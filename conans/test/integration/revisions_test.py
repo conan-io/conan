@@ -1,4 +1,6 @@
 import os
+from textwrap import dedent
+
 import time
 import unittest
 from collections import OrderedDict
@@ -736,6 +738,86 @@ class ConanFileToolsTest(ConanFile):
         # because the recipe revision is NOT the same
         self.client.run("install %s" % ref, assert_error=True)
         self.assertIn("Can't find a 'Hello/0.1@lasote/stable' package", self.client.out)
+
+    def test_when_revision_and_time_are_saved_in_metadata(self):
+        conanfile = dedent("""
+        from conans import ConanFile
+        class ConanFileToolsTest(ConanFile):
+            pass
+        """)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        # Generate recipe rev 1 + package rev1 to remote0
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("export . %s" % str(ref))
+        rev, trev = self.client.cache.recipe_revision(ref)
+        # The revision is stored in the metadata during the export
+        self.assertIsNotNone(rev)
+        # The time is always from the server, so no time yet
+        self.assertIsNone(trev)
+
+        self.client.run("create . %s" % str(ref))
+        # The revision for the package is also there
+        prev, tprev = self.client.cache.package_revision(pref)
+        self.assertIsNotNone(prev)
+        # The time is always from the server, so no time yet
+        self.assertIsNone(tprev)
+
+        self.client.run("upload %s -r=remote0 --all" % str(ref))
+
+        # Once we upload the recipe, the time is assigned
+        rev, trev = self.client.cache.recipe_revision(ref)
+        self.assertIsNotNone(rev)
+        self.assertIsNotNone(trev)
+
+        prev, tprev = self.client.cache.package_revision(pref)
+        self.assertIsNotNone(prev)
+        self.assertIsNotNone(tprev)
+
+        prev_trev = trev
+        prev_tprev = tprev
+
+        prev_rev = rev
+        prev_prev = prev
+
+        time.sleep(1)
+        # If we upload to a different server, the time is the same
+        # it is not changed
+        self.client.run("upload %s -r=remote1 --all" % str(ref))
+        _, trev = self.client.cache.recipe_revision(ref)
+        self.assertEquals(trev, prev_trev)
+        _, tprev = self.client.cache.package_revision(pref)
+        self.assertEquals(tprev, prev_tprev)
+
+        # New empty client, install from remote0
+        client2 = TestClient(servers=self.servers, users=self.users)
+        self.assertFalse(client2.cache.recipe_exists(ref))
+        self.assertFalse(client2.cache.package_exists(pref))
+
+        client2.run("install {} -r remote0".format(ref))
+        rev, trev = client2.cache.recipe_revision(ref)
+        prev, tprev = client2.cache.package_revision(pref)
+        # The times and revisions are equal from the expected
+        self.assertEquals(trev, prev_trev)
+        self.assertEquals(tprev, prev_tprev)
+        self.assertEquals(rev, prev_rev)
+        self.assertEquals(prev, prev_prev)
+
+        # Upload new revision to remote1 from original client
+        time.sleep(1)
+        self.client.save({"conanfile.py": conanfile + "\n\n"})
+        self.client.run("create . {}".format(ref))
+        self.client.run("upload {} -r remote1 --all".format(ref))
+
+        client2.run("install {} -r remote1 --update".format(ref))
+        # The times and revisions are updated in the metadata after the installation
+        # from the new revision
+        rev, trev = client2.cache.recipe_revision(ref)
+        prev, tprev = client2.cache.package_revision(pref)
+        self.assertNotEquals(trev, prev_trev)
+        self.assertNotEquals(tprev, prev_tprev)
+        self.assertNotEquals(rev, prev_rev)
+        self.assertNotEquals(prev, prev_prev)
 
 
 @unittest.skipUnless(TestClient().revisions,
