@@ -2,7 +2,7 @@ import time
 import unittest
 
 from conans.server.revision_list import RevisionList
-from conans.util.dates import from_iso8601_to_datetime, from_timestamp_to_iso8601
+from conans.util.dates import from_timestamp_to_iso8601
 
 
 class RevisionListTest(unittest.TestCase):
