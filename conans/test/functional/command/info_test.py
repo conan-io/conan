@@ -297,7 +297,7 @@ class MyTest(ConanFile):
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 
-    def test_reuse_test(self):
+    def reuse_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
