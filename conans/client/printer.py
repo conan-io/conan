@@ -48,6 +48,14 @@ class Printer(object):
             def show(field):
                 return field in _info_lower
 
+        # Handy function to perform a common print task
+        def _print(it_field, show_field=None, name=None, color=Color.BRIGHT_GREEN):
+            show_field = show_field or it_field
+            name = name or it_field
+            if show(show_field) and it_field in it:
+                self._out.writeln("    %s: %s" % (name, it[it_field]), color)
+
+        # Iteration and printing
         for it in data:
             if package_filter and not fnmatch.fnmatch(it["reference"], package_filter):
                 continue
@@ -55,23 +63,13 @@ class Printer(object):
             is_ref = it["is_ref"]
 
             self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
-            if show("id"):
-                self._out.writeln("    ID: %s" % it["id"], Color.BRIGHT_GREEN)
-            if show("build_id"):
-                self._out.writeln("    BuildID: %s" % it["build_id"], Color.BRIGHT_GREEN)
+            _print("id", name="ID")
+            _print("build_id", name="BuildID")
             if show_paths:
-                if show("export_folder"):
-                    self._out.writeln("    export_folder: %s" % it["export_folder"],
-                                      Color.BRIGHT_GREEN)
-                if show("source_folder"):
-                    self._out.writeln("    source_folder: %s" % it["source_folder"],
-                                      Color.BRIGHT_GREEN)
-                if show("build_folder") and "build_folder" in it:
-                    self._out.writeln("    build_folder: %s" % it["build_folder"],
-                                      Color.BRIGHT_GREEN)
-                if show("package_folder") and "package_folder" in it:
-                    self._out.writeln("    package_folder: %s" % it["package_folder"],
-                                      Color.BRIGHT_GREEN)
+                _print("export_folder")
+                _print("source_folder")
+                _print("build_folder")
+                _print("package_folder")
 
             if show("remote") and is_ref:
                 if "remote" in it:
@@ -81,32 +79,30 @@ class Printer(object):
                 else:
                     self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
 
-            if show("url") and "url" in it:
-                self._out.writeln("    URL: %s" % it["url"], Color.BRIGHT_GREEN)
-            if show("homepage") and "homepage" in it:
-                self._out.writeln("    Homepage: %s" % it["homepage"], Color.BRIGHT_GREEN)
+            _print("url", name="URL")
+            _print("homepage", name="Homepage")
+
             if show("license") and "license" in it:
                 licenses_str = ", ".join(it["license"])
                 lead_str = "Licenses" if len(it["license"]) > 1 else "License"
                 self._out.writeln("    %s: %s" % (lead_str, licenses_str), Color.BRIGHT_GREEN)
-            if show("author") and "author" in it:
-                self._out.writeln("    Author: %s" % it["author"], Color.BRIGHT_GREEN)
+
+            _print("author", name="Author")
+
             if show("topics") and "topics" in it:
                 self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)
-            if show("recipe") and "recipe" in it:
-                self._out.writeln("    Recipe: %s" % it["recipe"])
-            if show("revision") and "revision" in it:
-                self._out.writeln("    Revision: %s" % it["revision"])
-            if show("binary") and "binary" in it:
-                self._out.writeln("    Binary: %s" % it["binary"])
+
+            _print("recipe", name="Recipe", color=None)
+            _print("revision", name="Revision", color=None)
+            _print("binary", name="Binary", color=None)
+
             if show("binary_remote") and is_ref:
                 if "binary_remote" in it:
                     self._out.writeln("    Binary remote: %s" % it["binary_remote"])
                 else:
                     self._out.writeln("    Binary remote: None")
 
-            if show("date") and "creation_date" in it:
-                self._out.writeln("    Creation date: %s" % it["creation_date"], Color.BRIGHT_GREEN)
+            _print("creation_date", show_field="date", name="Creation date")
 
             if show("required") and "required_by" in it:
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
