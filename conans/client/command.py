@@ -475,8 +475,7 @@ class Command(object):
                             "specify both install-folder and any setting/option "
                             "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
-                            help='Only with --build-order option, return the information in a json.'
-                                 ' e.g --json=/path/to/filename.json or --json to output the json')
+                            help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help="Show only the specified fields: %s. '--paths' information can "
                             "also be filtered with options %s. Use '--only None' to show only "
@@ -485,8 +484,8 @@ class Command(object):
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
 
-        dry_build_help = ("Apply the --build argument to output the information, as it would be done "
-                          "by the install command")
+        dry_build_help = ("Apply the --build argument to output the information, as it would be done"
+                          " by the install command")
         parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
@@ -526,7 +525,11 @@ class Command(object):
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
-            self._outputer.nodes_to_build(nodes)
+            if args.json:
+                json_arg = True if args.json == "1" else args.json
+                self._outputer.json_nodes_to_build(nodes, json_arg, get_cwd())
+            else:
+                self._outputer.nodes_to_build(nodes)
 
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
@@ -553,6 +556,9 @@ class Command(object):
 
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd())
+            elif args.json:
+                json_arg = True if args.json == "1" else args.json
+                self._outputer.json_info(deps_graph, json_arg, get_cwd())
             else:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 

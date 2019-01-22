@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import textwrap
@@ -296,7 +297,7 @@ class MyTest(ConanFile):
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 
-    def reuse_test(self):
+    def test_reuse_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
@@ -382,6 +383,27 @@ class MyTest(ConanFile):
                 Licenses: MIT, GPL""")
 
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
+
+    def test_json_info_outpus(self):
+        self.client = TestClient()
+        self._create("LibA", "0.1")
+        self._create("LibE", "0.1")
+        self._create("LibF", "0.1")
+
+        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
+        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
+
+        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
+                     export=False)
+
+        json_file = os.path.join(self.client.current_folder, "output.json")
+        self.client.run("info . -u --json=\"{}\"".format(json_file))
+
+        # Check a couple of values in the generated JSON
+        content = json.loads(load(json_file))
+        self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
+        self.assertEqual(content[0]["license"][0], "MIT")
+        self.assertEqual(content[1]["id"], "c4ec2bf350e2a02405029ab366535e26372a4f63")
 
     def build_order_test(self):
         self.client = TestClient()
