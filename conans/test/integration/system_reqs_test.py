@@ -145,7 +145,7 @@ class SystemReqsTest(unittest.TestCase):
         load_file = load(client.cache.system_reqs_package(pref))
         self.assertEqual('', load_file)
 
-    def remove_global_system_reqs_test(self):
+    def remove_system_reqs_test(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
@@ -173,9 +173,7 @@ class SystemReqsTest(unittest.TestCase):
         # error must show exception message
         with self.assertRaises(Exception) as error:
             client.run("remove --system-reqs foo/bar@foo/bar")
-            self.assertIn(
-                "ERROR: Could not remove system_reqs: [Errno 2] No such file or directory:",
-                error.exception)
+            self.assertIn("ERROR: Could not remove system_reqs: [Errno 2] No such file or directory:", error.exception)
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # remove system_reqs global
@@ -188,48 +186,3 @@ class SystemReqsTest(unittest.TestCase):
         client.run("create . user/channel")
         self.assertIn("*+Running system requirements+*", client.user_io.out)
         self.assertTrue(os.path.exists(system_reqs_path))
-
-    def remove_package_system_reqs_test(self):
-
-        client = TestClient()
-        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
-        client.save(files)
-
-        client.run("create . user/channel")
-        self.assertIn("*+Running system requirements+*", client.user_io.out)
-
-        pid = "f0ba3ca2c218df4a877080ba99b65834b9413798"
-        ref = ConanFileReference.loads("Test/0.1@user/channel")
-        pref = PackageReference(ref, pid)
-        reqs_file = client.cache.system_reqs_package(pref)
-        self.assertTrue(os.path.isfile(reqs_file))
-
-        # Run with different option
-        client.run("create . user/channel -o myopt=False")
-        self.assertIn("*+Running system requirements+*", client.user_io.out)
-        self.assertFalse(os.path.exists(client.cache.system_reqs(ref)))
-
-        # wrong package id must not remove anything
-        with self.assertRaises(Exception) as error:
-            client.run(
-                "remove --system-reqs Test/0.1@user/channel -p b0ba3ca2c218df4a877080ba99b65834b9413791"
-            )
-            self.assertIn(
-                "ERROR: Could not remove system_reqs: [Errno 2] No such file or directory: '%s'" %
-                reqs_file, error.exception)
-        self.assertTrue(os.path.isfile(reqs_file))
-
-        # remove ONLY the specific package id
-        client.run("remove --system-reqs Test/0.1@user/channel -p %s" % pid)
-        self.assertFalse(os.path.isfile(reqs_file))
-
-        # global must be preserved
-        self.assertTrue(
-            os.path.exists(
-                os.path.join(client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)))
-
-        # Any other package id should not be affected
-        ref = ConanFileReference.loads("Test/0.1@user/channel")
-        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        reqs_file = client.cache.system_reqs_package(pref)
-        self.assertTrue(os.path.isfile(reqs_file))
