@@ -936,9 +936,10 @@ class ConanAPIV1(object):
             raise ConanException("Cannot list the revisions of a specific revision")
 
         if not remote_name:
-            if not self._cache.recipe_exists(ref):
+            layout = self._cache.package_layout(ref)
+            if not layout.recipe_exists():
                 raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-            rev, tm = self._cache.recipe_revision(ref)
+            rev, tm = layout.recipe_revision()
             return {"reference": ref.full_repr(),
                     "revisions": [{"revision": rev, "time": tm}]}
         else:
@@ -954,13 +955,14 @@ class ConanAPIV1(object):
             raise ConanException("Cannot list the revisions of a specific package revision")
 
         if not remote_name:
-            if not self._cache.recipe_exists(pref.ref):
+            layout = self._cache.package_layout(pref.ref)
+            if not layout.recipe_exists():
                 raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
 
-            if not self._cache.package_exists(pref):
+            if not layout.package_exists(pref):
                 raise NotFoundException("Package not found: '%s'" % pref.full_repr())
 
-            rev, tm = self._cache.package_revision(pref)
+            rev, tm = layout.package_revision(pref)
             return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
         else:
             remote = self.get_remote_by_name(remote_name)

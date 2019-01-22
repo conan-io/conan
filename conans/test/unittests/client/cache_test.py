@@ -21,38 +21,41 @@ class CacheTest(unittest.TestCase):
         self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
 
     def test_recipe_exists(self):
-
-        self.assertFalse(self.cache.recipe_exists(self.ref))
+        layout = self.cache.package_layout(self.ref)
+        self.assertFalse(layout.recipe_exists())
 
         mkdir(self.cache.export(self.ref))
-        self.assertTrue(self.cache.recipe_exists(self.ref))
+        self.assertTrue(layout.recipe_exists())
 
         # But if ref has revision and it doesn't match, it doesn't exist
         ref2 = self.ref.copy_with_rev("revision")
-        self.assertFalse(self.cache.recipe_exists(ref2))
+        layout2 = self.cache.package_layout(ref2)
+        self.assertFalse(layout2.recipe_exists())
 
         # Fake the metadata and check again
-        with self.cache.package_layout(self.ref).update_metadata() as metadata:
+        with layout.update_metadata() as metadata:
             metadata.recipe.revision = "revision"
 
-        self.assertTrue(self.cache.recipe_exists(ref2))
+        self.assertTrue(layout2.recipe_exists())
 
     def test_package_exists(self):
         pref = PackageReference(self.ref, "999")
-        self.assertFalse(self.cache.package_exists(pref))
+        layout = self.cache.package_layout(self.ref)
+        self.assertFalse(layout.package_exists(pref))
 
         mkdir(self.cache.export(self.ref))
         mkdir(self.cache.package(pref))
-        self.assertTrue(self.cache.package_exists(pref))
+        self.assertTrue(layout.package_exists(pref))
 
         # But if ref has revision and it doesn't match, it doesn't exist
         ref2 = self.ref.copy_with_rev("revision")
         pref2 = PackageReference(ref2, "999", "prevision")
-        self.assertFalse(self.cache.package_exists(pref2))
+        layout2 = self.cache.package_layout(ref2)
+        self.assertFalse(layout2.package_exists(pref2))
 
         # Fake the metadata and check again
-        with self.cache.package_layout(self.ref).update_metadata() as metadata:
+        with layout2.update_metadata() as metadata:
             metadata.recipe.revision = "revision"
             metadata.packages[pref2.id].revision = "prevision"
 
-        self.assertTrue(self.cache.package_exists(pref2))
+        self.assertTrue(layout2.package_exists(pref2))

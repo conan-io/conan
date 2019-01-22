@@ -188,7 +188,7 @@ class RemoveTest(unittest.TestCase):
                 if isinstance(base_path, ServerStore):
                     if not self.client.block_v2:
                         try:
-                            rev, _ = self.client.cache.recipe_revision(ref)
+                            rev, _ = self.client.cache.package_layout(ref).recipe_revision()
                         except:
                             # This whole test is a crap, we cannot guess remote revision
                             # if the package is not in local anymore
@@ -206,7 +206,8 @@ class RemoveTest(unittest.TestCase):
                             if not self.client.block_v2:
                                 pref = PackageReference(ref, sha)
                                 try:
-                                    prev, _ = self.client.cache.package_revision(pref)
+                                    layout = self.client.cache.package_layout(pref.ref)
+                                    prev, _ = layout.package_revision(pref)
                                 except:
                                     # This whole test is a crap, we cannot guess remote revision
                                     # if the package is not in local anymore

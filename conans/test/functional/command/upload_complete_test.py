@@ -261,9 +261,10 @@ class TestConan(ConanFile):
         # Upload conans
         self.client.run('upload %s' % str(self.ref))
         if not self.client.block_v2:
-            rev, _ = self.client.cache.recipe_revision(self.ref)
+            layout = self.client.cache.package_layout(self.ref)
+            rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
-            prev, _ = self.client.cache.package_revision(self.pref)
+            prev, _ = layout.package_revision(self.pref)
             self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
@@ -337,9 +338,10 @@ class TestConan(ConanFile):
                                  "Uploading conan_package.tgz",
                                  ])
         if not self.client.block_v2:
-            rev, _ = self.client.cache.recipe_revision(self.ref)
+            layout = self.client.cache.package_layout(self.ref)
+            rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
-            prev, _ = self.client.cache.package_revision(self.pref)
+            prev, _ = layout.package_revision(self.pref)
             self.pref = self.pref.copy_with_revs(rev, prev)
 
         server_reg_folder = self.test_server.server_store.export(self.ref)
@@ -354,9 +356,10 @@ class TestConan(ConanFile):
         self.client.run('upload %s --all' % str(self.ref))
 
         if not self.client.block_v2:
-            rev, _ = self.client.cache.recipe_revision(self.ref)
+            layout = self.client.cache.package_layout(self.ref)
+            rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
-            prev, _ = self.client.cache.package_revision(self.pref)
+            prev, _ = layout.package_revision(self.pref)
             self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)

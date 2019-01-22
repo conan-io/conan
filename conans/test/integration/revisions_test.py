@@ -79,7 +79,7 @@ class HelloConan(ConanFile):
         self.client.runner('git remote add origin https://myrepo.com.git', cwd=path)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("export . %s " % str(self.ref))
-        rev = self.client.cache.recipe_revision(self.ref)
+        rev = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertNotEqual(rev, "fixed_revision")
 
     def test_revisions_packages_download(self):
@@ -241,7 +241,7 @@ class HelloConan(ConanFile):
         self.client.run("remote list_pref %s" % str(self.ref))
         self.assertIn("%s: remote0" % str(pref), self.client.out)
 
-        rev, _ = self.client.cache.recipe_revision(self.ref)
+        rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
         sleep(1)
@@ -252,7 +252,7 @@ class HelloConan(ConanFile):
         client2.run("upload %s -c --all -r remote0" % str(self.ref))
         client2.run("remote list_pref %s" % str(self.ref))
 
-        rev, _ = client2.cache.recipe_revision(self.ref)
+        rev, _ = client2.cache.package_layout(self.ref).recipe_revision()
         self.assertEquals(rev, "621568e8053761d685dcf1bfbe3b3f10")
 
         # install of the client1 (no-update)
@@ -262,12 +262,12 @@ class HelloConan(ConanFile):
         self.client.run("remote list_pref %s" % str(self.ref))
         self.assertIn("%s: remote0" % str(pref), self.client.out)
 
-        rev, _ = self.client.cache.recipe_revision(self.ref)
+        rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
         # install with update
         self.client.run("install %s --update" % str(self.ref))
-        rev, _ = self.client.cache.recipe_revision(self.ref)
+        rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertEquals(rev, "621568e8053761d685dcf1bfbe3b3f10")
         self.assertNotIn("%s from 'remote0' - Newer" % str(self.ref), self.client.out)
         self.assertIn("Outdated package! The package doesn't belong to the installed recipe "
@@ -279,14 +279,14 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev, _ = self.client.cache.recipe_revision(self.ref)
+        rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev)
 
         self.client.save({"conanfile.py": self.conanfile + " "})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev2, _ = self.client.cache.recipe_revision(self.ref)
+        rev2, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         remote_rev2 = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev2.revision, rev2)
         self.assertNotEquals(rev, rev2)
@@ -400,13 +400,13 @@ class HelloConan(ConanFile):
         # No changes
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("export . %s" % str(self.ref))
-        cur_rev, _ = self.client.cache.recipe_revision(self.ref)
+        cur_rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertIsNotNone(cur_rev)
 
         # Export new recipe, the revision is not cleared but changed
         self.client.save({"conanfile.py": self.conanfile + " "})
         self.client.run("export . %s" % str(self.ref))
-        new_rev, _ = self.client.cache.recipe_revision(self.ref)
+        new_rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertIsNotNone(new_rev)
         self.assertNotEqual(cur_rev, new_rev)
 
@@ -415,7 +415,7 @@ class HelloConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev, _ = self.client.cache.recipe_revision(self.ref)
+        rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         full_ref = self.ref.copy_with_rev(rev)
 
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
@@ -452,7 +452,7 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev, _ = self.client.cache.recipe_revision(self.ref)
+        rev, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev)
 
@@ -460,7 +460,7 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 2")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev2, _ = self.client.cache.recipe_revision(self.ref)
+        rev2, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev2)
 
@@ -473,7 +473,7 @@ class AliasConanfile(ConanFile):
         self.client.save({"conanfile.py": self.conanfile.replace("Revision 1", "Revision 3")})
         self.client.run("create . %s" % str(self.ref))
         self.client.run("upload %s -c --all -r remote0" % str(self.ref))
-        rev3, _ = self.client.cache.recipe_revision(self.ref)
+        rev3, _ = self.client.cache.package_layout(self.ref).recipe_revision()
         self.assertNotEquals(rev3, rev2)
         remote_rev = self.servers["remote0"].server_store.get_last_revision(self.ref)
         self.assertEquals(remote_rev.revision, rev3)
@@ -529,9 +529,9 @@ class HelloConan(ConanFile):
         tools.save(os.path.join(self.package_folder, "file"), str(uuid.uuid4()))
 """
             self._create_and_upload(conanfile, ref)
-            _rev1, _ = self.client.cache.recipe_revision(ref)
+            _rev1, _ = self.client.cache.package_layout(ref).recipe_revision()
             self._create_and_upload(conanfile + "\n", ref)
-            _rev2, _ = self.client.cache.recipe_revision(ref)
+            _rev2, _ = self.client.cache.package_layout(ref).recipe_revision()
             return _rev1, _rev2
 
     def test_remove_recipe_v2_test(self):
@@ -601,16 +601,16 @@ class HelloConan(ConanFile):
         ref = ConanFileReference.loads("lib/1.0@lasote/testing")
         # Upload three revisions of A and its packages
         self._create_and_upload(conanfile, ref)
-        rev1, _ = self.client.cache.recipe_revision(ref)
+        rev1, _ = self.client.cache.package_layout(ref).recipe_revision()
 
         self._create_and_upload(conanfile + "\n", ref)
-        rev2, _ = self.client.cache.recipe_revision(ref)
+        rev2, _ = self.client.cache.package_layout(ref).recipe_revision()
 
         self._create_and_upload(conanfile + "\n\n", ref)
-        rev3, _ = self.client.cache.recipe_revision(ref)
+        rev3, _ = self.client.cache.package_layout(ref).recipe_revision()
 
         self._create_and_upload(conanfile + "\n\n\n", ref)
-        rev4, _ = self.client.cache.recipe_revision(ref)
+        rev4, _ = self.client.cache.package_layout(ref).recipe_revision()
 
         self.assertNotEquals(rev1, rev2)
         self.assertNotEquals(rev2, rev3)
@@ -670,7 +670,8 @@ class HelloConan(ConanFile):
         client_no_rev.run('remove "*" -f')
         client_no_rev.run("install %s --build" % str(self.ref))
         # Client v1 never receives revision but 0
-        self.assertEquals(client_no_rev.cache.recipe_revision(self.ref)[0], DEFAULT_REVISION_V1)
+        layout = client_no_rev.cache.package_layout(self.ref)
+        self.assertEquals(layout.recipe_revision()[0], DEFAULT_REVISION_V1)
         self.assertIn("Bye", client_no_rev.out)
 
         # If client v1 uploads again the recipe it is the latest again, but with rev0
@@ -685,7 +686,8 @@ class HelloConan(ConanFile):
         self.client.run('remove "*" -f')
         self.client.run("install %s --build" % str(self.ref))
         self.assertIn("Foo", self.client.out)
-        self.assertEquals(self.client.cache.recipe_revision(self.ref)[0], DEFAULT_REVISION_V1)
+        self.assertEquals(self.client.cache.package_layout(self.ref).recipe_revision()[0],
+                          DEFAULT_REVISION_V1)
 
     def package_iterating_remote_same_recipe_revision_test(self):
         """If remote1 and remote2 has the same recipe revisions it will
@@ -750,7 +752,7 @@ class ConanFileToolsTest(ConanFile):
         # Generate recipe rev 1 + package rev1 to remote0
         self.client.save({"conanfile.py": conanfile})
         self.client.run("export . %s" % str(ref))
-        rev, trev = self.client.cache.recipe_revision(ref)
+        rev, trev = self.client.cache.package_layout(ref).recipe_revision()
         # The revision is stored in the metadata during the export
         self.assertIsNotNone(rev)
         # The time is always from the server, so no time yet
@@ -758,7 +760,7 @@ class ConanFileToolsTest(ConanFile):
 
         self.client.run("create . %s" % str(ref))
         # The revision for the package is also there
-        prev, tprev = self.client.cache.package_revision(pref)
+        prev, tprev = self.client.cache.package_layout(ref).package_revision(pref)
         self.assertIsNotNone(prev)
         # The time is always from the server, so no time yet
         self.assertIsNone(tprev)
@@ -766,11 +768,11 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("upload %s -r=remote0 --all" % str(ref))
 
         # Once we upload the recipe, the time is assigned
-        rev, trev = self.client.cache.recipe_revision(ref)
+        rev, trev = self.client.cache.package_layout(ref).recipe_revision()
         self.assertIsNotNone(rev)
         self.assertIsNotNone(trev)
 
-        prev, tprev = self.client.cache.package_revision(pref)
+        prev, tprev = self.client.cache.package_layout(ref).package_revision(pref)
         self.assertIsNotNone(prev)
         self.assertIsNotNone(tprev)
 
@@ -784,19 +786,29 @@ class ConanFileToolsTest(ConanFile):
         # If we upload to a different server, the time is the same
         # it is not changed
         self.client.run("upload %s -r=remote1 --all" % str(ref))
-        _, trev = self.client.cache.recipe_revision(ref)
+        _, trev = self.client.cache.package_layout(ref).recipe_revision()
         self.assertEquals(trev, prev_trev)
-        _, tprev = self.client.cache.package_revision(pref)
+        _, tprev = self.client.cache.package_layout(ref).package_revision(pref)
         self.assertEquals(tprev, prev_tprev)
 
         # New empty client, install from remote0
         client2 = TestClient(servers=self.servers, users=self.users)
-        self.assertFalse(client2.cache.recipe_exists(ref))
-        self.assertFalse(client2.cache.package_exists(pref))
+        self.assertFalse(client2.cache.package_layout(ref).recipe_exists())
+        self.assertFalse(client2.cache.package_layout(pref.ref).package_exists(pref))
 
+        # The timestamp from remote1 is not the same in a fresh client
+        client2.run("install {} -r remote1".format(ref))
+        _, trev = client2.cache.package_layout(ref).recipe_revision()
+        self.assertNotEquals(trev, prev_trev)
+        _, tprev = client2.cache.package_layout(ref).package_revision(pref)
+        self.assertNotEquals(tprev, prev_tprev)
+
+        # In a fresh client we can install from remote0 and the times are the same
+        client2 = TestClient(servers=self.servers, users=self.users)
         client2.run("install {} -r remote0".format(ref))
-        rev, trev = client2.cache.recipe_revision(ref)
-        prev, tprev = client2.cache.package_revision(pref)
+        layout = client2.cache.package_layout(ref)
+        rev, trev = layout.recipe_revision()
+        prev, tprev = layout.package_revision(pref)
         # The times and revisions are equal from the expected
         self.assertEquals(trev, prev_trev)
         self.assertEquals(tprev, prev_tprev)
@@ -812,8 +824,9 @@ class ConanFileToolsTest(ConanFile):
         client2.run("install {} -r remote1 --update".format(ref))
         # The times and revisions are updated in the metadata after the installation
         # from the new revision
-        rev, trev = client2.cache.recipe_revision(ref)
-        prev, tprev = client2.cache.package_revision(pref)
+        layout = client2.cache.package_layout(ref)
+        rev, trev = layout.recipe_revision()
+        prev, tprev = layout.package_revision(pref)
         self.assertNotEquals(trev, prev_trev)
         self.assertNotEquals(tprev, prev_tprev)
         self.assertNotEquals(rev, prev_rev)
@@ -895,7 +908,8 @@ class ConanFileToolsTest(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s" % str(ref))
         self.client.run("upload %s -r=remote0 --all" % str(ref))
-        rev1, tm1 = self.client.cache.recipe_revision(ref)
+        layout = self.client.cache.package_layout(ref)
+        rev1, tm1 = layout.recipe_revision()
         self.assertIsNotNone(tm1)
         self.assertTrue(valid_iso8601(tm1))
 
@@ -903,7 +917,7 @@ class ConanFileToolsTest(ConanFile):
         self.client.save({"conanfile.py": conanfile + "\n"})
         self.client.run("create . %s" % str(ref))
         self.client.run("upload %s -r=remote0 --all" % str(ref))
-        rev2, _ = self.client.cache.recipe_revision(ref)
+        rev2, _ = layout.recipe_revision()
 
         # Remove the binaries from the recipe rev1
         self.client.run("remove %s#%s -p -r=remote0 -f" % (str(ref), rev1))
@@ -933,13 +947,14 @@ class ConanFileToolsTest(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s" % str(ref))
         self.client.run("upload %s -r=remote0 --all" % str(ref))
-        rev1, _ = self.client.cache.recipe_revision(ref)
+        layout = self.client.cache.package_layout(ref)
+        rev1, _ = layout.recipe_revision()
 
         # Upload recipe rev 2 + package to remote0
         self.client.save({"conanfile.py": conanfile + "\n#Comment for rev2"})
         self.client.run("create . %s" % str(ref))
         self.client.run("upload %s -r=remote0 --all" % str(ref))
-        rev2, _ = self.client.cache.recipe_revision(ref)
+        rev2, _ =  layout.recipe_revision()
 
         self.assertNotEqual(rev1, rev2)
 
@@ -980,7 +995,8 @@ class ConanFileToolsTest(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . %s" % str(ref))
         self.client.run("upload %s -r=remote0 --all" % str(ref))
-        rev1, _ = self.client.cache.recipe_revision(ref)
+        layout = self.client.cache.package_layout(ref)
+        rev1, _ = layout.recipe_revision()
         pref = PackageReference(ref.copy_with_rev(rev1), NO_SETTINGS_PACKAGE_ID)
         prev1 = self.client.servers["remote0"].server_store.get_last_package_revision(pref).revision
 
@@ -993,7 +1009,7 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("remove %s -f" % str(ref))
         self.client.run("create . %s" % str(ref))
         self.client.run("upload %s -r=remote0 --all" % str(ref))
-        rev1_, _ = self.client.cache.recipe_revision(ref)
+        rev1_, _ = layout.recipe_revision()
         self.assertEquals(rev1, rev1_)
         pref = PackageReference(ref.copy_with_rev(rev1), NO_SETTINGS_PACKAGE_ID)
         prev2 = self.client.servers["remote0"].server_store.\
@@ -1011,7 +1027,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("Hello/0.1@lasote/stable from 'remote0' - Updated", client2.out)
         self.assertIn("Hello/0.1@lasote/stable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", client2.out)
-        prev_, _ = client2.cache.package_revision(pref)
+        prev_, _ = client2.cache.package_layout(pref.ref).package_revision(pref)
         self.assertEquals(prev_, prev2)
 
     def old_server_new_client_simple_test(self):

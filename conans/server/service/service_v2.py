@@ -5,7 +5,6 @@ from bottle import FileUpload, static_file
 from conans.errors import NotFoundException
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
-from conans.util.dates import from_timestamp_to_iso8601
 from conans.util.files import mkdir
 
 
@@ -28,7 +27,7 @@ class ConanServiceV2(object):
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
                 "reference": reference.full_repr(),
-                "time": from_timestamp_to_iso8601(the_time)}
+                "time": the_time}
 
     def get_conanfile_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
@@ -72,7 +71,7 @@ class ConanServiceV2(object):
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
                 "reference": pref.full_repr(),
-                "time": from_timestamp_to_iso8601(the_time)}
+                "time": the_time}
 
     def get_package_file(self, pref, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
