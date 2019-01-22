@@ -33,9 +33,9 @@ class RevisionListTest(unittest.TestCase):
         self.assertIsNotNone(loaded.latest_revision().time)
 
     def test_compatibility_with_timestamps(self):
-        the_time = int(time.time())
+        the_time = time.time()
         iso = from_timestamp_to_iso8601(the_time)
-        old_contents = '{"revisions": [{"revision": "rev1", "time": "%s"}, ' \
+        old_contents = '{"revisions": [{"revision": "rev1", "time": %s}, ' \
                        '{"revision": "rev2", "time": "%s"}]}' % (the_time, the_time)
         r_list = RevisionList.loads(old_contents)
         when = r_list.get_time("rev1")
