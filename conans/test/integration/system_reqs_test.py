@@ -213,7 +213,7 @@ class SystemReqsTest(unittest.TestCase):
 
         # friendly message for permission error
         with self.assertRaisesRegexp(
-                Exception, "ERROR: Unable to remove system_reqs: Permission denied"):
+                Exception, "ERROR: Unable to remove system_reqs:"):
             client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertTrue(os.path.exists(system_reqs_path))
 
