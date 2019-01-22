@@ -86,8 +86,7 @@ class CommandOutputer(object):
     def nodes_to_build(self, nodes_to_build):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
-    def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
-        data = [str(n) for n in nodes_to_build]
+    def _handle_json_output(self, data, json_output, cwd):
         json_str = json.dumps(data)
 
         if json_output is True:
@@ -98,6 +97,10 @@ class CommandOutputer(object):
             save(json_output, json.dumps(data))
             self.user_io.out.writeln("")
             self.user_io.out.info("JSON file created at '%s'" % json_output)
+
+    def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
+        data = [str(n) for n in nodes_to_build]
+        self._handle_json_output(data, json_output, cwd)
 
     def _grab_info_data(self, deps_graph, grab_paths):
         """ Convert 'deps_graph' into consumible information for json and cli """
@@ -214,16 +217,7 @@ class CommandOutputer(object):
 
     def json_info(self, deps_graph, json_output, cwd, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
-        json_str = json.dumps(data)
-
-        if json_output is True:
-            self.user_io.out.write(json_str)
-        else:
-            if not os.path.isabs(json_output):
-                json_output = os.path.join(cwd, json_output)
-            save(json_output, json.dumps(data))
-            self.user_io.out.writeln("")
-            self.user_io.out.info("JSON file created at '%s'" % json_output)
+        self._handle_json_output(data, json_output, cwd)
 
     def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self.user_io.out)
