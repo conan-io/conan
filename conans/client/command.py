@@ -861,10 +861,12 @@ class Command(object):
                 raise ConanException("Please specify a valid package reference to be cleaned")
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
-
-            self._cache.remove_package_system_reqs(ref)
-            self._user_io.out.info("Cache system_reqs from %s has been removed" % str(ref))
-            return
+            try:
+                self._cache.remove_package_system_reqs(ref)
+                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                return
+            except Exception as error:
+                raise ConanException("Unable to remove system_reqs: %s" % error)
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')

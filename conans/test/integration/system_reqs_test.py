@@ -1,4 +1,5 @@
 import os
+import stat
 import unittest
 
 from conans.paths import SYSTEM_REQS_FOLDER
@@ -164,24 +165,84 @@ class SystemReqsTest(unittest.TestCase):
         self.assertNotIn("*+Running system requirements+*", client.user_io.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
-        # error must not remove anything
+        # remove system_reqs global
+        client.run("remove --system-reqs Test/0.1@user/channel")
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
+                      client.user_io.out)
+        self.assertFalse(os.path.exists(system_reqs_path))
+
+        # re-create system_reqs folder
+        client.run("create . user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+    def invalid_remove_reqs_test(self):
+        client = TestClient()
+
         with self.assertRaisesRegexp(
                 Exception, "ERROR: Please specify a valid package reference to be cleaned"):
             client.run("remove --system-reqs")
-        self.assertTrue(os.path.exists(system_reqs_path))
 
-        # error must show exception message
-        client.run("remove --system-reqs foo/bar@foo/bar")
-        self.assertIn("Cache system_reqs from foo/bar@foo/bar has been removed", client.user_io.out)
-        self.assertTrue(os.path.exists(system_reqs_path))
+        # wrong file reference should be treated as error
+        with self.assertRaisesRegexp(
+                Exception, "ERROR: Unable to remove system_reqs: foo/version@bar/testing does not exist"):
+            client.run("remove --system-reqs foo/version@bar/testing")
 
         # package is not supported with system_reqs
         with self.assertRaisesRegexp(
                 Exception, "ERROR: '-t' and '-p' parameters can't be used at the same time"):
             client.run("remove --system-reqs foo/bar@foo/bar -p f0ba3ca2c218df4a877080ba99b65834b9413798")
+
+    def permission_denied_remove_system_reqs_test(self):
+        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        client = TestClient()
+        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
+        client.save(files)
+        system_reqs_path = os.path.join(
+            client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)
+
+        # create package to populate system_reqs folder
+        self.assertFalse(os.path.exists(system_reqs_path))
+        client.run("create . user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+        # remove write permission
+        current = stat.S_IMODE(os.lstat(system_reqs_path).st_mode)
+        os.chmod(system_reqs_path, current & ~stat.S_IWRITE)
+
+        # friendly message for permission error
+        with self.assertRaisesRegexp(
+                Exception, "ERROR: Unable to remove system_reqs: Permission denied"):
+            client.run("remove --system-reqs Test/0.1@user/channel")
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+    def duplicate_remove_system_reqs_test(self):
+        ref = ConanFileReference.loads("Test/0.1@user/channel")
+        client = TestClient()
+        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
+        client.save(files)
+        system_reqs_path = os.path.join(
+            client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)
+
+        # create package to populate system_reqs folder
+        self.assertFalse(os.path.exists(system_reqs_path))
+        client.run("create . user/channel")
+        self.assertIn("*+Running system requirements+*", client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+
+        # a new build must not remove or re-run
+        client.run("create . user/channel")
+        self.assertNotIn("*+Running system requirements+*", client.user_io.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
         # remove system_reqs global
+        client.run("remove --system-reqs Test/0.1@user/channel")
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
+                      client.user_io.out)
+        self.assertFalse(os.path.exists(system_reqs_path))
+
+        # try to remove system_reqs global again
         client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
                       client.user_io.out)

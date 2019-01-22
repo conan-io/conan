@@ -258,9 +258,19 @@ class ClientCache(SimplePaths):
                 ref_path = os.path.dirname(ref_path)
 
     def remove_package_system_reqs(self, reference):
+        assert isinstance(reference, ConanFileReference)
         conan_folder = self.conan(reference)
         system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
-        shutil.rmtree(system_reqs_folder, ignore_errors=True)
+        if not os.path.exists(conan_folder):
+            raise ValueError("%s does not exist" % repr(reference))
+        if not os.path.exists(system_reqs_folder):
+            return
+        if not os.access(system_reqs_folder, os.W_OK):
+            raise OSError("Permission denied")
+        try:
+            shutil.rmtree(system_reqs_folder)
+        except OSError:
+            raise ConanException("Folder busy (open or some file open): %s" % system_reqs_folder)
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)
