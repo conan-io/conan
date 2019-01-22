@@ -52,5 +52,4 @@ class PackageEditableLayout(object):
         raise ConanException("Operation not allowed on a package installed as editable")
 
     def package_metadata(self):
-        # FIXME: I know that downstream there is an except for IOError
-        raise IOError("Package metadata is not available for editable packages")
+        raise ConanException("Package metadata is not available for editable packages")

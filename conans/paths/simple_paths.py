@@ -83,8 +83,5 @@ class SimplePaths(object):
     def scm_folder(self, ref):
         return self.package_layout(ref).scm_folder()
 
-    def package_metadata(self, ref):
-        return self.package_layout(ref).package_metadata()
-
     def installed_as_editable(self, ref):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
