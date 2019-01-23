@@ -122,3 +122,28 @@ class CustomGeneratorTest(unittest.TestCase):
         for i in (1, 2):
             generated = load(os.path.join(client.current_folder, "file%d.gen" % i))
             self.assertEqual(generated, "CustomContent%d" % i)
+
+    def export_template_generator_test(self):
+        templated_generator = """
+import os
+from conans import ConanFile, load
+from conans.model import Generator
+class MyCustomTemplateGenerator(Generator):
+    @property
+    def filename(self):
+        return "customfile.gen"
+    @property
+    def content(self):
+        template = load(os.path.join(os.path.dirname(__file__), "mytemplate.txt"))
+        return template % "Hello"
+
+class MyCustomGeneratorWithTemplatePackage(ConanFile):
+    exports = "mytemplate.txt"
+"""
+        client = TestClient()
+        client.save({CONANFILE: templated_generator, "mytemplate.txt": "Template: %s"})
+        client.run("create . gen/0.1@user/stable")
+
+        client.run("install gen/0.1@user/stable -g=MyCustomTemplateGenerator")
+        generated = load(os.path.join(client.current_folder, "customfile.gen"))
+        self.assertEqual(generated, "Template: Hello")
