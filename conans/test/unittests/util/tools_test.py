@@ -1688,6 +1688,13 @@ class GitToolsTests(unittest.TestCase):
         with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
             git.get_tag()
 
+    def test_excluded_files(self):
+        folder = temp_folder()
+        save(os.path.join(folder, "file"), "some contents")
+        git = Git(folder)
+        with tools.environment_append({"PATH": ""}):
+            git.excluded_files()
+
 
 @attr("slow")
 @attr('svn')
