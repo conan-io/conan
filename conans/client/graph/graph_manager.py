@@ -60,7 +60,7 @@ class GraphManager(object):
         except IOError:  # Only if file is missing
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile = self._cache.default_profile
-            profile.process_settings(self._client_cache)
+            profile.process_settings(self._cache)
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
