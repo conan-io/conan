@@ -1344,7 +1344,7 @@ class Command(object):
         parser.add_argument("-l", "--layout",
                             help='Relative or absolute path to a file containing the layout.'
                             ' Relative paths will be resolved first relative to current dir, '
-                            'then to local cache')
+                            'then to local cache "layouts" folder')
 
         args = parser.parse_args(*args)
         self._warn_python2()

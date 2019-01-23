@@ -30,7 +30,7 @@ def get_editable_abs_path(path, cwd, cache_folder):
 
 
 class EditableCppInfo(object):
-    cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs']
+    cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs', 'builddirs', 'srcdirs']
 
     def __init__(self, data):
         self._data = data
