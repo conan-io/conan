@@ -36,8 +36,7 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            # Not enough settings to set a generator in Windows
-            return None
+            return "MinGW Makefiles"
         return "Unix Makefiles"
 
     if compiler == "Visual Studio":

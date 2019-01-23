@@ -43,11 +43,11 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, remote_manager, loader, proxy, resolver):
+    def __init__(self, output, cache, remote_manager, loader, proxy, resolver):
         self._proxy = proxy
         self._output = output
         self._resolver = resolver
-        self._client_cache = client_cache
+        self._cache = cache
         self._remote_manager = remote_manager
         self._loader = loader
 
@@ -59,13 +59,13 @@ class GraphManager(object):
             graph_info = GraphInfo.load(info_folder)
         except IOError:  # Only if file is missing
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile = self._client_cache.default_profile
+            profile = self._cache.default_profile
             profile.process_settings(self._client_cache)
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
             profile = graph_info.profile
-            profile.process_settings(self._client_cache, preprocess=False)
+            profile.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)
         processed_profile = ProcessedProfile(profile, None)
@@ -105,29 +105,29 @@ class GraphManager(object):
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remote_name, recorder, workspace):
 
-        def _inject_require(conanfile, reference):
+        def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
             before running the install
             """
-            require = conanfile.requires.get(reference.name)
+            require = conanfile.requires.get(ref.name)
             if require:
-                require.conan_reference = require.range_reference = reference
+                require.ref = require.range_ref = ref
             else:
-                conanfile.requires(str(reference))
-            conanfile._conan_user = reference.user
-            conanfile._conan_channel = reference.channel
+                conanfile.requires(str(ref))
+            conanfile._conan_user = ref.user
+            conanfile._conan_channel = ref.channel
 
         # Computing the full dependency graph
         profile = graph_info.profile
         processed_profile = ProcessedProfile(profile, create_reference)
-        conan_ref = None
+        ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
-            root_node = Node(conan_ref, conanfile, recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
-            root_node = Node(conan_ref, conanfile, recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         else:
             path = reference
             if path.endswith(".py"):
@@ -139,13 +139,15 @@ class GraphManager(object):
                                                        channel=graph_info.root.channel)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
-                conan_ref = ConanFileReference(conanfile.name, conanfile.version,
-                                               conanfile._conan_user, conanfile._conan_channel,
-                                               validate=False)
+
+                ref = ConanFileReference(conanfile.name, conanfile.version,
+                                         conanfile._conan_user, conanfile._conan_channel,
+                                         validate=False)
             else:
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile,
                                                             ref=graph_info.root)
-            root_node = Node(conan_ref, conanfile, recipe=RECIPE_CONSUMER)
+
+            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
@@ -189,7 +191,7 @@ class GraphManager(object):
                     node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
-            str_ref = str(node.conan_ref)
+            str_ref = str(node.ref)
             new_profile_build_requires = OrderedDict()
             profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
@@ -239,7 +241,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
         if build_mode is None:
             return graph
-        binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
+        binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 

@@ -267,16 +267,15 @@ class Pkg(ConanFile):
                              "os=Windows",
                              conan_info.settings.dumps())
             self.assertEqual("language=%s\nstatic=True" % lang, conan_info.options.dumps())
-            conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+            ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-            hello0 = self.client.client_cache.package(PackageReference(conan_ref, id0))
+            hello0 = self.client.cache.package(PackageReference(ref, id0))
             hello0_info = os.path.join(hello0, CONANINFO)
             hello0_conan_info = ConanInfo.load_file(hello0_info)
             self.assertEqual(lang, hello0_conan_info.options.language)
 
-            package_ref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                                            id1)
-            hello1 = self.client.client_cache.package(package_ref1)
+            pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"), id1)
+            hello1 = self.client.cache.package(pref1)
             hello1_info = os.path.join(hello1, CONANINFO)
             hello1_conan_info = ConanInfo.load_file(hello1_info)
             self.assertEqual(lang, hello1_conan_info.options.language)
@@ -291,17 +290,18 @@ class Pkg(ConanFile):
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())
-        conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-        hello0 = self.client.client_cache.package(
-            PackageReference(conan_ref, "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+        hello0 = self.client.cache.package(PackageReference(ref,
+                                           "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual(1, hello0_conan_info.options.language)
 
-        package_ref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                                        "44671ecdd9c606eb7166f2197ab50be8d36a3c3b")
-        hello1 = self.client.client_cache.package(package_ref1)
+        pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
+                                 "44671ecdd9c606eb7166f2197ab50be8d36a3c3b")
+        hello1 = self.client.cache.package(pref1)
         hello1_info = os.path.join(hello1, CONANINFO)
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual(0, hello1_conan_info.options.language)
@@ -318,17 +318,17 @@ class Pkg(ConanFile):
         conan_info = ConanInfo.load_file(info_path)
 
         self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
-        conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        hello0 = self.client.cache.package(PackageReference(ref,
+                                           "2e38bbc2c3ef1425197c8e2ffa8532894c347d26"))
 
-        hello0 = self.client.client_cache.package(
-            PackageReference(conan_ref, "2e38bbc2c3ef1425197c8e2ffa8532894c347d26"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual("language=0\nstatic=True", hello0_conan_info.options.dumps())
 
-        package_ref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                                        "3eeab577a3134fa3afdcd82881751789ec48e08f")
-        hello1 = self.client.client_cache.package(package_ref1)
+        pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
+                                 "3eeab577a3134fa3afdcd82881751789ec48e08f")
+        hello1 = self.client.cache.package(pref1)
         hello1_info = os.path.join(hello1, CONANINFO)
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual("language=1\nstatic=True", hello1_conan_info.options.dumps())
@@ -352,17 +352,16 @@ class Pkg(ConanFile):
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
-        conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-
-        hello0 = self.client.client_cache.package(
-            PackageReference(conan_ref, "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        hello0 = self.client.cache.package(PackageReference(ref,
+                                           "8b964e421a5b7e48b7bc19b94782672be126be8b"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual(1, hello0_conan_info.options.language)
 
-        package_ref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                                        "44671ecdd9c606eb7166f2197ab50be8d36a3c3b")
-        hello1 = self.client.client_cache.package(package_ref1)
+        pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
+                                 "44671ecdd9c606eb7166f2197ab50be8d36a3c3b")
+        hello1 = self.client.cache.package(pref1)
         hello1_info = os.path.join(hello1, CONANINFO)
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual(0, hello1_conan_info.options.language)
@@ -516,8 +515,8 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("export . Hello/0.1@lasote/stable")
         client.run("remote add_ref Hello/0.1@lasote/stable default")
-        conan_reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        rmdir(os.path.join(client.client_cache.conan(conan_reference)))
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        rmdir(os.path.join(client.cache.conan(ref)))
 
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Hello/0.1@lasote/stable was not found in remote 'default'",

@@ -25,7 +25,7 @@ class InspectCommandTest(unittest.TestCase):
 
     def setUp(self):
         self.ref_parent = ConanFileReference.loads("parent/version@user/name")
-        self.reference = ConanFileReference.loads('lib/version@user/name')
+        self.ref = ConanFileReference.loads('lib/version@user/name')
 
         self.t = TestClient()
         self.t.save(files={'conanfile.py': self.conanfile})
@@ -35,18 +35,18 @@ class InspectCommandTest(unittest.TestCase):
                            self.conanfile_base.format(
                                body='requires = "{}"'.format(self.ref_parent)),
                            CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
-        self.t.run('link . {}'.format(self.reference))
-        self.assertTrue(self.t.client_cache.installed_as_editable(self.reference))
+        self.t.run('link . {}'.format(self.ref))
+        self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.reference))
-        self.assertFalse(self.t.client_cache.installed_as_editable(self.reference))
-        self.assertFalse(os.listdir(self.t.client_cache.conan(self.reference)))
+        self.t.run('link {} --remove'.format(self.ref))
+        self.assertFalse(self.t.cache.installed_as_editable(self.ref))
+        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
     def test_reference(self):
-        self.t.run('inspect {}'.format(self.reference))
+        self.t.run('inspect {}'.format(self.ref))
         self.assertIn("url: None", self.t.out)
 
         self.t.save(files={'conanfile.py': self.conanfile_base.format(body='url ="hh"')})
-        self.t.run('inspect {}'.format(self.reference))
+        self.t.run('inspect {}'.format(self.ref))
         self.assertIn('url: hh', self.t.out)

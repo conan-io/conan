@@ -156,13 +156,21 @@ class RestCommonMethods(object):
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)
 
-        result = json.loads(decode_text(response.content))
+        content = decode_text(response.content)
+        content_type = response.headers.get("Content-Type")
+        if content_type != 'application/json':
+            raise ConanException("%s\n\nResponse from remote is not json, but '%s'"
+                                 % (content, content_type))
+
+        try:  # This can fail, if some proxy returns 200 and an html message
+            result = json.loads(content)
+        except Exception:
+            raise ConanException("Remote responded with broken json: %s" % content)
         if not isinstance(result, dict):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy,
-                      remote_manifest):
+    def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
         """
         the_files: dict with relative_path: content
         """
@@ -173,16 +181,16 @@ class RestCommonMethods(object):
                                                 UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
             # Check if the latest revision is not the one we are uploading, with the compatibility
             # mode this is supposed to fail if someone tries to upload a different recipe
-            latest_ref = conan_reference.copy_clear_rev()
+            latest_ref = ref.copy_clear_rev()
             latest_snapshot, ref_latest_snapshot, _ = self._get_recipe_snapshot(latest_ref)
             server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \
-                    ref_latest_snapshot.revision != conan_reference.revision:
+                    ref_latest_snapshot.revision != ref.revision:
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbidden overwrite")
 
         # Get the remote snapshot
-        remote_snapshot, ref_snapshot, rev_time = self._get_recipe_snapshot(conan_reference)
+        remote_snapshot, ref_snapshot, rev_time = self._get_recipe_snapshot(ref)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
@@ -200,13 +208,13 @@ class RestCommonMethods(object):
         deleted = set(remote_snapshot).difference(the_files)
 
         if files_to_upload:
-            self._upload_recipe(conan_reference, files_to_upload, retry, retry_wait)
+            self._upload_recipe(ref, files_to_upload, retry, retry_wait)
         if deleted:
-            self._remove_conanfile_files(conan_reference, deleted)
+            self._remove_conanfile_files(ref, deleted)
 
         return (files_to_upload or deleted), rev_time
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
+    def upload_package(self, pref, the_files, retry, retry_wait, policy):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -217,16 +225,16 @@ class RestCommonMethods(object):
         if not revisions_enabled and policy == UPLOAD_POLICY_NO_OVERWRITE:
             # Check if the latest revision is not the one we are uploading, with the compatibility
             # mode this is supposed to fail if someone tries to upload a different recipe
-            latest_pref = PackageReference(package_reference.conan, package_reference.package_id)
+            latest_pref = PackageReference(pref.ref, pref.id)
             latest_snapshot, ref_latest_snapshot, _ = self._get_package_snapshot(latest_pref)
             server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \
-                    ref_latest_snapshot.revision != package_reference.revision:
+                    ref_latest_snapshot.revision != pref.revision:
                 raise ConanException("Local package is different from the remote package. "
                                      "Forbidden overwrite")
         t1 = time.time()
         # Get the remote snapshot
-        pref = package_reference
+        pref = pref
         remote_snapshot, pref_snapshot, rev_time = self._get_package_snapshot(pref)
 
         if remote_snapshot:
@@ -243,14 +251,14 @@ class RestCommonMethods(object):
         files_to_upload = the_files
         deleted = set(remote_snapshot).difference(the_files)
         if files_to_upload:
-            self._upload_package(package_reference, files_to_upload, retry, retry_wait)
+            self._upload_package(pref, files_to_upload, retry, retry_wait)
         if deleted:
             raise Exception("This shouldn't be happening, deleted files "
                             "in local package present in remote: %s.\n Please, report it at "
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
         logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
-        return files_to_upload or deleted, package_reference, rev_time
+        return files_to_upload or deleted, pref, rev_time
 
     def search(self, pattern=None, ignorecase=True):
         """
@@ -258,7 +266,7 @@ class RestCommonMethods(object):
         """
         url = self.search_router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        return [ConanFileReference.loads(ref) for ref in response]
+        return [ConanFileReference.loads(reference) for reference in response]
 
     def search_packages(self, reference, query):
 
@@ -283,10 +291,10 @@ class RestCommonMethods(object):
             return filter_packages(query, package_infos)
 
     @handle_return_deserializer()
-    def remove_conanfile(self, conan_reference):
+    def remove_conanfile(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
-        url = self.conans_router.remove_recipe(conan_reference)
+        url = self.conans_router.remove_recipe(ref)
         logger.debug("REST: remove: %s" % url)
         response = self.requester.delete(url,
                                          auth=self.auth,

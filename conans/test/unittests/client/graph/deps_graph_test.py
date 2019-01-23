@@ -13,13 +13,13 @@ class DepsGraphTest(unittest.TestCase):
         so they can be repeated if necessary in the graph (common
         static libraries)
         """
-        conan_ref1 = ConanFileReference.loads("Hello/0.1@user/stable")
-        conan_ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
+        ref1 = ConanFileReference.loads("Hello/0.1@user/stable")
+        ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
 
         conanfile1 = ConanFile(TestBufferConanOutput(), None)
         conanfile2 = ConanFile(TestBufferConanOutput(), None)
-        n1 = Node(conan_ref1, conanfile1)
-        n2 = Node(conan_ref2, conanfile2)
+        n1 = Node(ref1, conanfile1)
+        n2 = Node(ref2, conanfile2)
 
         self.assertNotEqual(n1, n2)
 
