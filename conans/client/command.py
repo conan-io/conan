@@ -256,8 +256,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.create.__doc__, prog="conan create")
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
-                            help='user/channel or pkg/version@user/channel (if name and version not'
-                                 ' declared in conanfile.py) where the package will be created')
+                            help='user/channel, version@user/channel or pkg/version@user/channel '
+                            '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
@@ -346,6 +346,10 @@ class Command(object):
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("reference", nargs="?",
+                            help='Reference for the conanfile path of the first argument: '
+                            'user/channel, version@user/channel or pkg/version@user/channel'
+                            '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
@@ -370,7 +374,9 @@ class Command(object):
             try:
                 ref = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
+                name, version, user, channel = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
+                                           name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
                                            env=args.env,
                                            remote_name=args.remote,
@@ -381,6 +387,10 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
             else:
+                if args.reference:
+                    raise ConanException("A full reference was provided as first argument, second "
+                                         "argument not allowed")
+
                 info = self._conan.install_reference(ref, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,
