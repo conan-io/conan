@@ -120,10 +120,10 @@ class RangeResolver(object):
 
         if update:
             resolved_ref = (self._resolve_remote(search_ref, version_range, remote_name) or
-                        self._resolve_local(search_ref, version_range))
+                            self._resolve_local(search_ref, version_range))
         else:
             resolved_ref = (self._resolve_local(search_ref, version_range) or
-                        self._resolve_remote(search_ref, version_range, remote_name))
+                            self._resolve_remote(search_ref, version_range, remote_name))
 
         if resolved_ref:
             self._result.append("Version range '%s' required by '%s' resolved to '%s'"

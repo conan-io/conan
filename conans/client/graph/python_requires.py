@@ -18,6 +18,9 @@ class ConanPythonRequire(object):
         self._requires = None
         self.valid = True
 
+    def invalidate_caches(self):
+        self._cached_requires = {}
+
     @contextmanager
     def capture_requires(self):
         old_requires = self._requires
