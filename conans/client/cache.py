@@ -16,7 +16,7 @@ from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
 from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
-from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
 CONAN_CONF = 'conan.conf'
@@ -265,12 +265,10 @@ class ClientCache(SimplePaths):
             raise ValueError("%s does not exist" % repr(reference))
         if not os.path.exists(system_reqs_folder):
             return
-        if not os.access(system_reqs_folder, os.W_OK):
-            raise OSError("Permission denied")
         try:
-            shutil.rmtree(system_reqs_folder)
-        except OSError:
-            raise ConanException("Folder busy (open or some file open): %s" % system_reqs_folder)
+            rmdir(system_reqs_folder)
+        except Exception as e:
+            raise ConanException("Unable to remove system requirements at %s: %s" % (system_reqs_folder, str(e)))
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)
