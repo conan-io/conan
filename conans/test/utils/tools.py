@@ -673,11 +673,15 @@ class TurboTestClient(TestClient):
 
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
+    def export(self, ref, conanfile=None, args=None):
+        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        self.save({"conanfile.py": conanfile})
+        self.run("export . {} {}".format(ref.full_repr(), args or ""))
+        rrev, _ = self.cache.package_layout(ref).recipe_revision()
+        return ref.copy_with_rev(rrev)
+
     def create(self, ref, conanfile=None, args=None):
-        if conanfile:
-            conanfile = str(conanfile)
-        else:
-            conanfile = str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
         self.run("create . {} {} --json {}".format(ref.full_repr(),
                                                    args or "", self.tmp_json_name))

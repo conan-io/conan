@@ -9,8 +9,8 @@ from conans.util.log import logger
 
 
 class DiskRemover(object):
-    def __init__(self, paths):
-        self._paths = paths
+    def __init__(self, cache):
+        self._cache = cache
 
     def _remove(self, path, ref, msg=""):
         try:
@@ -31,9 +31,9 @@ class DiskRemover(object):
 
     def remove_recipe(self, ref):
         self.remove_src(ref)
-        self._remove(self._paths.export(ref), ref, "export folder")
-        self._remove(self._paths.export_sources(ref), ref, "export_source folder")
-        for f in self._paths.conanfile_lock_files(ref):
+        self._remove(self._cache.export(ref), ref, "export folder")
+        self._remove(self._cache.export_sources(ref), ref, "export_source folder")
+        for f in self._cache.conanfile_lock_files(ref):
             try:
                 os.remove(f)
             except OSError:
@@ -43,38 +43,40 @@ class DiskRemover(object):
         self.remove_recipe(ref)
         self.remove_builds(ref)
         self.remove_packages(ref)
-        self._remove(self._paths.conan(ref), ref)
+        self._remove(self._cache.conan(ref), ref)
 
     def remove_src(self, ref):
-        self._remove(self._paths.source(ref), ref, "src folder")
+        self._remove(self._cache.source(ref), ref, "src folder")
 
     def remove_builds(self, ref, ids=None):
         if not ids:
-            path = self._paths.builds(ref)
-            for build in self._paths.conan_builds(ref):
+            path = self._cache.builds(ref)
+            for build in self._cache.conan_builds(ref):
                 self._remove(os.path.join(path, build), ref, "build folder:%s" % build)
             self._remove(path, ref, "builds")
         else:
             for id_ in ids:
                 # Removal build IDs should be those of the build_id if present
-                pkg_path = self._paths.build(PackageReference(ref, id_))
+                pkg_path = self._cache.build(PackageReference(ref, id_))
                 self._remove(pkg_path, ref, "package:%s" % id_)
 
     def remove_packages(self, ref, ids_filter=None):
         if not ids_filter:  # Remove all
-            path = self._paths.packages(ref)
+            path = self._cache.packages(ref)
             # Necessary for short_paths removal
-            for package in self._paths.conan_packages(ref):
+            for package in self._cache.conan_packages(ref):
                 self._remove(os.path.join(path, package), ref, "package folder:%s" % package)
             self._remove(path, ref, "packages")
-            self._remove_file(self._paths.system_reqs(ref), ref, SYSTEM_REQS)
+            self._remove_file(self._cache.system_reqs(ref), ref, SYSTEM_REQS)
         else:
             for id_ in ids_filter:  # remove just the specified packages
                 pref = PackageReference(ref, id_)
-                pkg_folder = self._paths.package(pref)
+                if not self._cache.package_layout(ref).package_exists(pref):
+                    raise ConanException("The package doesn't exist: %s" % pref.full_repr())
+                pkg_folder = self._cache.package(pref)
                 self._remove(pkg_folder, ref, "package:%s" % id_)
                 self._remove_file(pkg_folder + ".dirty", ref, "dirty flag")
-                self._remove_file(self._paths.system_reqs_package(pref), ref,
+                self._remove_file(self._cache.system_reqs_package(pref), ref,
                                   "%s/%s" % (id_, SYSTEM_REQS))
 
 
@@ -155,7 +157,13 @@ class ConanRemover(object):
             remote = self._registry.remotes.get(remote_name)
             refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            refs = search_recipes(self._cache, pattern)
+            if input_ref:
+                refs = []
+                if self._cache.package_layout(input_ref).recipe_exists():
+                    refs.append(input_ref)
+            else:
+                refs = search_recipes(self._cache, pattern)
+
         if not refs:
             if input_ref:
                 self._user_io.out.warn("No recipe found '%s'" % str(pattern))

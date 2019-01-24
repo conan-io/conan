@@ -974,6 +974,26 @@ class HelloConan(ConanFile):
 
 @unittest.skipUnless(os.getenv("TESTING_REVISIONS_ENABLED"),
                      "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
+class RevisionsInLocalCacheTest(unittest.TestCase):
+
+    def setUp(self):
+        self.c_v2 = TurboTestClient(revisions_enabled=True)
+        self.c_v1 = TurboTestClient(revisions_enabled=False)
+        self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
+
+    @parameterized.expand([(True,), (False,)])
+    def test_create_metadata(self, v1):
+        """When a create is executed, the recipe & package revision are updated in the cache"""
+        pass
+
+    @parameterized.expand([(True,), (False,)])
+    def test_export_metadata(self, v1):
+        """When a export is executed, the recipe revision is updated in the cache"""
+        pass
+
+
+@unittest.skipUnless(os.getenv("TESTING_REVISIONS_ENABLED"),
+                     "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class RemoveWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -987,16 +1007,64 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         """Locally:
             When I remove a recipe without RREV, everything is removed.
             When I remove a recipe with RREV only if the local revision matches is removed"""
-        pass
+        client = self.c_v1 if v1 else self.c_v2
+
+        # If I remove the ref, the revision is gone, of course
+        ref1 = client.export(self.ref)
+        client.run("remove {} -f".format(ref1.copy_clear_rev().full_repr()))
+        self.assertFalse(client.recipe_exists(self.ref))
+
+        # If I remove a ref with a wrong revision, the revision is not removed
+        ref1 = client.export(self.ref)
+        client.run("remove {} -f".format(ref1.copy_with_rev("fakerev").full_repr()))
+        self.assertTrue(client.recipe_exists(self.ref))
+        self.assertIn("No recipe found 'lib/1.0@conan/testing#fakerev'", client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_remove_local_package(self, v1):
         """Locally:
-            When I remove a package without RREV, the package is removed.
-            When I remove a package with RREV only if the local revision matches is removed
+            When I remove a recipe without RREV, the package is removed.
+            When I remove a recipe with RREV only if the local revision matches is removed
             When I remove a package with PREV and not RREV it raises an error
             When I remove a package with RREV and PREV only when both matches is removed"""
-        pass
+        client = self.c_v1 if v1 else self.c_v2
+
+        # If I remove the ref without RREV, the packages are also removed
+        pref1 = client.create(self.ref)
+        client.run("remove {} -f".format(pref1.ref.copy_clear_rev().full_repr()))
+        self.assertFalse(client.package_exists(pref1))
+
+        # If I remove the ref with fake RREV, the packages are not removed
+        pref1 = client.create(self.ref)
+        client.run("remove {} -f".format(pref1.ref.copy_with_rev("fakerev").full_repr()))
+        self.assertTrue(client.package_exists(pref1))
+        self.assertIn("No recipe found 'lib/1.0@conan/testing#fakerev'", client.out)
+
+        # If I remove the ref with valid RREV, the packages are removed
+        pref1 = client.create(self.ref)
+        client.run("remove {} -f".format(pref1.ref.full_repr()))
+        self.assertFalse(client.package_exists(pref1))
+
+        # If I remove the ref without RREV but specifying PREV it raises
+        pref1 = client.create(self.ref)
+        command = "remove {} -f -p {}#{}".format(pref1.ref.copy_clear_rev().full_repr(),
+                                                 pref1.id, pref1.revision)
+        client.run(command, assert_error=True)
+        self.assertTrue(client.package_exists(pref1))
+        self.assertIn("Specify a recipe revision if you specify a package revision", client.out)
+
+        # A wrong PREV doesn't remove the PREV
+        pref1 = client.create(self.ref)
+        command = "remove {} -f -p {}#fakeprev".format(pref1.ref.full_repr(), pref1.id)
+        client.run(command, assert_error=True)
+        self.assertTrue(client.package_exists(pref1))
+        self.assertIn("The package doesn't exist", client.out)
+
+        # Everything correct, removes the unique local package revision
+        pref1 = client.create(self.ref)
+        command = "remove {} -f -p {}#{}".format(pref1.ref.full_repr(), pref1.id, pref1.revision)
+        client.run(command)
+        self.assertFalse(client.package_exists(pref1))
 
     @parameterized.expand([(True, ), (False, )])
     def test_remove_remote_recipe(self, v1):
