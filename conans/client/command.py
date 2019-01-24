@@ -11,7 +11,6 @@ from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import (Conan, default_manifest_folder)
-from conans.client.conan_api import _get_conanfile_path
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -1342,6 +1341,10 @@ class Command(object):
         parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
         parser.add_argument("--remove", action='store_true', default=False,
                             help='Remove linked reference (target not required)')
+        parser.add_argument("-l", "--layout",
+                            help='Relative or absolute path to a file containing the layout.'
+                            ' Relative paths will be resolved first relative to current dir, '
+                            'then to local cache "layouts" folder')
 
         args = parser.parse_args(*args)
         self._warn_python2()
@@ -1354,7 +1357,7 @@ class Command(object):
             raise ConanException("Argument 'target' is required to link a reference")
 
         if not args.remove:
-            self._conan.link(args.target, args.reference, cwd=os.getcwd())
+            self._conan.link(args.target, args.reference, args.layout, cwd=os.getcwd())
             self._outputer.writeln("Reference '{}' linked to directory "
                                    "'{}'".format(args.reference, os.path.dirname(args.target)))
         else:

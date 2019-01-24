@@ -5,6 +5,7 @@ from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
+from conans.client.editable import EditablePackages
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
@@ -14,10 +15,13 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS
-from conans.paths.simple_paths import SimplePaths
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
+from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
+from conans.paths.simple_paths import SimplePaths, check_ref_case
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -26,9 +30,7 @@ REGISTRY = "registry.txt"
 REGISTRY_JSON = "registry.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
-LAYOUTS_FOLDER = 'layouts'
 
-DEFAULT_LAYOUT_FILE = "default"
 
 # Client certificates
 CLIENT_CERT = "client.crt"
@@ -54,6 +56,20 @@ class ClientCache(SimplePaths):
         self._registry = None
 
         super(ClientCache, self).__init__(self._store_folder)
+        self.editable_packages = EditablePackages(self.conan_folder)
+
+    def package_layout(self, ref, short_paths=False):
+        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
+        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        if edited_ref:
+            base_path = edited_ref["path"]
+            layout_file = edited_ref["layout"]
+            return PackageEditableLayout(base_path, layout_file, ref)
+        else:
+            check_ref_case(ref, self.store)
+            base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
+            return PackageCacheLayout(base_folder=base_folder,
+                                      ref=ref, short_paths=short_paths)
 
     @property
     def registry(self):
@@ -162,10 +178,6 @@ class ClientCache(SimplePaths):
                         self.conan_config.default_profile)
 
     @property
-    def default_editable_path(self):
-        return os.path.join(self.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
-
-    @property
     def hooks_path(self):
         """
         :return: Hooks folder in client cache
@@ -272,17 +284,6 @@ class ClientCache(SimplePaths):
     def invalidate(self):
         self._conan_config = None
         self._no_lock = None
-
-    def install_as_editable(self, ref, target_path):
-        linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
-        save(linked_folder_sentinel, content=target_path)
-
-    def remove_editable(self, ref):
-        if self.installed_as_editable(ref):
-            linked_folder_sentinel = self._build_path_to_linked_folder_sentinel(ref)
-            os.remove(linked_folder_sentinel)
-            return True
-        return False
 
 
 def _mix_settings_with_env(settings):

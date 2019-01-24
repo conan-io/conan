@@ -3,7 +3,6 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient
 
 
@@ -22,10 +21,17 @@ class CreateEditablePackageTest(unittest.TestCase):
         src/include
         """)
 
+    def test_link_wrong_layout(self):
+        ref = ConanFileReference.loads('lib/version@user/name')
+        t = TestClient()
+        t.save(files={'conanfile.py': self.conanfile, "mylayout": ""})
+        t.run('link . {} --layout=missing'.format(ref), assert_error=True)
+        self.assertIn("ERROR: Couldn't find layout file: missing", t.out)
+
     def test_install_ok(self):
         ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile, CONAN_PACKAGE_LAYOUT_FILE: ""})
+        t.save(files={'conanfile.py': self.conanfile})
         t.run('link . {}'.format(ref))
         self.assertIn("Reference 'lib/version@user/name' linked to directory '", t.out)
 
