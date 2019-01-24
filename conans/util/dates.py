@@ -20,5 +20,4 @@ def valid_iso8601(the_date):
             r'(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-]' \
             r'(?:2[0-3]|[01][0-9]):' \
             r'[0-5][0-9])?$'
-    match_iso8601 = re.compile(regex).match
-    return match_iso8601(the_date) is not None
+    return re.match(regex, the_date)

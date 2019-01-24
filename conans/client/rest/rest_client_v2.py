@@ -252,17 +252,9 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_revisions(self, ref):
         url = self.conans_router.recipe_revisions(ref)
         data = self.get_json(url)
-        return self._format_dates_in_revision_list(data)
+        return data
 
     def get_package_revisions(self, pref):
         url = self.conans_router.package_revisions(pref)
         data = self.get_json(url)
-        return self._format_dates_in_revision_list(data)
-
-    @staticmethod
-    def _format_dates_in_revision_list(data):
-        ret = {"reference": data["reference"],
-               "revisions": [{"revision": r["revision"],
-                              "time": r["time"]}
-                             for r in data["revisions"]]}
-        return ret
+        return data

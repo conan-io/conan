@@ -198,7 +198,7 @@ class RestCommonMethods(object):
         if deleted:
             self._remove_conanfile_files(ref, deleted)
 
-        return files_to_upload or deleted
+        return bool(files_to_upload or deleted)
 
     def upload_package(self, pref, the_files, retry, retry_wait, policy):
         """
