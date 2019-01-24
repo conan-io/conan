@@ -547,6 +547,9 @@ class ToolsTest(unittest.TestCase):
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(output=output), 34)
+        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
+            with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
+                tools.cpu_count(output=output)
 
     def get_env_unit_test(self):
         """
