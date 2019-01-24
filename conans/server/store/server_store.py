@@ -321,7 +321,7 @@ class ServerStore(SimplePaths):
     def get_package_revision_time(self, pref):
         try:
             rev_list = self._load_package_revision_list(pref)
-        except FileNotFoundError:
+        except (IOError, OSError):
             return None
 
         return rev_list.get_time(pref.revision)

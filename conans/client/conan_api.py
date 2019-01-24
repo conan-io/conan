@@ -56,6 +56,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.model.editable_cpp_info import get_editable_abs_path
 
 default_manifest_folder = '.conan_manifests'
 
@@ -968,12 +969,12 @@ class ConanAPIV1(object):
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_package_revisions(pref, remote=remote)
 
-    @api_method
-    def link(self, target_path, target_reference, cwd):
+    def link(self, path, reference, layout, cwd):
         # Retrieve conanfile.py from target_path
-        target_path = _get_conanfile_path(path=target_path, cwd=cwd, py=True)
+        target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
-        ref = ConanFileReference.loads(target_reference, validate=True)
+        # Check the conanfile is there, and name/version matches
+        ref = ConanFileReference.loads(reference, validate=True)
         target_conanfile = self._graph_manager._loader.load_class(target_path)
         if (target_conanfile.name and target_conanfile.name != ref.name) or \
                 (target_conanfile.version and target_conanfile.version != ref.version):
@@ -981,12 +982,15 @@ class ConanAPIV1(object):
                                  "conanfile.py ({}/{}) must match".
                                  format(ref, target_conanfile.name, target_conanfile.version))
 
-        self._cache.install_as_editable(ref, os.path.dirname(target_path))
+        layout_abs_path = get_editable_abs_path(layout, cwd, self._cache.conan_folder)
+        if layout_abs_path:
+            self._user_io.out.success("Using layout file: %s" % layout_abs_path)
+        self._cache.editable_packages.link(ref, os.path.dirname(target_path), layout_abs_path)
 
     @api_method
     def unlink(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
-        return self._cache.remove_editable(ref)
+        return self._cache.editable_packages.remove(ref)
 
 
 Conan = ConanAPIV1

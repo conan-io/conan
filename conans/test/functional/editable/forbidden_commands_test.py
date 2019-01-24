@@ -4,8 +4,28 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient, TestServer
+
+
+class ForbiddenRemoveTest(unittest.TestCase):
+
+    def test_remove(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class APck(ConanFile):
+                pass
+            """)
+        ref = ConanFileReference.loads('lib/version@user/name')
+        t = TestClient()
+        t.save(files={'conanfile.py': conanfile,
+                      "mylayout": "", })
+        t.run("export . lib/version@user/name")
+        t.run('link . {}'.format(ref))
+        self.assertTrue(t.cache.installed_as_editable(ref))
+        t.run('remove {} --force'.format(ref), assert_error=True)
+        self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
+                      "using command 'conan link lib/version@user/name --remove'", t.out)
 
 
 class ForbiddenCommandsTest(unittest.TestCase):
@@ -23,7 +43,7 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self.t.save(files={'conanfile.py': self.conanfile,
-                           CONAN_PACKAGE_LAYOUT_FILE: "", })
+                           "mylayout": "", })
         self.t.run('link . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
@@ -50,8 +70,3 @@ class ForbiddenCommandsTest(unittest.TestCase):
     def test_copy(self):
         self.t.run('copy --force {} ouser/ochannel'.format(self.ref), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
-    def test_remove(self):
-        self.t.run('remove {} --force'.format(self.ref), assert_error=True)
-        self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
-                      "using command 'conan link lib/version@user/name --remove'", self.t.out)
