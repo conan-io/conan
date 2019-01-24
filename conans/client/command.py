@@ -263,7 +263,8 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. Implies --keep-source. '
+                            help='Do not remove the build folder in local cache. '
+                                 'Implies --keep-source. '
                                  'Use this for testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
@@ -424,7 +425,8 @@ class Command(object):
         rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
-        install_subparser.add_argument("item", nargs="?", help="Configuration file or directory to use")
+        install_subparser.add_argument("item", nargs="?",
+                                       help="Configuration file or directory to use")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')

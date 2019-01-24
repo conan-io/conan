@@ -5,10 +5,10 @@ from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.editable import EditablePackages
+from conans.client.cache.editable import EditablePackages
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
+from conans.client.cache.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
     RemoteRegistry
 from conans.errors import ConanException
 from conans.model.profile import Profile

@@ -8,7 +8,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException
 from conans.model.manifest import gather_files

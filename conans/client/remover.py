@@ -1,6 +1,6 @@
 import os
 
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir

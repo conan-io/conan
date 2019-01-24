@@ -8,7 +8,7 @@ from mock import patch
 from conans.client import tools
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.client.rest.uploader_downloader import Downloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle

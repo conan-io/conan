@@ -1,7 +1,7 @@
 import os
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
