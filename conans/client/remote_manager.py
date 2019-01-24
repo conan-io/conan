@@ -322,6 +322,11 @@ class RemoteManager(object):
         return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
     def get_path(self, ref, package_id, path, remote):
+        if package_id and self._cache.revisions_enabled and not ref.revision:
+            # With revisions we resolve to latest to get the file, otherwise we can't
+            # FIXME: Dedicated endpoint to resolve the latest ref?
+            _, ref, _ = self._call_remote(remote, "get_recipe_snapshot", ref)
+
         return self._call_remote(remote, "get_path", ref, package_id, path)
 
     def authenticate(self, remote, name, password):

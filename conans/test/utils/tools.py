@@ -1,4 +1,5 @@
 import errno
+import json
 import os
 import random
 import shlex
@@ -8,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 import threading
+from textwrap import dedent
+
 import time
 import unittest
 import uuid
@@ -38,6 +41,7 @@ from conans.client.tools.files import replace_in_file
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
+from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
@@ -240,7 +244,7 @@ class TestServer(object):
         if write_permissions is None:
             write_permissions = []
         if users is None:
-            users = {"lasote": "mypass"}
+            users = {"lasote": "mypass", "conan": "password"}
 
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
@@ -260,6 +264,20 @@ class TestServer(object):
 
     def __str__(self):
         return self.fake_url
+
+    def recipe_exists(self, ref):
+        try:
+            path = self.test_server.server_store.conan(ref)
+            return self.test_server.server_store.path_exists(path)
+        except NotFoundException:  # When resolves the latest and there is no package
+            return False
+
+    def package_exists(self, pref):
+        try:
+            path = self.test_server.server_store.package(pref)
+            return self.test_server.server_store.path_exists(path)
+        except NotFoundException:  # When resolves the latest and there is no package
+            return False
 
 
 class TestBufferConanOutput(ConanOutput):
@@ -443,8 +461,9 @@ class TestClient(object):
         """
 
         self.all_output = ""  # For debugging purpose, append all the run outputs
-        self.users = users or {"default":
-                               [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
+        self.users = users
+        if self.users is None:
+            self.users =  {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
 
@@ -641,6 +660,166 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+
+class TurboTestClient(TestClient):
+
+    tmp_json_name = ".tmp_json"
+
+    def __init__(self, *args, **kwargs):
+        if "users" not in kwargs:
+            from collections import defaultdict
+            kwargs["users"] = defaultdict(lambda: [("conan", "password")])
+
+        super(TurboTestClient, self).__init__(*args, **kwargs)
+
+    def create(self, ref, conanfile=None, args=None):
+        if conanfile:
+            conanfile = str(conanfile)
+        else:
+            conanfile = str(GenConanfile())
+        self.save({"conanfile.py": conanfile})
+        self.run("create . {} {} --json {}".format(ref.full_repr(),
+                                                   args or "", self.tmp_json_name))
+        rrev, _ = self.cache.package_layout(ref).recipe_revision()
+        json_path = os.path.join(self.current_folder, self.tmp_json_name)
+        data = json.loads(load(json_path))
+        package_id = data["installed"][0]["packages"][0]["id"]
+        package_ref = PackageReference(ref, package_id)
+        prev, _ = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        return package_ref.copy_with_revs(rrev, prev)
+
+    def upload_all(self, ref, remote=None, args=None):
+        remote = remote or list(self.servers.keys())[0]
+        self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""))
+        remote_rrev = self.servers[remote].server_store.get_last_revision(ref).revision
+        return ref.copy_with_rev(remote_rrev)
+
+    def recipe_exists(self, ref):
+        return self.cache.package_layout(ref).recipe_exists()
+
+    def package_exists(self, pref):
+        return self.cache.package_layout(pref.ref).package_exists(pref)
+
+
+class GenConanfile(object):
+    """
+    USAGE:
+
+    x = GenConanfile().with_import("import os").\
+        with_setting("os").\
+        with_option("shared", [True, False]).\
+        with_default_option("shared", True).\
+        with_build_msg("holaaa").\
+        with_build_msg("adiooos").\
+        with_package_file("file.txt", "hola"). \
+        with_package_file("file2.txt", "hola").gen()
+    """
+
+    def __init__(self):
+        self._imports = ["from conans import ConanFile"]
+        self._settings = []
+        self._options = {}
+        self._default_options = {}
+        self._package_files = {}
+        self._package_files_env = {}
+        self._build_messages = []
+
+    def with_import(self, i):
+        if i not in self._imports:
+            self._imports.append(i)
+        return self
+
+    def with_setting(self, setting):
+        self._settings.append(setting)
+        return self
+
+    def with_option(self, option_name, values):
+        self._options[option_name] = values
+        return self
+
+    def with_default_option(self, option_name, value):
+        self._default_options[option_name] = value
+        return self
+
+    def with_package_file(self, file_name, contents=None, env_var=None):
+        if not contents and not env_var:
+            raise Exception("Specify contents or env_var")
+        self.with_import("from conans import tools")
+        if contents:
+            self._package_files[file_name] = contents
+        if env_var:
+            self.with_import("import os")
+            self._package_files_env[file_name] = env_var
+        return self
+
+    def with_build_msg(self, msg):
+        self._build_messages.append(msg)
+        return self
+
+    @property
+    def _settings_line(self):
+        if not self._settings:
+            return ""
+        line = ", ".join('"%s"' % s for s in self._settings)
+        return "settings = {}".format(line)
+
+    @property
+    def _options_line(self):
+        if not self._options:
+            return ""
+        line = ", ".join('"%s": %s' % (k, v) for k,v in self._options.items())
+        tmp = "options = {%s}" % line
+        if self._default_options:
+            line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
+            tmp += "\n    default_options = {%s}" % line
+        return tmp
+
+    @property
+    def _package_method(self):
+        lines = []
+        if self._package_files:
+            lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
+                     ''.format(key, value)
+                     for key, value in self._package_files.items()]
+
+        if self._package_files_env:
+            lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
+                          'os.getenv("{}"))'.format(key, value)
+                          for key, value in self._package_files_env.items()])
+
+        if not lines:
+            return ""
+        return """
+    def package(self):
+{}
+    """.format("\n".join(lines))
+
+    @property
+    def _build_method(self):
+        if not self._build_messages:
+            return ""
+        lines = ['        self.output.warn("{}")'.format(m) for m in self._build_messages]
+        return """
+    def build(self):
+{}
+    """.format("\n".join(lines))
+
+    def __repr__(self):
+        ret = []
+        ret.extend(self._imports)
+        ret.append("class HelloConan(ConanFile):")
+        if self._settings_line:
+            ret.append("    {}".format(self._settings_line))
+        if self._options_line:
+            ret.append("    {}".format(self._options_line))
+        if self._build_method:
+            ret.append("    {}".format(self._build_method))
+        if self._package_method:
+            ret.append("    {}".format(self._package_method))
+        if len(ret) == 2:
+            ret.append("    pass")
+        return "\n".join(ret)
 
 
 class StoppableThreadBottle(threading.Thread):

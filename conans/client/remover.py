@@ -141,11 +141,17 @@ class ConanRemover(object):
             raise ConanException("query parameter only allowed with a valid recipe "
                                  "reference as the search pattern.")
 
-        if self._cache.revisions_enabled and package_ids_filter and \
-                (not input_ref or input_ref.revision is None):
-            raise ConanException("To remove a binary package specify a recipe revision")
+        if input_ref and package_ids_filter and not input_ref.revision:
+            for package_id in package_ids_filter:
+                if "#" in package_id:
+                    raise ConanException("Specify a recipe revision if you specify a package "
+                                         "revision")
 
         if remote_name:
+            if not self._cache.revisions_enabled and input_ref and input_ref.revision:
+                raise ConanException("Revisions not enabled in the client, cannot remove "
+                                     "revisions in the server")
+
             remote = self._registry.remotes.get(remote_name)
             refs = self._remote_manager.search_recipes(remote, pattern)
         else:

@@ -30,5 +30,5 @@ class SearchControllerV2(Controller):
             query = request.params.get("q", None)
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
             ref = ConanFileReference(name, version, username, channel, revision)
-            info = search_service.search_packages(ref, query)
+            info = search_service.search_packages(ref, query, look_in_all_rrevs=False)
             return info

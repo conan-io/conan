@@ -437,12 +437,18 @@ class ConanAPIV1(object):
 
     @api_method
     def download(self, reference, remote_name=None, package=None, recipe=False):
+        # FIXME: The "package" parameter name is very bad, it is a list of package_ids
         if package and recipe:
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         ref = ConanFileReference.loads(reference)
 
         if check_valid_ref(ref, allow_pattern=False):
+            if ref.revision is None:
+                for package_id in package:
+                    if "#" in package_id:
+                        raise ConanException("It is needed to specify the recipe revision if you "
+                                             "specify a package revision")
             recorder = ActionRecorder()
             download(ref, package, remote_name, recipe, self._remote_manager,
                      self._cache, self._user_io.out, recorder, self._loader,

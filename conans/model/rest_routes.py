@@ -70,10 +70,6 @@ class RestRoutes(object):
         return '%s/files' % self.package_revision
 
     @property
-    def package_file(self):
-        return '%s/files/{path}' % self.package
-
-    @property
     def package_revision_file(self):
         return '%s/files/{path}' % self.package_revision
 

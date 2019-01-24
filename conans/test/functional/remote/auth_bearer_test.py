@@ -83,7 +83,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "ApiV1 test")
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "ApiV1 test")
     def no_signature_test(self):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()

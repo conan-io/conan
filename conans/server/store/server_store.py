@@ -85,11 +85,10 @@ class ServerStore(SimplePaths):
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, ref):
         assert isinstance(ref, ConanFileReference)
-        result = self._storage_adapter.delete_folder(self.conan(ref, resolve_latest=False))
+        self._storage_adapter.delete_folder(self.conan(ref, resolve_latest=False))
         if ref.revision:
             self._remove_revision_from_index(ref)
         self._storage_adapter.delete_empty_dirs([ref])
-        return result
 
     def remove_packages(self, ref, package_ids_filter):
         assert isinstance(ref, ConanFileReference)
