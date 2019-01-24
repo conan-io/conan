@@ -934,7 +934,7 @@ class ConanAPIV1(object):
     def get_recipe_revisions(self, reference, remote_name=None):
         ref = ConanFileReference.loads(str(reference))
         if ref.revision:
-            raise ConanException("Cannot list the revisions of a specific revision")
+            raise ConanException("Cannot list the revisions of a specific recipe revision")
 
         if not remote_name:
             layout = self._cache.package_layout(ref)
