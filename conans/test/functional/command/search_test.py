@@ -1279,7 +1279,7 @@ class Test(ConanFile):
         client = TestClient()
         # Local errors
         client.run("search missing/1.0@conan/stable#revision --revisions", assert_error=True)
-        self.assertIn("Cannot list the revisions of a specific revision", client.out)
+        self.assertIn("Cannot list the revisions of a specific recipe revision", client.out)
 
         client.run("search missing/1.0@conan/stable:pid#revision --revisions", assert_error=True)
         self.assertIn("Specify a recipe reference with revision", client.out)
@@ -1291,7 +1291,7 @@ class Test(ConanFile):
         # Remote errors
         client.run("search missing/1.0@conan/stable#revision --revisions -r fake",
                    assert_error=True)
-        self.assertIn("Cannot list the revisions of a specific revision", client.out)
+        self.assertIn("Cannot list the revisions of a specific recipe revision", client.out)
 
         client.run("search missing/1.0@conan/stable:pid#revision --revisions -r fake",
                    assert_error=True)
