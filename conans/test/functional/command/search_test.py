@@ -1100,7 +1100,7 @@ class Test(ConanFile):
             self.assertNotIn("os: Linux", client.user_io.out)
 
 
-@unittest.skipUnless(TestClient().revisions_enabled,
+@unittest.skipUnless(os.getenv("TESTING_REVISIONS_ENABLED"),
                      "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 

@@ -14,7 +14,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.dates import valid_iso8601
 
 
-@unittest.skipUnless(TestClient().revisions_enabled,
+@unittest.skipUnless(os.getenv("TESTING_REVISIONS_ENABLED"),
                      "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class RevisionsTest(unittest.TestCase):
 
@@ -852,7 +852,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertIsNone(tprev)  # Same revision, time kept
 
 
-@unittest.skipUnless(TestClient().revisions_enabled,
+@unittest.skipUnless(os.getenv("TESTING_REVISIONS_ENABLED"),
                      "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class CompatibilityRevisionsTest(unittest.TestCase):
     """Testing non breaking behavior from v1 and v2 with compatibility mode"""
