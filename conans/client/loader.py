@@ -164,7 +164,6 @@ class ConanFileLoader(object):
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
-        # conanfile._conan_env_values.update(processed_profile._env_values)
         return conanfile
 
     def load_virtual(self, references, processed_profile, scope_options=True,

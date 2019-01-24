@@ -16,4 +16,4 @@ class VirtualenvGeneratorTest(unittest.TestCase):
         gen = VirtualEnvGenerator(conanfile)
         content = gen.content
         self.assertIn("PATH=\"1\":\"2\":\"three\":$PATH", content["activate.sh"])
-        self.assertIn("PATH=\"1\":\"2\":\"three\":%PATH%", content["activate.bat"])
+        self.assertIn("PATH=1;2;three;%PATH%", content["activate.bat"])
