@@ -36,6 +36,10 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
         self.cached_conanfiles = {}
 
+    def invalidate_caches(self):
+        self.cached_conanfiles = {}
+        self._python_requires.invalidate_caches()
+
     def load_class(self, conanfile_path):
         try:
             return self.cached_conanfiles[conanfile_path]
@@ -209,7 +213,7 @@ def _parse_module(conanfile_module, module_id):
             else:
                 raise ConanException("More than 1 conanfile in the file")
         elif issubclass(attr, Generator) and attr != Generator:
-            registered_generators.add(attr.__name__, attr)
+            registered_generators.add(attr.__name__, attr, custom=True)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")

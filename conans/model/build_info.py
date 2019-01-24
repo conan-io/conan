@@ -38,11 +38,16 @@ class _CppInfo(object):
         self._src_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = True
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
-        return [p for p in abs_paths if os.path.isdir(p)]
+        if self.filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
 
     @property
     def include_paths(self):

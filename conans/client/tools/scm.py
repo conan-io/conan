@@ -102,24 +102,27 @@ class Git(SCMBase):
                 output += self.run("submodule update --init --recursive")
             else:
                 raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
-                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']" % submodule)
+                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
+                                     % submodule)
         # Element can be a tag, branch or commit
         return output
 
     def excluded_files(self):
         ret = []
         try:
-
-            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
+            file_paths = [os.path.normpath(
+                                os.path.join(
+                                    os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             if file_paths:
                 p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                      stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
                 paths = to_file_bytes("\n".join(file_paths))
+
                 grep_stdout = decode_text(p.communicate(input=paths)[0])
                 ret = grep_stdout.splitlines()
-        except (CalledProcessError, FileNotFoundError) as e:
+        except (CalledProcessError, IOError, OSError) as e:
             if self._output:
                 self._output.warn("Error checking excluded git files: %s. "
                                   "Ignoring excluded files" % e)
@@ -141,7 +144,7 @@ class Git(SCMBase):
 
     def is_local_repository(self):
         url = self.get_remote_url()
-        return os.path.exists(url)   
+        return os.path.exists(url)
 
     def get_commit(self):
         self._check_git_repo()
@@ -161,7 +164,7 @@ class Git(SCMBase):
             return True
         else:
             return False
-        
+
     def get_repo_root(self):
         self._check_git_repo()
         return self.run("rev-parse --show-toplevel")
@@ -206,7 +209,7 @@ class SVN(SCMBase):
     @staticmethod
     def get_version():
         try:
-            out, err = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.split(' ', 3)[2]
             return Version(version_str)
@@ -292,11 +295,11 @@ class SVN(SCMBase):
         url = self.get_remote_url(remove_credentials=remove_credentials)
         revision = self.get_last_changed_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
-        
+
     def is_local_repository(self):
         url = self.get_remote_url()
-        return url.startswith(self.file_protocol) and \
-               os.path.exists(unquote(url[len(self.file_protocol):]))
+        return (url.startswith(self.file_protocol) and
+                os.path.exists(unquote(url[len(self.file_protocol):])))
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
