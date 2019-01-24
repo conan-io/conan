@@ -56,7 +56,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # With revisions it looks in the server a package for the changed local recipe and it
         # doesn't find it, so there is no Outdated package alert, just building
-        if not self.client.revisions:
+        if not self.client.revisions_enabled:
             self.assertIn("Outdated package!", self.client.user_io.out)
         self.assertIn("Building your package", self.client.user_io.out)
 
@@ -91,7 +91,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # With revisions makes no sense, it won't download an outdated package, it belongs to
         # a different recipe
-        if not new_client.revisions:
+        if not new_client.revisions_enabled:
             # But if we remove the full Hello0 local package, will retrieve the updated
             # recipe and the outdated package
             new_client.run("remove Hello0* -f")

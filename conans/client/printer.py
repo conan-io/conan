@@ -61,7 +61,7 @@ class Printer(object):
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
     def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None,
-                   package_filter=None, show_paths=False):
+                   package_filter=None, show_paths=False, revisions_enabled=False):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -141,7 +141,6 @@ class Printer(object):
 
             if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
                 self._out.writeln("    Recipe: %s" % node.recipe)
-            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
             if revisions_enabled:
                 if (isinstance(ref, ConanFileReference) and show("revision") and
                         node.ref.revision):

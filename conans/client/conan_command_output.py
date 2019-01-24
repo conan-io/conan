@@ -90,7 +90,8 @@ class CommandOutputer(object):
                                              node_times=self._read_dates(deps_graph),
                                              path_resolver=self.cache,
                                              package_filter=package_filter,
-                                             show_paths=show_paths)
+                                             show_paths=show_paths,
+                                             revisions_enabled=self.cache.revisions_enabled)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):

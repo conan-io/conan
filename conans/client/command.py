@@ -836,10 +836,6 @@ class Command(object):
 
         self._warn_python2()
 
-        # NOTE: returns the expanded pattern (if a pattern was given), and checks
-        # that the query parameter wasn't abused
-        ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
-
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
@@ -859,7 +855,7 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=ref or args.pattern_or_reference, query=args.query,
+        return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
@@ -965,7 +961,6 @@ class Command(object):
         has to be used. For case insensitive file systems, like Windows, case
         sensitive search can be forced with '--case-sensitive'.
         """
-        v2_blocked = get_env("CONAN_API_V2_BLOCKED", True)
 
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
@@ -986,10 +981,10 @@ class Command(object):
                             "reference search")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the search information will be written to')
-        if not v2_blocked:
-            parser.add_argument("-rev", "--revisions", default=False, action='store_true',
-                                help='Get a list of revisions for a reference or a '
-                                     'package reference.')
+
+        parser.add_argument("-rev", "--revisions", default=False, action='store_true',
+                            help='Get a list of revisions for a reference or a '
+                                 'package reference.')
         args = parser.parse_args(*args)
 
         if args.table and args.json:
@@ -1003,12 +998,15 @@ class Command(object):
                 ref = None
         except (TypeError, ConanException):
             ref = None
+            if args.query:
+                raise ConanException("-q parameter only allowed with a valid recipe reference, "
+                                     "not with a pattern")
 
         cwd = os.getcwd()
         info = None
 
         try:
-            if not v2_blocked and args.revisions:
+            if args.revisions:
                 try:
                     pref = PackageReference.loads(args.pattern_or_reference)
                 except (TypeError, ConanException):
@@ -1042,9 +1040,6 @@ class Command(object):
                     raise ConanException("'--table' argument can only be used with a reference")
                 elif args.outdated:
                     raise ConanException("'--outdated' argument can only be used with a reference")
-
-                self._check_query_parameter_and_get_reference(args.pattern_or_reference,
-                                                              args.query)
 
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
@@ -1451,19 +1446,6 @@ class Command(object):
             self._user_io.out.writeln("https://docs.conan.io/en/latest/installation.html"
                                       "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
             self._user_io.out.writeln("")
-
-    @staticmethod
-    def _check_query_parameter_and_get_reference(pattern, query):
-        ref = None
-        if pattern:
-            try:
-                ref = ConanFileReference.loads(pattern)
-            except ConanException:
-                if query is not None:
-                    raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.g. conan search "
-                                         "MyPackage/1.2@user/channel -q \"os=Windows\"")
-        return ref
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class

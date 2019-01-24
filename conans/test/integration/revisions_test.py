@@ -14,8 +14,8 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.dates import valid_iso8601
 
 
-@unittest.skipUnless(TestClient().revisions,
-                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
+@unittest.skipUnless(TestClient().revisions_enabled,
+                     "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class RevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -37,17 +37,18 @@ class HelloConan(ConanFile):
 '''
         self.ref = ConanFileReference.loads("lib/1.0@lasote/testing")
 
-    def _create_and_upload(self, conanfile, reference, remote=None, args=""):
+    def _create_and_upload(self, conanfile, ref, remote=None, args=""):
         remote = remote or "remote0"
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . %s %s" % (str(reference), args))
-        self.client.run("upload %s -c --all -r %s" % (str(reference), remote))
+        self.client.run("create . %s %s" % (str(ref), args))
+        self.client.run("upload %s -c --all -r %s" % (str(ref), remote))
+        rrev, _ = self.client.cache.package_layout(ref).recipe_revision()
+        remote_rrev = self.servers["remote0"].server_store.get_last_revision(ref).revision
+        self.assertEquals(rrev, remote_rrev)
 
     def test_revisions_recipes_without_scm(self):
 
         self._create_and_upload(self.conanfile, self.ref)
-        rev = self.servers["remote0"].server_store.get_last_revision(self.ref).revision
-        self.assertEquals(rev, "149570a812b46d87c7dfa6408809b370")
 
         # Create a new revision and upload
         conanfile = self.conanfile.replace("Revision 1", "Revision 2")
@@ -551,8 +552,8 @@ class HelloConan(ConanFile):
         self.assertIsNone(latestrev)
 
     def test_remove_packages_v2_test(self):
-        # If I don't specify a recipe revision it will remove all the packages from all recipe
-        # revisions
+        # If I don't specify a recipe revision it won't remove all the packages from all recipe
+        # revisions, you have to specify a revision
         pid = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
         ref = ConanFileReference.loads("lib/1.0@lasote/testing")
         rev1, rev2 = self._upload_two_revisions(ref)
@@ -563,15 +564,16 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.exists(path1))
         self.assertTrue(os.path.exists(path2))
 
-        self.client.run("remove %s -f -r remote0 -p %s" % (str(ref), pid))
-        self.assertFalse(os.path.exists(path1))
-        self.assertFalse(os.path.exists(path2))
+        self.client.run("remove %s -f -r remote0 -p %s" % (str(ref), pid), assert_error=True)
+        self.assertIn("To remove a binary package specify a recipe revision", self.client.out)
 
-        # Now specify the recipe revision
-        self._upload_two_revisions(ref)
         self.client.run("remove %s#%s -f -r remote0 -p %s" % (str(ref), rev1, pid))
         self.assertFalse(os.path.exists(path1))
         self.assertTrue(os.path.exists(path2))
+
+        self.client.run("remove %s#%s -f -r remote0 -p %s" % (str(ref), rev2, pid))
+        self.assertFalse(os.path.exists(path1))
+        self.assertFalse(os.path.exists(path2))
 
         # Now generate different package revisions also
         rev1, rev2 = self._upload_two_revisions(ref, different_binary=True)
@@ -626,7 +628,8 @@ class HelloConan(ConanFile):
         self.client.run("install %s#%s" % (self.ref, rev3))
 
         # Create a v1 client and remove the pid
-        client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
+        client_no_rev = TestClient(revisions_enabled=False, servers=self.servers, users=self.users)
+        self.assertFalse(client_no_rev.revisions_enabled)
         client_no_rev.run("remove %s -f -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 "
                           "-r remote0" % str(ref))
 
@@ -643,7 +646,7 @@ class HelloConan(ConanFile):
 
     def test_v1_with_revisions_behavior(self):
 
-        client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
+        client_no_rev = TestClient(revisions_enabled=False, servers=self.servers, users=self.users)
         conanfile = '''
 from conans import ConanFile
 
@@ -849,8 +852,8 @@ class ConanFileToolsTest(ConanFile):
         self.assertIsNone(tprev)  # Same revision, time kept
 
 
-@unittest.skipUnless(TestClient().revisions,
-                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
+@unittest.skipUnless(TestClient().revisions_enabled,
+                     "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class CompatibilityRevisionsTest(unittest.TestCase):
     """Testing non breaking behavior from v1 and v2 with compatibility mode"""
 
@@ -888,13 +891,13 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("create . %s -s os=Linux" % ref)
         self.client.run("upload %s -r=remote0 --all" % ref)
 
-        client_no_rev = TestClient(block_v2=True, servers=self.servers, users=self.users)
+        client_no_rev = TestClient(revisions_enabled=False, servers=self.servers, users=self.users)
         client_no_rev.run("search %s -r remote0" % ref)
 
         self.assertIn("3475bd55b91ae904ac96fde0f106a136ab951a5e", client_no_rev.out)
         self.assertIn("cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client_no_rev.out)
 
-        client_compatibility = TestClient(block_v2=True, revisions=False,
+        client_compatibility = TestClient(revisions_enabled=False,
                                           servers=self.servers, users=self.users)
         client_compatibility.run("search %s -r remote0" % ref)
         self.assertIn("3475bd55b91ae904ac96fde0f106a136ab951a5e", client_compatibility.out)

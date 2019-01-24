@@ -12,7 +12,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, put_headers=None):
+    def __init__(self, output, requester, block_v2, put_headers=None):
 
         # Set to instance
         self.token = None
@@ -24,9 +24,9 @@ class RestApiClient(object):
         # Remote manager will set it to True or False dynamically depending on the remote
         self.verify_ssl = True
         self._put_headers = put_headers
+        self._block_v2 = block_v2
 
         self._cached_capabilities = defaultdict(list)
-        self.block_v2 = get_env("CONAN_API_V2_BLOCKED", True)
 
     def _get_api(self):
         if self.remote_url not in self._cached_capabilities:
@@ -35,10 +35,8 @@ class RestApiClient(object):
             _, _, cap = tmp.server_info()
             self._cached_capabilities[self.remote_url] = cap
 
-        if not self.block_v2 and REVISIONS in self._cached_capabilities[self.remote_url]:
+        if not self._block_v2 and REVISIONS in self._cached_capabilities[self.remote_url]:
             checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
-            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-            self.custom_headers["V2_COMPATIBILITY_MODE"] = "1" if not revisions_enabled else "0"
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,
                                  checksum_deploy)

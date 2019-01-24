@@ -72,7 +72,7 @@ class Test(ConanFile):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        if client.revisions:
+        if client.revisions_enabled:
             self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
@@ -186,7 +186,7 @@ class RemoveTest(unittest.TestCase):
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
                 ref = ConanFileReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
-                    if not self.client.block_v2:
+                    if self.client.revisions_enabled:
                         try:
                             rev, _ = self.client.cache.package_layout(ref).recipe_revision()
                         except:
@@ -203,7 +203,7 @@ class RemoveTest(unittest.TestCase):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
                         if isinstance(base_path, ServerStore):
-                            if not self.client.block_v2:
+                            if self.client.revisions_enabled:
                                 pref = PackageReference(ref, sha)
                                 try:
                                     layout = self.client.cache.package_layout(pref.ref)

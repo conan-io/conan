@@ -1056,13 +1056,27 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
+    def test_usage_of_list_revisions(self):
+        client = TestClient()
+        conanfile = dedent("""
+                    from conans import ConanFile
+                    class Test(ConanFile):
+                        pass
+                    """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . lib/1.0@conan/stable")
+        client.run("search lib/1.0@conan/stable --revisions")
+        self.assertIn("Revisions for 'lib/1.0@conan/stable':", client.out)
+        # FIXME: Should be "0" when no revisions are enabled?
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
+
 
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        if client.revisions:
+        if client.revisions_enabled:
             self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
@@ -1086,8 +1100,8 @@ class Test(ConanFile):
             self.assertNotIn("os: Linux", client.user_io.out)
 
 
-@unittest.skipUnless(TestClient().revisions,
-                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
+@unittest.skipUnless(TestClient().revisions_enabled,
+                     "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
     def search_recipe_revisions_test(self):
@@ -1300,26 +1314,3 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions -r fake",
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
-
-    def test_not_revisions_enabled_but_usage_of_search(self):
-
-        def create_local_revision(assert_error):
-            client = TestClient()
-            conanfile = dedent("""
-                        from conans import ConanFile
-                        class Test(ConanFile):
-                            pass
-                        """)
-            client.save({"conanfile.py": conanfile})
-            client.run("create . lib/1.0@conan/stable")
-            client.run("search lib/1.0@conan/stable --revisions", assert_error=assert_error)
-            return client
-
-        with environment_append({"CONAN_API_V2_BLOCKED": "1"}):
-            client = create_local_revision(assert_error=True)
-            # Cannot check easily the output from arg parse, but no conan output is printed
-            self.assertIn("ERROR: Exiting with code: 2", client.out)
-
-        with environment_append({"CONAN_API_V2_BLOCKED": "0"}):
-            client = create_local_revision(assert_error=False)
-            self.assertIn("Revisions for 'lib/1.0@conan/stable':", client.out)

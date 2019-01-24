@@ -24,11 +24,10 @@ class DeleteControllerV2(Controller):
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             conan_service.remove_conanfile(ref)
 
-        @app.route(r.package, method="DELETE")
         @app.route(r.package_recipe_revision, method=["DELETE"])
         @app.route(r.package_revision, method=["DELETE"])
         def remove_package(name, version, username, channel, package_id, auth_user,
-                           revision=None, p_revision=None):
+                           revision, p_revision=None):
             """ - If both RRev and PRev are specified, it will remove the specific package revision
                   of the specific recipe revision.
                 - If PRev is NOT specified but RRev is specified (package_recipe_revision_url)
@@ -42,11 +41,9 @@ class DeleteControllerV2(Controller):
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             conan_service.remove_package(pref)
 
-        @app.route(r.packages, method="DELETE")
         @app.route(r.packages_revision, method="DELETE")
-        def remove_all_packages(name, version, username, channel, auth_user, revision=None):
-            """ Remove a file from a recipe. The revision is mandatory, because it comes from
-            the upload and the revision is mandatory in v2"""
+        def remove_all_packages(name, version, username, channel, auth_user, revision):
+            """ Remove all packages from a RREV"""
             ref = ConanFileReference(name, version, username, channel, revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             conan_service.remove_all_packages(ref)

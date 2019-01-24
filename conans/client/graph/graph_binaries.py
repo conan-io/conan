@@ -29,8 +29,7 @@ class GraphBinariesAnalyzer(object):
 
     def _check_update(self, package_folder, pref, remote, output, node):
 
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        if revisions_enabled:
+        if self._cache.revisions_enabled:
             metadata = self._cache.package_layout(pref.ref).load_metadata()
             rec_rev = metadata.packages[pref.id].recipe_revision
             if rec_rev != node.ref.revision:
@@ -38,12 +37,6 @@ class GraphBinariesAnalyzer(object):
                             "to the installed recipe revision: %s" % str(pref))
 
         try:  # get_conan_digest can fail, not in server
-            # FIXME: This can iterate remotes to get and associate in registry
-            if not revisions_enabled and not node.revision_pinned:
-                # Compatibility mode and user hasn't specified the revision, so unlock
-                # it to find any binary for any revision
-                pref = pref.copy_clear_rev()
-
             upstream_manifest = self._remote_manager.get_package_manifest(pref, remote)
         except NotFoundException:
             output.warn("Can't update, no package in remote")
@@ -63,7 +56,6 @@ class GraphBinariesAnalyzer(object):
         assert node.binary is None
 
         ref, conanfile = node.ref, node.conanfile
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
         package_id = conanfile.info.package_id()
         pref = PackageReference(ref, package_id)
         # Check that this same reference hasn't already been checked
@@ -125,17 +117,14 @@ class GraphBinariesAnalyzer(object):
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
 
         else:  # Binary does NOT exist locally
-            if not revisions_enabled and not node.revision_pinned:
-                # Do not search for packages for the specific resolved recipe revision but all
-                pref = pref.copy_clear_rev()
-
             remote_info = None
             if remote:
                 remote_info = self._get_package_info(pref, remote)
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
-            if not remote or (not remote_info and revisions_enabled and not remote_name):
+            if not remote or (not remote_info and self._cache.revisions_enabled
+                              and not remote_name):
                 for r in remotes:
                     remote_info = self._get_package_info(pref, r)
                     if remote_info:

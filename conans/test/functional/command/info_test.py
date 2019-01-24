@@ -336,7 +336,7 @@ class MyTest(ConanFile):
                 Requires:
                     Hello1/0.1@lasote/stable""")
 
-        if self.client.revisions:
+        if self.client.revisions_enabled:
             expected_output = expected_output % (
                 "\n    Revision: cba5c22478b987899b8ca26b2c359bde",
                 "\n    Revision: c0683fc1338c11821957d21265927a7b")

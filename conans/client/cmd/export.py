@@ -48,7 +48,7 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
     # Maybe a platform check could be added, but depends on disk partition
     reference = str(ref)
     refs = search_recipes(cache, reference, ignorecase=True)
-    if refs and ref not in refs:
+    if refs and ref not in [r.copy_clear_rev() for r in refs]:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
                              % (reference, " ".join(str(s) for s in refs)))

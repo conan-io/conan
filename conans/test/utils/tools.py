@@ -22,7 +22,7 @@ from mock import Mock
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import tools
+from conans import tools, load
 from conans.client.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
@@ -432,8 +432,8 @@ class TestClient(object):
     """
 
     def __init__(self, base_folder=None, current_folder=None, servers=None, users=None,
-                 requester_class=None, runner=None, path_with_spaces=True, block_v2=None,
-                 revisions=None, cpu_count=1):
+                 requester_class=None, runner=None, path_with_spaces=True,
+                 revisions_enabled=None, cpu_count=1):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -441,13 +441,6 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
-        self.block_v2 = block_v2 or get_env("CONAN_API_V2_BLOCKED", True)
-
-        if self.block_v2:
-            self.revisions = False
-        else:
-            self.revisions = revisions or get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-            self.block_v2 = False
 
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
@@ -463,13 +456,10 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
-        if cpu_count:
-            self.cache.conan_config
-            replace_in_file(self.cache.conan_conf_path,
-                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=TestBufferConanOutput(), strict=not bool(base_folder))
-            # Invalidate the cached config
-            self.cache.invalidate()
+        if revisions_enabled is None:
+            revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
+
+        self.tune_conan_conf(base_folder, cpu_count, revisions_enabled)
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -486,6 +476,27 @@ servers["r2"] = TestServer()
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+    def tune_conan_conf(self, base_folder, cpu_count, revisions_enabled):
+        # Create the default
+        self.cache.conan_config
+
+        if cpu_count:
+            replace_in_file(self.cache.conan_conf_path,
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
+                            output=TestBufferConanOutput(), strict=not bool(base_folder))
+
+        current_conf = load(self.cache.conan_conf_path)
+        if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
+            replace_in_file(self.cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
+                            output=TestBufferConanOutput())
+        if revisions_enabled:
+            replace_in_file(self.cache.conan_conf_path,
+                            "[general]", "[general]\nrevisions_enabled = 1",
+                            output=TestBufferConanOutput())
+
+        # Invalidate the cached config
+        self.cache.invalidate()
 
     def update_servers(self):
         save(self.cache.registry_path, dump_registry({}, {}, {}))
@@ -513,6 +524,10 @@ servers["r2"] = TestServer()
     @property
     def out(self):
         return self.user_io.out
+
+    @property
+    def revisions_enabled(self):
+        return self.cache.revisions_enabled
 
     @contextmanager
     def chdir(self, newdir):
@@ -557,7 +572,6 @@ servers["r2"] = TestServer()
             self.localdb, self.rest_api_client, self.remote_manager = \
                 Conan.instance_remote_manager(self.requester, self.cache,
                                               self.user_io, self.hook_manager)
-            self.rest_api_client.block_v2 = self.block_v2
             return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):

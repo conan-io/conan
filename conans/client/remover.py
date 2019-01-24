@@ -132,14 +132,35 @@ class ConanRemover(object):
         if remote_name and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
+        try:
+            input_ref = ConanFileReference.loads(pattern)
+        except (ConanException, TypeError):
+            input_ref = None
+
+        if not input_ref and packages_query is not None:
+            raise ConanException("query parameter only allowed with a valid recipe "
+                                 "reference as the search pattern.")
+
+        if self._cache.revisions_enabled and package_ids_filter and \
+                (not input_ref or input_ref.revision is None):
+            raise ConanException("To remove a binary package specify a recipe revision")
+
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
             refs = self._remote_manager.search_recipes(remote, pattern)
         else:
             refs = search_recipes(self._cache, pattern)
         if not refs:
-            self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
+            if input_ref:
+                self._user_io.out.warn("No recipe found '%s'" % str(pattern))
+            else:
+                self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
+
+        if input_ref and not input_ref.revision:
+            # Ignore revisions for deleting if the input was not with a revision
+            # (Removing all the recipe revisions from a reference)
+            refs = [r.copy_clear_rev() for r in refs]
 
         deleted_refs = []
         for ref in refs:

@@ -339,6 +339,17 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
+    def revisions_enabled(self):
+        try:
+            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED")
+            if revisions_enabled is None:
+                return self.get_item("general.revisions_enabled")
+            else:
+                return revisions_enabled.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
     def storage_path(self):
         # Try with CONAN_STORAGE_PATH
         result = get_env('CONAN_STORAGE_PATH', None)

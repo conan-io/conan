@@ -56,7 +56,7 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-@unittest.skipIf(TestClient().revisions,
+@unittest.skipIf(TestClient().revisions_enabled,
                  "We cannot know the folder of the revision without knowing the hash of "
                  "the contents")
 class UploadTest(unittest.TestCase):
@@ -260,7 +260,7 @@ class TestConan(ConanFile):
         """
         # Upload conans
         self.client.run('upload %s' % str(self.ref))
-        if not self.client.block_v2:
+        if self.client.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
             rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
@@ -270,7 +270,7 @@ class TestConan(ConanFile):
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
-        if self.client.block_v2:
+        if not self.client.revisions_enabled:
             self.assertFalse(os.path.exists(self.server_pack_folder))
 
         # Upload package
@@ -337,7 +337,7 @@ class TestConan(ConanFile):
                                  "Uploading conaninfo.txt",
                                  "Uploading conan_package.tgz",
                                  ])
-        if not self.client.block_v2:
+        if self.client.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
             rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
@@ -355,7 +355,7 @@ class TestConan(ConanFile):
         # Upload all conans and packages
         self.client.run('upload %s --all' % str(self.ref))
 
-        if not self.client.block_v2:
+        if self.client.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
             rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)

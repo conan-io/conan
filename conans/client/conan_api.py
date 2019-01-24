@@ -151,7 +151,8 @@ class ConanAPIV1(object):
 
         # To handle remote connections
         put_headers = cache.read_put_headers()
-        rest_api_client = RestApiClient(user_io.out, requester=requester,
+        rest_api_client = RestApiClient(user_io.out, requester,
+                                        block_v2=not cache.revisions_enabled,
                                         put_headers=put_headers)
         # To store user and token
         localdb = LocalDB(cache.localdb)

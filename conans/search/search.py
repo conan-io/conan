@@ -74,7 +74,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     return False
 
 
-def search_recipes(paths, pattern=None, ignorecase=True):
+def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
         if isinstance(pattern, ConanFileReference):
@@ -82,7 +82,7 @@ def search_recipes(paths, pattern=None, ignorecase=True):
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-    subdirs = list_folder_subdirs(basedir=paths.store, level=4)
+    subdirs = list_folder_subdirs(basedir=cache.store, level=4)
     if not pattern:
         return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
     else:

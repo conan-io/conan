@@ -65,6 +65,10 @@ class ClientCache(SimplePaths):
     def cacert_path(self):
         return normpath(join(self.conan_folder, CACERT_FILE))
 
+    @property
+    def revisions_enabled(self):
+        return self.conan_config.revisions_enabled
+
     def _no_locks(self):
         if self._no_lock is None:
             self._no_lock = self.conan_config.cache_no_locks

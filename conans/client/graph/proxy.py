@@ -58,7 +58,7 @@ class ConanProxy(object):
         update_remote = named_remote or remote
 
         # Check if we have a revision different from the requested one
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+        revisions_enabled = self._cache.revisions_enabled
         if revisions_enabled and ref.revision and cur_revision != ref.revision:
             output.info("Different revision requested, removing current local recipe...")
             DiskRemover(self._cache).remove_recipe(ref)
