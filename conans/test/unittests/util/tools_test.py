@@ -18,7 +18,7 @@ from six import StringIO
 from six.moves.urllib.parse import quote
 
 from conans.client import tools
-from conans.client.cache import CONAN_CONF
+from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
@@ -547,6 +547,9 @@ class ToolsTest(unittest.TestCase):
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(output=output), 34)
+        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
+            with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
+                tools.cpu_count(output=output)
 
     def get_env_unit_test(self):
         """
@@ -1687,6 +1690,13 @@ class GitToolsTests(unittest.TestCase):
         git = Git(folder=temp_folder())
         with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
             git.get_tag()
+
+    def test_excluded_files(self):
+        folder = temp_folder()
+        save(os.path.join(folder, "file"), "some contents")
+        git = Git(folder)
+        with tools.environment_append({"PATH": ""}):
+            git.excluded_files()
 
 
 @attr("slow")

@@ -24,6 +24,9 @@ def cpu_count(output=None):
     output = default_output(output, 'conans.client.tools.oss.cpu_count')
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
+        if env_cpu_count is not None and not env_cpu_count.isdigit():
+            raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
+                                 "please specify a positive integer" % env_cpu_count)
         return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")

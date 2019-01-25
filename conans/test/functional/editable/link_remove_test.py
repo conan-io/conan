@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient
 
 
@@ -21,8 +20,8 @@ class RemoveEditablePackageTest(unittest.TestCase):
 
         self.t = TestClient()
         self.t.save(files={'conanfile.py': self.conanfile,
-                           CONAN_PACKAGE_LAYOUT_FILE: "", })
-        self.t.run('link . {}'.format(self.ref))
+                           "mylayout": "", })
+        self.t.run('link . {} -l=mylayout'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def test_unlink(self):
