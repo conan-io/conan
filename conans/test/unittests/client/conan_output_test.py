@@ -1,7 +1,7 @@
 # coding=utf-8
-"""
-import types
+
 import unittest
+from types import MethodType
 
 from six import StringIO
 
@@ -21,11 +21,10 @@ class ConanOutputTest(unittest.TestCase):
                 raise IOError("Stdout locked")
             self.super_write(data)
         stream.super_write = stream.write
-        stream.write = types.MethodType(write_raise, stream)
+        stream.write = MethodType(write_raise, stream)
         out = ConanOutput(stream)
 
         with mock.patch("time.sleep") as sleep:
             out.write("Hello world")
             sleep.assert_any_call(0.02)
         self.assertEqual("Hello world", stream.getvalue())
-"""
