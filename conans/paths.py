@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
 if platform.system() == "Windows":
-    from conans.util.windows import conan_expand_user,  rm_conandir, path_shortener
+    from conans.util.windows import conan_expand_user, rm_conandir, path_shortener
 else:
     def path_shortener(x, _):
         return x
