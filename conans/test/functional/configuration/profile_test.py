@@ -26,7 +26,6 @@ class AConan(ConanFile):
             self.run("SET")
         else:
             self.run("env")
-
 """
 
 
@@ -43,13 +42,19 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def profile_conanfile_txt_test(self):
+        self.client.save({"conanfile.txt": ""})
+        create_profile(self.client.cache.profiles_path, "envs", settings={},
+                       env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
+                       package_env={"Hello0": [("OTHER_VAR", "2")]})
+        self.client.run("install . -pr envs -g virtualenv")
+
     def base_profile_generated_test(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile_scope_env,
+        self.client.save({CONANFILE: conanfile_scope_env,
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
-        client.run("create . conan/testing --profile myprofile")
+        self.client.run("create . conan/testing --profile myprofile")
 
     def bad_syntax_test(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -137,11 +142,15 @@ class ProfileTest(unittest.TestCase):
         files["conanfile.py"] = conanfile_scope_env
 
         create_profile(self.client.cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
+                       env=[("A_VAR", "A_VALUE"),
+                            ("PREPEND_VAR", ["new_path", "other_path"])],
+                       package_env={"Hello0": [("OTHER_VAR", "2")]})
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
+        self._assert_env_variable_printed("PREPEND_VAR", "new_path;other_path")
+        self.assertNotIn("PREPEND_VAR=new_path;other_path;new_path;other_path", self.client.out)
         self._assert_env_variable_printed("A_VAR", "A_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
