@@ -7,7 +7,7 @@ import requests
 import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
