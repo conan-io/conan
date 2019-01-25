@@ -62,6 +62,8 @@ class ConanOutput(object):
         if newline:
             data = "%s\n" % data
 
+        # https://github.com/conan-io/conan/issues/4277
+        # Windows output locks produce IOErrors
         for _ in range(3):
             try:
                 self._stream.write(data)
