@@ -828,6 +828,8 @@ class Command(object):
                                   "specifying the package ID"))
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
+        parser.add_argument("-l", "--locks", default=False, action="store_true",
+                            help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. " \
                                  "This flag can only be used with a reference")
@@ -838,8 +840,8 @@ class Command(object):
                             help='Will remove from the specified remote')
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
-        parser.add_argument("-l", "--locks", default=False, action="store_true",
-                            help="Remove locks")
+        parser.add_argument('-t', '--system-reqs', default=False, action="store_true",
+                            help='Remove system_reqs folders')
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -863,6 +865,17 @@ class Command(object):
             self._cache.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
+        elif args.system_reqs:
+            if not ref:
+                raise ConanException("Please specify a valid package reference to be cleaned")
+            if args.packages:
+                raise ConanException("'-t' and '-p' parameters can't be used at the same time")
+            try:
+                self._cache.remove_package_system_reqs(ref)
+                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                return
+            except Exception as error:
+                raise ConanException("Unable to remove system_reqs: %s" % error)
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
