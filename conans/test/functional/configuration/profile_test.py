@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
@@ -158,8 +159,12 @@ class ProfileTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
-        self._assert_env_variable_printed("PREPEND_VAR", "new_path;other_path")
+        if platform.system() == "Windows":
+            self._assert_env_variable_printed("PREPEND_VAR", "new_path;other_path")
+        else:
+            self._assert_env_variable_printed("PREPEND_VAR", "new_path:other_path")
         self.assertNotIn("PREPEND_VAR=new_path;other_path;new_path;other_path", self.client.out)
+        self.assertNotIn("PREPEND_VAR=new_path:other_path:new_path:other_path", self.client.out)
         self._assert_env_variable_printed("A_VAR", "A_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
