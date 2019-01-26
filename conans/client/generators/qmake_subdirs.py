@@ -11,21 +11,18 @@ QMAKE_CXXFLAGS *= {deps.cppflags}
 QMAKE_CFLAGS *= {deps.cflags}
 QMAKE_LFLAGS *= {deps.exelinkflags}
 QMAKE_LFLAGS *= {deps.sharedlinkflags}
-}
 """
 
 class QmakeSubDirsGenerator(Generator):
 
     @property
     def content(self):
-        ret = {}
-
-        ret[BUILD_INFO_QMAKE_SUBDIRS] = "#include this file in your .qmake.conf\nQMAKEFEATURES *= $$PWD"
+        ret = {BUILD_INFO_QMAKE_SUBDIRS: "#include this file in your .qmake.conf\nQMAKEFEATURES *= $$PWD"}
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name =  dep_name.replace("-", "_").replace(".", "_")
+            dep_name = dep_name.replace("-", "_").replace(".", "_")
             deps = DepsCppQmake(dep_cpp_info)
-            ret["{}.prf".format(dep_name)] = generic_prf_template.format(name=dep_name, deps=deps )
+            ret["{0}.prf".format(dep_name)] = generic_prf_template.format(name=dep_name, deps=deps )
 
         return ret
 
