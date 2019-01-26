@@ -4,14 +4,14 @@ import os
 import stat
 import time
 
-from conans import tools
+from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
-from conans.util.files import md5sum, load
+from conans.util.files import load, md5sum
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -71,7 +71,7 @@ def _make_files_writable(file_names):
         os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
 
 
-def run_imports(conanfile, dest_folder, output):
+def run_imports(conanfile, dest_folder):
     if not hasattr(conanfile, "imports"):
         return []
     file_importer = _FileImporter(conanfile, dest_folder)
@@ -82,7 +82,7 @@ def run_imports(conanfile, dest_folder, output):
             conanfile.imports()
     copied_files = file_importer.copied_files
     _make_files_writable(copied_files)
-    import_output = ScopedOutput("%s imports()" % output.scope, output)
+    import_output = ScopedOutput("%s imports()" % conanfile.display_name, conanfile.output)
     _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
     return copied_files
 
@@ -96,8 +96,8 @@ def remove_imports(conanfile, copied_files, output):
                 output.warn("Unable to remove imported file from build: %s" % f)
 
 
-def run_deploy(conanfile, install_folder, output):
-    deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
+def run_deploy(conanfile, install_folder):
+    deploy_output = ScopedOutput("%s deploy()" % conanfile.display_name, conanfile.output)
     file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()
 
@@ -165,6 +165,8 @@ class _FileImporter(object):
         each dependency
         """
         if not pattern:
-            return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
-        return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
+            return {pkg: cpp_info.rootpath
+                    for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
+        return {pkg: cpp_info.rootpath
+                for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
                 if fnmatch.fnmatch(pkg, pattern)}

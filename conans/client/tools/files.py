@@ -1,20 +1,18 @@
-import platform
 import logging
 import os
+import platform
 import sys
-
 from contextlib import contextmanager
 from fnmatch import fnmatch
+
+import six
 from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import (load, save, _generic_algorithm_sum)
 from conans.unicode import get_cwd
-import six
-
-
-_global_output = None
+from conans.util.fallbacks import default_output
+from conans.util.files import (_generic_algorithm_sum, load, save)
 
 UNIT_SIZE = 1000.0
 
@@ -52,7 +50,7 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False, pattern=None):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
@@ -63,8 +61,11 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
     that the zip was created correctly.
     :param pattern: Extract only paths matching the pattern. This should be a
     Unix shell-style wildcard, see fnmatch documentation for more details.
+    :param output: output
     :return:
     """
+    output = default_output(output, 'conans.client.tools.files.unzip')
+
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
@@ -82,11 +83,11 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
             the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
             txt_msg = "Unzipping %d %%"
             if the_size > print_progress.last_size + 1:
-                _global_output.rewrite_line(txt_msg % the_size)
+                output.rewrite_line(txt_msg % the_size)
                 print_progress.last_size = the_size
                 if int(the_size) == 99:
-                    _global_output.rewrite_line(txt_msg % 100)
-                    _global_output.writeln("")
+                    output.rewrite_line(txt_msg % 100)
+                    output.writeln("")
     else:
         def print_progress(_, __):
             pass
@@ -98,9 +99,9 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
             zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
-            _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
+            output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
         else:
-            _global_output.info("Unzipping %s" % human_size(uncompress_size))
+            output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
 
         print_progress.last_size = -1
@@ -111,7 +112,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
-                    _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
                 extracted_size += file_.file_size
@@ -124,7 +125,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None):
                         perm = file_.external_attr >> 16 & 0xFFF
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
-                    _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
 def untargz(filename, destination=".", pattern=None):
@@ -220,18 +221,53 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
-def replace_in_file(file_path, search, replace, strict=True):
+def _manage_text_not_found(search, file_path, strict, function_name, output):
+    message = "%s didn't find pattern '%s' in '%s' file." % (function_name, search, file_path)
+    if strict:
+        raise ConanException(message)
+    else:
+        output.warn(message)
+        return False
+
+
+def replace_in_file(file_path, search, replace, strict=True, output=None):
+    output = default_output(output, 'conans.client.tools.files.replace_in_file')
+
     content = load(file_path)
     if -1 == content.find(search):
-        message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
-        if strict:
-            raise ConanException(message)
-        else:
-            _global_output.warn(message)
+        _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
         handle.write(content)
+
+
+def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None):
+    output = default_output(output, 'conans.client.tools.files.replace_path_in_file')
+
+    if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
+        return replace_in_file(file_path, search, replace, strict=strict, output=output)
+
+    def normalized_text(text):
+        return text.replace("\\", "/").lower()
+
+    content = load(file_path)
+    normalized_content = normalized_text(content)
+    normalized_search = normalized_text(search)
+    index = normalized_content.find(normalized_search)
+    if index == -1:
+        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file", output=output)
+
+    while index != -1:
+        content = content[:index] + replace + content[index + len(search):]
+        normalized_content = normalized_text(content)
+        index = normalized_content.find(normalized_search)
+
+    content = content.encode("utf-8")
+    with open(file_path, "wb") as handle:
+        handle.write(content)
+
+    return True
 
 
 def replace_prefix_in_pc_file(pc_file, new_prefix):
@@ -275,8 +311,9 @@ def collect_libs(conanfile, folder=None):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
-                    conanfile.output.warn("Library '%s' already found in a previous "
-                                          "'conanfile.cpp_info.libdirs' folder" % name)
+                    conanfile.output.warn("Library '%s' was either already found in a previous "
+                                          "'conanfile.cpp_info.libdirs' folder or appears several "
+                                          "times with a different file extension" % name)
                 else:
                     result.append(name)
     return result
@@ -326,3 +363,5 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+

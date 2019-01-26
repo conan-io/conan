@@ -1,7 +1,6 @@
 import platform
-import unittest
-
 import subprocess
+import unittest
 
 from conans.test.utils.tools import TestClient
 

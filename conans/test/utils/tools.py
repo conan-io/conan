@@ -1,64 +1,82 @@
+import errno
 import os
 import random
 import shlex
 import shutil
+import stat
+import subprocess
 import sys
+import tempfile
 import threading
+import time
+import unittest
 import uuid
-from collections import Counter
+from collections import Counter, OrderedDict
 from contextlib import contextmanager
 from io import StringIO
 
 import bottle
 import requests
 import six
-import time
 from mock import Mock
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import __version__ as CLIENT_VERSION, tools
-from conans.client.client_cache import ClientCache
+from conans import tools
+from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
-from conans.client.conan_api import migrate_and_get_client_cache, Conan, get_request_timeout
+from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.hook_manager import HookManager
+from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
-from conans.client.plugin_manager import PluginManager
-from conans.client.remote_registry import RemoteRegistry
+from conans.client.cache.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.tools.scm import Git
+from conans.client.tools.files import chdir
+from conans.client.tools.files import replace_in_file
+from conans.client.tools.scm import Git, SVN
+from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
-from conans.model.version import Version
-from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
-                                                      TESTING_REMOTE_PRIVATE_PASS,
-                                                      TestServerLauncher)
+from conans.model.manifest import FileTreeManifest
+from conans.model.profile import Profile
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.settings import Settings
 from conans.test.utils.runner import TestRunner
+from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
+                                               TESTING_REMOTE_PRIVATE_USER,
+                                               TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
-from conans.util.files import save_files, save, mkdir
+from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.manifest import FileTreeManifest
-from conans.client.tools.win import get_cased_path
+
+NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 
-def inc_recipe_manifest_timestamp(client_cache, conan_ref, inc_time):
-    conan_ref = ConanFileReference.loads(str(conan_ref))
-    path = client_cache.export(conan_ref)
+def inc_recipe_manifest_timestamp(cache, reference, inc_time):
+    ref = ConanFileReference.loads(reference)
+    path = cache.export(ref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
 
 
-def inc_package_manifest_timestamp(client_cache, package_ref, inc_time):
-    pkg_ref = PackageReference.loads(str(package_ref))
-    path = client_cache.package(pkg_ref)
+def inc_package_manifest_timestamp(cache, package_reference, inc_time):
+    pref = PackageReference.loads(package_reference)
+    path = cache.package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
+
+
+def test_processed_profile(profile=None, settings=None):
+    if profile is None:
+        profile = Profile()
+    if profile.processed_settings is None:
+        profile.processed_settings = settings or Settings()
+    return ProcessedProfile(profile=profile)
 
 
 class TestingResponse(object):
@@ -204,13 +222,8 @@ class TestRequester(object):
 
 
 class TestServer(object):
-    from conans import __version__ as SERVER_VERSION
-    from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
-
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
-                 server_version=Version(SERVER_VERSION),
-                 min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
                  server_capabilities=None, complete_urls=False):
         """
              'read_permissions' and 'write_permissions' is a list of:
@@ -230,19 +243,16 @@ class TestServer(object):
             users = {"lasote": "mypass"}
 
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
-        min_client_ver = min_client_compatible_version
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
         self.test_server = TestServerLauncher(base_path, read_permissions,
                                               write_permissions, users,
                                               base_url=base_url,
                                               plugins=plugins,
-                                              server_version=server_version,
-                                              min_client_compatible_version=min_client_ver,
                                               server_capabilities=server_capabilities)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
-    def paths(self):
+    def server_store(self):
         return self.test_server.server_store
 
     def __repr__(self):
@@ -306,6 +316,71 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None)
     return tmp.replace("\\", "/"), git.get_revision()
 
 
+def try_remove_readonly(func, path, exc):  # TODO: May promote to conan tools?
+    # src: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
+    excvalue = exc[1]
+    if func in (os.rmdir, os.remove, os.unlink) and excvalue.errno == errno.EACCES:
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)  # 0777
+        func(path)
+    else:
+        raise OSError("Cannot make read-only %s" % path)
+
+
+class SVNLocalRepoTestCase(unittest.TestCase):
+    path_with_spaces = True
+
+    def _create_local_svn_repo(self):
+        repo_url = os.path.join(self._tmp_folder, 'repo_server')
+        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
+        return SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
+
+    def gimme_tmp(self, create=True):
+        tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
+        if create:
+            os.makedirs(tmp)
+        return tmp
+
+    def create_project(self, files, rel_project_path=None, commit_msg='default commit message',
+                       delete_checkout=True):
+        tmp_dir = self.gimme_tmp()
+        try:
+            rel_project_path = rel_project_path or str(uuid.uuid4())
+            # Do not use SVN class as it is what we will be testing
+            subprocess.check_output('svn co "{url}" "{path}"'.format(url=self.repo_url,
+                                                                     path=tmp_dir),
+                                    shell=True)
+            tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
+            os.makedirs(tmp_project_dir)
+            save_files(tmp_project_dir, files)
+            with chdir(tmp_project_dir):
+                subprocess.check_output("svn add .", shell=True)
+                subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
+                if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+                    rev = subprocess.check_output("svn info --show-item revision",
+                                                  shell=True).decode().strip()
+                else:
+                    import xml.etree.ElementTree as ET
+                    output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                    root = ET.fromstring(output)
+                    rev = root.findall("./entry")[0].get("revision")
+            project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
+            return project_url, rev
+        finally:
+            if delete_checkout:
+                shutil.rmtree(tmp_dir, ignore_errors=False, onerror=try_remove_readonly)
+
+    def run(self, *args, **kwargs):
+        tmp_folder = tempfile.mkdtemp(suffix='_conans')
+        try:
+            self._tmp_folder = os.path.join(tmp_folder, 'path with spaces'
+                                            if self.path_with_spaces else 'pathwithoutspaces')
+            os.makedirs(self._tmp_folder)
+            self.repo_url = self._create_local_svn_repo()
+            super(SVNLocalRepoTestCase, self).run(*args, **kwargs)
+        finally:
+            shutil.rmtree(tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
+
+
 class MockedUserIO(UserIO):
 
     """
@@ -356,10 +431,9 @@ class TestClient(object):
     in command line
     """
 
-    def __init__(self, base_folder=None, current_folder=None,
-                 servers=None, users=None, client_version=CLIENT_VERSION,
-                 min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True):
+    def __init__(self, base_folder=None, current_folder=None, servers=None, users=None,
+                 requester_class=None, runner=None, path_with_spaces=True, block_v2=None,
+                 revisions=None, cpu_count=1):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -367,38 +441,61 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.block_v2 = block_v2 or get_env("CONAN_API_V2_BLOCKED", True)
+
+        if self.block_v2:
+            self.revisions = False
+        else:
+            self.revisions = revisions or get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
+            self.block_v2 = False
+
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
-
-        self.client_version = Version(str(client_version))
-        self.min_server_compatible_version = Version(str(min_server_compatible_version))
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
 
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
+        self.cache = ClientCache(self.base_folder, self.storage_folder,
+                                 TestBufferConanOutput())
 
         self.requester_class = requester_class
         self.conan_runner = runner
 
-        self.update_servers(servers)
+        if cpu_count:
+            self.cache.conan_config
+            replace_in_file(self.cache.conan_conf_path,
+                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
+                            output=TestBufferConanOutput(), strict=not bool(base_folder))
+            # Invalidate the cached config
+            self.cache.invalidate()
+
+        if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
+            raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
+servers = OrderedDict()
+servers["r1"] = server
+servers["r2"] = TestServer()
+""")
+
+        self.servers = servers or {}
+        if servers is not False:  # Do not mess with registry remotes
+            self.update_servers()
+
         self.init_dynamic_vars()
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
-    def update_servers(self, servers):
-        self.servers = servers or {}
-        save(self.client_cache.registry, "")
-        registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
+    def update_servers(self):
+        save(self.cache.registry_path, dump_registry({}, {}, {}))
+        registry = self.cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
-                registry.add(name, server.fake_url)
+                registry.remotes.add(name, server.fake_url)
             else:
-                registry.add(name, server)
+                registry.remotes.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
@@ -409,16 +506,8 @@ class TestClient(object):
                 add_server_to_registry(name, server)
 
     @property
-    def remote_registry(self):
-        return RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
-
-    @property
-    def paths(self):
-        return self.client_cache
-
-    @property
     def default_compiler_visual_studio(self):
-        settings = self.client_cache.default_profile.settings
+        settings = self.cache.default_profile.settings
         return settings.get("compiler", None) == "Visual Studio"
 
     @property
@@ -441,7 +530,7 @@ class TestClient(object):
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-
+        self.cache = ClientCache(self.base_folder, self.storage_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
@@ -450,7 +539,7 @@ class TestClient(object):
             if isinstance(server, str):  # Just URI
                 real_servers = True
 
-        with tools.environment_append(self.client_cache.conan_config.env_vars):
+        with tools.environment_append(self.cache.conan_config.env_vars):
             if real_servers:
                 requester = requests.Session()
             else:
@@ -459,50 +548,51 @@ class TestClient(object):
                 else:
                     requester = TestRequester(self.servers)
 
-            self.requester = ConanRequester(requester, self.client_cache,
+            self.requester = ConanRequester(requester, self.cache,
                                             get_request_timeout())
 
-            self.plugin_manager = PluginManager(self.client_cache.plugins_path,
-                                                get_env("CONAN_PLUGINS", list()),
-                                                self.user_io.out)
+            self.hook_manager = HookManager(self.cache.hooks_path,
+                                            get_env("CONAN_HOOKS", list()), self.user_io.out)
 
-            self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
-                                                            self.requester, self.client_cache,
-                                                            self.user_io, self.client_version,
-                                                            self.min_server_compatible_version,
-                                                            self.plugin_manager)
-            set_global_instances(output, self.requester)
+            self.localdb, self.rest_api_client, self.remote_manager = \
+                Conan.instance_remote_manager(self.requester, self.cache,
+                                              self.user_io, self.hook_manager)
+            self.rest_api_client.block_v2 = self.block_v2
+            return output, self.requester
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
-        self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
-                                                         storage_folder=self.storage_folder)
+        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput(),
+                                           storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
-        self._init_collaborators(user_io)
+        return self._init_collaborators(user_io)
 
-    def run(self, command_line, user_io=None, ignore_error=False):
+    def run(self, command_line, user_io=None, assert_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        self.init_dynamic_vars(user_io)
-        with tools.environment_append(self.client_cache.conan_config.env_vars):
+        output, requester = self.init_dynamic_vars(user_io)
+        with tools.environment_append(self.cache.conan_config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                          self.plugin_manager, interactive=interactive)
-        outputer = CommandOutputer(self.user_io, self.client_cache)
-        command = Command(conan, self.client_cache, self.user_io, outputer)
+            conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
+                          self.hook_manager, requester, interactive=interactive)
+        outputer = CommandOutputer(self.user_io, self.cache)
+        command = Command(conan, self.cache, self.user_io, outputer)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
+        sys.path.append(os.path.join(self.cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
+
+        old_output, old_requester = set_global_instances(output, requester)
         try:
             error = command.run(args)
         finally:
+            set_global_instances(old_output, old_requester)
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
@@ -510,12 +600,16 @@ class TestClient(object):
             for added in added_modules:
                 sys.modules.pop(added, None)
 
-        if not ignore_error and error:
-            exc_message = "\n{command_header}\n{command}\n{output_header}\n{output}\n{output_footer}\n".format(
-                command_header='{:-^80}'.format(" Command failed: "),
+        if (assert_error and not error) or (not assert_error and error):
+            if assert_error:
+                msg = " Command succeeded (failure expected): "
+            else:
+                msg = " Command failed (unexpectedly): "
+            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
+                header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
-                command=command_line,
+                cmd=command_line,
                 output=self.user_io.out
             )
             raise Exception(exc_message)
@@ -534,19 +628,25 @@ class TestClient(object):
         if not files:
             mkdir(self.current_folder)
 
+    def get_revision(self, ref):
+        return self.cache.package_layout(ref).load_metadata().recipe.revision
+
+    def get_package_revision(self, pref):
+        metadata = self.cache.package_layout(pref.ref).load_metadata()
+        return metadata.packages[pref.id].revision
+
 
 class StoppableThreadBottle(threading.Thread):
     """
     Real server to test download endpoints
     """
-    server = None
-    port = None
 
-    def __init__(self, host="127.0.0.1", port=None):
-        self.port = port or random.randrange(8200, 8600)
+    def __init__(self, host=None, port=None):
+        self.host = host or "127.0.0.1"
+        self.port = port or random.randrange(48000, 49151)
         self.server = bottle.Bottle()
         super(StoppableThreadBottle, self).__init__(target=self.server.run,
-                                                    kwargs={"host": host, "port": self.port})
+                                                    kwargs={"host": self.host, "port": self.port})
         self.daemon = True
         self._stop = threading.Event()
 

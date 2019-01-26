@@ -16,6 +16,8 @@ linuxpylocation = {"py27": "/usr/bin/python2.7",
                    "py36": "/usr/bin/python3.6",
                    "py37": "/usr/bin/python3.7"}
 
+win_msbuilds_logs_folder = "D:\\J\\msbuild_logs"
+
 
 def get_environ(tmp_path):
     if platform.system() == "Windows":

@@ -1,5 +1,6 @@
 import argparse
 import inspect
+import json
 import os
 import sys
 from argparse import ArgumentError
@@ -7,19 +8,19 @@ from argparse import ArgumentError
 import six
 
 from conans import __version__ as client_version
+from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
+    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
-
-from conans.errors import ConanException, NoRemoteAvailable, ConanInvalidConfiguration
+from conans.client.printer import Printer
+from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
 from conans.model.ref import ConanFileReference
-from conans.util.config_parser import get_bool_from_text
-from conans.util.log import logger
-from conans.util.files import exception_message_safe
 from conans.unicode import get_cwd
-from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE,\
-    UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-
+from conans.util.config_parser import get_bool_from_text
+from conans.util.files import exception_message_safe
+from conans.util.files import save
+from conans.util.log import logger
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)
@@ -69,9 +70,10 @@ class OnceArgument(argparse.Action):
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
 
+
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
-_REFERENCE_EXAMPLE =  ("MyPackage/1.2@user/channel")
+_REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
@@ -94,15 +96,15 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, client_cache, user_io, outputer):
+    def __init__(self, conan_api, cache, user_io, outputer):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._client_cache = client_cache
+        self._cache = cache
         self._user_io = user_io
         self._outputer = outputer
 
     def help(self, *args):
-        """Show help of a specific commmand.
+        """Show help of a specific command.
         """
         parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help")
         parser.add_argument("command", help='command', nargs="?")
@@ -138,7 +140,7 @@ class Command(object):
                                  'using "exports_sources" instead of retrieving external code with '
                                  'the "source()" method')
         parser.add_argument("-b", "--bare", action='store_true', default=False,
-                            help='Create the minimum package recipe, without build() method'
+                            help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
@@ -163,13 +165,13 @@ class Command(object):
                             help='Generate GitLab files for linux clang')
         parser.add_argument("-ciccg", "--ci-circleci-gcc", action='store_true',
                             default=False,
-                            help='Generate CicleCI files for linux gcc')
+                            help='Generate CircleCI files for linux gcc')
         parser.add_argument("-ciccc", "--ci-circleci-clang", action='store_true',
                             default=False,
-                            help='Generate CicleCI files for linux clang')
+                            help='Generate CircleCI files for linux clang')
         parser.add_argument("-cicco", "--ci-circleci-osx", action='store_true',
                             default=False,
-                            help='Generate CicleCI files for OSX apple-clang')
+                            help='Generate CircleCI files for OSX apple-clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",
@@ -190,6 +192,32 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx)
+
+    def inspect(self, *args):
+        """Displays conanfile attributes, like name, version, options
+        Works both locally, in local cache and remote
+        """
+        parser = argparse.ArgumentParser(description=self.inspect.__doc__, prog="conan inspect")
+        parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                            " (conanfile.py) or to a recipe file. e.g., "
+                            "./my_project/conanfile.py. It could also be a reference")
+        parser.add_argument("-a", "--attribute", help='The attribute to be displayed, e.g "name"',
+                            nargs="?", action=Extender)
+        parser.add_argument("-r", "--remote", help='look in the specified remote server',
+                            action=OnceArgument)
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='json output file')
+
+        args = parser.parse_args(*args)
+        result = self._conan.inspect(args.path_or_reference, args.attribute, args.remote)
+        Printer(self._user_io.out).print_inspect(result)
+        if args.json:
+            json_output = json.dumps(result)
+            if not os.path.isabs(args.json):
+                json_output_file = os.path.join(get_cwd(), args.json)
+            else:
+                json_output_file = args.json
+            save(json_output_file, json_output)
 
     def test(self, *args):
         """Test a package consuming it from a conanfile.py with a test() method.
@@ -228,14 +256,15 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.create.__doc__, prog="conan create")
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
-                            help='user/channel or pkg/version@user/channel (if name and version not'
-                                 ' declared in conanfile.py) where the package will be created')
+                            help='user/channel, version@user/channel or pkg/version@user/channel '
+                            '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. Implies --keep-source. '
+                            help='Do not remove the build folder in local cache. '
+                                 'Implies --keep-source. '
                                  'Use this for testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
@@ -318,6 +347,10 @@ class Command(object):
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("reference", nargs="?",
+                            help='Reference for the conanfile path of the first argument: '
+                            'user/channel, version@user/channel or pkg/version@user/channel'
+                            '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
@@ -340,26 +373,32 @@ class Command(object):
         info = None
         try:
             try:
-                reference = ConanFileReference.loads(args.path_or_reference)
+                ref = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
+                name, version, user, channel = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
+                                           name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
                                            env=args.env,
                                            remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
-                                           build=args.build, profile_name=args.profile,
+                                           build=args.build, profile_names=args.profile,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
             else:
-                info = self._conan.install_reference(reference, settings=args.settings,
+                if args.reference:
+                    raise ConanException("A full reference was provided as first argument, second "
+                                         "argument not allowed")
+
+                info = self._conan.install_reference(ref, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=args.manifests_interactive,
-                                                     build=args.build, profile_name=args.profile,
+                                                     build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder)
@@ -386,7 +425,8 @@ class Command(object):
         rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
-        install_subparser.add_argument("item", nargs="?", help="Configuration file to use")
+        install_subparser.add_argument("item", nargs="?",
+                                       help="Configuration file or directory to use")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
@@ -401,7 +441,7 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except ValueError:
-                if "plugins." in args.item:
+                if "hooks." in args.item:
                     key, value = args.item.split("=", 1)[0], None
                 else:
                     raise ConanException("Please specify 'key=value'")
@@ -475,7 +515,7 @@ class Command(object):
                                                settings=args.settings,
                                                options=args.options,
                                                env=args.env,
-                                               profile_name=args.profile,
+                                               profile_names=args.profile,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
@@ -493,7 +533,7 @@ class Command(object):
                                                        settings=args.settings,
                                                        options=args.options,
                                                        env=args.env,
-                                                       profile_name=args.profile,
+                                                       profile_names=args.profile,
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
@@ -506,7 +546,7 @@ class Command(object):
                                     settings=args.settings,
                                     options=args.options,
                                     env=args.env,
-                                    profile_name=args.profile,
+                                    profile_names=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
@@ -714,7 +754,7 @@ class Command(object):
                             "will raise an error.")
         parser.add_argument("-o", "--options", nargs=1, action=Extender,
                             help='Define options values, e.g., -o pkg:with_qt=true')
-        parser.add_argument("-pr", "--profile", action=OnceArgument,
+        parser.add_argument("-pr", "--profile", action=Extender,
                             help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
@@ -723,24 +763,37 @@ class Command(object):
         parser.add_argument("-s", "--settings", nargs=1, action=Extender,
                             help='Define settings values, e.g., -s compiler=gcc')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information will be '
+                            'written')
         args = parser.parse_args(*args)
+
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
-        return self._conan.export_pkg(conanfile_path=args.path,
-                                      name=name,
-                                      version=version,
-                                      source_folder=args.source_folder,
-                                      build_folder=args.build_folder,
-                                      package_folder=args.package_folder,
-                                      install_folder=args.install_folder,
-                                      profile_name=args.profile,
-                                      env=args.env,
-                                      settings=args.settings,
-                                      options=args.options,
-                                      force=args.force,
-                                      user=user,
-                                      channel=channel)
+        cwd = os.getcwd()
+        info = None
+
+        try:
+            info = self._conan.export_pkg(conanfile_path=args.path,
+                                          name=name,
+                                          version=version,
+                                          source_folder=args.source_folder,
+                                          build_folder=args.build_folder,
+                                          package_folder=args.package_folder,
+                                          install_folder=args.install_folder,
+                                          profile_names=args.profile,
+                                          env=args.env,
+                                          settings=args.settings,
+                                          options=args.options,
+                                          force=args.force,
+                                          user=user,
+                                          channel=channel)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, cwd)
 
     def export(self, *args):
         """Copies the recipe (conanfile.py & associated files) to your local cache.
@@ -777,6 +830,8 @@ class Command(object):
                                   "specifying the package ID"))
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
+        parser.add_argument("-l", "--locks", default=False, action="store_true",
+                            help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. " \
                                  "This flag can only be used with a reference")
@@ -787,16 +842,15 @@ class Command(object):
                             help='Will remove from the specified remote')
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
-        parser.add_argument("-l", "--locks", default=False, action="store_true",
-                            help="Remove locks")
+        parser.add_argument('-t', '--system-reqs', default=False, action="store_true",
+                            help='Remove system_reqs folders')
         args = parser.parse_args(*args)
 
         self._warn_python2()
 
         # NOTE: returns the expanded pattern (if a pattern was given), and checks
         # that the query parameter wasn't abused
-        reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
-                                                                  args.query)
+        ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -810,14 +864,25 @@ class Command(object):
         if args.locks:
             if args.pattern_or_reference:
                 raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._client_cache.remove_locks()
+            self._cache.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
+        elif args.system_reqs:
+            if not ref:
+                raise ConanException("Please specify a valid package reference to be cleaned")
+            if args.packages:
+                raise ConanException("'-t' and '-p' parameters can't be used at the same time")
+            try:
+                self._cache.remove_package_system_reqs(ref)
+                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                return
+            except Exception as error:
+                raise ConanException("Unable to remove system_reqs: %s" % error)
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=reference or args.pattern_or_reference, query=args.query,
+        return self._conan.remove(pattern=ref or args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
@@ -947,24 +1012,25 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
-            reference = ConanFileReference.loads(args.pattern_or_reference)
-            if "*" in reference:
+            ref = ConanFileReference.loads(args.pattern_or_reference)
+            if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.g.: conan search lib/*@lasote/stable
-                reference = None
+                ref = None
         except (TypeError, ConanException):
-            reference = None
+            ref = None
 
         cwd = os.getcwd()
         info = None
 
         try:
-            if reference:
-                info = self._conan.search_packages(reference, query=args.query,
+            if ref:
+
+                info = self._conan.search_packages(ref.full_repr(), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
-                self._outputer.print_search_packages(info["results"], reference, args.query,
+                self._outputer.print_search_packages(info["results"], ref, args.query,
                                                      args.table, outdated=args.outdated)
             else:
                 if args.table:
@@ -1030,7 +1096,6 @@ class Command(object):
                             help='json file path where the upload information will be written to')
 
         args = parser.parse_args(*args)
-
 
         if args.query and args.package:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -1118,9 +1183,33 @@ class Command(object):
                                             "a package recipe")
         parser_pupd.add_argument('reference', help='Package recipe reference')
         parser_pupd.add_argument('remote', help='Name of the remote')
+
+
+        list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
+                                                            'its associated remotes')
+        list_pref.add_argument('reference', help='Package recipe reference')
+
+        add_pref = subparsers.add_parser('add_pref',
+                                         help="Associate a package reference to a remote")
+        add_pref.add_argument('package_reference', help='Binary package reference')
+        add_pref.add_argument('remote', help='Name of the remote')
+
+        remove_pref = subparsers.add_parser('remove_pref', help="Dissociate a package's reference "
+                                                              "and its remote")
+        remove_pref.add_argument('package_reference', help='Binary package reference')
+
+        update_pref = subparsers.add_parser('update_pref', help="Update the remote associated with "
+                                            "a binary package")
+        update_pref.add_argument('package_reference', help='Bianary package reference')
+        update_pref.add_argument('remote', help='Name of the remote')
+
+        subparsers.add_parser('clean', help="Clean the list of remotes and all "
+                                            "recipe-remote associations")
+
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
+        package_reference = args.package_reference if hasattr(args, 'package_reference') else None
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
@@ -1148,6 +1237,17 @@ class Command(object):
             return self._conan.remote_remove_ref(reference)
         elif args.subcommand == "update_ref":
             return self._conan.remote_update_ref(reference, remote_name)
+        elif args.subcommand == "list_pref":
+            refs = self._conan.remote_list_pref(reference)
+            self._outputer.remote_pref_list(refs)
+        elif args.subcommand == "add_pref":
+            return self._conan.remote_add_pref(package_reference, remote_name)
+        elif args.subcommand == "remove_pref":
+            return self._conan.remote_remove_pref(package_reference)
+        elif args.subcommand == "update_pref":
+            return self._conan.remote_update_pref(package_reference, remote_name)
+        elif args.subcommand == "clean":
+            return self._conan.remote_clean()
 
     def profile(self, *args):
         """ Lists profiles in the '.conan/profiles' folder, or shows profile details.
@@ -1255,14 +1355,52 @@ class Command(object):
 
         self._conan.export_alias(args.reference, args.target)
 
+    def link(self, *args):
+        """ Links a conan reference (e.g lib/1.0@conan/stable) with a local folder path.
+
+        """
+        parser = argparse.ArgumentParser(description=self.link.__doc__,
+                                         prog="conan link")
+        parser.add_argument('target', help='Path to the package folder in the user workspace',
+                            nargs='?',)
+        parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
+        parser.add_argument("--remove", action='store_true', default=False,
+                            help='Remove linked reference (target not required)')
+        parser.add_argument("-l", "--layout",
+                            help='Relative or absolute path to a file containing the layout.'
+                            ' Relative paths will be resolved first relative to current dir, '
+                            'then to local cache "layouts" folder')
+
+        args = parser.parse_args(*args)
+        self._warn_python2()
+
+        # Args sanity check
+        if args.remove and args.target:
+            raise ConanException("Do not provide the 'target' argument for removal")
+
+        if not args.remove and not args.target:
+            raise ConanException("Argument 'target' is required to link a reference")
+
+        if not args.remove:
+            self._conan.link(args.target, args.reference, args.layout, cwd=os.getcwd())
+            self._outputer.writeln("Reference '{}' linked to directory "
+                                   "'{}'".format(args.reference, os.path.dirname(args.target)))
+        else:
+            ret = self._conan.unlink(args.reference)
+            if ret:
+                self._outputer.writeln("Removed linkage for reference '{}'".format(args.reference))
+            else:
+                self._user_io.out.warn("Reference '{}' was not installed "
+                                       "as editable".format(args.reference))
+
     def _show_help(self):
         """Prints a summary of all commands
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package")),
+                ("Package development commands", ("source", "build", "package", "link")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "help"))]
+                                   "alias", "download", "inspect", "help"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -1314,16 +1452,16 @@ class Command(object):
 
     @staticmethod
     def _check_query_parameter_and_get_reference(pattern, query):
-        reference = None
+        ref = None
         if pattern:
             try:
-                reference = ConanFileReference.loads(pattern)
+                ref = ConanFileReference.loads(pattern)
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
                                          "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
-        return reference
+        return ref
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1385,7 +1523,11 @@ def get_reference_fields(arg_reference):
 
     try:
         name_version, user_channel = arg_reference.split("@")
-        name, version = name_version.split("/")
+        name_version = name_version.split("/")
+        try:
+            name, version = name_version
+        except ValueError:
+            name, version = None, name_version[0]
         user, channel = user_channel.split("/")
     except ValueError:
         name, version = None, None
@@ -1423,7 +1565,7 @@ def _add_common_install_arguments(parser, build_help):
                              '-e CXX=/usr/bin/clang++')
     parser.add_argument("-o", "--options", nargs=1, action=Extender,
                         help='Define options values, e.g., -o Pkg:with_qt=true')
-    parser.add_argument("-pr", "--profile", default=None, action=OnceArgument,
+    parser.add_argument("-pr", "--profile", default=None, action=Extender,
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
@@ -1465,12 +1607,12 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, client_cache, user_io = Conan.factory()
+        conan_api, cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
         sys.exit(ERROR_MIGRATION)
 
-    outputer = CommandOutputer(user_io, client_cache)
-    command = Command(conan_api, client_cache, user_io, outputer)
+    outputer = CommandOutputer(user_io, cache)
+    command = Command(conan_api, cache, user_io, outputer)
     current_dir = get_cwd()
     try:
         import signal

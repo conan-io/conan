@@ -14,10 +14,9 @@ class DepsCppQbs(object):
         self.cppflags = delimiter.join('"%s"' % d
                                        for d in cpp_info.cppflags)
         self.cflags = delimiter.join('"%s"' % d for d in cpp_info.cflags)
-        self.sharedlinkflags = delimiter.join('"%s"' % d
-                                              for d in cpp_info.sharedlinkflags)
-        self.sharedlinkflags += delimiter.join('"%s"' % d
-                                               for d in cpp_info.exelinkflags)
+        linker_flags = cpp_info.sharedlinkflags
+        linker_flags.extend(cpp_info.exelinkflags)
+        self.linkerFlags = delimiter.join('"%s"' % d for d in linker_flags)
         self.bin_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                         for p in cpp_info.bin_paths)
         self.rootpath = '%s' % cpp_info.rootpath.replace("\\", "/")
@@ -43,7 +42,7 @@ class QbsGenerator(Generator):
                     '            cpp.defines: [{deps.defines}]\n'
                     '            cpp.cppFlags: [{deps.cppflags}]\n'
                     '            cpp.cFlags: [{deps.cflags}]\n'
-                    '            cpp.linkerFlags: [{deps.sharedlinkflags}]\n'
+                    '            cpp.linkerFlags: [{deps.linkerFlags}]\n'
                     '        }}\n'
                     '    }}\n')
 

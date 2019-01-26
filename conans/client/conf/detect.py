@@ -1,11 +1,12 @@
 import os
 import platform
 import re
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
+from conans.client.tools.win import latest_visual_studio_version_installed
+from conans.client.tools import OSInfo
 from conans.model.version import Version
-from conans.client.tools import latest_visual_studio_version_installed
 
 
 def _execute(command):
@@ -64,9 +65,14 @@ def _clang_compiler(output, compiler_exe="clang"):
         installed_version = re.search("([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
+            major = installed_version.split(".")[0]
+            if int(major) >= 8 and compiler == "clang":
+                output.info("clang>=8, using the major as version")
+                installed_version = major
             return compiler, installed_version
     except:
         return None
+
 
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
@@ -163,16 +169,11 @@ adjusting 'compiler.libcxx=libstdc++11'
 
 
 def detected_os():
-    result = platform.system()
-    if result == "Darwin":
+    if OSInfo().is_macos:
         return "Macos"
-    if result.startswith("CYGWIN"):
+    if OSInfo().is_windows:
         return "Windows"
-    if result.startswith("MINGW32_NT") or result.startswith("MINGW64_NT"):
-        return "Windows"
-    if result.startswith("MSYS_NT"):
-        return "Windows"
-    return result
+    return platform.system()
 
 
 def _detect_os_arch(result, output):
@@ -185,17 +186,19 @@ def _detect_os_arch(result, output):
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
-    arch = architectures.get(platform.machine().lower(), platform.machine().lower())
-    if arch.startswith('arm'):
-        for a in ("armv6", "armv7hf", "armv7", "armv8"):
-            if arch.startswith(a):
-                arch = a
-                break
-        else:
-            output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
-                         "Please check your conan.conf and settings.yml files" % arch)
-    result.append(("arch", arch))
-    result.append(("arch_build", arch))
+    platform_machine = platform.machine().lower()
+    if platform_machine:
+        arch = architectures.get(platform_machine, platform_machine)
+        if arch.startswith('arm'):
+            for a in ("armv6", "armv7hf", "armv7", "armv8"):
+                if arch.startswith(a):
+                    arch = a
+                    break
+            else:
+                output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
+                             "Please check your conan.conf and settings.yml files" % arch)
+        result.append(("arch", arch))
+        result.append(("arch_build", arch))
 
 
 def detect_defaults_settings(output):

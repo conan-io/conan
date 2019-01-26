@@ -1,8 +1,8 @@
 import re
+
+from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.client.cmd.new_ci import ci_get_files
-
 
 conanfile = """from conans import ConanFile, CMake, tools
 
@@ -11,8 +11,10 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
+    author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -62,6 +64,8 @@ class {package_name}Conan(ConanFile):
     description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
+    author = "None"
+    topics = None
 
     def package(self):
         self.copy("*")
@@ -77,8 +81,10 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
+    author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -116,8 +122,10 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
+    author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     no_copy_source = True
     # No settings/options are necessary, this is header only
 

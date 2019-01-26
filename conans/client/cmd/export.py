@@ -2,21 +2,21 @@ import ast
 import os
 import shutil
 
+import six
+
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
-from conans.client.source import get_scm_data
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.model.scm import SCM
-from conans.paths import CONAN_MANIFEST, CONANFILE
-from conans.util.files import save, rmdir, is_dirty, set_dirty, mkdir, load
-from conans.util.log import logger
+from conans.model.scm import SCM, get_scm_data
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
-from conans.client.plugin_manager import PluginManager
+from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
+from conans.util.log import logger
 
 
-def export_alias(reference, target_reference, client_cache):
+def export_alias(reference, target_reference, cache):
     if reference.name != target_reference.name:
         raise ConanException("An alias can only be defined to a package with the same name")
     conanfile = """
@@ -26,78 +26,95 @@ class AliasConanfile(ConanFile):
     alias = "%s"
 """ % str(target_reference)
 
-    export_path = client_cache.export(reference)
+    export_path = cache.export(reference)
     mkdir(export_path)
     save(os.path.join(export_path, CONANFILE), conanfile)
-    mkdir(client_cache.export_sources(reference))
+    mkdir(cache.export_sources(reference))
     digest = FileTreeManifest.create(export_path)
     digest.save(export_path)
 
 
-def cmd_export(conanfile_path, conanfile, reference, keep_source, output, client_cache,
-               plugin_manager):
+def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
-    plugin_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                           reference=reference)
-    logger.debug("Exporting %s" % conanfile_path)
+    hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
+                         reference=ref)
+    logger.debug("EXPORT: %s" % conanfile_path)
     output.highlight("Exporting package recipe")
 
     conan_linter(conanfile_path, output)
     # Maybe a platform check could be added, but depends on disk partition
-    conan_ref_str = str(reference)
-    refs = search_recipes(client_cache, conan_ref_str, ignorecase=True)
-    if refs and reference not in refs:
+    reference = str(ref)
+    refs = search_recipes(cache, reference, ignorecase=True)
+    if refs and ref not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"
-                             % (conan_ref_str, " ".join(str(s) for s in refs)))
+                             % (reference, " ".join(str(s) for s in refs)))
 
-    with client_cache.conanfile_write_lock(reference):
-        _export_conanfile(conanfile_path, conanfile.output, client_cache, conanfile, reference,
-                          keep_source)
-    conanfile_cache_path = client_cache.conanfile(reference)
-    plugin_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
-                           reference=reference)
+    with cache.conanfile_write_lock(ref):
+        _export_conanfile(conanfile_path, conanfile.output, cache, conanfile, ref, keep_source)
+    conanfile_cache_path = cache.conanfile(ref)
+    hook_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
+                         reference=ref)
 
 
-def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, conan_ref):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, ref):
 
-    scm_src_file = paths.scm_folder(conan_ref)
+    scm_src_file = paths.scm_folder(ref)
     if os.path.exists(scm_src_file):
         os.unlink(scm_src_file)
 
     scm_data = get_scm_data(conanfile)
+    if not scm_data:
+        return None, False
 
-    if not scm_data or not (scm_data.capture_origin or scm_data.capture_revision):
-        return
+    # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
+    captured_revision = scm_data.capture_revision
 
-    scm = SCM(scm_data, conanfile_dir)
+    scm = SCM(scm_data, conanfile_dir, output)
+    if scm_data.capture_origin or scm_data.capture_revision:
+        # Generate the scm_folder.txt file pointing to the src_path
+        src_path = scm.get_repo_root()
+        save(scm_src_file, src_path.replace("\\", "/"))
 
     if scm_data.url == "auto":
-        origin = scm.get_remote_url()
+        origin = scm.get_qualified_remote_url(remove_credentials=True)
         if not origin:
             raise ConanException("Repo origin cannot be deduced by 'auto'")
-        if os.path.exists(origin):
+        if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
-            origin = origin.replace("\\", "/")
         output.success("Repo origin deduced by 'auto': %s" % origin)
         scm_data.url = origin
+
     if scm_data.revision == "auto":
+        if not scm.is_pristine():
+            output.warn("Repo status is not pristine: there might be modified files")
         scm_data.revision = scm.get_revision()
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
-    # Generate the scm_folder.txt file pointing to the src_path
-    src_path = scm.get_repo_root()
-    save(scm_src_file, src_path.replace("\\", "/"))
-    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"),
-                                   scm_data)
+    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+
+    return scm_data, captured_revision
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
+    headers = []
+
+    if six.PY2:
+        # Workaround for https://bugs.python.org/issue22221
+        lines_without_headers = []
+        lines = content.splitlines(True)
+        for line in lines:
+            if not lines_without_headers and line.startswith("#"):
+                headers.append(line)
+            else:
+                lines_without_headers.append(line)
+        content = ''.join(lines_without_headers)
+
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
@@ -126,19 +143,27 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
+    content = content if not headers else ''.join(headers) + content
+
+    remove(conanfile_path)
     save(conanfile_path, content)
 
 
-def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
+def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source):
 
-    exports_folder = paths.export(conan_ref)
-    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
+    exports_folder = cache.export(ref)
+    exports_source_folder = cache.export_sources(ref, conanfile.short_paths)
+
     previous_digest = _init_export_folder(exports_folder, exports_source_folder)
-    _execute_export(conanfile_path, conanfile, exports_folder, exports_source_folder, output)
+    origin_folder = os.path.dirname(conanfile_path)
+    export_recipe(conanfile, origin_folder, exports_folder)
+    export_source(conanfile, origin_folder, exports_source_folder)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder,
-                             output, paths, conan_ref)
+    scm_data, captured_revision = _capture_export_scm_data(conanfile,
+                                                           os.path.dirname(conanfile_path),
+                                                           exports_folder,
+                                                           output, cache, ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
@@ -150,9 +175,16 @@ def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % exports_folder)
         modified_recipe = True
+
     digest.save(exports_folder)
 
-    source = paths.source(conan_ref, conanfile.short_paths)
+    revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
+    with cache.package_layout(ref).update_metadata() as metadata:
+        # Note that there is no time set, the time will come from the remote
+        metadata.recipe.revision = revision
+
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
+    source = cache.source(ref, conanfile.short_paths)
     remove = False
     if is_dirty(source):
         output.info("Source folder is corrupted, forcing removal")
@@ -193,28 +225,35 @@ def _init_export_folder(destination_folder, destination_src_folder):
     return previous_digest
 
 
-def _execute_export(conanfile_path, conanfile, destination_folder, destination_source_folder,
-                    output):
+def _classify_patterns(patterns):
+    patterns = patterns or []
+    included, excluded = [], []
+    for p in patterns:
+        if p.startswith("!"):
+            excluded.append(p[1:])
+        else:
+            included.append(p)
+    return included, excluded
 
-    if isinstance(conanfile.exports, str):
-        conanfile.exports = (conanfile.exports, )
+
+def export_source(conanfile, origin_folder, destination_source_folder):
     if isinstance(conanfile.exports_sources, str):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
-    origin_folder = os.path.dirname(conanfile_path)
+    included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
+    copier = FileCopier(origin_folder, destination_source_folder)
+    for pattern in included_sources:
+        copier(pattern, links=True, excludes=excluded_sources)
+    output = conanfile.output
+    package_output = ScopedOutput("%s exports_sources" % output.scope, output)
+    copier.report(package_output)
 
-    def classify_patterns(patterns):
-        patterns = patterns or []
-        included, excluded = [], []
-        for p in patterns:
-            if p.startswith("!"):
-                excluded.append(p[1:])
-            else:
-                included.append(p)
-        return included, excluded
 
-    included_exports, excluded_exports = classify_patterns(conanfile.exports)
-    included_sources, excluded_sources = classify_patterns(conanfile.exports_sources)
+def export_recipe(conanfile, origin_folder, destination_folder):
+    if isinstance(conanfile.exports, str):
+        conanfile.exports = (conanfile.exports, )
+
+    included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
@@ -224,8 +263,6 @@ def _execute_export(conanfile_path, conanfile, destination_folder, destination_s
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    copier = FileCopier(origin_folder, destination_source_folder)
-    for pattern in included_sources:
-        copier(pattern, links=True, excludes=excluded_sources)
-    package_output = ScopedOutput("%s export" % output.scope, output)
+    output = conanfile.output
+    package_output = ScopedOutput("%s exports" % output.scope, output)
     copier.report(package_output)

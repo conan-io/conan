@@ -1,7 +1,6 @@
 import platform
 
-from conans.paths import CONANFILE, BUILD_INFO_CMAKE
-
+from conans.paths import BUILD_INFO_CMAKE, CONANFILE
 
 conanfile_build_cmake = """    def build(self):
         defs = {
@@ -174,8 +173,10 @@ conan_basic_setup()
 add_library(hello{name} hello{ext})
 target_link_libraries(hello{name} ${{CONAN_LIBS}})
 set_target_properties(hello{name}  PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_executable(say_hello main{ext})
-target_link_libraries(say_hello hello{name})
+if({with_exe})
+    add_executable(say_hello main{ext})
+    target_link_libraries(say_hello hello{name})
+endif()
 
 
 """ % BUILD_INFO_CMAKE
@@ -194,9 +195,10 @@ conan_basic_setup(TARGETS)
 add_library(hello{name} hello{ext})
 target_link_libraries(hello{name} PUBLIC {targets})
 set_target_properties(hello{name}  PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_executable(say_hello main{ext})
-target_link_libraries(say_hello hello{name})
-
+if({with_exe})
+    add_executable(say_hello main{ext})
+    target_link_libraries(say_hello hello{name})
+endif()
 
 """ % BUILD_INFO_CMAKE
 
@@ -252,7 +254,8 @@ executable = """
 
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=None,
-                           dll_export=False, need_patch=False, pure_c=False, cmake_targets=False):
+                           dll_export=False, need_patch=False, pure_c=False, cmake_targets=False,
+                           with_exe=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -297,9 +300,10 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
     if cmake_targets:
         ret["CMakeLists.txt"] = cmake_targets_file.format(name=name, ext=ext,
                                                           targets=" ".join("CONAN_PKG::%s"
-                                                                           % d for d in deps))
+                                                                           % d for d in deps),
+                                                          with_exe=str(with_exe))
     else:
-        ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext)
+        ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext, with_exe=str(with_exe))
     if pure_c:
         ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project(MyHello CXX)",
                                                               "project(MyHello C)")
@@ -315,7 +319,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
                           use_cmake=True, cmake_targets=False, no_copy_source=False,
-                          use_additional_infos=0, settings=None):
+                          use_additional_infos=0, settings=None, with_exe=True):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -348,7 +352,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
 
     base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
                                         dll_export=dll_export, need_patch=need_patch,
-                                        pure_c=pure_c, cmake_targets=cmake_targets)
+                                        pure_c=pure_c, cmake_targets=cmake_targets,
+                                        with_exe=with_exe)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
     build_env = conanfile_build_cmake if use_cmake else conanfile_build_new_env
 

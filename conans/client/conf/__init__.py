@@ -1,25 +1,24 @@
 import os
 
-from six.moves.configparser import ConfigParser, NoSectionError
 from six.moves import urllib
+from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
+from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
-MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -35,16 +34,16 @@ os:
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     watchOS:
-        version: ["4.0"]
+        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1"]
     tvOS:
-        version: ["11.0"]
+        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -55,7 +54,7 @@ compiler:
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
                   "7", "7.1", "7.2", "7.3",
-                  "8", "8.1"]
+                  "8", "8.1", "8.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -63,11 +62,13 @@ compiler:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
-                  v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp, 
-                  LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp, 
+                  v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
+                  LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0", "7.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
+                  "5.0", "6.0", "7.0",
+                  "8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
@@ -97,12 +98,14 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
-# cache_no_locks = True               # Disable locking mechanism of local cache
+# cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
+# use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
 # non_interactive = False             # environment CONAN_NON_INTERACTIVE
 
 # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
+# conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -114,6 +117,8 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # cmake_find_root_path_mode_program   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
 # cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
 # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+
+# msbuild_verbosity = minimal         # environment CONAN_MSBUILD_VERBOSITY
 
 # cpu_count = 1             # environment CONAN_CPU_COUNT
 
@@ -137,7 +142,7 @@ path = ~/.conan/data
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
-[plugins]  # environment CONAN_PLUGINS
+[hooks]    # environment CONAN_HOOKS
 attribute_checker
 
 # Default settings now declared in the default profile
@@ -166,6 +171,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_NON_INTERACTIVE": self._env_c("general.non_interactive", "CONAN_NON_INTERACTIVE", "False"),
                "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
+               "CONAN_CACHE_NO_LOCKS": self._env_c("general.cache_no_locks", "CONAN_CACHE_NO_LOCKS", "False"),
                "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
@@ -175,6 +181,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                "CONAN_READ_ONLY_CACHE": self._env_c("general.read_only_cache", "CONAN_READ_ONLY_CACHE", None),
                "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
+               "CONAN_USE_ALWAYS_SHORT_PATHS": self._env_c("general.use_always_short_paths", "CONAN_USE_ALWAYS_SHORT_PATHS", None),
                "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
@@ -199,9 +206,13 @@ class ConanClientConfigParser(ConfigParser, object):
 
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
+               "CONAN_CMAKE_PROGRAM": self._env_c("general.conan_cmake_program", "CONAN_CMAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
-               "CONAN_PLUGINS": self._env_c("plugins", "CONAN_PLUGINS", None)
+               "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
+               "CONAN_MSBUILD_VERBOSITY": self._env_c("general.msbuild_verbosity",
+                                                      "CONAN_MSBUILD_VERBOSITY",
+                                                      None)
                }
 
         # Filter None values
@@ -228,7 +239,7 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("'%s' is not a section of conan.conf" % section_name)
         if len(tokens) == 1:
             result = []
-            if section_name == "plugins":
+            if section_name == "hooks":
                 for key, _ in section:
                     result.append(key)
                 return ",".join(result)
@@ -256,7 +267,12 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("You can't set a full section, please specify a key=value")
 
         key = tokens[1]
-        super(ConanClientConfigParser, self).set(section_name, key, value)
+        try:
+            super(ConanClientConfigParser, self).set(section_name, key, value)
+        except ValueError:
+            # https://github.com/conan-io/conan/issues/4110
+            value = value.replace("%", "%%")
+            super(ConanClientConfigParser, self).set(section_name, key, value)
 
         with open(self.filename, "w") as f:
             self.write(f)
@@ -290,11 +306,13 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point "
-                                     "to an absolute path.")
+                from conans.client.cache.cache import PROFILES_FOLDER
+                profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
+                ret = os.path.abspath(os.path.join(profiles_folder, ret))
+
             if not os.path.exists(ret):
-                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' must point to "
-                                     "an existing profile file.")
+                raise ConanException("Environment variable 'CONAN_DEFAULT_PROFILE_PATH' "
+                                     "must point to an existing profile file.")
             return ret
         else:
             try:
@@ -305,7 +323,7 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def cache_no_locks(self):
         try:
-            return self.get_item("general.cache_no_locks")
+            return get_env("CONAN_CACHE_NO_LOCKS", False)
         except ConanException:
             return False
 

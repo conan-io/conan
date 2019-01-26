@@ -18,12 +18,12 @@ class TestConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        error = client.run('create . user/testing -s compiler="gcc" '
-                           '-s compiler.libcxx="libstdc++11" '
-                           '-s compiler.version="4.6" -s cppstd=17', ignore_error=True)
-        self.assertTrue(error)
+        client.run('create . user/testing -s compiler="gcc" '
+                   '-s compiler.libcxx="libstdc++11" '
+                   '-s compiler.version="4.6" -s cppstd=17', assert_error=True)
+
         self.assertIn("The specified 'cppstd=17' is not available for 'gcc 4.6'", client.out)
-        self.assertIn("Possible values are ['98', 'gnu98', '11', 'gnu11']", client.out)
+        self.assertIn("Possible values are ['11', '98', 'gnu11', 'gnu98']", client.out)
 
         client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
                    '-s compiler.version="6.3" -s cppstd=17')

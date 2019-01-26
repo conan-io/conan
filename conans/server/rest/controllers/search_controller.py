@@ -1,8 +1,8 @@
 from bottle import request
 
 from conans.model.ref import ConanFileReference
+from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.rest.controllers.controller import Controller
-from conans.server.rest.controllers.routes import Router
 from conans.server.service.service import SearchService
 
 
@@ -12,7 +12,7 @@ class SearchController(Controller):
     """
     def attach_to(self, app):
 
-        r = Router(self.route)
+        r = BottleRoutes(self.route)
 
         @app.route('%s/search' % r.base_url, method=["GET"])
         def search(auth_user):
@@ -29,6 +29,6 @@ class SearchController(Controller):
         def search_packages(name, version, username, channel, auth_user, revision=None):
             query = request.params.get("q", None)
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
-            conan_reference = ConanFileReference(name, version, username, channel, revision)
-            info = search_service.search_packages(conan_reference, query)
+            ref = ConanFileReference(name, version, username, channel, revision)
+            info = search_service.search_packages(ref, query)
             return info

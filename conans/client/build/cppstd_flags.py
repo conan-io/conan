@@ -1,15 +1,6 @@
 from conans.model.version import Version
 
 
-def available_cppstd_versions(compiler, compiler_version):
-    ret = []
-    stds = ["98", "gnu98", "11", "gnu11", "14",  "gnu14", "17", "gnu17", "20", "gnu20"]
-    for stdver in stds:
-        if cppstd_flag(compiler, compiler_version, stdver):
-            ret.append(stdver)
-    return ret
-
-
 def cppstd_flag(compiler, compiler_version, cppstd):
     if not compiler or not compiler_version or not cppstd:
         return ""

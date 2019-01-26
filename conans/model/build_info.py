@@ -6,6 +6,7 @@ DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
 DEFAULT_BIN = "bin"
 DEFAULT_RES = "res"
+DEFAULT_SHARE = "share"
 
 
 class _CppInfo(object):
@@ -15,6 +16,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.includedirs = []  # Ordered list of include paths
+        self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
         self.resdirs = []  # Directories to find resources, data, etc
         self.bindirs = []  # Directories to find executables and shared libs
@@ -33,13 +35,19 @@ class _CppInfo(object):
         self._bin_paths = None
         self._build_paths = None
         self._res_paths = None
+        self._src_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = True
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
-        return [p for p in abs_paths if os.path.isdir(p)]
+        if self.filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
 
     @property
     def include_paths(self):
@@ -52,6 +60,12 @@ class _CppInfo(object):
         if self._lib_paths is None:
             self._lib_paths = self._filter_paths(self.libdirs)
         return self._lib_paths
+
+    @property
+    def src_paths(self):
+        if self._src_paths is None:
+            self._src_paths = self._filter_paths(self.srcdirs)
+        return self._src_paths
 
     @property
     def bin_paths(self):
@@ -116,6 +130,7 @@ class _BaseDepsCppInfo(_CppInfo):
             return [s for s in seq1 if s not in seq2] + seq2
 
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
+        self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
         self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
@@ -140,6 +155,10 @@ class _BaseDepsCppInfo(_CppInfo):
     @property
     def lib_paths(self):
         return self.libdirs
+
+    @property
+    def src_paths(self):
+        return self.srcdirs
 
     @property
     def bin_paths(self):

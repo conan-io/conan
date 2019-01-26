@@ -1,8 +1,9 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.paths import CONANINFO
-from conans.util.files import load
 import os
+import unittest
+
+from conans.paths import CONANINFO
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.util.files import load
 
 
 class OptionsTest(unittest.TestCase):
@@ -32,8 +33,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
         client.run("create . Pkg/0.1@user/testing -o Pkg:shared=2")
         self.assertIn("Pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
-        error = client.run("create . Pkg/0.1@user/testing -o shared=1", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@user/testing -o shared=1", assert_error=True)
         self.assertIn("'options.shared' doesn't exist", client.out)
 
         conanfile = """from conans import ConanFile
@@ -43,8 +43,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing -o *:shared=True")
         self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
-        error = client.run("create . Pkg/0.1@user/testing -o shared=False", ignore_error=True)
-        self.assertTrue(error)
+        client.run("create . Pkg/0.1@user/testing -o shared=False", assert_error=True)
         self.assertIn("'options.shared' doesn't exist", client.out)
         # With test_package
         client.save({"conanfile.py": conanfile,
@@ -137,10 +136,72 @@ zlib/0.1@lasote/testing
 
         # Options not cached anymore
         client.run("install . --build=missing")
-        self.assertIn("zlib/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+        self.assertIn("zlib/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                       client.user_io.out)
         conaninfo = load(os.path.join(client.current_folder, CONANINFO))
         self.assertNotIn("zlib:shared=True", conaninfo)
+
+    def test_default_options(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+
+class MyConanFile(ConanFile):
+    name = "MyConanFile"
+    version = "1.0"
+    options = {"config": %s}
+    default_options = "config%s"
+
+    def configure(self):
+        if self.options.config:
+            self.output.info("Boolean evaluation")
+        if self.options.config is None:
+            self.output.info("None evaluation")
+        if self.options.config == "None":
+            self.output.info("String evaluation")
+"""
+        # Using "ANY" as possible options
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", "")})
+        client.run("create . danimtb/testing", assert_error=True)
+        self.assertIn("Error while initializing options.", client.out)
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=None")})
+        client.run("create . danimtb/testing")
+        self.assertNotIn("Boolean evaluation", client.out)
+        self.assertNotIn("None evaluation", client.out)
+        self.assertIn("String evaluation", client.out)
+
+        # Using None as possible options
+        client.save({"conanfile.py": conanfile % ("[None]", "")})
+        client.run("create . danimtb/testing", assert_error=True)
+        self.assertIn("Error while initializing options.", client.out)
+        client.save({"conanfile.py": conanfile % ("[None]", "=None")})
+        client.run("create . danimtb/testing")
+        self.assertNotIn("Boolean evaluation", client.out)
+        self.assertNotIn("None evaluation", client.out)
+        self.assertIn("String evaluation", client.out)
+
+        # Using "None" as possible options
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "")})
+        client.run("create . danimtb/testing", assert_error=True)
+        self.assertIn("Error while initializing options.", client.out)
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=None")})
+        client.run("create . danimtb/testing")
+        self.assertNotIn("Boolean evaluation", client.out)
+        self.assertNotIn("None evaluation", client.out)
+        self.assertIn("String evaluation", client.out)
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=\\\"None\\\"")})
+        client.run("create . danimtb/testing", assert_error=True)
+        self.assertIn("'\"None\"' is not a valid 'options.config' value", client.out)
+
+        # Using "ANY" as possible options and "otherstringvalue" as default
+        client.save({"conanfile.py": conanfile % ("[\"otherstringvalue\"]", "")})
+        client.run("create . danimtb/testing", assert_error=True)
+        self.assertIn("Error while initializing options.", client.out)
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=otherstringvalue")})
+        client.run("create . danimtb/testing")
+        self.assertIn("Boolean evaluation", client.out)
+        self.assertNotIn("None evaluation", client.out)
+        self.assertNotIn("String evaluation", client.out)
 
     def general_scope_options_test(self):
         # https://github.com/conan-io/conan/issues/2538
@@ -174,8 +235,8 @@ class LibB(ConanFile):
             client.save({"conanfile.py": conanfile})
 
             # Test info
-            client.run("info . -o *:shared=True", ignore_error=True)
-            self.assertIn("PROJECT: shared=True", client.out)
+            client.run("info . -o *:shared=True")
+            self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
             # Test create
             client.run("create . libB/0.1@danimtb/testing -o *:shared=True")
@@ -183,5 +244,5 @@ class LibB(ConanFile):
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
             # Test install
             client.run("install . -o *:shared=True")
-            self.assertIn("PROJECT: shared=True", client.out)
+            self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)

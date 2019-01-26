@@ -1,21 +1,36 @@
-import os
-import shutil
-import tempfile
-from contextlib import contextmanager
-from errno import ENOENT, EEXIST
+import errno
 import hashlib
-import sys
-from os.path import abspath, realpath, join as joinpath
+import os
 import platform
 import re
-import six
-from conans.util.log import logger
-import tarfile
+import shutil
 import stat
+import sys
+import tarfile
+import tempfile
+
+from os.path import abspath, join as joinpath, realpath
+
+import six
+
+from conans.util.log import logger
+
+
+def walk(top, **kwargs):
+    if six.PY2:
+        # If py2 os.walk receives a unicode object, it will fail if a non-ascii file name is found
+        # during the iteration. More info:
+        # https://stackoverflow.com/questions/21772271/unicodedecodeerror-when-performing-os-walk
+        try:
+            top = str(top)
+        except UnicodeDecodeError:
+            pass
+
+    return os.walk(top, **kwargs)
 
 
 def make_read_only(path):
-    for root, _, files in os.walk(path):
+    for root, _, files in walk(path):
         for f in files:
             full_path = os.path.join(root, f)
             mode = os.stat(full_path).st_mode
@@ -56,7 +71,7 @@ def touch(fname, times=None):
 
 
 def touch_folder(folder):
-    for dirname, _, filenames in os.walk(folder):
+    for dirname, _, filenames in walk(folder):
         for fname in filenames:
             os.utime(os.path.join(dirname, fname), None)
 
@@ -140,23 +155,6 @@ def mkdir_tmp():
     return tempfile.mkdtemp(suffix='tmp_conan')
 
 
-@contextmanager
-def tmp_file(contents):
-    """ Usage:
-
-    with tmp_file("mycontents") as filepath:
-        # Here exists filepath tmp file with "mycontents" inside
-
-    """
-    try:
-        tmp_dir = mkdir_tmp()
-        path = os.path.join(tmp_dir, "t")
-        save(path, contents)
-        yield path
-    finally:
-        rmdir(tmp_dir)
-
-
 def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
@@ -181,7 +179,7 @@ def load(path, binary=False):
 def relative_dirs(path):
     ''' Walks a dir and return a list with the relative paths '''
     ret = []
-    for dirpath, _, fnames in os.walk(path):
+    for dirpath, _, fnames in walk(path):
         for filename in fnames:
             tmp = os.path.join(dirpath, filename)
             tmp = tmp[len(path) + 1:]
@@ -209,18 +207,28 @@ def rmdir(path):
     try:
         shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
-        if err.errno == ENOENT:
+        if err.errno == errno.ENOENT:
+            return
+        raise
+
+
+def remove(path):
+    try:
+        assert os.path.isfile(path)
+        os.remove(path)
+    except (IOError, OSError) as e:  # for py3, handle just PermissionError
+        if e.errno == errno.EPERM or e.errno == errno.EACCES:
+            os.chmod(path, stat.S_IRWXU)
+            os.remove(path)
             return
         raise
 
 
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
-    try:
-        os.makedirs(path)
-    except OSError as err:
-        if err.errno != EEXIST:
-            raise
+    if os.path.exists(path):
+        return
+    os.makedirs(path)
 
 
 def path_exists(path, basedir):
@@ -310,7 +318,7 @@ def tar_extract(fileobj, destination_dir):
 
 def list_folder_subdirs(basedir, level):
     ret = []
-    for root, dirs, _ in os.walk(basedir):
+    for root, dirs, _ in walk(basedir):
         rel_path = os.path.relpath(root, basedir)
         if rel_path == ".":
             continue

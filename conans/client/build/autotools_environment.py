@@ -3,17 +3,18 @@ import os
 import platform
 
 from conans.client import join_arguments
-from conans.client.build.compiler_flags import (architecture_flag, format_libraries,
-                                                format_library_paths, format_defines,
-                                                sysroot_flag, format_include_paths,
-                                                build_type_flags, libcxx_flag, build_type_define,
-                                                libcxx_define, pic_flag, rpath_flags)
+from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
+                                                build_type_flags, format_defines,
+                                                format_include_paths, format_libraries,
+                                                format_library_paths, libcxx_define, libcxx_flag,
+                                                pic_flag, rpath_flags, sysroot_flag)
 from conans.client.build.cppstd_flags import cppstd_flag
-from conans.client.tools.oss import OSInfo
+from conans.client.tools.env import environment_append
+from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
+    detected_architecture, get_gnu_triplet
 from conans.client.tools.win import unix_path
-from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
-                          detected_architecture, get_gnu_triplet)
 from conans.errors import ConanException
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
 from conans.util.files import get_abs_path
 
 
@@ -95,7 +96,7 @@ class AutoToolsBuildEnvironment(object):
         return build, host, None
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
-                  pkg_config_paths=None, vars=None):
+                  pkg_config_paths=None, vars=None, use_default_install_dirs=True):
         """
         :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
@@ -106,10 +107,10 @@ class AutoToolsBuildEnvironment(object):
                        "False" skips the --target flag
                        When the tool chain generates executable program, in which target system
                        the program will run.
-        :return: None
 
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+        :param use_default_install_dirs: Use or not the defaulted installation dirs
 
         """
         if not self._conanfile.should_configure:
@@ -136,36 +137,69 @@ class AutoToolsBuildEnvironment(object):
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
                        [os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
-                                       for f in pkg_config_paths)]}
+                                        for f in pkg_config_paths)]}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
             pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else {}
 
+        configure_dir = self._adjust_path(configure_dir)
+
         if self._conanfile.package_folder is not None:
             if not args:
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
-            elif not any(["--prefix=" in arg for arg in args]):
+            elif not self._is_flag_in_args("prefix", args):
                 args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
 
-            if not any(["--libdir=" in arg for arg in args]):
-                args.append("--libdir=${prefix}/lib")
+            all_flags = ["bindir", "sbindir", "libexecdir", "libdir", "includedir", "oldincludedir",
+                         "datarootdir"]
+            help_output = self._configure_help_output(configure_dir)
+            available_flags = [flag for flag in all_flags if "--%s" % flag in help_output]
+
+            if use_default_install_dirs:
+                for varname in ["bindir", "sbindir", "libexecdir"]:
+                    if self._valid_configure_flag(varname, args, available_flags):
+                        args.append("--%s=${prefix}/%s" % (varname, DEFAULT_BIN))
+                if self._valid_configure_flag("libdir", args, available_flags):
+                    args.append("--libdir=${prefix}/%s" % DEFAULT_LIB)
+                for varname in ["includedir", "oldincludedir"]:
+                    if self._valid_configure_flag(varname, args, available_flags):
+                        args.append("--%s=${prefix}/%s" % (varname, DEFAULT_INCLUDE))
+                if self._valid_configure_flag("datarootdir", args, available_flags):
+                    args.append("--datarootdir=${prefix}/%s" % DEFAULT_SHARE)
 
         with environment_append(pkg_env):
             with environment_append(vars or self.vars):
-                configure_dir = self._adjust_path(configure_dir)
-                command = '%s/configure %s %s' % (configure_dir,
-                                                  args_to_string(args), " ".join(triplet_args))
+                command = '%s/configure %s %s' % (configure_dir, args_to_string(args),
+                                                  " ".join(triplet_args))
                 self._conanfile.output.info("Calling:\n > %s" % command)
-                self._conanfile.run(command,
-                                    win_bash=self._win_bash,
-                                    subsystem=self.subsystem)
+                self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+
+    def _configure_help_output(self, configure_path):
+        from six import StringIO  # Python 2 and 3 compatible
+        mybuf = StringIO()
+        try:
+            self._conanfile.run("%s/configure --help" % configure_path, output=mybuf)
+        except ConanException as e:
+            self._conanfile.output.warn("Error running `configure --help`: %s" % e)
+            return ""
+        return mybuf.getvalue()
 
     def _adjust_path(self, path):
         if self._win_bash:
             path = unix_path(path, path_flavor=self.subsystem)
         return '"%s"' % path if " " in path else path
+
+    @staticmethod
+    def _valid_configure_flag(varname, args, available_flags):
+        return not AutoToolsBuildEnvironment._is_flag_in_args(varname, args) and \
+               varname in available_flags
+
+    @staticmethod
+    def _is_flag_in_args(varname, args):
+        flag = "--%s=" % varname
+        return any([flag in arg for arg in args])
 
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
@@ -173,7 +207,7 @@ class AutoToolsBuildEnvironment(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
+            cpu_count_option = ("-j%s" % cpu_count(output=self._conanfile.output)) if "-j" not in str_args else None
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)

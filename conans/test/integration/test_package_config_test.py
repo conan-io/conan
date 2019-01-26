@@ -1,5 +1,7 @@
-from conans.test.utils.tools import TestClient
 import unittest
+
+from conans.test.utils.tools import TestClient
+
 test_conanfile = """from conans import ConanFile
 
 class test_packageConan(ConanFile):
@@ -63,9 +65,9 @@ class TestPackageConfigTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . lasote/stable -o conan_test_package:shared=True")
-        self.assertIn("PROJECT: shared (configure): True",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (configure): True",
                       client.out)
-        self.assertIn("PROJECT: shared (requirements): True",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (requirements): True",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",
                       client.out)
@@ -78,9 +80,9 @@ class TestPackageConfigTest(unittest.TestCase):
         self.assertNotIn("False", client.out)
 
         client.run("create . lasote/stable -o conan_test_package:shared=False")
-        self.assertIn("PROJECT: shared (configure): False",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (configure): False",
                       client.out)
-        self.assertIn("PROJECT: shared (requirements): False",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (requirements): False",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
                       client.out)
@@ -107,7 +109,7 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertNotIn("False", client.out)
 
-        client.run("create . lasote/stable -o conan_test_package:shared=False")
+        client.run("create . lasote/stable -o shared=False")
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
