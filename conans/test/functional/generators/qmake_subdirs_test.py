@@ -7,18 +7,16 @@ from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
-from conans.client.conf import default_settings_yml
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
-import os
 from conans.model.env_info import EnvValues
+from conans.test.utils.tools import TestBufferConanOutput
+
 
 
 class QMakeSubDirsGeneratorTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.conanfile = ConanFile(None, None)
+        cls.conanfile = ConanFile(TestBufferConanOutput(), None)
         cls.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
