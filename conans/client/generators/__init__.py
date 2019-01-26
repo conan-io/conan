@@ -16,8 +16,6 @@ from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
 from .premake import PremakeGenerator
-from .qmake import QmakeGenerator
-from .qmake_subdirs import QmakeSubDirsGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .qmake_subdirs import QmakeSubDirsGenerator
