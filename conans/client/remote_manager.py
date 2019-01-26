@@ -64,15 +64,6 @@ class RemoteManager(object):
         ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
                                 policy, remote_manifest)
 
-        # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._cache.package_layout(ref).update_metadata() as metadata:
-            if metadata.recipe.time is None:
-                _, _, rev_time = self._call_remote(remote, "get_recipe_snapshot", ref)
-                # Only if we hadn't time locally update it, otherwise we are uploading
-                # the recipe to a different server, but in the upload never the registry
-                # is updated, so the time should be kept to the first upload
-                metadata.recipe.time = rev_time
-
         duration = time.time() - t1
         log_recipe_upload(ref, duration, the_files, remote.name)
         if ret:
@@ -159,15 +150,6 @@ class RemoteManager(object):
 
         uploaded = self._call_remote(remote, "upload_package", pref,
                                      the_files, retry, retry_wait, policy)
-
-        # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
-            if metadata.packages[pref.id].time is None:
-                _, _, rev_time = self._call_remote(remote, "get_package_snapshot", pref)
-                # Only if we hadn't time locally update it, otherwise we are uploading
-                # the package to a different server, but in the upload never the registry
-                # is updated, so the time should be kept to the first upload
-                metadata.packages[pref.id].time = rev_time
 
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, remote)

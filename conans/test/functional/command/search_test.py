@@ -17,6 +17,7 @@ from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
+from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
 
 conan_vars1 = '''
@@ -1100,8 +1101,8 @@ class Test(ConanFile):
             self.assertNotIn("os: Linux", client.user_io.out)
 
 
-@unittest.skipUnless(os.getenv("TESTING_REVISIONS_ENABLED"),
-                     "The test needs revisions activated, set TESTING_REVISIONS_ENABLED=1")
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),
+                     "set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
     def search_recipe_revisions_test(self):

@@ -76,7 +76,7 @@ class SearchService(object):
         self._server_store = server_store
         self._auth_user = auth_user
 
-    def search_packages(self, reference, query, look_in_all_rrevs):
+    def search_packages(self, reference, query, look_in_all_rrevs=False):
         """Shared between v1 and v2, v1 will iterate rrevs"""
         self._authorizer.check_read_conan(self._auth_user, reference)
         info = search_packages(self._server_store, reference, query, look_in_all_rrevs)

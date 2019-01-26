@@ -18,8 +18,9 @@ def short_path(func):
         from conans.util.windows import path_shortener
 
         def wrap(self, *args, **kwargs):
-            p = func(self,  *args, **kwargs)
+            p = func(self, *args, **kwargs)
             return path_shortener(p, self._short_paths)
+
         return wrap
     else:
         return func
@@ -101,33 +102,32 @@ class PackageCacheLayout(object):
     def package_exists(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return self.recipe_exists() and \
-               os.path.exists(self.package(pref)) and \
-               (not pref.revision or self.package_revision(pref)[0] ==  pref.revision)
+        return (self.recipe_exists() and
+                os.path.exists(self.package(pref)) and
+                (not pref.revision or self.package_revision(pref)[0] == pref.revision))
 
     def recipe_revision(self):
         metadata = self.load_metadata()
-        the_time = metadata.recipe.time if metadata.recipe.time else None
-        return metadata.recipe.revision, the_time
+        return metadata.recipe.revision, metadata.recipe.time
 
     def package_revision(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref.copy_clear_rev() == self._ref.copy_clear_rev()
         metadata = self.load_metadata()
         tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
         return metadata.packages[pref.id].revision, tm
 
     # Metadata
     def load_metadata(self):
-        try:
-            text = load(self.package_metadata())
-            return PackageMetadata.loads(text)
-        except IOError:
-            return PackageMetadata()
+        text = load(self.package_metadata())
+        return PackageMetadata.loads(text)
 
     @contextmanager
     def update_metadata(self):
-        metadata = self.load_metadata()
+        try:
+            metadata = self.load_metadata()
+        except FileNotFoundError:
+            metadata = PackageMetadata()
         yield metadata
         save(self.package_metadata(), metadata.dumps())
 

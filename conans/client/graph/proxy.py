@@ -45,32 +45,30 @@ class ConanProxy(object):
         # check if it is in disk
         conanfile_path = self._cache.conanfile(ref)
 
+        # Check if we have a revision different from the requested one to remove it
+        if os.path.exists(conanfile_path):
+            cur_revision, _ = self._cache.package_layout(ref).recipe_revision()
+            if self._cache.revisions_enabled and ref.revision:
+                if cur_revision != ref.revision:
+                    # FIXME:? even if the requested revision doesn't exist in the server
+                    # we are removing the local copy. It would be weird to implement the check,
+                    # from which remote? calling what? the cache is a cache...
+                    output.info("Different revision requested, removing current local recipe...")
+                    DiskRemover(self._cache).remove_recipe(ref)
+
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
             remote, new_ref = self._download_recipe(ref, output, remote_name, recorder)
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        metadata = self._cache.package_layout(ref).load_metadata()
-        cur_revision = metadata.recipe.revision
         remote = self._registry.refs.get(ref)
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
         update_remote = named_remote or remote
 
-        # Check if we have a revision different from the requested one
-        revisions_enabled = self._cache.revisions_enabled
-        if revisions_enabled and ref.revision and cur_revision != ref.revision:
-            output.info("Different revision requested, removing current local recipe...")
-            DiskRemover(self._cache).remove_recipe(ref)
-
-            output.info("Retrieving from remote '%s'..." % update_remote.name)
-            new_ref = self._remote_manager.get_recipe(ref, update_remote)
-            self._registry.refs.set(new_ref, update_remote.name)
-            status = RECIPE_UPDATED
-            return conanfile_path, status, update_remote, new_ref
-
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
+        cur_revision, _ = self._cache.package_layout(ref).recipe_revision()
         if not check_updates:
             status = RECIPE_INCACHE
             ref = ref.copy_with_rev(cur_revision)
@@ -151,7 +149,7 @@ class ConanProxy(object):
             except NotFoundException:
                 pass
         else:
-            msg = "Unable to find '%s' in remotes" % str(ref)
+            msg = "Unable to find '%s' in remotes" % ref.full_repr()
             recorder.recipe_install_error(ref, INSTALL_ERROR_MISSING,
                                           msg, None)
             raise NotFoundException(msg)

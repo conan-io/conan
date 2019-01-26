@@ -343,9 +343,11 @@ class ConanClientConfigParser(ConfigParser, object):
         try:
             revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED")
             if revisions_enabled is None:
-                return self.get_item("general.revisions_enabled")
-            else:
-                return revisions_enabled.lower() in ("1", "true")
+                try:
+                    revisions_enabled = self.get_item("general.revisions_enabled")
+                except ConanException:
+                    return False
+            return revisions_enabled.lower() in ("1", "true")
         except ConanException:
             return False
 

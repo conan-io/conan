@@ -1,7 +1,7 @@
 import os
 
 from conans.client.remote_registry import Remote
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.search.search import filter_outdated, search_packages, search_recipes
@@ -72,7 +72,7 @@ class DiskRemover(object):
             for id_ in ids_filter:  # remove just the specified packages
                 pref = PackageReference(ref, id_)
                 if not self._cache.package_layout(ref).package_exists(pref):
-                    raise ConanException("The package doesn't exist: %s" % pref.full_repr())
+                    raise NotFoundException("The package doesn't exist: %s" % pref.full_repr())
                 pkg_folder = self._cache.package(pref)
                 self._remove(pkg_folder, ref, "package:%s" % id_)
                 self._remove_file(pkg_folder + ".dirty", ref, "dirty flag")
@@ -98,10 +98,15 @@ class ConanRemover(object):
             tmp = self._remote_manager.remove_packages(ref, package_ids, remote)
             return tmp
 
+    @staticmethod
+    def _message_removing_editable(ref):
+        return "Package '{r}' is installed as editable, unlink it first using " \
+               "command 'conan link {r} --remove'".format(r=ref)
+
     def _local_remove(self, ref, src, build_ids, package_ids):
         if self._cache.installed_as_editable(ref):
-            raise ConanException("Package '{r}' is installed as editable, unlink it first using "
-                                 "command 'conan link {r} --remove'".format(r=ref))
+            self._user_io.out.warn(self._message_removing_editable(ref))
+            return
 
         # Make sure to clean the locks too
         self._cache.remove_package_locks(ref)
@@ -159,17 +164,16 @@ class ConanRemover(object):
         else:
             if input_ref:
                 refs = []
-                if self._cache.package_layout(input_ref).recipe_exists():
-                    refs.append(input_ref)
+                if self._cache.installed_as_editable(input_ref):
+                    raise ConanException(self._message_removing_editable(input_ref))
+                if not self._cache.package_layout(input_ref).recipe_exists():
+                    raise NotFoundException("No recipe found '%s'" % input_ref.full_repr())
+                refs.append(input_ref)
             else:
                 refs = search_recipes(self._cache, pattern)
-
-        if not refs:
-            if input_ref:
-                self._user_io.out.warn("No recipe found '%s'" % str(pattern))
-            else:
-                self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
-            return
+                if not refs:
+                    self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
+                    return
 
         if input_ref and not input_ref.revision:
             # Ignore revisions for deleting if the input was not with a revision
@@ -203,12 +207,18 @@ class ConanRemover(object):
                     continue
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):
-                deleted_refs.append(ref)
-                if remote_name:
-                    self._remote_remove(ref, package_ids, remote)
+                try:
+                    if remote_name:
+                        self._remote_remove(ref, package_ids, remote)
+                    else:
+                        self._local_remove(ref, src, build_ids, package_ids)
+                except NotFoundException:
+                    # If we didn't specify a pattern but a concrete ref, fail if there is no
+                    # ref to remove
+                    if input_ref:
+                        raise
                 else:
                     deleted_refs.append(ref)
-                    self._local_remove(ref, src, build_ids, package_ids)
 
         if not remote_name:
             self._cache.delete_empty_dirs(deleted_refs)

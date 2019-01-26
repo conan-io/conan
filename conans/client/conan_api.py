@@ -444,7 +444,7 @@ class ConanAPIV1(object):
         ref = ConanFileReference.loads(reference)
 
         if check_valid_ref(ref, allow_pattern=False):
-            if ref.revision is None:
+            if package and ref.revision is None:
                 for package_id in package:
                     if "#" in package_id:
                         raise ConanException("It is needed to specify the recipe revision if you "

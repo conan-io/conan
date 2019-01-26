@@ -398,8 +398,10 @@ class RemoveTest(unittest.TestCase):
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 
     def query_remove_locally_test(self):
-        self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f")
-        self.assertIn("No matching packages to remove", self.client.user_io.out)
+        # Incorrect casing of "hello"
+        self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
+                        assert_error=True)
+        self.assertIn("No recipe found 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},

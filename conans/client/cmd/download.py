@@ -22,9 +22,6 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
 
-    if not cache.revisions_enabled:
-        ref = ref.copy_clear_rev()
-
     if not recipe:  # Not only the recipe
         # Download the sources too, don't be lazy
         complete_recipe_sources(remote_manager, cache, conanfile, ref)

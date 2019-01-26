@@ -279,6 +279,27 @@ class TestServer(object):
         except NotFoundException:  # When resolves the latest and there is no package
             return False
 
+    def latest_recipe(self, ref):
+        rev, _ = self.test_server.server_store.get_last_revision(ref)
+        return ref.copy_with_rev(rev)
+
+    def recipe_revision_time(self, ref):
+        if not ref.revision:
+            raise Exception("Pass a ref with revision (Testing framework)")
+        return self.test_server.server_store.get_revision_time(ref)
+
+    def latest_package(self, pref):
+        if not pref.ref.revision:
+            raise Exception("Pass a pref with .rev.revision (Testing framework)")
+        prev, _ = self.test_server.server_store.get_last_package_revision(pref)
+        return pref.copy_with_revs(pref.ref.revision, prev)
+
+    def package_revision_time(self, pref):
+        if not pref:
+            raise Exception("Pass a pref with revision (Testing framework)")
+        tmp = self.test_server.server_store.get_package_revision_time(pref)
+        return tmp
+
 
 class TestBufferConanOutput(ConanOutput):
 
@@ -463,7 +484,7 @@ class TestClient(object):
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users
         if self.users is None:
-            self.users =  {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
+            self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
 
@@ -699,11 +720,27 @@ class TurboTestClient(TestClient):
         remote_rrev = self.servers[remote].server_store.get_last_revision(ref).revision
         return ref.copy_with_rev(remote_rrev)
 
+    def remove_all(self):
+        self.run("remove '*' -f")
+
     def recipe_exists(self, ref):
         return self.cache.package_layout(ref).recipe_exists()
 
     def package_exists(self, pref):
         return self.cache.package_layout(pref.ref).package_exists(pref)
+
+    def recipe_revision(self, ref):
+        return self.cache.package_layout(ref).recipe_revision()
+
+    def package_revision(self, pref):
+        return self.cache.package_layout(pref.ref).package_revision(pref)
+
+    def search(self, pattern, remote=None):
+        remote = " -r={}".format(remote) if remote else ""
+        self.run("search {} --json {} {}".format(pattern, self.tmp_json_name, remote))
+        json_path = os.path.join(self.current_folder, self.tmp_json_name)
+        data = json.loads(load(json_path))
+        return data
 
 
 class GenConanfile(object):

@@ -8,7 +8,6 @@ from conans.errors import NoRemoteAvailable, NotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.util.env_reader import get_env
 from conans.util.files import is_dirty, rmdir
 
 
@@ -28,13 +27,6 @@ class GraphBinariesAnalyzer(object):
             return False
 
     def _check_update(self, package_folder, pref, remote, output, node):
-
-        if self._cache.revisions_enabled:
-            metadata = self._cache.package_layout(pref.ref).load_metadata()
-            rec_rev = metadata.packages[pref.id].recipe_revision
-            if rec_rev != node.ref.revision:
-                output.warn("Outdated package! The package doesn't belong "
-                            "to the installed recipe revision: %s" % str(pref))
 
         try:  # get_conan_digest can fail, not in server
             upstream_manifest = self._remote_manager.get_package_manifest(pref, remote)
@@ -91,6 +83,14 @@ class GraphBinariesAnalyzer(object):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
                 rmdir(package_folder)  # Do not remove if it is EDITABLE
+
+            if self._cache.revisions_enabled:
+                metadata = self._cache.package_layout(pref.ref).load_metadata()
+                rec_rev = metadata.packages[pref.id].recipe_revision
+                if rec_rev != node.ref.revision:
+                    output.warn("The package {} doesn't belong "
+                                "to the installed recipe revision, removing folder".format(pref))
+                rmdir(package_folder)
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)
