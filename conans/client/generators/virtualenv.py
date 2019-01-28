@@ -29,8 +29,8 @@ class VirtualEnvGenerator(Generator):
         if flavor == "ps1":
             return "$env:%s" % name
         print("_variable_placeholder", name)
-        #return "${%s+:%s}" % (name, name)  # flavor == sh
-        return "$%s" % name  # flavor == sh
+        return "${%s+:$%s}" % (name, name)  # flavor == sh
+        #return "$%s" % name  # flavor == sh
 
     def format_values(self, flavor, variables):
         """

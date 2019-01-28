@@ -26,7 +26,8 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
             activate = load(os.path.join(client.current_folder, "activate.sh"))
             #self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":$PREPEND_VAR", activate)
             client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
-            self.assertIn("PREPEND_VAR=1:2:three:1:2:three:")
+            print(client.out)
+            self.assertIn("PREPEND_VAR=1:2:three:1:2:three:", client.out)
 
     def basic_test(self, posix_empty_vars=True):
         env = copy.deepcopy(os.environ)
