@@ -68,11 +68,14 @@ class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     scm = ["Other stuff"]
-
+    
+    def build(self):
+        self.output.writeln("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
-        self.client.run("export . user/channel")
+        self.client.run("create . user/channel")
+        self.assertIn("['Other stuff']", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
@@ -576,10 +579,13 @@ class ConanLib(ConanFile):
     version = "0.1"
     scm = ["Other stuff"]
 
+    def build(self):
+        self.output.writeln("scm: {}".format(self.scm))
 '''
         self.client.save({"conanfile.py": conanfile})
         # nothing breaks
-        self.client.run("export . user/channel")
+        self.client.run("create . user/channel")
+        self.assertIn("['Other stuff']", self.client.out)
 
     def test_repeat_clone_changing_subfolder(self):
         tmp = '''
