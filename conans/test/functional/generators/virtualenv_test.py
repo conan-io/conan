@@ -188,6 +188,7 @@ virtualenv
         client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
         # Check no trailing path separator ":"
         self.assertNotIn("PREPEND_VAR=1:2:three:", client.out)
+        self.assertIn("PREPEND_VAR=1:2:three", client.out)
         # Check old value is preserved
         client.runner("bash -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
                       client.current_folder)
