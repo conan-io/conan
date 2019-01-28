@@ -245,6 +245,8 @@ class RestV2Methods(RestCommonMethods):
             url = self.conans_router.remove_package(pref)
             response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                              verify=self.verify_ssl)
+            if response.status_code == 404:
+                raise NotFoundException("Package not found: {}".format(pref.full_repr()))
             if response.status_code != 200:  # Error message is text
                 response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
                 raise get_exception_from_error(response.status_code)(response.text)

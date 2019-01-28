@@ -12,6 +12,15 @@ from conans.util.env_reader import get_env
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+class CapabilitiesRevisionsTest(unittest.TestCase):
+
+    def test_server_without_revisions_capability(self):
+        """If a server doesn't have the revisions capability, a modern client will still
+        talk v1"""
+        pass
+
+
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class InfoRevisions(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
@@ -166,19 +175,64 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
     @parameterized.expand([(True,), (False,)])
     def search_a_local_package_with_rrev_test(self, v1):
         """If we search for the packages of a ref specifying the RREV in the local cache:
-         1. With v2 client it shows the packages for that RREV (only Linux)
-         2. With v1 client it fails, because it cannot propagate the rrev with v1"""
-        pass
+         1. With v2 client it shows the packages for that RREV and only if it is the one
+            in the cache, otherwise it is not returned.
+         2. With v1 client: the same"""
+
+        client = self.c_v1 if v1 else self.c_v2
+        pref1 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev1"),
+                              args="-s os=Windows")
+
+        pref2 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev2"),
+                              args="-s os=Linux")
+
+        client.run("search {}".format(pref1.ref.full_repr()), assert_error=True)
+        self.assertIn("Recipe not found: {}".format(pref1.ref.full_repr()), client.out)
+
+        client.run("search {}".format(pref2.ref.full_repr()))
+        self.assertIn("Existing packages for recipe {}:".format(pref2.ref), client.out)
+        self.assertIn("os: Linux", client.out)
 
     @parameterized.expand([(True,), (False,)])
-    def search_in_local_by_pattern_test(self, v1):
+    def search_recipes_in_local_by_pattern_test(self, v1):
         """If we search for recipes with a pattern:
-         1. With v2 client it return the refs matching, the refs contain RREV
-         2. With v1 client it return the refs matching, the refs without the RREV"""
-        pass
+         1. With v2 client it return the refs matching, the refs doesn't contain RREV
+         2. With v1 client, same"""
+
+        client = self.c_v1 if v1 else self.c_v2
+        # Create a couple of recipes locally
+        client.export(self.ref)
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/testing")
+        client.export(ref2)
+
+        # Search for the recipes
+        data = client.search("lib*")
+        items = data["results"][0]["items"]
+        self.assertEquals(2, len(items))
+        expected = [str(self.ref), str(ref2)]
+        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
-    def search_in_remote_by_pattern_test(self, v1):
+    def search_recipes_in_local_by_revision_pattern_test(self, v1):
+        """If we search for recipes with a pattern containing even the RREV:
+         1. With v2 client it return the refs matching, the refs doesn't contain RREV
+         2. With v1 client, same"""
+
+        client = self.c_v1 if v1 else self.c_v2
+        # Create a couple of recipes locally
+        client.export(self.ref)
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/testing")
+        client.export(ref2)
+
+        # Search for the recipes
+        data = client.search("{}*".format(self.ref.full_repr()))
+        items = data["results"][0]["items"]
+        self.assertEquals(1, len(items))
+        expected = [str(self.ref)]
+        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+
+    @parameterized.expand([(True,), (False,)])
+    def search_recipes_in_remote_by_pattern_test(self, v1):
         """If we search for recipes with a pattern:
          1. With v2 client it return the refs matching of the latests, the refs contain RREV
          2. With v1 client it return the refs matching, the refs without the RREV"""
@@ -204,21 +258,33 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search("lib*", remote="default")
         items = data["results"][0]["items"]
         self.assertEquals(2, len(items))
-        if v1:
-            expected = [str(pref1b.ref), str(pref2b.ref)]
-        else:
-            expected = [pref1b.ref.full_repr(), pref2b.full_repr()]
+        expected = [str(pref1b.ref), str(pref2b.ref)]
 
         self.assertEquals(expected, [i["recipe"]["id"] for i in items])
 
+    @parameterized.expand([(True,), (False,)])
+    def search_in_remote_by_revision_pattern_test(self, v1):
+        """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
+         1. With v2 client: We get the revs without refs matching the rev
+         2. With v1 client: Same"""
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-class CapabilitiesRevisionsTest(unittest.TestCase):
+        # Upload to the server two rrevs for "lib" and one rrevs for "lib2"
+        self.c_v2.create(self.ref)
+        self.c_v2.upload_all(self.ref)
 
-    def test_server_without_revisions_capability(self):
-        """If a server doesn't have the revisions capability, a modern client will still
-        talk v1"""
-        pass
+        pref2_lib = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv2"))
+        self.c_v2.upload_all(self.ref)
+
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/testing")
+        self.c_v2.create(ref2)
+        self.c_v2.upload_all(ref2)
+
+        client = self.c_v1 if v1 else self.c_v2
+
+        data = client.search("{}*".format(pref2_lib.ref.full_repr()), remote="default")
+        items = data["results"][0]["items"]
+        expected = [str(self.ref)]
+        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
@@ -229,6 +295,16 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
         self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
+
+    def test_install_missing_prev_deletes_outdated_prev(self):
+        """If we have in a local v2 client a RREV with a PREV that doesn't match the RREV, when
+        we try to install, it removes the previous outdated PREV even before resolve it"""
+        pass
+
+    def test_install_different_rrev(self):
+        """If we have an RREV in local and we specify a different RREV in the install command,
+        it will remove the previous one"""
+        pass
 
     @parameterized.expand([(True,), (False,)])
     def test_install_binary_iterating_remotes(self, v1):
@@ -732,3 +808,10 @@ class RemoveWithRevisionsTest(unittest.TestCase):
             self.assertTrue(self.server.package_exists(pref1))
             self.assertTrue(self.server.package_exists(pref2b))
             self.assertFalse(self.server.package_exists(pref2))
+
+            # Try to remove a missing revision
+            command = "remove {} -p {}#fakerev -f -r default".format(pref2.ref.full_repr(),
+                                                                     pref2.id)
+            remover_client.run(command, assert_error=True)
+            fakeref = pref2.copy_with_revs(pref2.ref.revision, "fakerev")
+            self.assertIn("Package not found: {}".format(fakeref.full_repr()), remover_client.out)

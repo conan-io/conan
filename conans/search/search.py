@@ -118,14 +118,16 @@ def search_packages(cache, ref, query):
                            settings: {os: Windows}}}
     param ref: ConanFileReference object
     """
-    if not os.path.exists(cache.conan(ref)):
-        raise NotFoundException("Recipe not found: %s" % str(ref))
+    if not os.path.exists(cache.conan(ref)) or (
+           ref.revision and cache.package_layout(ref).recipe_revision()[0] != ref.revision):
+        raise NotFoundException("Recipe not found: %s" % ref.full_repr())
     infos = _get_local_infos_min(cache, ref)
     return filter_packages(query, infos)
 
 
 def _get_local_infos_min(cache, ref):
     result = {}
+
     packages_path = cache.packages(ref)
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:

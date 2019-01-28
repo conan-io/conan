@@ -155,12 +155,14 @@ class ConanRemover(object):
                                          "revision")
 
         if remote_name:
-            if not self._cache.revisions_enabled and input_ref and input_ref.revision:
-                raise ConanException("Revisions not enabled in the client, cannot remove "
-                                     "revisions in the server")
-
             remote = self._registry.remotes.get(remote_name)
-            refs = self._remote_manager.search_recipes(remote, pattern)
+            if input_ref:
+                if not self._cache.revisions_enabled and input_ref.revision:
+                    raise ConanException("Revisions not enabled in the client, cannot remove "
+                                         "revisions in the server")
+                refs = [input_ref]
+            else:
+                refs = self._remote_manager.search_recipes(remote, pattern)
         else:
             if input_ref:
                 refs = []

@@ -94,17 +94,6 @@ class SearchService(object):
                 ref_ = _pattern
             return ref_
 
-        # Check directly if it is a reference
-        ref = get_ref(pattern)
-        if ref:
-            # Search should return the reference with revision
-            # for deleting all refs or any other use case, the client should discard it
-            try:
-                new_ref = self._server_store.ref_with_rev(ref)
-                return [new_ref]
-            except NotFoundException:
-                pass
-
         # Conan references in main storage
         if pattern:
             pattern = str(pattern)
@@ -116,12 +105,12 @@ class SearchService(object):
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:
-            ret = []
+            ret = set()
             for subdir in subdirs:
                 ref = ConanFileReference(*subdir.split("/"))
-                if _partial_match(b_pattern, ref):
+                if _partial_match(b_pattern, ref.full_repr()):
                     new_ref = self._server_store.ref_with_rev(ref)
-                    ret.append(new_ref)
+                    ret.add(new_ref.copy_clear_rev())
 
             return sorted(ret)
 

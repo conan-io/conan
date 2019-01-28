@@ -694,18 +694,20 @@ class TurboTestClient(TestClient):
 
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
-    def export(self, ref, conanfile=None, args=None):
+    def export(self, ref, conanfile=None, args=None, assert_error=False):
         conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_repr(), args or ""))
+        self.run("export . {} {}".format(ref.full_repr(), args or ""),
+                 assert_error=assert_error)
         rrev, _ = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
-    def create(self, ref, conanfile=None, args=None):
+    def create(self, ref, conanfile=None, args=None, assert_error=False):
         conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
         self.run("create . {} {} --json {}".format(ref.full_repr(),
-                                                   args or "", self.tmp_json_name))
+                                                   args or "", self.tmp_json_name),
+                 assert_error=assert_error)
         rrev, _ = self.cache.package_layout(ref).recipe_revision()
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
@@ -714,9 +716,10 @@ class TurboTestClient(TestClient):
         prev, _ = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
 
-    def upload_all(self, ref, remote=None, args=None):
+    def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""))
+        self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
+                 assert_error=assert_error)
         remote_rrev = self.servers[remote].server_store.get_last_revision(ref).revision
         return ref.copy_with_rev(remote_rrev)
 
@@ -735,9 +738,10 @@ class TurboTestClient(TestClient):
     def package_revision(self, pref):
         return self.cache.package_layout(pref.ref).package_revision(pref)
 
-    def search(self, pattern, remote=None):
+    def search(self, pattern, remote=None, assert_error=False):
         remote = " -r={}".format(remote) if remote else ""
-        self.run("search {} --json {} {}".format(pattern, self.tmp_json_name, remote))
+        self.run("search {} --json {} {}".format(pattern, self.tmp_json_name, remote),
+                 assert_error=assert_error)
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
         return data
