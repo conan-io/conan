@@ -17,7 +17,7 @@ class VirtualEnvGenerator(Generator):
     def filename(self):
         return
 
-    def _variable_placeholder(self, flavor, name):
+    def _variable_placeholder(self, flavor, name, append_with_spaces):
         """
         :param flavor: flavor of the execution environment
         :param name: variable name
@@ -28,8 +28,8 @@ class VirtualEnvGenerator(Generator):
             return "%%%s%%" % name
         if flavor == "ps1":
             return "$env:%s" % name
-        print("_variable_placeholder", name)
-        return "${%s+:$%s}" % (name, name)  # flavor == sh
+        # flavor == sh
+        return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
 
     def format_values(self, flavor, variables):
         """
@@ -50,8 +50,9 @@ class VirtualEnvGenerator(Generator):
         for name, value in variables:
             # activate values
             if isinstance(value, list):
-                placeholder = self._variable_placeholder(flavor, name)
-                if name in self.append_with_spaces:
+                append_with_spaces = name in self.append_with_spaces
+                placeholder = self._variable_placeholder(flavor, name, append_with_spaces)
+                if append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
                     value = "\"%s\"" % value if quote_elements else value
