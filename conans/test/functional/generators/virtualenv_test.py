@@ -1,5 +1,6 @@
 import copy
 import os
+import platform
 import unittest
 
 from conans.client import tools
@@ -20,13 +21,12 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         os_info = OSInfo()
         if os_info.is_windows:
             activate = load(os.path.join(client.current_folder, "activate.bat"))
-            self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":%PREPEND_VAR%", activate)
+            self.assertIn("PREPEND_VAR=1:2:three:%PREPEND_VAR%", activate)
 
         if os_info.is_posix:
             activate = load(os.path.join(client.current_folder, "activate.sh"))
-            #self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":$PREPEND_VAR", activate)
+            self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":$PREPEND_VAR", activate)
             client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
-            print(client.out)
             self.assertIn("PREPEND_VAR=1:2:three:1:2:three:", client.out)
 
     def basic_test(self, posix_empty_vars=True):
@@ -124,7 +124,6 @@ virtualenv
             self.assertIn('$env:BCKW_SLASH = "%s"' % env.setdefault('BCKW_SLASH', ''), deactivate)
 
         activate = load(os.path.join(client.current_folder, "activate.sh"))
-        print(activate)
         self.assertIn('OLD_PS1="$PS1"', activate)
         self.assertIn('export OLD_PS1', activate)
         self.assertIn('PS1="(conanenv) $PS1"', activate)
@@ -192,3 +191,21 @@ virtualenv
                "BCKW_SLASH": "old_BCKW_SLASH"}
         with tools.environment_append(env):
             self.basic_test(posix_empty_vars=False)
+
+    @unittest.skipIf(platform.system() == "Windows", "Needs bash terminal")
+    def conditional_parameter_expansion_test(self):
+        # https://github.com/conan-io/conan/issues/3911
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("profile new default --detect")
+        client.run("profile update env.PREPEND_VAR=[1,2,three] default")
+        client.run("install . -g virtualenv")
+        activate = load(os.path.join(client.current_folder, "activate.sh"))
+        self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":${PREPEND_VAR+:$PREPEND_VAR}", activate)
+        client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
+        # Check no trailing path separator ":"
+        self.assertNotIn("PREPEND_VAR=1:2:three:", client.out)
+        # Check old value is preserved
+        client.runner("bash -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
+                      client.current_folder)
+        self.assertIn("PREPEND_VAR=1:2:three:kk", client.out)
