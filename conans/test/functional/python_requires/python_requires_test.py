@@ -294,6 +294,7 @@ class MyConanfileBase(ConanFile):
 """
         create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
                               folder=client.current_folder)
+        client.runner("git remote add origin https://any.url/what.git", cwd=client.current_folder)
         client.run("export . MyConanfileBase/1.1@lasote/testing")
         client.run("get MyConanfileBase/1.1@lasote/testing")
         # The global scm is left as-is
