@@ -30,7 +30,6 @@ class VirtualEnvGenerator(Generator):
             return "$env:%s" % name
         print("_variable_placeholder", name)
         return "${%s+:$%s}" % (name, name)  # flavor == sh
-        #return "$%s" % name  # flavor == sh
 
     def format_values(self, flavor, variables):
         """
@@ -61,7 +60,10 @@ class VirtualEnvGenerator(Generator):
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
                     value = ["\"%s\"" % v for v in value] if quote_elements else value
-                    value = path_sep.join(value+[placeholder])
+                    if flavor == "sh":
+                        value = path_sep.join(value) + placeholder
+                    else:
+                        value = path_sep.join(value + [placeholder])
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
