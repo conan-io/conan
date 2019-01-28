@@ -45,11 +45,17 @@ class ProfileTest(unittest.TestCase):
         self.client = TestClient()
 
     def profile_conanfile_txt_test(self):
+        """
+        Test prepended env variables are applied correctrly from a profile
+        """
         self.client.save({"conanfile.txt": ""})
         create_profile(self.client.cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
         self.client.run("install . -pr envs -g virtualenv")
+        content = load(os.path.join(self.client.current_folder, "activate.bat"))
+        end = "%PREPEND_VAR%" if platform.system() == "Windows" else "$PREPEND_VAR"
+        self.assertIn(os.pathsep.join(["PREPEND_VAR=new_path", "other_path", end]), content)
 
     def test_profile_relative_cwd(self):
         self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})
@@ -159,12 +165,8 @@ class ProfileTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
-        if platform.system() == "Windows":
-            self._assert_env_variable_printed("PREPEND_VAR", "new_path;other_path")
-        else:
-            self._assert_env_variable_printed("PREPEND_VAR", "new_path:other_path")
-        self.assertNotIn("PREPEND_VAR=new_path;other_path;new_path;other_path", self.client.out)
-        self.assertNotIn("PREPEND_VAR=new_path:other_path:new_path:other_path", self.client.out)
+        self._assert_env_variable_printed("PREPEND_VAR", os.pathsep.join(["new_path", "other_path"]))
+        self.assertEqual(1, str(self.client.out).count("PREPEND_VAR=new_path"))  # prepended once
         self._assert_env_variable_printed("A_VAR", "A_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
