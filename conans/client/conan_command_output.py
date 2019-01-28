@@ -137,7 +137,6 @@ class CommandOutputer(object):
                     pref = PackageReference(ref, bid)
                     item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
 
-                    package_id = conanfile.info.package_id()
                     pref = PackageReference(ref, package_id)
                     item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
 
