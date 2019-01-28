@@ -137,3 +137,29 @@ class MesonTest(unittest.TestCase):
 
         meson.install()
         self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
+
+    def prefix_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.package_folder = os.getcwd()
+        expected_prefix = '-Dprefix="%s"' % os.getcwd()
+        meson = Meson(conan_file)
+        meson.configure()
+        self.assertIn(expected_prefix, conan_file.command)
+        meson.build()
+        self.assertIn("ninja -C", conan_file.command)
+        meson.install()
+        self.assertIn("ninja -C", conan_file.command)
+
+    def no_prefix_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.package_folder = None
+        meson = Meson(conan_file)
+        meson.configure()
+        self.assertNotIn('-Dprefix', conan_file.command)
+        meson.build()
+        self.assertIn("ninja -C", conan_file.command)
+        with self.assertRaises(TypeError):
+            meson.install()
+
