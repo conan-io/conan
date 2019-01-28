@@ -17,6 +17,6 @@ class VirtualenvGeneratorTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues.loads("PATH=[1,2,three]"))
         gen = VirtualEnvGenerator(conanfile)
         content = gen.content
-        self.assertIn("PATH=\"1\":\"2\":\"three\":$PATH", content["activate.sh"])
+        self.assertIn("PATH=\"1\":\"2\":\"three\"${PATH+:$PATH}", content["activate.sh"])
         if platform.system() == "Windows":
             self.assertIn("PATH=1;2;three;%PATH%", content["activate.bat"])
