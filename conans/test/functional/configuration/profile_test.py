@@ -54,13 +54,11 @@ class ProfileTest(unittest.TestCase):
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
         self.client.run("install . -pr envs -g virtualenv")
         content = load(os.path.join(self.client.current_folder, "activate.sh"))
-        self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\"", "${PREPEND_VAR+",
-                                "$PREPEND_VAR}"]),
-                      content)
+        self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
+                      "${PREPEND_VAR+:$PREPEND_VAR}", content)
         if platform.system() == "Windows":
             content = load(os.path.join(self.client.current_folder, "activate.bat"))
-            self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
-                          content)
+            self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]), content)
 
     def test_profile_relative_cwd(self):
         self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})

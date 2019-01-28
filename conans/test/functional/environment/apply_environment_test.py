@@ -439,7 +439,8 @@ class HelloConan(ConanFile):
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
             self.assertIn('var2="value3":"value2"${var2+:$var2}', activate_contents)
-            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 $CPPFLAGS"', activate_contents)
+            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 ${CPPFLAGS+ $CPPFLAGS}"',
+                          activate_contents)
         self.assertIn("Another value", activate_contents)
         if platform.system() == "Windows":
             self.assertIn("PATH=/dir", activate_contents)

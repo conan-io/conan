@@ -184,7 +184,7 @@ virtualenv
         client.run("profile update env.PREPEND_VAR=[1,2,three] default")
         client.run("install . -g virtualenv")
         activate = load(os.path.join(client.current_folder, "activate.sh"))
-        self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":${PREPEND_VAR+:$PREPEND_VAR}", activate)
+        self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\"${PREPEND_VAR+:$PREPEND_VAR}", activate)
         client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
         # Check no trailing path separator ":"
         self.assertNotIn("PREPEND_VAR=1:2:three:", client.out)
