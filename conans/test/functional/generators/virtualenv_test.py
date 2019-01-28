@@ -11,24 +11,6 @@ from conans.util.files import load
 
 class VirtualEnvGeneratorTest(unittest.TestCase):
 
-    def profile_prepend_test(self):
-        client = TestClient()
-        client.save({"conanfile.txt": ""})
-        client.run("profile new default --detect")
-        client.run("profile update env.PREPEND_VAR=[1,2,three] default")
-        client.run("install . -g virtualenv")
-
-        os_info = OSInfo()
-        if os_info.is_windows:
-            activate = load(os.path.join(client.current_folder, "activate.bat"))
-            self.assertIn("PREPEND_VAR=1:2:three:%PREPEND_VAR%", activate)
-
-        if os_info.is_posix:
-            activate = load(os.path.join(client.current_folder, "activate.sh"))
-            self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\":$PREPEND_VAR", activate)
-            client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
-            self.assertIn("PREPEND_VAR=1:2:three:1:2:three:", client.out)
-
     def basic_test(self, posix_empty_vars=True):
         env = copy.deepcopy(os.environ)
         client = TestClient()
@@ -78,14 +60,11 @@ virtualenv
         client.save({"conanfile.py": dep2}, clean_first=True)
         client.run("export . lasote/testing")
         client.save({"conanfile.txt": base}, clean_first=True)
-        client.run("profile new default --detect")
-        client.run("profile update env.PATH=[kk] default")
         client.run("install . --build")
 
         os_info = OSInfo()
         if os_info.is_windows and not os_info.is_posix:
             activate = load(os.path.join(client.current_folder, "activate.bat"))
-            print(activate)
             self.assertIn('SET PROMPT=(conanenv) %PROMPT%', activate)
             self.assertIn('SET BASE_LIST=dummyValue1;dummyValue2;baseValue1;baseValue2;%BASE_LIST%', activate)
             self.assertIn('SET BASE_VAR=baseValue', activate)
@@ -128,22 +107,26 @@ virtualenv
         self.assertIn('export OLD_PS1', activate)
         self.assertIn('PS1="(conanenv) $PS1"', activate)
         self.assertIn('export PS1', activate)
-        self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2":$BASE_LIST', activate)
+        self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2"${'
+                      'BASE_LIST+:$BASE_LIST}', activate)
         self.assertIn('export BASE_LIST', activate)
         self.assertIn('BASE_VAR="baseValue"', activate)
         self.assertIn('export BASE_VAR', activate)
-        self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 $CPPFLAGS"', activate)
+        self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 ${CPPFLAGS+ $CPPFLAGS}"',
+                      activate)
         self.assertIn('export CPPFLAGS', activate)
         self.assertIn('SPECIAL_VAR="dummyValue"', activate)
         self.assertIn('export SPECIAL_VAR', activate)
         self.assertIn('BCKW_SLASH="dummy\\value"', activate)
         self.assertIn('export BCKW_SLASH', activate)
         if os_info.is_windows:
-            self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib":$LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin":$PATH', activate)
+            self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib"${'
+                          'LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}', activate)
+            self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin"${PATH+:$PATH}', activate)
         else:
-            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib":$LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin":$PATH', activate)
+            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib"${'
+                          'LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}', activate)
+            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin"${PATH+:$PATH}', activate)
         self.assertIn('export LD_LIBRARY_PATH', activate)
         self.assertIn('export PATH', activate)
         deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
