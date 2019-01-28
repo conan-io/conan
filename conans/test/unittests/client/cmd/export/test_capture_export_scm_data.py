@@ -72,6 +72,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = "https://remote.url"
         conanfile = mock.MagicMock()
         conanfile.scm = {'type': 'git', 'url': url, 'revision': 'auto'}
+        self.git.run("remote add origin \"{}\"".format(url))
 
         if not is_pristine:
             save(os.path.join(self.git.folder, "other"), "ccc")
@@ -93,7 +94,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             self.assertIn("Repo status is not pristine: there might be modified files", output)
 
         scm_folder_file = os.path.join(self.cache_ref_folder, SCM_FOLDER)
-        self.assertFalse(os.path.exists(scm_folder_file))
+        self.assertTrue(os.path.exists(scm_folder_file))
+        self.assertEqual(load(scm_folder_file), self.conanfile_dir)
 
     def test_url_auto(self, _):
         output = TestBufferConanOutput()
