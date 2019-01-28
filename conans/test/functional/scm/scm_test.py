@@ -5,6 +5,7 @@ from collections import namedtuple
 
 from nose.plugins.attrib import attr
 
+from conans.client.tools.files import chdir
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.model.ref import ConanFileReference, PackageReference
@@ -852,3 +853,25 @@ class ConanLib(ConanFile):
         the_json = str(scm_data)
         data2 = json.loads(the_json)
         self.assertEquals(data, data2)
+
+
+@attr('svn')
+class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
+
+    def test_propset_own(self):
+        """ Apply svn:needs-lock property to every file in the own working-copy of the repository """
+
+        conanfile = base_svn.format(directory="None", url="auto", revision="auto")
+        project_url, _ = self.create_project(files={"conanfile.py": conanfile,})
+        project_url = project_url.replace(" ", "%20")
+
+        # Add property needs-lock to my own copy
+        client = TestClient()
+        client.runner('svn co "{url}" "{path}"'.format(url=project_url,
+                                                       path=client.current_folder))
+        with chdir(client.current_folder):
+            for item in ['conanfile.py', ]:
+                client.runner('svn propset svn:needs-lock yes {}'.format(item))
+            client.runner('svn commit -m "lock some files"')
+
+        client.run("export . user/channel")

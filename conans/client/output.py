@@ -58,18 +58,22 @@ class ConanOutput(object):
                 data = decode_text(data)  # Keep python 2 compatibility
 
         if self._color and (front or back):
-            color = "%s%s" % (front or '', back or '')
-            end = (Style.RESET_ALL + "\n") if newline else Style.RESET_ALL  # @UndefinedVariable
-            data = "%s%s%s" % (color, data, end)
-        else:
-            if newline:
-                data = "%s\n" % data
+            data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
+        if newline:
+            data = "%s\n" % data
 
-        try:
-            self._stream.write(data)
-        except UnicodeError:
-            data = data.encode("utf8").decode("ascii", "ignore")
-            self._stream.write(data)
+        # https://github.com/conan-io/conan/issues/4277
+        # Windows output locks produce IOErrors
+        for _ in range(3):
+            try:
+                self._stream.write(data)
+                break
+            except IOError:
+                import time
+                time.sleep(0.02)
+            except UnicodeError:
+                data = data.encode("utf8").decode("ascii", "ignore")
+
         self._stream.flush()
 
     def info(self, data):

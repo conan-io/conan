@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from conans.client.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator

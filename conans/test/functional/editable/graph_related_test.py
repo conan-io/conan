@@ -6,7 +6,6 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -36,7 +35,6 @@ class EmptyCacheTestMixin(object):
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
 
 class ExistingCacheTestMixin(object):
@@ -65,7 +63,7 @@ class RelatedToGraphBehavior(object):
 
     def test_do_nothing(self):
         self.t.save(files={'conanfile.py': conanfile,
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
+                           "mylayout": conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
@@ -82,13 +80,13 @@ class RelatedToGraphBehavior(object):
         # Create our project and link it
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
+                           "mylayout": conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
 
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
         self.t.run('install {}{}'.format(self.ref, update))
-        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
         self.assertTrue(os.path.exists(self.t.cache.conan(ref_parent)))
@@ -107,7 +105,7 @@ class RelatedToGraphBehavior(object):
         path_to_lib = os.path.join(self.t.current_folder, 'lib')
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, },
+                           "mylayout": conan_package_layout, },
                     path=path_to_lib)
         self.t.run('link "{}" {}'.format(path_to_lib, self.ref))
 
@@ -123,7 +121,7 @@ class RelatedToGraphBehavior(object):
         child_remote = 'No remote' if update else 'Cache'
         self.assertIn("    child/version@lasote/channel from local cache - {}".format(child_remote),
                       self.t.out)
-        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
         self.assertTrue(os.path.exists(self.t.cache.conan(ref_parent)))
 

@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
+from conans.client.cache.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
     load_registry_txt, migrate_registry_file
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
