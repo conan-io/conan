@@ -131,9 +131,7 @@ class CommandOutputer(object):
                 item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
                 if isinstance(self.cache, SimplePaths):
                     # @todo: check if this is correct or if it must always be package_id()
-                    bid = build_id(conanfile)
-                    if not bid:
-                        bid = conanfile.info.package_id()
+                    bid = build_id(conanfile) or package_id
                     pref = PackageReference(ref, bid)
                     item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
 
