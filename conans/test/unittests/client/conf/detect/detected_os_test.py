@@ -4,8 +4,7 @@
 
 import unittest
 from mock import mock
-from conans.client.conf.detect import detected_os
-from conans.client.tools import OSInfo
+from conans.client.tools.oss import detected_os, OSInfo
 
 
 class DetectedOSTest(unittest.TestCase):
