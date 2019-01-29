@@ -325,7 +325,6 @@ class TestConan(ConanFile):
         """Upload conans and package together"""
         # Try to upload all conans and packages
         self.client.run('upload %s --all' % str(self.ref))
-        print(self.client.out)
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
