@@ -175,7 +175,7 @@ virtualenv
         with tools.environment_append(env):
             self.basic_test(posix_empty_vars=False)
 
-    @unittest.skipIf(platform.system() == "Windows", "Needs bash terminal")
+    @unittest.skipUnless(OSInfo.bash_path(), "Needs bash")
     def conditional_parameter_expansion_test(self):
         # https://github.com/conan-io/conan/issues/3911
         client = TestClient()
@@ -185,11 +185,12 @@ virtualenv
         client.run("install . -g virtualenv")
         activate = load(os.path.join(client.current_folder, "activate.sh"))
         self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\"${PREPEND_VAR+:$PREPEND_VAR}", activate)
-        client.runner("bash -c 'source \"%s/activate.sh\" && env'" % client.current_folder)
+        client.runner("%s -c 'source \"%s/activate.sh\" && env'" % (OSInfo.bash_path(),
+                                                                    client.current_folder))
         # Check no trailing path separator ":"
         self.assertNotIn("PREPEND_VAR=1:2:three:", client.out)
-        self.assertIn("PREPEND_VAR=1:2:three", client.out)
+        self.assertIn("PREPEND_VAR=1:2:three", client.out)  # Check correct value
         # Check old value is preserved
-        client.runner("bash -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
-                      client.current_folder)
+        client.runner("%s -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
+                      (OSInfo.bash_path(), client.current_folder))
         self.assertIn("PREPEND_VAR=1:2:three:kk", client.out)
