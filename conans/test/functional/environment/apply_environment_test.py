@@ -438,8 +438,9 @@ class HelloConan(ConanFile):
         if platform.system() == "Windows":
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
-            self.assertIn('var2="value3":"value2":$var2', activate_contents)
-            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 $CPPFLAGS"', activate_contents)
+            self.assertIn('var2="value3":"value2"${var2+:$var2}', activate_contents)
+            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 ${CPPFLAGS+ $CPPFLAGS}"',
+                          activate_contents)
         self.assertIn("Another value", activate_contents)
         if platform.system() == "Windows":
             self.assertIn("PATH=/dir", activate_contents)
@@ -673,7 +674,7 @@ PATH=["path_from_A"]
 PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
             activate = load(os.path.join(client.current_folder, "activate.sh"))
-            self.assertIn('PATH="path_from_A":"path_from_B":$PATH', activate)
+            self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
         else:
             activate = load(os.path.join(client.current_folder, "activate.bat"))
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
