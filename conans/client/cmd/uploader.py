@@ -81,8 +81,8 @@ class CmdUpload(object):
                         packages_ids = [package_id, ]
                     else:
                         packages_ids = []
-                    #self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
-                    #             integrity_check, policy, remote, recorder)
+                    self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
+                                 integrity_check, policy, remote, recorder)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
