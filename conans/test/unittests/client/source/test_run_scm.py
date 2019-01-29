@@ -100,7 +100,7 @@ class RunSCMTest(unittest.TestCase):
                      output=output,
                      cache=False)
 
-        self.assertIn("getting sources from folder: {}".format(local_sources_path),
+        self.assertIn("getting sources from folder: {}".format(local_sources_path).lower(),
                       str(output).lower())
 
     def test_user_space_no_local_sources(self):
