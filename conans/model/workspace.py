@@ -1,12 +1,12 @@
-import platform
 import os
-import yaml
-
+import platform
 from collections import OrderedDict
 
+import yaml
+
 from conans.errors import ConanException
-from conans.util.files import load, save, mkdir
 from conans.model.ref import ConanFileReference
+from conans.util.files import load, mkdir, save
 
 
 class LocalPackage(object):
@@ -139,7 +139,7 @@ project({name} CXX)
 
     def _loads(self, text):
         try:
-            yml = yaml.load(text)
+            yml = yaml.safe_load(text)
             self._generator = yml.pop("generator", None)
             self._name = yml.pop("name", None)
             self._root = [s.strip() for s in yml.pop("root", "").split(",") if s.strip()]

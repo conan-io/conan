@@ -1,60 +1,49 @@
-import os
-
-from conans.model.ref import PackageReference, ConanFileReference
 from conans.client.output import ScopedOutput
-from conans.errors import ConanException
 from conans.client.source import complete_recipe_sources
+from conans.errors import NotFoundException
+from conans.model.ref import ConanFileReference, PackageReference
 
 
-def download(reference, package_ids, remote_name, recipe, registry, remote_manager,
-             client_cache, out, recorder, loader, hook_manager):
+def download(ref, package_ids, remote_name, recipe, remote_manager,
+             cache, out, recorder, loader, hook_manager):
 
-    assert(isinstance(reference, ConanFileReference))
-    output = ScopedOutput(str(reference), out)
+    assert(isinstance(ref, ConanFileReference))
+    output = ScopedOutput(str(ref), out)
+    registry = cache.registry
     remote = registry.remotes.get(remote_name) if remote_name else registry.remotes.default
-    package = remote_manager.search_recipes(remote, reference, None)
-    if not package:  # Search the reference first, and raise if it doesn't exist
-        raise ConanException("'%s' not found in remote" % str(reference))
 
-    hook_manager.execute("pre_download", reference=reference, remote=remote)
+    hook_manager.execute("pre_download", reference=ref, remote=remote)
     # First of all download package recipe
-    remote_manager.get_recipe(reference, remote)
-    registry.refs.set(reference, remote.name)
-    conan_file_path = client_cache.conanfile(reference)
+    try:
+        remote_manager.get_recipe(ref, remote)
+    except NotFoundException:
+        raise NotFoundException("'%s' not found in remote '%s'" % (str(ref), remote.name))
+    registry.refs.set(ref, remote.name)
+    conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
 
-    if not recipe:
+    if not recipe:  # Not only the recipe
         # Download the sources too, don't be lazy
-        complete_recipe_sources(remote_manager, client_cache, registry,
-                                conanfile, reference)
+        complete_recipe_sources(remote_manager, cache, conanfile, ref)
 
-        if package_ids:
-            _download_binaries(reference, package_ids, client_cache, remote_manager,
-                               remote, output, recorder, loader)
-        else:
-            output.info("Getting the complete package list "
-                        "from '%s'..." % str(reference))
-            packages_props = remote_manager.search_packages(remote, reference, None)
-            if not packages_props:
-                output = ScopedOutput(str(reference), out)
+        if not package_ids:  # User didnt specify a specific package binary
+            output.info("Getting the complete package list from '%s'..." % str(ref))
+            packages_props = remote_manager.search_packages(remote, ref, None)
+            package_ids = list(packages_props.keys())
+            if not package_ids:
                 output.warn("No remote binary packages found in remote")
-            else:
-                _download_binaries(reference, list(packages_props.keys()), client_cache,
-                                   remote_manager, remote, output, recorder, loader)
-    hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=reference,
+
+        _download_binaries(conanfile, ref, package_ids, cache, remote_manager,
+                           remote, output, recorder)
+    hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
                          remote=remote)
 
 
-def _download_binaries(reference, package_ids, client_cache, remote_manager, remote, output,
-                       recorder, loader):
-    conanfile_path = client_cache.conanfile(reference)
-    if not os.path.exists(conanfile_path):
-        raise Exception("Download recipe first")
-    conanfile = loader.load_class(conanfile_path)
+def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output, recorder):
     short_paths = conanfile.short_paths
 
     for package_id in package_ids:
-        package_ref = PackageReference(reference, package_id)
-        package_folder = client_cache.package(package_ref, short_paths=short_paths)
-        output.info("Downloading %s" % str(package_ref))
-        remote_manager.get_package(package_ref, package_folder, remote, output, recorder)
+        pref = PackageReference(ref, package_id)
+        package_folder = cache.package(pref, short_paths=short_paths)
+        output.info("Downloading %s" % str(pref))
+        remote_manager.get_package(pref, package_folder, remote, output, recorder)

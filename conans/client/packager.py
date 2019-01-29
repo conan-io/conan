@@ -2,24 +2,25 @@ import os
 import shutil
 
 from conans.client import tools
-from conans.util.files import mkdir, save, rmdir
-from conans.util.log import logger
-from conans.paths import CONANINFO
+from conans.client.file_copier import FileCopier
+from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
-from conans.client.output import ScopedOutput
-from conans.client.file_copier import FileCopier
+from conans.paths import CONANINFO
+from conans.util.files import mkdir, rmdir, save
+from conans.util.log import logger
 
 
-def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, hook_manager,
-               conanfile_path, reference):
+def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
+               conanfile_path, ref):
     mkdir(package_folder)
     conanfile.package_folder = src_package_folder
+    output = conanfile.output
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % package_folder)
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=reference, package_id=pkg_id)
+                         reference=ref, package_id=package_id)
 
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
@@ -31,19 +32,21 @@ def export_pkg(conanfile, pkg_id, src_package_folder, package_folder, output, ho
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
-    output.success("Package '%s' created" % pkg_id)
+    output.success("Package '%s' created" % package_id)
     conanfile.package_folder = package_folder
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=reference, package_id=pkg_id)
+                         reference=ref, package_id=package_id)
 
 
-def create_package(conanfile, pkg_id, source_folder, build_folder, package_folder, install_folder,
-                   output, hook_manager, conanfile_path, reference, local=False, copy_info=False):
+def create_package(conanfile, package_id, source_folder, build_folder, package_folder,
+                   install_folder, hook_manager, conanfile_path, ref, local=False,
+                   copy_info=False):
     """ copies built artifacts, libs, headers, data, etc. from build_folder to
     package folder
     """
     mkdir(package_folder)
 
+    output = conanfile.output
     # Make the copy of all the patterns
     output.info("Generating the package")
     output.info("Package folder %s" % package_folder)
@@ -55,7 +58,7 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
         conanfile.build_folder = build_folder
 
         hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                             reference=reference, package_id=pkg_id)
+                             reference=ref, package_id=package_id)
 
         package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
@@ -93,17 +96,17 @@ def create_package(conanfile, pkg_id, source_folder, build_folder, package_folde
         raise ConanException(e)
 
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
-    pkg_id = pkg_id or os.path.basename(package_folder)
-    output.success("Package '%s' created" % pkg_id)
+    package_id = package_id or os.path.basename(package_folder)
+    output.success("Package '%s' created" % package_id)
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=reference, package_id=pkg_id)
+                         reference=ref, package_id=package_id)
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
-    logger.debug("Creating config files to %s" % package_folder)
+    logger.debug("PACKAGE: Creating config files to %s" % package_folder)
     if copy_info:
         try:
             shutil.copy(os.path.join(install_folder, CONANINFO), package_folder)

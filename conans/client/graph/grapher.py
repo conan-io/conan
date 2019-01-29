@@ -1,103 +1,8 @@
-from conans.util.files import save
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
+    BINARY_UPDATE
 from conans.client.installer import build_id
-from collections import defaultdict, namedtuple
-from conans.client.graph.graph import BINARY_CACHE, BINARY_UPDATE,\
-    BINARY_MISSING, BINARY_BUILD, BINARY_DOWNLOAD
-
-
-def html_binary_graph(search_info, reference, table_filename):
-    result = ["""<style>
-    table, th, td {
-    border: 1px solid black;
-    border-collapse: collapse;
-}
-.selected {
-    border: 3px solid black;
-}
-</style>
-<script type="text/javascript">
-    function handleEvent(id) {
-        selected = document.getElementsByClassName('selected');
-        if (selected[0]) selected[0].className = '';
-        cell = document.getElementById(id);
-        cell.className = 'selected';
-        elem = document.getElementById('SelectedPackage');
-        elem.innerHTML = id;
-    }
-
-</script>
-<h1>%s</h1>
-    """ % str(reference)]
-
-    for remote_info in search_info:
-        if remote_info["remote"] != 'None':
-            result.append("<h2>'%s':</h2>" % str(remote_info["remote"]))
-
-        ordered_packages = remote_info["items"][0]["packages"]
-        binary = namedtuple("Binary", "ID outdated")
-        columns = set()
-        table = defaultdict(dict)
-        for package in ordered_packages:
-            package_id = package["id"]
-            settings = package["settings"]
-            if settings:
-                row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
-                                         settings.get("compiler.version", "None"))
-                column_name = []
-                for setting, value in settings.items():
-                    if setting.startswith("compiler."):
-                        if not setting.startswith("compiler.version"):
-                            row_name += " (%s)" % value
-                    elif setting not in ("os", "compiler"):
-                        column_name.append(value)
-                column_name = " ".join(column_name)
-            else:
-                row_name = "NO settings"
-                column_name = ""
-
-            options = package["options"]
-            if options:
-                for k, v in options.items():
-                    column_name += "<br>%s=%s" % (k, v)
-
-            column_name = column_name or "NO options"
-            columns.add(column_name)
-            # Always compare outdated with local recipe, simplification,
-            # if a remote check is needed install recipe first
-            if "outdated" in package:
-                outdated = package["outdated"]
-            else:
-                outdated = None
-            table[row_name][column_name] = binary(package_id, outdated)
-
-        headers = sorted(columns)
-        result.append("<table>")
-        result.append("<tr>")
-        result.append("<th></th>")
-        for header in headers:
-            result.append("<th>%s</th>" % header)
-        result.append("</tr>")
-        for row, columns in sorted(table.items()):
-            result.append("<tr>")
-            result.append("<td>%s</td>" % row)
-            for header in headers:
-                col = columns.get(header, "")
-                if col:
-                    color = "#ffff00" if col.outdated else "#00ff00"
-                    result.append('<td bgcolor=%s id="%s" onclick=handleEvent("%s")></td>' % (color, col.ID, col.ID))
-                else:
-                    result.append("<td></td>")
-            result.append("</tr>")
-        result.append("</table>")
-
-    result.append('<br>Selected: <div id="SelectedPackage"></div>')
-
-    result.append("<br>Legend<br>"
-                  "<table><tr><td bgcolor=#ffff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Outdated from recipe</td></tr>"
-                  "<tr><td bgcolor=#00ff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Updated</td></tr>"
-                  "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Non existing</td></tr></table>")
-    html_contents = "\n".join(result)
-    save(table_filename, html_contents)
+from conans.util.files import save
+import os
 
 
 class ConanGrapher(object):
@@ -108,11 +13,10 @@ class ConanGrapher(object):
         graph_lines = ['digraph {\n']
 
         for node in self._deps_graph.nodes:
-            ref = node.conan_ref or str(node.conanfile)
             depends = node.neighbors()
             if depends:
-                depends = " ".join('"%s"' % str(d.conan_ref) for d in depends)
-                graph_lines.append('    "%s" -> {%s}\n' % (str(ref), depends))
+                depends = " ".join('"%s"' % str(d.ref) for d in depends)
+                graph_lines.append('    "%s" -> {%s}\n' % (node.conanfile.display_name, depends))
 
         graph_lines.append('}\n')
         return ''.join(graph_lines)
@@ -122,8 +26,18 @@ class ConanGrapher(object):
 
 
 class ConanHTMLGrapher(object):
-    def __init__(self, deps_graph):
+    def __init__(self, deps_graph, cache_folder):
         self._deps_graph = deps_graph
+        self._cache_folder = cache_folder
+
+    def _visjs_paths(self):
+        visjs = "https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"
+        viscss = "https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css"
+        visjs_path = os.path.join(self._cache_folder, "vis.min.js")
+        visjs = visjs_path if os.path.exists(visjs_path) else visjs
+        viscss_path = os.path.join(self._cache_folder, "vis.min.css")
+        viscss = viscss_path if os.path.exists(viscss_path) else viscss
+        return visjs, viscss
 
     def graph_file(self, filename):
         save(filename, self.graph())
@@ -134,27 +48,27 @@ class ConanHTMLGrapher(object):
         graph_nodes = self._deps_graph.by_levels()
         graph_nodes = reversed([n for level in graph_nodes for n in level])
         for i, node in enumerate(graph_nodes):
-            ref, conanfile = node.conan_ref, node.conanfile
+            ref, conanfile = node.ref, node.conanfile
             nodes_map[node] = i
-            if ref:
-                label = "%s/%s" % (ref.name, ref.version)
-                fulllabel = ["<h3>%s</h3>" % str(ref)]
-                fulllabel.append("<ul>")
-                for name, data in [("id", conanfile.info.package_id()),
-                                   ("build_id", build_id(conanfile)),
-                                   ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
-                                   ("homepage", '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
-                                   ("license", conanfile.license),
-                                   ("author", conanfile.author),
-                                   ("topics", conanfile.topics)]:
-                    if data:
-                        data = data.replace("'", '"')
-                        fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
 
-                fulllabel.append("<ul>")
-                fulllabel = "".join(fulllabel)
-            else:
-                fulllabel = label = node.conan_ref or str(node.conanfile)
+            label = "%s/%s" % (ref.name, ref.version) if ref else conanfile.display_name
+            fulllabel = ["<h3>%s</h3>" % conanfile.display_name]
+            fulllabel.append("<ul>")
+            for name, data in [("id", conanfile.info.package_id()),
+                               ("build_id", build_id(conanfile)),
+                               ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
+                               ("homepage",
+                                '<a href="{url}">{url}</a>'.format(url=conanfile.homepage)),
+                               ("license", conanfile.license),
+                               ("author", conanfile.author),
+                               ("topics", str(conanfile.topics))]:
+                if data:
+                    data = data.replace("'", '"')
+                    fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
+
+            fulllabel.append("<ul>")
+            fulllabel = "".join(fulllabel)
+
             if node.build_require:
                 shape = "ellipse"
             else:
@@ -164,7 +78,8 @@ class ConanHTMLGrapher(object):
                      BINARY_BUILD: "Khaki",
                      BINARY_MISSING: "OrangeRed",
                      BINARY_UPDATE: "SeaGreen"}.get(node.binary, "White")
-            nodes.append("{id: %d, label: '%s', shape: '%s', color: {background: '%s'}, fulllabel: '%s'}"
+            nodes.append("{id: %d, label: '%s', shape: '%s', "
+                         "color: {background: '%s'}, fulllabel: '%s'}"
                          % (i, label, shape, color, fulllabel))
         nodes = ",\n".join(nodes)
 
@@ -176,13 +91,15 @@ class ConanHTMLGrapher(object):
                 edges.append("{ from: %d, to: %d }" % (src, dst))
         edges = ",\n".join(edges)
 
-        return self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
+        result = self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
+        visjs, viscss = self._visjs_paths()
+        return result.replace("%VISJS%", visjs).replace("%VISCSS%", viscss)
 
     _template = """<html>
 
 <head>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css" rel="stylesheet" type="text/css" />
+  <script type="text/javascript" src="%VISJS%"></script>
+  <link href="%VISCSS%" rel="stylesheet" type="text/css"/>
 </head>
 
 <body>
@@ -215,7 +132,9 @@ class ConanHTMLGrapher(object):
     <div id="mynetwork" style="float:left; width: 75%;"></div>
     <div style="float:right;width:25%;">
       <div id="details"  style="padding:10;" class="noPrint">Package info: no package selected</div>
-      <button onclick="javascript:showhideclass('controls')" class="button noPrint">Show / hide graph controls.</button>
+      <button onclick="javascript:showhideclass('controls')" class="button noPrint">
+          Show / hide graph controls
+      </button>
       <div id="controls" class="controls" style="padding:5; display:none"></div>
     </div>
   </div>

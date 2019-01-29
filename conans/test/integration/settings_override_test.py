@@ -1,11 +1,12 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE, CONANINFO
-from conans.model.ref import ConanFileReference
-from conans.util.files import load
 import os
-from conans import tools
+import unittest
+
+from conans.client import tools
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE, CONANINFO
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 class SettingsOverrideTest(unittest.TestCase):
@@ -34,13 +35,13 @@ class SettingsOverrideTest(unittest.TestCase):
         self.assertIn("COMPILER=> VisualBuild Visual Studio", self.client.user_io.out)
 
         # CHECK CONANINFO FILE
-        packs_dir = self.client.paths.packages(ConanFileReference.loads("MinGWBuild/0.1@lasote/testing"))
+        packs_dir = self.client.cache.packages(ConanFileReference.loads("MinGWBuild/0.1@lasote/testing"))
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
         self.assertIn("compiler=gcc", conaninfo)
 
         # CHECK CONANINFO FILE
-        packs_dir = self.client.paths.packages(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
+        packs_dir = self.client.cache.packages(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
         self.assertIn("compiler=Visual Studio", conaninfo)
@@ -53,7 +54,7 @@ class SettingsOverrideTest(unittest.TestCase):
         self.client.run("export . lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                         "-s compiler.version=14 -s compiler.runtime=MD "
-                        "-s MinGWBuild:missingsetting='gcc' ", ignore_error=True)
+                        "-s MinGWBuild:missingsetting='gcc' ", assert_error=True)
         self.assertIn("settings.missingsetting' doesn't exist", self.client.user_io.out)
 
     def test_override_in_non_existing_recipe(self):

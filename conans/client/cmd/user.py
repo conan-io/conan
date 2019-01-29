@@ -1,5 +1,5 @@
-from conans.errors import ConanException
 from conans.client.store.localdb import LocalDB
+from conans.errors import ConanException
 
 
 def users_list(localdb_file, remotes):

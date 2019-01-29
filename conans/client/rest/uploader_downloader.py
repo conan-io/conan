@@ -2,10 +2,10 @@ import os
 import time
 import traceback
 
-import conans.tools
-from conans.errors import ConanException, ConanConnectionError, NotFoundException, \
-    AuthenticationException
-from conans.util.files import save_append, sha1sum, exception_message_safe, to_file_bytes, mkdir
+from conans.client.tools.files import human_size
+from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
+    NotFoundException
+from conans.util.files import exception_message_safe, mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -19,16 +19,18 @@ class Uploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+        # Send always the header with the Sha1
+        headers = headers or {}
+        headers["X-Checksum-Sha1"] = sha1sum(abs_path)
         if dedup:
-            dedup_headers = {"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)}
+            dedup_headers = {"X-Checksum-Deploy": "true"}
             if headers:
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
-            if response.status_code != 404:
+            if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
-        headers = headers or {}
         self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
@@ -150,6 +152,7 @@ class Downloader(object):
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
+            logger.debug("DOWNLOAD: %s" % url)
             data = self._download_data(response, file_path)
             duration = time.time() - t1
             log_download(url, duration)
@@ -226,8 +229,7 @@ def progress_units(progress, total):
 
 
 def human_readable_progress(bytes_transferred, total_bytes):
-    return "%s/%s" % (conans.tools.human_size(bytes_transferred),
-                      conans.tools.human_size(total_bytes))
+    return "%s/%s" % (human_size(bytes_transferred), human_size(total_bytes))
 
 
 def print_progress(output, units, progress=""):

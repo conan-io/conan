@@ -1,5 +1,6 @@
-from conans.model import Generator
 import json
+
+from conans.model import Generator
 
 
 class YouCompleteMeGenerator(Generator):

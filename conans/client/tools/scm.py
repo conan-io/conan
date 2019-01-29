@@ -1,14 +1,14 @@
 
 import os
-import re
-
-import subprocess
-from six.moves.urllib.parse import urlparse, quote_plus, unquote
-from subprocess import CalledProcessError, PIPE, STDOUT
 import platform
+import re
+import subprocess
 import xml.etree.ElementTree as ET
+from subprocess import CalledProcessError, PIPE, STDOUT
 
-from conans.client.tools.env import no_op, environment_append
+from six.moves.urllib.parse import quote_plus, unquote, urlparse
+
+from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -18,8 +18,8 @@ from conans.util.files import decode_text, to_file_bytes, walk
 class SCMBase(object):
     cmd_command = None
 
-    def __init__(self, folder=None, verify_ssl=True, username=None, password=None, force_english=True,
-                 runner=None):
+    def __init__(self, folder=None, verify_ssl=True, username=None, password=None,
+                 force_english=True, runner=None, output=None):
         self.folder = folder or os.getcwd()
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
@@ -28,6 +28,7 @@ class SCMBase(object):
         self._username = username
         self._password = password
         self._runner = runner
+        self._output = output
 
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
@@ -49,6 +50,15 @@ class SCMBase(object):
         url = url.replace("://", "://" + user_enc + ":" + pwd_enc + "@", 1)
         return url
 
+    @classmethod
+    def _remove_credentials_url(cls, url):
+        parsed = urlparse(url)
+        netloc = parsed.hostname
+        if parsed.port:
+            netloc += ":{}".format(parsed.port)
+        replaced = parsed._replace(netloc=netloc)
+        return replaced.geturl()
+
 
 class Git(SCMBase):
     cmd_command = "git"
@@ -57,7 +67,7 @@ class Git(SCMBase):
         # TODO: This should be a context manager
         return self.run("config http.sslVerify %s" % ("true" if self._verify_ssl else "false"))
 
-    def clone(self, url, branch=None):
+    def clone(self, url, branch=None, args=""):
         url = self.get_url_with_credentials(url)
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
@@ -74,7 +84,7 @@ class Git(SCMBase):
             output += self.run("checkout -t origin/%s" % branch)
         else:
             branch_cmd = "--branch %s" % branch if branch else ""
-            output = self.run('clone "%s" . %s' % (url, branch_cmd))
+            output = self.run('clone "%s" . %s %s' % (url, branch_cmd, args))
             output += self._configure_ssl_verify()
 
         return output
@@ -92,26 +102,34 @@ class Git(SCMBase):
                 output += self.run("submodule update --init --recursive")
             else:
                 raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
-                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']" % submodule)
+                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
+                                     % submodule)
         # Element can be a tag, branch or commit
         return output
 
     def excluded_files(self):
+        ret = []
         try:
-
-            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
+            file_paths = [os.path.normpath(
+                                os.path.join(
+                                    os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
-            p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
-                                 stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
-            paths = to_file_bytes("\n".join(file_paths))
-            grep_stdout = decode_text(p.communicate(input=paths)[0])
-            tmp = grep_stdout.splitlines()
-        except CalledProcessError:
-            tmp = []
-        return tmp
+            if file_paths:
+                p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
+                                     stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
+                paths = to_file_bytes("\n".join(file_paths))
 
-    def get_remote_url(self, remote_name=None):
+                grep_stdout = decode_text(p.communicate(input=paths)[0])
+                ret = grep_stdout.splitlines()
+        except (CalledProcessError, IOError, OSError) as e:
+            if self._output:
+                self._output.warn("Error checking excluded git files: %s. "
+                                  "Ignoring excluded files" % e)
+            ret = []
+        return ret
+
+    def get_remote_url(self, remote_name=None, remove_credentials=False):
         self._check_git_repo()
         remote_name = remote_name or "origin"
         remotes = self.run("remote -v")
@@ -119,12 +137,14 @@ class Git(SCMBase):
             name, url = remote.split(None, 1)
             if name == remote_name:
                 url, _ = url.rsplit(None, 1)
+                if remove_credentials and not os.path.exists(url):  # only if not local
+                    url = self._remove_credentials_url(url)
                 return url
         return None
 
     def is_local_repository(self):
         url = self.get_remote_url()
-        return os.path.exists(url)   
+        return os.path.exists(url)
 
     def get_commit(self):
         self._check_git_repo()
@@ -144,7 +164,7 @@ class Git(SCMBase):
             return True
         else:
             return False
-        
+
     def get_repo_root(self):
         self._check_git_repo()
         return self.run("rev-parse --show-toplevel")
@@ -158,6 +178,15 @@ class Git(SCMBase):
             return branch
         except Exception as e:
             raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
+
+    def get_tag(self):
+        self._check_git_repo()
+        try:
+            status = self.run("describe --exact-match --tags")
+            tag = status.strip()
+            return tag
+        except Exception:
+            return None
 
     def _check_git_repo(self):
         try:
@@ -180,7 +209,7 @@ class SVN(SCMBase):
     @staticmethod
     def get_version():
         try:
-            out, err = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.split(' ', 3)[2]
             return Version(version_str)
@@ -205,6 +234,7 @@ class SVN(SCMBase):
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def _show_item(self, item, target='.'):
+        self._check_svn_repo()
         if self.version >= SVN.API_CHANGE_VERSION:
             value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
             return value.strip()
@@ -255,19 +285,22 @@ class SVN(SCMBase):
                 excluded_list.append(os.path.normpath(filepath))
         return excluded_list
 
-    def get_remote_url(self):
-        return self._show_item('url')
+    def get_remote_url(self, remove_credentials=False):
+        url = self._show_item('url')
+        if remove_credentials and not os.path.exists(url):  # only if not local
+            url = self._remove_credentials_url(url)
+        return url
 
-    def get_qualified_remote_url(self):
+    def get_qualified_remote_url(self, remove_credentials=False):
         # Return url with peg revision
-        url = self.get_remote_url()
+        url = self.get_remote_url(remove_credentials=remove_credentials)
         revision = self.get_last_changed_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
-        
+
     def is_local_repository(self):
         url = self.get_remote_url()
-        return url.startswith(self.file_protocol) and \
-               os.path.exists(unquote(url[len(self.file_protocol):]))
+        return (url.startswith(self.file_protocol) and
+                os.path.exists(unquote(url[len(self.file_protocol):])))
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
@@ -313,17 +346,21 @@ class SVN(SCMBase):
             return self._show_item(item='last-changed-revision')
 
     def get_branch(self):
-        url = self._show_item('relative-url')
+        item = self._get_item("branches/[^/]+|trunk", "branch")
+        return item.replace("branches/", "") if item else None
+
+    def get_tag(self):
+        item = self._get_item("tags/[^/]+", "tag")
+        return item.replace("tags/", "") if item else None
+
+    def _get_item(self, pattern, item_name):
         try:
-            pattern = "(tags|branches)/[^/]+|trunk"
-            branch = re.search(pattern, url)
-            
-            if branch is None:
-                return None
-            else:
-                return branch.group(0)
+            url = self._show_item('relative-url')
         except Exception as e:
-            raise ConanException("Unable to get svn branch from %s: %s" % (self.folder, str(e)))
+            raise ConanException("Unable to get svn %s from %s: %s"
+                                 % (item_name, self.folder, str(e)))
+        item = re.search(pattern, url)
+        return item.group(0) if item else None
 
     def _check_svn_repo(self):
         try:

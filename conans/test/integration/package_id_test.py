@@ -1,12 +1,12 @@
+import os
 import unittest
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANINFO
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans.paths import CONANINFO
-import os
-from conans.test.utils.conanfile import TestConanFile
 
 
 class PackageIDTest(unittest.TestCase):
@@ -205,11 +205,11 @@ class Pkg(ConanFile):
                             ' -s compiler.version=15 -s compiler.toolset=v140')
 
             # Should NOT have binary available
-            error = self.client.run('install Hello/1.2.0@user/testing '
-                                    '-s compiler="Visual Studio" '
-                                    '-s compiler.version=15 -s compiler.toolset=v120',
-                                    ignore_error=True)
-            self.assertTrue(error)
+            self.client.run('install Hello/1.2.0@user/testing '
+                            '-s compiler="Visual Studio" '
+                            '-s compiler.version=15 -s compiler.toolset=v120',
+                            assert_error=True)
+
             self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
             # Specify a toolset not involved with the visual version is ok, needed to build:
@@ -229,11 +229,10 @@ class Pkg(ConanFile):
                         ' -s compiler.version=14 --build')
 
         # Should NOT have binary available
-        error = self.client.run('install Hello/1.2.0@user/testing'
-                                ' -s compiler="Visual Studio" '
-                                ' -s compiler.version=15 -s compiler.toolset=v140',
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="Visual Studio" '
+                        ' -s compiler.version=15 -s compiler.toolset=v140',
+                        assert_error=True)
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_build_settings(self):
@@ -251,9 +250,9 @@ class Pkg(ConanFile):
                             ' --build missing')
 
             ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-            pkg = os.listdir(self.client.client_cache.packages(ref))
-            pid = PackageReference(ref, pkg[0])
-            pkg_folder = self.client.client_cache.package(pid)
+            pkg = os.listdir(self.client.cache.packages(ref))
+            pref = PackageReference(ref, pkg[0])
+            pkg_folder = self.client.cache.package(pref)
             return ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
 
         info = install_and_get_info(None)  # Default
@@ -283,7 +282,7 @@ class Pkg(ConanFile):
                               ' -s os="Windows" '
                               ' -s arch="x86_64"'
                               ' -s os_build="Macos"'
-                              ' -s arch_build="x86_64"', ignore_error=True)
+                              ' -s arch_build="x86_64"', assert_error=True)
         self.assertTrue(err)
         self.assertIn("Can't find", self.client.out)
 
@@ -303,9 +302,9 @@ class Pkg(ConanFile):
                         ' -s arch_build="x86"'
                         ' --build missing')
         ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-        pkg = os.listdir(self.client.client_cache.packages(ref))
-        pid = PackageReference(ref, pkg[0])
-        pkg_folder = self.client.client_cache.package(pid)
+        pkg = os.listdir(self.client.cache.packages(ref))
+        pref = PackageReference(ref, pkg[0])
+        pkg_folder = self.client.cache.package(pref)
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
         self.assertEquals(str(info.settings.os_build), "Linux")
         self.assertEquals(str(info.settings.arch_build), "x86")
@@ -328,11 +327,11 @@ class Pkg(ConanFile):
                         ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
 
         # Should NOT have binary available
-        error = self.client.run('install Hello/1.2.0@user/testing'
-                                ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                                ' -s compiler.version=7.2 -s cppstd=gnu11',
-                                ignore_error=True)
-        self.assertTrue(error)
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s cppstd=gnu11',
+                        assert_error=True)
+
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_standard_version_default_non_matching(self):
@@ -348,10 +347,8 @@ class Pkg(ConanFile):
                      channel="user/testing",
                      settings='"compiler", "cppstd"'
                      )
-        error = self.client.run('install Hello/1.2.0@user/testing '
+        self.client.run('install Hello/1.2.0@user/testing '
                                 ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                                 ' -s compiler.version=7.2 -s cppstd=gnu14',
-                                ignore_error=True)  # Default
-        self.assertTrue(error)
+                                assert_error=True)  # Default
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
-

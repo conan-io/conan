@@ -31,7 +31,7 @@ class JsonGenerator(Generator):
         info["deps_user_info"] = self.get_deps_user_info()
         info["dependencies"] = self.get_dependencies_info()
         info["settings"] = self.get_settings()
-        info["options"] = self.get_options()        
+        info["options"] = self.get_options()
         return json.dumps(info, indent=2)
 
     def get_deps_user_info(self):

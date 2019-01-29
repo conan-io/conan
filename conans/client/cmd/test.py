@@ -2,9 +2,9 @@ import hashlib
 import os
 import tempfile
 
-from conans.util.files import rmdir
-from conans.util.env_reader import get_env
 from conans.client.cmd.build import build
+from conans.util.env_reader import get_env
+from conans.util.files import rmdir
 
 
 class PackageTester(object):
@@ -13,7 +13,7 @@ class PackageTester(object):
         self._manager = manager
         self._user_io = user_io
 
-    def install_build_and_test(self, conanfile_abs_path, reference, profile,
+    def install_build_and_test(self, conanfile_abs_path, reference, graph_info,
                                remote_name, update, build_modes=None, manifest_folder=None,
                                manifest_verify=False, manifest_interactive=False, keep_build=False,
                                test_build_folder=None):
@@ -22,17 +22,18 @@ class PackageTester(object):
         and builds the test_package/conanfile.py running the test() method.
         """
         base_folder = os.path.dirname(conanfile_abs_path)
-        test_build_folder, delete_after_build = self._build_folder(test_build_folder, profile,
+        test_build_folder, delete_after_build = self._build_folder(test_build_folder,
+                                                                   graph_info.profile,
                                                                    base_folder)
         rmdir(test_build_folder)
         if build_modes is None:
             build_modes = ["never"]
         try:
             self._manager.install(create_reference=reference,
-                                  reference=conanfile_abs_path,
+                                  ref_or_path=conanfile_abs_path,
                                   install_folder=test_build_folder,
                                   remote_name=remote_name,
-                                  profile=profile,
+                                  graph_info=graph_info,
                                   update=update,
                                   build_modes=build_modes,
                                   manifest_folder=manifest_folder,
@@ -41,7 +42,6 @@ class PackageTester(object):
                                   keep_build=keep_build)
             # FIXME: This is ugly access to graph_manager and hook_manager. Will be cleaned in 2.0
             build(self._manager._graph_manager, self._manager._hook_manager, conanfile_abs_path,
-                  self._user_io.out,
                   base_folder, test_build_folder, package_folder=None,
                   install_folder=test_build_folder, test=str(reference))
         finally:

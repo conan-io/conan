@@ -1,7 +1,7 @@
-
 import os
-from tqdm import tqdm
 from contextlib import contextmanager
+
+from tqdm import tqdm
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
@@ -17,17 +17,15 @@ class _FileReaderWithProgressBar(object):
 
     def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
-        self._ori_output = output
 
         # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
         if not output.is_terminal:
             output = _NoTerminalOutput(output)
             pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
 
-        self._output = output
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        self._pb = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
+        self._tqdm_bar = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
         self.seek(0)
 
     def seekable(self):
@@ -42,15 +40,11 @@ class _FileReaderWithProgressBar(object):
     def read(self, size):
         prev = self.tell()
         ret = self._fileobj.read(size)
-        self._pb.update(self.tell() - prev)
+        self._tqdm_bar.update(self.tell() - prev)
         return ret
 
     def pb_close(self):
-        self._pb.close()
-
-    def pb_write(self, message):
-        """ Allow to write messages to output without interfering with the progress bar """
-        tqdm.write(message, file=self._ori_output)
+        self._tqdm_bar.close()
 
 
 class _NoTerminalOutput(object):

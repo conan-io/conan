@@ -2,9 +2,10 @@ import calendar
 import datetime
 import os
 import time
+
 from conans.errors import ConanException
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
-from conans.util.files import md5sum, md5, save, load, walk
+from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.util.files import load, md5, md5sum, save, walk
 
 
 def discarded_file(filename):
