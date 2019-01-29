@@ -1,15 +1,14 @@
 import os
 import time
+from collections import defaultdict
 
 from conans.client.source import complete_recipe_sources
-from conans.client.tools.env import no_op
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.search.search import search_packages, search_recipes
 from conans.util.env_reader import get_env
 from conans.util.files import load
 from conans.util.log import logger
-from collections import defaultdict
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
@@ -58,32 +57,32 @@ class CmdUpload(object):
         else:
             refs_by_remote[self._registry.remotes.get(remote_name)] = references
 
+        # Do the job
         for remote, references in refs_by_remote.items():
             self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
-            with self._user_io.out.scoped("remote:{}".format(remote.name)):
-                for conan_ref in references:
-                    upload = True
-                    if not confirm:
-                        msg = "Are you sure you want to upload '%s'?" % str(conan_ref)
-                        upload = self._user_io.request_boolean(msg)
-                    if upload:
-                        try:
-                            conanfile_path = self._client_cache.conanfile(conan_ref)
-                            conan_file = self._loader.load_class(conanfile_path)
-                        except NotFoundException:
-                            raise NotFoundException(("There is no local conanfile exported as %s" %
-                                                     str(conan_ref)))
-                        if all_packages:
-                            packages_ids = self._client_cache.conan_packages(conan_ref)
-                        elif query:
-                            packages = search_packages(self._client_cache, conan_ref, query)
-                            packages_ids = list(packages.keys())
-                        elif package_id:
-                            packages_ids = [package_id, ]
-                        else:
-                            packages_ids = []
-                        self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
-                                     integrity_check, policy, remote, recorder)
+            for conan_ref in references:
+                upload = True
+                if not confirm:
+                    msg = "Are you sure you want to upload '%s'?" % str(conan_ref)
+                    upload = self._user_io.request_boolean(msg)
+                if upload:
+                    try:
+                        conanfile_path = self._client_cache.conanfile(conan_ref)
+                        conan_file = self._loader.load_class(conanfile_path)
+                    except NotFoundException:
+                        raise NotFoundException(("There is no local conanfile exported as %s" %
+                                                 str(conan_ref)))
+                    if all_packages:
+                        packages_ids = self._client_cache.conan_packages(conan_ref)
+                    elif query:
+                        packages = search_packages(self._client_cache, conan_ref, query)
+                        packages_ids = list(packages.keys())
+                    elif package_id:
+                        packages_ids = [package_id, ]
+                    else:
+                        packages_ids = []
+                    #self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
+                    #             integrity_check, policy, remote, recorder)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 

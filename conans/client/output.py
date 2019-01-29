@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-
 import six
 from colorama import Fore, Style
 
@@ -46,7 +44,6 @@ class ConanOutput(object):
     def __init__(self, stream, color=False):
         self._stream = stream
         self._color = color
-        self._scoped = None
 
     @property
     def is_terminal(self):
@@ -55,7 +52,7 @@ class ConanOutput(object):
     def writeln(self, data, front=None, back=None):
         self.write(data, front, back, True)
 
-    def _write(self, data, front=None, back=None, newline=False):
+    def write(self, data, front=None, back=None, newline=False):
         if six.PY2:
             if isinstance(data, str):
                 data = decode_text(data)  # Keep python 2 compatibility
@@ -95,42 +92,26 @@ class ConanOutput(object):
 
     def rewrite_line(self, line):
         tmp_color = self._color
-        try:
-            self._color = False
-            TOTAL_SIZE = 70 if not self._scoped else (70 - len(self._scoped) - 2)
-            LIMIT_SIZE = int(TOTAL_SIZE/2-3)
-            if len(line) > TOTAL_SIZE:
-                line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
-            else:
-                line += " " * (TOTAL_SIZE-len(line))
-            self._write("\r", newline=False)
-            self.write(line, newline=True)
-            self._stream.flush()
-        finally:
-            self._color = tmp_color
+        self._color = False
+        TOTAL_SIZE = 70
+        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
+        if len(line) > TOTAL_SIZE:
+            line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
+        self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
+        self._stream.flush()
+        self._color = tmp_color
 
     def flush(self):
         self._stream.flush()
 
-    def write(self, data, front=None, back=None, newline=False):
-        if not self._scoped:
-            self._write(data, front=front, back=back, newline=newline)
-        else:
-            self._write("%s: " % self._scoped, front, back, False)
-            self._write("%s" % data, Color.BRIGHT_WHITE, back, newline)
-
-    @contextmanager
-    def scoped(self, scope):
-        self._scoped = scope
-        yield
-        self._scoped = None
-
-    @property
-    def scope(self):
-        return self._scoped
-
 
 class ScopedOutput(ConanOutput):
     def __init__(self, scope, output):
-        super(ScopedOutput, self).__init__(stream=output._stream, color=output._color)
-        self._scoped = scope
+        self.scope = scope
+        self._stream = output._stream
+        self._color = output._color
+
+    def write(self, data, front=None, back=None, newline=False):
+        assert self.scope != "virtual", "printing with scope==virtual"
+        super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
+        super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)
