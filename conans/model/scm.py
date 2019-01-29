@@ -114,6 +114,9 @@ class SCM(object):
             for CVS where chunks of the repository can be checked out isolated). The argument
             'url' should be contained inside the root url.
         """
+        if self._data.type == "git":
+            return self.get_repo_root()
+
         src_root = self.get_repo_root()
         url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
         if url_root:
