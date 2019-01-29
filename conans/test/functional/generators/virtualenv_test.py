@@ -175,7 +175,7 @@ virtualenv
         with tools.environment_append(env):
             self.basic_test(posix_empty_vars=False)
 
-    @unittest.skipUnless(OSInfo.bash_path(), "Needs bash")
+    @unittest.skipIf(platform.system() == "Windows", "Needs bash")
     def conditional_parameter_expansion_test(self):
         # https://github.com/conan-io/conan/issues/3911
         client = TestClient()
