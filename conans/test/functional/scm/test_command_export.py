@@ -20,7 +20,7 @@ class ExportCommandTestCase(unittest.TestCase):
     """)
 
     @parameterized.expand(itertools.product(["SVN", "git"], [(True, False), (False, True)]))
-    def test_no_git_repo(self, type, autos):
+    def test_no_repo(self, type, autos):
         auto_url, auto_rev = autos
         url_value = "auto" if auto_url else "http://this.url"
         rev_value = "auto" if auto_rev else "123"
@@ -44,5 +44,6 @@ class ExportCommandTestCase(unittest.TestCase):
                                                                     rev_value=rev_value)})
         self.client = TestClient()
         self.client.current_folder = self.path
-        self.client.run("export . lib/version@user/channel", assert_error=True)
-        self.assertIn("ERROR: Repo origin cannot be deduced", self.client.out)
+        self.client.run("export . lib/version@user/channel", assert_error=bool(auto_url))
+        if auto_url:
+            self.assertIn("ERROR: Repo origin cannot be deduced", self.client.out)
