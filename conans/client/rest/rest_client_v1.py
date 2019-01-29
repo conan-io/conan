@@ -81,7 +81,7 @@ class RestV1Methods(RestCommonMethods):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def get_package_manifest(self, package_reference):
+    def _get_package_manifest(self, package_reference):
         """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs

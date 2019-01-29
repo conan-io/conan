@@ -75,7 +75,7 @@ class RestV2Methods(RestCommonMethods):
         content = self._get_remote_file_contents(url)
         return FileTreeManifest.loads(decode_text(content))
 
-    def get_package_manifest(self, pref):
+    def _get_package_manifest(self, pref):
         url = self.conans_router.package_manifest(pref)
         content = self._get_remote_file_contents(url)
         return FileTreeManifest.loads(decode_text(content))
