@@ -26,7 +26,7 @@ def wait_until_removed(folder):
 
 
 def temp_folder(path_with_spaces=True):
-    # First upper case is important, to make sure everything works
+    # First upper case is important to make sure everything works
     t = tempfile.mkdtemp(suffix='Conans', dir=CONAN_TEST_FOLDER)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
