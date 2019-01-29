@@ -1,5 +1,7 @@
+import glob
 import os
 import platform
+import re
 import shutil
 import tempfile
 import time
@@ -27,6 +29,9 @@ def wait_until_removed(folder):
 
 def temp_folder(path_with_spaces=True):
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+    # Make sure that the temp folder is correctly cased, as tempfile return lowercase for Win
+    r = glob.glob(re.sub(r'([^:/\\])(?=[/\\]|$)', r'[\1]', t))
+    t = r and r[0] or t
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
     # FreeBSD and Solaris do not use GNU Make as a the default 'make' program which has trouble
