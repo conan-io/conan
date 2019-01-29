@@ -98,7 +98,7 @@ def _process_folder(folder, cache, output):
                 output.info("Installing profiles:")
                 profiles_path = cache.profiles_path
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
-            elif d == "hooks" and ".git" not in root:  # Avoid git hooks
+            elif d == "hooks" and ".git" not in root:    # Avoid git hooks
                 output.info("Installing hooks:")
                 src_hooks_path = os.path.join(root, d)
                 dst_hooks_path = cache.hooks_path
@@ -116,8 +116,13 @@ def _process_download(item, cache, output, tmp_folder, verify_ssl, requester):
         raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(path_or_url, cache, output, verify_ssl, requester,
-                          config_type=None, args=None):
+def configuration_install(path_or_url,
+                          cache,
+                          output,
+                          verify_ssl,
+                          requester,
+                          config_type=None,
+                          args=None):
     if path_or_url is None:
         try:
             item = cache.conan_config.get_item("general.config_install")
@@ -151,8 +156,8 @@ def configuration_install(path_or_url, cache, output, verify_ssl, requester,
             _process_zip_file(path_or_url, cache, output, tmp_folder)
         elif config_type == "url":
             args = None
-            _process_download(path_or_url, cache, output, tmp_folder, verify_ssl,
-                              requester=requester)
+            _process_download(
+                path_or_url, cache, output, tmp_folder, verify_ssl, requester=requester)
         else:
             raise ConanException("Unable to process config install: %s" % path_or_url)
     finally:
@@ -203,6 +208,8 @@ def _handle_hooks(src_hooks_path, dst_hooks_path, output):
     :param output: Output to indicate the files copied
     """
     for root, dirs, files in walk(src_hooks_path):
+        if ".git" in root:
+            continue
         relpath = os.path.relpath(root, src_hooks_path)
         for f in files:
             if ".git" not in f:

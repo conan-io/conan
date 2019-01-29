@@ -10,16 +10,16 @@ from conans.util.files import save, mkdir
 
 
 class ConfigInstallerTests(unittest.TestCase):
-
     def process_config_install_item_test(self):
         config_type, url_or_path, verify_ssl, args = _process_config_install_item(
-                "git, whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4")
+            "git, whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4")
         self.assertEqual("git", config_type)
         self.assertEqual("whaterver.url.com/repo.git", url_or_path)
         self.assertFalse(verify_ssl)
         self.assertEqual("--recusrive --other -b 0.3.4", args)
 
-        config_type, url_or_path, verify_ssl, args = _process_config_install_item("whaterver.url.com/repo.git")
+        config_type, url_or_path, verify_ssl, args = _process_config_install_item(
+            "whaterver.url.com/repo.git")
         self.assertEqual("git", config_type)
         self.assertEqual("whaterver.url.com/repo.git", url_or_path)
         self.assertIsNone(verify_ssl)
@@ -44,8 +44,10 @@ class ConfigInstallerTests(unittest.TestCase):
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
-        for url_item in ["url, http://is/an/absloute/path with spaces/here/file.zip, True, None",
-                         "http://is/an/absloute/path with spaces/here/file.zip"]:
+        for url_item in [
+                "url, http://is/an/absloute/path with spaces/here/file.zip, True, None",
+                "http://is/an/absloute/path with spaces/here/file.zip"
+        ]:
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(url_item)
             self.assertEqual("url", config_type)
             self.assertEqual("http://is/an/absloute/path with spaces/here/file.zip", url_or_path)
@@ -54,39 +56,35 @@ class ConfigInstallerTests(unittest.TestCase):
             self.assertIsNone(args)
 
         config_type, url, verify_ssl, args = _process_config_install_item(
-                "url,   http://is/an/absloute/path with spaces/here/file.zip,False, --option  ")
+            "url,   http://is/an/absloute/path with spaces/here/file.zip,False, --option  ")
         self.assertEqual("url", config_type)
         self.assertEqual("http://is/an/absloute/path with spaces/here/file.zip", url)
         self.assertFalse(verify_ssl)
         self.assertEqual("--option", args)
 
         # Test wrong input
-        for item in ["git@github.com:conan-io/conan.git, None"
-                     "file/not/exists.zip"]:
+        for item in ["git@github.com:conan-io/conan.git, None" "file/not/exists.zip"]:
             with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
 
     def handle_hooks_test(self):
         src_dir = temp_folder()
         subsrc_dir = os.path.join(src_dir, "foo")
+
         mkdir(subsrc_dir)
+        save(os.path.join(subsrc_dir, "foo"), "foo")
+        save(os.path.join(src_dir, "bar"), "bar")
+
+        git_dir = os.path.join(src_dir, ".git")
+        mkdir(git_dir)
+        mkdir(os.path.join(git_dir, "hooks"))
+        save(os.path.join(git_dir, "hooks", "before_push"), "before_push")
+
         target_dir = temp_folder()
-        temp_files = []
         output = TestBufferConanOutput()
 
-        for _ in range(10):
-            _, path = tempfile.mkstemp(dir=src_dir)
-            temp_files.append(path)
-
         _handle_hooks(src_hooks_path=src_dir, dst_hooks_path=target_dir, output=output)
 
-        for file_name in temp_files:
-            expected_path = os.path.join(target_dir, file_name)
-            self.assertTrue(os.path.exists(expected_path))
-            self.assertTrue(os.path.isfile(expected_path))
-
-        _, path = tempfile.mkstemp(dir=subsrc_dir)
-
-        _handle_hooks(src_hooks_path=src_dir, dst_hooks_path=target_dir, output=output)
-        expected_path = os.path.join(subsrc_dir, path)
-        self.assertTrue(os.path.isfile(expected_path))
+        self.assertTrue(os.path.isfile(os.path.join(target_dir, "bar")))
+        self.assertTrue(os.path.isfile(os.path.join(target_dir, "foo", "foo")))
+        self.assertFalse(os.path.isfile(os.path.join(target_dir, ".git", "hooks", "before_push")))
