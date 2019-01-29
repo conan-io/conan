@@ -1,10 +1,11 @@
 import os
 import unittest
-from parameterized import parameterized
+import tempfile
 
-from conans.client.conf.config_installer import _process_config_install_item
+from conans.client.conf.config_installer import _process_config_install_item, _handle_config_files
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -64,3 +65,20 @@ class ConfigInstallerTests(unittest.TestCase):
                      "file/not/exists.zip"]:
             with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
+
+    def handle_config_files_test(self):
+        src_dir = temp_folder()
+        target_dir = temp_folder()
+        temp_files = []
+        output = TestBufferConanOutput()
+
+        for _ in range(10):
+            _, path = tempfile.mkstemp(dir=src_dir)
+            temp_files.append(path)
+
+        _handle_config_files(source_folder=src_dir, target_folder=target_dir, output=output)
+
+        for file_name in temp_files:
+            expected_path = os.path.join(target_dir, file_name)
+            self.assertTrue(os.path.exists(expected_path))
+            self.assertTrue(os.path.isfile(expected_path))
