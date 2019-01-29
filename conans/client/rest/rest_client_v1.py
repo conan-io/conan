@@ -1,5 +1,6 @@
 import os
 import time
+import traceback
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
@@ -81,18 +82,25 @@ class RestV1Methods(RestCommonMethods):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def _get_package_manifest(self, package_reference):
+    def get_package_manifest(self, pref):
         """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs
-        url = self.conans_router.package_manifest(package_reference)
+        url = self.conans_router.package_manifest(pref)
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
         contents = self._download_files(urls, quiet=True)
-        # Unroll generator and decode shas (plain text)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}
-        return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+        try:
+            # Unroll generator and decode shas (plain text)
+            content = dict(contents)[CONAN_MANIFEST]
+            return FileTreeManifest.loads(decode_text(content))
+        except Exception as e:
+            msg = "Error retrieving manifest file for package " \
+                  "'{}' from remote ({}): '{}'".format(pref.full_repr(), self.remote_url, e)
+            logger.error(msg)
+            logger.error(traceback.format_exc())
+            raise ConanException(msg)
 
     def get_package_info(self, package_reference):
         """Gets a ConanInfo file from a package"""

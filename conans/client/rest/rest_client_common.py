@@ -290,15 +290,6 @@ class RestCommonMethods(object):
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
 
-    def get_package_manifest(self, *args, **kwargs):
-        try:
-            return self._get_package_manifest(*args, **kwargs)
-        except Exception as e:
-            logger.error("Error retrieving manifest file from remote: '{}'".format(e))
-            # If the manifest file in the remote is corrupted or we cannot access to it,
-            # there is nothing we can do, just remove the package and upload it again.
-            raise
-
     @handle_return_deserializer()
     def remove_conanfile(self, ref):
         """ Remove a recipe and packages """
