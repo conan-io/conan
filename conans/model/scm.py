@@ -1,4 +1,5 @@
 import json
+import os
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
@@ -79,8 +80,8 @@ class SCM(object):
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output
 
-    def get_remote_url(self):
-        return self.repo.get_remote_url()
+    def get_remote_url(self, remove_credentials):
+        return self.repo.get_remote_url(remove_credentials=remove_credentials)
 
     def get_revision(self):
         return self.repo.get_revision()
@@ -91,11 +92,35 @@ class SCM(object):
     def get_repo_root(self):
         return self.repo.get_repo_root()
 
-    def get_qualified_remote_url(self):
+    def get_qualified_remote_url(self, remove_credentials):
         if self._data.type == "git":
-            return self.repo.get_remote_url()
+            return self.repo.get_remote_url(remove_credentials=remove_credentials)
         else:
-            return self.repo.get_qualified_remote_url()
+            return self.repo.get_qualified_remote_url(remove_credentials=remove_credentials)
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
+
+    @staticmethod
+    def clean_url(url):
+        _, last_chunk = url.rsplit('/', 1)
+        if '@' in last_chunk:  # Remove peg_revision
+            url, peg_revision = url.rsplit('@', 1)
+            return url
+        return url
+
+    def get_local_path_to_url(self, url):
+        """ Compute the local path to the directory where the URL is pointing to (only make sense
+            for CVS where chunks of the repository can be checked out isolated). The argument
+            'url' should be contained inside the root url.
+        """
+        src_root = self.get_repo_root()
+
+        if self._data.type == "git":
+            return src_root
+
+        url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
+        if url_root:
+            url = self.clean_url(url)
+            src_path = os.path.join(src_root, os.path.relpath(url, url_root))
+            return src_path

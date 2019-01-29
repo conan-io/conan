@@ -8,7 +8,7 @@ from mock import patch
 from conans.client import tools
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.client.rest.uploader_downloader import Downloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -78,7 +78,7 @@ class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         # Save to the old registry, it has to be migrated
-        registry_path = self.client.client_cache.registry_path
+        registry_path = self.client.cache.registry_path
 
         save(registry_path, """
 {
@@ -100,9 +100,9 @@ class ConfigInstallTest(unittest.TestCase):
  }
 }        
 """)
-        save(os.path.join(self.client.client_cache.profiles_path, "default"),
+        save(os.path.join(self.client.cache.profiles_path, "default"),
              "#default profile empty")
-        save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
+        save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
 
         self.old_env = dict(os.environ)
 
@@ -129,21 +129,21 @@ class ConfigInstallTest(unittest.TestCase):
         return zippath
 
     def _check(self, install_path):
-        settings_path = self.client.client_cache.settings_path
+        settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        registry = self.client.client_cache.registry
+        registry = self.client.cache.registry
         self.assertEqual(registry.remotes.list,
                          [Remote("myrepo1", "https://myrepourl.net", False),
                           Remote("my-repo-2", "https://myrepo2.com", True),
                           ])
         self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
-        self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
-        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "windows")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "windows")).splitlines(),
                          win_profile.splitlines())
-        conan_conf = ConanClientConfigParser(self.client.client_cache.conan_conf_path)
+        conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
         self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
         self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
@@ -155,9 +155,9 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
-                         load(os.path.join(self.client.client_cache.conan_folder, "pylintrc")))
+                         load(os.path.join(self.client.cache.conan_folder, "pylintrc")))
         self.assertEqual("",
-                         load(os.path.join(self.client.client_cache.conan_folder, "python",
+                         load(os.path.join(self.client.cache.conan_folder, "python",
                                            "__init__.py")))
 
     def reuse_python_test(self):
@@ -192,12 +192,12 @@ class Pkg(ConanFile):
         self._check("dir, %s, True, None" % folder)
 
     def test_without_profile_folder(self):
-        shutil.rmtree(self.client.client_cache.profiles_path)
+        shutil.rmtree(self.client.cache.profiles_path)
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
+        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
                          sorted(["linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
 
     def install_url_test(self):
@@ -381,7 +381,7 @@ class Pkg(ConanFile):
         self.client.run('config install "%s/.git"' % folder)
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, None" % check_path)
-        file_path = os.path.join(self.client.client_cache.hooks_path, "cust", "cust.py")
+        file_path = os.path.join(self.client.cache.hooks_path, "cust", "cust.py")
         self.assertFalse(os.path.exists(file_path))
         # With checkout tag and reuse url
         self.client.run('config install --args="-b 0.0.1"')
@@ -400,7 +400,7 @@ class Pkg(ConanFile):
             self.client.runner('git add .')
             self.client.runner('git commit -m "my other file"')
             self.client.runner('git checkout master')
-        other_path = os.path.join(self.client.client_cache.conan_folder, "hooks", "other",
+        other_path = os.path.join(self.client.cache.conan_folder, "hooks", "other",
                                   "other.py")
         self.assertFalse(os.path.exists(other_path))
         self.client.run('config install')

@@ -28,12 +28,14 @@ class CompilerArgsGenerator(Generator):
         """
         flags = []
         flags.extend(format_defines(self._deps_build_info.defines))
-        flags.extend(format_include_paths(self._deps_build_info.include_paths, compiler=self.compiler))
+        flags.extend(format_include_paths(self._deps_build_info.include_paths,
+                                          compiler=self.compiler))
 
         flags.extend(self._deps_build_info.cppflags)
         flags.extend(self._deps_build_info.cflags)
 
-        arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"), compiler=self.compiler)
+        arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"),
+                                      compiler=self.compiler)
         if arch_flag:
             flags.append(arch_flag)
 

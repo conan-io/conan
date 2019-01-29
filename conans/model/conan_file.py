@@ -269,8 +269,8 @@ class ConanFile(object):
         return retcode
 
     def package_id(self):
-        """ modify the conans info, typically to narrow values
-        eg.: conaninfo.package_references = []
+        """ modify the binary info, typically to narrow values
+        e.g.: self.info.settings.compiler = "Any" => All compilers will generate same ID
         """
 
     def test(self):

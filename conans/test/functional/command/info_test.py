@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import textwrap
@@ -126,7 +127,7 @@ class MyTest(ConanFile):
             export = False if name == "Hello0" else True
             self._create(name, "0.1", expanded_deps, export=export)
 
-        def check_conan_ref(ref):
+        def check_ref(ref):
             self.assertEqual(ref.version, "0.1")
             self.assertEqual(ref.user, "lasote")
             self.assertEqual(ref.channel, "stable")
@@ -136,17 +137,17 @@ class MyTest(ConanFile):
 
             node_matches = node_regex.findall(line)
 
-            parent = node_matches[0]
-            deps = [ConanFileReference.loads(ref) for ref in node_matches[1:]]
+            parent_reference = node_matches[0]
+            deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
 
-            if parent == "conanfile.py (Hello0/0.1@None/None)":
-                parent = ConanFileReference("Hello0", None, None, None, validate=False)
+            if parent_reference == "conanfile.py (Hello0/0.1@None/None)":
+                parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
             else:
-                parent = ConanFileReference.loads(parent)
-                check_conan_ref(parent)
-            for dep in deps:
-                check_conan_ref(dep)
-                self.assertIn(dep.name, test_deps[parent.name])
+                parent_ref = ConanFileReference.loads(parent_reference)
+                check_ref(parent_ref)
+            for dep in deps_ref:
+                check_ref(dep)
+                self.assertIn(dep.name, test_deps[parent_ref.name])
 
         def check_file(dot_file):
             with open(dot_file) as dot_file_contents:
@@ -199,8 +200,8 @@ class MyTest(ConanFile):
 
     def graph_html_embedded_visj_test(self):
         client = TestClient()
-        visjs_path = os.path.join(client.client_cache.conan_folder, "vis.min.js")
-        viscss_path = os.path.join(client.client_cache.conan_folder, "vis.min.css")
+        visjs_path = os.path.join(client.cache.conan_folder, "vis.min.js")
+        viscss_path = os.path.join(client.cache.conan_folder, "vis.min.css")
         save(visjs_path, "")
         save(viscss_path, "")
         client.save({"conanfile.txt": ""})
@@ -382,6 +383,28 @@ class MyTest(ConanFile):
                 Licenses: MIT, GPL""")
 
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
+
+    def test_json_info_outputs(self):
+        self.client = TestClient()
+        self._create("LibA", "0.1")
+        self._create("LibE", "0.1")
+        self._create("LibF", "0.1")
+
+        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
+        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
+
+        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
+                     export=False)
+
+        json_file = os.path.join(self.client.current_folder, "output.json")
+        self.client.run("info . -u --json=\"{}\"".format(json_file))
+
+        # Check a couple of values in the generated JSON
+        content = json.loads(load(json_file))
+        self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
+        self.assertEqual(content[0]["license"][0], "MIT")
+        self.assertEqual(content[1]["url"], "myurl")
+        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1@None/None)")
 
     def build_order_test(self):
         self.client = TestClient()

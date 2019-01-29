@@ -1,19 +1,19 @@
 import os
 
-from conans.client.remote_registry import Remote
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.paths import SimplePaths
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.paths.simple_paths import SimplePaths
 
 
 class ManifestManager(object):
 
-    def __init__(self, folder, user_io, client_cache):
+    def __init__(self, folder, user_io, cache):
         self._paths = SimplePaths(folder)
         self._user_io = user_io
-        self._client_cache = client_cache
+        self._cache = cache
         self._log = []
 
     def check_graph(self, graph, verify, interactive):
@@ -29,9 +29,9 @@ class ManifestManager(object):
                 self._handle_package(node, verify, interactive)
 
     def _handle_recipe(self, node, verify, interactive):
-        ref = node.conan_ref
-        export = self._client_cache.export(ref)
-        exports_sources_folder = self._client_cache.export_sources(ref)
+        ref = node.ref
+        export = self._cache.export(ref)
+        exports_sources_folder = self._cache.export_sources(ref)
         read_manifest = FileTreeManifest.load(export)
         expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)
@@ -39,14 +39,14 @@ class ManifestManager(object):
         self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
 
     def _handle_package(self, node, verify, interactive):
-        ref = node.conan_ref
-        ref = PackageReference(ref, node.conanfile.info.package_id())
-        package_folder = self._client_cache.package(ref)
+        ref = node.ref
+        pref = PackageReference(ref, node.conanfile.info.package_id())
+        package_folder = self._cache.package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
-        self._check_not_corrupted(ref, read_manifest, expected_manifest)
-        folder = self._paths.package(ref)
-        self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
+        self._check_not_corrupted(pref, read_manifest, expected_manifest)
+        folder = self._paths.package(pref)
+        self._handle_folder(folder, pref, read_manifest, interactive, node.remote, verify)
 
     def _handle_folder(self, folder, ref, read_manifest, interactive, remote, verify):
         assert(isinstance(remote, Remote) or remote is None)

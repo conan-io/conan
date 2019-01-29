@@ -11,6 +11,23 @@ from conans.util.files import load, mkdir
 
 
 class PackageLocalCommandTest(unittest.TestCase):
+    def uses_recipe_env_test(self):
+        conanfile = """from conans import ConanFile, tools
+import os
+
+class Pkg(ConanFile):
+    name = "lib"
+    version = "1.0"
+
+    def package(self):
+        assert(tools.get_env("test_param") == r"hello-world")
+        self.output.info("Test_param: %s!" % os.environ["test_param"])
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -e test_param=hello-world")
+        client.run("package .")
+        self.assertIn("Test_param: hello-world!", client.out)
 
     def package_with_destination_test(self):
         client = TestClient()
@@ -72,16 +89,17 @@ class PackageLocalCommandTest(unittest.TestCase):
         # Path with conanfile.txt
         client.run("package conanfile.txt --build-folder build2 --install-folder build",
                    assert_error=True)
-        self.assertIn(
-            "A conanfile.py is needed, %s is not acceptable" % os.path.join(client.current_folder, "conanfile.txt"),
-            client.out)
+        self.assertIn("A conanfile.py is needed, %s is not acceptable"
+                      % os.path.join(client.current_folder, "conanfile.txt"),
+                      client.out)
 
         # Path with wrong conanfile path
         client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
                    assert_error=True)
 
-        self.assertIn("Conanfile not found at %s" % os.path.join(client.current_folder, "not_real_dir",
-                                                                 "conanfile.py"), client.out)
+        self.assertIn("Conanfile not found at %s"
+                      % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
+                      client.out)
 
     def package_with_reference_errors_test(self):
         client = TestClient()

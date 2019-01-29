@@ -146,7 +146,7 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("create . private_user/channel")
         self.client.run('upload "*" -c --all')
 
-        save(os.path.join(self.client.client_cache.profiles_path, "mybr"),
+        save(os.path.join(self.client.cache.profiles_path, "mybr"),
              """
 include(default)
 [build_requires]

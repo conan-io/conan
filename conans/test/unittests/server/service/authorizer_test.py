@@ -10,9 +10,9 @@ class AuthorizerTest(unittest.TestCase):
     def setUp(self):
         unittest.TestCase.setUp(self)
         self.openssl_ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
-        self.package_reference = PackageReference(self.openssl_ref, "123123123")
+        self.openssl_pref = PackageReference(self.openssl_ref, "123123123")
         self.openssl_ref2 = ConanFileReference.loads("openssl/2.0.2@lasote/testing")
-        self.package_reference2 = PackageReference(self.openssl_ref2, "123123123")
+        self.openssl_pref2 = PackageReference(self.openssl_ref2, "123123123")
 
     def invalid_rule_test(self):
         """Invalid rule input"""
@@ -103,13 +103,13 @@ class AuthorizerTest(unittest.TestCase):
 
         # Pepe can't read package
         self.assertRaises(ForbiddenException,
-                          authorizer.check_read_package, "pepe", self.package_reference)
+                          authorizer.check_read_package, "pepe", self.openssl_pref)
 
         # Owner can read package
-        authorizer.check_read_package("lasote", self.package_reference)
+        authorizer.check_read_package("lasote", self.openssl_pref)
 
         # Pepe can read other package
-        authorizer.check_read_package("pepe", self.package_reference2)
+        authorizer.check_read_package("pepe", self.openssl_pref2)
 
         # WRITE PERMISSIONS
 
@@ -128,14 +128,14 @@ class AuthorizerTest(unittest.TestCase):
                           authorizer.check_write_conan, "pepe", self.openssl_ref2)
 
         # Owner can write package
-        authorizer.check_write_package("lasote", self.package_reference)
+        authorizer.check_write_package("lasote", self.openssl_pref)
 
         # Pepe can write package
-        authorizer.check_write_package("pepe", self.package_reference)
+        authorizer.check_write_package("pepe", self.openssl_pref)
 
         # Pepe can't write other package
         self.assertRaises(ForbiddenException,
-                          authorizer.check_write_package, "pepe", self.package_reference2)
+                          authorizer.check_write_package, "pepe", self.openssl_pref2)
         
     def authenticated_user_wildcard_permissions_test(self):
         """Check that authenciated user wildcard permissions logic is ok"""
@@ -152,7 +152,7 @@ class AuthorizerTest(unittest.TestCase):
         authorizer.check_read_conan("pepe", self.openssl_ref)
 
         # Authenticated user can read package
-        authorizer.check_read_package("pepe", self.package_reference)
+        authorizer.check_read_package("pepe", self.openssl_pref)
 
         # Anonymous user can not read conan, they must authenticate
         self.assertRaises(AuthenticationException,
@@ -160,7 +160,7 @@ class AuthorizerTest(unittest.TestCase):
 
         # Anonymous user can not read package, they must authenticate
         self.assertRaises(AuthenticationException,
-                          authorizer.check_read_package, None, self.package_reference)
+                          authorizer.check_read_package, None, self.openssl_pref)
 
         # WRITE PERMISSIONS
 
@@ -168,7 +168,7 @@ class AuthorizerTest(unittest.TestCase):
         authorizer.check_write_conan("pepe", self.openssl_ref)
 
         # Authenticated user can write package
-        authorizer.check_write_package("pepe", self.package_reference)
+        authorizer.check_write_package("pepe", self.openssl_pref)
 
         # Anonymous user can not write conan, they must authenticate
         self.assertRaises(AuthenticationException,
@@ -176,7 +176,7 @@ class AuthorizerTest(unittest.TestCase):
 
         # Anonymous user can not write package, they must authenticate
         self.assertRaises(AuthenticationException,
-                          authorizer.check_write_package, None, self.package_reference)
+                          authorizer.check_write_package, None, self.openssl_pref)
 
     def users_test(self):
         """Check that lists of user names are parsed correctly"""

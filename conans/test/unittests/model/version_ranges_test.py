@@ -10,15 +10,15 @@ from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput, test_processed_profile
 
 
-def _clear_revs(reqs):
-    for req in reqs.values():
-        req.conan_reference = req.conan_reference.copy_clear_rev()
-    return reqs
+def _clear_revs(requires):
+    for require in requires.values():
+        require.ref = require.ref.copy_clear_rev()
+    return requires
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -182,6 +182,7 @@ class SayConan(ConanFile):
             self.retriever.conan(say_ref, say_content)
 
     def root(self, content, update=False):
+        self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
@@ -206,7 +207,7 @@ class SayConan(ConanFile):
             say = _get_nodes(deps_graph, "Say")[0]
             self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
 
-            self.assertEqual(hello.conan_ref, None)
+            self.assertEqual(hello.ref, None)
             conanfile = hello.conanfile
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
@@ -237,7 +238,7 @@ class SayConan(ConanFile):
             say = _get_nodes(deps_graph, "Say")[0]
             self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
 
-            self.assertEqual(hello.conan_ref, None)
+            self.assertEqual(hello.ref, None)
             conanfile = hello.conanfile
             self.assertEqual(conanfile.version, "1.2")
             self.assertEqual(conanfile.name, "Hello")
@@ -286,8 +287,10 @@ class HelloConan(ConanFile):
                            # ranges
                            ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False),
                            ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True),
+                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True),
                            ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False),
                            ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True),
+                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True),
                            ])
     def transitive_test(self, version_range, solution, override, valid):
         hello_text = hello_content % ">0.1, <1"
@@ -328,7 +331,7 @@ class ChatConan(ConanFile):
 
         self.assertEqual(_get_edges(deps_graph), edges)
 
-        self.assertEqual(hello.conan_ref.copy_clear_rev(), hello_ref)
+        self.assertEqual(hello.ref.copy_clear_rev(), hello_ref)
         conanfile = hello.conanfile
         self.assertEqual(conanfile.version, "1.2")
         self.assertEqual(conanfile.name, "Hello")
@@ -384,17 +387,17 @@ class Project(ConanFile):
 
         self.assertEqual(4, len(deps_graph.nodes))
 
-        self.assertEqual(log4cpp.conan_ref.copy_clear_rev(), log4cpp_ref)
+        self.assertEqual(log4cpp.ref.copy_clear_rev(), log4cpp_ref)
         conanfile = log4cpp.conanfile
         self.assertEqual(conanfile.version, "1.1.1")
         self.assertEqual(conanfile.name, "log4cpp")
 
-        self.assertEqual(logger_interface.conan_ref.copy_clear_rev(), logiface_ref)
+        self.assertEqual(logger_interface.ref.copy_clear_rev(), logiface_ref)
         conanfile = logger_interface.conanfile
         self.assertEqual(conanfile.version, "0.1.1")
         self.assertEqual(conanfile.name, "LoggerInterface")
 
-        self.assertEqual(other.conan_ref.copy_clear_rev(), other_ref)
+        self.assertEqual(other.ref.copy_clear_rev(), other_ref)
         conanfile = other.conanfile
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")

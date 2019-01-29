@@ -36,8 +36,7 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            # Not enough settings to set a generator in Windows
-            return None
+            return "MinGW Makefiles"
         return "Unix Makefiles"
 
     if compiler == "Visual Studio":
@@ -62,18 +61,6 @@ def get_generator(settings):
         return "MinGW Makefiles"  # it is valid only under Windows
 
     return "Unix Makefiles"
-
-
-def add_cmake_flag(cmake_flags, name, flag):
-    """
-    appends compiler linker flags (if already present), or just sets
-    """
-    if flag:
-        if name not in cmake_flags:
-            cmake_flags[name] = flag
-        else:
-            cmake_flags[name] = ' ' + flag
-    return cmake_flags
 
 
 def is_multi_configuration(generator):
@@ -244,9 +231,9 @@ class CMakeDefinitionsBuilder(object):
         if self._forced_build_type and self._forced_build_type != build_type:
             self._output.warn("Forced CMake build type ('%s') different from the settings build "
                               "type ('%s')" % (self._forced_build_type, build_type))
-            ret.update(build_type_definition(self._forced_build_type, self._generator))
-        else:
-            ret.update(build_type_definition(build_type, self._generator))
+            build_type = self._forced_build_type
+
+        ret.update(build_type_definition(build_type, self._generator))
 
         if str(os_) == "Macos":
             if arch == "x86":
@@ -263,11 +250,22 @@ class CMakeDefinitionsBuilder(object):
         if compiler_version:
             ret["CONAN_COMPILER_VERSION"] = str(compiler_version)
 
-        # Force compiler flags -- TODO: give as environment/setting parameter?
-        arch_flag = architecture_flag(compiler=compiler, arch=arch)
-        ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', arch_flag)
-        ret = add_cmake_flag(ret, 'CONAN_SHARED_LINKER_FLAGS', arch_flag)
-        ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', arch_flag)
+        # C, CXX, LINK FLAGS
+        if compiler == "Visual Studio":
+            if self._parallel:
+                flag = parallel_compiler_cl_flag(output=self._output)
+                ret['CONAN_CXX_FLAGS'] = flag
+                ret['CONAN_C_FLAGS'] = flag
+        else:  # arch_flag is only set for non Visual Studio
+            arch_flag = architecture_flag(compiler=compiler, arch=arch)
+            if arch_flag:
+                ret['CONAN_CXX_FLAGS'] = arch_flag
+                ret['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
+                ret['CONAN_C_FLAGS'] = arch_flag
+                if self._set_cmake_flags:
+                    ret['CMAKE_CXX_FLAGS'] = arch_flag
+                    ret['CMAKE_SHARED_LINKER_FLAGS'] = arch_flag
+                    ret['CMAKE_C_FLAGS'] = arch_flag
 
         if libcxx:
             ret["CONAN_LIBCXX"] = libcxx
@@ -292,12 +290,6 @@ class CMakeDefinitionsBuilder(object):
         except AttributeError:
             pass
 
-        if str(os_) in ["Windows", "WindowsStore"] and compiler == "Visual Studio":
-            if self._parallel:
-                flag = parallel_compiler_cl_flag(output=self._output)
-                ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', flag)
-                ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', flag)
-
         # fpic
         if str(os_) not in ["Windows", "WindowsStore"]:
             fpic = self._conanfile.options.get_safe("fPIC")
@@ -310,11 +302,6 @@ class CMakeDefinitionsBuilder(object):
             ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
         ret.update(self._get_make_program_definition())
-
-        if self._set_cmake_flags:
-            ret = add_cmake_flag(ret, 'CMAKE_CXX_FLAGS', arch_flag)
-            ret = add_cmake_flag(ret, 'CMAKE_SHARED_LINKER_FLAGS', arch_flag)
-            ret = add_cmake_flag(ret, 'CMAKE_C_FLAGS', arch_flag)
 
         # Disable CMake export registry #3070 (CMake installing modules in user home's)
         ret["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
