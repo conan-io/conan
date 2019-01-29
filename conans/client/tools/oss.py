@@ -33,6 +33,14 @@ def cpu_count(output=None):
     return 1  # Safe guess
 
 
+def detected_os():
+    if OSInfo().is_macos:
+        return "Macos"
+    if OSInfo().is_windows:
+        return "Windows"
+    return platform.system()
+
+
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
@@ -326,8 +334,7 @@ def cross_building(settings, self_os=None, self_arch=None):
 
 
 def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or \
-               {"Darwin": "Macos"}.get(platform.system(), platform.system())
+    build_os = self_os or settings.get_safe("os_build") or detected_os()
     build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
     host_os = settings.get_safe("os")
     host_arch = settings.get_safe("arch")

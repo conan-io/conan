@@ -2,7 +2,7 @@ import os
 import platform
 import unittest
 
-from conans.client.conf.detect import detected_os
+from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
