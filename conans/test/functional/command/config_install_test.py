@@ -116,6 +116,9 @@ class ConfigInstallTest(unittest.TestCase):
                             "remotes.txt": remotes,
                             "profiles/linux": linux_profile,
                             "profiles/windows": win_profile,
+                            "hooks/dummy": "#hook dummy",
+                            "hooks/foo.py": "#hook foo",
+                            "hooks/custom/custom.py": "#hook custom",
                             "config/conan.conf": conan_conf,
                             "pylintrc": "#Custom pylint",
                             "python/myfuncs.py": myfuncpy,
@@ -159,6 +162,12 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual("",
                          load(os.path.join(self.client.cache.conan_folder, "python",
                                            "__init__.py")))
+        self.assertEqual("#hook dummy",
+                         load(os.path.join(self.client.cache.conan_folder, "hooks", "dummy")))
+        self.assertEqual("#hook foo",
+                         load(os.path.join(self.client.cache.conan_folder, "hooks", "foo.py")))
+        self.assertEqual("#hook custom",
+                         load(os.path.join(self.client.cache.conan_folder, "hooks", "custom", "custom.py")))
 
     def reuse_python_test(self):
         zippath = self._create_zip()

@@ -2,11 +2,11 @@ import os
 import unittest
 import tempfile
 
-from conans.client.conf.config_installer import _process_config_install_item, _handle_config_files
+from conans.client.conf.config_installer import _process_config_install_item, _handle_hooks
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.util.files import save
+from conans.util.files import save, mkdir
 
 
 class ConfigInstallerTests(unittest.TestCase):
@@ -66,8 +66,10 @@ class ConfigInstallerTests(unittest.TestCase):
             with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
 
-    def handle_config_files_test(self):
+    def handle_hooks_test(self):
         src_dir = temp_folder()
+        subsrc_dir = os.path.join(src_dir, "foo")
+        mkdir(subsrc_dir)
         target_dir = temp_folder()
         temp_files = []
         output = TestBufferConanOutput()
@@ -76,9 +78,15 @@ class ConfigInstallerTests(unittest.TestCase):
             _, path = tempfile.mkstemp(dir=src_dir)
             temp_files.append(path)
 
-        _handle_config_files(source_folder=src_dir, target_folder=target_dir, output=output)
+        _handle_hooks(src_hooks_path=src_dir, dst_hooks_path=target_dir, output=output)
 
         for file_name in temp_files:
             expected_path = os.path.join(target_dir, file_name)
             self.assertTrue(os.path.exists(expected_path))
             self.assertTrue(os.path.isfile(expected_path))
+
+        _, path = tempfile.mkstemp(dir=subsrc_dir)
+
+        _handle_hooks(src_hooks_path=src_dir, dst_hooks_path=target_dir, output=output)
+        expected_path = os.path.join(subsrc_dir, path)
+        self.assertTrue(os.path.isfile(expected_path))
