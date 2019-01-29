@@ -18,7 +18,7 @@ from six import StringIO
 from six.moves.urllib.parse import quote
 
 from conans.client import tools
-from conans.client.cache import CONAN_CONF
+from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
@@ -547,6 +547,9 @@ class ToolsTest(unittest.TestCase):
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(output=output), 34)
+        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
+            with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
+                tools.cpu_count(output=output)
 
     def get_env_unit_test(self):
         """
@@ -1646,6 +1649,56 @@ class HelloConan(ConanFile):
         self.assertIn("specify a branch to checkout", client.out)
 
 
+class GitToolsTests(unittest.TestCase):
+
+    def setUp(self):
+        self.folder, self.rev = create_local_git_repo({'myfile.txt': "contents"})
+
+    def test_no_tag(self):
+        """
+        No tags has been created in repo
+        """
+        git = Git(folder=self.folder)
+        tag = git.get_tag()
+        self.assertIsNone(tag)
+
+    def test_in_tag(self):
+        """
+        Current checkout is on a tag
+        """
+        git = Git(folder=self.folder)
+        git.run("tag 0.0.0")
+        tag = git.get_tag()
+        self.assertEqual("0.0.0", tag)
+
+    def test_in_branch_with_tag(self):
+        """
+        Tag is defined but current commit is ahead of it
+        """
+        git = Git(folder=self.folder)
+        git.run("tag 0.0.0")
+        save(os.path.join(self.folder, "file.txt"), "")
+        git.run("add .")
+        git.run("commit -m \"new file\"")
+        tag = git.get_tag()
+        self.assertIsNone(tag)
+
+    def test_get_tag_no_git_repo(self):
+        """
+        Try to get tag out of a git repo
+        """
+        git = Git(folder=temp_folder())
+        with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
+            git.get_tag()
+
+    def test_excluded_files(self):
+        folder = temp_folder()
+        save(os.path.join(folder, "file"), "some contents")
+        git = Git(folder)
+        with tools.environment_append({"PATH": ""}):
+            git.excluded_files()
+
+
 @attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
@@ -1832,15 +1885,46 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
-        self.assertEqual("branches/my_feature", svn.get_branch())
+        self.assertEqual("my_feature", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
-        self.assertEqual("branches/issue3434", svn.get_branch())
+        self.assertEqual("issue3434", svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
-        self.assertEqual("tags/v12.3.4", svn.get_branch())
+        self.assertIsNone(svn.get_branch())
+
+        svn = SVN(folder=self.gimme_tmp())
+        with self.assertRaisesRegexp(ConanException, "Unable to get svn branch"):
+            svn.get_branch()
+
+    def test_tag(self):
+        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
+                                                    'prj1/branches/my_feature/myfile': "",
+                                                    'prj1/branches/issue3434/myfile': "",
+                                                    'prj1/tags/v12.3.4/myfile': "",
+                                                    })
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
+        self.assertIsNone(svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
+        self.assertIsNone(svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
+        self.assertIsNone(svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
+        self.assertEqual("v12.3.4", svn.get_tag())
+
+        svn = SVN(folder=self.gimme_tmp())
+        with self.assertRaisesRegexp(ConanException, "Unable to get svn tag"):
+            svn.get_tag()
+
 
 @attr("slow")
 @attr('svn')

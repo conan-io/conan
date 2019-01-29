@@ -51,7 +51,7 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        metadata = self._cache.load_metadata(ref)
+        metadata = self._cache.package_layout(ref).load_metadata()
         cur_revision = metadata.recipe.revision
         remote = self._registry.refs.get(ref)
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None

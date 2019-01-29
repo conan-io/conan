@@ -50,7 +50,7 @@ class Lock(object):
 
     @property
     def files(self):
-        return (self._count_file, self._count_lock_file)
+        return self._count_file, self._count_lock_file
 
     def _info_locked(self):
         if self._first_lock:

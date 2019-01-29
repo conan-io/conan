@@ -18,7 +18,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
-from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -113,7 +112,7 @@ class _ConanPackageBuilder(object):
         """
 
         # FIXME: Is weak to assign here the recipe_hash
-        manifest = self._cache.load_manifest(self._ref)
+        manifest = self._cache.package_layout(self._ref).load_manifest()
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
         # Creating ***info.txt files
@@ -137,10 +136,11 @@ class _ConanPackageBuilder(object):
                            self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._ref)
 
-        package_hash = self._cache.package_summary_hash(self._pref)
+        layout = self._cache.package_layout(self._pref.ref, self._conan_file.short_paths)
+        package_hash = layout.package_summary_hash(self._pref)
         package_id = self._pref.id
 
-        with self._cache.update_metadata(self._ref) as metadata:
+        with self._cache.package_layout(self._ref).update_metadata() as metadata:
             metadata.packages[package_id].revision = package_hash
             metadata.packages[package_id].recipe_revision = self._ref.revision
 
@@ -260,7 +260,6 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
-        self._editable_cpp_info = self._load_editables_cpp_info()
 
     def install(self, deps_graph, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
@@ -305,36 +304,20 @@ class BinaryInstaller(object):
             if node.update_manifest == read_manifest:
                 return True
 
-    def _load_editables_cpp_info(self):
-        editables_path = self._cache.default_editable_path
-        if os.path.exists(editables_path):
-            return EditableCppInfo.load(editables_path, require_namespace=True)
-        return None
-
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
         base_path = package_layout.conan()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
+        node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
-        package_layout_file = package_layout.editable_package_layout_file()
-        if os.path.exists(package_layout_file):
-            editable_cpp_info = EditableCppInfo.load(package_layout_file,
-                                                     require_namespace=False)
-            editable_cpp_info.apply_to(node.conanfile.name,
+        editable_cpp_info = package_layout.editable_cpp_info()
+        if editable_cpp_info:
+            editable_cpp_info.apply_to(node.ref,
                                        node.conanfile.cpp_info,
-                                       base_path=base_path,
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
-
-        # Try with the profile-like file
-        elif self._editable_cpp_info and self._editable_cpp_info.has_info_for(node.conanfile.name):
-            self._editable_cpp_info.apply_to(node.conanfile.name,
-                                             node.conanfile.cpp_info,
-                                             base_path=base_path,
-                                             settings=node.conanfile.settings,
-                                             options=node.conanfile.options)
 
         workspace_package = self._workspace[node.ref] if self._workspace else None
         if workspace_package:

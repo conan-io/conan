@@ -1,6 +1,6 @@
 import os
 
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
@@ -155,7 +155,8 @@ class ConanRemover(object):
                     if remote_name:
                         recipe_hash = self._remote_manager.get_conan_manifest(ref, remote).summary_hash
                     else:
-                        recipe_hash = self._cache.load_manifest(ref).summary_hash
+                        recipe_hash = self._cache.package_layout(ref).load_manifest().summary_hash
+
                     packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]

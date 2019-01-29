@@ -1,6 +1,7 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node
+
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -236,6 +237,8 @@ class DepsGraphBuilder(object):
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
                                                     ref=requirement.ref)
+        if recipe_status == RECIPE_EDITABLE:
+            dep_conanfile.in_local_cache = False
 
         if getattr(dep_conanfile, "alias", None):
             alias_ref = alias_ref or new_ref.copy_clear_rev()

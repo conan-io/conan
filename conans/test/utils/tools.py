@@ -23,14 +23,14 @@ from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import tools
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
-from conans.client.remote_registry import dump_registry
+from conans.client.cache.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools.files import chdir
@@ -470,14 +470,6 @@ class TestClient(object):
                             output=TestBufferConanOutput(), strict=not bool(base_folder))
             # Invalidate the cached config
             self.cache.invalidate()
-        if self.revisions:
-            # Generate base file
-            self.cache.conan_config
-            replace_in_file(self.cache.conan_conf_path,
-                            "revisions_enabled = False", "revisions_enabled = True",
-                            output=TestBufferConanOutput(), strict=not bool(base_folder))
-            # Invalidate the cached config
-            self.cache.invalidate()
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -637,10 +629,10 @@ servers["r2"] = TestServer()
             mkdir(self.current_folder)
 
     def get_revision(self, ref):
-        return self.cache.load_metadata(ref).recipe.revision
+        return self.cache.package_layout(ref).load_metadata().recipe.revision
 
     def get_package_revision(self, pref):
-        metadata = self.cache.load_metadata(pref.ref)
+        metadata = self.cache.package_layout(pref.ref).load_metadata()
         return metadata.packages[pref.id].revision
 
 

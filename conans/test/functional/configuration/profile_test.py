@@ -1,6 +1,8 @@
 import os
+import platform
 import unittest
 from collections import OrderedDict
+from textwrap import dedent
 
 from parameterized import parameterized
 
@@ -26,7 +28,6 @@ class AConan(ConanFile):
             self.run("SET")
         else:
             self.run("env")
-
 """
 
 
@@ -43,13 +44,36 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def profile_conanfile_txt_test(self):
+        """
+        Test prepended env variables are applied correctrly from a profile
+        """
+        self.client.save({"conanfile.txt": ""})
+        create_profile(self.client.cache.profiles_path, "envs", settings={},
+                       env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
+                       package_env={"Hello0": [("OTHER_VAR", "2")]})
+        self.client.run("install . -pr envs -g virtualenv")
+        content = load(os.path.join(self.client.current_folder, "activate.sh"))
+        self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
+                      "${PREPEND_VAR+:$PREPEND_VAR}", content)
+        if platform.system() == "Windows":
+            content = load(os.path.join(self.client.current_folder, "activate.bat"))
+            self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]), content)
+
+    def test_profile_relative_cwd(self):
+        self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})
+        self.client.current_folder = os.path.join(self.client.current_folder, "sub")
+        self.client.run("install .. -pr=sub/profile2", assert_error=True)
+        self.assertIn("ERROR: Profile not found: sub/profile2", self.client.out)
+        self.client.run("install .. -pr=sub/profile")
+        self.assertIn("conanfile.txt: Installing package", self.client.out)
+
     def base_profile_generated_test(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile_scope_env,
+        self.client.save({CONANFILE: conanfile_scope_env,
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
-        client.run("create . conan/testing --profile myprofile")
+        self.client.run("create . conan/testing --profile myprofile")
 
     def bad_syntax_test(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -137,11 +161,15 @@ class ProfileTest(unittest.TestCase):
         files["conanfile.py"] = conanfile_scope_env
 
         create_profile(self.client.cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
+                       env=[("A_VAR", "A_VALUE"),
+                            ("PREPEND_VAR", ["new_path", "other_path"])],
+                       package_env={"Hello0": [("OTHER_VAR", "2")]})
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
+        self._assert_env_variable_printed("PREPEND_VAR", os.pathsep.join(["new_path", "other_path"]))
+        self.assertEqual(1, str(self.client.out).count("PREPEND_VAR=new_path"))  # prepended once
         self._assert_env_variable_printed("A_VAR", "A_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
@@ -175,7 +203,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
-        self.client.cache.default_profile # Creates default
+        self.client.cache.default_profile  # Creates default
         tools.replace_in_file(self.client.cache.default_profile_path,
                               "compiler.libcxx", "#compiler.libcxx", strict=False,
                               output=self.client.out)
@@ -391,3 +419,138 @@ class DefaultNameConan(ConanFile):
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
         self.assertIn('''Requires:
         WinRequire/0.1@lasote/stable''', self.client.user_io.out)
+
+
+class ProfileAggregationTest(unittest.TestCase):
+
+    profile1 = dedent("""
+    [settings]
+    os=Windows
+    arch=x86_64
+
+    [env]
+    ENV1=foo
+    ENV2=bar
+
+    """)
+
+    profile2 = dedent("""
+    [settings]
+    arch=x86
+    build_type=Debug
+    compiler=Visual Studio
+    compiler.version=15
+
+    [env]
+    ENV1=foo2
+    ENV3=bar2
+    """)
+
+    conanfile = dedent("""
+    from conans.model.conan_file import ConanFile
+    import os
+
+    class DefaultNameConan(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+
+        def build(self):
+            self.output.warn("ENV1:%s" % os.getenv("ENV1"))
+            self.output.warn("ENV2:%s" % os.getenv("ENV2"))
+            self.output.warn("ENV3:%s" % os.getenv("ENV3"))
+    """)
+
+    consumer = dedent("""
+    from conans.model.conan_file import ConanFile
+    import os
+
+    class DefaultNameConan(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        requires = "lib/1.0@user/channel"
+    """)
+
+    def setUp(self):
+        self.client = TestClient()
+        self.client.save({CONANFILE: self.conanfile,
+                          "profile1": self.profile1, "profile2": self.profile2})
+
+    def test_create(self):
+
+        # The latest declared profile has priority
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+        self.assertIn(dedent("""
+        [env]
+        ENV1=foo2
+        ENV2=bar
+        ENV3=bar2
+        """), self.client.out)
+        self.client.run("search lib/1.0@user/channel")
+        self.assertIn("arch: x86", self.client.out)
+
+    def test_info(self):
+
+        # The latest declared profile has priority
+        self.client.run("create . lib/1.0@user/channel --profile profile1 -p profile2")
+
+        self.client.save({CONANFILE: self.consumer})
+        self.client.run("info . --profile profile1 --profile profile2")
+        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+
+        # Build order
+        self.client.run("info . --profile profile1 --profile profile2 "
+                        "--build-order lib/1.0@user/channel")
+        self.assertIn("[lib/1.0@user/channel]", self.client.out)
+
+    def test_install(self):
+        self.client.run("export . lib/1.0@user/channel")
+        # Install ref
+        self.client.run("install lib/1.0@user/channel -p profile1 -p profile2 --build missing")
+        self.assertIn(dedent("""
+               [env]
+               ENV1=foo2
+               ENV2=bar
+               ENV3=bar2
+               """), self.client.out)
+        self.client.run("search lib/1.0@user/channel")
+        self.assertIn("arch: x86", self.client.out)
+
+        # Install project
+        self.client.save({CONANFILE: self.consumer})
+        self.client.run("install . -p profile1 -p profile2 --build")
+        self.assertIn("arch=x86", self.client.out)
+        self.assertIn(dedent("""
+                       [env]
+                       ENV1=foo2
+                       ENV2=bar
+                       ENV3=bar2
+                       """), self.client.out)
+
+    def test_export_pkg(self):
+        self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
+        # ID for the expected settings applied: x86, Visual Studio 15,...
+        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+
+    def profile_crazy_inheritance_test(self):
+        profile1 = dedent("""
+            [settings]
+            os=Windows
+            arch=x86_64
+            compiler=Visual Studio
+            compiler.version=15
+            """)
+
+        profile2 = dedent("""
+            include(profile1)
+            [settings]
+            os=Linux
+            """)
+
+        self.client.save({"profile1": profile1, "profile2": profile2})
+        self.client.run("create . lib/1.0@user/channel --profile profile2 -p profile1")
+        self.assertIn(dedent("""
+                             Configuration:
+                             [settings]
+                             arch=x86_64
+                             compiler=Visual Studio
+                             compiler.runtime=MD
+                             compiler.version=15
+                             os=Windows"""), self.client.out)

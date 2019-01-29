@@ -119,7 +119,7 @@ project({name} CXX)
 
     def _loads(self, text):
         try:
-            yml = yaml.load(text)
+            yml = yaml.safe_load(text)
             self._generator = yml.pop("generator", None)
             self._name = yml.pop("name", None)
             self._root = [ConanFileReference.loads(s.strip())

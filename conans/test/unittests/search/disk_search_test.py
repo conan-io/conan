@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.tools import chdir
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference

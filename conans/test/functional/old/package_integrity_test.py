@@ -39,14 +39,15 @@ class PackageIngrityTest(unittest.TestCase):
         package_folder = client.cache.package(pref)
         recipe_rev = client.get_revision(ref)
         p_rev = client.get_package_revision(pref)
-        with client.cache.update_metadata(pref.ref) as metadata:
+        with client.cache.package_layout(pref.ref).update_metadata() as metadata:
             metadata.packages[pref.id].revision = p_rev
             metadata.packages[pref.id].recipe_revision = recipe_rev
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
 
         client.run("upload * --all --confirm", assert_error=True)
-        self.assertIn("ERROR: Package Hello/0.1@lasote/testing:12345 is corrupted, aborting upload", client.out)
+        self.assertIn("ERROR: Package Hello/0.1@lasote/testing:12345 is corrupted, aborting upload",
+                      client.out)
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=12345'", client.out)
 
         client.run("remove Hello/0.1@lasote/testing -p=12345 -f")

@@ -273,7 +273,7 @@ class ServerStore(SimplePaths):
                 rev_list.add_revision(DEFAULT_REVISION_V1)
                 self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                                  lock_file=rev_file_path + ".lock")
-                return DEFAULT_REVISION_V1
+                return rev_list.latest_revision()
             else:
                 return None
         return rev_list.latest_revision()
@@ -308,7 +308,7 @@ class ServerStore(SimplePaths):
     def get_package_revision_time(self, pref):
         try:
             rev_list = self._load_package_revision_list(pref)
-        except FileNotFoundError:
+        except (IOError, OSError):
             return None
 
         return rev_list.get_time(pref.revision)

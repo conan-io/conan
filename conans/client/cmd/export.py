@@ -12,7 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
-from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty
+from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
@@ -74,15 +74,12 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     captured_revision = scm_data.capture_revision
 
     scm = SCM(scm_data, conanfile_dir, output)
-    if scm_data.capture_origin or scm_data.capture_revision:
-        # Generate the scm_folder.txt file pointing to the src_path
-        src_path = scm.get_repo_root()
-        save(scm_src_file, src_path.replace("\\", "/"))
+    captured = scm_data.capture_origin or scm_data.capture_revision
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url(remove_credentials=True)
         if not origin:
-            raise ConanException("Repo origin cannot be deduced by 'auto'")
+            raise ConanException("Repo origin cannot be deduced")
         if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
         output.success("Repo origin deduced by 'auto': %s" % origin)
@@ -95,6 +92,12 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+
+    if captured:
+        # Generate the scm_folder.txt file pointing to the src_path
+        src_path = scm.get_local_path_to_url(scm_data.url)
+        if src_path:
+            save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
 
     return scm_data, captured_revision
 
@@ -144,6 +147,8 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
+
+    remove(conanfile_path)
     save(conanfile_path, content)
 
 
@@ -177,7 +182,7 @@ def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source
     digest.save(exports_folder)
 
     revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
-    with cache.update_metadata(ref) as metadata:
+    with cache.package_layout(ref).update_metadata() as metadata:
         # Note that there is no time set, the time will come from the remote
         metadata.recipe.revision = revision
 

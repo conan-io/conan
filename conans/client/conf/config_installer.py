@@ -5,7 +5,7 @@ from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.remote_registry import load_registry_txt
+from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -83,6 +83,10 @@ def _process_folder(folder, cache, output):
             elif f == "remotes.txt":
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
+            elif f == "README.md":
+                output.info("Skip README.md")
+            elif f == "LICENSE.txt":
+                output.info("Skip LICENSE.txt")
             else:
                 relpath = os.path.relpath(root, folder)
                 target_folder = os.path.join(cache.conan_folder, relpath)

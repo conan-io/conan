@@ -1,16 +1,15 @@
 # coding=utf-8
 
-import os
-import unittest
-import tempfile
 import itertools
+import os
+import tempfile
+import unittest
 from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
 from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.paths import LINKED_PACKAGE_SENTINEL, CONAN_PACKAGE_LAYOUT_FILE
-from conans.model.ref import ConanFileReference
+from conans.model.editable_cpp_info import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -68,17 +67,13 @@ src/include/{{settings.build_type}}/{{options.shared}}
                  }
 
         if use_repo_file:
-            files[CONAN_PACKAGE_LAYOUT_FILE] = self.conan_package_layout.format(namespace="")
+            files["mylayout"] = self.conan_package_layout.format(namespace="")
         else:
-            save(self.cache.default_editable_path,
-                 self.conan_package_layout.format(namespace="MyLib:"))
+            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            save(file_path,
+                 self.conan_package_layout.format(namespace="MyLib/0.1@user/editable:"))
 
         self.save(files)
-
-    def make_editable(self, full_reference):
-        ref = ConanFileReference.loads(full_reference)
-        cache_dir = self.cache.conan(ref)
-        save(os.path.join(cache_dir, LINKED_PACKAGE_SENTINEL), content=self.current_folder)
 
 
 class SettingsAndOptionsTest(unittest.TestCase):
@@ -93,7 +88,10 @@ class SettingsAndOptionsTest(unittest.TestCase):
         # Editable project
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   base_folder=base_folder)
-        client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
+        if use_repo_file:
+            client_editable.run("link . MyLib/0.1@user/editable -l=mylayout")
+        else:
+            client_editable.run("link . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)
@@ -141,7 +139,8 @@ int main() {
                      "src/main.cpp": main_cpp})
 
         # Build consumer project
-        client.run("create . pkg/0.0@user/testing -s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
-        self.assertIn("    MyLib/0.1@user/editable from user - Editable", client.out)
+        client.run("create . pkg/0.0@user/testing "
+                   "-s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
+        self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("Hello {}!".format(build_type), client.out)
         self.assertIn(" - options.shared: {}".format(shared), client.out)

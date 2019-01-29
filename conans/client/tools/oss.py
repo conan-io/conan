@@ -24,10 +24,21 @@ def cpu_count(output=None):
     output = default_output(output, 'conans.client.tools.oss.cpu_count')
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
+        if env_cpu_count is not None and not env_cpu_count.isdigit():
+            raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
+                                 "please specify a positive integer" % env_cpu_count)
         return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
+
+
+def detected_os():
+    if OSInfo().is_macos:
+        return "Macos"
+    if OSInfo().is_windows:
+        return "Windows"
+    return platform.system()
 
 
 def detected_architecture():
@@ -85,24 +96,21 @@ class OSInfo(object):
     """
 
     def __init__(self):
+        system = platform.system()
         self.os_version = None
         self.os_version_name = None
-        self.is_linux = platform.system() == "Linux"
+        self.is_linux = system == "Linux"
         self.linux_distro = None
-        self.is_windows = platform.system() == "Windows"
-        self.is_macos = platform.system() == "Darwin"
-        self.is_freebsd = platform.system() == "FreeBSD"
-        self.is_solaris = platform.system() == "SunOS"
+        self.is_msys = system.startswith("MING") or system.startswith("MSYS_NT")
+        self.is_cygwin = system.startswith("CYGWIN_NT")
+        self.is_windows = system == "Windows" or self.is_msys or self.is_cygwin
+        self.is_macos = system == "Darwin"
+        self.is_freebsd = system == "FreeBSD"
+        self.is_solaris = system == "SunOS"
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
-            import distro
-            self.linux_distro = distro.id()
-            self.os_version = Version(distro.version())
-            version_name = distro.codename()
-            self.os_version_name = version_name if version_name != "n/a" else ""
-            if not self.os_version_name and self.linux_distro == "debian":
-                self.os_version_name = self.get_debian_version_name(self.os_version)
+            self._get_linux_distro_info()
         elif self.is_windows:
             self.os_version = self.get_win_os_version()
             self.os_version_name = self.get_win_version_name(self.os_version)
@@ -115,6 +123,15 @@ class OSInfo(object):
         elif self.is_solaris:
             self.os_version = Version(platform.release())
             self.os_version_name = self.get_solaris_version_name(self.os_version)
+
+    def _get_linux_distro_info(self):
+        import distro
+        self.linux_distro = distro.id()
+        self.os_version = Version(distro.version())
+        version_name = distro.codename()
+        self.os_version_name = version_name if version_name != "n/a" else ""
+        if not self.os_version_name and self.linux_distro == "debian":
+            self.os_version_name = self.get_debian_version_name(self.os_version)
 
     @property
     def with_apt(self):
@@ -143,7 +160,7 @@ class OSInfo(object):
         if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
             return True
         return False
-    
+
     @staticmethod
     def get_win_os_version():
         """
@@ -264,7 +281,7 @@ class OSInfo(object):
     @staticmethod
     def uname(options=None):
         options = " %s" % options if options else ""
-        if platform.system() != "Windows":
+        if not OSInfo().is_windows:
             raise ConanException("Command only for Windows operating system")
         custom_bash_path = OSInfo.bash_path()
         if not custom_bash_path:
@@ -291,7 +308,7 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-or")
+            output = OSInfo.uname("-r")
             if output.startswith("2"):
                 return MSYS2
             elif output.startswith("1"):
@@ -305,7 +322,6 @@ class OSInfo(object):
 
 
 def cross_building(settings, self_os=None, self_arch=None):
-
     ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
 
@@ -318,8 +334,7 @@ def cross_building(settings, self_os=None, self_arch=None):
 
 
 def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or \
-               {"Darwin": "Macos"}.get(platform.system(), platform.system())
+    build_os = self_os or settings.get_safe("os_build") or detected_os()
     build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
     host_os = settings.get_safe("os")
     host_arch = settings.get_safe("arch")

@@ -1,15 +1,19 @@
 # coding=utf-8
 
+
 import os
+import shutil
 import textwrap
 import unittest
-from collections import namedtuple
-
-import six
 
 from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.build_info import CppInfo
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
+from conans.model.ref import ConanFileReference
 
-base_content = six.u(textwrap.dedent("""\
+
+base_content = textwrap.dedent("""\
     [{namespace}includedirs]
     {path_prefix}dirs/includedirs
 
@@ -22,56 +26,51 @@ base_content = six.u(textwrap.dedent("""\
     #[{namespace}bindirs]
     #{path_prefix}dirs/bindirs
 
-    [{namespace}extradirs]
-    {path_prefix}dirs/extradirs
-    """))
+    """)
 
 
 class ApplyEditableCppInfoTest(unittest.TestCase):
-    content = '\n\n'.join([
-        base_content.format(namespace="", path_prefix=""),
-        base_content.format(namespace="*:", path_prefix="all/"),
-        base_content.format(namespace="libA:", path_prefix="libA/")
-    ])
+
+    def setUp(self):
+        self.test_folder = temp_folder()
+        self.layout_filepath = os.path.join(self.test_folder, "layout")
+        self.ref = ConanFileReference.loads("libA/0.1@user/channel")
+
+    def tearDown(self):
+        shutil.rmtree(self.test_folder)
 
     def test_require_no_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(content=self.content, require_namespace=False)
-
-        cpp_info = namedtuple('_', EditableCppInfo.cpp_info_dirs)
-        editable_cpp_info.apply_to('libA', cpp_info, base_path=None, settings=None, options=None)
-        self.assertTrue(editable_cpp_info.has_info_for('any-thing'))
-        self.assertListEqual(cpp_info.includedirs, [os.path.normpath('dirs/includedirs'), ])
-        self.assertListEqual(cpp_info.libdirs, [os.path.normpath('dirs/libdirs'), ])
-        self.assertListEqual(cpp_info.resdirs, [os.path.normpath('dirs/resdirs'), ])
+        content = base_content.format(namespace="", path_prefix="")
+        save(self.layout_filepath, content)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath)
+        cpp_info = CppInfo(None)
+        editable_cpp_info.apply_to(self.ref, cpp_info, settings=None, options=None)
+        self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
+        self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
+        self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
+        # The default defined by package_info() is removed
         self.assertListEqual(cpp_info.bindirs, [])
 
     def test_require_namespace(self):
-        editable_cpp_info = EditableCppInfo.loads(content=self.content, require_namespace=True)
-        self.assertTrue(editable_cpp_info.has_info_for('libA', use_wildcard=True))
-        self.assertTrue(editable_cpp_info.has_info_for('libA', use_wildcard=False))
-        self.assertTrue(editable_cpp_info.has_info_for('libOther', use_wildcard=True))
-        self.assertFalse(editable_cpp_info.has_info_for('libOther', use_wildcard=False))
-
-        cpp_info = namedtuple('_', EditableCppInfo.cpp_info_dirs)
-
-        # Apply to 'libA' ==> existing one
-        editable_cpp_info.apply_to('libA', cpp_info, base_path=None, settings=None, options=None)
-        self.assertListEqual(cpp_info.includedirs, [os.path.normpath('libA/dirs/includedirs'), ])
-        self.assertListEqual(cpp_info.libdirs, [os.path.normpath('libA/dirs/libdirs'), ])
-        self.assertListEqual(cpp_info.resdirs, [os.path.normpath('libA/dirs/resdirs'), ])
+        content = '\n\n'.join([
+            base_content.format(namespace="", path_prefix=""),
+            base_content.format(namespace="libA/0.1@user/channel:", path_prefix="libA/")
+            ])
+        save(self.layout_filepath, content)
+        editable_cpp_info = EditableCppInfo.load(self.layout_filepath)
+        cpp_info = CppInfo(None)
+        editable_cpp_info.apply_to(self.ref, cpp_info, settings=None, options=None)
+        self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs'])
+        self.assertListEqual(cpp_info.libdirs, ['libA/dirs/libdirs'])
+        self.assertListEqual(cpp_info.resdirs, ['libA/dirs/resdirs'])
+        # The default defined by package_info() is removed
         self.assertListEqual(cpp_info.bindirs, [])
 
-        # Apply to non existing lib ==> uses wildcard ones
-        editable_cpp_info.apply_to('libOther', cpp_info, base_path=None, settings=None, options=None)
-        self.assertListEqual(cpp_info.includedirs, [os.path.normpath('all/dirs/includedirs'), ])
-        self.assertListEqual(cpp_info.libdirs, [os.path.normpath('all/dirs/libdirs'), ])
-        self.assertListEqual(cpp_info.resdirs, [os.path.normpath('all/dirs/resdirs'), ])
-        self.assertListEqual(cpp_info.bindirs, [])
-
-        # Apply to non existing lib ==> not found, and not wildcard allowed
-        editable_cpp_info.apply_to('libOther', cpp_info, base_path=None, settings=None, options=None,
-                                   use_wildcard=False)
-        self.assertListEqual(cpp_info.includedirs, [])
-        self.assertListEqual(cpp_info.libdirs, [])
-        self.assertListEqual(cpp_info.resdirs, [])
+        cpp_info = CppInfo(None)
+        other = ConanFileReference.loads("other/0.1@user/channel")
+        editable_cpp_info.apply_to(other, cpp_info, settings=None, options=None)
+        self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
+        self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
+        self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
+        # The default defined by package_info() is removed
         self.assertListEqual(cpp_info.bindirs, [])
