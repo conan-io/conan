@@ -30,7 +30,15 @@ def _handle_remotes(cache, remote_file):
     registry.remotes.define(remotes)
 
 
-def _handle_profiles(source_folder, target_folder, output):
+def _handle_config_files(source_folder, target_folder, output):
+    """
+    Copies files to the target_folder overwriting the files that are in the same path
+    (shutil.copytree fails on doing this) and outputs the copied files
+
+    :param source_folder: Folder where the files come from
+    :param target_folder:  Folder where the files should finally go
+    :param output: Output to indicate the files copied
+    """
     mkdir(target_folder)
     for root, _, files in walk(source_folder):
         relative_path = os.path.relpath(root, source_folder)
@@ -97,12 +105,12 @@ def _process_folder(folder, cache, output):
             if d == "profiles":
                 output.info("Installing profiles:")
                 profiles_path = cache.profiles_path
-                _handle_profiles(os.path.join(root, d), profiles_path, output)
+                _handle_config_files(os.path.join(root, d), profiles_path, output)
             elif d == "hooks" and ".git" not in root:  # Avoid git hooks
                 output.info("Installing hooks:")
                 src_hooks_path = os.path.join(root, d)
                 dst_hooks_path = cache.hooks_path
-                _handle_hooks(src_hooks_path, dst_hooks_path, output)
+                _handle_config_files(src_hooks_path, dst_hooks_path, output)
         dirs[:] = [d for d in dirs if d not in ("profiles", ".git", "hooks")]
 
 
@@ -190,30 +198,3 @@ def _process_config_install_item(item):
         verify_ssl = "true" in verify_ssl.lower()
         args = None if "none" in args.lower() else args
     return config_type, path_or_url, verify_ssl, args
-
-
-def _handle_hooks(src_hooks_path, dst_hooks_path, output):
-    """
-    Copies files to the hooks folder overwriting the files that are in the same path
-    (shutil.copytree fails on doing this), skips git related files (.git, .gitmodule...) and outputs
-    the copied files
-
-    :param src_hooks_path: Folder where the hooks come from
-    :param dst_hooks_path:  Folder where the hooks should finally go
-    :param output: Output to indicate the files copied
-    """
-    hooks_dirs = []
-    for root, dirs, files in walk(src_hooks_path):
-        if root == src_hooks_path:
-            hooks_dirs = dirs
-        else:
-            copied_files = False
-            relpath = os.path.relpath(root, src_hooks_path)
-            for f in files:
-                if ".git" not in f:
-                    dst = os.path.join(dst_hooks_path, relpath)
-                    mkdir(dst)
-                    shutil.copy(os.path.join(root, f), dst)
-                    copied_files = True
-            if copied_files and relpath in hooks_dirs:
-                output.info(" - %s" % relpath)
