@@ -100,8 +100,8 @@ class RunSCMTest(unittest.TestCase):
                      output=output,
                      cache=False)
 
-        self.assertIn("Getting sources from folder: {}".format(os.path.normcase(local_sources_path)),
-                      output)
+        self.assertIn("getting sources from folder: {}".format(local_sources_path),
+                      str(output).lower())
 
     def test_user_space_no_local_sources(self):
         output = TestBufferConanOutput()
