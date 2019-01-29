@@ -281,7 +281,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def test_reuse_scm_test(self):
+    def reuse_scm_test(self):
         client = TestClient()
 
         conanfile = """from conans import ConanFile
