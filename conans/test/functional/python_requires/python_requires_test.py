@@ -281,12 +281,12 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: Package installed %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def reuse_scm_test(self):
+    def test_reuse_scm_test(self):
         client = TestClient()
 
         conanfile = """from conans import ConanFile
 scm = {"type" : "git",
-       "url" : "http://somerepo",
+       "url" : "somerepo",
        "revision" : "auto"}
 
 class MyConanfileBase(ConanFile):
@@ -298,13 +298,13 @@ class MyConanfileBase(ConanFile):
         client.run("get MyConanfileBase/1.1@lasote/testing")
         # The global scm is left as-is
         self.assertIn("""scm = {"type" : "git",
-       "url" : "http://somerepo",
+       "url" : "somerepo",
        "revision" : "auto"}""", client.out)
         # but the class one is replaced
         self.assertNotIn("scm = scm", client.out)
         self.assertIn('    scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
-        self.assertIn('"url": "http://somerepo"', client.out)
+        self.assertIn('"url": "somerepo"', client.out)
 
         reuse = """from conans import python_requires
 base = python_requires("MyConanfileBase/1.1@lasote/testing")
@@ -320,7 +320,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertNotIn("scm = base.scm", client.out)
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
-        self.assertIn('"url": "http://somerepo"', client.out)
+        self.assertIn('"url": "somerepo"', client.out)
 
     def reuse_exports_test(self):
         conanfile = """from conans import ConanFile
