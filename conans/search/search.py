@@ -12,6 +12,8 @@ from conans.util.log import logger
 
 
 def filter_outdated(packages_infos, recipe_hash):
+    if not recipe_hash:
+        return packages_infos
     result = {}
     for package_id, info in packages_infos.items():
         try:  # Existing package_info of old package might not have recipe_hash
@@ -20,6 +22,19 @@ def filter_outdated(packages_infos, recipe_hash):
         except KeyError:
             pass
     return result
+
+
+def filter_by_revision(metadata, packages_infos):
+    ok = {}
+    recipe_revision = metadata.recipe.revision
+    for package_id, info in packages_infos.items():
+        try:
+            rec_rev = metadata.packages[package_id].recipe_revision
+            if rec_rev == recipe_revision:
+                ok[package_id] = info
+        except KeyError:
+            pass
+    return ok
 
 
 def filter_packages(query, package_infos):

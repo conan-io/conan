@@ -36,6 +36,7 @@ from conans.client.output import ConanOutput
 from conans.client.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
 from conans.client.tools.scm import Git, SVN
@@ -745,6 +746,34 @@ class TurboTestClient(TestClient):
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
         return data
+
+    def massive_uploader(self, ref, revisions, num_prev, remote=None):
+        """Uploads N revisions with M package revisions. The revisions can be specified like:
+            revisions = [{"os": "Windows"}, {"os": "Linux"}], \
+                        [{"os": "Macos"}], \
+                        [{"os": "Solaris"}, {"os": "FreeBSD"}]
+
+            IMPORTANT: Different settings keys will cause different recipe revisions
+        """
+        remote = remote or "default"
+        ret = []
+        for i, settings_groups in enumerate(revisions):
+            tmp = []
+            for settings in settings_groups:
+                conanfile_gen = GenConanfile(). \
+                    with_build_msg("REV{}".format(i)). \
+                    with_package_file("file", env_var="MY_VAR")
+                for s in settings.keys():
+                    conanfile_gen = conanfile_gen.with_setting(s)
+                for k in range(num_prev):
+                    args = " ".join(["-s {}={}".format(key, value)
+                                     for key, value in settings.items()])
+                    with environment_append({"MY_VAR": str(k)}):
+                        pref = self.create(ref, conanfile=conanfile_gen, args=args)
+                        self.upload_all(ref, remote=remote)
+                        tmp.append(pref)
+                ret.append(tmp)
+        return ret
 
 
 class GenConanfile(object):

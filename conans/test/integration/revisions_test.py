@@ -141,20 +141,81 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
+        self.server2 = TestServer()
+        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server,
+                                                                     "remote2": self.server2})
+        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server,
+                                                                      "remote2": self.server2})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
         # FIXME: Prepare here two RREVs in a remote,
         #  one with LINUX packages and second with WINDOWS packages
+
+    def search_outdated_packages_locally_without_rrev_test(self):
+        """If we search for the packages of a ref without specifying the RREV using --outdated:
+           it shows the packages not matching the current recipe revision"""
+        pass
+
+    def search_outdated_packages_locally_with_rrev_test(self):
+        """If we search for the packages of a ref specifying the RREV using --outdated:
+            - If the RREV do not exists it will raise
+            - If the RREV exists it won't show anything, if the recipe is there, is the current one
+        """
+        pass
+
+    def search_outdated_packages_remote_without_rrev_test(self):
+        """If we search for the packages of a ref without specifying the RREV using --outdated:
+           ??????"""
+        pass
+
+    def search_outdated_packages_remote_with_rrev_test(self):
+        """?????
+        """
+        pass
+
+    def search_all_remotes_with_rrev_test(self):
+        """?????
+        """
+        pass
+
+    def search_all_remotes_without_rrev_test(self):
+        """If we search for the packages of a ref without specifying the RREV:
+
+         - With an v1 client, it shows all the packages for all the revisions
+         - With an v2 client, it shows the packages for the latest
+
+         No matter how many PREVS are uploaded it returns package references not duplicated"""
+        pass
 
     @parameterized.expand([(True,), (False,)])
     def search_a_remote_package_without_rrev_test(self, v1):
         """If we search for the packages of a ref without specifying the RREV:
 
          - With an v1 client, it shows all the packages for all the revisions
-         - With an v2 client, it shows the packages for the latest"""
-        pass
+         - With an v2 client, it shows the packages for the latest
+
+         No matter how many PREVS are uploaded it returns package references not duplicated"""
+
+        # Upload to the server five RREVS for "lib" each one with 5 package_ids, each one with
+        # three PREVS
+
+        # First revision with 2 binaries, Windows and Linux
+        # Second revision with 1 binary for Macos
+        # Third revision with 2 binaries for SunOS and FreeBSD
+        revisions = [{"os": "Windows"}, {"os": "Linux"}], \
+                    [{"os": "Macos"}], \
+                    [{"os": "SunOS"}, {"os": "FreeBSD"}]
+        self.c_v2.massive_uploader(self.ref, revisions, num_prev=2)
+
+        client = self.c_v1 if v1 else self.c_v2
+        client.remove_all()
+
+        data = client.search(str(self.ref), remote="default")
+        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
+        if v1:
+            self.assertEquals(set(["Linux", "Windows", "Macos", "SunOS", "FreeBSD"]), set(oss))
+        else:
+            self.assertEquals(set(["SunOS", "FreeBSD"]), set(oss))
 
     @parameterized.expand([(True,), (False,)])
     def search_a_local_package_without_rrev_test(self, v1):
@@ -163,14 +224,57 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
          - With an v1 client, it shows all the packages in local.
          - With an v2 client, it shows the packages in local for the latest, not showing the
            packages that doesn't belong to the recipe"""
-        pass
+        client = self.c_v1 if v1 else self.c_v2
+
+        # Create two RREVs, first with Linux and Windows, second with Mac only (one PREV)
+        conanfile = GenConanfile().with_build_msg("Rev1").with_setting("os")
+        pref1a = client.create(self.ref, conanfile=conanfile, args="-s os=Linux")
+        client.create(self.ref, conanfile=conanfile, args="-s os=Windows")
+
+        conanfile2 = GenConanfile().with_build_msg("Rev2").with_setting("os")
+        pref2a = client.create(self.ref, conanfile=conanfile2, args="-s os=Macos")
+
+        self.assertNotEquals(pref1a.ref.revision, pref2a.ref.revision)
+
+        # Search without RREV
+        data = client.search(self.ref)
+        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
+
+        if v1:
+            self.assertEquals(set(["Linux", "Windows", "Macos"]), set(oss))
+        else:
+            self.assertEquals(set(["Macos"]), set(oss))
 
     @parameterized.expand([(True,), (False,)])
     def search_a_remote_package_with_rrev_test(self, v1):
         """If we search for the packages of a ref specifying the RREV:
          1. With v2 client it shows the packages for that RREV
          2. With v1 client it fails, because it cannot propagate the rrev with v1"""
-        pass
+
+        # Upload to the server two rrevs for "lib" and two rrevs for "lib2"
+        conanfile = GenConanfile().with_build_msg("REV1").with_setting("os")
+        pref = self.c_v2.create(self.ref, conanfile, args="-s os=Linux")
+        self.c_v2.upload_all(self.ref)
+
+        conanfile = GenConanfile().with_build_msg("REV2").with_setting("os")
+        pref2 = self.c_v2.create(self.ref, conanfile, args="-s os=Windows")
+        self.c_v2.upload_all(self.ref)
+
+        # Ensure we have uploaded two different revisions
+        self.assertNotEquals(pref.ref.revision, pref2.ref.revision)
+
+        client = self.c_v1 if v1 else self.c_v2
+        client.remove_all()
+        if v1:
+            client.search(pref.ref.full_repr(), remote="default", assert_error=True)
+            self.assertIn("ERROR: Revisions not enabled in the client, specify "
+                          "a reference without revision", client.out)
+        else:
+            data = client.search(pref.ref.full_repr(), remote="default")
+            items = data["results"][0]["items"][0]["packages"]
+            self.assertEquals(1, len(items))
+            oss = items[0]["settings"]["os"]
+            self.assertEquals(oss, "Linux")
 
     @parameterized.expand([(True,), (False,)])
     def search_a_local_package_with_rrev_test(self, v1):
@@ -614,6 +718,15 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
         self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
+
+    def test_remove_oudated_packages_locally_removes_orphan_prevs(self):
+        """if we run 'conan remove --outdated' locally, it removes the PREVS belonging to a
+        different RREV"""
+        pass
+
+    def test_remove_oudated_packages_remote_removes_nothing(self):
+        """In a server with revisions uploaded no package is oudated so nothing is done"""
+        pass
 
     @parameterized.expand([(True,), (False,)])
     def test_remove_local_recipe(self, v1):

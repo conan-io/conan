@@ -284,7 +284,7 @@ def _get_local_infos_min(paths, ref, look_in_all_rrevs):
                 continue
             # Read conaninfo
             try:
-                pref = PackageReference(ref, package_id)
+                pref = PackageReference(new_ref, package_id)
                 info_path = os.path.join(paths.package(pref, short_paths=None), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
