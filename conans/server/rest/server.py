@@ -1,6 +1,5 @@
 import bottle
 
-from conans.model.version import Version
 from conans.server.rest.api_v1 import ApiV1
 from conans.server.rest.api_v2 import ApiV2
 
@@ -16,19 +15,14 @@ class ConanServer(object):
 
     def __init__(self, run_port, credentials_manager,
                  updown_auth_manager, authorizer, authenticator,
-                 server_store, server_version, min_client_compatible_version,
-                 server_capabilities):
+                 server_store, server_capabilities):
 
         self.run_port = run_port
-
-        assert(isinstance(server_version, Version))
-        assert(isinstance(min_client_compatible_version, Version))
 
         server_capabilities = server_capabilities or []
         self.root_app = bottle.Bottle()
 
         self.api_v1 = ApiV1(credentials_manager, updown_auth_manager,
-                            server_version, min_client_compatible_version,
                             server_capabilities)
         self.api_v1.authorizer = authorizer
         self.api_v1.authenticator = authenticator
@@ -37,8 +31,7 @@ class ConanServer(object):
 
         self.root_app.mount("/v1/", self.api_v1)
 
-        self.api_v2 = ApiV2(credentials_manager, server_version, min_client_compatible_version,
-                            server_capabilities)
+        self.api_v2 = ApiV2(credentials_manager, server_capabilities)
         self.api_v2.authorizer = authorizer
         self.api_v2.authenticator = authenticator
         self.api_v2.server_store = server_store

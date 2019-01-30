@@ -1,5 +1,4 @@
 import os
-import shutil
 import unittest
 from collections import namedtuple
 
@@ -8,7 +7,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
@@ -16,7 +15,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
     def cmake_vars_unit_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
         settings = settings_mock("Release", None, None, lambda x: x)
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo(tmp)

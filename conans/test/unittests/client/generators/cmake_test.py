@@ -3,18 +3,16 @@ import re
 import unittest
 from collections import namedtuple
 
-from nose.plugins.attrib import attr
-
 from conans.client.conf import default_settings_yml
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
-from conans.client.tools import replace_in_file
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -25,7 +23,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         return re.sub(pattern, r"\1", text, flags=re.DOTALL)
 
     def variables_setup_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
@@ -52,7 +50,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def paths_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock("Release", None, None,
                                            lambda x: x), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -72,7 +70,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def paths_cmake_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items")
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock(None, None, None, lambda x: x,
                                            lambda: {}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -92,7 +90,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def variables_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
                              EnvValues())
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
@@ -107,7 +105,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def variables_cmake_multi_user_vars_escape_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
                              EnvValues())
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
@@ -121,7 +119,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn(r'set(CONAN_USER_FOO_myvar3 "my\\value")', cmake_lines)
 
     def multi_flag_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
@@ -143,7 +141,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                       ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1 ${CONAN_CXX_FLAGS}")', cmake_lines)
 
     def escaped_flags_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
@@ -161,7 +159,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('\t\t\t"-DMY_DEF2=My other string")', cmake_lines)
 
     def aux_cmake_test_setup_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         generator = CMakeGenerator(conanfile)
         aux_cmake_test_setup = generator.content
@@ -235,7 +233,7 @@ endmacro()""", macro)
 endmacro()""", macro)
 
     def name_and_version_are_generated_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.name = "MyPkg"
         conanfile.version = "1.1.0"
@@ -253,7 +251,7 @@ endmacro()""", macro)
         settings.compiler.runtime = "MD"
         settings.arch = "x86"
         settings.build_type = "Debug"
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.settings = settings
         generator = CMakeGenerator(conanfile)

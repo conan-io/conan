@@ -4,11 +4,11 @@ from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node
+from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node,\
+    RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
-from conans.client.output import ScopedOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
@@ -43,33 +43,37 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, client_cache, remote_manager, loader, proxy, resolver):
+    def __init__(self, output, cache, remote_manager, loader, proxy, resolver):
         self._proxy = proxy
         self._output = output
         self._resolver = resolver
-        self._client_cache = client_cache
+        self._cache = cache
         self._remote_manager = remote_manager
         self._loader = loader
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder, output,
-                                deps_info_required=False):
+    def load_consumer_conanfile(self, conanfile_path, info_folder,
+                                deps_info_required=False, test=None):
         """loads a conanfile for local flow: source, imports, package, build
         """
         try:
             graph_info = GraphInfo.load(info_folder)
         except IOError:  # Only if file is missing
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile = self._client_cache.default_profile
-            profile.process_settings(self._client_cache)
+            profile = self._cache.default_profile
+            profile.process_settings(self._cache)
+            name, version, user, channel = None, None, None, None
         else:
+            name, version, user, channel, _ = graph_info.root
             profile = graph_info.profile
-            profile.process_settings(self._client_cache, preprocess=False)
+            profile.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)
         processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
-            conanfile = self._loader.load_conanfile(conanfile_path, output, consumer=True,
-                                                    processed_profile=processed_profile)
+            conanfile = self._loader.load_consumer(conanfile_path,
+                                                   processed_profile=processed_profile, test=test,
+                                                   name=name, version=version,
+                                                   user=user, channel=channel)
             with get_env_context_manager(conanfile, without_python=True):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
@@ -79,7 +83,7 @@ class GraphManager(object):
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, output, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -93,7 +97,7 @@ class GraphManager(object):
                                    workspace=None, recorder=recorder)
         processed_profile = ProcessedProfile(profile, create_reference=None)
         conanfile = self._loader.load_virtual([reference], processed_profile)
-        root_node = Node(None, conanfile)
+        root_node = Node(None, conanfile, recipe=RECIPE_VIRTUAL)
         graph = builder.load_graph(root_node, check_updates=False, update=False, remote_name=None,
                                    processed_profile=processed_profile)
         return graph
@@ -101,39 +105,51 @@ class GraphManager(object):
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remote_name, recorder, workspace):
 
-        def _inject_require(conanfile, reference):
+        def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
             before running the install
             """
-            require = conanfile.requires.get(reference.name)
+            require = conanfile.requires.get(ref.name)
             if require:
-                require.conan_reference = require.range_reference = reference
+                require.ref = require.range_ref = ref
             else:
-                conanfile.requires(str(reference))
-            conanfile._conan_user = reference.user
-            conanfile._conan_channel = reference.channel
+                conanfile.requires(str(ref))
+            conanfile._conan_user = ref.user
+            conanfile._conan_channel = ref.channel
 
         # Computing the full dependency graph
         profile = graph_info.profile
-        cache_settings = profile.processed_settings
         processed_profile = ProcessedProfile(profile, create_reference)
+        ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile)
+            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
+            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         else:
-            output = ScopedOutput("PROJECT", self._output)
-            if reference.endswith(".py"):
-                conanfile = self._loader.load_conanfile(reference, output, processed_profile,
-                                                        consumer=True)
+            path = reference
+            if path.endswith(".py"):
+                test = str(create_reference) if create_reference else None
+                conanfile = self._loader.load_consumer(path, processed_profile, test=test,
+                                                       name=graph_info.root.name,
+                                                       version=graph_info.root.version,
+                                                       user=graph_info.root.user,
+                                                       channel=graph_info.root.channel)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
+
+                ref = ConanFileReference(conanfile.name, conanfile.version,
+                                         conanfile._conan_user, conanfile._conan_channel,
+                                         validate=False)
             else:
-                conanfile = self._loader.load_conanfile_txt(reference, output, processed_profile)
+                conanfile = self._loader.load_conanfile_txt(path, processed_profile,
+                                                            ref=graph_info.root)
+
+            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)
-        root_node = Node(None, conanfile)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
@@ -152,7 +168,7 @@ class GraphManager(object):
             self._output.writeln("")
 
         build_mode.report_matches()
-        return deps_graph, conanfile, cache_settings
+        return deps_graph, conanfile
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):
@@ -169,17 +185,18 @@ class GraphManager(object):
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
-            if node.conanfile.output is None:
+            if node.recipe == RECIPE_VIRTUAL:
                 continue
-            if node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and node.conan_ref:
+            if (node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and
+                    node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
-            str_ref = str(node.conan_ref or "")
+            str_ref = str(node.ref)
             new_profile_build_requires = OrderedDict()
             profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
-                if ((not str_ref and pattern == "&") or
-                        (str_ref and pattern == "&!") or
+                if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
+                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
                                 if build_require.name in package_build_requires:  # Override existing
@@ -194,7 +211,7 @@ class GraphManager(object):
                                                     scope_options=False,
                                                     build_requires_options=build_requires_options,
                                                     processed_profile=processed_profile)
-                virtual_node = Node(None, virtual)
+                virtual_node = Node(None, virtual, recipe=RECIPE_VIRTUAL)
                 build_requires_package_graph = self._load_graph(virtual_node, check_updates, update,
                                                                 build_mode, remote_name,
                                                                 profile_build_requires,
@@ -209,7 +226,7 @@ class GraphManager(object):
                                                     scope_options=False,
                                                     build_requires_options=build_requires_options,
                                                     processed_profile=processed_profile)
-                virtual_node = Node(None, virtual)
+                virtual_node = Node(None, virtual, recipe=RECIPE_VIRTUAL)
                 build_requires_profile_graph = self._load_graph(virtual_node, check_updates, update,
                                                                 build_mode, remote_name,
                                                                 new_profile_build_requires,
@@ -224,7 +241,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
         if build_mode is None:
             return graph
-        binaries_analyzer = GraphBinariesAnalyzer(self._client_cache, self._output,
+        binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager, workspace)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 

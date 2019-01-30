@@ -236,7 +236,7 @@ class LibB(ConanFile):
 
             # Test info
             client.run("info . -o *:shared=True")
-            self.assertIn("PROJECT: shared=True", client.out)
+            self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
             # Test create
             client.run("create . libB/0.1@danimtb/testing -o *:shared=True")
@@ -244,5 +244,5 @@ class LibB(ConanFile):
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
             # Test install
             client.run("install . -o *:shared=True")
-            self.assertIn("PROJECT: shared=True", client.out)
+            self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)

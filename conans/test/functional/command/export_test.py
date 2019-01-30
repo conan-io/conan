@@ -75,8 +75,8 @@ class TestConan(ConanFile):
     exports_sources = "file2.txt"
 """
         ref = ConanFileReference.loads("Hello/1.2@lasote/stable")
-        export_path = client.client_cache.export(ref)
-        export_src_path = client.client_cache.export_sources(ref)
+        export_path = client.cache.export(ref)
+        export_src_path = client.cache.export_sources(ref)
 
         files = {CONANFILE: conanfile,
                  "file1.txt": "",
@@ -137,8 +137,8 @@ class TestConan(ConanFile):
             client.save(files)
             client.current_folder = os.path.join(client.current_folder, "recipe")
             client.run("export . lasote/stable")
-            conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
-            export_path = client.client_cache.export(conan_ref)
+            ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+            export_path = client.cache.export(ref)
             content = load(os.path.join(export_path, "sibling/file.txt"))
             self.assertEqual("Hello World!", content)
 
@@ -157,8 +157,8 @@ class TestConan(ConanFile):
         client.save(files)
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . lasote/stable")
-        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
-        export_path = client.client_cache.export(conan_ref)
+        ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.cache.export(ref)
         content = load(os.path.join(export_path, "file.txt"))
         self.assertEqual("Hello World!", content)
 
@@ -179,8 +179,8 @@ class TestConan(ConanFile):
         client.save(files)
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . lasote/stable")
-        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
-        export_path = client.client_cache.export_sources(conan_ref)
+        ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.cache.export_sources(ref)
         self.assertEqual(sorted(['file.txt', 'file.cpp', 'file.h']),
                          sorted(os.listdir(export_path)))
 
@@ -198,8 +198,8 @@ class TestConan(ConanFile):
         client.run("export %s lasote/stable" % filename)
         self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
                       client.user_io.out)
-        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
-        export_path = client.client_cache.export(conan_ref)
+        ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.cache.export(ref)
         conanfile = load(os.path.join(export_path, "conanfile.py"))
         self.assertIn('name = "Hello"', conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
@@ -222,9 +222,9 @@ class TestConan(ConanFile):
                      "file.cpp": "",
                      "file_temp.cpp": ""})
         client.run("export . lasote/stable")
-        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
-        export_path = client.client_cache.export(conan_ref)
-        exports_sources_path = client.client_cache.export_sources(conan_ref)
+        ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.cache.export(ref)
+        exports_sources_path = client.cache.export_sources(ref)
         self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
         self.assertFalse(os.path.exists(os.path.join(export_path, "file1.txt")))
         self.assertTrue(os.path.exists(os.path.join(exports_sources_path, "file.cpp")))
@@ -245,8 +245,8 @@ class TestConan(ConanFile):
                      "any/temp/file1.txt": "",
                      "other/sub/file2.txt": ""})
         client.run("export . lasote/stable")
-        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
-        export_path = client.client_cache.export(conan_ref)
+        ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.cache.export(ref)
         self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
         self.assertFalse(os.path.exists(os.path.join(export_path, "any/temp/file1.txt")))
         self.assertTrue(os.path.exists(os.path.join(export_path, "other/sub/file2.txt")))
@@ -257,19 +257,19 @@ class ExportTest(unittest.TestCase):
     def setUp(self):
         self.conan = TestClient()
         self.files = cpp_hello_conan_files("Hello0", "0.1")
-        self.conan_ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
+        self.ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         self.conan.save(self.files)
         self.conan.run("export . lasote/stable")
 
     def test_basic(self):
         """ simple registration of a new conans
         """
-        reg_path = self.conan.client_cache.export(self.conan_ref)
-        manif = FileTreeManifest.load(self.conan.client_cache.export(self.conan_ref))
+        reg_path = self.conan.cache.export(self.ref)
+        manif = FileTreeManifest.load(self.conan.cache.export(self.ref))
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
                       self.conan.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path), self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(self.files.keys()):
@@ -285,7 +285,7 @@ class ExportTest(unittest.TestCase):
 
     def test_case_sensitive(self):
         self.files = cpp_hello_conan_files("hello0", "0.1")
-        self.conan_ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
+        self.ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
         self.conan.save(self.files)
         self.conan.run("export . lasote/stable", assert_error=True)
         self.assertIn("ERROR: Cannot export package with same name but different case",
@@ -301,7 +301,7 @@ class OpenSSLConan(ConanFile):
 """
         save(os.path.join(self.conan.current_folder, CONANFILE), content)
         self.conan.run("export . lasote/stable")
-        reg_path = self.conan.client_cache.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
+        reg_path = self.conan.cache.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
                          [CONANFILE, CONAN_MANIFEST])
 
@@ -315,7 +315,7 @@ class OpenSSLConan(ConanFile):
 """
         save(os.path.join(self.conan.current_folder, CONANFILE), content)
         self.conan.run("export . lasote/stable")
-        reg_path = self.conan.client_cache.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
+        reg_path = self.conan.cache.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
                          ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
                           'helloHello0.h'])
@@ -331,7 +331,7 @@ class OpenSSLConan(ConanFile):
 """
         save(os.path.join(self.conan.current_folder, CONANFILE), content)
         self.conan.run("export . lasote/stable")
-        reg_path = self.conan.client_cache.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
+        reg_path = self.conan.cache.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
                          ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
 
@@ -343,16 +343,16 @@ class OpenSSLConan(ConanFile):
         files2 = cpp_hello_conan_files("Hello0", "0.1")
         conan2.save(files2)
         conan2.run("export . lasote/stable")
-        reg_path2 = conan2.client_cache.export(self.conan_ref)
-        digest2 = FileTreeManifest.load(conan2.client_cache.export(self.conan_ref))
+        reg_path2 = conan2.cache.export(self.ref)
+        digest2 = FileTreeManifest.load(conan2.cache.export(self.ref))
 
         self.assertNotIn('A new Conan version was exported', conan2.user_io.out)
         self.assertNotIn('Cleaning the old builds ...', conan2.user_io.out)
         self.assertNotIn('Cleaning the old packs ...', conan2.user_io.out)
         self.assertNotIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
                       self.conan.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path2), self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path2), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path2))
 
         for name in list(files2.keys()):
@@ -380,12 +380,12 @@ class OpenSSLConan(ConanFile):
         conan2.save(files2)
         conan2.run("export . lasote/stable")
 
-        reg_path3 = conan2.client_cache.export(self.conan_ref)
-        digest3 = FileTreeManifest.load(conan2.client_cache.export(self.conan_ref))
+        reg_path3 = conan2.cache.export(self.ref)
+        digest3 = FileTreeManifest.load(conan2.cache.export(self.ref))
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.conan_ref),
+        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
                       self.conan.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path3), self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path3), self.conan.user_io.out)
 
         self.assertTrue(os.path.exists(reg_path3))
 
@@ -404,8 +404,8 @@ class OpenSSLConan(ConanFile):
         #    self.assertFalse(os.path.exists(f))
 
     def _create_packages_and_builds(self):
-        reg_builds = self.conan.client_cache.builds(self.conan_ref)
-        reg_packs = self.conan.client_cache.packages(self.conan_ref)
+        reg_builds = self.conan.cache.builds(self.ref)
+        reg_packs = self.conan.cache.packages(self.ref)
 
         folders = [os.path.join(reg_builds, '342525g4f52f35f'),
                    os.path.join(reg_builds, 'ew9o8asdf908asdf80'),

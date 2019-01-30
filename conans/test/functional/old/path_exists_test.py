@@ -2,21 +2,11 @@ import os
 import unittest
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, mkdir, path_exists
+from conans.util.files import load
 
 
 class PathExistsTest(unittest.TestCase):
-
-    def test_paths(self):
-        """Unit test of path_exists"""
-        tmp_dir = temp_folder()
-        tmp_dir = os.path.join(tmp_dir, "WhatEver")
-        new_path = os.path.join(tmp_dir, "CapsDir")
-        mkdir(new_path)
-        self.assertTrue(path_exists(new_path, tmp_dir))
-        self.assertFalse(path_exists(os.path.join(tmp_dir, "capsdir"), tmp_dir))
 
     def test_conanfile_not_found(self):
         test_server = TestServer()

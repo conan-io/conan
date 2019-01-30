@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
@@ -12,47 +12,47 @@ from conans.util.files import list_folder_subdirs, load, save
 
 class ClientMigrator(Migrator):
 
-    def __init__(self, client_cache, current_version, out):
-        self.client_cache = client_cache
-        super(ClientMigrator, self).__init__(client_cache.conan_folder, client_cache.store,
+    def __init__(self, cache, current_version, out):
+        self.cache = cache
+        super(ClientMigrator, self).__init__(cache.conan_folder, cache.store,
                                              current_version, out)
 
     def _update_settings_yml(self, old_settings):
         from conans.client.conf import default_settings_yml
-        settings_path = self.client_cache.settings_path
+        settings_path = self.cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
             self.out.warn("Nothing to migrate here, settings will be generated automatically")
             return
 
-        current_settings = load(self.client_cache.settings_path)
+        current_settings = load(self.cache.settings_path)
         if current_settings != default_settings_yml:
             self.out.warn("Migration: Updating settings.yml")
             if current_settings != old_settings:
-                new_path = self.client_cache.settings_path + ".new"
+                new_path = self.cache.settings_path + ".new"
                 save(new_path, default_settings_yml)
                 self.out.warn("*" * 40)
                 self.out.warn("settings.yml is locally modified, can't be updated")
                 self.out.warn("The new settings.yml has been stored in: %s" % new_path)
                 self.out.warn("*" * 40)
             else:
-                save(self.client_cache.settings_path, default_settings_yml)
+                save(self.cache.settings_path, default_settings_yml)
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
         # VERSION 0.1
         if old_version is None:
             return
-        if old_version < Version("1.9.0"):
+        if old_version < Version("1.12.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -77,7 +77,7 @@ os:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -88,7 +88,7 @@ compiler:
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
                   "7", "7.1", "7.2", "7.3",
-                  "8", "8.1"]
+                  "8", "8.1", "8.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -96,11 +96,13 @@ compiler:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
-                  v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp, 
-                  LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp, 
+                  v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
+                  LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0", "7.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
+                  "5.0", "6.0", "7.0",
+                  "8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
@@ -110,29 +112,29 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
             self._update_settings_yml(old_settings)
-            migrate_plugins_to_hooks(self.client_cache)
+            migrate_plugins_to_hooks(self.cache)
 
         if old_version < Version("1.0"):
-            _migrate_lock_files(self.client_cache, self.out)
+            _migrate_lock_files(self.cache, self.out)
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
-            default_profile_path = os.path.join(self.client_cache.conan_folder, PROFILES_FOLDER,
+            default_profile_path = os.path.join(self.cache.conan_folder, PROFILES_FOLDER,
                                                 DEFAULT_PROFILE_NAME)
             if not os.path.exists(default_profile_path):
                 self.out.warn("Migration: Moving default settings from %s file to %s"
                               % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-                conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
+                conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
 
                 migrate_to_default_profile(conf_path, default_profile_path, output=self.out)
 
                 self.out.warn("Migration: export_source cache new layout")
-                migrate_c_src_export_source(self.client_cache, self.out)
+                migrate_c_src_export_source(self.cache, self.out)
 
 
-def _migrate_lock_files(client_cache, out):
+def _migrate_lock_files(cache, out):
     out.warn("Migration: Removing old lock files")
-    base_dir = client_cache.store
+    base_dir = cache.store
     pkgs = list_folder_subdirs(base_dir, 4)
     for pkg in pkgs:
         out.info("Removing locks for %s" % pkg)
@@ -175,11 +177,10 @@ def migrate_to_default_profile(conf_path, default_profile_path):
         save(default_profile_path, new_profile)
 
 
-def migrate_c_src_export_source(client_cache, out):
-    from conans.util.files import list_folder_subdirs
-    package_folders = list_folder_subdirs(client_cache.store, 4)
+def migrate_c_src_export_source(cache, out):
+    package_folders = list_folder_subdirs(cache.store, 4)
     for package in package_folders:
-        package_folder = os.path.join(client_cache.store, package)
+        package_folder = os.path.join(cache.store, package)
         c_src = os.path.join(package_folder, "export/%s" % EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src):
             out.warn("Migration: Removing package with old export_sources layout: %s" % package)
@@ -190,9 +191,9 @@ def migrate_c_src_export_source(client_cache, out):
                          "remove it manually" % package_folder)
 
 
-def migrate_plugins_to_hooks(client_cache, output=None):
-    plugins_path = os.path.join(client_cache.conan_folder, "plugins")
-    if os.path.exists(plugins_path) and not os.path.exists(client_cache.hooks_path):
-        os.rename(plugins_path, client_cache.hooks_path)
-    conf_path = client_cache.conan_conf_path
+def migrate_plugins_to_hooks(cache, output=None):
+    plugins_path = os.path.join(cache.conan_folder, "plugins")
+    if os.path.exists(plugins_path) and not os.path.exists(cache.hooks_path):
+        os.rename(plugins_path, cache.hooks_path)
+    conf_path = cache.conan_conf_path
     replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)

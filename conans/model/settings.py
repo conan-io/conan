@@ -227,7 +227,7 @@ class Settings(object):
 
     @staticmethod
     def loads(text):
-        return Settings(yaml.load(text) or {})
+        return Settings(yaml.safe_load(text) or {})
 
     def validate(self):
         for field in self.fields:

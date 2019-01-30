@@ -114,20 +114,18 @@ class HelloReuseConan(ConanFile):
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
         client.run("test test Hello/0.1@lasote/stable")
-        ref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.cache.package(pref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
         client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.cache.package(pref), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
-                         load(os.path.join(client.client_cache.package(ref), "FindXXX.cmake")))
+                         load(os.path.join(client.cache.package(pref), "FindXXX.cmake")))
 
     def conan_test_test(self):
-
-        # With classic requires
         conanfile = '''
 from conans import ConanFile, CMake
 import os
@@ -146,32 +144,7 @@ class HelloReuseConan(ConanFile):
         # equal to ./bin/greet, but portable win: .\bin\greet
         self.run(os.sep.join([".","bin", "greet"]))
         '''
-        self._test_with_conanfile(conanfile)
 
-        # With requirements
-        conanfile = '''
-from conans import ConanFile, CMake
-import os
-
-class HelloReuseConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-    generators = "cmake"
-
-    def requirements(self):
-        self.requires("Hello0/0.1@ lasote/stable")
-
-    def build(self):
-        cmake = CMake(self)
-        self.run('cmake "%s" %s' % (self.source_folder, cmake.command_line))
-        self.run("cmake --build . %s" % cmake.build_config)
-
-    def test(self):
-        # equal to ./bin/greet, but portable win: .\bin\greet
-        self.run(os.sep.join([".","bin", "greet"]))
-        '''
-        self._test_with_conanfile(conanfile)
-
-    def _test_with_conanfile(self, test_conanfile):
         client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1")
         print_build = 'self.output.warn("BUILD_TYPE=>%s" % self.settings.build_type)'
@@ -194,17 +167,18 @@ ADD_EXECUTABLE(greet main.cpp)
 TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
 """
         files["test_package/CMakeLists.txt"] = cmakelist
-        files["test_package/conanfile.py"] = test_conanfile
+        files["test_package/conanfile.py"] = conanfile
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
-        client.run("create . lasote/stable")
+        client.run("create . lasote/stable -tf=None")
         time.sleep(1)  # Try to avoid windows errors in CI  (Cannot change permissions)
         client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
+        self.assertIn('Hello Hello0', client.out)
 
-        self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)
-        self.assertNotIn("WARN: conanenv.txt file not found", client.user_io.out)
-        self.assertIn('Hello Hello0', client.user_io.out)
+        self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.out)
+        self.assertNotIn("WARN: conanenv.txt file not found", client.out)
+        self.assertIn('Hello Hello0', client.out)
         client.run("test test_package Hello0/0.1@lasote/stable -s Hello0:build_type=Debug "
                    "-o Hello0:language=1 --build missing")
-        self.assertIn('Hola Hello0', client.user_io.out)
-        self.assertIn('BUILD_TYPE=>Debug', client.user_io.out)
+        self.assertIn('Hola Hello0', client.out)
+        self.assertIn('BUILD_TYPE=>Debug', client.out)

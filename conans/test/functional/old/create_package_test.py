@@ -4,7 +4,6 @@ import unittest
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
-from conans.client.output import ScopedOutput
 from conans.client.packager import create_package
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
@@ -45,8 +44,8 @@ class ExporterTest(unittest.TestCase):
         client.init_dynamic_vars()
         files = hello_source_files()
 
-        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        reg_folder = client.client_cache.export(conan_ref)
+        ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
+        reg_folder = client.cache.export(ref)
 
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
@@ -72,19 +71,18 @@ class ExporterTest(unittest.TestCase):
                      "modules/opencv_mod.hpp":                     "copy"}, path=reg_folder)
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
-        package_ref = PackageReference(conan_ref, "myfakeid")
-        build_folder = client.client_cache.build(package_ref)
-        package_folder = client.client_cache.package(package_ref)
+        pref = PackageReference(ref, "myfakeid")
+        build_folder = client.cache.build(pref)
+        package_folder = client.cache.package(pref)
         install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)
 
-        output = ScopedOutput("", TestBufferConanOutput())
-        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        conanfile = loader.load_conanfile(conanfile_path, None, test_processed_profile())
+        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       output, client.hook_manager, conanfile_path, conan_ref, copy_info=True)
+                       client.hook_manager, conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

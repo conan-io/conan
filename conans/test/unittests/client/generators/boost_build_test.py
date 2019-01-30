@@ -6,13 +6,14 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class BoostJamGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
 
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")

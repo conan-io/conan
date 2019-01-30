@@ -9,7 +9,8 @@ from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.client.output import ConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, test_processed_profile
+from conans.test.utils.tools import TestClient, test_processed_profile,\
+    TestBufferConanOutput
 from conans.util.files import load, save
 
 base_conanfile = '''
@@ -149,7 +150,7 @@ class Pkg(ConanFile):
         client.run("install .")
         client.run("build .", assert_error=True)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)
-        self.assertIn("ERROR: test/1.9.10@PROJECT: Error in build() method, line 12",
+        self.assertIn("ERROR: conanfile.py (test/1.9.10@None/None): Error in build() method, line 12",
                       client.user_io.out)
         self.assertIn("Failed to parse patch: string", client.user_io.out)
 
@@ -162,8 +163,8 @@ class Pkg(ConanFile):
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, None, ConanPythonRequire(None, None))
-        ret = loader.load_conanfile(file_path, None, test_processed_profile())
+        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        ret = loader.load_consumer(file_path, test_processed_profile())
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

@@ -39,15 +39,9 @@ endforeach()
 '''
 
 
-def nowintest(func):
-    if platform.system() == "Windows":
-        func.__test__ = False
-    return func
-
-
 class LibcxxSettingTest(unittest.TestCase):
 
-    @nowintest
+    @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
     def test_declared_stdlib_and_passed(self):
         client = TestClient()
         client.save({"conanfile.py": file_content,
@@ -99,7 +93,7 @@ class ConanFileToolsTest(ConanFile):
         client.save({"conanfile.py": conanfile})
         # Also check that it not fails the config method with Visual Studio, because of the lack of libcxx
         client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
-        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+        self.assertIn("conanfile.py (test/1.9@None/None): Generated conaninfo.txt", client.out)
 
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("libcxx", conaninfo)
@@ -122,10 +116,10 @@ class ConanFileToolsTest(ConanFile):
         client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
-        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("libcxx", conaninfo)
         client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++ -s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
-        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)

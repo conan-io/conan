@@ -120,7 +120,7 @@ AC_OUTPUT
                      "hello.h": header,
                      "hello.cpp": body})
         client.run("create . danimtb/testing")
-        pkg_path = client.client_cache.package(
+        pkg_path = client.cache.package(
                 PackageReference.loads(
                         "test/1.0@danimtb/testing:%s" % NO_SETTINGS_PACKAGE_ID))
 
@@ -158,7 +158,7 @@ class HelloConan(ConanFile):
         self.assertNotIn("PKG_CONFIG_PATH=", client.out)
 
         ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
-        builds_folder = client.client_cache.builds(ref)
+        builds_folder = client.cache.builds(ref)
         bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
 
         client.save({CONANFILE: conanfile % ("'pkg_config'", "")})

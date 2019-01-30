@@ -123,11 +123,11 @@ class AConan(ConanFile):
 
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py")
-        ref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.client_cache.package(ref).replace("\\", "/")
-        self.assertIn("Project: INCLUDE PATH: %s/include" % package_folder, client.user_io.out)
-        self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)
-        self.assertIn("Project: HELLO INCLUDE PATHS: %s/include"
+        pref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package(pref).replace("\\", "/")
+        self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
+        self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
+        self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.user_io.out)
 
     def build_different_folders_test(self):
@@ -309,3 +309,41 @@ class AConan(ConanFile):
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install . --build missing")
         client.run("build .")
+
+    def build_single_full_reference_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile, CMake
+
+class FooConan(ConanFile):
+    name = "foo"
+    version = "1.0"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("create --build foo/1.0@user/stable . user/stable")
+        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
+
+    def build_multiple_full_reference_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile, CMake
+
+class FooConan(ConanFile):
+    name = "foo"
+    version = "1.0"
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("create . user/stable")
+
+        conanfile = """
+from conans import ConanFile
+
+class BarConan(ConanFile):
+    name = "bar"
+    version = "1.0"
+    requires = "foo/1.0@user/stable"
+"""
+        client.save({CONANFILE: conanfile}, clean_first=True)
+        client.run("create --build foo/1.0@user/stable --build bar/1.0@user/testing . user/testing")
+        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
+        self.assertIn("bar/1.0@user/testing: WARN: Forced build from source", client.out)

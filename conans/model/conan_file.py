@@ -2,7 +2,7 @@ import os
 from contextlib import contextmanager
 
 from conans.client import tools
-from conans.client.output import Color
+from conans.client.output import Color, ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -115,9 +115,10 @@ class ConanFile(object):
     options = None
     default_options = None
 
-    def __init__(self, output, runner, user=None, channel=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
-        self.output = output
+        self.output = ScopedOutput(display_name, output)
+        self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
         self._conan_user = user
@@ -268,8 +269,8 @@ class ConanFile(object):
         return retcode
 
     def package_id(self):
-        """ modify the conans info, typically to narrow values
-        eg.: conaninfo.package_references = []
+        """ modify the binary info, typically to narrow values
+        e.g.: self.info.settings.compiler = "Any" => All compilers will generate same ID
         """
 
     def test(self):
@@ -279,9 +280,4 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        if self.name and self.version and self._conan_channel and self._conan_user:
-            return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
-        elif self.name and self.version:
-            return "%s/%s@PROJECT" % (self.name, self.version)
-        else:
-            return "PROJECT"
+        return self.display_name

@@ -45,41 +45,39 @@ class ConanServiceV2(object):
         self._server_store.update_last_revision(reference)
 
     # PACKAGE METHODS
-    def get_package_file_list(self, p_reference, auth_user):
-        self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        file_list = self._server_store.get_package_file_list(p_reference)
+    def get_package_file_list(self, pref, auth_user):
+        self._authorizer.check_read_conan(auth_user, pref.ref)
+        file_list = self._server_store.get_package_file_list(pref)
         if not file_list:
             raise NotFoundException("conanfile not found")
 
-        p_reference = self._server_store.p_ref_with_rev(p_reference)
-        the_time = self._server_store.get_package_revision_time(p_reference)
+        pref = self._server_store.p_ref_with_rev(pref)
+        the_time = self._server_store.get_package_revision_time(pref)
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
-                "reference": p_reference.full_repr(),
+                "reference": pref.full_repr(),
                 "time": the_time}
 
-    def get_package_file(self, p_reference, filename, auth_user):
-        self._authorizer.check_read_conan(auth_user, p_reference.conan)
-        path = self._server_store.get_package_file_path(p_reference, filename)
+    def get_package_file(self, pref, filename, auth_user):
+        self._authorizer.check_read_conan(auth_user, pref.ref)
+        path = self._server_store.get_package_file_path(pref, filename)
         return static_file(os.path.basename(path), root=os.path.dirname(path),
                            mimetype=get_mime_type(path))
 
-    def upload_package_file(self, body, headers, p_reference, filename, auth_user):
-        self._authorizer.check_write_conan(auth_user, p_reference.conan)
+    def upload_package_file(self, body, headers, pref, filename, auth_user):
+        self._authorizer.check_write_conan(auth_user, pref.ref)
         # FIXME: Check that reference contains revisions (MANDATORY TO UPLOAD)
 
         # Check if the recipe exists
-        recipe_path = self._server_store.export(p_reference.conan)
+        recipe_path = self._server_store.export(pref.ref)
         if not os.path.exists(recipe_path):
-            raise NotFoundException("Recipe %s with revision "
-                                    "%s doesn't exist in "
-                                    "remote" % (str(p_reference.conan),
-                                                str(p_reference.conan.revision)))
-        path = self._server_store.get_package_file_path(p_reference, filename)
+            raise NotFoundException("Recipe %s with revision %s doesn't exist in "
+                                    "remote" % (str(pref.ref), str(pref.ref.revision)))
+        path = self._server_store.get_package_file_path(pref, filename)
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
-        self._server_store.update_last_package_revision(p_reference)
+        self._server_store.update_last_package_revision(pref)
 
     # Misc
     @staticmethod

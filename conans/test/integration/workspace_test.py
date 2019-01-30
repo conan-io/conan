@@ -134,11 +134,11 @@ root: HelloA
 """
         client.save({WORKSPACE_FILE: project})
         client.run("install . -if=build")
-        self.assertIn("Workspace HelloC: Applying build-requirement: Tool/0.1@user/testing",
+        self.assertIn("HelloC/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
-        self.assertIn("Workspace HelloB: Applying build-requirement: Tool/0.1@user/testing",
+        self.assertIn("HelloB/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
-        self.assertIn("Workspace HelloA: Applying build-requirement: Tool/0.1@user/testing",
+        self.assertIn("HelloA/root@project/develop: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
         for sub in ("A", "B", "C"):
             conanbuildinfo = load(os.path.join(client.current_folder, "build", sub, "conanbuildinfo.cmake"))

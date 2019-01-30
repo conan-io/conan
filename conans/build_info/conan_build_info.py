@@ -10,7 +10,7 @@ from conans.util.files import load
 
 
 def _extract_uploads_from_conan_trace(path):
-    modules = defaultdict(dict)  # dict of {conan_ref: [abs_path1, abs_path2]}
+    modules = defaultdict(dict)
     try:
         with open(path, "r") as traces:
             for line in traces.readlines():
@@ -26,7 +26,7 @@ def _extract_uploads_from_conan_trace(path):
 
 
 def _extract_downloads_from_conan_trace(path):
-    downloaded_modules = defaultdict(dict)  # dict of {conan_ref: {"files": [doc_file, doc_file], "remote": remote }}
+    downloaded_modules = defaultdict(dict)  # dict of {reference: {"files": [], "remote": remote }}
 
     with open(path, "r") as traces:
         for line in traces.readlines():
@@ -58,7 +58,7 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
     deps = defaultdict(set)  # Reference: [Reference, Reference]
     # Extract needed information
     for module_id, mod_doc in uploaded_files.items():
-        module_id = ConanFileReference.loads(module_id) if mod_doc["type"] == "recipe" \
+        ref_or_pref = ConanFileReference.loads(module_id) if mod_doc["type"] == "recipe" \
             else PackageReference.loads(module_id)
         # Store recipe and package dependencies
         if mod_doc["type"] == "package":
@@ -67,9 +67,9 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
             if conan_infos:
                 conan_info = conan_infos[0]["path"]
                 info = ConanInfo.loads(load(conan_info))
-                for package_reference in info.full_requires:
-                    deps[str(module_id.conan)].add(str(package_reference.conan))
-                    deps[str(module_id)].add(str(package_reference))
+                for pref in info.full_requires:
+                    deps[str(ref_or_pref.ref)].add(str(pref.ref))
+                    deps[str(ref_or_pref)].add(str(pref))
 
     # Add the modules
     for module_id, mod_doc in uploaded_files.items():
@@ -84,7 +84,8 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
         for mod_dep_id in deps[module_id]:
             if mod_dep_id in downloaded_files:
                 down_module = downloaded_files[mod_dep_id]
-                # Check if the remote from the uploaded package matches the remote from the downloaded dependency
+                # Check if the remote from the uploaded package matches the remote
+                # from the downloaded dependency
                 if down_module.get("remote", None) == mod_doc["remote"]:
                     for file_doc in down_module["files"]:
                         module.dependencies.append(_get_dependency(file_doc, mod_dep_id))
@@ -96,13 +97,13 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
 def _get_only_downloads_module(downloaded_files):
     """
     Gets a BuildInfoModule for the downloaded_files
-    :param downloaded_files: {conan_ref: {"files": [doc_file, doc_file], "remote": remote }}
+    :param downloaded_files: {reference: {"files": [doc_file, doc_file], "remote": remote }}
     :return: BuildInfoModule object
     """
     ret = BuildInfoModule()
     ret.id = "DownloadOnly"
-    for _, file_docs in downloaded_files.items():
-        files = file_docs["files"]
+    for _, data in downloaded_files.items():
+        files = data["files"]
         for file_doc in files:
             the_type = _get_type(file_doc["path"])
             dep = BuildInfoModuleDependency(file_doc["name"], the_type, file_doc["sha1"],

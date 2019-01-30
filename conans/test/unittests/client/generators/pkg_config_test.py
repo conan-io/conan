@@ -1,5 +1,3 @@
-import os
-import platform
 import unittest
 
 from conans.client.generators.pkg_config import PkgConfigGenerator
@@ -8,13 +6,13 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.util.files import load
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class PkgGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
-        conanfile = ConanFile(None, None)
+        conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")

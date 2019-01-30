@@ -346,7 +346,7 @@ class MyPkg(ConanFile):
     requires = "Other/1.0@user/channel"
     def build(self):
         for r in self.requires.values():
-            self.output.info("build() Requires: %s" % str(r.conan_reference))
+            self.output.info("build() Requires: %s" % str(r.ref))
         import os
         for dep in self.deps_cpp_info.deps:
             self.output.info("build() cpp_info dep: %s" % dep)
@@ -357,11 +357,13 @@ class MyPkg(ConanFile):
     def test(self):
         pass
         """
+
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
 
         client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include",
+                      client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Other/1.0@user/channel", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
@@ -372,49 +374,6 @@ class MyPkg(ConanFile):
                       client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Pkg",
                       client.out)
-
-    def create_with_tests_and_build_requires_test(self):
-        client = TestClient()
-        # Generate and export the build_require recipe
-        conanfile = """from conans import ConanFile
-class MyBuildRequire(ConanFile):
-    def package_info(self):
-        self.env_info.MYVAR="1"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . Build1/0.1@conan/stable")
-        client.save({"conanfile.py": conanfile.replace('MYVAR="1"', 'MYVAR2="2"')})
-        client.run("create . Build2/0.1@conan/stable")
-
-        # Create a recipe that will use a profile requiring the build_require
-        client.save({"conanfile.py": """from conans import ConanFile
-import os
-
-class MyLib(ConanFile):
-    build_requires = "Build2/0.1@conan/stable"
-    def build(self):
-        assert(os.environ['MYVAR']=='1')
-        assert(os.environ['MYVAR2']=='2')
-
-""", "myprofile": '''
-[build_requires]
-Build1/0.1@conan/stable
-''',
-                    "test_package/conanfile.py": """from conans import ConanFile
-import os
-
-class MyTest(ConanFile):
-    def build(self):
-        assert(os.environ['MYVAR']=='1')
-    def test(self):
-        self.output.info("TESTING!!!")
-"""}, clean_first=True)
-
-        # Test that the build require is applyed to testing
-        client.run("create . Lib/0.1@conan/stable --profile=./myprofile")
-        self.assertEqual(1, str(client.out).count("Lib/0.1@conan/stable: Applying build-requirement:"
-                                                  " Build1/0.1@conan/stable"))
-        self.assertIn("TESTING!!", client.user_io.out)
 
     def build_policy_test(self):
         # https://github.com/conan-io/conan/issues/1956
@@ -492,5 +451,6 @@ class TestConanLib(ConanFile):
         # Test if the specified build folder is respected also when the use of
         # temporary test folders is enabled in the config file.
         client.run("create -tbf=test_package/build_folder . lasote/stable")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package", "build_folder")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
+                                                    "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
