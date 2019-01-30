@@ -110,21 +110,20 @@ class ConfigInstallTest(unittest.TestCase):
 
     def _create_profile_folder(self, folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
-        save_files(folder, {
-            "settings.yml": settings_yml,
-            "remotes.txt": remotes,
-            "profiles/linux": linux_profile,
-            "profiles/windows": win_profile,
-            "hooks/dummy": "#hook dummy",
-            "hooks/foo.py": "#hook foo",
-            "hooks/custom/custom.py": "#hook custom",
-            ".git/hooks/foo": "foo",
-            "hooks/.git/hooks/before_push": "before_push",
-            "config/conan.conf": conan_conf,
-            "pylintrc": "#Custom pylint",
-            "python/myfuncs.py": myfuncpy,
-            "python/__init__.py": ""
-        })
+        save_files(folder, {"settings.yml": settings_yml,
+                            "remotes.txt": remotes,
+                            "profiles/linux": linux_profile,
+                            "profiles/windows": win_profile,
+                            "hooks/dummy": "#hook dummy",
+                            "hooks/foo.py": "#hook foo",
+                            "hooks/custom/custom.py": "#hook custom",
+                            ".git/hooks/foo": "foo",
+                            "hooks/.git/hooks/before_push": "before_push",
+                            "config/conan.conf": conan_conf,
+                            "pylintrc": "#Custom pylint",
+                            "python/myfuncs.py": myfuncpy,
+                            "python/__init__.py": ""
+                            })
         return folder
 
     def _create_zip(self, zippath=None):
@@ -208,11 +207,10 @@ class Pkg(ConanFile):
         shutil.rmtree(self.client.cache.profiles_path)
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self.assertEqual(
-                sorted(os.listdir(self.client.cache.profiles_path)), sorted(["linux", "windows"]))
-        self.assertEqual(
-                load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
-                linux_profile.splitlines())
+        self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
+                         sorted(["linux", "windows"]))
+        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
+                         linux_profile.splitlines())
 
     def install_url_test(self):
         """ should install from a URL

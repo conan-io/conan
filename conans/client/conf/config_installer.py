@@ -116,12 +116,7 @@ def _process_download(item, cache, output, tmp_folder, verify_ssl, requester):
         raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(path_or_url,
-                          cache,
-                          output,
-                          verify_ssl,
-                          requester,
-                          config_type=None,
+def configuration_install(path_or_url, cache, output, verify_ssl, requester, config_type=None,
                           args=None):
     if path_or_url is None:
         try:
@@ -156,8 +151,8 @@ def configuration_install(path_or_url,
             _process_zip_file(path_or_url, cache, output, tmp_folder)
         elif config_type == "url":
             args = None
-            _process_download(
-                    path_or_url, cache, output, tmp_folder, verify_ssl, requester=requester)
+            _process_download(path_or_url, cache, output, tmp_folder, verify_ssl,
+                              requester=requester)
         else:
             raise ConanException("Unable to process config install: %s" % path_or_url)
     finally:

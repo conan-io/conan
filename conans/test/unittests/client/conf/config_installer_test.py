@@ -40,7 +40,7 @@ class ConfigInstallerTests(unittest.TestCase):
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(file_item)
             self.assertEqual("file", config_type)
             self.assertEqual(file_path, url_or_path)
-            self.assertTrue(verify_ssl) if file_item.startswith("file,") \
+            self.assertTrue(verify_ssl) if file_item.startswith("file,")\
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
@@ -61,7 +61,7 @@ class ConfigInstallerTests(unittest.TestCase):
         self.assertEqual("--option", args)
 
         # Test wrong input
-        for item in ["git@github.com:conan-io/conan.git, None" "file/not/exists.zip"]:
+        for item in ["git@github.com:conan-io/conan.git, None", "file/not/exists.zip"]:
             with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
 
