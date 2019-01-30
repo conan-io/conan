@@ -739,9 +739,10 @@ class TurboTestClient(TestClient):
     def package_revision(self, pref):
         return self.cache.package_layout(pref.ref).package_revision(pref)
 
-    def search(self, pattern, remote=None, assert_error=False):
+    def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""
-        self.run("search {} --json {} {}".format(pattern, self.tmp_json_name, remote),
+        self.run("search {} --json {} {} {}".format(pattern, self.tmp_json_name, remote,
+                                                    args or ""),
                  assert_error=assert_error)
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
@@ -775,6 +776,12 @@ class TurboTestClient(TestClient):
                 ret.append(tmp)
         return ret
 
+    def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
+        _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
+        if origin_url:
+            self.runner('git remote add origin {}'.format(origin_url), cwd=self.current_folder)
+        return commit
+
 
 class GenConanfile(object):
     """
@@ -798,6 +805,11 @@ class GenConanfile(object):
         self._package_files = {}
         self._package_files_env = {}
         self._build_messages = []
+        self._scm = {}
+
+    def with_scm(self, scm):
+        self._scm = scm
+        return self
 
     def with_import(self, i):
         if i not in self._imports:
@@ -830,6 +842,13 @@ class GenConanfile(object):
     def with_build_msg(self, msg):
         self._build_messages.append(msg)
         return self
+
+    @property
+    def _scm_line(self):
+        if not self._scm:
+            return ""
+        line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
+        return "scm = {%s}" % line
 
     @property
     def _settings_line(self):
@@ -883,6 +902,8 @@ class GenConanfile(object):
         ret = []
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
+        if self._scm:
+            ret.append("    {}".format(self._scm_line))
         if self._settings_line:
             ret.append("    {}".format(self._settings_line))
         if self._options_line:
