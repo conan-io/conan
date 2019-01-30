@@ -130,8 +130,7 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("info . --build missing --json=\"{}\"".format(json_file))
         self.assertEqual(load(json_file), json_output)
 
-        json_file = os.path.join(temp_folder(), "output.json")
-        self.clients["H3"].run("info . --build missing --json".format(json_file))
+        self.clients["H3"].run("info . --build missing --json")
         self.assert_last_line(self.clients["H3"], json_output)
 
 
