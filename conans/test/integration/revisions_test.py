@@ -130,9 +130,21 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         it gives an error"""
         pass
 
-    def test_alias(self):
+    def test_alias_to_a_rrev(self):
         """ If an alias points to a RREV, it resolved that RREV and no other"""
-        pass
+
+        # Upload one revision
+        pref = self.c_v2.create(self.ref)
+        self.c_v2.upload_all(self.ref)
+
+        # Upload other revision
+        self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("Build Rev 2"))
+        self.c_v2.remove_all()
+
+        # Create an alias to the first revision
+        self.c_v2.run("alias lib/latest@conan/stable {}".format(pref.ref.full_repr()))
+        self.c_v2.run("install lib/latest@conan/stable")
+        self.assertIn("polla", self.c_v2.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_install_rev0(self, v1):
@@ -394,6 +406,10 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertNotEqual(rev2, rev)
         self.assertIsNotNone(rev2)
         self.assertIsNone(rev_time2)
+
+    def test_alias_metadata(self):
+        """If I export an alias it gets a revision"""
+        pass
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")

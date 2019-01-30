@@ -33,6 +33,11 @@ class AliasConanfile(ConanFile):
     digest = FileTreeManifest.create(export_path)
     digest.save(export_path)
 
+    # Create the metadata for the alias
+    with cache.package_layout(reference).update_metadata() as metadata:
+        metadata.recipe.revision = None
+        metadata.recipe.time = None
+
 
 def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):
     """ Export the recipe
