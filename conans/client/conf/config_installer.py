@@ -98,7 +98,7 @@ def _process_folder(folder, cache, output):
                 output.info("Installing profiles:")
                 profiles_path = cache.profiles_path
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
-            elif d == "hooks" and ".git" not in root:    # Avoid git hooks
+            elif d == "hooks" and ".git" not in root:  # Avoid git hooks
                 output.info("Installing hooks:")
                 src_hooks_path = os.path.join(root, d)
                 dst_hooks_path = cache.hooks_path
@@ -157,7 +157,7 @@ def configuration_install(path_or_url,
         elif config_type == "url":
             args = None
             _process_download(
-                path_or_url, cache, output, tmp_folder, verify_ssl, requester=requester)
+                    path_or_url, cache, output, tmp_folder, verify_ssl, requester=requester)
         else:
             raise ConanException("Unable to process config install: %s" % path_or_url)
     finally:

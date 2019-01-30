@@ -12,14 +12,14 @@ from conans.util.files import save, mkdir
 class ConfigInstallerTests(unittest.TestCase):
     def process_config_install_item_test(self):
         config_type, url_or_path, verify_ssl, args = _process_config_install_item(
-            "git, whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4")
+                "git, whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4")
         self.assertEqual("git", config_type)
         self.assertEqual("whaterver.url.com/repo.git", url_or_path)
         self.assertFalse(verify_ssl)
         self.assertEqual("--recusrive --other -b 0.3.4", args)
 
         config_type, url_or_path, verify_ssl, args = _process_config_install_item(
-            "whaterver.url.com/repo.git")
+                "whaterver.url.com/repo.git")
         self.assertEqual("git", config_type)
         self.assertEqual("whaterver.url.com/repo.git", url_or_path)
         self.assertIsNone(verify_ssl)
@@ -30,7 +30,7 @@ class ConfigInstallerTests(unittest.TestCase):
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(dir_item)
             self.assertEqual("dir", config_type)
             self.assertEqual(dir_path, url_or_path)
-            self.assertTrue(verify_ssl) if dir_item.startswith("dir,")\
+            self.assertTrue(verify_ssl) if dir_item.startswith("dir,") \
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
@@ -44,10 +44,8 @@ class ConfigInstallerTests(unittest.TestCase):
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
-        for url_item in [
-                "url, http://is/an/absloute/path with spaces/here/file.zip, True, None",
-                "http://is/an/absloute/path with spaces/here/file.zip"
-        ]:
+        for url_item in ["url, http://is/an/absloute/path with spaces/here/file.zip, True, None",
+                         "http://is/an/absloute/path with spaces/here/file.zip"]:
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(url_item)
             self.assertEqual("url", config_type)
             self.assertEqual("http://is/an/absloute/path with spaces/here/file.zip", url_or_path)
@@ -56,7 +54,7 @@ class ConfigInstallerTests(unittest.TestCase):
             self.assertIsNone(args)
 
         config_type, url, verify_ssl, args = _process_config_install_item(
-            "url,   http://is/an/absloute/path with spaces/here/file.zip,False, --option  ")
+                "url,   http://is/an/absloute/path with spaces/here/file.zip,False, --option  ")
         self.assertEqual("url", config_type)
         self.assertEqual("http://is/an/absloute/path with spaces/here/file.zip", url)
         self.assertFalse(verify_ssl)
