@@ -1,5 +1,7 @@
 import unittest
-from collections import namedtuple
+from collections import namedtuple, Counter
+
+from parameterized import parameterized
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.conf import default_settings_yml
@@ -19,58 +21,17 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutpu
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from mock import Mock
 from conans.client.graph.build_mode import BuildMode
+from conans.test.utils.conanfile import TestConanFile
+from conans.paths.simple_paths import SimplePaths
+from conans.client.graph.range_resolver import RangeResolver
 
-say_content = """
-from conans import ConanFile
+say_content = TestConanFile("Say", "0.1")
+say_content2 = TestConanFile("Say", "0.2")
+hello_content = TestConanFile("Hello", "1.2", requires=["Say/0.1@user/testing"])
+chat_content = TestConanFile("Chat", "2.3", requires=["Hello/1.2@user/testing"])
+bye_content = TestConanFile("Bye", "0.1", requires=["Say/0.1@user/testing"])
+bye_content2 = TestConanFile("Bye", "0.2", requires=["Say/0.2@user/testing"])
 
-class SayConan(ConanFile):
-    name = "Say"
-    version = "0.1"
-"""
-
-say_content2 = """
-from conans import ConanFile
-
-class SayConan(ConanFile):
-    name = "Say"
-    version = "0.2"
-"""
-
-hello_content = """
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    requires = "Say/0.1@user/testing"
-"""
-
-chat_content = """
-from conans import ConanFile
-
-class ChatConan(ConanFile):
-    name = "Chat"
-    version = "2.3"
-    requires = "Hello/1.2@user/testing"
-"""
-
-bye_content = """
-from conans import ConanFile
-
-class ByeConan(ConanFile):
-    name = "Bye"
-    version = "0.2"
-    requires = "Say/0.1@user/testing"
-"""
-
-bye_content2 = """
-from conans import ConanFile
-
-class ByeConan(ConanFile):
-    name = "Bye"
-    version = "0.2"
-    requires = "Say/0.2@user/testing"
-"""
 
 hello_ref = ConanFileReference.loads("Hello/1.2@user/testing")
 say_ref = ConanFileReference.loads("Say/0.1@user/testing")
@@ -90,16 +51,10 @@ Edge = namedtuple("Edge", "src dst")
 
 
 def _get_edges(graph):
-
     edges = set()
     for n in graph.nodes:
         edges.update([Edge(n, neigh) for neigh in n.neighbors()])
     return edges
-
-
-class MockRequireResolver(object):
-    def resolve(self, require, ref, update, remote_name):  # @UnusedVariable
-        return
 
 
 def _clear_revs(requires):
@@ -108,33 +63,53 @@ def _clear_revs(requires):
     return requires
 
 
-class ConanRequirementsTest(unittest.TestCase):
+class MockSearchRemote(object):
+    def __init__(self, packages=None):
+        self.packages = packages or []
+        self.count = Counter()
+
+    def search_remotes(self, pattern, ignorecase):  # @UnusedVariable
+        self.count[pattern] += 1
+        return self.packages
+
+
+class GraphTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
+        paths = SimplePaths(self.retriever.folder)
+        self.remote_search = MockSearchRemote()
+        self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None, None)
-
-    def root(self, content):
-        self.loader.cached_conanfiles = {}
-        processed_profile = test_processed_profile()
-        root_conan = self.retriever.root(content, processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             processed_profile)
+                                        self.resolver, None, None)
         cache = Mock()
         remote_manager = None
-        build_mode = BuildMode([], self.output)
-        binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
-                                                  remote_manager, workspace=None)
-        binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                         update=False, remote_name=None)
+        self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
+                                                       remote_manager, workspace=None)
 
+    def build_graph(self, content, options="", settings=""):
+        self.loader.cached_conanfiles = {}
+        full_settings = Settings.loads(default_settings_yml)
+        full_settings.values = Values.loads(settings)
+        profile = Profile()
+        profile.processed_settings = full_settings
+        profile.options = OptionsValues.loads(options)
+        processed_profile = test_processed_profile(profile=profile)
+        root_conan = self.retriever.root(str(content), processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+
+        build_mode = BuildMode([], self.output)
+        self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
+                                              update=False, remote_name=None)
         return deps_graph
 
+
+class ConanRequirementsTest(GraphTest):
+
     def test_basic(self):
-        deps_graph = self.root(say_content)
+        deps_graph = self.build_graph(say_content)
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -159,7 +134,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def test_transitive(self):
         self.retriever.conan(say_ref, say_content)
-        deps_graph = self.root(hello_content)
+        deps_graph = self.build_graph(hello_content)
         self.assertEqual(2, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
         say = _get_nodes(deps_graph, "Say")[0]
@@ -189,7 +164,7 @@ class ConanRequirementsTest(unittest.TestCase):
     def test_transitive_two_levels(self):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -234,7 +209,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -286,7 +261,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(say_ref2, say_content2)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -335,7 +310,7 @@ class ChatConan(ConanFile):
 
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -380,7 +355,7 @@ class ChatConan(ConanFile):
 
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -425,7 +400,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content2)
         with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
-            self.root(chat_content)
+            self.build_graph(chat_content)
 
     def test_diamond_conflict(self):
         chat_content = """
@@ -442,7 +417,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content2)
 
         with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
-            self.root(chat_content)
+            self.build_graph(chat_content)
 
     def test_diamond_conflict_solved(self):
         chat_content = """
@@ -458,7 +433,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref2, say_content2)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content2)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overridden by "
                       "your conanfile to Say/0.2@user/testing", self.output)
@@ -508,7 +483,7 @@ class SayConan(ConanFile):
     options = {"myoption": [123, 234]}
     default_options = "myoption=123"
 """
-        deps_graph = self.root(say_content)
+        deps_graph = self.build_graph(say_content)
         self.assertEqual(1, len(deps_graph.nodes))
         say = _get_nodes(deps_graph, "Say")[0]
         self.assertEqual(_get_edges(deps_graph), set())
@@ -528,7 +503,7 @@ class SayConan(ConanFile):
 
         def _assert_conanfile(conanfile_content):
             self.retriever.conan(say_ref, say_content)
-            deps_graph = self.root(conanfile_content)
+            deps_graph = self.build_graph(conanfile_content)
 
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
@@ -617,7 +592,7 @@ class ChatConan(ConanFile):
 """
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -695,7 +670,7 @@ class ChatConan(ConanFile):
 """
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -746,7 +721,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
 
         with self.assertRaises(ConanException) as cm:
-            self.root(chat_content)
+            self.build_graph(chat_content)
         self.assertEqual(str(cm.exception),
                          "Say/0.1@user/testing: %s" % option_not_exist_msg("myoption2",
                                                                            ['myoption']))
@@ -764,7 +739,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
 
         with self.assertRaises(ConanException) as cm:
-            self.root(chat_content)
+            self.build_graph(chat_content)
         self.assertEqual(str(cm.exception),  "Say/0.1@user/testing: %s"
                          % option_wrong_value_msg("myoption", "235", ["123", "234"]))
 
@@ -806,7 +781,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -877,7 +852,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content)
 
         with self.assertRaisesRegexp(ConanException, "tried to change"):
-            self.root(chat_content)
+            self.build_graph(chat_content)
 
     def test_diamond_conflict_options_solved(self):
         say_content = """
@@ -918,7 +893,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -1001,7 +976,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
 
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
         self.assertEqual(5, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
         bye = _get_nodes(deps_graph, "Bye")[0]
@@ -1039,7 +1014,7 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@user/testing", "Bye/0.2@user/testing"
     default_options = "Say:zip=False"
 """
-        deps_graph = self.root(chat_content2)
+        deps_graph = self.build_graph(chat_content2)
         self.assertEqual(4, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
         bye = _get_nodes(deps_graph, "Bye")[0]
@@ -1085,27 +1060,6 @@ class ChatConan(ConanFile):
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_conditional_diamond(self):
-        zlib_content = """
-from conans import ConanFile
-
-class ZlibConan(ConanFile):
-    name = "Zlib"
-    version = "0.1"
-"""
-        png_content = """
-from conans import ConanFile
-
-class PngConan(ConanFile):
-    name = "png"
-    version = "0.1"
-"""
-        base_content = """
-from conans import ConanFile
-
-class BaseConan(ConanFile):
-    name = "Base"
-    version = "0.1"
-"""
         say_content = """
 from conans import ConanFile
 
@@ -1131,20 +1085,12 @@ class HelloConan(ConanFile):
     requires = "Say/0.1@user/testing"
     default_options = "Say:zip=True"
 """
-        chat_content = """
-from conans import ConanFile
-
-class ChatConan(ConanFile):
-    name = "Chat"
-    version = "2.3"
-    requires = "Say/0.1@user/testing", "Hello/1.2@user/testing"
-"""
         zlib_ref = ConanFileReference.loads("Zlib/0.1@user/testing")
         png_ref = ConanFileReference.loads("png/0.1@user/testing")
         base_ref = ConanFileReference.loads("Base/0.1@user/testing")
-        self.retriever.conan(zlib_ref, zlib_content)
-        self.retriever.conan(base_ref, base_content)
-        self.retriever.conan(png_ref, png_content)
+        self.retriever.conan(zlib_ref, TestConanFile("ZLib", "0.1"))
+        self.retriever.conan(base_ref, TestConanFile("Base", "0.1"))
+        self.retriever.conan(png_ref, TestConanFile("png", "0.1"))
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
 
@@ -1152,7 +1098,8 @@ class ChatConan(ConanFile):
     Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
-            _ = self.root(chat_content)
+            _ = self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
+                                                                        "Hello/1.2@user/testing"]))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)
@@ -1186,7 +1133,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref2, say_content2)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(5, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -1260,7 +1207,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref2, say_content2)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(5, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -1320,7 +1267,7 @@ class HelloConan(ConanFile):
 """
 
         self.retriever.conan(say_ref, say_content)
-        deps_graph = self.root(hello_content)
+        deps_graph = self.build_graph(hello_content)
 
         self.assertEqual(2, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -1343,7 +1290,7 @@ class HelloConan(ConanFile):
 """
 
         self.retriever.conan(say_ref, say_content)
-        deps_graph = self.root(hello_content)
+        deps_graph = self.build_graph(hello_content)
 
         self.assertEqual(2, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -1368,7 +1315,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
         chat = _get_nodes(deps_graph, "Chat")[0]
@@ -1423,7 +1370,7 @@ class ChatConan(ConanFile):
 
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         chat = _get_nodes(deps_graph, "Chat")[0]
@@ -1436,7 +1383,7 @@ class ChatConan(ConanFile):
                          "shared=True\nHello:shared=True\nSay:shared=False")
 
         # Now change the chat content
-        deps_graph = self.root(chat_content.replace("shared=True", "shared=False"))
+        deps_graph = self.build_graph(chat_content.replace("shared=True", "shared=False"))
 
         self.assertEqual(3, len(deps_graph.nodes))
         chat = _get_nodes(deps_graph, "Chat")[0]
@@ -1449,7 +1396,7 @@ class ChatConan(ConanFile):
 
         # Now change the hello content
         self.retriever.conan(hello_ref, hello_content.replace("shared=True", "shared=False"))
-        deps_graph = self.root(chat_content)
+        deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
         chat = _get_nodes(deps_graph, "Chat")[0]
@@ -1512,7 +1459,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None, None)
+                                        Mock(), None, None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1522,14 +1469,14 @@ class ConsumerConan(ConanFile):
         self.retriever.conan(libc_ref, self.libc_content)
         self.retriever.conan(libd_ref, self.libd_content)
 
-    def root(self, content):
+    def build_graph(self, content):
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
-        self.root(self.consumer_content)
+        self.build_graph(self.consumer_content)
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
 
@@ -1546,7 +1493,7 @@ class LibDConan(ConanFile):
         self.retriever.conan(libd_ref, libd_content)
 
         with self.assertRaisesRegexp(ConanException, "Conflict in LibB/0.1@user/testing"):
-            self.root(self.consumer_content)
+            self.build_graph(self.consumer_content)
         self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
@@ -1565,7 +1512,7 @@ class LibDConan(ConanFile):
         self.retriever.conan(libd_ref, libd_content)
 
         with self.assertRaisesRegexp(ConanException, "Conflict in LibB/0.1@user/testing"):
-            self.root(self.consumer_content)
+            self.build_graph(self.consumer_content)
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
 
@@ -1585,7 +1532,7 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.conan(libd_ref, libd_content)
 
-        self.root(self.consumer_content)
+        self.build_graph(self.consumer_content)
         self.assertEqual(2, str(self.output).count("LibA requirements()"))
         self.assertEqual(2, str(self.output).count("LibA configure()"))
 
@@ -1594,66 +1541,25 @@ class LibDConan(ConanFile):
         then, the other downstream is discarded there, no need to propagate twice
         upstream
         """
-
-        libc_content = """
-from conans import ConanFile
-
-class LibCConan(ConanFile):
-    name = "LibC"
-    version = "0.1"
-    requires = "LibB/0.1@user/testing"
-    default_options = "LibA:shared=False"
-"""
-        libd_content = """
-from conans import ConanFile
-
-class LibDConan(ConanFile):
-    name = "LibD"
-    version = "0.1"
-    requires = "LibB/0.1@user/testing"
-    default_options = "LibA:shared=True"
-"""
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
-        self.retriever.conan(libd_ref, libd_content)
+        self.retriever.conan(libd_ref, TestConanFile("LibD", "0.1",
+                                                     requires=["LibB/0.1@user/testing"],
+                                                     default_options="LibA:shared=True"))
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
-        self.retriever.conan(libc_ref, libc_content)
+        self.retriever.conan(libc_ref, TestConanFile("LibC", "0.1",
+                                                     requires=["LibB/0.1@user/testing"],
+                                                     default_options="LibA:shared=False"))
 
         with self.assertRaisesRegexp(ConanException,
                                      "LibD/0.1@user/testing tried to change LibB/0.1@user/testing "
                                      "option LibA:shared to True"):
-            self.root(self.consumer_content)
+            self.build_graph(self.consumer_content)
 
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
 
 
-class CoreSettingsTest(unittest.TestCase):
-
-    def setUp(self):
-        self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
-        self.retriever = Retriever(self.loader)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver(), None, None)
-
-    def root(self, content, options="", settings=""):
-        full_settings = Settings.loads(default_settings_yml)
-        full_settings.values = Values.loads(settings)
-        profile = Profile()
-        profile.processed_settings = full_settings
-        profile.options = OptionsValues.loads(options)
-        processed_profile = test_processed_profile(profile=profile)
-        root_conan = self.retriever.root(content, processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
-
-        cache = Mock()
-        remote_manager = None
-        build_mode = BuildMode([], self.output)
-        binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
-                                                  remote_manager, workspace=None)
-        binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                         update=False, remote_name=None)
-        return deps_graph
+class CoreSettingsTest(GraphTest):
 
     def test_basic(self):
         content = """
@@ -1669,7 +1575,7 @@ class SayConan(ConanFile):
         self.info.settings.os = "Win"
         self.info.options.myoption = "1,2,3"
 """
-        deps_graph = self.root(content, options="myoption=2", settings="os=Windows")
+        deps_graph = self.build_graph(content, options="myoption=2", settings="os=Windows")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1696,7 +1602,7 @@ class SayConan(ConanFile):
 
         check(conanfile, "myoption=2", "os=Windows")
 
-        deps_graph = self.root(content, options="myoption=1", settings="os=Linux")
+        deps_graph = self.build_graph(content, options="myoption=1", settings="os=Linux")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1706,10 +1612,10 @@ class SayConan(ConanFile):
 
     def test_errors(self):
         with self.assertRaisesRegexp(ConanException, "root.py: No subclass of ConanFile"):
-            self.root("")
+            self.build_graph("")
 
         with self.assertRaisesRegexp(ConanException, "root.py: More than 1 conanfile in the file"):
-            self.root("""from conans import ConanFile
+            self.build_graph("""from conans import ConanFile
 class HelloConan(ConanFile):pass
 class ByeConan(ConanFile):pass""")
 
@@ -1727,7 +1633,7 @@ class SayConan(ConanFile):
         if self.settings.os == "Linux":
             self.options.clear()
 """
-        deps_graph = self.root(content, options="myoption=2", settings="os=Windows")
+        deps_graph = self.build_graph(content, options="myoption=2", settings="os=Windows")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1752,7 +1658,7 @@ class SayConan(ConanFile):
 
         check(conanfile, "myoption=2", "os=Windows")
 
-        deps_graph = self.root(content, options="myoption=1", settings="os=Linux")
+        deps_graph = self.build_graph(content, options="myoption=1", settings="os=Linux")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1775,7 +1681,8 @@ class SayConan(ConanFile):
             self.settings.remove("arch")
             self.settings.os.remove("Linux")
 """
-        deps_graph = self.root(content, options="arch_independent=True", settings="os=Windows")
+        deps_graph = self.build_graph(content, options="arch_independent=True",
+                                      settings="os=Windows")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1801,7 +1708,7 @@ class SayConan(ConanFile):
         check(conanfile, "arch_independent=True", "os=Windows")
 
         with self.assertRaises(ConanException) as cm:
-            self.root(content, options="arch_independent=True", settings="os=Linux")
+            self.build_graph(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
                                     ['Android', 'Arduino', 'FreeBSD', 'Macos',
                                      'SunOS', 'Windows', 'WindowsStore',
@@ -1820,8 +1727,8 @@ class SayConan(ConanFile):
     def config(self):
         del self.settings.compiler.version
 """
-        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86\n"
-                               "compiler.libcxx=libstdc++")
+        deps_graph = self.build_graph(content, settings="os=Windows\n compiler=gcc\narch=x86\n"
+                                      "compiler.libcxx=libstdc++")
         self.assertIn("WARN: config() has been deprecated. Use config_options and configure",
                       self.output)
         self.assertEqual(_get_edges(deps_graph), set())
@@ -1857,7 +1764,7 @@ class SayConan(ConanFile):
             self.settings.clear()
             del self.options.shared
 """
-        deps_graph = self.root(content, settings="os=Linux")
+        deps_graph = self.build_graph(content, settings="os=Linux")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1872,7 +1779,7 @@ class SayConan(ConanFile):
         self.assertEqual(conanfile.requires, Requirements())
 
         # in lib mode, there is OS and shared
-        deps_graph = self.root(content, settings="os=Linux", options="header_only=False")
+        deps_graph = self.build_graph(content, settings="os=Linux", options="header_only=False")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1887,7 +1794,7 @@ class SayConan(ConanFile):
         self.assertEqual(conanfile.requires, Requirements())
 
         # In windows there is no shared option
-        deps_graph = self.root(content, settings="os=Windows", options="header_only=False")
+        deps_graph = self.build_graph(content, settings="os=Windows", options="header_only=False")
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1941,13 +1848,9 @@ class ChatConan(ConanFile):
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
                                              processed_profile=processed_profile)
 
-        cache = Mock()
-        remote_manager = None
         build_mode = BuildMode([], self.output)
-        binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
-                                                  remote_manager, workspace=None)
-        binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                         update=False, remote_name=None)
+        self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
+                                              update=False, remote_name=None)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
@@ -2013,3 +1916,233 @@ class ChatConan(ConanFile):
                          "%s:95c360996106af45b8eec11a37df19fda39a5880\n"
                          "%s:751fd69d10b2a54fdd8610cdae748d6b22700841"
                          % (str(hello_ref), str(say_ref)))
+
+
+class VersionRangesTest(GraphTest):
+
+    def setUp(self):
+        super(VersionRangesTest, self).setUp()
+
+        for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+            say_content = TestConanFile("Say", v)
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
+            self.retriever.conan(say_ref, say_content)
+
+    def build_graph(self, content, update=False):
+        self.loader.cached_conanfiles = {}
+        processed_profile = test_processed_profile()
+        root_conan = self.retriever.root(str(content), processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
+        self.output.write("\n".join(self.resolver.output))
+        return deps_graph
+
+    def test_local_basic(self):
+        for expr, solution in [(">0.0", "2.2.1"),
+                               (">0.1,<1", "0.3"),
+                               (">0.1,<1||2.1", "2.1"),
+                               ("", "2.2.1"),
+                               ("~0", "0.3"),
+                               ("~=1", "1.2.1"),
+                               ("~1.1", "1.1.2"),
+                               ("~=2", "2.2.1"),
+                               ("~=2.1", "2.1"),
+                               ]:
+            deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
+                                                        requires=["Say/[%s]@myuser/testing" % expr]))
+
+            self.assertEqual(2, len(deps_graph.nodes))
+            hello = _get_nodes(deps_graph, "Hello")[0]
+            say = _get_nodes(deps_graph, "Say")[0]
+            self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
+
+            self.assertEqual(hello.ref, None)
+            conanfile = hello.conanfile
+            self.assertEqual(conanfile.version, "1.2")
+            self.assertEqual(conanfile.name, "Hello")
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
+            self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
+
+    def test_remote_basic(self):
+        self.resolver._local_search = None
+        remote_packages = []
+        for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+            say_ref = ConanFileReference.loads("Say/[%s]@myuser/testing" % v)
+            remote_packages.append(say_ref)
+        self.remote_search.packages = remote_packages
+        for expr, solution in [(">0.0", "2.2.1"),
+                               (">0.1,<1", "0.3"),
+                               (">0.1,<1||2.1", "2.1"),
+                               ("", "2.2.1"),
+                               ("~0", "0.3"),
+                               ("~=1", "1.2.1"),
+                               ("~1.1", "1.1.2"),
+                               ("~=2", "2.2.1"),
+                               ("~=2.1", "2.1"),
+                               ]:
+            deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
+                                                        requires=["Say/[%s]@myuser/testing" % expr]),
+                                          update=True)
+            self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
+            self.assertEqual(2, len(deps_graph.nodes))
+            hello = _get_nodes(deps_graph, "Hello")[0]
+            say = _get_nodes(deps_graph, "Say")[0]
+            self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
+
+            self.assertEqual(hello.ref, None)
+            conanfile = hello.conanfile
+            self.assertEqual(conanfile.version, "1.2")
+            self.assertEqual(conanfile.name, "Hello")
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
+            self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
+
+    def test_remote_optimized(self):
+        self.resolver._local_search = None
+        remote_packages = []
+        for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+            say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
+            remote_packages.append(say_ref)
+        self.remote_search.packages = remote_packages
+
+        dep_content = """from conans import ConanFile
+class Dep1Conan(ConanFile):
+    requires = "Say/[%s]@myuser/testing"
+"""
+        dep_ref = ConanFileReference.loads("Dep1/0.1@myuser/testing")
+        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        dep_ref = ConanFileReference.loads("Dep2/0.1@myuser/testing")
+        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+
+        hello_content = """from conans import ConanFile
+class HelloConan(ConanFile):
+    name = "Hello"
+    requires = "Dep1/0.1@myuser/testing", "Dep2/0.1@myuser/testing"
+"""
+        deps_graph = self.build_graph(hello_content, update=True)
+        self.assertEqual(4, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        dep1 = _get_nodes(deps_graph, "Dep1")[0]
+        dep2 = _get_nodes(deps_graph, "Dep2")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, dep1), Edge(hello, dep2),
+                                                  Edge(dep1, say), Edge(dep2, say)})
+
+        # Most important check: counter of calls to remote
+        self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
+
+    @parameterized.expand([("", "0.3", None, None),
+                           ('"Say/1.1@myuser/testing"', "1.1", False, False),
+                           ('"Say/0.2@myuser/testing"', "0.2", False, True),
+                           ('("Say/1.1@myuser/testing", "override")', "1.1", True, False),
+                           ('("Say/0.2@myuser/testing", "override")', "0.2", True, True),
+                           # ranges
+                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False),
+                           ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True),
+                           ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True),
+                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False),
+                           ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True),
+                           ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True),
+                           ])
+    def transitive_test(self, version_range, solution, override, valid):
+        hello_text = TestConanFile("Hello", "1.2",
+                                   requires=["Say/[>0.1, <1]@myuser/testing"])
+        hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
+        self.retriever.conan(hello_ref, hello_text)
+
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.2@myuser/testing", %s
+"""
+        if valid is False:
+            with self.assertRaisesRegexp(ConanException, "not valid"):
+                self.build_graph(chat_content % version_range)
+            return
+
+        deps_graph = self.build_graph(chat_content % version_range)
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        edges = {Edge(hello, say), Edge(chat, hello)}
+        if override is not None:
+            self.assertIn("overridden", self.output)
+        else:
+            self.assertNotIn("overridden", self.output)
+        if override is False:
+            edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
+
+        if valid is True:
+            self.assertIn(" valid", self.output)
+            self.assertNotIn("not valid", self.output)
+        elif valid is False:
+            self.assertIn("not valid", self.output)
+        self.assertEqual(3, len(deps_graph.nodes))
+
+        self.assertEqual(_get_edges(deps_graph), edges)
+
+        self.assertEqual(hello.ref.copy_clear_rev(), hello_ref)
+        conanfile = hello.conanfile
+        self.assertEqual(conanfile.version, "1.2")
+        self.assertEqual(conanfile.name, "Hello")
+        say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
+        self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
+
+    def duplicated_error_test(self):
+        content = TestConanFile("log4cpp", "1.1.1")
+        log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
+        self.retriever.conan(log4cpp_ref, content)
+
+        content = """
+from conans import ConanFile
+
+class LoggerInterfaceConan(ConanFile):
+    name = "LoggerInterface"
+    version = "0.1.1"
+
+    def requirements(self):
+        self.requires("log4cpp/[~1.1]@myuser/testing")
+"""
+        logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@myuser/testing")
+        self.retriever.conan(logiface_ref, content)
+
+        content = """
+from conans import ConanFile
+
+class OtherConan(ConanFile):
+    name = "other"
+    version = "2.0.11549"
+    requires = "LoggerInterface/[~0.1]@myuser/testing"
+"""
+        other_ref = ConanFileReference.loads("other/2.0.11549@myuser/testing")
+        self.retriever.conan(other_ref, content)
+
+        content = """
+from conans import ConanFile
+
+class Project(ConanFile):
+    requires = "LoggerInterface/[~0.1]@myuser/testing", "other/[~2.0]@myuser/testing"
+"""
+        deps_graph = self.build_graph(content)
+
+        log4cpp = _get_nodes(deps_graph, "log4cpp")[0]
+        logger_interface = _get_nodes(deps_graph, "LoggerInterface")[0]
+        other = _get_nodes(deps_graph, "other")[0]
+
+        self.assertEqual(4, len(deps_graph.nodes))
+
+        self.assertEqual(log4cpp.ref.copy_clear_rev(), log4cpp_ref)
+        conanfile = log4cpp.conanfile
+        self.assertEqual(conanfile.version, "1.1.1")
+        self.assertEqual(conanfile.name, "log4cpp")
+
+        self.assertEqual(logger_interface.ref.copy_clear_rev(), logiface_ref)
+        conanfile = logger_interface.conanfile
+        self.assertEqual(conanfile.version, "0.1.1")
+        self.assertEqual(conanfile.name, "LoggerInterface")
+
+        self.assertEqual(other.ref.copy_clear_rev(), other_ref)
+        conanfile = other.conanfile
+        self.assertEqual(conanfile.version, "2.0.11549")
+        self.assertEqual(conanfile.name, "other")
