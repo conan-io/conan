@@ -16,6 +16,9 @@ from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
     test_processed_profile
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from mock import Mock
+from conans.client.graph.build_mode import BuildMode
 
 say_content = """
 from conans import ConanFile
@@ -120,6 +123,14 @@ class ConanRequirementsTest(unittest.TestCase):
         root_conan = self.retriever.root(content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
                                              processed_profile)
+        cache = Mock()
+        remote_manager = None
+        build_mode = BuildMode([], self.output)
+        binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
+                                                  remote_manager, workspace=None)
+        binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
+                                         update=False, remote_name=None)
+
         return deps_graph
 
     def test_basic(self):
@@ -909,7 +920,6 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content)
         deps_graph = self.root(chat_content)
 
-        self.assertEqual(self.output, "")
         self.assertEqual(4, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
         bye = _get_nodes(deps_graph, "Bye")[0]
@@ -992,7 +1002,6 @@ class ChatConan(ConanFile):
         self.retriever.conan(bye_ref, bye_content)
 
         deps_graph = self.root(chat_content)
-        self.assertEqual(self.output, "")
         self.assertEqual(5, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
         bye = _get_nodes(deps_graph, "Bye")[0]
@@ -1031,7 +1040,6 @@ class ChatConan(ConanFile):
     default_options = "Say:zip=False"
 """
         deps_graph = self.root(chat_content2)
-        self.assertEqual(self.output, "")
         self.assertEqual(4, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
         bye = _get_nodes(deps_graph, "Bye")[0]
@@ -1623,6 +1631,10 @@ class CoreSettingsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
+        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.retriever = Retriever(self.loader)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
+                                        MockRequireResolver(), None, None)
 
     def root(self, content, options="", settings=""):
         full_settings = Settings.loads(default_settings_yml)
@@ -1630,12 +1642,17 @@ class CoreSettingsTest(unittest.TestCase):
         profile = Profile()
         profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
-        retriever = Retriever(loader)
-        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), None, None)
         processed_profile = test_processed_profile(profile=profile)
-        root_conan = retriever.root(content, processed_profile)
-        deps_graph = builder.load_graph(root_conan, False, False, None, processed_profile)
+        root_conan = self.retriever.root(content, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+
+        cache = Mock()
+        remote_manager = None
+        build_mode = BuildMode([], self.output)
+        binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
+                                                  remote_manager, workspace=None)
+        binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
+                                         update=False, remote_name=None)
         return deps_graph
 
     def test_basic(self):
@@ -1911,22 +1928,26 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@user/testing"
     options = {"myoption_chat": ["on", "off"]}
 """
-        output = TestBufferConanOutput()
         profile = Profile()
         profile.processed_settings = Settings()
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
-        loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
-        retriever = Retriever(loader)
-        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), None, None)
-        retriever.conan(say_ref, say_content)
-        retriever.conan(hello_ref, hello_content)
+        self.retriever.conan(say_ref, say_content)
+        self.retriever.conan(hello_ref, hello_content)
 
         processed_profile = test_processed_profile(profile=profile)
-        root_conan = retriever.root(chat_content, processed_profile)
-        deps_graph = builder.load_graph(root_conan, False, False, None,
-                                        processed_profile=processed_profile)
+        root_conan = self.retriever.root(chat_content, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None,
+                                             processed_profile=processed_profile)
+
+        cache = Mock()
+        remote_manager = None
+        build_mode = BuildMode([], self.output)
+        binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
+                                                  remote_manager, workspace=None)
+        binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
+                                         update=False, remote_name=None)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]
