@@ -126,7 +126,7 @@ class HelloConan(ConanFile):
             self.assertEquals(num_post, 2)  # 2 get urls
 
         num_get = len([it for it in actions if "REST_API_CALL" in it and "GET" in it])
-        self.assertEquals(num_get, 12)
+        self.assertEquals(num_get, 10 if not client.revisions_enabled else 12)
 
         # Check masked signature
         for action in actions:

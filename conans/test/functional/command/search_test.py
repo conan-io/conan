@@ -12,13 +12,14 @@ from mock import patch
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.client.tools import environment_append
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
-from conans.util.files import list_folder_subdirs, load
+from conans.util.files import list_folder_subdirs, load, save
 
 conan_vars1 = '''
 [settings]
@@ -176,6 +177,24 @@ class SearchTest(unittest.TestCase):
                                                PACKAGES_FOLDER,
                                                CONANINFO): conan_vars_tool_linx64},
                          self.client.cache.store)
+        # Fake metadata
+
+        def create_metadata(folder, pids):
+            metadata = PackageMetadata()
+            metadata.recipe.revision = DEFAULT_REVISION_V1
+            for pid in pids:
+                metadata.packages[pid].revision = DEFAULT_REVISION_V1
+            save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
+
+        create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
+                                       "LinuxPackageSHA"])
+        create_metadata(root_folder11, ["WindowsPackageSHA"])
+        create_metadata(root_folder12, ["WindowsPackageSHA"])
+        create_metadata(root_folder2, ["a44f541cd44w57"])
+        create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
@@ -1125,7 +1144,7 @@ class Test(ConanFile):
 
         # List locally
         client.run("search lib/1.0@user/testing --revisions")
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
 
         # Create new revision and upload
         client.save({"conanfile.py": conanfile + "# force new rev"})
@@ -1138,6 +1157,8 @@ class Test(ConanFile):
         # List remote
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
+        client.run("remove -f lib*")
+        client.run("install lib/1.0@user/testing --build")  # To update the local time
         client.run("search lib/1.0@user/testing -r default --revisions")
 
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
@@ -1187,6 +1208,13 @@ class Test(ConanFile):
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
+        client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
+
+        # The time is not updated locally until we install the package
+        self.assertIn("%s (No time)" % first_prev, client.out)
+        client.run("remove lib/1.0@user/testing -f")
+        client.run("install lib/1.0@user/testing")
+        # Now installed the package the time is ok
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
         self.assertIn("%s (%s)" % (first_prev, time_str), client.out)
 

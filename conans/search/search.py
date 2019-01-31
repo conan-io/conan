@@ -114,7 +114,7 @@ def _partial_match(pattern, ref):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').split()
+    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
 
     def partial_sums(iterable):
         partial = ''
@@ -147,23 +147,20 @@ def _get_local_infos_min(cache, ref):
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
-        try:
-            pref = PackageReference(ref, package_id)
-            info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
-            if not os.path.exists(info_path):
-                raise NotFoundException("")
-            conan_info_content = load(info_path)
+        pref = PackageReference(ref, package_id)
+        info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
+        if not os.path.exists(info_path):
+            logger.error("There is no ConanInfo: %s" % str(info_path))
+            continue
+        conan_info_content = load(info_path)
 
+        info = ConanInfo.loads(conan_info_content)
+        if ref.revision:
             metadata = cache.package_layout(pref.ref).load_metadata()
             recipe_revision = metadata.packages[package_id].recipe_revision
-            info = ConanInfo.loads(conan_info_content)
-            if ref.revision and recipe_revision and recipe_revision != ref.revision:
+            if recipe_revision and recipe_revision != ref.revision:
                 continue
-            conan_vars_info = info.serialize_min()
-            result[package_id] = conan_vars_info
+        conan_vars_info = info.serialize_min()
+        result[package_id] = conan_vars_info
 
-        except Exception as exc:
-            logger.error("Package %s has no ConanInfo file" % str(pref))
-            if str(exc):
-                logger.error(str(exc))
     return result
