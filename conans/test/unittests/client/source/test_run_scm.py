@@ -90,8 +90,8 @@ class RunSCMTest(unittest.TestCase):
         def merge_directories(src, dst, excluded=None, symlinks=True):
             src = os.path.normpath(src)
             dst = os.path.normpath(dst)
-            self.assertEqual(os.path.normcase(src), os.path.normcase(local_sources_path))
-            self.assertEqual(os.path.normcase(dst), os.path.normcase(self.src_folder))
+            self.assertEqual(src.replace('\\', '/'), local_sources_path)
+            self.assertEqual(dst, self.src_folder)
 
         with mock.patch("conans.client.source.merge_directories", side_effect=merge_directories):
             _run_scm(conanfile=conanfile,
