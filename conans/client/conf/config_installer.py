@@ -5,7 +5,7 @@ from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.remote_registry import load_registry_txt
+from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -116,8 +116,8 @@ def _process_download(item, cache, output, tmp_folder, verify_ssl, requester):
         raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(path_or_url, cache, output, verify_ssl, requester,
-                          config_type=None, args=None):
+def configuration_install(path_or_url, cache, output, verify_ssl, requester, config_type=None,
+                          args=None):
     if path_or_url is None:
         try:
             item = cache.conan_config.get_item("general.config_install")
@@ -202,18 +202,13 @@ def _handle_hooks(src_hooks_path, dst_hooks_path, output):
     :param dst_hooks_path:  Folder where the hooks should finally go
     :param output: Output to indicate the files copied
     """
-    hooks_dirs = []
     for root, dirs, files in walk(src_hooks_path):
-        if root == src_hooks_path:
-            hooks_dirs = dirs
-        else:
-            copied_files = False
-            relpath = os.path.relpath(root, src_hooks_path)
-            for f in files:
-                if ".git" not in f:
-                    dst = os.path.join(dst_hooks_path, relpath)
-                    mkdir(dst)
-                    shutil.copy(os.path.join(root, f), dst)
-                    copied_files = True
-            if copied_files and relpath in hooks_dirs:
+        if ".git" in root:
+            continue
+        relpath = os.path.relpath(root, src_hooks_path)
+        for f in files:
+            if ".git" not in f:
+                dst = os.path.join(dst_hooks_path, relpath)
+                mkdir(dst)
+                shutil.copy(os.path.join(root, f), dst)
                 output.info(" - %s" % relpath)

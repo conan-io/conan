@@ -23,14 +23,14 @@ from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import tools
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
-from conans.client.remote_registry import dump_registry
+from conans.client.cache.remote_registry import dump_registry
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools.files import chdir

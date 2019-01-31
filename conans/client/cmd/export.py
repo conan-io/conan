@@ -74,15 +74,12 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     captured_revision = scm_data.capture_revision
 
     scm = SCM(scm_data, conanfile_dir, output)
-    if scm_data.capture_origin or scm_data.capture_revision:
-        # Generate the scm_folder.txt file pointing to the src_path
-        src_path = scm.get_repo_root()
-        save(scm_src_file, src_path.replace("\\", "/"))
+    captured = scm_data.capture_origin or scm_data.capture_revision
 
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url(remove_credentials=True)
         if not origin:
-            raise ConanException("Repo origin cannot be deduced by 'auto'")
+            raise ConanException("Repo origin cannot be deduced")
         if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
         output.success("Repo origin deduced by 'auto': %s" % origin)
@@ -95,6 +92,12 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+
+    if captured:
+        # Generate the scm_folder.txt file pointing to the src_path
+        src_path = scm.get_local_path_to_url(scm_data.url)
+        if src_path:
+            save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
 
     return scm_data, captured_revision
 

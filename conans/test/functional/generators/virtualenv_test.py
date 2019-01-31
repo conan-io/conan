@@ -1,5 +1,6 @@
 import copy
 import os
+import platform
 import unittest
 
 from conans.client import tools
@@ -106,22 +107,26 @@ virtualenv
         self.assertIn('export OLD_PS1', activate)
         self.assertIn('PS1="(conanenv) $PS1"', activate)
         self.assertIn('export PS1', activate)
-        self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2":$BASE_LIST', activate)
+        self.assertIn('BASE_LIST="dummyValue1":"dummyValue2":"baseValue1":"baseValue2"${'
+                      'BASE_LIST+:$BASE_LIST}', activate)
         self.assertIn('export BASE_LIST', activate)
         self.assertIn('BASE_VAR="baseValue"', activate)
         self.assertIn('export BASE_VAR', activate)
-        self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 $CPPFLAGS"', activate)
+        self.assertIn('CPPFLAGS="-flag1 -flag2 -baseFlag1 -baseFlag2 ${CPPFLAGS+ $CPPFLAGS}"',
+                      activate)
         self.assertIn('export CPPFLAGS', activate)
         self.assertIn('SPECIAL_VAR="dummyValue"', activate)
         self.assertIn('export SPECIAL_VAR', activate)
         self.assertIn('BCKW_SLASH="dummy\\value"', activate)
         self.assertIn('export BCKW_SLASH', activate)
         if os_info.is_windows:
-            self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib":$LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin":$PATH', activate)
+            self.assertIn('LD_LIBRARY_PATH="dummydir\\lib":"basedir\\lib"${'
+                          'LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}', activate)
+            self.assertIn('PATH="dummydir\\bin":"basedir\\bin":"samebin"${PATH+:$PATH}', activate)
         else:
-            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib":$LD_LIBRARY_PATH', activate)
-            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin":$PATH', activate)
+            self.assertIn('LD_LIBRARY_PATH="dummydir/lib":"basedir/lib"${'
+                          'LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}', activate)
+            self.assertIn('PATH="dummydir/bin":"basedir/bin":"samebin"${PATH+:$PATH}', activate)
         self.assertIn('export LD_LIBRARY_PATH', activate)
         self.assertIn('export PATH', activate)
         deactivate = load(os.path.join(client.current_folder, "deactivate.sh"))
@@ -169,3 +174,23 @@ virtualenv
                "BCKW_SLASH": "old_BCKW_SLASH"}
         with tools.environment_append(env):
             self.basic_test(posix_empty_vars=False)
+
+    @unittest.skipIf(platform.system() == "Windows", "Needs bash")
+    def conditional_parameter_expansion_test(self):
+        # https://github.com/conan-io/conan/issues/3911
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("profile new default --detect")
+        client.run("profile update env.PREPEND_VAR=[1,2,three] default")
+        client.run("install . -g virtualenv")
+        activate = load(os.path.join(client.current_folder, "activate.sh"))
+        self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\"${PREPEND_VAR+:$PREPEND_VAR}", activate)
+        client.runner("%s -c 'source \"%s/activate.sh\" && env'" % (OSInfo.bash_path(),
+                                                                    client.current_folder))
+        # Check no trailing path separator ":"
+        self.assertNotIn("PREPEND_VAR=1:2:three:", client.out)
+        self.assertIn("PREPEND_VAR=1:2:three", client.out)  # Check correct value
+        # Check old value is preserved
+        client.runner("%s -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
+                      (OSInfo.bash_path(), client.current_folder))
+        self.assertIn("PREPEND_VAR=1:2:three:kk", client.out)

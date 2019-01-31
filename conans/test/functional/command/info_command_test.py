@@ -3,6 +3,7 @@ import unittest
 
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
@@ -14,40 +15,26 @@ class InfoTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.clients = {}
 
-    def _export(self, name=0, version=None, deps=None):
-        client = TestClient(servers=self.servers, users={"default": [("lu", "mypass")]})
-        self.clients[name] = client
-        # Not necessary to actually build binaries
-        files = cpp_hello_conan_files(name, version, deps, build=False)
-        client.save(files, clean_first=True)
-        client.run("export . lu/st")
-        client.run("upload %s/%s@lu/st" % (name, version))
-
-    def assert_last_line(self, client, line):
-        lastline = str(client.user_io.out).splitlines()[-1]
-        self.assertEquals(lastline, line)
-
-    def info_build_test(self):
-        """Test that the output of 'conan info --build' is correct
-
-                    +-----------+
-           +------> |  H0       | <--------+
-           |        +------+----+          |
-   private |               ^               |private
-           |               |               |
-      +----+-----+    +----+------+   +----+------+
-      |  H1a     |    | H1b       |   | H1c       |
-      +----+-----+    +-----------+   +----+------+
-           ^                               ^
-           |                               |
-           |                               |
-+----------+-+                     +-------+------+
-|  H2a       | <------+    +-----> |   H2c        |
-+------------+        |    |       +--------------+
-                      |    |
-                  +---+----+---+
-                  |  H3        |
-                  +------------+
+        # Build a complex graph
+        """
+                            +-----------+
+                   +------> |  H0       | <--------+
+                   |        +------+----+          |
+           private |               ^               |private
+                   |               |               |
+              +----+-----+    +----+------+   +----+------+
+              |  H1a     |    | H1b       |   | H1c       |
+              +----+-----+    +-----------+   +----+------+
+                   ^                               ^
+                   |                               |
+                   |                               |
+        +----------+-+                     +-------+------+
+        |  H2a       | <------+    +-----> |   H2c        |
+        +------------+        |    |       +--------------+
+                              |    |
+                          +---+----+---+
+                          |  H3        |
+                          +------------+
 
         """
 
@@ -63,6 +50,21 @@ class InfoTest(unittest.TestCase):
         self._export("H3", "0.1", deps=["H2a/0.1@lu/st",
                                         "H2c/0.1@lu/st"])
 
+    def _export(self, name=0, version=None, deps=None):
+        client = TestClient(servers=self.servers, users={"default": [("lu", "mypass")]})
+        self.clients[name] = client
+        # Not necessary to actually build binaries
+        files = cpp_hello_conan_files(name, version, deps, build=False)
+        client.save(files, clean_first=True)
+        client.run("export . lu/st")
+        client.run("upload %s/%s@lu/st" % (name, version))
+
+    def assert_last_line(self, client, line):
+        lastline = str(client.user_io.out).splitlines()[-1]
+        self.assertEquals(lastline, line)
+
+    def info_build_test(self):
+        """ Test that the output of 'conan info --build' is correct """
         # If we install H3 we need to build all except H1b
         self.clients["H3"].run("info . --build missing")
         self.assert_last_line(self.clients["H3"],
@@ -118,3 +120,18 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("info . --build outdated")
         self.assert_last_line(self.clients["H3"],
                               "H0/0.1@lu/st, H1a/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
+
+    def test_json_output_build(self):
+        """ Test that the output of 'conan info --build' to json file is correct """
+        json_file = os.path.join(temp_folder(), "output.json")
+        json_output = '["H0/0.1@lu/st", "H1a/0.1@lu/st", "H1c/0.1@lu/st", ' \
+                      '"H2a/0.1@lu/st", "H2c/0.1@lu/st"]'
+
+        self.clients["H3"].run("info . --build missing --json=\"{}\"".format(json_file))
+        self.assertEqual(load(json_file), json_output)
+
+        self.clients["H3"].run("info . --build missing --json")
+        self.assert_last_line(self.clients["H3"], json_output)
+
+
+

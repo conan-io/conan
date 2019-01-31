@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
@@ -27,7 +28,6 @@ class AConan(ConanFile):
             self.run("SET")
         else:
             self.run("env")
-
 """
 
 
@@ -44,23 +44,36 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def profile_conanfile_txt_test(self):
+        """
+        Test prepended env variables are applied correctrly from a profile
+        """
+        self.client.save({"conanfile.txt": ""})
+        create_profile(self.client.cache.profiles_path, "envs", settings={},
+                       env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
+                       package_env={"Hello0": [("OTHER_VAR", "2")]})
+        self.client.run("install . -pr envs -g virtualenv")
+        content = load(os.path.join(self.client.current_folder, "activate.sh"))
+        self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
+                      "${PREPEND_VAR+:$PREPEND_VAR}", content)
+        if platform.system() == "Windows":
+            content = load(os.path.join(self.client.current_folder, "activate.bat"))
+            self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]), content)
+
     def test_profile_relative_cwd(self):
-        client = TestClient()
-        client.save({"conanfile.txt": "",
-                     "sub/sub/profile": ""})
-        client.current_folder = os.path.join(client.current_folder, "sub")
-        client.run("install .. -pr=sub/profile2", assert_error=True)
-        self.assertIn("ERROR: Profile not found: sub/profile2", client.out)
-        client.run("install .. -pr=sub/profile")
-        self.assertIn("conanfile.txt: Installing package", client.out)
+        self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})
+        self.client.current_folder = os.path.join(self.client.current_folder, "sub")
+        self.client.run("install .. -pr=sub/profile2", assert_error=True)
+        self.assertIn("ERROR: Profile not found: sub/profile2", self.client.out)
+        self.client.run("install .. -pr=sub/profile")
+        self.assertIn("conanfile.txt: Installing package", self.client.out)
 
     def base_profile_generated_test(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile_scope_env,
-                     "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
-        client.run("create . conan/testing --profile myprofile")
+        self.client.save({CONANFILE: conanfile_scope_env,
+                          "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
+        self.client.run("create . conan/testing --profile myprofile")
 
     def bad_syntax_test(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -148,11 +161,15 @@ class ProfileTest(unittest.TestCase):
         files["conanfile.py"] = conanfile_scope_env
 
         create_profile(self.client.cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
+                       env=[("A_VAR", "A_VALUE"),
+                            ("PREPEND_VAR", ["new_path", "other_path"])],
+                       package_env={"Hello0": [("OTHER_VAR", "2")]})
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
+        self._assert_env_variable_printed("PREPEND_VAR", os.pathsep.join(["new_path", "other_path"]))
+        self.assertEqual(1, str(self.client.out).count("PREPEND_VAR=new_path"))  # prepended once
         self._assert_env_variable_printed("A_VAR", "A_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 

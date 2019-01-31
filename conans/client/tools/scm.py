@@ -234,6 +234,7 @@ class SVN(SCMBase):
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def _show_item(self, item, target='.'):
+        self._check_svn_repo()
         if self.version >= SVN.API_CHANGE_VERSION:
             value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
             return value.strip()

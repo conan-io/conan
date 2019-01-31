@@ -7,7 +7,7 @@ import requests
 import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
@@ -79,6 +79,7 @@ def get_basic_requester(cache):
 def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
+        the_self.invalidate_caches()
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
@@ -236,6 +237,10 @@ class ConanAPIV1(object):
                                            self._remote_manager, self._loader, self._proxy,
                                            resolver)
         self._hook_manager = hook_manager
+
+    def invalidate_caches(self):
+        self._loader.invalidate_caches()
+        self._cache.invalidate()
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
@@ -479,7 +484,8 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def install(self, path="", settings=None, options=None, env=None,
+    def install(self, path="", name=None, version=None, user=None, channel=None,
+                settings=None, options=None, env=None,
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
@@ -491,7 +497,8 @@ class ConanAPIV1(object):
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
-                                        self._cache, self._user_io.out)
+                                        self._cache, self._user_io.out,
+                                        name=name, version=version, user=user, channel=channel)
 
             wspath = _make_abs_path(path, cwd)
             if install_folder:
@@ -996,7 +1003,8 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-def get_graph_info(profile_names, settings, options, env, cwd, install_folder, cache, output):
+def get_graph_info(profile_names, settings, options, env, cwd, install_folder, cache, output,
+                   name=None, version=None, user=None, channel=None):
     try:
         graph_info = GraphInfo.load(install_folder)
         graph_info.profile.process_settings(cache, preprocess=False)
@@ -1014,9 +1022,11 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                         "Don't pass settings, options or profile arguments if you want to reuse "
                         "the installed graph-info file."
                         % install_folder)
+
         profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile.process_settings(cache)
-        graph_info = GraphInfo(profile=profile)
+        root_ref = ConanFileReference(name, version, user, channel, validate=False)
+        graph_info = GraphInfo(profile=profile, root_ref=root_ref)
         # Preprocess settings and convert to real settings
     return graph_info
 

@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
 from conans.client.tools.win import latest_visual_studio_version_installed
-from conans.client.tools import OSInfo
+from conans.client.tools import detected_os
 from conans.model.version import Version
 
 
@@ -166,14 +166,6 @@ adjusting 'compiler.libcxx=libstdc++11'
                 result.append(("compiler.libcxx", "libstdc++"))
         elif compiler == "sun-cc":
             result.append(("compiler.libcxx", "libCstd"))
-
-
-def detected_os():
-    if OSInfo().is_macos:
-        return "Macos"
-    if OSInfo().is_windows:
-        return "Windows"
-    return platform.system()
 
 
 def _detect_os_arch(result, output):

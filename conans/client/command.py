@@ -257,14 +257,15 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.create.__doc__, prog="conan create")
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
-                            help='user/channel or pkg/version@user/channel (if name and version not'
-                                 ' declared in conanfile.py) where the package will be created')
+                            help='user/channel, version@user/channel or pkg/version@user/channel '
+                            '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. Implies --keep-source. '
+                            help='Do not remove the build folder in local cache. '
+                                 'Implies --keep-source. '
                                  'Use this for testing purposes only')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile.py')
@@ -347,6 +348,10 @@ class Command(object):
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("reference", nargs="?",
+                            help='Reference for the conanfile path of the first argument: '
+                            'user/channel, version@user/channel or pkg/version@user/channel'
+                            '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
@@ -371,7 +376,9 @@ class Command(object):
             try:
                 ref = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
+                name, version, user, channel = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
+                                           name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
                                            env=args.env,
                                            remote_name=args.remote,
@@ -382,6 +389,10 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
             else:
+                if args.reference:
+                    raise ConanException("A full reference was provided as first argument, second "
+                                         "argument not allowed")
+
                 info = self._conan.install_reference(ref, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,
@@ -415,7 +426,8 @@ class Command(object):
         rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
-        install_subparser.add_argument("item", nargs="?", help="Configuration file or directory to use")
+        install_subparser.add_argument("item", nargs="?",
+                                       help="Configuration file or directory to use")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
@@ -475,8 +487,7 @@ class Command(object):
                             "specify both install-folder and any setting/option "
                             "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
-                            help='Only with --build-order option, return the information in a json.'
-                                 ' e.g --json=/path/to/filename.json or --json to output the json')
+                            help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help="Show only the specified fields: %s. '--paths' information can "
                             "also be filtered with options %s. Use '--only None' to show only "
@@ -485,8 +496,8 @@ class Command(object):
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
 
-        dry_build_help = ("Apply the --build argument to output the information, as it would be done "
-                          "by the install command")
+        dry_build_help = ("Apply the --build argument to output the information, as it would be done"
+                          " by the install command")
         parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
@@ -526,7 +537,11 @@ class Command(object):
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
-            self._outputer.nodes_to_build(nodes)
+            if args.json:
+                json_arg = True if args.json == "1" else args.json
+                self._outputer.json_nodes_to_build(nodes, json_arg, get_cwd())
+            else:
+                self._outputer.nodes_to_build(nodes)
 
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
@@ -553,7 +568,11 @@ class Command(object):
 
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, get_cwd())
-            else:
+            if args.json:
+                json_arg = True if args.json == "1" else args.json
+                self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
+
+            if not args.graph and not args.json:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
     def source(self, *args):
@@ -819,6 +838,8 @@ class Command(object):
                                   "specifying the package ID"))
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Remove without requesting a confirmation')
+        parser.add_argument("-l", "--locks", default=False, action="store_true",
+                            help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. " \
                                  "This flag can only be used with a reference")
@@ -829,8 +850,8 @@ class Command(object):
                             help='Will remove from the specified remote')
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
-        parser.add_argument("-l", "--locks", default=False, action="store_true",
-                            help="Remove locks")
+        parser.add_argument('-t', '--system-reqs', default=False, action="store_true",
+                            help='Remove system_reqs folders')
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -854,6 +875,17 @@ class Command(object):
             self._cache.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
+        elif args.system_reqs:
+            if not ref:
+                raise ConanException("Please specify a valid package reference to be cleaned")
+            if args.packages:
+                raise ConanException("'-t' and '-p' parameters can't be used at the same time")
+            try:
+                self._cache.remove_package_system_reqs(ref)
+                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                return
+            except Exception as error:
+                raise ConanException("Unable to remove system_reqs: %s" % error)
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
