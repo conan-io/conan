@@ -13,71 +13,6 @@ from conans.util.env_reader import get_env
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-class CapabilitiesRevisionsTest(unittest.TestCase):
-
-    def test_server_without_revisions_capability(self):
-        """If a server doesn't have the revisions capability, a modern client will still
-        talk v1"""
-        pass
-
-
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-class InfoRevisions(unittest.TestCase):
-
-    @parameterized.expand([(True,), (False,)])
-    def test_info_command_showing_revision(self, v1):
-        """If I run 'conan info ref' I get information about the revision only in a v2 client"""
-        pass
-
-
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-class ServerRevisionsIndexes(unittest.TestCase):
-    def rotation_deleting_recipe_revisions_test(self):
-        """
-        - If we have two RREVs in the server and we remove the first one,
-        the last one is the latest
-        - If we have two RREvs in the server and we remove the second one,
-        the first is now the latest
-        """
-        pass
-
-    def rotation_deleting_package_revisions_test(self):
-        """
-        - If we have two PREVs in the server and we remove the first one,
-        the last one is the latest
-        - If we have two PREVs in the server and we remove the second one,
-        the first is now the latest
-        """
-        pass
-
-    def deleting_all_rrevs_test(self):
-        """
-        If we delete all the recipe revisions in the server. There is no latest.
-        If then a client uploads a RREV it is the latest
-        """
-        pass
-
-    def deleting_all_prevs_test(self):
-        """
-        If we delete all the package revisions in the server. There is no latest.
-        If then a client uploads a RREV/PREV it is the latest
-        """
-        pass
-
-    def rotation_of_latest_recipe_revision(self):
-        """
-        - If we upload a new RREV, is the latest
-        """
-        pass
-
-    def rotation_of_latest_package_revision(self):
-        """
-        - If we upload a new PREV, is the latest
-        """
-        pass
-
-
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -143,8 +78,15 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Create an alias to the first revision
         self.c_v2.run("alias lib/latest@conan/stable {}".format(pref.ref.full_repr()))
+        self.c_v2.upload_all(ConanFileReference.loads("lib/latest@conan/stable"))
+        self.c_v2.remove_all()
+
         self.c_v2.run("install lib/latest@conan/stable")
-        self.assertIn("polla", self.c_v2.out)
+        # Shouldn't be packages in the cache
+        self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
+
+        # Read current revision
+        self.assertEquals(pref.ref.revision, self.c_v2.recipe_revision(self.ref)[0])
 
     @parameterized.expand([(True,), (False,)])
     def test_install_rev0(self, v1):
@@ -355,8 +297,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 class RevisionsInLocalCacheTest(unittest.TestCase):
 
     def setUp(self):
-        self.c_v2 = TurboTestClient(revisions_enabled=True)
-        self.c_v1 = TurboTestClient(revisions_enabled=False)
+        self.server = TestServer()
+        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
+        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     @parameterized.expand([(True,), (False,)])
@@ -407,9 +350,22 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertIsNotNone(rev2)
         self.assertIsNone(rev_time2)
 
-    def test_alias_metadata(self):
+    def test_remove_metadata(self):
         """If I export an alias it gets a revision"""
-        pass
+        pref = self.c_v2.create(self.ref)
+        self.c_v2.upload_all(self.ref)
+        self.c_v2.remove_all()
+        self.c_v2.run("install {}".format(self.ref))
+
+        self.c_v2.run("remove {} -p {} -f".format(pref.ref, pref.id))
+        prev, prev_time = self.c_v2.package_revision(pref)
+        rev, rev_time = self.c_v2.recipe_revision(pref.ref)
+        self.assertIsNone(prev)
+        self.assertIsNone(prev_time)
+        self.assertIsNotNone(rev)
+        self.assertIsNotNone(rev_time)
+        self.c_v2.remove_all()
+        self.assertRaises(FileNotFoundError, self.c_v2.recipe_revision, pref.ref)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
@@ -1178,28 +1134,13 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class SCMRevisions(unittest.TestCase):
 
-    @parameterized.expand([(True,), (False,)])
-    def explicit_revision_from_scm_test(self, v1):
-        """If we use the SCM feature, the revision is taken from there. """
-        # FIXME: This is not a desired behavior. If we use a fixed value it should take
-        # but we have a problem when the scm feature is used to download third party
-        # libraries, then your recipe is not "revisioned".
-
-        ref = ConanFileReference.loads("lib/1.0@conan/testing")
-        client = TurboTestClient(revisions_enabled=not v1)
-        conanfile = GenConanfile().with_scm({"type": "git", "url": "auto", "revision": "FIXED"})
-        client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
-        client.create(ref, conanfile=conanfile)
-        self.assertNotEquals(client.recipe_revision(ref)[0], "FIXED")
-
-    @parameterized.expand([(True,), (False,)])
-    def auto_revision_from_scm_test(self, v1):
-        """If we use the SCM feature, the revision is detected from there.
+    def auto_revision_even_without_scm_git_test(self):
+        """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages
          can be found"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
-        client = TurboTestClient(revisions_enabled=not v1)
-        conanfile = GenConanfile().with_scm({"type": "git", "url": "auto", "revision": "auto"})
+        client = TurboTestClient()
+        conanfile = GenConanfile()
         commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
         self.assertEquals(client.recipe_revision(ref)[0], commit)
@@ -1209,3 +1150,189 @@ class SCMRevisions(unittest.TestCase):
         client.create(ref, conanfile=conanfile)
         self.assertEquals(client.recipe_revision(ref)[0], commit)
         self.assertIn("New changes!", client.out)
+
+    def auto_revision_even_without_scm_svn_test(self):
+        """Even without using the scm feature, the revision is detected from repo.
+         Also while we continue working in local, the revision doesn't change, so the packages
+         can be found"""
+        # FIXME: Complete same test with SVN
+
+
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+class CapabilitiesRevisionsTest(unittest.TestCase):
+
+    def test_server_without_revisions_capability(self):
+        """If a server doesn't have the revisions capability, a modern client will still
+        talk v1"""
+        server = TestServer(server_capabilities=[])
+        c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": server})
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        c_v2.create(ref)
+        c_v2.upload_all(ref)
+        c_v2.remove_all()
+        c_v2.run("install {}".format(ref))
+        self.assertEquals(c_v2.recipe_revision(ref)[0], DEFAULT_REVISION_V1)
+
+
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+class InfoRevisions(unittest.TestCase):
+
+    @parameterized.expand([(True,), (False,)])
+    def test_info_command_showing_revision(self, v1):
+        """If I run 'conan info ref' I get information about the revision only in a v2 client"""
+        server = TestServer(server_capabilities=[])
+        c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": server})
+        c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": server})
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+
+        client = c_v1 if v1 else c_v2
+        client.create(ref)
+        client.run("info {}".format(ref))
+        revision = client.recipe_revision(ref)[0]
+        if v1:
+            self.assertNotIn("Revision:", client.out)
+        else:
+            self.assertIn("Revision: {}".format(revision), client.out)
+
+
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+class ServerRevisionsIndexes(unittest.TestCase):
+
+    def setUp(self):
+        self.server = TestServer()
+        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
+        self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
+
+    def rotation_deleting_recipe_revisions_test(self):
+        """
+        - If we have two RREVs in the server and we remove the first one,
+        the last one is the latest
+        - If we have two RREvs in the server and we remove the second one,
+        the first is now the latest
+        """
+        ref1 = self.c_v2.export(self.ref, conanfile=GenConanfile())
+        self.c_v2.upload_all(ref1)
+        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+                          ref1.revision)
+        ref2 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev2"))
+        self.c_v2.upload_all(ref2)
+        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+                          ref2.revision)
+        ref3 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev3"))
+        self.c_v2.upload_all(ref3)
+        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+                          ref3.revision)
+
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        self.assertEquals(revs, [ref3.revision, ref2.revision, ref1.revision])
+        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+                          ref3.revision)
+
+        # Delete the latest from the server
+        self.c_v2.run("remove {} -r default -f".format(ref3.full_repr()))
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        self.assertEquals(revs, [ref2.revision, ref1.revision])
+        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+                          ref2.revision)
+
+    def rotation_deleting_package_revisions_test(self):
+        """
+        - If we have two PREVs in the server and we remove the first one,
+        the last one is the latest
+        - If we have two PREVs in the server and we remove the second one,
+        the first is now the latest
+        """
+        conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
+        with environment_append({"MY_VAR": "1"}):
+            pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref)
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+                          pref1.revision)
+        with environment_append({"MY_VAR": "2"}):
+            pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref)
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+                          pref2.revision)
+        with environment_append({"MY_VAR": "3"}):
+            pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
+        server_pref3 = self.c_v2.upload_all(self.ref)
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+                          pref3.revision)
+
+        self.assertEquals(pref1.ref.revision, pref2.ref.revision)
+        self.assertEquals(pref2.ref.revision, pref3.ref.revision)
+        self.assertEquals(pref3.ref.revision, server_pref3.revision)
+
+        pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
+        revs = [r.revision
+                for r in self.server.server_store.get_package_revisions(pref)]
+        self.assertEquals(revs, [pref3.revision, pref2.revision, pref1.revision])
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref).revision,
+                          pref3.revision)
+
+        # Delete the latest from the server
+        self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_repr(),
+                                                                pref3.id, pref3.revision))
+        revs = [r.revision
+                for r in self.server.server_store.get_package_revisions(pref)]
+        self.assertEquals(revs, [pref2.revision, pref1.revision])
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref).revision,
+                          pref2.revision)
+
+    def deleting_all_rrevs_test(self):
+        """
+        If we delete all the recipe revisions in the server. There is no latest.
+        If then a client uploads a RREV it is the latest
+        """
+        ref1 = self.c_v2.export(self.ref, conanfile=GenConanfile())
+        self.c_v2.upload_all(ref1)
+        ref2 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev2"))
+        self.c_v2.upload_all(ref2)
+        ref3 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev3"))
+        self.c_v2.upload_all(ref3)
+
+        self.c_v2.run("remove {} -r default -f".format(ref1.full_repr()))
+        self.c_v2.run("remove {} -r default -f".format(ref2.full_repr()))
+        self.c_v2.run("remove {} -r default -f".format(ref3.full_repr()))
+
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        self.assertEquals(revs, [])
+
+        ref4 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev4"))
+        self.c_v2.upload_all(ref4)
+
+        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
+        self.assertEquals(revs, [ref4.revision])
+
+    def deleting_all_prevs_test(self):
+        """
+        If we delete all the package revisions in the server. There is no latest.
+        If then a client uploads a RREV/PREV it is the latest
+        """
+        conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
+        with environment_append({"MY_VAR": "1"}):
+            pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref)
+        with environment_append({"MY_VAR": "2"}):
+            pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref)
+        with environment_append({"MY_VAR": "3"}):
+            pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref)
+
+        # Delete the package revisions
+        self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_repr(),
+                                                                pref3.id, pref3.revision))
+        self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref2.ref.full_repr(),
+                                                                pref2.id, pref2.revision))
+        self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref1.ref.full_repr(),
+                                                                pref1.id, pref1.revision))
+
+        with environment_append({"MY_VAR": "4"}):
+            pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref)
+
+        pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
+        revs = [r.revision
+                for r in self.server.server_store.get_package_revisions(pref)]
+        self.assertEquals(revs, [pref4.revision])

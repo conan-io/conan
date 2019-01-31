@@ -782,6 +782,11 @@ class TurboTestClient(TestClient):
             self.runner('git remote add origin {}'.format(origin_url), cwd=self.current_folder)
         return commit
 
+    def init_svn_repo(self, origin_url=None):
+        # FIXME complete to work like the init_git_repo
+        subprocess.check_output('svnadmin create "{}"'.format(self.current_folder), shell=True)
+        return SVN.file_protocol + quote(origin_url.replace("\\", "/"), safe='/:')
+
 
 class GenConanfile(object):
     """

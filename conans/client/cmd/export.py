@@ -7,9 +7,10 @@ import six
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
+from conans.client.tools import Git, SVN
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.model.scm import SCM, get_scm_data
+from conans.model.scm import SCM, get_scm_data, detect_repo_type
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.search.search import search_recipes
 from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
@@ -34,9 +35,7 @@ class AliasConanfile(ConanFile):
     digest.save(export_path)
 
     # Create the metadata for the alias
-    with cache.package_layout(reference).update_metadata() as metadata:
-        metadata.recipe.revision = None
-        metadata.recipe.time = None
+    _update_revision_in_metadata(cache, None, reference, digest)
 
 
 def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):
@@ -73,11 +72,9 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
 
     scm_data = get_scm_data(conanfile)
     if not scm_data:
-        return None, False
+        return
 
     # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
-    captured_revision = scm_data.capture_revision
-
     scm = SCM(scm_data, conanfile_dir, output)
     if scm_data.capture_origin or scm_data.capture_revision:
         # Generate the scm_folder.txt file pointing to the src_path
@@ -100,8 +97,6 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
-
-    return scm_data, captured_revision
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -154,6 +149,24 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     save(conanfile_path, content)
 
 
+def _detect_scm_revision(path):
+    repo_type = detect_repo_type(path)
+    if not repo_type:
+        return None
+
+    repo_obj = {"git": Git, "svn": SVN}.get(repo_type)(path)
+    return repo_obj.get_revision()
+
+
+def _update_revision_in_metadata(cache, path, ref, digest):
+
+    scm_revision_detected = _detect_scm_revision(path)
+    revision = scm_revision_detected or digest.summary_hash
+    with cache.package_layout(ref).update_metadata() as metadata:
+        metadata.recipe.revision = revision
+        metadata.recipe.time = None
+
+
 def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source):
 
     exports_folder = cache.export(ref)
@@ -165,10 +178,8 @@ def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source
     export_source(conanfile, origin_folder, exports_source_folder)
     shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
 
-    scm_data, captured_revision = _capture_export_scm_data(conanfile,
-                                                           os.path.dirname(conanfile_path),
-                                                           exports_folder,
-                                                           output, cache, ref)
+    _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path), exports_folder, output,
+                             cache, ref)
 
     digest = FileTreeManifest.create(exports_folder, exports_source_folder)
 
@@ -183,12 +194,7 @@ def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source
 
     digest.save(exports_folder)
 
-    revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
-    with cache.package_layout(ref).update_metadata() as metadata:
-        # Note that there is no time set, the time will come from the remote
-        if metadata.recipe.revision != revision:
-            metadata.recipe.revision = revision
-            metadata.recipe.time = None
+    _update_revision_in_metadata(cache, os.path.dirname(conanfile_path), ref, digest)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = cache.source(ref, conanfile.short_paths)

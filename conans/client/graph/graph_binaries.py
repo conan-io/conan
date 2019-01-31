@@ -87,7 +87,7 @@ class GraphBinariesAnalyzer(object):
             if self._cache.revisions_enabled:
                 metadata = self._cache.package_layout(pref.ref).load_metadata()
                 rec_rev = metadata.packages[pref.id].recipe_revision
-                if rec_rev != node.ref.revision:
+                if rec_rev and rec_rev != node.ref.revision:
                     output.warn("The package {} doesn't belong "
                                 "to the installed recipe revision, removing folder".format(pref))
                 rmdir(package_folder)

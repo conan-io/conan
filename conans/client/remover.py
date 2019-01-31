@@ -115,11 +115,14 @@ class ConanRemover(object):
             remover.remove_src(ref)
         if build_ids is not None:
             remover.remove_builds(ref, build_ids)
+
         if package_ids is not None:
             remover.remove_packages(ref, package_ids)
-            for package_id in package_ids:
-                pref = PackageReference(ref, package_id)
-                self._registry.prefs.remove(pref)
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                for package_id in package_ids:
+                    pref = PackageReference(ref, package_id)
+                    self._registry.prefs.remove(pref)
+                    metadata.clear_package(package_id)
         if not src and build_ids is None and package_ids is None:
             remover.remove(ref)
             self._registry.refs.remove(ref, quiet=True)
