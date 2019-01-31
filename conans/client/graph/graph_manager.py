@@ -89,19 +89,6 @@ class GraphManager(object):
 
         return conanfile
 
-    def load_simple_graph(self, reference, profile, recorder):
-        # Loads a graph without computing the binaries. It is necessary for
-        # export-pkg command, not hitting the server
-        # # https://github.com/conan-io/conan/issues/3432
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   workspace=None, recorder=recorder)
-        processed_profile = ProcessedProfile(profile, create_reference=None)
-        conanfile = self._loader.load_virtual([reference], processed_profile)
-        root_node = Node(None, conanfile, recipe=RECIPE_VIRTUAL)
-        graph = builder.load_graph(root_node, check_updates=False, update=False, remote_name=None,
-                                   processed_profile=processed_profile)
-        return graph
-
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remote_name, recorder, workspace):
 
