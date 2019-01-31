@@ -90,7 +90,7 @@ class GraphBinariesAnalyzer(object):
                 if rec_rev and rec_rev != node.ref.revision:
                     output.warn("The package {} doesn't belong "
                                 "to the installed recipe revision, removing folder".format(pref))
-                rmdir(package_folder)
+                    rmdir(package_folder)
 
         if remote_name:
             remote = self._registry.remotes.get(remote_name)

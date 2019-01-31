@@ -277,9 +277,17 @@ class ConanLib(ConanFile):
         upload("mycontent2")
 
         client.run("install Pkg/0.1@lasote/channel -u")
-        self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+
+        if client.revisions_enabled:
+            # The binary package is not updated but downloaded, because the local one we have
+            # belongs to a different revision and it is removed
+            self.assertIn("Pkg/0.1@lasote/channel:%s - Download" % NO_SETTINGS_PACKAGE_ID,
+                          client.out)
+        else:
+            self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID,
+                          client.out)
+            self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
+                          client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         header = os.path.join(client.cache.package(pref), "header.h")

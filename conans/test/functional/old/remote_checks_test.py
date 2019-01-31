@@ -1,13 +1,16 @@
-import time
 import unittest
 from collections import OrderedDict
 
+import time
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
+from conans.util.env_reader import get_env
 
 
 class RemoteChecksTest(unittest.TestCase):
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def test_recipe_updates(self):
         servers = OrderedDict()
         servers["server1"] = TestServer()

@@ -68,6 +68,7 @@ def package_copy(src_ref, user_channel, package_ids, paths, user_io, short_paths
         # Copy packages
         for package_id in package_ids:
             metadata.packages[package_id].revision = old_metadata.packages[package_id].revision
+            metadata.packages[package_id].recipe_revision = old_metadata.recipe.revision
             pref_origin = PackageReference(src_ref, package_id)
             pref_dest = PackageReference(dest_ref, package_id)
             package_path_origin = paths.package(pref_origin, short_paths)

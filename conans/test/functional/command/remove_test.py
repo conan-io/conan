@@ -16,6 +16,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient, \
     TestServer
+from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -218,12 +219,12 @@ class RemoveTest(unittest.TestCase):
                                     continue
                             else:
                                 prev = DEFAULT_REVISION_V1
-                            package_folder += "/%s" % prev
+                            package_folder += "/%s" % prev if prev else ""
                         if value in shas:
                             self.assertTrue(os.path.exists(package_folder),
                                             "%s doesn't exist " % package_folder)
                         else:
-                            self.assertFalse(os.path.exists(package_folder))
+                            self.assertFalse(os.path.exists(package_folder), package_folder)
 
         root_folder = self.client.cache.store
         for k, shas in build_folders.items():
@@ -401,6 +402,9 @@ class RemoveTest(unittest.TestCase):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "This test is insane to be "
+                                                                  "tested with revisions, in "
+                                                                  "general all the module")
     def query_remove_locally_test(self):
         # Incorrect casing of "hello"
         self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
