@@ -62,8 +62,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             self.assertIn("WARN: Repo origin looks like a local path: {}".format(url), output)
 
         scm_folder_file = os.path.join(self.cache_ref_folder, SCM_FOLDER)
-        self.assertEqual(os.path.normcase(load(scm_folder_file)),
-                         os.path.normcase(self.conanfile_dir))
+        self.assertEqual(load(scm_folder_file), self.conanfile_dir)
 
     @parameterized.expand([(True, ), (False, ), ])
     def test_revision_auto(self, _, is_pristine):
@@ -95,8 +94,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
 
         scm_folder_file = os.path.join(self.cache_ref_folder, SCM_FOLDER)
         self.assertTrue(os.path.exists(scm_folder_file))
-        self.assertEqual(os.path.normcase(load(scm_folder_file)),
-                         os.path.normcase(self.conanfile_dir))
+        self.assertEqual(load(scm_folder_file), self.conanfile_dir)
 
     def test_url_auto(self, _):
         output = TestBufferConanOutput()
@@ -125,5 +123,4 @@ class CaptureExportSCMDataTest(unittest.TestCase):
 
         scm_folder_file = os.path.join(self.cache_ref_folder, SCM_FOLDER)
         self.assertTrue(os.path.exists(scm_folder_file))
-        self.assertEqual(os.path.normcase(load(scm_folder_file)),
-                         os.path.normcase(self.conanfile_dir))
+        self.assertEqual(load(scm_folder_file), self.conanfile_dir)
