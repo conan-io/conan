@@ -147,13 +147,6 @@ Without tox
     $ pip install -r conans/requirements_dev.txt
 
 
-Only in OSX:
-
-.. code-block:: bash
-
-    $ pip install -r conans/requirements_osx.txt # You can omit this one if not running OSX
-
-
 If you are not Windows and you are not using a python virtual environment, you will need to run these
 commands using `sudo`.
 

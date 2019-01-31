@@ -27,8 +27,6 @@ def get_requires(filename):
 
 
 project_requirements = get_requires("conans/requirements.txt")
-if platform.system() == "Darwin":
-    project_requirements.extend(get_requires("conans/requirements_osx.txt"))
 project_requirements.extend(get_requires("conans/requirements_server.txt"))
 dev_requirements = get_requires("conans/requirements_dev.txt")
 
