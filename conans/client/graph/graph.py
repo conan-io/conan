@@ -1,7 +1,5 @@
 from collections import OrderedDict
 
-from conans.errors import conanfile_exception_formatter
-from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -168,40 +166,11 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def compute_package_ids(self):
+    def ordered_iterate(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                conanfile = node.conanfile
-                neighbors = node.neighbors()
-                direct_reqs = []  # of PackageReference
-                indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for neighbor in neighbors:
-                    ref, nconan = neighbor.ref, neighbor.conanfile
-                    package_id = nconan.info.package_id()
-                    pref = PackageReference(ref, package_id)
-                    direct_reqs.append(pref)
-                    indirect_reqs.update(nconan.info.requires.refs())
-                    conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-                    # Might be never used, but update original requirement, just in case
-                    conanfile.requires[ref.name].ref = ref
-
-                # Make sure not duplicated
-                indirect_reqs.difference_update(direct_reqs)
-                # There might be options that are not upstream, backup them, might be
-                # for build-requires
-                conanfile.build_requires_options = conanfile.options.values
-                conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
-
-                conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                                  conanfile.options.values,
-                                                  direct_reqs,
-                                                  indirect_reqs)
-
-                # Once we are done, call package_id() to narrow and change possible values
-                with conanfile_exception_formatter(str(conanfile), "package_id"):
-                    conanfile.package_id()
-        return ordered
+                yield node
 
     def full_closure(self, node, private=False):
         # Needed to propagate correctly the cpp_info even with privates

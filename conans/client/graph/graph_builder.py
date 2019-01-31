@@ -38,9 +38,6 @@ class DepsGraphBuilder(object):
                         loop_ancestors, aliased, check_updates, update, remote_name,
                         processed_profile)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
-        t1 = time.time()
-        dep_graph.compute_package_ids()
-        logger.debug("GRAPH: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update, remote_name):

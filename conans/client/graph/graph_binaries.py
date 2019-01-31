@@ -4,7 +4,8 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
-from conans.errors import NoRemoteAvailable, NotFoundException
+from conans.errors import NoRemoteAvailable, NotFoundException,\
+    conanfile_exception_formatter
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -162,22 +163,53 @@ class GraphBinariesAnalyzer(object):
 
         node.binary_remote = remote
 
+    @staticmethod
+    def _compute_package_id(node):
+        conanfile = node.conanfile
+        neighbors = node.neighbors()
+        direct_reqs = []  # of PackageReference
+        indirect_reqs = set()   # of PackageReference, avoid duplicates
+        for neighbor in neighbors:
+            ref, nconan = neighbor.ref, neighbor.conanfile
+            package_id = nconan.info.package_id()
+            pref = PackageReference(ref, package_id)
+            direct_reqs.append(pref)
+            indirect_reqs.update(nconan.info.requires.refs())
+            conanfile.options.propagate_downstream(ref, nconan.info.full_options)
+            # Might be never used, but update original requirement, just in case
+            conanfile.requires[ref.name].ref = ref
+
+        # Make sure not duplicated
+        indirect_reqs.difference_update(direct_reqs)
+        # There might be options that are not upstream, backup them, might be
+        # for build-requires
+        conanfile.build_requires_options = conanfile.options.values
+        conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
+
+        conanfile.info = ConanInfo.create(conanfile.settings.values,
+                                          conanfile.options.values,
+                                          direct_reqs,
+                                          indirect_reqs)
+
+        # Once we are done, call package_id() to narrow and change possible values
+        with conanfile_exception_formatter(str(conanfile), "package_id"):
+            conanfile.package_id()
+
+    def _handle_private(self, node, deps_graph):
+        private_neighbours = node.private_neighbors()
+        if private_neighbours:
+            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
+                for neigh in private_neighbours:
+                    neigh.binary = BINARY_SKIP
+                    closure = deps_graph.full_closure(neigh, private=True)
+                    for n in closure:
+                        n.binary = BINARY_SKIP
+
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_nodes = {}
-        for node in deps_graph.nodes:
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
-                continue
-            private_neighbours = node.private_neighbors()
-            if private_neighbours:
-                self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
-                if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                    for neigh in private_neighbours:
-                        neigh.binary = BINARY_SKIP
-                        closure = deps_graph.full_closure(neigh, private=True)
-                        for n in closure:
-                            n.binary = BINARY_SKIP
-
-        for node in deps_graph.nodes:
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary:
+        for node in deps_graph.ordered_iterate():
+            self._compute_package_id(node)
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
+            self._handle_private(node, deps_graph)

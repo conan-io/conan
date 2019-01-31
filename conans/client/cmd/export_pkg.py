@@ -16,7 +16,8 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
         raise ConanException("Package recipe '%s' does not exist" % str(ref))
 
     deps_graph = graph_manager.load_simple_graph(ref, graph_info.profile, recorder)
-
+    deps_graph = graph_manager.load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
+                   remote_name, recorder, workspace)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
