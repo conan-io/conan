@@ -84,7 +84,7 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
 
         # Compute the new digest
         digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
-        modified_recipe = not previous_digest or previous_digest == digest
+        modified_recipe = not previous_digest or previous_digest != digest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
             output.info('Folder: %s' % package_layout.export())
