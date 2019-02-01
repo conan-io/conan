@@ -10,7 +10,6 @@ from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTAL
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import FileTreeManifest
-from conans.util.env_reader import get_env
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
@@ -45,17 +44,6 @@ class ConanProxy(object):
         # check if it is in disk
         conanfile_path = self._cache.conanfile(ref)
 
-        # Check if we have a revision different from the requested one to remove it
-        if os.path.exists(conanfile_path):
-            cur_revision, _ = self._cache.package_layout(ref).recipe_revision()
-            if self._cache.revisions_enabled and ref.revision:
-                if cur_revision != ref.revision:
-                    # FIXME:? even if the requested revision doesn't exist in the server
-                    # we are removing the local copy. It would be weird to implement the check,
-                    # from which remote? calling what? the cache is a cache...
-                    output.info("Different revision requested, removing current local recipe...")
-                    DiskRemover(self._cache).remove_recipe(ref)
-
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
             remote, new_ref = self._download_recipe(ref, output, remote_name, recorder)
@@ -69,15 +57,25 @@ class ConanProxy(object):
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
         cur_revision, _ = self._cache.package_layout(ref).recipe_revision()
-        if not check_updates:
-            status = RECIPE_INCACHE
-            ref = ref.copy_with_rev(cur_revision)
-            return conanfile_path, status, remote, ref
+        requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
+        if requested_different_revision and not check_updates:
+            raise NotFoundException("The recipe in the local cache doesn't match the specified "
+                                    "revision. Use '--update' to check in the remote.")
 
-        if not update_remote:
-            status = RECIPE_NO_REMOTE
-            ref = ref.copy_with_rev(cur_revision)
-            return conanfile_path, status, None, ref
+        if not requested_different_revision:
+            if not check_updates:
+                status = RECIPE_INCACHE
+                ref = ref.copy_with_rev(cur_revision)
+                return conanfile_path, status, remote, ref
+
+            if not update_remote:
+                status = RECIPE_NO_REMOTE
+                ref = ref.copy_with_rev(cur_revision)
+                return conanfile_path, status, None, ref
+        else:  # Requested different revision and with --update
+            remote, new_ref = self._download_recipe(ref, output, remote_name, recorder)
+            status = RECIPE_DOWNLOADED
+            return conanfile_path, status, remote, new_ref
 
         try:  # get_conan_manifest can fail, not in server
             upstream_manifest = self._remote_manager.get_conan_manifest(ref, update_remote)

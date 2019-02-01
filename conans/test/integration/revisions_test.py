@@ -17,53 +17,127 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
+        self.server2 = TestServer()
+        self.servers = OrderedDict([("default", self.server),
+                               ("remote2", self.server2)])
+        self.c_v2 = TurboTestClient(revisions_enabled=True, servers=self.servers)
+        self.c_v1 = TurboTestClient(revisions_enabled=False, servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_install_missing_prev_deletes_outdated_prev(self):
         """If we have in a local v2 client a RREV with a PREV that doesn't match the RREV, when
         we try to install, it removes the previous outdated PREV even before resolve it"""
-        pass
+        pref = self.c_v2.create(self.ref)
+        self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
 
-    def test_install_different_rrev(self):
-        """If we have an RREV in local and we specify a different RREV in the install command,
-        it will remove the previous one, even if there is no RREV in the remote"""
-        pass
+        self.c_v2.run("install {} --build missing".format(self.ref))
+        self.assertIn("WARN: The package {} doesn't belong to the installed recipe revision, "
+                      "removing folder".format(pref), self.c_v2.out)
+        self.assertIn("Package '{}' created".format(pref.id), self.c_v2.out)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_install_binary_iterating_remotes(self, v1):
-        """We have two servers (remote1 and remote2), both with a recipe and a package but the
-        second one with a new
-         PREV of the binary. If a client installs without specifying -r remote1, it will iterate
-         remote2 also"""
-        pass
+    def test_install_binary_iterating_remotes_same_rrev(self):
+        """We have two servers (remote1 and remote2), first with a recipe but the
+        second one with a PREV of the binary.
+        If a client installs without specifying -r remote1, it will iterate remote2 also"""
+        conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
+        with environment_append({"MY_VAR": "1"}):
+            pref = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref, remote="default")
+        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_update_recipe_iterating_remotes(self, v1):
+        # Same RREV, different PREV
+        with environment_append({"MY_VAR": "2"}):
+            self.c_v2.create(self.ref, conanfile=conanfile)
+
+        self.c_v2.upload_all(self.ref, remote="remote2")
+        self.c_v2.remove_all()
+
+        # Install, it will iterate remotes, resolving the package from remote2, but the recipe
+        # from default
+        self.c_v2.run("install {}".format(self.ref))
+        self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
+        self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
+
+    def test_install_binary_iterating_remotes_different_rrev(self):
+        """We have two servers (remote1 and remote2), first with a recipe RREV1 but the
+        second one with other RREV2 a PREV of the binary.
+        If a client installs without specifying -r remote1, it wont find in remote2 the binary"""
+
+        pref = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv1"))
+        self.c_v2.upload_all(self.ref, remote="default")
+        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
+
+        # Same RREV, different PREV
+        pref = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv2"))
+        self.c_v2.upload_all(self.ref, remote="remote2")
+        self.c_v2.remove_all()
+
+        # Install, it will iterate remotes, resolving the package from remote2, but the recipe
+        # from default
+        self.c_v2.run("install {}".format(self.ref), assert_error=True)
+        self.assertIn("{} - Missing".format(pref), self.c_v2.out)
+
+    def test_update_recipe_iterating_remotes(self):
         """We have two servers (remote1 and remote2), both with a recipe but the second one with a
         new RREV. If a client installs without specifying -r remote1, it WONT iterate
-        remote2, because it is associated in the registry"""
-        pass
+        remote2, because it is associated in the registry and have it in the cache. Unless we
+        specify the -r remote2"""
 
-    def test_update_pinned_rrev(self):
-        """If I have a server with two RREV (RREV1 and RREV2) and two PREVs each (PREV1 and PREV2)
-        if a client "install --update" pinning the RREV2 (being in the registry RREV1) it will
-        install the PREV2 from the RREV2
-        """
-        pass
+        conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
+        with environment_append({"MY_VAR": "1"}):
+            pref = self.c_v2.create(self.ref, conanfile=conanfile)
+        self.c_v2.upload_all(self.ref, remote="default")
 
-    def test_update_prev_only_same_rrev(self):
-        """If I have a server with two RREV (RREV1 and RREV2) and RREV2 has two PREV, PREV1 and
-        PREV2. If a client with RREV locally performs an install --update, it won't update PREV2
-        because it doesn't belong to RREV1
-        """
-        pass
+        time.sleep(1)
+
+        other_v2 = TurboTestClient(revisions_enabled=True, servers=self.servers)
+        # Same RREV, different new PREV
+        with environment_append({"MY_VAR": "2"}):
+            other_v2.create(self.ref, conanfile=conanfile)
+        other_v2.upload_all(self.ref, remote="remote2")
+
+        # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
+        self.c_v2.run("install {} --update".format(self.ref))
+        self.assertIn("lib/1.0@conan/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - "
+                      "Cache".format(pref.id), self.c_v2.out)
+
+        # If we force remote2, it will find an update
+        self.c_v2.run("install {} --update -r remote2".format(self.ref))
+        self.assertIn("{} - Update".format(pref), self.c_v2.out)
+        self.assertIn("Retrieving package {} from remote 'remote2' ".format(pref.id),
+                      self.c_v2.out)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
         it gives an error"""
-        pass
+
+        # Two revisions of "lib1" to the server
+        lib1 = ConanFileReference.loads("lib1/1.0@conan/stable")
+        lib1_pref = self.c_v2.create(lib1)
+        self.c_v2.upload_all(lib1)
+        lib1b_pref = self.c_v2.create(lib1, conanfile=GenConanfile().with_build_msg("Rev2"))
+        self.c_v2.upload_all(lib1)
+
+        # Lib2 depending of lib1
+        self.c_v2.remove_all()
+        lib2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+        self.c_v2.create(lib2, conanfile=GenConanfile().with_requirement(lib1_pref.ref))
+        self.c_v2.upload_all(lib2)
+
+        # Lib3 depending of lib1b
+        self.c_v2.remove_all()
+        lib3 = ConanFileReference.loads("lib3/1.0@conan/stable")
+        self.c_v2.create(lib3, conanfile=GenConanfile().with_requirement(lib1b_pref.ref))
+        self.c_v2.upload_all(lib3)
+
+        # Project depending on both lib3 and lib2
+        self.c_v2.remove_all()
+        project = ConanFileReference.loads("project/1.0@conan/stable")
+        self.c_v2.create(project,
+                         conanfile=GenConanfile().with_requirement(lib2).with_requirement(lib3),
+                         assert_error=True)
+        self.assertIn("Conflict in {}\n ".format(lib3), self.c_v2.out)
+        self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
 
     def test_alias_to_a_rrev(self):
         """ If an alias points to a RREV, it resolved that RREV and no other"""
@@ -258,20 +332,31 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
     @parameterized.expand([(True,), (False,)])
     def test_revision_install_explicit_miss_match_rrev(self, v1):
         """If we have a recipe in local, but we request to install a different one with RREV
-         1. With revisions enabled, it is removed and will look for it in the remotes
+         1. With revisions enabled, it fail and won't look the remotes unless --update
          2. Without revisions enabled it raises an input error"""
         client = self.c_v1 if v1 else self.c_v2
         ref = client.export(self.ref)
-        command = "install {}#fakerevision --build missing".format(ref)
+        command = "install {}#fakerevision".format(ref)
         if v1:
             client.run(command, assert_error=True)
             self.assertIn("ERROR: Revisions not enabled in the client, "
                           "specify a reference without revision", client.out)
         else:
             client.run(command, assert_error=True)
-            self.assertIn("Different revision requested, "
-                          "removing current local recipe...", client.out)
-            self.assertIn("Unable to find '{}#fakerevision'".format(self.ref), client.out)
+            self.assertIn("The recipe in the local cache doesn't match the specified revision. "
+                          "Use '--update' to check in the remote", client.out)
+            command = "install {}#fakerevision --update".format(ref)
+            client.run(command, assert_error=True)
+            self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
+
+            # Now create a new revision with other client and upload it, we will request it
+            new_client = TurboTestClient(revisions_enabled=True, servers=self.servers)
+            pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
+            new_client.upload_all(self.ref)
+
+            # Repeat the install --update pointing to the new reference
+            client.run("install {} --update".format(pref.ref.full_repr()))
+            self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_revision_miss_match_packages_remote(self, v1):

@@ -9,9 +9,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-from textwrap import dedent
-
-import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -21,6 +18,7 @@ from io import StringIO
 import bottle
 import requests
 import six
+import time
 from mock import Mock
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
@@ -712,6 +710,8 @@ class TurboTestClient(TestClient):
         rrev, _ = self.cache.package_layout(ref).recipe_revision()
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
+        if assert_error:
+            return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
         prev, _ = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
@@ -811,9 +811,14 @@ class GenConanfile(object):
         self._package_files_env = {}
         self._build_messages = []
         self._scm = {}
+        self._requirements = []
 
     def with_scm(self, scm):
         self._scm = scm
+        return self
+
+    def with_requirement(self, ref):
+        self._requirements.append(ref)
         return self
 
     def with_import(self, i):
@@ -874,6 +879,14 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _requirements_line(self):
+        if not self._requirements:
+            return ""
+        line = ", ".join(['"{}"'.format(r.full_repr()) for r in self._requirements])
+        tmp = "requires = %s" % line
+        return tmp
+
+    @property
     def _package_method(self):
         lines = []
         if self._package_files:
@@ -907,6 +920,8 @@ class GenConanfile(object):
         ret = []
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
+        if self._requirements_line:
+            ret.append("    {}".format(self._requirements_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
         if self._settings_line:
