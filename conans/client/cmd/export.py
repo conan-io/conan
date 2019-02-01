@@ -61,7 +61,7 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
     package_layout = cache.package_layout(ref, conanfile.short_paths)
     try:
         previous_digest = FileTreeManifest.load(package_layout.export())
-    except FileNotFoundError:
+    except IOError:
         previous_digest = None
     finally:
         _recreate_folders(package_layout.export(), package_layout.export_sources())
