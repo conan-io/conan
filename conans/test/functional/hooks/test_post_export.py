@@ -19,7 +19,7 @@ class PostExportTestCase(unittest.TestCase):
         """ Test that 'post_export' hook is called before computing the digest of the
             exported folders
         """
-        
+
         ref = ConanFileReference.loads("name/version@user/channel")
         conanfile = textwrap.dedent("""\
             from conans import ConanFile
