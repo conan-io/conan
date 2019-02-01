@@ -10,7 +10,7 @@ from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONANFILE, CONAN_MANIFEST
+from conans.paths import CONANFILE
 from conans.search.search import search_recipes
 from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
 from conans.util.log import logger
@@ -101,15 +101,15 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source = package_layout.source()
-    remove = False
+    remove_source_folder = False
     if is_dirty(source):
         output.info("Source folder is corrupted, forcing removal")
-        remove = True
+        remove_source_folder = True
     elif modified_recipe and not keep_source and os.path.exists(source):
         output.info("Package recipe modified in export, forcing source folder removal")
         output.info("Use the --keep-source, -k option to skip it")
-        remove = True
-    if remove:
+        remove_source_folder = True
+    if remove_source_folder:
         output.info("Removing 'source' folder, this can take a while for big packages")
         try:
             # remove only the internal
