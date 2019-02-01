@@ -33,18 +33,27 @@ class GraphInfo(object):
     def loads(text):
         try:
             graph_json = json.loads(text)
-            profile = graph_json["profile"]
-            # FIXME: Reading private very ugly
-            profile, _ = _load_profile(profile, None, None)
+
+            # Work with required fields
+            try:
+                profile = graph_json["profile"]
+                # FIXME: Reading private very ugly
+                profile, _ = _load_profile(profile, None, None)
+
+                root = graph_json["root"]
+                root_ref = ConanFileReference(root["name"], root["version"], root["user"],
+                                              root["channel"], validate=False)
+            except KeyError as e:
+                raise Exception("Required node {} is not present".format(e))
+
+            # Work with option 'options'
             try:
                 options = graph_json["options"]
             except KeyError:
                 options = None
             else:
                 options = OptionsValues(options)
-            root = graph_json["root"]
-            root_ref = ConanFileReference(root["name"], root["version"], root["user"], root["channel"],
-                                          validate=False)
+
             return GraphInfo(profile=profile, options=options, root_ref=root_ref)
         except ConanException:
             raise
