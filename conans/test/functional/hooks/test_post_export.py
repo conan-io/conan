@@ -32,9 +32,9 @@ class PostExportTestCase(unittest.TestCase):
         t.save({'conanfile.py': conanfile})
         package_layout = t.cache.package_layout(ref)
 
-        def mocked_post_export(output, conanfile_path, reference, *args, **kwargs):
+        def mocked_post_export(*args, **kwargs):
             # There shouldn't be a digest yet
-            with self.assertRaisesRegexp(FileNotFoundError, "No such file or directory"):
+            with self.assertRaisesRegexp(IOError, "No such file or directory"):
                 FileTreeManifest.load(package_layout.export())
             self.assertFalse(os.path.exists(os.path.join(package_layout.export(), CONAN_MANIFEST)))
 
