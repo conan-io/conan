@@ -39,6 +39,28 @@ class Node(object):
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
 
+    def closure(self):
+        closure = OrderedDict()
+        # is_direct = True
+        current = [(edge.dst, True) for edge in self.dependencies]
+        while current:
+            new_current = []
+            for n, private in current:
+                closure[n] = private
+            for n, private in current:
+                for edge in n.dependencies:
+                    private = private or edge.private or edge.build_require
+                    if edge.dst not in new_current and edge.dst not in closure:
+                        new_current.append((edge.dst, private))
+            current = new_current
+        return closure
+
+    def public_closure(self):
+        return [n for n, private in self.closure().items() if not private]
+
+    def private_closure(self):
+        return [n for n, private in self.closure().items() if private]
+
     def partial_copy(self):
         result = Node(self.ref, self.conanfile)
         result.dependants = set()

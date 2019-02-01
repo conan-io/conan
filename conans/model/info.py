@@ -193,21 +193,17 @@ class RequirementsInfo(object):
             r.full_package_mode()
 
 
-class RequirementsList(list):
+class PackageReferenceList(list):
     @staticmethod
     def loads(text):
-        return RequirementsList.deserialize(text.splitlines())
+        return PackageReferenceList([PackageReference.loads(package_reference)
+                                     for package_reference in text.splitlines()])
 
     def dumps(self):
         return "\n".join(self.serialize())
 
     def serialize(self):
-        return [str(r) for r in sorted(self)]
-
-    @staticmethod
-    def deserialize(data):
-        return RequirementsList([PackageReference.loads(package_reference)
-                                 for package_reference in data])
+        return [str(r) for r in self]
 
 
 class ConanInfo(object):
@@ -229,7 +225,7 @@ class ConanInfo(object):
         result.full_options = options
         result.options = options.copy()
         result.options.clear_indirect()
-        result.full_requires = RequirementsList(requires)
+        result.full_requires = PackageReferenceList(requires)
         result.requires = RequirementsInfo(requires)
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
@@ -251,7 +247,7 @@ class ConanInfo(object):
         result.full_settings = Values.loads(parser.full_settings)
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
-        result.full_requires = RequirementsList.loads(parser.full_requires)
+        result.full_requires = PackageReferenceList.loads(parser.full_requires)
         result.requires = RequirementsInfo(result.full_requires)
         result.recipe_hash = parser.recipe_hash or None
 
