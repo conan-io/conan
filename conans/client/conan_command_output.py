@@ -106,7 +106,7 @@ class CommandOutputer(object):
         """ Convert 'deps_graph' into consumible information for json and cli """
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.ref, node.bid), []).append(node)
 
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():

@@ -27,6 +27,8 @@ BINARY_EDITABLE = "Editable"
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
+        self.bid = None
+        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -230,7 +232,7 @@ class DepsGraph(object):
         for node in self.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            pref = PackageReference(node.ref, node.conanfile.info.package_id())
+            pref = PackageReference(node.ref, node.bid)
             if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)
@@ -267,11 +269,10 @@ class DepsGraph(object):
 
     def nodes_to_build(self):
         ret = []
-        for level in self.by_levels():
-            for node in level:
-                if node.binary == BINARY_BUILD:
-                    if node.ref.copy_clear_rev() not in ret:
-                        ret.append(node.ref.copy_clear_rev())
+        for node in self.ordered_iterate():
+            if node.binary == BINARY_BUILD:
+                if node.ref.copy_clear_rev() not in ret:
+                    ret.append(node.ref.copy_clear_rev())
         return ret
 
     def by_levels(self):

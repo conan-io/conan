@@ -131,7 +131,7 @@ class _ConanPackageBuilder(object):
             source_folder = self.build_folder
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
-            pkg_id = self._conan_file.info.package_id()
+            pkg_id = self._pref.id
             conanfile_path = self._cache.conanfile(self._ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
@@ -179,14 +179,14 @@ class _ConanPackageBuilder(object):
             with conanfile_exception_formatter(str(self._conan_file), "build"):
                 self._conan_file.build()
 
-            self._out.success("Package '%s' built" % self._conan_file.info.package_id())
+            self._out.success("Package '%s' built" % self._pref.id)
             self._out.info("Build folder %s" % self.build_folder)
             self._hook_manager.execute("post_build", conanfile=self._conan_file,
                                        reference=self._ref,
                                        package_id=self._pref.id)
         except Exception as exc:
             self._out.writeln("")
-            self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())
+            self._out.error("Package '%s' build failed" % self._pref.id)
             self._out.warn("Build folder %s" % self.build_folder)
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
@@ -279,7 +279,7 @@ class BinaryInstaller(object):
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
-                package_id = conan_file.info.package_id()
+                package_id = node.bid
                 if node.binary == BINARY_MISSING:
                     dependencies = [str(dep.dst) for dep in node.dependencies]
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,

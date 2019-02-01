@@ -312,18 +312,19 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        computed_id = getattr(self, "_package_id", None)
-        if computed_id:
-            return computed_id
+        bid = getattr(self, "_package_id", None)
+        if bid:
+            return bid
+
         result = []
         result.append(self.settings.sha)
         # Only are valid requires for OPtions those Non-Dev who are still in requires
-
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
         result.append(self.requires.sha)
-        self._package_id = sha1('\n'.join(result).encode())
-        return self._package_id
+        package_id = sha1('\n'.join(result).encode())
+        self._package_id = package_id
+        return package_id
 
     def serialize_min(self):
         """

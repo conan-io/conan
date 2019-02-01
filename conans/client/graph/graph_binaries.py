@@ -65,8 +65,7 @@ class GraphBinariesAnalyzer(object):
 
         ref, conanfile = node.ref, node.conanfile
         revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        package_id = conanfile.info.package_id()
-        pref = PackageReference(ref, package_id)
+        pref = PackageReference(ref, node.bid)
         # Check that this same reference hasn't already been checked
         previous_node = evaluated_nodes.get(pref)
         if previous_node:
@@ -171,8 +170,7 @@ class GraphBinariesAnalyzer(object):
         indirect_reqs = set()   # of PackageReference, avoid duplicates
         for neighbor in neighbors:
             ref, nconan = neighbor.ref, neighbor.conanfile
-            package_id = nconan.info.package_id()
-            pref = PackageReference(ref, package_id)
+            pref = PackageReference(ref, neighbor.bid)
             direct_reqs.append(pref)
             indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
@@ -194,6 +192,9 @@ class GraphBinariesAnalyzer(object):
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             conanfile.package_id()
+
+        info = node.conanfile.info
+        node.bid = info.package_id()
 
     def _handle_private(self, node, deps_graph):
         private_neighbours = node.private_neighbors()
