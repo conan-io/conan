@@ -79,20 +79,18 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
                                                                output, cache, ref)
 
         # Execute post-export hook before computing the digest
-        hook_manager.execute("post_export", conanfile=conanfile,
-                             conanfile_path=package_layout.conanfile(),
-                             reference=ref)
+        hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
+                             conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
         digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
-        if previous_digest and previous_digest == digest:
-            output.info("The stored package has not changed")
-            modified_recipe = False
-            digest = previous_digest  # Use the old one, keep old timestamp
-        else:
+        modified_recipe = not previous_digest or previous_digest == digest
+        if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
             output.info('Folder: %s' % package_layout.export())
-            modified_recipe = True
+        else:
+            output.info("The stored package has not changed")
+            digest = previous_digest  # Use the old one, keep old timestamp
         digest.save(package_layout.export())
 
     # Compute the revision for the recipe
@@ -102,25 +100,20 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
         metadata.recipe.revision = revision
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
-    source = package_layout.source()
-    remove_source_folder = False
-    if is_dirty(source):
-        output.info("Source folder is corrupted, forcing removal")
-        remove_source_folder = True
-    elif modified_recipe and not keep_source and os.path.exists(source):
-        output.info("Package recipe modified in export, forcing source folder removal")
-        output.info("Use the --keep-source, -k option to skip it")
-        remove_source_folder = True
-    if remove_source_folder:
-        output.info("Removing 'source' folder, this can take a while for big packages")
+    source_folder = package_layout.source()
+    if os.path.exists(source_folder):
         try:
-            # remove only the internal
-            rmdir(source)
+            if is_dirty(source_folder):
+                output.info("Source folder is corrupted, forcing removal")
+                rmdir(source_folder)
+            elif modified_recipe and not keep_source:
+                output.info("Package recipe modified in export, forcing source folder removal")
+                output.info("Use the --keep-source, -k option to skip it")
+                rmdir(source_folder)
         except BaseException as e:
-            output.error("Unable to delete source folder. "
-                         "Will be marked as corrupted for deletion")
+            output.error("Unable to delete source folder. Will be marked as corrupted for deletion")
             output.warn(str(e))
-            set_dirty(source)
+            set_dirty(source_folder)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, ref):
