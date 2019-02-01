@@ -2,11 +2,11 @@ import json
 import os
 
 from conans.client.profile_loader import _load_profile
+from conans.errors import ConanException
 from conans.model.options import OptionsValues
+from conans.model.ref import ConanFileReference
 from conans.tools import save
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
-
 
 GRAPH_INFO_FILE = "graph_info.json"
 
@@ -24,24 +24,32 @@ class GraphInfo(object):
         if not path:
             raise IOError("Invalid path")
         p = path if os.path.isfile(path) else os.path.join(path, GRAPH_INFO_FILE)
-        return GraphInfo.loads(load(p))
+        try:
+            return GraphInfo.loads(load(p))
+        except Exception as e:
+            raise ConanException("Error parsing GraphInfo from file '{}': {}".format(p, e))
 
     @staticmethod
     def loads(text):
-        graph_json = json.loads(text)
-        profile = graph_json["profile"]
-        # FIXME: Reading private very ugly
-        profile, _ = _load_profile(profile, None, None)
         try:
-            options = graph_json["options"]
-        except KeyError:
-            options = None
-        else:
-            options = OptionsValues(options)
-        root = graph_json["root"]
-        root_ref = ConanFileReference(root["name"], root["version"], root["user"], root["channel"],
-                                      validate=False)
-        return GraphInfo(profile=profile, options=options, root_ref=root_ref)
+            graph_json = json.loads(text)
+            profile = graph_json["profile"]
+            # FIXME: Reading private very ugly
+            profile, _ = _load_profile(profile, None, None)
+            try:
+                options = graph_json["options"]
+            except KeyError:
+                options = None
+            else:
+                options = OptionsValues(options)
+            root = graph_json["root"]
+            root_ref = ConanFileReference(root["name"], root["version"], root["user"], root["channel"],
+                                          validate=False)
+            return GraphInfo(profile=profile, options=options, root_ref=root_ref)
+        except ConanException:
+            raise
+        except Exception as e:
+            raise ConanException("Error related to GraphInfo text content: {}".format(e))
 
     def save(self, folder, filename=None):
         filename = filename or GRAPH_INFO_FILE
