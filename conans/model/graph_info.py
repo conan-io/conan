@@ -26,7 +26,7 @@ class GraphInfo(object):
         p = path if os.path.isfile(path) else os.path.join(path, GRAPH_INFO_FILE)
         try:
             return GraphInfo.loads(load(p))
-        except Exception as e:
+        except ConanException as e:
             raise ConanException("Error parsing GraphInfo from file '{}': {}".format(p, e))
 
     @staticmethod
