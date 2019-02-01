@@ -55,6 +55,8 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
                              "You exported '%s' but already existing '%s'"
                              % (reference, " ".join(str(s) for s in refs)))
 
+    output = conanfile.output
+
     # Get previous digest
     package_layout = cache.package_layout(ref, conanfile.short_paths)
     try:
