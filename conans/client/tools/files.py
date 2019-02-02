@@ -204,6 +204,8 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         if target.startswith("b/"):
             target = target[2:]
         if "dev/null" in source:
+            tokens = target.split("/")[strip:]
+            target = "/".join(tokens)
             if base_path:
                 target = os.path.join(base_path, target)
             hunks = [s.decode("utf-8") for s in p.hunks[0].text]
