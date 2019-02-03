@@ -66,11 +66,10 @@ class ToolsFilesPatchTest(unittest.TestCase):
         tmp_dir, file_path, text_file = self._save_files(file_content)
         self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
 
-    def test_patch_new(self):
+    def test_patch_strip_new(self):
         conanfile = dedent("""
             from conans import ConanFile, tools
             class PatchConan(ConanFile):
-                exports_sources = "example.patch"
                 def source(self):
                     tools.patch(self.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
@@ -85,6 +84,26 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("source .")
         self.assertEqual(load(os.path.join(client.current_folder, "newfile")),
                          "New file!")
+
+    def test_patch_strip_delete(self):
+        conanfile = dedent("""
+            from conans import ConanFile, tools
+            class PatchConan(ConanFile):
+                def source(self):
+                    tools.patch(self.source_folder, "example.patch", strip=1)""")
+        patch = dedent("""
+            --- a\src\oldfile
+            +++ b/dev/null
+            @@ -0,1 +0,0 @@
+            -legacy code""")
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "example.patch": patch,
+                     "oldfile": "legacy code"})
+        path = os.path.join(client.current_folder, "oldfile")
+        self.assertTrue(os.path.exists(path))
+        client.run("source .")
+        self.assertFalse(os.path.exists(path))
 
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
