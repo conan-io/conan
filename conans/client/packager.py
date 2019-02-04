@@ -8,7 +8,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
-from conans.util.files import mkdir, rmdir, save
+from conans.util.files import mkdir, rmdir, save, walk
 from conans.util.log import logger
 
 
@@ -45,7 +45,6 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
     package folder
     """
     mkdir(package_folder)
-
     output = conanfile.output
     # Make the copy of all the patterns
     output.info("Generating the package")
@@ -66,6 +65,12 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
         def recipe_has(attribute):
             return attribute in conanfile.__class__.__dict__
 
+        def are_there_files_in_folder(folder):
+            for root, dirs, files in walk(folder):
+                if files:
+                    return True
+            return False
+
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             with conanfile_exception_formatter(str(conanfile), "package"):
@@ -80,7 +85,8 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
         copy_done = conanfile.copy.report(package_output)
-        if not copy_done and recipe_has("build") and recipe_has("package"):
+        if not copy_done and recipe_has("build") and recipe_has("package") and \
+                not are_there_files_in_folder(package_folder):
             output.warn("No files copied from build folder!")
     except Exception as e:
         if not local:
