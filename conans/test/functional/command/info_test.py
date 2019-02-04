@@ -9,6 +9,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
+from conans.test.utils.conanfile import TestConanFile
 
 
 class InfoTest(unittest.TestCase):
@@ -611,3 +612,17 @@ class MyTest(ConanFile):
         html_content = load(html_path)
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
+
+    def wrong_graph_info_test(self):
+        # https://github.com/conan-io/conan/issues/4443
+        conanfile = TestConanFile()
+        client = TestClient()
+        client.save({"conanfile.py": str(conanfile)})
+        client.run("install .")
+        path = os.path.join(client.current_folder, "graph_info.json")
+        graph_info = load(path)
+        graph_info = json.loads(graph_info)
+        graph_info.pop("root")
+        save(path, json.dumps(graph_info))
+        client.run("info .")
+        self.assertIn("conanfile.py (Hello/0.1@None/None)", client.out)

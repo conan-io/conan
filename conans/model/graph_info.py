@@ -2,10 +2,11 @@ import json
 import os
 
 from conans.client.profile_loader import _load_profile
+from conans.errors import ConanException
 from conans.model.options import OptionsValues
+from conans.model.ref import ConanFileReference
 from conans.tools import save
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
 
 
 GRAPH_INFO_FILE = "graph_info.json"
@@ -24,7 +25,10 @@ class GraphInfo(object):
         if not path:
             raise IOError("Invalid path")
         p = path if os.path.isfile(path) else os.path.join(path, GRAPH_INFO_FILE)
-        return GraphInfo.loads(load(p))
+        try:
+            return GraphInfo.loads(load(p))
+        except Exception as e:
+            raise ConanException("Error parsing GraphInfo from file '{}': {}".format(p, e))
 
     @staticmethod
     def loads(text):
@@ -38,7 +42,7 @@ class GraphInfo(object):
             options = None
         else:
             options = OptionsValues(options)
-        root = graph_json["root"]
+        root = graph_json.get("root", {"name": None, "version": None, "user": None, "channel": None})
         root_ref = ConanFileReference(root["name"], root["version"], root["user"], root["channel"],
                                       validate=False)
         return GraphInfo(profile=profile, options=options, root_ref=root_ref)
