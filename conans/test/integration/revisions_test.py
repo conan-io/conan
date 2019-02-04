@@ -416,6 +416,22 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertIsNotNone(prev2)
         self.assertIsNone(prev_time2)
 
+    def test_new_exported_revision_always_clear_time(self):
+
+        self.c_v2.create(self.ref)
+        self.c_v2.upload_all(self.ref)
+
+        self.c_v2.remove_all()
+        self.c_v2.run("install {}".format(self.ref))
+        rrev, rtime = self.c_v2.recipe_revision(self.ref)
+        self.assertIsNotNone(rrev)
+        self.assertIsNotNone(rtime)
+
+        self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
+        _, rtime = self.c_v2.recipe_revision(self.ref)
+        self.assertIsNotNone(rrev)
+        self.assertIsNone(rtime)
+
     @parameterized.expand([(True,), (False,)])
     def test_export_metadata(self, v1):
         """When a export is executed, the recipe revision is updated in the cache"""
