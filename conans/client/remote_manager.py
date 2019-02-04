@@ -8,7 +8,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
 from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException
 from conans.model.manifest import gather_files
@@ -63,7 +63,6 @@ class RemoteManager(object):
 
         ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
                                 policy, remote_manifest)
-
         duration = time.time() - t1
         log_recipe_upload(ref, duration, the_files, remote.name)
         if ret:
@@ -150,7 +149,6 @@ class RemoteManager(object):
 
         uploaded = self._call_remote(remote, "upload_package", pref,
                                      the_files, retry, retry_wait, policy)
-
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, remote)
         logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)

@@ -306,7 +306,7 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                from conans.client.cache import PROFILES_FOLDER
+                from conans.client.cache.cache import PROFILES_FOLDER
                 profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
                 ret = os.path.abspath(os.path.join(profiles_folder, ret))
 

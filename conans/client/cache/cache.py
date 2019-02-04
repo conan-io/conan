@@ -5,21 +5,21 @@ from os.path import join, normpath
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.editable import EditablePackages
+from conans.client.cache.editable import EditablePackages
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
+from conans.client.cache.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
     RemoteRegistry
 from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.paths import PUT_HEADERS
+from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.paths.simple_paths import SimplePaths, check_ref_case
 from conans.unicode import get_cwd
-from conans.util.files import list_folder_subdirs, load, normalize, save
+from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
 
@@ -272,6 +272,19 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def remove_package_system_reqs(self, reference):
+        assert isinstance(reference, ConanFileReference)
+        conan_folder = self.conan(reference)
+        system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
+        if not os.path.exists(conan_folder):
+            raise ValueError("%s does not exist" % repr(reference))
+        if not os.path.exists(system_reqs_folder):
+            return
+        try:
+            rmdir(system_reqs_folder)
+        except Exception as e:
+            raise ConanException("Unable to remove system requirements at %s: %s" % (system_reqs_folder, str(e)))
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)

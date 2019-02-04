@@ -7,8 +7,7 @@ from parameterized.parameterized import parameterized
 from conans import DEFAULT_REVISION_V1
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, \
-    TurboTestClient, GenConanfile
+from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 
 

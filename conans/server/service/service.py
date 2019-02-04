@@ -273,7 +273,6 @@ def search_packages(paths, ref, query, look_in_all_rrevs):
 def _get_local_infos_min(paths, ref, look_in_all_rrevs):
 
     result = {}
-
     rrevs = paths.get_recipe_revisions(ref) if look_in_all_rrevs else [None]
 
     for rrev in rrevs:
@@ -292,7 +291,6 @@ def _get_local_infos_min(paths, ref, look_in_all_rrevs):
                 info = ConanInfo.loads(conan_info_content)
                 conan_vars_info = info.serialize_min()
                 result[package_id] = conan_vars_info
-
             except Exception as exc:  # FIXME: Too wide
                 logger.error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):

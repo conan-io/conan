@@ -268,7 +268,6 @@ class TestConan(ConanFile):
         """
         # Upload conans
         self.client.run('upload %s' % str(self.ref))
-
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
@@ -324,12 +323,13 @@ class TestConan(ConanFile):
                              stat.S_IRWXU, stat.S_IRWXU)
 
     def upload_all_test(self):
-        '''Upload conans and package together'''
+        """Upload conans and package together"""
         # Try to upload all conans and packages
         self.client.run('upload %s --all' % str(self.ref))
         lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
                  if line.startswith("Uploading")]
-        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable to remote 'default'",
+        self.assertEqual(lines, ["Uploading to remote 'default':",
+                                 "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
                                  "Uploading conanmanifest.txt",
                                  "Uploading conanfile.py",
                                  "Uploading conan_export.tgz",

@@ -1,4 +1,4 @@
-import datetime
+import json
 import json
 import os
 import shutil
@@ -10,7 +10,6 @@ import time
 from mock import patch
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
-from conans.client.tools import environment_append
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
@@ -19,7 +18,8 @@ from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
-from conans.util.files import list_folder_subdirs, load, save
+from conans.util.files import list_folder_subdirs, load
+from conans.util.files import save
 
 conan_vars1 = '''
 [settings]
@@ -1159,6 +1159,7 @@ class Test(ConanFile):
             client.run("upload lib/1.0@user/testing -c")
         client.run("remove -f lib*")
         client.run("install lib/1.0@user/testing --build")  # To update the local time
+
         client.run("search lib/1.0@user/testing -r default --revisions")
 
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)

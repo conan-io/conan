@@ -55,7 +55,7 @@ class UploadTest(unittest.TestCase):
     def non_existing_recipe_error_test(self):
         """ Trying to upload a non-existing recipe must raise an Error
         """
-        client = TestClient()
+        client = TestClient(servers={"default": TestServer()})
         client.run("upload Pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: There is no local conanfile exported as Pkg/0.1@user/channel",
                       client.user_io.out)
@@ -63,7 +63,8 @@ class UploadTest(unittest.TestCase):
     def non_existing_package_error_test(self):
         """ Trying to upload a non-existing package must raise an Error
         """
-        client = TestClient()
+        servers = {"default": TestServer()}
+        client = TestClient(servers=servers)
         client.run("upload Pkg/0.1@user/channel -p hash1", assert_error=True)
         self.assertIn("ERROR: There is no local conanfile exported as Pkg/0.1@user/channel",
                       client.user_io.out)
@@ -114,10 +115,8 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading package", client.user_io.out)
 
         # Check that an invalid query fails
-        try:
-            client.run("upload Hello1/*@user/testing --confirm -q 'blah blah blah'")
-        except:
-            self.assertIn("Invalid package query", client.user_io.out)
+        client.run("upload Hello1/*@user/testing --confirm -q 'blah blah blah'", assert_error=True)
+        self.assertIn("Invalid package query", client.user_io.out)
 
     def broken_sources_tgz_test(self):
         # https://github.com/conan-io/conan/issues/2854
@@ -129,7 +128,8 @@ class UploadTest(unittest.TestCase):
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
-        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps', new=gzopen_patched):
+        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps',
+                        new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_sources.tgz", client.out)
 
@@ -156,7 +156,8 @@ class UploadTest(unittest.TestCase):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
-        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps', new=gzopen_patched):
+        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps',
+                        new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
 

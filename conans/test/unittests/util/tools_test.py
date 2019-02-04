@@ -18,7 +18,7 @@ from six import StringIO
 from six.moves.urllib.parse import quote
 
 from conans.client import tools
-from conans.client.cache import CONAN_CONF
+from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
@@ -547,6 +547,9 @@ class ToolsTest(unittest.TestCase):
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(output=output), 34)
+        with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
+            with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
+                tools.cpu_count(output=output)
 
     def get_env_unit_test(self):
         """

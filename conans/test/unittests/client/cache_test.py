@@ -1,15 +1,27 @@
 # coding=utf-8
+
 import os
+
+
+
 import unittest
 
 from six import StringIO
 
-from conans.client.cache import ClientCache
+
+
 from conans.client.output import ConanOutput
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir, save
+
+from conans.client.cache.cache import ClientCache
+from conans.client.output import ConanOutput
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import mkdir
+
 
 
 class CacheTest(unittest.TestCase):
@@ -31,6 +43,7 @@ class CacheTest(unittest.TestCase):
         # But if ref has revision and it doesn't match, it doesn't exist
         save(os.path.join(self.cache.conan(self.ref), "metadata.json"),
              PackageMetadata().dumps())
+
         ref2 = self.ref.copy_with_rev("revision")
         layout2 = self.cache.package_layout(ref2)
         self.assertFalse(layout2.recipe_exists())
@@ -50,6 +63,7 @@ class CacheTest(unittest.TestCase):
         mkdir(self.cache.package(pref))
         save(os.path.join(self.cache.conan(self.ref), "metadata.json"),
              PackageMetadata().dumps())
+
         self.assertTrue(layout.package_exists(pref))
 
         # But if ref has revision and it doesn't match, it doesn't exist

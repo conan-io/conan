@@ -1,13 +1,17 @@
 import json
 import os
+from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths.simple_paths import SimplePaths
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
+from conans.util.env_reader import get_env
 from conans.util.files import save
 
 
@@ -83,15 +87,121 @@ class CommandOutputer(object):
     def nodes_to_build(self, nodes_to_build):
         self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
 
+    def _handle_json_output(self, data, json_output, cwd):
+        json_str = json.dumps(data)
+
+        if json_output is True:
+            self.user_io.out.write(json_str)
+        else:
+            if not os.path.isabs(json_output):
+                json_output = os.path.join(cwd, json_output)
+            save(json_output, json.dumps(data))
+            self.user_io.out.writeln("")
+            self.user_io.out.info("JSON file created at '%s'" % json_output)
+
+    def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
+        data = [str(n) for n in nodes_to_build]
+        self._handle_json_output(data, json_output, cwd)
+
+    def _grab_info_data(self, deps_graph, grab_paths):
+        """ Convert 'deps_graph' into consumible information for json and cli """
+        compact_nodes = OrderedDict()
+        for node in sorted(deps_graph.nodes):
+            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
+
+        ret = []
+        for (ref, package_id), list_nodes in compact_nodes.items():
+            node = list_nodes[0]
+            if node.recipe == RECIPE_VIRTUAL:
+                continue
+
+            item_data = {}
+            conanfile = node.conanfile
+            if node.recipe == RECIPE_CONSUMER:
+                ref = str(conanfile)
+            else:
+                item_data["revision"] = str(ref.revision)
+
+            item_data["reference"] = str(ref)
+            item_data["is_ref"] = isinstance(ref, ConanFileReference)
+            item_data["display_name"] = conanfile.display_name
+            item_data["id"] = package_id
+            item_data["build_id"] = build_id(conanfile)
+
+            # Paths
+            if isinstance(ref, ConanFileReference) and grab_paths:
+                item_data["export_folder"] = self.cache.export(ref)
+                item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
+                if isinstance(self.cache, SimplePaths):
+                    # @todo: check if this is correct or if it must always be package_id()
+                    bid = build_id(conanfile) or package_id
+                    pref = PackageReference(ref, bid)
+                    item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
+
+                    pref = PackageReference(ref, package_id)
+                    item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
+
+            try:
+                reg_remote = self.cache.registry.refs.get(ref)
+                if reg_remote:
+                    item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
+            except:
+                pass
+
+            def _add_if_exists(attrib, as_list=False):
+                value = getattr(conanfile, attrib, None)
+                if value:
+                    if not as_list:
+                        item_data[attrib] = value
+                    else:
+                        item_data[attrib] = list(value) if isinstance(value, (list, tuple, set)) \
+                            else [value, ]
+
+            _add_if_exists("url")
+            _add_if_exists("homepage")
+            _add_if_exists("license", as_list=True)
+            _add_if_exists("author")
+            _add_if_exists("topics", as_list=True)
+
+            if isinstance(ref, ConanFileReference):
+                item_data["recipe"] = node.recipe
+
+                if get_env("CONAN_CLIENT_REVISIONS_ENABLED", False) and node.ref.revision:
+                    item_data["revision"] = node.ref.revision
+
+                item_data["binary"] = node.binary
+                if node.binary_remote:
+                    item_data["binary_remote"] = node.binary_remote.name
+
+            node_times = self._read_dates(deps_graph)
+            if node_times and node_times.get(ref, None):
+                item_data["creation_date"] = node_times.get(ref, None)
+
+            if isinstance(ref, ConanFileReference):
+                dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
+                required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
+                if required:
+                    item_data["required_by"] = [d.display_name for d in required]
+
+            depends = node.neighbors()
+            requires = [d for d in depends if not d.build_require]
+            build_requires = [d for d in depends if d.build_require]
+
+            if requires:
+                item_data["requires"] = [repr(d.ref) for d in requires]
+
+            if build_requires:
+                item_data["build_requires"] = [repr(d.ref) for d in build_requires]
+
+            ret.append(item_data)
+
+        return ret
+
     def info(self, deps_graph, only, package_filter, show_paths):
-        registry = self.cache.registry
-        Printer(self.user_io.out).print_info(deps_graph,
-                                             only, registry,
-                                             node_times=self._read_dates(deps_graph),
-                                             path_resolver=self.cache,
-                                             package_filter=package_filter,
+        data = self._grab_info_data(deps_graph, grab_paths=show_paths)
+        Printer(self.user_io.out).print_info(data, only,  package_filter=package_filter,
                                              show_paths=show_paths,
-                                             revisions_enabled=self.cache.revisions_enabled)
+                                             show_revisions=self.cache.revisions_enabled)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
@@ -105,6 +215,10 @@ class CommandOutputer(object):
         if not os.path.isabs(graph_filename):
             graph_filename = os.path.join(cwd, graph_filename)
         grapher.graph_file(graph_filename)
+
+    def json_info(self, deps_graph, json_output, cwd, show_paths):
+        data = self._grab_info_data(deps_graph, grab_paths=show_paths)
+        self._handle_json_output(data, json_output, cwd)
 
     def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self.user_io.out)

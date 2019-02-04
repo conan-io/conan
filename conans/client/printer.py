@@ -1,13 +1,9 @@
 import fnmatch
 from collections import OrderedDict
 
-from conans.client.installer import build_id
 from conans.client.output import Color
 from conans.model.options import OptionsValues
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths.simple_paths import SimplePaths
-from conans.util.env_reader import get_env
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.model.ref import ConanFileReference
 
 
 class Printer(object):
@@ -40,36 +36,8 @@ class Printer(object):
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))
 
-    def _print_paths(self, ref, conan, path_resolver, show):
-        if isinstance(ref, ConanFileReference):
-            if show("export_folder"):
-                path = path_resolver.export(ref)
-                self._out.writeln("    export_folder: %s" % path, Color.BRIGHT_GREEN)
-            if show("source_folder"):
-                path = path_resolver.source(ref, conan.short_paths)
-                self._out.writeln("    source_folder: %s" % path, Color.BRIGHT_GREEN)
-            if show("build_folder") and isinstance(path_resolver, SimplePaths):
-                # @todo: check if this is correct or if it must always be package_id()
-                bid = build_id(conan)
-                if not bid:
-                    bid = conan.info.package_id()
-                path = path_resolver.build(PackageReference(ref, bid), conan.short_paths)
-                self._out.writeln("    build_folder: %s" % path, Color.BRIGHT_GREEN)
-            if show("package_folder") and isinstance(path_resolver, SimplePaths):
-                id_ = conan.info.package_id()
-                path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
-                self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
-
-    def print_info(self, deps_graph, _info, registry, node_times=None, path_resolver=None,
-                   package_filter=None, show_paths=False, revisions_enabled=False):
-        """ Print the dependency information for a conan file
-
-            Attributes:
-                deps_graph: the dependency graph of conan file references to print
-                placeholder_reference: the conan file reference that represents the conan
-                                       file for a project on the path. This may be None,
-                                       in which case the project itself will not be part
-                                       of the printed dependencies.
+    def print_info(self, data, _info, package_filter=None, show_paths=False, show_revisions=False):
+        """ Print in console the dependency information for a conan file
         """
         if _info is None:  # No filter
             def show(_):
@@ -80,101 +48,78 @@ class Printer(object):
             def show(field):
                 return field in _info_lower
 
-        compact_nodes = OrderedDict()
-        for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
+        # Handy function to perform a common print task
+        def _print(it_field, show_field=None, name=None, color=Color.BRIGHT_GREEN):
+            show_field = show_field or it_field
+            name = name or it_field
+            if show(show_field) and it_field in it:
+                self._out.writeln("    %s: %s" % (name, it[it_field]), color)
 
-        for (ref, package_id), list_nodes in compact_nodes.items():
-            node = list_nodes[0]
-            conan = node.conanfile
-            if node.recipe == RECIPE_VIRTUAL:
-                continue
-            if node.recipe == RECIPE_CONSUMER:
-                ref = str(conan)
-            if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
+        # Iteration and printing
+        for it in data:
+            if package_filter and not fnmatch.fnmatch(it["reference"], package_filter):
                 continue
 
-            self._out.writeln("%s" % node.conanfile.display_name, Color.BRIGHT_CYAN)
-            try:
-                # Excludes PROJECT fake reference
-                reg_remote = registry.refs.get(ref)
-            except:
-                reg_remote = None
+            is_ref = it["is_ref"]
 
-            if show("id"):
-                self._out.writeln("    ID: %s" % package_id, Color.BRIGHT_GREEN)
-            if show("build_id"):
-                bid = build_id(conan)
-                self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
-
+            self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
+            _print("id", name="ID")
+            _print("build_id", name="BuildID")
             if show_paths:
-                self._print_paths(ref, conan, path_resolver, show)
+                _print("export_folder")
+                _print("source_folder")
+                _print("build_folder")
+                _print("package_folder")
 
-            if isinstance(ref, ConanFileReference) and show("remote"):
-                if reg_remote:
-                    self._out.writeln("    Remote: %s=%s" % (reg_remote.name, reg_remote.url),
+            if show("remote") and is_ref:
+                if "remote" in it:
+                    self._out.writeln("    Remote: %s=%s" % (it["remote"]["name"],
+                                                             it["remote"]["url"]),
                                       Color.BRIGHT_GREEN)
                 else:
                     self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
-            url = getattr(conan, "url", None)
-            homepage = getattr(conan, "homepage", None)
-            license_ = getattr(conan, "license", None)
-            author = getattr(conan, "author", None)
-            topics = getattr(conan, "topics", None)
-            if url and show("url"):
-                self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
-            if homepage and show("homepage"):
-                self._out.writeln("    Homepage: %s" % homepage, Color.BRIGHT_GREEN)
 
-            if license_ and show("license"):
-                if isinstance(license_, (list, tuple, set)):
-                    self._out.writeln("    Licenses: %s" % ", ".join(license_), Color.BRIGHT_GREEN)
+            _print("url", name="URL")
+            _print("homepage", name="Homepage")
+
+            if show("license") and "license" in it:
+                licenses_str = ", ".join(it["license"])
+                lead_str = "Licenses" if len(it["license"]) > 1 else "License"
+                self._out.writeln("    %s: %s" % (lead_str, licenses_str), Color.BRIGHT_GREEN)
+
+            _print("author", name="Author")
+
+            if show("topics") and "topics" in it:
+                self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)
+
+            _print("recipe", name="Recipe", color=None)
+            if show_revisions:
+                _print("revision", name="Revision", color=None)
+            _print("binary", name="Binary", color=None)
+
+            if show("binary_remote") and is_ref:
+                if "binary_remote" in it:
+                    self._out.writeln("    Binary remote: %s" % it["binary_remote"])
                 else:
-                    self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
-            if author and show("author"):
-                self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
-            if topics and show("topics"):
-                if isinstance(topics, (list, tuple, set)):
-                    self._out.writeln("    Topics: %s" % ", ".join(topics), Color.BRIGHT_GREEN)
-                else:
-                    self._out.writeln("    Topics: %s" % topics, Color.BRIGHT_GREEN)
+                    self._out.writeln("    Binary remote: None")
 
-            if isinstance(ref, ConanFileReference) and show("recipe"):  # Excludes PROJECT
-                self._out.writeln("    Recipe: %s" % node.recipe)
-            if revisions_enabled:
-                if (isinstance(ref, ConanFileReference) and show("revision") and
-                        node.ref.revision):
-                    self._out.writeln("    Revision: %s" % node.ref.revision)
-            if isinstance(ref, ConanFileReference) and show("binary"):  # Excludes PROJECT
-                self._out.writeln("    Binary: %s" % node.binary)
-            if isinstance(ref, ConanFileReference) and show("binary_remote"):  # Excludes PROJECT
-                self._out.writeln("    Binary remote: %s" % (node.binary_remote.name
-                                                             if node.binary_remote else "None"))
+            _print("creation_date", show_field="date", name="Creation date")
 
-            if node_times and node_times.get(ref, None) and show("date"):
-                self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
-                                  Color.BRIGHT_GREEN)
-
-            dependants = [n for node in list_nodes for n in node.inverse_neighbors()]
-            if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
-                required = [d.conanfile for d in dependants if d.recipe != RECIPE_VIRTUAL]
-                if required:
-                    self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
-                    for d in required:
-                        self._out.writeln("        %s" % d.display_name, Color.BRIGHT_YELLOW)
+            if show("required") and "required_by" in it:
+                self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
+                for d in it["required_by"]:
+                    self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
             if show("requires"):
-                depends = node.neighbors()
-                requires = [d for d in depends if not d.build_require]
-                build_requires = [d for d in depends if d.build_require]
-                if requires:
+                if "requires" in it:
                     self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
-                    for d in requires:
-                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
-                if build_requires:
+                    for d in it["requires"]:
+                        self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
+
+                if "build_requires" in it:
                     self._out.writeln("    Build Requires:", Color.BRIGHT_GREEN)
-                    for d in build_requires:
-                        self._out.writeln("        %s" % repr(d.ref), Color.BRIGHT_YELLOW)
+                    for d in it["build_requires"]:
+                        self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
 
     def print_search_recipes(self, search_info, pattern, raw, all_remotes_search):
         """ Print all the exported conans information
