@@ -25,8 +25,9 @@ class GraphInfo(object):
         if not path:
             raise IOError("Invalid path")
         p = path if os.path.isfile(path) else os.path.join(path, GRAPH_INFO_FILE)
+        content = load(p)
         try:
-            return GraphInfo.loads(load(p))
+            return GraphInfo.loads(content)
         except Exception as e:
             raise ConanException("Error parsing GraphInfo from file '{}': {}".format(p, e))
 
