@@ -1,3 +1,4 @@
+import os
 import unittest
 from collections import OrderedDict
 
@@ -9,6 +10,7 @@ from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
+from tools import temp_folder
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
@@ -1255,7 +1257,20 @@ class SCMRevisions(unittest.TestCase):
         """Even without using the scm feature, the revision is detected from repo.
          Also while we continue working in local, the revision doesn't change, so the packages
          can be found"""
-        # FIXME: Complete same test with SVN
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client = TurboTestClient()
+        conanfile = GenConanfile()
+        commit = client.init_svn_repo("project",
+                                      files={"file.txt": "hey", "conanfile.py": str(conanfile)})
+        client.current_folder = os.path.join(client.current_folder, "project")
+        client.create(ref, conanfile=conanfile)
+        self.assertEquals(client.recipe_revision(ref)[0], commit)
+
+        # Change the conanfile and make another create, the revision should be the same
+        client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
+        client.create(ref, conanfile=conanfile)
+        self.assertEquals(client.recipe_revision(ref)[0], commit)
+        self.assertIn("New changes!", client.out)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")

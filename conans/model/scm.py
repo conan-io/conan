@@ -57,17 +57,21 @@ def detect_repo_type(folder):
     if not folder:
         return None
 
-    def _run_command(cmd):
+    def _run_command_ignore_output(cmd):
         with chdir(folder):
             try:
-                subprocess.check_output(cmd, shell=True).strip()
+                ret = subprocess.call(cmd, shell=True,
+                                      stdout=open(os.devnull, 'w'),
+                                      stderr=subprocess.STDOUT)
+                if ret != 0:
+                    return False
             except Exception:
                 return False
         return True
 
-    if _run_command("git status"):
+    if _run_command_ignore_output("git status"):
         return "git"
-    elif _run_command("svn info"):
+    elif _run_command_ignore_output("svn info"):
         return "svn"
     return None
 

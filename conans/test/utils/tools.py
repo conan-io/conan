@@ -354,6 +354,43 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None)
     return tmp.replace("\\", "/"), git.get_revision()
 
 
+def create_local_svn_checkout(files, repo_url, rel_project_path=None,
+                              commit_msg='default commit message', delete_checkout=True,
+                              folder=None):
+    tmp_dir = folder or temp_folder()
+    try:
+        rel_project_path = rel_project_path or str(uuid.uuid4())
+        # Do not use SVN class as it is what we will be testing
+        subprocess.check_output('svn co "{url}" "{path}"'.format(url=repo_url,
+                                                                 path=tmp_dir),
+                                shell=True)
+        tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
+        mkdir(tmp_project_dir)
+        save_files(tmp_project_dir, files)
+        with chdir(tmp_project_dir):
+            subprocess.check_output("svn add .", shell=True)
+            subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
+            if SVN.get_version() >= SVN.API_CHANGE_VERSION:
+                rev = subprocess.check_output("svn info --show-item revision",
+                                              shell=True).decode().strip()
+            else:
+                import xml.etree.ElementTree as ET
+                output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                root = ET.fromstring(output)
+                rev = root.findall("./entry")[0].get("revision")
+        project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
+        return project_url, rev
+    finally:
+        if delete_checkout:
+            shutil.rmtree(tmp_dir, ignore_errors=False, onerror=try_remove_readonly)
+
+
+def create_remote_svn_repo(folder=None):
+    tmp_dir = folder or temp_folder()
+    subprocess.check_output('svnadmin create "{}"'.format(tmp_dir), shell=True)
+    return SVN.file_protocol + quote(tmp_dir.replace("\\", "/"), safe='/:')
+
+
 def try_remove_readonly(func, path, exc):  # TODO: May promote to conan tools?
     # src: https://stackoverflow.com/questions/1213706/what-user-do-python-scripts-run-as-in-windows
     excvalue = exc[1]
@@ -368,9 +405,8 @@ class SVNLocalRepoTestCase(unittest.TestCase):
     path_with_spaces = True
 
     def _create_local_svn_repo(self):
-        repo_url = os.path.join(self._tmp_folder, 'repo_server')
-        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
-        return SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
+        folder = os.path.join(self._tmp_folder, 'repo_server')
+        return create_remote_svn_repo(folder)
 
     def gimme_tmp(self, create=True):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
@@ -381,31 +417,9 @@ class SVNLocalRepoTestCase(unittest.TestCase):
     def create_project(self, files, rel_project_path=None, commit_msg='default commit message',
                        delete_checkout=True):
         tmp_dir = self.gimme_tmp()
-        try:
-            rel_project_path = rel_project_path or str(uuid.uuid4())
-            # Do not use SVN class as it is what we will be testing
-            subprocess.check_output('svn co "{url}" "{path}"'.format(url=self.repo_url,
-                                                                     path=tmp_dir),
-                                    shell=True)
-            tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
-            os.makedirs(tmp_project_dir)
-            save_files(tmp_project_dir, files)
-            with chdir(tmp_project_dir):
-                subprocess.check_output("svn add .", shell=True)
-                subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
-                if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                    rev = subprocess.check_output("svn info --show-item revision",
-                                                  shell=True).decode().strip()
-                else:
-                    import xml.etree.ElementTree as ET
-                    output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
-                    root = ET.fromstring(output)
-                    rev = root.findall("./entry")[0].get("revision")
-            project_url = self.repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
-            return project_url, rev
-        finally:
-            if delete_checkout:
-                shutil.rmtree(tmp_dir, ignore_errors=False, onerror=try_remove_readonly)
+        return create_local_svn_checkout(files, self.repo_url, rel_project_path=rel_project_path,
+                                         commit_msg=commit_msg, delete_checkout=delete_checkout,
+                                         folder=tmp_dir)
 
     def run(self, *args, **kwargs):
         tmp_folder = tempfile.mkdtemp(suffix='_conans')
@@ -782,10 +796,12 @@ class TurboTestClient(TestClient):
             self.runner('git remote add origin {}'.format(origin_url), cwd=self.current_folder)
         return commit
 
-    def init_svn_repo(self, origin_url=None):
-        # FIXME complete to work like the init_git_repo
-        subprocess.check_output('svnadmin create "{}"'.format(self.current_folder), shell=True)
-        return SVN.file_protocol + quote(origin_url.replace("\\", "/"), safe='/:')
+    def init_svn_repo(self, subpath, files=None, repo_url=None):
+        if not repo_url:
+            repo_url = create_remote_svn_repo(temp_folder())
+        url, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
+                                             rel_project_path=subpath, delete_checkout=False)
+        return rev
 
 
 class GenConanfile(object):

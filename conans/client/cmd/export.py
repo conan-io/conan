@@ -97,7 +97,7 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
         digest.save(package_layout.export())
 
     # Compute the revision for the recipe
-    _update_revision_in_metadata(cache, os.path.dirname(conanfile_path), ref, digest)
+    _update_revision_in_metadata(cache, output, os.path.dirname(conanfile_path), ref, digest)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source_folder = package_layout.source()
@@ -205,19 +205,27 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     remove(conanfile_path)
     save(conanfile_path, content)
 
+
 def _detect_scm_revision(path):
     repo_type = detect_repo_type(path)
     if not repo_type:
-        return None
+        return None, None
 
     repo_obj = {"git": Git, "svn": SVN}.get(repo_type)(path)
-    return repo_obj.get_revision()
+    return repo_obj.get_revision(), repo_type
 
 
-def _update_revision_in_metadata(cache, path, ref, digest):
+def _update_revision_in_metadata(cache, output, path, ref, digest):
 
-    scm_revision_detected = _detect_scm_revision(path)
+    scm_revision_detected, repo_type = _detect_scm_revision(path)
     revision = scm_revision_detected or digest.summary_hash
+    if cache.revisions_enabled:
+        if scm_revision_detected:
+            output.info("Using {} commit from as the recipe"
+                        " revision: {} ".format(repo_type, revision))
+        else:
+            output.info("Using the exported files summary hash as the recipe"
+                        " revision: {} ".format(revision))
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.revision = revision
         metadata.recipe.time = None
