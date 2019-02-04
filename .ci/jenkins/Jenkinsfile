@@ -141,9 +141,7 @@ for (n in ["Windows", "Linux"]) {
                 }
                 else{
                     docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        dir(src_dir){
-                            sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} ${venv_dir}")
-                        }
+                      sh(script: "mkdir -p ${src_dir} && python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} ${venv_dir}")
                     }
                 }
             }
