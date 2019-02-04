@@ -75,7 +75,7 @@ class RestApiTest(unittest.TestCase):
         RestApiTest.server.clean()
 
     def server_info_test(self):
-        check, version, capabilities = self.api.server_info()
+        _, _, capabilities = self.api.server_info()
         self.assertEquals(capabilities, ["ImCool", "TooCool"])
 
     def get_conan_test(self):
@@ -105,7 +105,7 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA")
+        pref = PackageReference(ref, "1F23223EFDA2")
         self._upload_package(pref)
 
         # Get the package
@@ -199,8 +199,8 @@ class RestApiTest(unittest.TestCase):
         self.assertFalse(os.path.exists(path1))
 
     def remove_packages_test(self):
-        ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s" %
-                                             DEFAULT_REVISION_V1)
+        ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
+                                       % DEFAULT_REVISION_V1)
         self._upload_recipe(ref)
 
         folders = {}
