@@ -48,41 +48,43 @@ class CmdUpload(object):
 
         # Group recipes by remote
         refs_by_remote = defaultdict(list)
-        if not remote_name:
-            default_remote = self._registry.remotes.default
+        default_remote = (self._registry.remotes.get(remote_name) if remote_name else
+                          self._registry.remotes.default)
 
-            for ref in refs:
-                recipe_remote = self._registry.refs.get(ref) or default_remote
-                refs_by_remote[recipe_remote].append(ref)
-        else:
-            refs_by_remote[self._registry.remotes.get(remote_name)] = refs
+        for ref in refs:
+            if not remote_name:
+                remote = self._registry.refs.get(ref) or default_remote
+            else:
+                remote = default_remote
+
+            upload = True
+            if not confirm:
+                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote.name)
+                upload = self._user_io.request_boolean(msg)
+            if upload:
+                refs_by_remote[remote].append(ref)
 
         # Do the job
         for remote, refs in refs_by_remote.items():
             self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
             for conan_ref in refs:
-                upload = True
-                if not confirm:
-                    msg = "Are you sure you want to upload '%s'?" % str(conan_ref)
-                    upload = self._user_io.request_boolean(msg)
-                if upload:
-                    try:
-                        conanfile_path = self._cache.conanfile(conan_ref)
-                        conan_file = self._loader.load_class(conanfile_path)
-                    except NotFoundException:
-                        raise NotFoundException(("There is no local conanfile exported as %s" %
-                                                 str(conan_ref)))
-                    if all_packages:
-                        packages_ids = self._cache.conan_packages(conan_ref)
-                    elif query:
-                        packages = search_packages(self._cache, conan_ref, query)
-                        packages_ids = list(packages.keys())
-                    elif package_id:
-                        packages_ids = [package_id, ]
-                    else:
-                        packages_ids = []
-                    self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
-                                 integrity_check, policy, remote, upload_recorder)
+                try:
+                    conanfile_path = self._cache.conanfile(conan_ref)
+                    conan_file = self._loader.load_class(conanfile_path)
+                except NotFoundException:
+                    raise NotFoundException(("There is no local conanfile exported as %s" %
+                                             str(conan_ref)))
+                if all_packages:
+                    packages_ids = self._cache.conan_packages(conan_ref)
+                elif query:
+                    packages = search_packages(self._cache, conan_ref, query)
+                    packages_ids = list(packages.keys())
+                elif package_id:
+                    packages_ids = [package_id, ]
+                else:
+                    packages_ids = []
+                self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
+                             integrity_check, policy, remote, upload_recorder)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
