@@ -109,7 +109,7 @@ for (n in ["Windows", "Linux"]) {
                 def vars = checkout scm
                 def base_dir = (the_node == "Windows") ? win_tmp_base : rest_tmp_base
                 base_dir = base_dir + "rest" + vars["GIT_COMMIT"].substring(0, 4)
-                def venv_dir = base_dir + "/dst"
+                def venv_dir = base_dir + "/venv"
                 def src_dir = base_dir + "/src"
 
                 while(fileExists(src_dir)){
@@ -140,7 +140,7 @@ for (n in ["Windows", "Linux"]) {
                     }
                 }
                 else{
-                    docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${src_dir} -v${src_dir}:${src_dir}") {
+                    docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${src_dir} -v${src_dir}:${src_dir} -v${venv_dir}:${venv_dir}") {
                       sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} ${venv_dir}")
                     }
                 }
