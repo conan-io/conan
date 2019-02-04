@@ -626,3 +626,6 @@ class MyTest(ConanFile):
         save(path, json.dumps(graph_info))
         client.run("info .")
         self.assertIn("conanfile.py (Hello/0.1@None/None)", client.out)
+        save(path, "broken thing")
+        client.run("info .", assert_error=True)
+        self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)
