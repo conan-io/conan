@@ -225,6 +225,10 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
         """Remove recipe url"""
         return self.for_recipe(ref)
 
+    def recipe_revisions(self, ref):
+        """Get revisions for a recipe url"""
+        return self.format_ref(self.routes.recipe_revisions, ref)
+
     def remove_package(self, pref):
         """Remove package url"""
         return self.for_package(pref)
@@ -252,3 +256,7 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
     def package_snapshot(self, pref):
         """get recipe manifest url"""
         return self.for_package_files(pref)
+
+    def package_revisions(self, pref):
+        """get revisions for a package url"""
+        return self.format_pref(self.routes.package_revisions, pref)

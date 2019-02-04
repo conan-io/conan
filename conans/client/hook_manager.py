@@ -53,7 +53,7 @@ class HookManager(object):
         for name, method in self.hooks[method_name]:
             try:
                 output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)
-                method(output, **kwargs)
+                method(output=output, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s\n%s" % (name, method_name, str(e),
                                                                    traceback.format_exc()))

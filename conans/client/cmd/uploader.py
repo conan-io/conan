@@ -1,5 +1,6 @@
 import os
 import time
+from collections import defaultdict
 
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
@@ -45,18 +46,34 @@ class CmdUpload(object):
                 raise NotFoundException(("No packages found matching pattern '%s'" %
                                          reference_or_pattern))
 
+        # Group recipes by remote
+        refs_by_remote = defaultdict(list)
+        default_remote = (self._registry.remotes.get(remote_name) if remote_name else
+                          self._registry.remotes.default)
+
         for ref in refs:
+            if not remote_name:
+                remote = self._registry.refs.get(ref) or default_remote
+            else:
+                remote = default_remote
+
             upload = True
             if not confirm:
-                msg = "Are you sure you want to upload '%s'?" % str(ref)
+                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote.name)
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
                     conanfile_path = self._cache.conanfile(ref)
-                    conan_file = self._loader.load_class(conanfile_path)
+                    conanfile = self._loader.load_class(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
+                refs_by_remote[remote].append((ref, conanfile))
+
+        # Do the job
+        for remote, refs in refs_by_remote.items():
+            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
+            for (ref, conanfile) in refs:
                 if all_packages:
                     packages_ids = self._cache.conan_packages(ref)
                 elif query:
@@ -66,21 +83,14 @@ class CmdUpload(object):
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
-                self._upload(conan_file, ref, packages_ids, retry, retry_wait,
-                             integrity_check, policy, remote_name, upload_recorder)
+                self._upload(conanfile, ref, packages_ids, retry, retry_wait,
+                             integrity_check, policy, remote, upload_recorder)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _upload(self, conan_file, ref, packages_ids, retry, retry_wait,
-                integrity_check, policy, remote_name, upload_recorder):
-        """Uploads the recipes and binaries identified by ref"""
-
-        default_remote = self._registry.remotes.default
-        cur_recipe_remote = self._registry.refs.get(ref)
-        if remote_name:  # If remote_name is given, use it
-            recipe_remote = self._registry.remotes.get(remote_name)
-        else:
-            recipe_remote = cur_recipe_remote or default_remote
+                integrity_check, policy, recipe_remote, upload_recorder):
+        """Uploads the recipes and binaries identified by conan_ref"""
 
         conanfile_path = self._cache.conanfile(ref)
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
@@ -155,21 +165,21 @@ class CmdUpload(object):
         t1 = time.time()
         self._user_io.out.info(msg)
 
-        if pref.ref.revision:
-            # Read the revisions and build a correct package reference for the server
-            package_revision = metadata.packages[pref.id].revision
-            # Copy to not modify the original with the revisions
-            pref = pref.copy_with_revs(pref.ref.revision, package_revision)
-        else:
-            pref = pref.copy_clear_rev()
+        # Read the revisions and build a correct package reference for the server
+        package_revision = metadata.packages[pref.id].revision
+        # Copy to not modify the original with the revisions
+        new_pref = pref.copy_with_revs(pref.ref.revision, package_revision)
 
-        new_pref = self._remote_manager.upload_package(pref, p_remote, retry, retry_wait,
-                                                       integrity_check, policy)
+        assert (new_pref.revision is not None)
+        assert (new_pref.ref.revision is not None)
+
+        self._remote_manager.upload_package(new_pref, p_remote, retry, retry_wait, integrity_check,
+                                            policy)
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_remote = self._registry.prefs.get(pref.copy_clear_rev())
-        if (not cur_package_remote or pref != new_pref) and policy != UPLOAD_POLICY_SKIP:
-            self._registry.prefs.set(pref, p_remote.name)
+        cur_package_remote = self._registry.prefs.get(new_pref.copy_clear_rev())
+        if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
+            self._registry.prefs.set(new_pref, p_remote.name)
 
         return new_pref
 

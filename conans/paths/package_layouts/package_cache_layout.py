@@ -88,11 +88,34 @@ class PackageCacheLayout(object):
     def load_manifest(self):
         return FileTreeManifest.load(self.export())
 
-    def package_manifests(self, package_reference):
-        package_folder = self.package(package_reference)
+    def package_manifests(self, pref):
+        package_folder = self.package(pref)
         readed_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
         return readed_manifest, expected_manifest
+
+    def recipe_exists(self):
+        return os.path.exists(self.export()) and \
+               (not self._ref.revision or self.recipe_revision()[0] == self._ref.revision)
+
+    def package_exists(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref
+        return self.recipe_exists() and \
+               os.path.exists(self.package(pref)) and \
+               (not pref.revision or self.package_revision(pref)[0] ==  pref.revision)
+
+    def recipe_revision(self):
+        metadata = self.load_metadata()
+        the_time = metadata.recipe.time if metadata.recipe.time else None
+        return metadata.recipe.revision, the_time
+
+    def package_revision(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref
+        metadata = self.load_metadata()
+        tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
+        return metadata.packages[pref.id].revision, tm
 
     # Metadata
     def load_metadata(self):
