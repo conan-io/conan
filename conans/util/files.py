@@ -170,14 +170,14 @@ def save_files(path, files, only_if_modified=False):
 
 
 def load(path, binary=False):
-    '''Loads a file content'''
+    """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
         return tmp if binary else decode_text(tmp)
 
 
 def relative_dirs(path):
-    ''' Walks a dir and return a list with the relative paths '''
+    """ Walks a dir and return a list with the relative paths """
     ret = []
     for dirpath, _, fnames in walk(path):
         for filename in fnames:
