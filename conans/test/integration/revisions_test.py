@@ -224,7 +224,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
-        self.assertRaises(FileNotFoundError, self.c_v2.recipe_revision, self.ref)
+        self.assertRaises(IOError, self.c_v2.recipe_revision, self.ref)
 
         self.c_v2.run("install {}".format(self.ref))
         local_rev, rev_time = self.c_v2.recipe_revision(self.ref)
@@ -467,7 +467,7 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertIsNotNone(rev)
         self.assertIsNotNone(rev_time)
         self.c_v2.remove_all()
-        self.assertRaises(FileNotFoundError, self.c_v2.recipe_revision, pref.ref)
+        self.assertRaises(IOError, self.c_v2.recipe_revision, pref.ref)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")

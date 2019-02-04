@@ -126,7 +126,7 @@ class PackageCacheLayout(object):
     def update_metadata(self):
         try:
             metadata = self.load_metadata()
-        except FileNotFoundError:
+        except IOError:
             metadata = PackageMetadata()
         yield metadata
         save(self.package_metadata(), metadata.dumps())
