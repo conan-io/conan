@@ -107,7 +107,7 @@ for (n in ["Windows", "Linux"]) {
         node(the_node){
             stage("REST tests ${the_node}"){
                 def vars = checkout scm
-                def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
+                def base_dir = (the_node == "Windows") ? win_tmp_base : rest_tmp_base
                 base_dir = base_dir + "/rest" + vars["GIT_COMMIT"].substring(0, 4)
                 def dest_dir = base_dir + "/dst"
                 def src_dir = base_dir + "/src"
