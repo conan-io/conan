@@ -108,15 +108,15 @@ for (n in ["Windows", "Linux"]) {
             stage("REST tests ${the_node}"){
                 def vars = checkout scm
                 def base_dir = (the_node == "Windows") ? win_tmp_base : rest_tmp_base
-                base_dir = base_dir + "/rest" + vars["GIT_COMMIT"].substring(0, 4)
-                def dest_dir = base_dir + "/dst"
+                base_dir = base_dir + "rest" + vars["GIT_COMMIT"].substring(0, 4)
+                def venv_dir = base_dir + "/dst"
                 def src_dir = base_dir + "/src"
 
                 while(fileExists(src_dir)){
                     src_dir = src_dir + "_"
                 }
-                while(fileExists(dest_dir)){
-                    dest_dir = dest_dir + "_"
+                while(fileExists(venv_dir)){
+                    venv_dir = venv_dir + "_"
                 }
 
                 // Copy SRC to a clean folder
@@ -133,7 +133,7 @@ for (n in ["Windows", "Linux"]) {
 
                 if(the_node == "Windows"){
                     try{
-                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} \"${dest_dir}\"")
+                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} \"${venv_dir}\"")
                     }
                     finally{
                       bat(script: "rd /s /q \"${base_dir}\"")
@@ -141,7 +141,7 @@ for (n in ["Windows", "Linux"]) {
                 }
                 else{
                     docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} ${dest_dir}")
+                        sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} ${venv_dir}")
                     }
                 }
             }
