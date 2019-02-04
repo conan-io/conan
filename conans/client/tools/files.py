@@ -200,7 +200,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
             path = path[2:]
         return path
 
-    def handle_null(path):
+    def strip_path(path):
         tokens = path.split("/")[strip:]
         path = "/".join(tokens)
         if base_path:
@@ -212,12 +212,12 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         source = decode_clean(p.source, "a/")
         target = decode_clean(p.target, "b/")
         if "dev/null" in source:
-            target = handle_null(target)
+            target = strip_path(target)
             hunks = [s.decode("utf-8") for s in p.hunks[0].text]
             new_file = "".join(hunk[1:] for hunk in hunks)
             save(target, new_file)
         elif "dev/null" in target:
-            source = handle_null(source)
+            source = strip_path(source)
             os.unlink(source)
         else:
             items.append(p)
