@@ -62,28 +62,28 @@ class CmdUpload(object):
                 msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote.name)
                 upload = self._user_io.request_boolean(msg)
             if upload:
-                refs_by_remote[remote].append(ref)
+                try:
+                    conanfile_path = self._cache.conanfile(ref)
+                    conanfile = self._loader.load_class(conanfile_path)
+                except NotFoundException:
+                    raise NotFoundException(("There is no local conanfile exported as %s" %
+                                             str(ref)))
+                refs_by_remote[remote].append((ref, conanfile))
 
         # Do the job
         for remote, refs in refs_by_remote.items():
             self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
-            for conan_ref in refs:
-                try:
-                    conanfile_path = self._cache.conanfile(conan_ref)
-                    conan_file = self._loader.load_class(conanfile_path)
-                except NotFoundException:
-                    raise NotFoundException(("There is no local conanfile exported as %s" %
-                                             str(conan_ref)))
+            for (ref, conanfile) in refs:
                 if all_packages:
-                    packages_ids = self._cache.conan_packages(conan_ref)
+                    packages_ids = self._cache.conan_packages(ref)
                 elif query:
-                    packages = search_packages(self._cache, conan_ref, query)
+                    packages = search_packages(self._cache, ref, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
                 else:
                     packages_ids = []
-                self._upload(conan_file, conan_ref, packages_ids, retry, retry_wait,
+                self._upload(conanfile, ref, packages_ids, retry, retry_wait,
                              integrity_check, policy, remote, upload_recorder)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
