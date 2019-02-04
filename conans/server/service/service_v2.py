@@ -44,6 +44,21 @@ class ConanServiceV2(object):
         # If the upload was ok, update the pointer to the latest
         self._server_store.update_last_revision(reference)
 
+    def get_recipe_revisions(self, ref, auth_user):
+        self._authorizer.check_read_conan(auth_user, ref)
+        if not self._server_store.path_exists(self._server_store.conan(ref)):
+            raise NotFoundException("Recipe not found: '%s'" % str(ref))
+        return self._server_store.get_recipe_revisions(ref)
+
+    def get_package_revisions(self, pref, auth_user):
+        self._authorizer.check_read_conan(auth_user, pref.ref)
+        if not self._server_store.path_exists(self._server_store.conan(pref.ref)):
+            raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
+        # Will raise if no package is there
+        self._server_store.package(pref)
+        ret = self._server_store.get_package_revisions(pref)
+        return ret
+
     # PACKAGE METHODS
     def get_package_file_list(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)

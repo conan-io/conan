@@ -1,7 +1,6 @@
 # coding=utf-8
 
 import os
-import textwrap
 import unittest
 
 from nose.plugins.attrib import attr

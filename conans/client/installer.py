@@ -143,7 +143,9 @@ class _ConanPackageBuilder(object):
         package_id = self._pref.id
 
         with self._cache.package_layout(self._ref).update_metadata() as metadata:
-            metadata.packages[package_id].revision = package_hash
+            if metadata.packages[package_id].revision != package_hash:
+                metadata.packages[package_id].revision = package_hash
+                metadata.packages[package_id].time = None
             metadata.packages[package_id].recipe_revision = self._ref.revision
 
         if get_env("CONAN_READ_ONLY_CACHE", False):

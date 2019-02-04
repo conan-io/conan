@@ -55,14 +55,14 @@ class RestV2Methods(RestCommonMethods):
             rev_time = None
         return files_list, reference, rev_time
 
-    def _get_recipe_snapshot(self, ref):
+    def get_recipe_snapshot(self, ref):
         url = self.conans_router.recipe_snapshot(ref)
         ref_str = ref.full_repr()
         snap, reference, rev_time = self._get_snapshot(url, ref_str)
         ref = ConanFileReference.loads(reference)
         return snap, ref, rev_time
 
-    def _get_package_snapshot(self, pref):
+    def get_package_snapshot(self, pref):
         url = self.conans_router.package_snapshot(pref)
         pref_str = pref.full_repr()
         snap, package_reference, rev_time = self._get_snapshot(url, pref_str)
@@ -250,3 +250,13 @@ class RestV2Methods(RestCommonMethods):
             url = self.conans_router.remove_package(pref)
             self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                   verify=self.verify_ssl)
+
+    def get_recipe_revisions(self, ref):
+        url = self.conans_router.recipe_revisions(ref)
+        data = self.get_json(url)
+        return data
+
+    def get_package_revisions(self, pref):
+        url = self.conans_router.package_revisions(pref)
+        data = self.get_json(url)
+        return data

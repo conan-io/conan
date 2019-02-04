@@ -35,7 +35,8 @@ class RunSCMTest(unittest.TestCase):
             self.assertEqual(folder, self.src_folder)
 
         with mock.patch("conans.client.source.merge_directories", side_effect=merge_directories):
-            with mock.patch("conans.client.source._clean_source_folder", side_effect=clean_source_folder):
+            with mock.patch("conans.client.source._clean_source_folder",
+                            side_effect=clean_source_folder):
                 _run_scm(conanfile=conanfile,
                          src_folder=self.src_folder,
                          local_sources_path=local_sources_path,
@@ -60,7 +61,8 @@ class RunSCMTest(unittest.TestCase):
         def scm_checkout(scm_itself):
             self.assertEqual(scm_itself.repo_folder, os.path.join(self.src_folder, subfolder))
 
-        with mock.patch("conans.client.source._clean_source_folder", side_effect=clean_source_folder):
+        with mock.patch("conans.client.source._clean_source_folder",
+                        side_effect=clean_source_folder):
             with mock.patch.object(SCM, "checkout", new=scm_checkout):
                 _run_scm(conanfile=conanfile,
                          src_folder=self.src_folder,
@@ -72,7 +74,6 @@ class RunSCMTest(unittest.TestCase):
 
     def test_user_space_with_local_sources(self):
         output = TestBufferConanOutput()
-        local_sources_path = self.tmp_dir
 
         # Need a real repo to get a working SCM object
         local_sources_path = os.path.join(self.tmp_dir, 'git_repo').replace('\\', '/')
@@ -99,7 +100,8 @@ class RunSCMTest(unittest.TestCase):
                      output=output,
                      cache=False)
 
-        self.assertIn("Getting sources from folder: {}".format(local_sources_path), output)
+        self.assertIn("getting sources from folder: {}".format(local_sources_path).lower(),
+                      str(output).lower())
 
     def test_user_space_no_local_sources(self):
         output = TestBufferConanOutput()

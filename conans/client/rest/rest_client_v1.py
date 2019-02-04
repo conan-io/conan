@@ -1,6 +1,4 @@
 import os
-import time
-import traceback
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
@@ -286,13 +284,13 @@ class RestV1Methods(RestCommonMethods):
             snapshot = []
         return snapshot
 
-    def _get_recipe_snapshot(self, ref):
+    def get_recipe_snapshot(self, ref):
         url = self.conans_router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         rev_time = None
         return snap, ref.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
-    def _get_package_snapshot(self, pref):
+    def get_package_snapshot(self, pref):
         url = self.conans_router.package_snapshot(pref)
         snap = self._get_snapshot(url)
         rev_time = None
@@ -313,3 +311,9 @@ class RestV1Methods(RestCommonMethods):
         payload = {"package_ids": package_ids}
         url = self.conans_router.remove_packages(ref)
         return self._post_json(url, payload)
+
+    def get_recipe_revisions(self, ref):
+        raise ConanException("The remote doesn't support revisions")
+
+    def get_package_revisions(self, pref):
+        raise ConanException("The remote doesn't support revisions")
