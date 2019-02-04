@@ -11,13 +11,18 @@ from conans.model.editable_cpp_info import get_editable_abs_path
 
 
 class LocalPackage(object):
-    def __init__(self, base_folder, install_folder, data, cache):
+    def __init__(self, base_folder, install_folder, data, cache, ws_layout):
         self._base_folder = base_folder
         self._install_folder = install_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
         self._build_folder = data.get("build", "")
-        self.layout = get_editable_abs_path(data.get("layout"), self._base_folder,
-                                            cache.conan_folder)
+        layout = data.get("layout")
+        if layout:
+            self.layout = get_editable_abs_path(data.get("layout"), self._base_folder,
+                                                cache.conan_folder)
+        else:
+            self.layout = ws_layout
+
         # package_folder can be None, then it will directly use build_folder
         self._package_folder = data.get("package", "")
         self._cmakedir = data.get("cmakedir")
@@ -64,7 +69,7 @@ class LocalPackage(object):
                          os=platform.system())
         try:
             result = eval('%s' % v)
-        except:
+        except Exception:
             result = v
         return result
 
@@ -126,12 +131,17 @@ project({name} CXX)
         yml = yaml.safe_load(text)
         self._generator = yml.pop("generator", None)
         self._name = yml.pop("name", None)
+        self._layout = yml.pop("layout", None)
+        if self._layout:
+            self._layout = get_editable_abs_path(self._layout, self._base_folder,
+                                                 self._cache.conan_folder)
         self._root = [ConanFileReference.loads(s.strip())
                       for s in yml.pop("root", "").split(",") if s.strip()]
         if not self._root:
             raise ConanException("Conan workspace needs at least 1 root conanfile")
         for package_name, data in yml.items():
-            workspace_package = LocalPackage(self._base_folder, self._install_folder, data, self._cache)
+            workspace_package = LocalPackage(self._base_folder, self._install_folder, data,
+                                             self._cache, self._layout)
             package_name = ConanFileReference.loads(package_name)
             self._workspace_packages[package_name] = workspace_package
         for package_name in self._root:

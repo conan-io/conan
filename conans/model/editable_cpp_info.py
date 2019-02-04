@@ -37,13 +37,16 @@ class EditableCppInfo(object):
 
     @staticmethod
     def load(filepath):
-        parser = configparser.ConfigParser(allow_no_value=True)
+        parser = configparser.ConfigParser(allow_no_value=True,)
         parser.optionxform = str
         try:
             parser.read(filepath)
         except configparser.Error as e:
             raise ConanException("Error parsing layout file: %s\n%s" % (filepath, str(e)))
         data = OrderedDict()
+        if parser.has_section("folders"):
+            build_folder = parser.get("folders", "build")
+            parser.remove_section("folders")
         for section in parser.sections():
             ref, cpp_info_dir = section.rsplit(":", 1) if ':' in section else (None, section)
             if cpp_info_dir not in EditableCppInfo.cpp_info_dirs:

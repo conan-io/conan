@@ -2,9 +2,9 @@ import os
 import platform
 import re
 import shutil
-import textwrap
 import time
 import unittest
+from textwrap import dedent
 
 from parameterized.parameterized import parameterized
 
@@ -107,15 +107,15 @@ class WorkspaceTest(unittest.TestCase):
         client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
         client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
 
-        project = textwrap.dedent("""
-                                    HelloB/0.1@lasote/stable:
-                                        folder: B
-                                    HelloC/0.1@lasote/stable:
-                                        folder: C
-                                    HelloA/0.1@lasote/stable:
-                                        folder: A
-                                    root: HelloA/0.1@lasote/stable
-                                  """)
+        project = dedent("""
+                            HelloB/0.1@lasote/stable:
+                                folder: B
+                            HelloC/0.1@lasote/stable:
+                                folder: C
+                            HelloA/0.1@lasote/stable:
+                                folder: A
+                            root: HelloA/0.1@lasote/stable
+                          """)
         client.save({"conanws.yml": project})
         client.run("workspace install conanws.yml")
         self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
@@ -146,20 +146,44 @@ class WorkspaceTest(unittest.TestCase):
         a["src/main.cpp"] = main_cpp
         client.save(a, path=A)
 
-        project = textwrap.dedent("""
-                                    HelloB/0.1@lasote/stable:
-                                        folder: B
-                                    HelloC/0.1@lasote/stable:
-                                        folder: C
-                                    HelloA/0.1@lasote/stable:
-                                        folder: A
-                                    root: HelloA/0.1@lasote/stable
-                                  """)
-        client.save({"conanws.yml": project})
+        project = dedent("""
+                        HelloB/0.1@lasote/stable:
+                            folder: B
+                        HelloC/0.1@lasote/stable:
+                            folder: C
+                        HelloA/0.1@lasote/stable:
+                            folder: A
+                        layout: layout
+                        root: HelloA/0.1@lasote/stable
+                      """)
+        layout = dedent("""
+                        [includedirs]
+                        src
+
+                        [libdirs]
+                        build/{settings.build_type}
+                        """)
+        client.save({"conanws.yml": project,
+                     "layout": layout})
         client.run("workspace install conanws.yml")
         self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
+
+        release = "build/Release"
+        client.run("build C -bf=C/%s" % release)
+        client.run("build B -bf=B/%s" % release)
+        client.run("build A -bf=A/%s" % release)
+        if platform.system() == "Windows":
+            cmd_release = r".\A\build\Release\app"
+            cmd_debug = r".\A\build\Debug\app"
+        else:
+            cmd_release = "./A/build_release/app"
+            cmd_debug = "./A/build_debug/app"
+        client.runner(cmd_release, cwd=client.current_folder)
+        self.assertIn("Hello World C Release!", client.out)
+        self.assertIn("Hello World B Release!", client.out)
+        self.assertIn("Hello World A Release!", client.out)
 
 
     def build_requires_test(self):

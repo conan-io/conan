@@ -14,6 +14,10 @@ from conans.model.ref import ConanFileReference
 
 
 base_content = textwrap.dedent("""\
+    [folders]
+    build: build_folder
+    src: source_folder
+
     [{namespace}includedirs]
     {path_prefix}dirs/includedirs
 
