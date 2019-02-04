@@ -18,7 +18,7 @@ from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, rem
 from conans.util.log import logger
 
 
-def export_alias(reference, target_reference, cache):
+def export_alias(reference, target_reference, cache, output):
     if reference.name != target_reference.name:
         raise ConanException("An alias can only be defined to a package with the same name")
     conanfile = """
@@ -36,7 +36,7 @@ class AliasConanfile(ConanFile):
     digest.save(export_path)
 
     # Create the metadata for the alias
-    _update_revision_in_metadata(cache, None, reference, digest)
+    _update_revision_in_metadata(cache, output, None, reference, digest)
 
 
 def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):

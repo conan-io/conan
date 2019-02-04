@@ -934,7 +934,7 @@ class ConanAPIV1(object):
     def export_alias(self, reference, target_reference):
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
-        return export_alias(ref, target_ref, self._cache)
+        return export_alias(ref, target_ref, self._cache, self._user_io.out)
 
     @api_method
     def get_default_remote(self):

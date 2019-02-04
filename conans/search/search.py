@@ -1,5 +1,6 @@
 import os
 import re
+from collections import OrderedDict
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
@@ -14,7 +15,7 @@ from conans.util.log import logger
 def filter_outdated(packages_infos, recipe_hash):
     if not recipe_hash:
         return packages_infos
-    result = {}
+    result = OrderedDict()
     for package_id, info in packages_infos.items():
         try:  # Existing package_info of old package might not have recipe_hash
             if info["recipe_hash"] != recipe_hash:
@@ -25,7 +26,7 @@ def filter_outdated(packages_infos, recipe_hash):
 
 
 def filter_by_revision(metadata, packages_infos):
-    ok = {}
+    ok = OrderedDict()
     recipe_revision = metadata.recipe.revision
     for package_id, info in packages_infos.items():
         try:
@@ -46,7 +47,7 @@ def filter_packages(query, package_infos):
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
-        result = {}
+        result = OrderedDict()
         for package_id, info in package_infos.items():
             if evaluate_postfix_with_info(postfix, info):
                 result[package_id] = info
@@ -141,7 +142,7 @@ def search_packages(cache, ref, query):
 
 
 def _get_local_infos_min(cache, ref):
-    result = {}
+    result = OrderedDict()
 
     packages_path = cache.packages(ref)
     subdirs = list_folder_subdirs(packages_path, level=1)

@@ -70,15 +70,18 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
 
     def test_no_args(self):
         self.t.run('info {}'.format(self.ref))
-        self.assertIn("lib/version@user/name\n"
-                      "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
-                      "    BuildID: None\n"
-                      "    Remote: None\n"
-                      "    Recipe: Editable\n"
-                      "    Binary: Editable\n"
-                      "    Binary remote: None\n"
-                      "    Requires:\n"
-                      "        parent/version@user/name\n", self.t.out)
+        rev = "    Revision: None\n" \
+            if self.t.revisions_enabled else ""  # Project revision is None
+        expected = "lib/version@user/name\n" \
+                   "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n" \
+                   "    BuildID: None\n" \
+                   "    Remote: None\n" \
+                   "    Recipe: Editable\n{}" \
+                   "    Binary: Editable\n" \
+                   "    Binary remote: None\n" \
+                   "    Requires:\n" \
+                   "        parent/version@user/name\n".format(rev)
+        self.assertIn(expected, self.t.out)
 
     def test_only_none(self):
         self.t.run('info {} --only None'.format(self.ref))
