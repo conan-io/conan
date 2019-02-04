@@ -6,7 +6,6 @@ from conans.paths import is_case_insensitive_os
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 
-
 if is_case_insensitive_os():
     def check_ref_case(ref, store_folder):
         if not os.path.exists(store_folder):
@@ -35,7 +34,6 @@ class SimplePaths(object):
     """
     def __init__(self, store_folder):
         self._store_folder = store_folder
-        self._workspace_refs = {}
 
     @property
     def store(self):

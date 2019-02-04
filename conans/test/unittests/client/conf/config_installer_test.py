@@ -1,15 +1,15 @@
 import os
 import unittest
-from parameterized import parameterized
+import tempfile
 
-from conans.client.conf.config_installer import _process_config_install_item
+from conans.client.conf.config_installer import _process_config_install_item, _handle_hooks
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.files import save, mkdir
 
 
 class ConfigInstallerTests(unittest.TestCase):
-
     def process_config_install_item_test(self):
         config_type, url_or_path, verify_ssl, args = _process_config_install_item(
                 "git, whaterver.url.com/repo.git, False, --recusrive --other -b 0.3.4")
@@ -18,7 +18,8 @@ class ConfigInstallerTests(unittest.TestCase):
         self.assertFalse(verify_ssl)
         self.assertEqual("--recusrive --other -b 0.3.4", args)
 
-        config_type, url_or_path, verify_ssl, args = _process_config_install_item("whaterver.url.com/repo.git")
+        config_type, url_or_path, verify_ssl, args = _process_config_install_item(
+                "whaterver.url.com/repo.git")
         self.assertEqual("git", config_type)
         self.assertEqual("whaterver.url.com/repo.git", url_or_path)
         self.assertIsNone(verify_ssl)
@@ -29,7 +30,7 @@ class ConfigInstallerTests(unittest.TestCase):
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(dir_item)
             self.assertEqual("dir", config_type)
             self.assertEqual(dir_path, url_or_path)
-            self.assertTrue(verify_ssl) if dir_item.startswith("dir,")\
+            self.assertTrue(verify_ssl) if dir_item.startswith("dir,") \
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
@@ -39,7 +40,7 @@ class ConfigInstallerTests(unittest.TestCase):
             config_type, url_or_path, verify_ssl, args = _process_config_install_item(file_item)
             self.assertEqual("file", config_type)
             self.assertEqual(file_path, url_or_path)
-            self.assertTrue(verify_ssl) if file_item.startswith("file,") \
+            self.assertTrue(verify_ssl) if file_item.startswith("file,")\
                 else self.assertIsNone(verify_ssl)
             self.assertIsNone(args)
 
@@ -60,7 +61,28 @@ class ConfigInstallerTests(unittest.TestCase):
         self.assertEqual("--option", args)
 
         # Test wrong input
-        for item in ["git@github.com:conan-io/conan.git, None"
-                     "file/not/exists.zip"]:
+        for item in ["git@github.com:conan-io/conan.git, None", "file/not/exists.zip"]:
             with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
+
+    def handle_hooks_test(self):
+        src_dir = temp_folder()
+        subsrc_dir = os.path.join(src_dir, "foo")
+
+        mkdir(subsrc_dir)
+        save(os.path.join(subsrc_dir, "foo"), "foo")
+        save(os.path.join(src_dir, "bar"), "bar")
+
+        git_dir = os.path.join(src_dir, ".git")
+        mkdir(git_dir)
+        mkdir(os.path.join(git_dir, "hooks"))
+        save(os.path.join(git_dir, "hooks", "before_push"), "before_push")
+
+        target_dir = temp_folder()
+        output = TestBufferConanOutput()
+
+        _handle_hooks(src_hooks_path=src_dir, dst_hooks_path=target_dir, output=output)
+
+        self.assertTrue(os.path.isfile(os.path.join(target_dir, "bar")))
+        self.assertTrue(os.path.isfile(os.path.join(target_dir, "foo", "foo")))
+        self.assertFalse(os.path.isfile(os.path.join(target_dir, ".git", "hooks", "before_push")))

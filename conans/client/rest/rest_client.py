@@ -3,6 +3,7 @@ from collections import defaultdict
 from conans import CHECKSUM_DEPLOY, REVISIONS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
+from conans.errors import ConanException
 from conans.util.env_reader import get_env
 
 
@@ -57,11 +58,17 @@ class RestApiClient(object):
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
 
+    def get_recipe_snapshot(self, ref):
+        return self._get_api().get_recipe_snapshot(ref)
+
     def get_recipe_sources(self, ref, dest_folder):
         return self._get_api().get_recipe_sources(ref, dest_folder)
 
     def get_package(self, pref, dest_folder):
         return self._get_api().get_package(pref, dest_folder)
+
+    def get_package_snapshot(self, ref):
+        return self._get_api().get_package_snapshot(ref)
 
     def get_path(self, ref, package_id, path):
         return self._get_api().get_path(ref, package_id, path)
@@ -93,3 +100,9 @@ class RestApiClient(object):
 
     def server_info(self):
         return self._get_api().server_info()
+
+    def get_recipe_revisions(self, ref):
+        return self._get_api().get_recipe_revisions(ref)
+
+    def get_package_revisions(self, pref):
+        return self._get_api().get_package_revisions(pref)

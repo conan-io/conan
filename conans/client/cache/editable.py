@@ -42,3 +42,6 @@ class EditablePackages(object):
             self.save()
             return True
         return False
+
+    def update(self, workspace_edited):
+        self._edited_refs.update(workspace_edited)

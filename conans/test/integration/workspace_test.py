@@ -2,16 +2,16 @@ import os
 import platform
 import re
 import shutil
+import textwrap
 import time
 import unittest
 
 from parameterized.parameterized import parameterized
 
 from conans.client import tools
-from conans.model.workspace import WORKSPACE_FILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import textwrap
+
 
 conanfile = """from conans import ConanFile
 import os
@@ -116,11 +116,11 @@ class WorkspaceTest(unittest.TestCase):
                                         folder: A
                                     root: HelloA/0.1@lasote/stable
                                   """)
-        client.save({WORKSPACE_FILE: project})
+        client.save({"conanws.yml": project})
         client.run("workspace install conanws.yml")
-        self.assertIn("HelloA/0.1@lasote/stable from user - Editable", client.out)
-        self.assertIn("HelloB/0.1@lasote/stable from user - Editable", client.out)
-        self.assertIn("HelloC/0.1@lasote/stable from user - Editable", client.out)
+        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
         for sub in ("A", "B", "C"):
             for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
@@ -129,12 +129,22 @@ class WorkspaceTest(unittest.TestCase):
         client = TestClient()
 
         def files(name, depend=None):
+            includes = ('#include "hello%s.h"' % depend) if depend else ""
+            calls = ('hello%s();' % depend) if depend else ""
             deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
-            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name),
+                    "src/hello%s.h" % name: hello_h.format(name=name),
+                    "src/hello.cpp": hello_cpp.format(name=name, includes=includes, calls=calls),
+                    "src/CMakeLists.txt": cmake.format(name=name)}
 
         client.save(files("C"), path=os.path.join(client.current_folder, "C"))
         client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
-        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+        A = os.path.join(client.current_folder, "A")
+        a = files("A", "B")
+        a["src/CMakeLists.txt"] += ("add_executable(app main.cpp)\n"
+                                    "target_link_libraries(app helloA)\n")
+        a["src/main.cpp"] = main_cpp
+        client.save(a, path=A)
 
         project = textwrap.dedent("""
                                     HelloB/0.1@lasote/stable:
@@ -145,14 +155,12 @@ class WorkspaceTest(unittest.TestCase):
                                         folder: A
                                     root: HelloA/0.1@lasote/stable
                                   """)
-        client.save({WORKSPACE_FILE: project})
+        client.save({"conanws.yml": project})
         client.run("workspace install conanws.yml")
-        self.assertIn("HelloA/0.1@lasote/stable from user - Editable", client.out)
-        self.assertIn("HelloB/0.1@lasote/stable from user - Editable", client.out)
-        self.assertIn("HelloC/0.1@lasote/stable from user - Editable", client.out)
-        for sub in ("A", "B", "C"):
-            for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
-                self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
+        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
+
 
     def build_requires_test(self):
         # https://github.com/conan-io/conan/issues/3075
@@ -190,7 +198,7 @@ HelloA:
 
 root: HelloA
 """
-        client.save({WORKSPACE_FILE: project})
+        client.save({"conanws.yml": project})
         client.run("install . -if=build")
         self.assertIn("HelloC/0.1@lasote/stable: Applying build-requirement: Tool/0.1@user/testing",
                       client.out)
@@ -241,7 +249,7 @@ root: HelloA
 generator: cmake
 name: MyProject
 """
-        client.save({WORKSPACE_FILE: project})
+        client.save({"conanws.yml": project})
         client.run("install . -if=build")
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         base_folder = os.path.join(client.current_folder, "build")
@@ -335,7 +343,7 @@ HelloA:
 
 root: HelloA
 """
-        client.save({WORKSPACE_FILE: project})
+        client.save({"conanws.yml": project})
 
         release = "build" if platform.system() == "Windows" else "build_release"
         debug = "build" if platform.system() == "Windows" else "build_debug"

@@ -1,6 +1,6 @@
 import json
-import time
 
+import time
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
@@ -182,7 +182,7 @@ class RestCommonMethods(object):
             # Check if the latest revision is not the one we are uploading, with the compatibility
             # mode this is supposed to fail if someone tries to upload a different recipe
             latest_ref = ref.copy_clear_rev()
-            latest_snapshot, ref_latest_snapshot, _ = self._get_recipe_snapshot(latest_ref)
+            latest_snapshot, ref_latest_snapshot, _ = self.get_recipe_snapshot(latest_ref)
             server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \
                     ref_latest_snapshot.revision != ref.revision:
@@ -190,14 +190,14 @@ class RestCommonMethods(object):
                                      "Forbidden overwrite")
 
         # Get the remote snapshot
-        remote_snapshot, ref_snapshot, rev_time = self._get_recipe_snapshot(ref)
+        remote_snapshot, ref_snapshot, _ = self.get_recipe_snapshot(ref)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, rev_time
+                return False
 
             if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
@@ -212,7 +212,7 @@ class RestCommonMethods(object):
         if deleted:
             self._remove_conanfile_files(ref, deleted)
 
-        return (files_to_upload or deleted), rev_time
+        return bool(files_to_upload or deleted)
 
     def upload_package(self, pref, the_files, retry, retry_wait, policy):
         """
@@ -226,7 +226,7 @@ class RestCommonMethods(object):
             # Check if the latest revision is not the one we are uploading, with the compatibility
             # mode this is supposed to fail if someone tries to upload a different recipe
             latest_pref = PackageReference(pref.ref, pref.id)
-            latest_snapshot, ref_latest_snapshot, _ = self._get_package_snapshot(latest_pref)
+            latest_snapshot, ref_latest_snapshot, _ = self.get_package_snapshot(latest_pref)
             server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
             if latest_snapshot and server_with_revisions and \
                     ref_latest_snapshot.revision != pref.revision:
@@ -234,15 +234,14 @@ class RestCommonMethods(object):
                                      "Forbidden overwrite")
         t1 = time.time()
         # Get the remote snapshot
-        pref = pref
-        remote_snapshot, pref_snapshot, rev_time = self._get_package_snapshot(pref)
+        remote_snapshot, pref_snapshot, _ = self.get_package_snapshot(pref)
 
         if remote_snapshot:
             remote_manifest = self.get_package_manifest(pref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
-                return False, pref_snapshot, rev_time
+                return False
 
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
@@ -258,7 +257,7 @@ class RestCommonMethods(object):
                             "https://github.com/conan-io/conan/issues " % str(deleted))
 
         logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
-        return files_to_upload or deleted, pref, rev_time
+        return True
 
     def search(self, pattern=None, ignorecase=True):
         """

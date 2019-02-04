@@ -7,18 +7,21 @@ import yaml
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, mkdir, save
+from conans.model.editable_cpp_info import get_editable_abs_path
 
 
 class LocalPackage(object):
-    def __init__(self, base_folder, install_folder, data):
+    def __init__(self, base_folder, install_folder, data, cache):
         self._base_folder = base_folder
         self._install_folder = install_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
         self._build_folder = data.get("build", "")
+        self.layout = get_editable_abs_path(data.get("layout"), self._base_folder,
+                                            cache.conan_folder)
         # package_folder can be None, then it will directly use build_folder
         self._package_folder = data.get("package", "")
         self._cmakedir = data.get("cmakedir")
-        includedirs = data.get("includedirs", [])  # To override include dirs, mainly for build_folder
+        includedirs = data.get("includedirs", [])  # To override includedirs, mainly for build_folder
         self._includedirs = [includedirs] if not isinstance(includedirs, list) else includedirs
         libdirs = data.get("libdirs", [])  # To override libdirs...
         self._libdirs = [libdirs] if not isinstance(libdirs, list) else libdirs
@@ -72,9 +75,6 @@ class LocalPackage(object):
         return os.path.join(self._conanfile_folder, self._cmakedir).replace("\\", "/")
 
 
-WORKSPACE_FILE = "conanws.yml"
-
-
 class Workspace(object):
 
     def generate(self):
@@ -88,13 +88,15 @@ project({name} CXX)
             for _, workspace_package in self._workspace_packages.items():
                 build_folder = workspace_package.build_folder
                 build_folder = build_folder.replace("\\", "/")
-                cmake += 'add_subdirectory(%s "%s")\n' % (workspace_package.local_cmakedir, build_folder)
+                cmake += 'add_subdirectory(%s "%s")\n' % (workspace_package.local_cmakedir,
+                                                          build_folder)
             cmake_path = os.path.join(self._base_folder, "CMakeLists.txt")
             if os.path.exists(cmake_path) and not load(cmake_path).startswith("# conanws"):
                 raise ConanException("Can't generate CMakeLists.txt, will overwrite existing one")
             save(cmake_path, cmake)
 
-    def __init__(self, path, install_folder):
+    def __init__(self, path, install_folder, cache):
+        self._cache = cache
         self._install_folder = install_folder
         self._generator = None
         self._name = "ConanWorkspace"
@@ -103,35 +105,35 @@ project({name} CXX)
         try:
             content = load(path)
         except IOError:
-            raise ConanException("Couldn't load workwspace file in %s" % path)
-        self._loads(content)
+            raise ConanException("Couldn't load workspace file in %s" % path)
+        try:
+            self._loads(content)
+        except Exception as e:
+            raise ConanException("There was an error parsing %s: %s" % (path, str(e)))
 
     def get_editable_dict(self):
-        return {ref: local_package.root_folder
-                for ref, local_package in self._workspace_packages.items()}
+        return {ref: {"path": ws_package.root_folder, "layout": ws_package.layout}
+                for ref, ws_package in self._workspace_packages.items()}
 
-    def __getitem__(self, reference):
-        return self._workspace_packages.get(reference)
+    def __getitem__(self, ref):
+        return self._workspace_packages.get(ref)
 
     @property
     def root(self):
         return self._root
 
     def _loads(self, text):
-        try:
-            yml = yaml.safe_load(text)
-            self._generator = yml.pop("generator", None)
-            self._name = yml.pop("name", None)
-            self._root = [ConanFileReference.loads(s.strip())
-                          for s in yml.pop("root", "").split(",") if s.strip()]
-            if not self._root:
-                raise ConanException("Conan workspace needs at least 1 root conanfile")
-            for package_name, data in yml.items():
-                workspace_package = LocalPackage(self._base_folder, self._install_folder, data)
-                package_name = ConanFileReference.loads(package_name)
-                self._workspace_packages[package_name] = workspace_package
-            for package_name in self._root:
-                if package_name not in self._workspace_packages:
-                    raise ConanException("Root %s is not a local package" % package_name)
-        except Exception as e:
-            raise ConanException("There was an error parsing %s: %s" % (WORKSPACE_FILE, str(e)))
+        yml = yaml.safe_load(text)
+        self._generator = yml.pop("generator", None)
+        self._name = yml.pop("name", None)
+        self._root = [ConanFileReference.loads(s.strip())
+                      for s in yml.pop("root", "").split(",") if s.strip()]
+        if not self._root:
+            raise ConanException("Conan workspace needs at least 1 root conanfile")
+        for package_name, data in yml.items():
+            workspace_package = LocalPackage(self._base_folder, self._install_folder, data, self._cache)
+            package_name = ConanFileReference.loads(package_name)
+            self._workspace_packages[package_name] = workspace_package
+        for package_name in self._root:
+            if package_name not in self._workspace_packages:
+                raise ConanException("Root %s is not a local package" % package_name)

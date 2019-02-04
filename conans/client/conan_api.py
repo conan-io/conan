@@ -13,8 +13,8 @@ from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
 from conans.client.cmd.export_pkg import export_pkg
-from conans.client.cmd.profile import cmd_profile_create, cmd_profile_delete_key, cmd_profile_get, \
-    cmd_profile_list, cmd_profile_update
+from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
+                                       cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
@@ -43,7 +43,7 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
@@ -459,12 +459,12 @@ class ConanAPIV1(object):
         else:
             abs_path = os.path.normpath(os.path.join(cwd, path))
 
-        workspace = Workspace(abs_path, None)
+        workspace = Workspace(abs_path, None, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
         self._user_io.out.success("Using workspace file from %s" % workspace._base_folder)
 
-        self._cache._workspace_refs.update(workspace.get_editable_dict())
+        self._cache.editable_packages.update(workspace.get_editable_dict())
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         manager.install_workspace(graph_info, workspace, remote_name, build, update)
@@ -942,6 +942,44 @@ class ConanAPIV1(object):
         return self._cache.registry.remotes.get(remote_name)
 
     @api_method
+    def get_recipe_revisions(self, reference, remote_name=None):
+        ref = ConanFileReference.loads(str(reference))
+        if ref.revision:
+            raise ConanException("Cannot list the revisions of a specific recipe revision")
+
+        if not remote_name:
+            layout = self._cache.package_layout(ref)
+            if not layout.recipe_exists():
+                raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
+            rev, tm = layout.recipe_revision()
+            return {"reference": ref.full_repr(),
+                    "revisions": [{"revision": rev, "time": tm}]}
+        else:
+            remote = self.get_remote_by_name(remote_name)
+            return self._remote_manager.get_recipe_revisions(ref, remote=remote)
+
+    @api_method
+    def get_package_revisions(self, reference, remote_name=None):
+        pref = PackageReference.loads(str(reference), validate=True)
+        if not pref.ref.revision:
+            raise ConanException("Specify a recipe reference with revision")
+        if pref.revision:
+            raise ConanException("Cannot list the revisions of a specific package revision")
+
+        if not remote_name:
+            layout = self._cache.package_layout(pref.ref)
+            if not layout.recipe_exists():
+                raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
+
+            if not layout.package_exists(pref):
+                raise NotFoundException("Package not found: '%s'" % pref.full_repr())
+
+            rev, tm = layout.package_revision(pref)
+            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
+        else:
+            remote = self.get_remote_by_name(remote_name)
+            return self._remote_manager.get_package_revisions(pref, remote=remote)
+
     def link(self, path, reference, layout, cwd):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)

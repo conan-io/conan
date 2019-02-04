@@ -2,14 +2,25 @@ import json
 from collections import defaultdict
 
 from conans import DEFAULT_REVISION_V1
+from conans.util.dates import valid_iso8601
 
 
 class _RecipeMetadata(object):
 
     def __init__(self):
         self._revision = DEFAULT_REVISION_V1
-        self.time = None
+        self._time = None
         self.properties = {}
+
+    @property
+    def time(self):
+        return self._time
+
+    @time.setter
+    def time(self, r):
+        if r is not None and not valid_iso8601(r):
+            raise ValueError("Invalid time for the revision, not ISO8601 compliant: %s" % r)
+        self._time = r
 
     @property
     def revision(self):
@@ -22,7 +33,7 @@ class _RecipeMetadata(object):
     def to_dict(self):
         ret = {"revision": self.revision,
                "properties": self.properties,
-               "time": self.time}
+               "time": self._time}
         return ret
 
     @staticmethod
@@ -39,7 +50,7 @@ class _BinaryPackageMetadata(object):
     def __init__(self):
         self._revision = DEFAULT_REVISION_V1
         self._recipe_revision = DEFAULT_REVISION_V1
-        self.time = None
+        self._time = None
         self.properties = {}
 
     @property
@@ -49,6 +60,16 @@ class _BinaryPackageMetadata(object):
     @revision.setter
     def revision(self, r):
         self._revision = DEFAULT_REVISION_V1 if r is None else r
+
+    @property
+    def time(self):
+        return self._time
+
+    @time.setter
+    def time(self, r):
+        if r is not None and not valid_iso8601(r):
+            raise ValueError("Invalid time for the revision, not ISO8601 compliant: %s" % r)
+        self._time = r
 
     @property
     def recipe_revision(self):
@@ -62,7 +83,7 @@ class _BinaryPackageMetadata(object):
         ret = {"revision": self.revision,
                "recipe_revision": self.recipe_revision,
                "properties": self.properties,
-               "time": self.time}
+               "time": self._time}
         return ret
 
     @staticmethod

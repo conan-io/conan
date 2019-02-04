@@ -233,12 +233,11 @@ class GraphManager(object):
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, processed_profile):
+
+        assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    recorder)
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
-        if build_mode is None:
-            return graph
-
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager)
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
