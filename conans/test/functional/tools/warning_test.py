@@ -152,9 +152,6 @@ class TestConan(ConanFile):
 
         with tools.environment_append({"PATH": None}):
             self.output.info("PATH: %s" % tools.get_env("PATH"))
-            
-        self.output.info("human size: %s" % tools.human_size(1024))
-        self.output.info("cross-building: %s" % tools.cross_building(self.settings))
         tools.get_gnu_triplet(self.settings.get_safe("os"), self.settings.get_safe("arch"), 
                               self.settings.get_safe("compiler"))
         tools.get_cased_path(os.path.abspath(os.curdir))
@@ -195,11 +192,7 @@ class TestConan(ConanFile):
         self.client.run("install .")
         self.client.run("build .")
         self.assertNotIn("Provide the output argument explicitly to function", self.client.out)
-        self.assertIn("CONAN_COMPRESSION_LEVEL 9", self.client.out)
-        self.assertIn("this is something C:/file.txt", self.client.out)
         self.assertIn("PATH: None", self.client.out)
-        self.assertIn("human size: 1.0KB", self.client.out)
-        self.assertIn("cross-building: False", self.client.out)
 
     def tearDown(self):
         shutil.rmtree(self.client.current_folder)
