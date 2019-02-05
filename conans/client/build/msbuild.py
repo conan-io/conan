@@ -160,7 +160,8 @@ class MSBuild(object):
             command.append('/verbosity:%s' % verbosity)
 
         if props_file_path:
-            command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
+            command.append('/p:ForceImportBeforeCppTargets="%s"' %
+                           os.path.abspath(props_file_path))
 
         for name, value in properties.items():
             command.append('/p:%s="%s"' % (name, value))
