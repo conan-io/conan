@@ -39,6 +39,11 @@ class WindowsWarningTest(unittest.TestCase):
                 tools.vs_installation_path("14")
                 tools.latest_vs_version_installed()
                 tools.run_in_windows_bash(self, "pwd")
+
+                manual_file = os.path.abspath("manual.html")
+                with open(manual_file, "w") as fmanual:
+                    fmanual.write("content C:/some/PATH/File.txt")
+                tools.replace_path_in_file(manual_file, "c:\Some/PATH\File.txt", "C:/file.txt")
         """)
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile})
@@ -131,12 +136,10 @@ class TestConan(ConanFile):
     def build(self):
         tools.cpu_count()
         self.output.info("CONAN_COMPRESSION_LEVEL %s" % tools.get_env("CONAN_COMPRESSION_LEVEL"))
-        with open("manual.html", "w") as fmanual:
-            fmanual.write("this is some content C:/some/PATH/File.txt")
-            manual_file = os.path.abspath("manual.html")
+        manual_file = os.path.abspath("manual.html")
+        with open(manual_file, "w") as fmanual:
+            fmanual.write("this is some content")
         tools.replace_in_file(manual_file, "some content", "something")
-        tools.replace_path_in_file(manual_file, "c:\Some/PATH\File.txt", "C:/file.txt")
-        self.output.info(tools.load(manual_file))
         
         tools.md5("this is a string")
         md5 = tools.md5sum(manual_file)
@@ -192,6 +195,11 @@ class TestConan(ConanFile):
         self.client.run("install .")
         self.client.run("build .")
         self.assertNotIn("Provide the output argument explicitly to function", self.client.out)
+        self.assertIn("CONAN_COMPRESSION_LEVEL 9", self.client.out)
+        self.assertIn("this is something C:/file.txt", self.client.out)
+        self.assertIn("PATH: None", self.client.out)
+        self.assertIn("human size: 1.0KB", self.client.out)
+        self.assertIn("cross-building: False", self.client.out)
 
     def tearDown(self):
         shutil.rmtree(self.client.current_folder)

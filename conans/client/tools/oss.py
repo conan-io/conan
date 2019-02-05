@@ -348,7 +348,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
 
     :param os_: os to be used to create the triplet
     :param arch: arch to be used to create the triplet
-    :param compiler: compiler used to create the triplet (only needed fo windows)
+    :param compiler: compiler used to create the triplet (only needed for windows)
     """
 
     if os_ == "Windows" and compiler is None:
