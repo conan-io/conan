@@ -101,6 +101,7 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -pr=profile")
         self.assertNotIn("PACKAGE NOT CALLED", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Copied 1 '.h' file: myfile.h", client.out)
+        self.assertNotIn("No files copied from package folder!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pkg_folder = client.cache.packages(ref)
         folders = os.listdir(pkg_folder)
