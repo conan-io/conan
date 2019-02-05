@@ -69,7 +69,7 @@ if(is_pr){ // Read the PR body to
 
 def flavors
 if(test_revisions){
-    flavors = ["enabled_revisions", "disabled_revisions"]
+    flavors = ["disabled_revisions", "enabled_revisions"]
 }
 else{
     flavors = ["disabled_revisions"]

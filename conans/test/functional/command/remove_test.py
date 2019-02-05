@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 import six
@@ -409,7 +410,12 @@ class RemoveTest(unittest.TestCase):
         # Incorrect casing of "hello"
         self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)
-        self.assertIn("No recipe found 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
+        if platform.system() == "Linux":
+            self.assertIn("No recipe found 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
+        else:
+            self.assertIn("Requested 'hello/1.4.10@myuser/testing' but found "
+                          "case incompatible 'Hello'\n"
+                          "Case insensitive filesystem can't manage this", self.client.user_io.out)
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
