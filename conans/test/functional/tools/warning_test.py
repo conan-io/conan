@@ -4,10 +4,10 @@ import tarfile
 import unittest
 import zipfile
 
-from conans import tools
 from conans.client.tools import chdir
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
+
 
 conanfile = """
 import os
@@ -110,7 +110,7 @@ class ToolsWarningTest(unittest.TestCase):
         self.http_server = StoppableThreadBottle()
         self.http_server.current_folder = temp_folder()
 
-        with tools.chdir(self.http_server.current_folder):
+        with chdir(self.http_server.current_folder):
             zipfile.ZipFile('file.zip', 'w', zipfile.ZIP_DEFLATED).close()
             zip_file = os.path.abspath("file.zip")
 
@@ -118,7 +118,7 @@ class ToolsWarningTest(unittest.TestCase):
         def get_zip():
             return static_file(os.path.basename(zip_file), os.path.dirname(zip_file))
 
-        with tools.chdir(self.http_server.current_folder):
+        with chdir(self.http_server.current_folder):
             tarfile.open("file.tar.gz", "w:gz").close()
             targz_file = os.path.abspath("file.tar.gz")
 
@@ -145,5 +145,5 @@ class ToolsWarningTest(unittest.TestCase):
         self.http_server.stop()
         shutil.rmtree(self.http_server.current_folder)
         shutil.rmtree(self.client.current_folder)
-        self.client.localdb.connection.close()
+        self.client.localdb.connection.close()  # FIXME
         shutil.rmtree(self.client.cache.conan_folder)
