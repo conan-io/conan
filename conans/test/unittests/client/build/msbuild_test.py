@@ -1,6 +1,8 @@
+import os
 import platform
 import unittest
 
+import re
 import mock
 from parameterized import parameterized
 
@@ -246,3 +248,19 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
         self.assertIn('/verbosity:quiet', command)
 
+    def properties_injection_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("dummy.sln", props_file_path="conan_build.props")
+
+        print(command)
+        match = re.search('/p:ForceImportBeforeCppTargets="(.+?)"', command)
+        self.assertTrue(
+            match, "Haven't been able to find the ForceImportBeforeCppTargets")
+
+        props_file_path = match.group(1)
+        self.assertTrue(os.path.isabs(props_file_path))
+        self.assertEquals(os.path.basename(props_file_path), "conan_build.props")
