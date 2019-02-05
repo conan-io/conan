@@ -134,11 +134,10 @@ class DepsGraphBuilder(object):
     def _conflicting_references(previous_ref, new_ref):
         if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
             return REFERENCE_CONFLICT
-        # Computed node, has to have a revision, at least 0
-        assert(previous_ref.revision is not None)
+        # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
-        if new_ref.revision and previous_ref.revision != new_ref.revision:
+        if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
             return REVISION_CONFLICT
         return False
 
