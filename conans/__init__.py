@@ -18,4 +18,4 @@ REVISIONS = "revisions"  # Only when enabled in config, not by default look at s
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always with revisions
 DEFAULT_REVISION_V1 = "0"
 
-__version__ = '1.12.0'
+__version__ = '1.12.1'
