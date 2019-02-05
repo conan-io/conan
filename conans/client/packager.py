@@ -2,13 +2,13 @@ import os
 import shutil
 
 from conans.client import tools
-from conans.client.file_copier import FileCopier
+from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
-from conans.util.files import mkdir, rmdir, save, walk
+from conans.util.files import mkdir, rmdir, save
 from conans.util.log import logger
 
 
@@ -24,14 +24,14 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
 
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
+
     copier.report(output)
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
 
-    if not _manifest_files(package_folder):
-        output.warn("No files copied from package folder!")
+    _report_files_from_manifest(output, package_folder)
 
     output.success("Package '%s' created" % package_id)
     conanfile.package_folder = package_folder
@@ -63,23 +63,16 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
         package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
 
-        def recipe_has(attribute):
-            return attribute in conanfile.__class__.__dict__
-
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            copy_done = conanfile.copy.report(package_output)
-            if not copy_done and recipe_has("package"):
-                output.warn("No files copied from source folder!")
 
         conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        conanfile.copy.report(package_output)
     except Exception as e:
         if not local:
             os.chdir(build_folder)
@@ -94,8 +87,7 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
         raise ConanException(e)
 
     _create_aux_files(install_folder, package_folder, conanfile, copy_info)
-    if not _manifest_files(package_folder):
-        output.warn("No files copied from build folder!")
+    _report_files_from_manifest(package_output, package_folder)
     package_id = package_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % package_id)
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
@@ -122,6 +114,16 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     digest.save(package_folder)
 
 
-def _manifest_files(package_folder):
+def _report_files_from_manifest(output, package_folder):
     digest = FileTreeManifest.load(package_folder)
-    return [file for file in digest.files() if file != CONANINFO]
+    copied_files = list(digest.files())
+    try:
+        copied_files.remove(CONANINFO)
+    finally:
+        pass
+
+    if not copied_files:
+        output.warn("No files in this package!")
+        return
+
+    report_copied_files(copied_files, output, message_suffix="Packaged")

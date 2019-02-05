@@ -47,7 +47,7 @@ class Pkg(ConanFile):
         # In current dir subdir
         prepare_for_package(client)
         client.run("package . --build-folder build2 --install-folder build --package-folder=subdir")
-        self.assertNotIn("package(): WARN: No files copied", client.out)
+        self.assertNotIn("package(): WARN: No files in this package!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # In current dir subdir with conanfile path
@@ -59,7 +59,7 @@ class Pkg(ConanFile):
         # Default path
         prepare_for_package(client)
         client.run("package . --build-folder build")
-        self.assertNotIn("package(): WARN: No files copied", client.out)
+        self.assertNotIn("package(): WARN: No files in this package!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
 
         # Default path with conanfile path
@@ -71,7 +71,7 @@ class Pkg(ConanFile):
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
         client.run("package . --build-folder build --package-folder='%s'" % pf)
-        self.assertNotIn("package(): WARN: No files copied", client.out)
+        self.assertNotIn("package(): WARN: No files in this package!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
         # Abs path with conanfile path
@@ -207,8 +207,8 @@ class MyConan(ConanFile):
             client.run('package "{0}" --build-folder="{1}/build" '
                        '--package-folder="{2}" --source-folder="{1}/src"'.
                        format(path, conanfile_folder, package_folder))
-        self.assertNotIn("package(): Copied 1 \'\' file", client.out)
-        self.assertIn("package(): Copied 1 file: myapp", client.out)
+        self.assertNotIn("package(): Packaged 1 \'\' file", client.out)
+        self.assertIn("package(): Packaged 1 file: myapp", client.out)
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
         self.assertEqual(sorted(os.listdir(package_folder)),
@@ -234,8 +234,8 @@ class MyConan(ConanFile):
                      CONANFILE: conanfile})
         client.run("install . --install-folder=install")
         client.run('package . --source-folder=source --install-folder=install --build-folder=build')
-        self.assertIn("No files copied from source folder!", client.out)
-        self.assertIn("Copied 1 '.lib' file: library.lib", client.out)
+        self.assertNotIn("No files in this package!", client.out)
+        self.assertIn("package(): Packaged 1 '.lib' file: library.lib", client.out)
 
         conanfile = """
 from conans import ConanFile
@@ -248,8 +248,8 @@ class MyConan(ConanFile):
 """
         client.save({CONANFILE: conanfile})
         client.run('package . --source-folder=source --install-folder=install --build-folder=build')
-        self.assertNotIn("No files copied from build folder!", client.out)
-        self.assertIn("Copied 1 '.h' file: file.h", client.out)
+        self.assertNotIn("No files in this package!", client.out)
+        self.assertIn("package(): Packaged 1 '.h' file: file.h", client.out)
 
         conanfile = """
 from conans import ConanFile
@@ -262,10 +262,9 @@ class MyConan(ConanFile):
 """
         client.save({CONANFILE: conanfile})
         client.run('package . --source-folder=source --install-folder=install --build-folder=build')
-        self.assertIn("No files copied from source folder!", client.out)
-        self.assertNotIn("No files copied from build folder!", client.out)
-        self.assertNotIn("Copied 1 '.h' file: file.h", client.out)
-        self.assertNotIn("Copied 1 '.lib' file: library.lib", client.out)
+        self.assertNotIn("No files in this package!", client.out)
+        self.assertIn("package(): Packaged 1 '.h' file: file.h", client.out)
+        self.assertIn("package(): Packaged 1 '.lib' file: library.lib", client.out)
 
     def install_package_by_cmake_test(self):
         client = TestClient()
@@ -296,8 +295,31 @@ install(FILES LICENSE DESTINATION licenses)
                      CONANFILE: conanfile})
         client.run("install .")
         client.run("package .")
-        self.assertNotIn("No files copied from source folder!", client.out)
-        self.assertNotIn("No files copied from build folder!", client.out)
+        self.assertNotIn("No files in this package!", client.out)
         self.assertIn("Install the project...", client.out)
         self.assertIn("-- Installing:", client.out)
+        self.assertIn("package(): Packaged 1 file: LICENSE", client.out)
         self.assertIn("conanfile.py: Package 'package' created", client.out)
+
+
+    def empty_package_folder_test(self):
+        conanfile = """from conans import ConanFile
+import os
+
+class Pkg(ConanFile):
+    name = "lib"
+    version = "1.0"
+
+    def build(self):
+        pass
+
+    def package(self):
+        self.output.info("yet another conan package")
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        client.run("package .")
+        self.assertIn("yet another conan package", client.out)
+        self.assertIn("package(): WARN: No files in this package!", client.out)
+        self.assertNotIn("package(): Packaged", client.out)
