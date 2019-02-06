@@ -2,9 +2,11 @@ import os
 import shutil
 
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 
+from conans.paths import PACKAGE_METADATA
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
@@ -146,22 +148,36 @@ def _get_refs(cache):
     return [ConanFileReference(*s.split("/")) for s in folders]
 
 
+def _get_prefs(cache, ref):
+    packages_folder = cache.packages(ref)
+    folders = list_folder_subdirs(packages_folder, 1)
+    return [PackageReference(ref, s) for s in folders]
+
+
 def _migrate_create_metadata(cache, out):
     out.warn("Migration: Generating missing metadata files")
     refs = _get_refs(cache)
 
     for ref in refs:
         try:
-            folder = cache.exports(ref)
+            folder = cache.export(ref)
             manifest = FileTreeManifest.load(folder)
-            with cache.package_layout(ref).update_metadata() as metadata:
+            metadata_path = os.path.join(cache.conan(ref), PACKAGE_METADATA)
+            if not os.path.exists(metadata_path):
+                out.info("Creating {} for {}".format(PACKAGE_METADATA, ref))
+                prefs = _get_prefs(cache, ref)
+                metadata = PackageMetadata()
                 metadata.recipe.revision = manifest.summary_hash
+                for pref in prefs:
+                    pmanifest = FileTreeManifest.load(cache.package(pref))
+                    metadata.packages[pref.id].revision = pmanifest.summary_hash
+                    metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
+                save(metadata_path, metadata.dumps())
         except Exception as e:
             raise ConanException("Something went wrong while generating the metadata.json files "
                                  "in the cache, please try to fix the issue or wipe the cache: {}"
                                  ":{}".format(ref, e))
-    out.warn("Migration: Removing old lock files finished\n")
-    raise Exception(refs)
+    out.warn("Migration: Generating missing metadata files finished OK!\n")
 
 
 def _migrate_lock_files(cache, out):
