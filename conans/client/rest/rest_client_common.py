@@ -193,7 +193,7 @@ class RestCommonMethods(object):
         remote_snapshot, ref_snapshot, _ = self.get_recipe_snapshot(ref)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
+            remote_manifest = remote_manifest or self.get_recipe_manifest(ref_snapshot)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:

@@ -135,12 +135,12 @@ class ConanApiAuthManager(object):
         return self._rest_client.upload_package(pref, the_files, retry, retry_wait, policy)
 
     @input_credentials_if_unauthorized
-    def get_conan_manifest(self, ref):
-        return self._rest_client.get_conan_manifest(ref)
+    def get_recipe_manifest(self, ref):
+        return self._rest_client.get_recipe_manifest(ref)
 
     @input_credentials_if_unauthorized
-    def get_package_manifest(self, ref):
-        return self._rest_client.get_package_manifest(ref)
+    def get_package_manifest(self, pref):
+        return self._rest_client.get_package_manifest(pref)
 
     @input_credentials_if_unauthorized
     def get_package(self, pref, dest_folder):
