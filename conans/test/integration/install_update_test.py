@@ -286,8 +286,8 @@ class ConanLib(ConanFile):
         else:
             self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID,
                           client.out)
-            self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
-                          client.out)
+        self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
+                      client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         header = os.path.join(client.cache.package(pref), "header.h")

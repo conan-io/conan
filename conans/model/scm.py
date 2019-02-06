@@ -1,7 +1,6 @@
 import json
 import os
-
-from future.moves import subprocess
+import subprocess
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
@@ -61,8 +60,7 @@ def detect_repo_type(folder):
         with chdir(folder):
             try:
                 ret = subprocess.call(cmd, shell=True,
-                                      stdout=open(os.devnull, 'w'),
-                                      stderr=subprocess.STDOUT)
+                                      stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
                 if ret != 0:
                     return False
             except Exception:

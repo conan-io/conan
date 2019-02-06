@@ -1,6 +1,10 @@
 import os
 import shutil
 
+from conans.model.manifest import FileTreeManifest
+
+from conans.model.ref import ConanFileReference
+
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
@@ -43,7 +47,7 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-        if old_version < Version("1.12.0"):
+        if old_version < Version("1.13.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
@@ -68,11 +72,11 @@ os:
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     watchOS:
-        version: ["4.0"]
+        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1"]
     tvOS:
-        version: ["11.0"]
+        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
     Arduino:
@@ -112,6 +116,11 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
             self._update_settings_yml(old_settings)
+
+            # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
+            _migrate_create_metadata(self.cache, self.out)
+
+        if old_version < Version("1.12.0"):
             migrate_plugins_to_hooks(self.cache)
 
         if old_version < Version("1.0"):
@@ -130,6 +139,29 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.cache, self.out)
+
+
+def _get_refs(cache):
+    folders = list_folder_subdirs(cache.store, 4)
+    return [ConanFileReference(*s.split("/")) for s in folders]
+
+
+def _migrate_create_metadata(cache, out):
+    out.warn("Migration: Generating missing metadata files")
+    refs = _get_refs(cache)
+
+    for ref in refs:
+        try:
+            folder = cache.exports(ref)
+            manifest = FileTreeManifest.load(folder)
+            with cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.revision = manifest.summary_hash
+        except Exception as e:
+            raise ConanException("Something went wrong while generating the metadata.json files "
+                                 "in the cache, please try to fix the issue or wipe the cache: {}"
+                                 ":{}".format(ref, e))
+    out.warn("Migration: Removing old lock files finished\n")
+    raise Exception(refs)
 
 
 def _migrate_lock_files(cache, out):
