@@ -254,13 +254,12 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, cache, output, remote_manager, recorder, workspace, hook_manager):
+    def __init__(self, cache, output, remote_manager, recorder, hook_manager):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = cache.registry
         self._recorder = recorder
-        self._workspace = workspace
         self._hook_manager = hook_manager
 
     def install(self, deps_graph, keep_build=False, graph_info=None):
@@ -321,22 +320,24 @@ class BinaryInstaller(object):
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
 
-        workspace_package = self._workspace[node.ref] if self._workspace else None
-        if workspace_package:
-            output = node.conanfile.output
-            build_folder = workspace_package.build_folder(node.conanfile)
-            write_generators(node.conanfile, build_folder, output)
-            save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
-            output.info("Generated %s" % CONANINFO)
-            graph_info.save(build_folder)
-            output.info("Generated graphinfo")
-            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
-            output.info("Generated %s" % BUILD_INFO)
-            # Build step might need DLLs, binaries as protoc to generate source files
-            # So execute imports() before build, storing the list of copied_files
-            from conans.client.importer import run_imports
-            copied_files = run_imports(node.conanfile, build_folder)
-            report_copied_files(copied_files, output)
+            build_folder = editable_cpp_info.folder("build",
+                                                    settings=node.conanfile.settings,
+                                                    options=node.conanfile.options)
+            if build_folder is not None:
+                build_folder = os.path.join(package_layout.conan(), build_folder)
+                output = node.conanfile.output
+                write_generators(node.conanfile, build_folder, output)
+                save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
+                output.info("Generated %s" % CONANINFO)
+                graph_info.save(build_folder)
+                output.info("Generated graphinfo")
+                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
+                output.info("Generated %s" % BUILD_INFO)
+                # Build step might need DLLs, binaries as protoc to generate source files
+                # So execute imports() before build, storing the list of copied_files
+                from conans.client.importer import run_imports
+                copied_files = run_imports(node.conanfile, build_folder)
+                report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, pref, keep_build, processed_package_references):
         conan_file = node.conanfile

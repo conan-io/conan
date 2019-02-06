@@ -7,7 +7,6 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
-from conans.client.output import Color, ScopedOutput
 from conans.client.source import complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -28,21 +27,6 @@ class ConanManager(object):
         self._recorder = recorder
         self._graph_manager = graph_manager
         self._hook_manager = hook_manager
-
-    def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
-        references = workspace.root
-        deps_graph, _ = self._graph_manager.load_graph(references, None, graph_info, build_modes,
-                                                       False, update, remote_name, self._recorder)
-
-        output = ScopedOutput(str("Workspace"), self._user_io.out)
-        output.highlight("Installing...")
-        print_graph(deps_graph, self._user_io.out)
-
-        installer = BinaryInstaller(self._cache, output, self._remote_manager,
-                                    recorder=self._recorder, workspace=workspace,
-                                    hook_manager=self._hook_manager)
-        installer.install(deps_graph, keep_build=False, graph_info=graph_info)
-        workspace.generate()
 
     def install(self, ref_or_path, install_folder, graph_info, remote_name=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
@@ -90,7 +74,7 @@ class ConanManager(object):
             pass
 
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
-                                    recorder=self._recorder, workspace=None,
+                                    recorder=self._recorder,
                                     hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build)
 

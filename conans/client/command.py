@@ -1408,7 +1408,7 @@ class Command(object):
         args = parser.parse_args(*args)
 
         if args.subcommand == "install":
-            self._conan.install_workspace(args.path, args.settings, args.options, args.env,
+            self._conan.workspace_install(args.path, args.settings, args.options, args.env,
                                           args.remote, args.build,
                                           args.profile, args.update)
 

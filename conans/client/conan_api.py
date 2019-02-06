@@ -57,6 +57,8 @@ from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.editable_cpp_info import get_editable_abs_path
+from conans.client.graph.printer import print_graph
+from conans.client.installer import BinaryInstaller
 
 default_manifest_folder = '.conan_manifests'
 
@@ -450,7 +452,7 @@ class ConanAPIV1(object):
             raise ConanException("Provide a valid full reference without wildcards.")
 
     @api_method
-    def install_workspace(self, path, settings=None, options=None, env=None,
+    def workspace_install(self, path, settings=None, options=None, env=None,
                           remote_name=None, build=None, profile_name=None,
                           update=False, cwd=None):
         cwd = cwd or get_cwd()
@@ -459,15 +461,24 @@ class ConanAPIV1(object):
         else:
             abs_path = os.path.normpath(os.path.join(cwd, path))
 
-        workspace = Workspace(abs_path, None, self._cache)
+        workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
         self._user_io.out.success("Using workspace file from %s" % workspace._base_folder)
 
         self._cache.editable_packages.update(workspace.get_editable_dict())
+
         recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        manager.install_workspace(graph_info, workspace, remote_name, build, update)
+        references = workspace.root
+        deps_graph, _ = self._graph_manager.load_graph(references, None, graph_info, build,
+                                                       False, update, remote_name, recorder)
+
+        print_graph(deps_graph, self._user_io.out)
+
+        installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
+                                    recorder=recorder, hook_manager=self._hook_manager)
+        installer.install(deps_graph, keep_build=False, graph_info=graph_info)
+        workspace.generate(cwd)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

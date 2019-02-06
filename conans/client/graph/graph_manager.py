@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node,\
-    RECIPE_CONSUMER, RECIPE_VIRTUAL
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
@@ -185,7 +185,8 @@ class GraphManager(object):
         for node in list(graph.nodes):
             if node.recipe == RECIPE_VIRTUAL:
                 continue
-            if (node.binary != BINARY_BUILD and node.recipe != RECIPE_CONSUMER):
+            if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE)
+                    and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.ref)

@@ -32,8 +32,19 @@ def get_editable_abs_path(path, cwd, cache_folder):
 class EditableCppInfo(object):
     cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs', 'builddirs', 'srcdirs']
 
-    def __init__(self, data):
+    def __init__(self, data, folders):
         self._data = data
+        self._folders = folders
+
+    def folder(self, name, settings, options):
+        try:
+            path = self._folders[name]
+        except KeyError:
+            return None
+        try:
+            return self._work_on_item(path, settings, options)
+        except Exception as e:
+            raise ConanException("Error getting folder '%s' from layout: %s" % (str(name), str(e)))
 
     @staticmethod
     def load(filepath):
@@ -44,8 +55,12 @@ class EditableCppInfo(object):
         except configparser.Error as e:
             raise ConanException("Error parsing layout file: %s\n%s" % (filepath, str(e)))
         data = OrderedDict()
+        folders = {}
         if parser.has_section("folders"):
-            build_folder = parser.get("folders", "build")
+            folders_config = parser.options("folders")
+            if folders_config:
+                for f in folders_config:
+                    folders[f] = parser.get("folders", f)
             parser.remove_section("folders")
         for section in parser.sections():
             ref, cpp_info_dir = section.rsplit(":", 1) if ':' in section else (None, section)
@@ -62,7 +77,7 @@ class EditableCppInfo(object):
                                          % (ref, filepath))
             data.setdefault(ref, {})[cpp_info_dir] = [k for k, _ in parser.items(section)]
 
-        return EditableCppInfo(data)
+        return EditableCppInfo(data, folders)
 
     @staticmethod
     def _work_on_item(value, settings, options):
