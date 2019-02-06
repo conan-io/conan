@@ -245,7 +245,6 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("dummy.sln", props_file_path="conan_build.props")
 
-        print(command)
         match = re.search('/p:ForceImportBeforeCppTargets="(.+?)"', command)
         self.assertTrue(
             match, "Haven't been able to find the ForceImportBeforeCppTargets")
