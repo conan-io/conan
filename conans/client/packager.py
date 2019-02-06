@@ -25,8 +25,6 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     copier = FileCopier(src_package_folder, package_folder)
     copier("*", symlinks=True)
 
-    copier.report(output)
-
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
@@ -117,10 +115,7 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
 def _report_files_from_manifest(output, package_folder):
     digest = FileTreeManifest.load(package_folder)
     copied_files = list(digest.files())
-    try:
-        copied_files.remove(CONANINFO)
-    finally:
-        pass
+    copied_files.remove(CONANINFO)
 
     if not copied_files:
         output.warn("No files in this package!")
