@@ -62,7 +62,7 @@ class AuthorizeBearerTest(unittest.TestCase):
 
         if get_env("CONAN_API_V2_BLOCKED", True):
             expected_calls = [('ping', None),
-                              ('get_conan_manifest_url', None),
+                              ('get_recipe_manifest_url', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
                               ('get_recipe_snapshot', 'Bearer'),
@@ -97,7 +97,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         self.assertTrue(errors)
 
         expected_calls = [('ping', None),
-                          ('get_conan_manifest_url', None),
+                          ('get_recipe_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_recipe_snapshot', 'Bearer'),
