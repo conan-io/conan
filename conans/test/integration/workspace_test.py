@@ -265,38 +265,47 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(2)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
 
+        time.sleep(2)
         client.runner('cmake --build . --config Release', cwd=base_release)
+        time.sleep(2)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(2)
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
 
+        time.sleep(2)
         client.runner('cmake --build . --config Release', cwd=base_release)
+        time.sleep(2)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(2)
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
+        time.sleep(2)
         client.runner('cmake --build . --config Debug', cwd=base_debug)
-        time.sleep(1)
+        time.sleep(2)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
-        time.sleep(1)
+        time.sleep(2)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Bye Moon", "Hello World", output=client.out)
 
+        time.sleep(2)
         client.runner('cmake --build . --config Debug', cwd=base_debug)
-        time.sleep(1)
+        time.sleep(2)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
