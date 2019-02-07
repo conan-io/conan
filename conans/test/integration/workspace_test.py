@@ -6,6 +6,7 @@ from textwrap import dedent
 from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+import time
 
 
 conanfile_build = """from conans import ConanFile, CMake
@@ -284,15 +285,18 @@ class WorkspaceTest(unittest.TestCase):
 
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
         client.runner('cmake --build . --config Debug', cwd=base_debug)
+        time.sleep(1)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
+        time.sleep(1)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Bye Moon", "Hello World", output=client.out)
 
         client.runner('cmake --build . --config Debug', cwd=base_debug)
+        time.sleep(1)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
