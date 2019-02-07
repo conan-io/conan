@@ -298,6 +298,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
+    @unittest.skipUnless(platform.system() == "Windows", "only windows")
     def complete_multi_conf_build_test(self):
         client = TestClient()
 
@@ -355,7 +356,7 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
             client.run("workspace install ../conanws.yml -s build_type=Debug")
 
-        generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
+        generator = "Visual Studio 15 Win64"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=build)
         client.runner('cmake --build . --config Release', cwd=build)
 

@@ -36,9 +36,10 @@ class EditableCppInfo(object):
         self._data = data
         self._folders = folders
 
-    def folder(self, name, settings, options):
+    def folder(self, ref, name, settings, options):
         try:
-            path = self._folders[name]
+            path = self._folders.get(str(ref)) or self._folders.get(None) or {}
+            path = path[name]
         except KeyError:
             return None
         try:
@@ -56,14 +57,11 @@ class EditableCppInfo(object):
             raise ConanException("Error parsing layout file: %s\n%s" % (filepath, str(e)))
         data = OrderedDict()
         folders = {}
-        if parser.has_section("folders"):
-            folders_config = parser.options("folders")
-            if folders_config:
-                for f in folders_config:
-                    folders[f] = parser.get("folders", f)
-            parser.remove_section("folders")
         for section in parser.sections():
             ref, cpp_info_dir = section.rsplit(":", 1) if ':' in section else (None, section)
+            if cpp_info_dir == "folders":
+                folders[ref] = {k: v for k, v in parser.items(section)}
+                continue
             if cpp_info_dir not in EditableCppInfo.cpp_info_dirs:
                 raise ConanException("Wrong cpp_info field '%s' in layout file: %s"
                                      % (cpp_info_dir, filepath))
@@ -71,7 +69,7 @@ class EditableCppInfo(object):
                 try:
                     r = ConanFileReference.loads(ref)
                     if r.revision:
-                        raise ConanException
+                        raise ConanException("Don't provide revision in Editable layouts")
                 except ConanException:
                     raise ConanException("Wrong package reference '%s' in layout file: %s"
                                          % (ref, filepath))
