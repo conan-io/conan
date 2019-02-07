@@ -36,7 +36,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
             raise ConanException("Package already exists. Please use --force, -f to "
                                  "overwrite it")
 
-    recipe_hash = cache.package_layout(ref).load_manifest().summary_hash
+    recipe_hash = cache.package_layout(ref).recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:
