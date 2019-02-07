@@ -153,7 +153,7 @@ class GraphBinariesAnalyzer(object):
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                local_recipe_hash = self._cache.package_layout(ref).load_manifest().summary_hash
+                local_recipe_hash = self._cache.package_layout(ref).recipe_manifest().summary_hash
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD

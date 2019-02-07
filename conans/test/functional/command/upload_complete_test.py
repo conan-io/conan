@@ -102,7 +102,8 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
-        save(os.path.join(package_folder, CONANINFO), """[recipe_hash]\n%s""" % manifest.summary_hash)
+        save(os.path.join(package_folder, CONANINFO),
+             """[recipe_hash]\n%s""" % manifest.summary_hash)
         FileTreeManifest.create(package_folder).save(package_folder)
         self.test_server.server_store.update_last_package_revision(self.pref)
 
@@ -371,7 +372,7 @@ class TestConan(ConanFile):
 
         # Fake datetime from exported date and upload again
 
-        old_digest = self.client.cache.package_layout(self.ref).load_manifest()
+        old_digest = self.client.cache.package_layout(self.ref).recipe_manifest()
         old_digest.file_sums["new_file"] = "012345"
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
         fake_digest.save(self.client.cache.export(self.ref))

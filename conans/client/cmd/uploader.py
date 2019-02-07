@@ -189,7 +189,7 @@ class CmdUpload(object):
         except NotFoundException:
             return  # First time uploading this package
 
-        local_manifest = self._cache.package_layout(ref).load_manifest()
+        local_manifest = self._cache.package_layout(ref).recipe_manifest()
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
             self._print_manifest_information(remote_recipe_manifest, local_manifest, ref, remote)

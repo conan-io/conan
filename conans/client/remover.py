@@ -155,7 +155,7 @@ class ConanRemover(object):
                     if remote_name:
                         recipe_hash = self._remote_manager.get_recipe_manifest(ref, remote).summary_hash
                     else:
-                        recipe_hash = self._cache.package_layout(ref).load_manifest().summary_hash
+                        recipe_hash = self._cache.package_layout(ref).recipe_manifest().summary_hash
 
                     packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:

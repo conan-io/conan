@@ -85,7 +85,7 @@ class PackageCacheLayout(object):
     def package_metadata(self):
         return os.path.join(self.conan(), PACKAGE_METADATA)
 
-    def load_manifest(self):
+    def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
 
     def package_manifests(self, pref):
@@ -101,9 +101,9 @@ class PackageCacheLayout(object):
     def package_exists(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return self.recipe_exists() and \
-               os.path.exists(self.package(pref)) and \
-               (not pref.revision or self.package_revision(pref)[0] ==  pref.revision)
+        return (self.recipe_exists() and
+                os.path.exists(self.package(pref)) and
+                (not pref.revision or self.package_revision(pref)[0] == pref.revision))
 
     def recipe_revision(self):
         metadata = self.load_metadata()
