@@ -266,43 +266,32 @@ class MyConan(ConanFile):
         self.assertIn("package(): Packaged 1 '.h' file: file.h", client.out)
         self.assertIn("package(): Packaged 1 '.lib' file: library.lib", client.out)
 
-    def install_package_by_cmake_test(self):
+    def installer_package_test(self):
+        """ Simulates installers when packaging the file e.g. cmake install
+            The package() does not use self.copy, but files are copied to package folder
+        """
         client = TestClient()
         conanfile = """
-from conans import ConanFile, CMake
+import os
+from conans import ConanFile, tools
 
 class MyConan(ConanFile):
-    exports = "LICENSE"
-    exports_sources = "CMakeLists.txt"
-    generators = "cmake"
     def build(self):
         pass
     def package(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.install()
-    """
-        cmake = """
-cmake_minimum_required(VERSION 2.8)
-project(MyHello)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-add_custom_target(hello DEPENDS LICENSE)
-install(FILES LICENSE DESTINATION licenses)
-    """
-        client.save({"LICENSE": "foo",
-                     "CMakeLists.txt": cmake,
-                     CONANFILE: conanfile})
+        tools.save(os.path.join(self.package_folder, "LICENSE.md"), "my license")
+"""
+        client.save({CONANFILE: conanfile})
         client.run("install .")
         client.run("package .")
         self.assertNotIn("No files in this package!", client.out)
-        self.assertIn("Install the project...", client.out)
-        self.assertIn("-- Installing:", client.out)
-        self.assertIn("package(): Packaged 1 file: LICENSE", client.out)
+        self.assertIn("package(): Packaged 1 '.md' file: LICENSE.md", client.out)
         self.assertIn("conanfile.py: Package 'package' created", client.out)
 
-
     def empty_package_folder_test(self):
+        """ When the package folder is empty, then an warning should appear
+            and no files must be listed
+        """
         conanfile = """from conans import ConanFile
 import os
 
