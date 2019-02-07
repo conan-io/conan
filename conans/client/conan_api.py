@@ -478,7 +478,7 @@ class ConanAPIV1(object):
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=recorder, hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build=False, graph_info=graph_info)
-        workspace.generate(cwd)
+        workspace.generate(cwd, deps_graph)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

@@ -8,6 +8,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 from conans.model.editable_cpp_info import get_editable_abs_path
+from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 class LocalPackage(object):
@@ -28,23 +29,22 @@ class LocalPackage(object):
 
 class Workspace(object):
 
-    def generate(self, cwd):
+    def generate(self, cwd, graph):
+        editables = {node.ref: node.conanfile for node in graph.nodes
+                     if node.recipe == RECIPE_EDITABLE}
         if self._generator == "cmake":
             cmake = ""
             for ref, ws_pkg in self._workspace_packages.items():
-                base_folder = ws_pkg.root_folder
-                src, build = None, None
-                for root, _, files in os.walk(base_folder):
-                    if not src and "CMakeLists.txt" in files:
-                        src = root.replace("\\", "/")
-                    if not build:
-                        if "conanbuildinfo.cmake" in files or "conanbuildinfo_multi.cmake" in files:
-                            build = root.replace("\\", "/")
-                    if src and build:
-                        break
+                layout = self._cache.package_layout(ref)
+                editable = layout.editable_cpp_info()
+                conanfile = editables[ref]
+                build = editable.folder(ref, "build", conanfile.settings, conanfile.options)
+                src = editable.folder(ref, "src", conanfile.settings, conanfile.options)
                 if src:
+                    src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)
                 if build:
+                    build = os.path.join(ws_pkg.root_folder, build).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_BUILD "%s")\n' % (ref.name, build)
 
                 if src and build:

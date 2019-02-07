@@ -25,7 +25,7 @@ class PackageEditableLayout(object):
         """ Path to the conanfile. We can agree that an editable package
             needs to be a Conan package
         """
-        return os.path.join(self.conan(), CONANFILE)
+        return os.path.join(self._base_folder, CONANFILE)
 
     def editable_cpp_info(self):
         if self._layout_file:
