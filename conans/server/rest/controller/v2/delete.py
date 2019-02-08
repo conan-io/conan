@@ -24,7 +24,6 @@ class DeleteControllerV2(Controller):
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             conan_service.remove_conanfile(ref)
 
-        @app.route(r.package, method="DELETE")
         @app.route(r.package_recipe_revision, method=["DELETE"])
         @app.route(r.package_revision, method=["DELETE"])
         def remove_package(name, version, username, channel, package_id, auth_user,
@@ -33,16 +32,12 @@ class DeleteControllerV2(Controller):
                   of the specific recipe revision.
                 - If PRev is NOT specified but RRev is specified (package_recipe_revision_url)
                   it will remove all the package revisions
-                - If PRev is NOT specified and RRev is NOT specified (package_url) it will remove
-                  ALL the package revisions for the specified "package_id" for all the recipe
-                  revisions (SAME AS V1)
              """
             pref = get_package_ref(name, version, username, channel, package_id,
                                    revision, p_revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             conan_service.remove_package(pref)
 
-        @app.route(r.packages, method="DELETE")
         @app.route(r.packages_revision, method="DELETE")
         def remove_all_packages(name, version, username, channel, auth_user, revision=None):
             """ Remove all packages from a RREV"""

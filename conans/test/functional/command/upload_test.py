@@ -92,9 +92,9 @@ class UploadTest(unittest.TestCase):
         client = self._client()
         client.save({"conanfile.py": conanfile_upload_query})
 
-        for os, arch in itertools.product(["Macos", "Linux", "Windows"],
-                                          ["armv8", "x86_64"]):
-            client.run("create . user/testing -s os=%s -s arch=%s" % (os, arch))
+        for _os, arch in itertools.product(["Macos", "Linux", "Windows"],
+                                           ["armv8", "x86_64"]):
+            client.run("create . user/testing -s os=%s -s arch=%s" % (_os, arch))
 
         # Check that the right number of packages are picked up by the queries
         client.run("upload Hello1/*@user/testing --confirm -q 'os=Windows or os=Macos'")

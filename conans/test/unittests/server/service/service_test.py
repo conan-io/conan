@@ -258,7 +258,8 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete one package
         self.service.remove_packages(ref3, ["77777777777"])
-        package_folder_3 = self.server_store.package_parent(PackageReference(ref3, '77777777777'))
+        pref = PackageReference(ref3, '77777777777')
+        package_folder_3 = self.server_store.package_revisions_root(pref)
         self.assertFalse(os.path.exists(package_folder_3))
 
         # Raise an exception

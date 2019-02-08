@@ -59,7 +59,7 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
         assert ref.revision is not None
     else:
         assert ref.revision is None
-    if not os.path.exists(server_store.conan_revisions_root(ref)):
+    if not os.path.exists(server_store.conan_revisions_root(ref.copy_clear_rev())):
         raise NotFoundException("Recipe not found: %s" % str(ref))
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
     return filter_packages(query, infos)

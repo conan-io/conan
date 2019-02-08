@@ -268,3 +268,13 @@ class RestV2Methods(RestCommonMethods):
         url = self.conans_router.package_revisions(pref)
         data = self.get_json(url)
         return data
+
+    def get_latest_recipe_revision(self, ref):
+        url = self.conans_router.for_recipe_latest(ref)
+        data = self.get_json(url)
+        return data
+
+    def get_latest_package_revision(self, ref):
+        url = self.conans_router.for_package_latest(ref)
+        data = self.get_json(url)
+        return data

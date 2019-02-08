@@ -198,6 +198,14 @@ class ConanApiAuthManager(object):
     def get_package_revisions(self, pref):
         return self._rest_client.get_package_revisions(pref)
 
+    @input_credentials_if_unauthorized
+    def get_latest_recipe_revision(self, ref):
+        return self._rest_client.get_latest_recipe_revision(ref)
+
+    @input_credentials_if_unauthorized
+    def get_latest_package_revision(self, pref):
+        return self._rest_client.get_latest_package_revision(pref)
+
     def authenticate(self, user, password):
         if user is None:  # The user is already in DB, just need the passwd
             prev_user = self._localdb.get_username(self._remote.url)

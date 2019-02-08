@@ -91,7 +91,8 @@ class CmdUpload(object):
     def _upload(self, conan_file, ref, packages_ids, retry, retry_wait,
                 integrity_check, policy, recipe_remote, upload_recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
-
+        metadata = self._cache.package_layout(ref).load_metadata()
+        ref = ref.copy_with_rev(metadata.recipe.revision)
         conanfile_path = self._cache.conanfile(ref)
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
@@ -104,11 +105,7 @@ class CmdUpload(object):
             remote_manifest = None
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
-
-        metadata = self._cache.package_layout(ref).load_metadata()
-        ref = ref.copy_with_rev(metadata.recipe.revision)
         self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
-
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision

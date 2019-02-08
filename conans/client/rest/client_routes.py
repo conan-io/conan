@@ -51,14 +51,17 @@ class ClientBaseRouterBuilder(object):
 
     def for_recipe(self, ref):
         """url for a recipe with or without revisions (without rev,
-        only for delete the root recipe)"""
-        assert ref.revision is not None
+        only for delete the root recipe, or v1)"""
         tmp = self.routes.recipe_revision
+        return self.format_ref(tmp, ref)
+
+    def for_recipe_latest(self, ref):
+        assert ref.revision is None
+        tmp = self.routes.recipe_latest
         return self.format_ref(tmp, ref)
 
     def for_packages(self, ref):
         """url for a recipe with or without revisions"""
-        assert ref.revision is not None
         tmp = self.routes.packages_revision
         return self.format_ref(tmp, ref)
 
@@ -76,8 +79,6 @@ class ClientBaseRouterBuilder(object):
 
     def for_package(self, pref):
         """url for the package with or without revisions"""
-        assert pref.ref.revision is not None
-        assert pref.revision is not None
         tmp = self.routes.package_revision
         return self.format_pref(tmp, pref)
 
@@ -93,7 +94,12 @@ class ClientBaseRouterBuilder(object):
         assert pref.revision is not None
         assert pref.ref.revision is not None
         tmp = self.routes.package_revision_files
+        return self.format_pref(tmp, pref)
 
+    def for_package_latest(self, pref):
+        assert pref.ref.revision is not None
+        assert pref.revision is None
+        tmp = self.routes.package_revision_latest
         return self.format_pref(tmp, pref)
 
 
@@ -193,6 +199,10 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
 
     def __init__(self, base_url):
         super(ClientV2ConanRouterBuilder, self).__init__(base_url + "/conans")
+
+    def recipe_latest(self, ref, path):
+        """Recipe file url"""
+        return self.for_conan_revisions_root(ref, path)
 
     def recipe_file(self, ref, path):
         """Recipe file url"""

@@ -316,9 +316,21 @@ class RemoteManager(object):
         revisions = self._call_remote(remote, "get_recipe_revisions", ref)
         return revisions
 
+    def get_recipe_revisions(self, ref, remote):
+        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
+        return revisions
+
     def get_package_revisions(self, pref, remote):
         revisions = self._call_remote(remote, "get_package_revisions", pref)
         return revisions
+
+    def get_latest_recipe_revision(self, ref, remote):
+        revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
+        return revision
+
+    def get_latest_package_revision(self, pref, remote):
+        revision = self._call_remote(remote, "get_latest_package_revision", pref)
+        return revision
 
     def _call_remote(self, remote, method, *argc, **argv):
         assert(isinstance(remote, Remote))
