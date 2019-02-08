@@ -32,7 +32,7 @@ class SynchronizeTest(unittest.TestCase):
         client.run("upload %s" % str(ref))
 
         # Verify the files are there
-        if not client.block_v2:
+        if client.cache.config.revisions_enabled:
             rev, _ = client.cache.package_layout(ref).recipe_revision()
             ref = ref.copy_with_rev(rev)
         server_conan_path = remote_paths.export(ref)
@@ -46,8 +46,8 @@ class SynchronizeTest(unittest.TestCase):
         os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
         client.run("export . lasote/stable")
         client.run("upload %s" % str(ref))
-        if not client.block_v2:
-            rev ,_ = client.cache.package_layout(ref).recipe_revision()
+        if client.cache.config.revisions_enabled:
+            rev, _ = client.cache.package_layout(ref).recipe_revision()
             ref = ref.copy_with_rev(rev)
         server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -64,7 +64,7 @@ class SynchronizeTest(unittest.TestCase):
         client.run("export . lasote/stable")
         client.run("upload %s" % str(ref))
 
-        if not client.block_v2:
+        if client.cache.config.revisions_enabled:
             rev, _ = client.cache.package_layout(ref).recipe_revision()
             ref = ref.copy_with_rev(rev)
         server_conan_path = remote_paths.export(ref)
@@ -122,7 +122,7 @@ class SynchronizeTest(unittest.TestCase):
         remote_file_path = os.path.join(folder, "newlib.lib")
 
         # With revisions makes no sense because there is a new revision always that sources change
-        if not client.revisions:
+        if not client.cache.config.revisions_enabled:
             self.assertFalse(os.path.exists(remote_file_path))
             self.assertNotEquals(remote_file_path, new_file_source_path)
 

@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 import six
@@ -7,6 +8,7 @@ from mock import Mock
 from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
@@ -15,6 +17,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient, \
     TestServer
+from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -72,7 +75,7 @@ class Test(ConanFile):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        if client.revisions:
+        if client.cache.config.revisions_enabled:
             self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
@@ -140,18 +143,21 @@ class RemoveTest(unittest.TestCase):
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             folder = folder.replace("@", "/")
+            fake_metadata = PackageMetadata()
+            fake_metadata.recipe.revision = DEFAULT_REVISION_V1
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
+                fake_metadata.packages[pack_id].revision = DEFAULT_REVISION_V1
                 prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
-
+            files["%s/metadata.json" % folder] = fake_metadata.dumps()
             exports_sources_dir = client.cache.export_sources(ref)
             os.makedirs(exports_sources_dir)
 
@@ -186,7 +192,7 @@ class RemoveTest(unittest.TestCase):
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
                 ref = ConanFileReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
-                    if not self.client.block_v2:
+                    if self.client.cache.config.revisions_enabled:
                         try:
                             rev, _ = self.client.cache.package_layout(ref).recipe_revision()
                         except:
@@ -203,7 +209,7 @@ class RemoveTest(unittest.TestCase):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
                         if isinstance(base_path, ServerStore):
-                            if not self.client.block_v2:
+                            if self.client.cache.config.revisions_enabled:
                                 pref = PackageReference(ref, sha)
                                 try:
                                     layout = self.client.cache.package_layout(pref.ref)
@@ -214,12 +220,12 @@ class RemoveTest(unittest.TestCase):
                                     continue
                             else:
                                 prev = DEFAULT_REVISION_V1
-                            package_folder += "/%s" % prev
+                            package_folder += "/%s" % prev if prev else ""
                         if value in shas:
                             self.assertTrue(os.path.exists(package_folder),
                                             "%s doesn't exist " % package_folder)
                         else:
-                            self.assertFalse(os.path.exists(package_folder))
+                            self.assertFalse(os.path.exists(package_folder), package_folder)
 
         root_folder = self.client.cache.store
         for k, shas in build_folders.items():
@@ -397,9 +403,19 @@ class RemoveTest(unittest.TestCase):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "This test is insane to be "
+                                                                  "tested with revisions, in "
+                                                                  "general all the module")
     def query_remove_locally_test(self):
-        self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f")
-        self.assertIn("No matching packages to remove", self.client.user_io.out)
+        # Incorrect casing of "hello"
+        self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
+                        assert_error=True)
+        if platform.system() == "Linux":
+            self.assertIn("No recipe found 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
+        else:
+            self.assertIn("Requested 'hello/1.4.10@myuser/testing' but found "
+                          "case incompatible 'Hello'\n"
+                          "Case insensitive filesystem can't manage this", self.client.user_io.out)
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
