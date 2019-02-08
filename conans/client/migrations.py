@@ -1,6 +1,7 @@
 import os
 import shutil
 
+from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 
@@ -166,16 +167,24 @@ def _migrate_create_metadata(cache, out):
             # not the editables
             layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
             folder = layout.export()
-            manifest = FileTreeManifest.load(folder)
+            try:
+                manifest = FileTreeManifest.load(folder)
+                rrev = manifest.summary_hash
+            except:
+                rrev = DEFAULT_REVISION_V1
             metadata_path = os.path.join(layout.conan(), PACKAGE_METADATA)
             if not os.path.exists(metadata_path):
                 out.info("Creating {} for {}".format(PACKAGE_METADATA, ref))
                 prefs = _get_prefs(layout)
                 metadata = PackageMetadata()
-                metadata.recipe.revision = manifest.summary_hash
+                metadata.recipe.revision = rrev
                 for pref in prefs:
-                    pmanifest = FileTreeManifest.load(layout.package(pref))
-                    metadata.packages[pref.id].revision = pmanifest.summary_hash
+                    try:
+                        pmanifest = FileTreeManifest.load(layout.package(pref))
+                        prev = pmanifest.summary_hash
+                    except:
+                        prev = DEFAULT_REVISION_V1
+                    metadata.packages[pref.id].revision = prev
                     metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
                 save(metadata_path, metadata.dumps())
         except Exception as e:
