@@ -45,7 +45,7 @@ class Meson(object):
 
         # shared
         shared = self._so("shared")
-        self.options['default-library'] = "shared" if shared is None or shared else "static"
+        self.options['default_library'] = "shared" if shared is None or shared else "static"
 
         # fpic
         if self._os and "Windows" not in self._os:
