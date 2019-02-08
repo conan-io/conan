@@ -41,7 +41,6 @@ class ExporterTest(unittest.TestCase):
         """ basic installation of a new conans
         """
         client = TestClient()
-        client.init_dynamic_vars()
         files = hello_source_files()
 
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
