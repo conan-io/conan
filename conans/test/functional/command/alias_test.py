@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
@@ -6,7 +7,6 @@ from parameterized.parameterized import parameterized
 from conans.client.tools.files import replace_in_file
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-import textwrap
 
 
 class ConanAliasTest(unittest.TestCase):
