@@ -61,6 +61,12 @@ class ConanServiceV2(CommonService):
         ret = self._server_store.get_package_revisions(pref)
         return ret
 
+    def get_latest_revision(self, ref, auth_user):
+        return self.get_recipe_revisions(ref, auth_user)[-1]
+
+    def get_latest_package_revision(self, pref, auth_user):
+        return self.get_package_revisions(pref, auth_user)[-1]
+
     # PACKAGE METHODS
     def get_package_file_list(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)

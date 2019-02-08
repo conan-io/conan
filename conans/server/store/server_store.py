@@ -281,10 +281,12 @@ class ServerStore(SimplePaths):
         return rev_list.latest_revision()
 
     def _recipe_revisions_file(self, ref):
+        assert ref.revision is None
         recipe_folder = normpath(join(self._store_folder, ref.dir_repr()))
         return join(recipe_folder, REVISIONS_FILE)
 
     def _package_revisions_file(self, pref):
+        assert pref.revision is not None
         tmp = normpath(join(self._store_folder, pref.ref.dir_repr()))
         revision = {None: ""}.get(pref.ref.revision, pref.ref.revision)
         p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.id)

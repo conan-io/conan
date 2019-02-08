@@ -22,6 +22,15 @@ class RevisionsController(Controller):
             revs = conan_service.get_recipe_revisions(conan_reference, auth_user)
             return _format_revs_return(conan_reference, revs)
 
+        @app.route(r.recipe_latest, method="GET")
+        def get_latest_recipe_revision(name, version, username, channel, auth_user):
+            """ Gets a JSON with the revisions for the specified recipe
+            """
+            conan_reference = ConanFileReference(name, version, username, channel)
+            conan_service = ConanServiceV2(app.authorizer, app.server_store)
+            rev = conan_service.get_latest_revision(conan_reference)
+            return _format_rev_return(rev)
+
         @app.route(r.package_revisions, method="GET")
         def get_package_revisions(name, version, username, channel, package_id, auth_user,
                                   revision):
@@ -32,9 +41,21 @@ class RevisionsController(Controller):
             revs = conan_service.get_package_revisions(package_reference, auth_user)
             return _format_revs_return(package_reference, revs)
 
-        def _format_revs_return(ref, revs):
-            tmp = [{"revision": rev[0],
+        @app.route(r.package_revision_latest, method="GET")
+        def get_latest_package_revision(name, version, username, channel, package_id, auth_user,
+                                        revision):
+            """ Gets a JSON with the revisions for the specified recipe
+            """
+            package_reference = get_package_ref(name, version, username, channel, package_id,
+                                                revision, p_revision=None)
+            conan_service = ConanServiceV2(app.authorizer, app.server_store)
+            rev = conan_service.get_latest_package_revision(package_reference, auth_user)
+            return _format_rev_return(rev)
+
+        def _format_rev_return(rev):
+            return {"revision": rev[0],
                     "time": rev[1]}
-                   for rev in revs]
+
+        def _format_revs_return(ref, revs):
             return {"reference": ref.full_repr(),
-                    "revisions": tmp}
+                    "revisions": [self._format_rev_return(rev)for rev in revs]}

@@ -9,6 +9,10 @@ class RestRoutes(object):
         return '%s/{name}/{version}/{username}/{channel}' % self.base_url
 
     @property
+    def recipe_latest(self):
+        return '%s/latest' % self.recipe
+
+    @property
     def recipe_revision(self):
         return '%s/revisions/{revision}' % self.recipe
 
@@ -56,6 +60,10 @@ class RestRoutes(object):
     @property
     def package_revision_files(self):
         return '%s/files' % self.package_revision
+
+    @property
+    def package_revision_latest(self):
+        return '%s/latest' % self.package_recipe_revision
 
     @property
     def package_revision_file(self):
