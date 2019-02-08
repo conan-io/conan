@@ -57,21 +57,21 @@ class HelloConan(ConanFile):
             return log_file_packaged_, client.user_io.out
 
         log_file_packaged, output = _install_a_package(False, True)
-        self.assertIn("Copied 1 '.log' file: conan_run.log", output)
+        self.assertIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
         self.assertNotIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(True, True)
-        self.assertIn("Copied 1 '.log' file: conan_run.log", output)
+        self.assertIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
         self.assertIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(False, False)
-        self.assertNotIn("Copied 1 '.log' file: conan_run.log", output)
+        self.assertNotIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
