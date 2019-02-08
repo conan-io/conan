@@ -4,7 +4,9 @@ import os
 import platform
 from contextlib import contextmanager
 
+from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
+from conans.model.manifest import discarded_file
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
@@ -136,3 +138,28 @@ class PackageCacheLayout(object):
         package_folder = self.package(pref)
         readed_manifest = FileTreeManifest.load(package_folder)
         return readed_manifest.summary_hash
+
+    # Raw access to file
+    def get_path(self, package_id=None, path=None):
+        """ Return the contents for the given `path` inside current layout, it can
+            be a single file or the list of files in a directory
+
+            :param package_id: will retrieve the contents from the package directory
+            :param path: path relative to the cache reference or package folder
+        """
+
+        assert not os.path.isabs(path)
+
+        if package_id is None:  # Get the file in the exported files
+            folder = self.export()
+        else:
+            pref = PackageReference(self._ref, package_id)
+            folder = self.package(pref)
+
+        abs_path = os.path.join(folder, path)
+        if not os.path.exists(abs_path):
+            raise NotFoundException("The specified path doesn't exist")
+        if os.path.isdir(abs_path):
+            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
+        else:
+            return load(abs_path)
