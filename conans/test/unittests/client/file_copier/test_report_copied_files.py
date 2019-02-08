@@ -23,7 +23,7 @@ class ReportCopiedFilesTestCase(unittest.TestCase):
                  'a/other.txt']
 
         report_copied_files(files, output)
-        lines = str(output).splitlines()
-        self.assertEqual("Copied 7 '.pdf' files", lines[0])
+        lines = sorted(str(output).splitlines())
+        self.assertEqual("Copied 7 '.pdf' files", lines[2])
         self.assertEqual("Copied 2 files: no_ext1, no_ext2", lines[1])
-        self.assertEqual("Copied 1 '.txt' file: other.txt", lines[2])
+        self.assertEqual("Copied 1 '.txt' file: other.txt", lines[0])
