@@ -39,18 +39,21 @@ class Node(object):
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
 
+    @property
+    def pref(self):
+        return PackageReference(self.ref, self.bid, self.prev)
+
     def closure(self):
         closure = OrderedDict()
-        current = [(edge.dst, False) for edge in self.dependencies]
+        current = {edge.dst: False for edge in self.dependencies}
         while current:
-            new_current = []
-            for n, private in current:
-                closure[n] = private
-            for n, private in current:
+            new_current = OrderedDict()
+            closure.update(current)
+            for n, private in current.items():
                 for edge in n.dependencies:
                     private = private or edge.private
                     if edge.dst not in new_current and edge.dst not in closure:
-                        new_current.append((edge.dst, private))
+                        new_current[edge.dst] = private
             current = new_current
         return closure
 
