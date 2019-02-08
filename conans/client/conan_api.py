@@ -918,7 +918,7 @@ class ConanAPIV1(object):
 
         if not remote_name:
             package_layout = self._cache.package_layout(ref, short_paths=None)
-            return package_layout.get_path(package_id=package_id, path=path), path
+            return package_layout.get_path(path=path, package_id=package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_path(ref, package_id, path, remote), path

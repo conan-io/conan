@@ -140,7 +140,7 @@ class PackageCacheLayout(object):
         return readed_manifest.summary_hash
 
     # Raw access to file
-    def get_path(self, package_id=None, path=None):
+    def get_path(self, path, package_id=None):
         """ Return the contents for the given `path` inside current layout, it can
             be a single file or the list of files in a directory
 
