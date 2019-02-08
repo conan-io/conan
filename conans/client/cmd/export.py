@@ -27,7 +27,7 @@ from conans import ConanFile
 
 class AliasConanfile(ConanFile):
     alias = "%s"
-""" % str(target_reference)
+""" % target_reference.full_repr()
 
     export_path = cache.export(reference)
     mkdir(export_path)
