@@ -336,7 +336,7 @@ class MyPkg(ConanFile):
         client.run("create . frodo/stable")
         # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
-        self.assertIn("Recipe is up to date, upload skipped", client.all_output)
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
         self.assertNotIn("Forbidden overwrite", client.out)
 
