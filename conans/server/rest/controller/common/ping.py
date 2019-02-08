@@ -1,6 +1,6 @@
 from bottle import response
 
-from conans.server.rest.controllers.controller import Controller
+from conans.server.rest.controller.controller import Controller
 
 
 class PingController(Controller):

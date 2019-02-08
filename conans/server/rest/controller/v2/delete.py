@@ -1,8 +1,8 @@
 from conans.model.ref import ConanFileReference
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.rest.controllers.controller import Controller
-from conans.server.rest.controllers.v2 import get_package_ref
-from conans.server.service.service import ConanService
+from conans.server.rest.controller.controller import Controller
+from conans.server.rest.controller.v2 import get_package_ref
+from conans.server.service.v1.service import ConanService
 
 
 class DeleteControllerV2(Controller):

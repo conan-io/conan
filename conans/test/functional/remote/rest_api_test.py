@@ -193,6 +193,7 @@ class RestApiTest(unittest.TestCase):
         # Upload a conans
         ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
         self._upload_recipe(ref)
+        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         path1 = self.server.server_store.conan(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages

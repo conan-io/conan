@@ -4,9 +4,9 @@ from unicodedata import normalize
 import six
 from bottle import FileUpload, cached_property, request, static_file
 
-from conans.server.rest.controllers.controller import Controller
+from conans.server.rest.controller.controller import Controller
 from conans.server.service.mime import get_mime_type
-from conans.server.service.service import FileUploadDownloadService
+from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 
 
 class FileUploadDownloadController(Controller):

@@ -10,7 +10,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.service.authorize import BasicAuthorizer
-from conans.server.service.service import ConanService, FileUploadDownloadService, \
+from conans.server.service.v1.service import ConanService, FileUploadDownloadService, \
     SearchService
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore

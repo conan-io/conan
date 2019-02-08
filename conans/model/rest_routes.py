@@ -9,10 +9,6 @@ class RestRoutes(object):
         return '%s/{name}/{version}/{username}/{channel}' % self.base_url
 
     @property
-    def recipe_files(self):
-        return '%s/files' % self.recipe
-
-    @property
     def recipe_revision(self):
         return '%s/revisions/{revision}' % self.recipe
 
@@ -23,10 +19,6 @@ class RestRoutes(object):
     @property
     def recipe_revisions(self):
         return '%s/revisions' % self.recipe
-
-    @property
-    def recipe_file(self):
-        return '%s/files/{path}' % self.recipe
 
     @property
     def recipe_revision_file(self):
@@ -54,10 +46,6 @@ class RestRoutes(object):
         return '%s/{package_id}' % self.packages_revision
 
     @property
-    def package_recipe_revision_files(self):
-        return '%s/files' % self.package_recipe_revision
-
-    @property
     def package_revisions(self):
         return '%s/revisions' % self.package_recipe_revision
 
@@ -72,10 +60,6 @@ class RestRoutes(object):
     @property
     def package_revision_file(self):
         return '%s/files/{path}' % self.package_revision
-
-    @property
-    def package_recipe_revision_file(self):
-        return '%s/files/{path}' % self.package_recipe_revision
 
     # ONLY V1
     @property

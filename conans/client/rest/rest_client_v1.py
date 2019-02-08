@@ -320,5 +320,5 @@ class RestV1Methods(RestCommonMethods):
     def get_package_revisions(self, pref):
         raise ConanException("The remote doesn't support revisions")
 
-    def search_packages(self, reference, query):
-        return super(RestV1Methods, self).search_packages(reference.copy_clear_rev(), query)
+    def search_packages(self, ref, query):
+        return super(RestV1Methods, self).search_packages(ref.copy_clear_rev(), query)

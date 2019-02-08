@@ -3,12 +3,13 @@ import os
 from bottle import FileUpload, static_file
 
 from conans.errors import NotFoundException
+from conans.server.service.common.common import CommonService
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
 from conans.util.files import mkdir
 
 
-class ConanServiceV2(object):
+class ConanServiceV2(CommonService):
 
     def __init__(self, authorizer, server_store):
         assert(isinstance(server_store, ServerStore))
@@ -18,7 +19,6 @@ class ConanServiceV2(object):
     # RECIPE METHODS
     def get_recipe_file_list(self, reference,  auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        reference = self._server_store.ref_with_rev(reference)
         the_time = self._server_store.get_revision_time(reference)
         file_list = self._server_store.get_recipe_file_list(reference)
         if not file_list:
@@ -66,7 +66,6 @@ class ConanServiceV2(object):
         if not file_list:
             raise NotFoundException("conanfile not found")
 
-        pref = self._server_store.p_ref_with_rev(pref)
         the_time = self._server_store.get_package_revision_time(pref)
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list},
