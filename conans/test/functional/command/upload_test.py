@@ -106,7 +106,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading package 1/1", client.user_io.out)
 
         client.run("upload Hello1/*@user/testing --confirm -q 'arch=armv8'")
-        for i in range(1, 4):
+        for i in range(1, 4):º
             self.assertIn("Uploading package %d/3" % i, client.user_io.out)
         self.assertIn("Package is up to date, upload skipped", client.user_io.out)
 

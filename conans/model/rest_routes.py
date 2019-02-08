@@ -65,10 +65,6 @@ class RestRoutes(object):
     def package_revision_latest(self):
         return '%s/latest' % self.package_recipe_revision
 
-    @property
-    def package_revision_file(self):
-        return '%s/files/{path}' % self.package_revision
-
     # ONLY V1
     @property
     def v1_recipe_digest(self):
