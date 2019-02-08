@@ -104,6 +104,8 @@ class TestConan(ConanFile):
         client.run("upload test/1.0@danimtb/testing -r upload_repo")
         self.assertIn("Uploading conan_sources.tgz", client.out)
         ref = ConanFileReference("test", "1.0", "danimtb", "testing")
+        rev = servers["upload_repo"].server_store.get_last_revision(ref).revision
+        ref = ref.copy_with_rev(rev)
         export_sources_path = os.path.join(servers["upload_repo"].server_store.export(ref),
                                            "conan_sources.tgz")
         self.assertTrue(os.path.exists(export_sources_path))

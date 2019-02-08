@@ -43,8 +43,12 @@ def temp_folder(path_with_spaces=True):
     return nt
 
 
-def uncompress_packaged_files(paths, package_reference):
-    package_path = paths.package(package_reference)
+def uncompress_packaged_files(paths, pref):
+    prev = paths.get_last_package_revision(pref)
+    if not prev:
+        raise ConanException("%s not found" % PACKAGE_TGZ_NAME)
+    pref = pref.copy_with_revs(pref.ref.revision, prev.revision)
+    package_path = paths.package(pref)
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
         raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
     tmp = temp_folder()

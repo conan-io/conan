@@ -88,6 +88,8 @@ class SynchronizeTest(unittest.TestCase):
 
         # Check that conans exists on server
         pref = PackageReference(ref, str(package_ids[0]))
+        prev = remote_paths.get_last_package_revision(pref)
+        pref = pref.copy_with_revs(pref.ref.revision, prev.revision)
         package_server_path = remote_paths.package(pref)
         self.assertTrue(os.path.exists(package_server_path))
 

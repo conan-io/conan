@@ -10,8 +10,9 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.service.authorize import BasicAuthorizer
-from conans.server.service.v1.service import ConanService, FileUploadDownloadService, \
-    SearchService
+from conans.server.service.common.search import SearchService
+from conans.server.service.v1.service import ConanService
+from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.test_files import hello_source_files, temp_folder
@@ -223,6 +224,7 @@ class ConanServiceTest(unittest.TestCase):
         info = self.search_service.search(pattern="Assimp*", ignorecase=False)
         self.assertEqual(info, [ref3.copy_clear_rev()])
 
+        ref2 = ref2.copy_with_rev(DEFAULT_REVISION_V1)
         info = self.search_service.search_packages(ref2, None)
         self.assertEqual(info, {'12345587754': {'full_requires': [],
                                                 'options': {'use_Qt': 'False'},
@@ -256,7 +258,7 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete one package
         self.service.remove_packages(ref3, ["77777777777"])
-        package_folder_3 = self.server_store.package(PackageReference(ref3, '77777777777'))
+        package_folder_3 = self.server_store.package_parent(PackageReference(ref3, '77777777777'))
         self.assertFalse(os.path.exists(package_folder_3))
 
         # Raise an exception

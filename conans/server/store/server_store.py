@@ -18,7 +18,7 @@ class ServerStore(SimplePaths):
         self._storage_adapter = storage_adapter
 
     def conan(self, ref):
-        assert ref.revision
+        assert ref.revision is not None
         tmp = normpath(join(self.store, ref.dir_repr()))
         return join(tmp, ref.revision)
 
@@ -30,9 +30,16 @@ class ServerStore(SimplePaths):
     def packages(self, ref):
         return join(self.conan(ref), PACKAGES_FOLDER)
 
-    def package(self, pref, short_paths=None):
+    def package_parent(self, pref):
+        assert pref.revision is None
+        assert pref.ref.revision is not None
         tmp = join(self.packages(pref.ref), pref.id)
-        return join(tmp, pref.revision) if pref.revision else tmp
+        return tmp
+
+    def package(self, pref):
+        assert pref.revision is not None
+        tmp = join(self.packages(pref.ref), pref.id)
+        return join(tmp, pref.revision)
 
     def export(self, ref):
         return join(self.conan(ref), EXPORT_FOLDER)
@@ -102,7 +109,8 @@ class ServerStore(SimplePaths):
         else:
             for package_id in package_ids_filter:
                 pref = PackageReference(ref, package_id)
-                package_folder = self.package(pref)
+                # Remove all package revisions
+                package_folder = self.package_parent(pref)
                 self._storage_adapter.delete_folder(package_folder)
         self._storage_adapter.delete_empty_dirs([ref])
 

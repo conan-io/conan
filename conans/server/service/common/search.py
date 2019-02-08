@@ -30,7 +30,7 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 if not revision_entry:
                     raise NotFoundException("")
                 pref = PackageReference(new_ref, package_id, revision_entry.revision)
-                info_path = os.path.join(server_store.package(pref, short_paths=None), CONANINFO)
+                info_path = os.path.join(server_store.package(pref), CONANINFO)
                 if not os.path.exists(info_path):
                     raise NotFoundException("")
                 conan_info_content = load(info_path)
@@ -55,6 +55,10 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
                            settings: {os: Windows}}}
     param ref: ConanFileReference object
     """
+    if not look_in_all_rrevs:
+        assert ref.revision is not None
+    else:
+        assert ref.revision is None
     if not os.path.exists(server_store.conan_parent(ref)):
         raise NotFoundException("Recipe not found: %s" % str(ref))
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
