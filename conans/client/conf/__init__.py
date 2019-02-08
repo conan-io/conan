@@ -341,7 +341,7 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def revisions_enabled(self):
         try:
-            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED")
+            revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
             if revisions_enabled is None:
                 try:
                     revisions_enabled = self.get_item("general.revisions_enabled")
