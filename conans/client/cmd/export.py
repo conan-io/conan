@@ -26,7 +26,7 @@ class AliasConanfile(ConanFile):
 
     save(ref_layout.conanfile(), conanfile)
     digest = FileTreeManifest.create(ref_layout.export())
-    digest.save(folder=ref_layout.export_sources())
+    digest.save(folder=ref_layout.export())
 
 
 def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):

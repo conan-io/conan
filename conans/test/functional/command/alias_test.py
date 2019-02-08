@@ -430,23 +430,24 @@ class Pkg(ConanFile):
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         for i in (1, 2):
-            conanfile = """from conans import ConanFile
+            conanfile = textwrap.dedent("""
+                from conans import ConanFile
 
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.%s"
-    """ % i
+                class TestConan(ConanFile):
+                    name = "Hello"
+                    version = "0.%s"
+                    """ % i)
             client.save({"conanfile.py": conanfile})
             client.run("export . lasote/channel")
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
-        conanfile_chat = """from conans import ConanFile
-
-class TestConan(ConanFile):
-    name = "Chat"
-    version = "1.0"
-    requires = "Hello/0.X@lasote/channel"
-    """
+        conanfile_chat = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Chat"
+                version = "1.0"
+                requires = "Hello/0.X@lasote/channel"
+                """)
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
         client.run("export . lasote/channel")
         client.save({"conanfile.txt": "[requires]\nChat/1.0@lasote/channel"}, clean_first=True)
@@ -502,3 +503,11 @@ class TestConan(ConanFile):
         # Check that the package is not damaged
         t.run("inspect {} -a description".format(reference2))
         self.assertIn("description: {}".format(reference2), t.out)
+
+        # Remove it, and create the alias again (twice, override an alias is allowed)
+        t.run("remove {} -f".format(reference2))
+        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1))
+        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1))
+
+        t.run("inspect {} -a description".format(reference2))
+        self.assertIn("description: None", t.out)  # The alias conanfile doesn't have description
