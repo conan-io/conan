@@ -41,7 +41,7 @@ def package_copy(src_ref, user_channel, package_ids, paths, user_io, short_paths
                                                       src_ref.version,
                                                       user_channel))
     # Generate metadata
-    old_metadata = paths.package_layout(src_ref).load_metadata()
+    src_metadata = paths.package_layout(src_ref).load_metadata()
 
     # Copy export
     export_origin = paths.export(src_ref)
@@ -66,8 +66,6 @@ def package_copy(src_ref, user_channel, package_ids, paths, user_io, short_paths
     # Copy packages
     package_revisions = {}  # To be stored in the metadata
     for package_id in package_ids:
-        package_revisions[package_id] = (old_metadata.packages[package_id].revision,
-                                         old_metadata.recipe.revision)
         pref_origin = PackageReference(src_ref, package_id)
         pref_dest = PackageReference(dest_ref, package_id)
         package_path_origin = paths.package(pref_origin, short_paths)
@@ -77,13 +75,14 @@ def package_copy(src_ref, user_channel, package_ids, paths, user_io, short_paths
                                                          " Override?" % str(package_id)):
                 continue
             rmdir(package_path_dest)
+        package_revisions[package_id] = (src_metadata.packages[package_id].revision,
+                                         src_metadata.recipe.revision)
         shutil.copytree(package_path_origin, package_path_dest, symlinks=True)
         user_io.out.info("Copied %s to %s" % (str(package_id), str(dest_ref)))
 
     # Generate the metadata
     with paths.package_layout(dest_ref).update_metadata() as metadata:
-        metadata.recipe.revision = old_metadata.recipe.revision
+        metadata.recipe.revision = src_metadata.recipe.revision
         for package_id, (revision, recipe_revision) in package_revisions.items():
             metadata.packages[package_id].revision = revision
             metadata.packages[package_id].recipe_revision = recipe_revision
-

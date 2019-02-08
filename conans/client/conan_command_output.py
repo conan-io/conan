@@ -201,7 +201,7 @@ class CommandOutputer(object):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self.user_io.out).print_info(data, only,  package_filter=package_filter,
                                              show_paths=show_paths,
-                                             show_revisions=self.cache.revisions_enabled)
+                                             show_revisions=self.cache.config.revisions_enabled)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):

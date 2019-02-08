@@ -83,7 +83,7 @@ def api_method(f):
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
-            with tools.environment_append(the_self._cache.conan_config.env_vars):
+            with tools.environment_append(the_self._cache.config.env_vars):
                 # Patch the globals in tools
                 return f(*args, **kwargs)
         except Exception as exc:
@@ -154,7 +154,7 @@ class ConanAPIV1(object):
         # To handle remote connections
         put_headers = cache.read_put_headers()
         rest_api_client = RestApiClient(user_io.out, requester,
-                                        block_v2=not cache.revisions_enabled,
+                                        revisions_enabled=cache.config.revisions_enabled,
                                         put_headers=put_headers)
         # To store user and token
         localdb = LocalDB(cache.localdb)
@@ -192,7 +192,7 @@ class ConanAPIV1(object):
             out.error(str(e))
             raise
 
-        with tools.environment_append(cache.conan_config.env_vars):
+        with tools.environment_append(cache.config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
             conans.util.log.logger = configure_logger()
             conans.util.log.logger.debug("INIT: Using config '%s'" % cache.conan_conf_path)

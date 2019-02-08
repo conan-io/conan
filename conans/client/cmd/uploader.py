@@ -112,7 +112,7 @@ class CmdUpload(object):
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision
-            if self._cache.revisions_enabled and ref.revision:
+            if self._cache.config.revisions_enabled and ref.revision:
                 recipe_package_ids = []
                 for package_id in packages_ids:
                     rec_rev = metadata.packages[package_id].recipe_revision

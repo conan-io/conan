@@ -3,8 +3,6 @@ from collections import defaultdict
 from conans import CHECKSUM_DEPLOY, REVISIONS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.errors import ConanException
-from conans.util.env_reader import get_env
 
 
 class RestApiClient(object):
@@ -12,7 +10,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, block_v2, put_headers=None):
+    def __init__(self, output, requester, revisions_enabled, put_headers=None):
 
         # Set to instance
         self.token = None
@@ -24,7 +22,7 @@ class RestApiClient(object):
         # Remote manager will set it to True or False dynamically depending on the remote
         self.verify_ssl = True
         self._put_headers = put_headers
-        self._block_v2 = block_v2
+        self._revisions_enabled = revisions_enabled
 
         self._cached_capabilities = defaultdict(list)
 
@@ -35,7 +33,7 @@ class RestApiClient(object):
             _, _, cap = tmp.server_info()
             self._cached_capabilities[self.remote_url] = cap
 
-        if not self._block_v2 and REVISIONS in self._cached_capabilities[self.remote_url]:
+        if self._revisions_enabled and REVISIONS in self._cached_capabilities[self.remote_url]:
             checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,

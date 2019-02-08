@@ -50,7 +50,7 @@ class Search(object):
         if not remote_name:
             return self._search_packages_in_local(ref, query, outdated)
 
-        if ref.revision and not self._cache.revisions_enabled:
+        if ref.revision and not self._cache.config.revisions_enabled:
             raise ConanException("Revisions not enabled in the client, specify a "
                                  "reference without revision")
 
@@ -70,7 +70,7 @@ class Search(object):
 
         if outdated:
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
-        elif self._cache.revisions_enabled:
+        elif self._cache.config.revisions_enabled:
             # With revisions, by default filter the packages not belonging to the recipe
             # unless outdated is specified.
             metadata = self._cache.package_layout(ref).load_metadata()

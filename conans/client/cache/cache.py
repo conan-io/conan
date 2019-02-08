@@ -47,9 +47,9 @@ class ClientCache(SimplePaths):
 
     def __init__(self, base_folder, store_folder, output):
         self.conan_folder = join(base_folder, ".conan")
-        self._conan_config = None
+        self._config = None
         self._output = output
-        self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
+        self._store_folder = store_folder or self.config.storage_path or self.conan_folder
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
@@ -81,13 +81,9 @@ class ClientCache(SimplePaths):
     def cacert_path(self):
         return normpath(join(self.conan_folder, CACERT_FILE))
 
-    @property
-    def revisions_enabled(self):
-        return self.conan_config.revisions_enabled
-
     def _no_locks(self):
         if self._no_lock is None:
-            self._no_lock = self.conan_config.cache_no_locks
+            self._no_lock = self.config.cache_no_locks
         return self._no_lock
 
     def conanfile_read_lock(self, ref):
@@ -149,13 +145,13 @@ class ClientCache(SimplePaths):
         return reg_json_path
 
     @property
-    def conan_config(self):
-        if not self._conan_config:
+    def config(self):
+        if not self._config:
             if not os.path.exists(self.conan_conf_path):
                 save(self.conan_conf_path, normalize(default_client_conf))
 
-            self._conan_config = ConanClientConfigParser(self.conan_conf_path)
-        return self._conan_config
+            self._config = ConanClientConfigParser(self.conan_conf_path)
+        return self._config
 
     @property
     def localdb(self):
@@ -175,11 +171,11 @@ class ClientCache(SimplePaths):
 
     @property
     def default_profile_path(self):
-        if os.path.isabs(self.conan_config.default_profile):
-            return self.conan_config.default_profile
+        if os.path.isabs(self.config.default_profile):
+            return self.config.default_profile
         else:
             return join(self.conan_folder, PROFILES_FOLDER,
-                        self.conan_config.default_profile)
+                        self.config.default_profile)
 
     @property
     def hooks_path(self):
@@ -299,7 +295,7 @@ class ClientCache(SimplePaths):
         shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
     def invalidate(self):
-        self._conan_config = None
+        self._config = None
         self._no_lock = None
 
 

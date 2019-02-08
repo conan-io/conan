@@ -71,7 +71,7 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
     def test_no_args(self):
         self.t.run('info {}'.format(self.ref))
         rev = "    Revision: None\n" \
-            if self.t.revisions_enabled else ""  # Project revision is None
+            if self.t.cache.config.revisions_enabled else ""  # Project revision is None
         expected = "lib/version@user/name\n" \
                    "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n" \
                    "    BuildID: None\n" \

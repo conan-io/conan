@@ -79,12 +79,12 @@ class GraphBinariesAnalyzer(object):
             return
 
         with self._cache.package_lock(pref):
+            assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
-                assert node.recipe != RECIPE_EDITABLE, "Editable package cannot be dirty"
                 rmdir(package_folder)  # Do not remove if it is EDITABLE
 
-            if self._cache.revisions_enabled:
+            if self._cache.config.revisions_enabled:
                 metadata = self._cache.package_layout(pref.ref).load_metadata()
                 rec_rev = metadata.packages[pref.id].recipe_revision
                 if rec_rev and rec_rev != node.ref.revision:
@@ -123,7 +123,7 @@ class GraphBinariesAnalyzer(object):
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
-            if not remote or (not remote_info and self._cache.revisions_enabled
+            if not remote or (not remote_info and self._cache.config.revisions_enabled
                               and not remote_name):
                 for r in remotes:
                     remote_info = self._get_package_info(pref, r)

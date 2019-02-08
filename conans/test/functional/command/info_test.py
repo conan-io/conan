@@ -341,7 +341,7 @@ class MyTest(ConanFile):
         expected_output = expected_output % (
                 "\n    Revision: cba5c22478b987899b8ca26b2c359bde",
                 "\n    Revision: c0683fc1338c11821957d21265927a7b") \
-            if self.client.revisions_enabled else expected_output % ("", "")
+            if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
         def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()

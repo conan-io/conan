@@ -119,7 +119,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
-    @unittest.skipIf(TestClient().revisions_enabled,
+    @unittest.skipIf(TestClient().cache.config.revisions_enabled,
                      "This test is not valid for revisions, where we keep iterating the remotes "
                      "for searching a package for the same recipe revision")
     def package_binary_remote_test(self):

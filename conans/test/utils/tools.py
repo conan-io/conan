@@ -530,9 +530,29 @@ servers["r2"] = TestServer()
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
+    def _set_revisions(self, value):
+        current_conf = load(self.cache.conan_conf_path)
+        if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
+            replace_in_file(self.cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
+                            output=TestBufferConanOutput())
+
+        replace_in_file(self.cache.conan_conf_path,
+                        "[general]", "[general]\nrevisions_enabled = %s" % value,
+                        output=TestBufferConanOutput())
+        # Invalidate the cached config
+        self.cache.invalidate()
+
+    def enable_revisions(self):
+        self._set_revisions("1")
+        assert self.cache.config.revisions_enabled
+
+    def disable_revisions(self):
+        self._set_revisions("0")
+        assert not self.cache.config.revisions_enabled
+
     def tune_conan_conf(self, base_folder, cpu_count, revisions_enabled):
         # Create the default
-        self.cache.conan_config
+        self.cache.config
 
         if cpu_count:
             replace_in_file(self.cache.conan_conf_path,
@@ -578,10 +598,6 @@ servers["r2"] = TestServer()
     def out(self):
         return self.user_io.out
 
-    @property
-    def revisions_enabled(self):
-        return self.cache.revisions_enabled
-
     @contextmanager
     def chdir(self, newdir):
         old_dir = self.current_folder
@@ -607,7 +623,7 @@ servers["r2"] = TestServer()
             if isinstance(server, str):  # Just URI
                 real_servers = True
 
-        with tools.environment_append(self.cache.conan_config.env_vars):
+        with tools.environment_append(self.cache.config.env_vars):
             if real_servers:
                 requester = requests.Session()
             else:
@@ -641,7 +657,7 @@ servers["r2"] = TestServer()
             tuple if required
         """
         output, requester = self.init_dynamic_vars(user_io)
-        with tools.environment_append(self.cache.conan_config.env_vars):
+        with tools.environment_append(self.cache.config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,

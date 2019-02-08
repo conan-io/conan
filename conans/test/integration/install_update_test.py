@@ -278,7 +278,7 @@ class ConanLib(ConanFile):
 
         client.run("install Pkg/0.1@lasote/channel -u")
 
-        if client.revisions_enabled:
+        if client.cache.config.revisions_enabled:
             # The binary package is not updated but downloaded, because the local one we have
             # belongs to a different revision and it is removed
             self.assertIn("Pkg/0.1@lasote/channel:%s - Download" % NO_SETTINGS_PACKAGE_ID,

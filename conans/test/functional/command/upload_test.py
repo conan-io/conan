@@ -348,8 +348,8 @@ class MyPkg(ConanFile):
         # upload recipe and packages
         # *1
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
-                   assert_error=not client.revisions_enabled)
-        if not client.revisions_enabled:  # The --no-overwrite makes no sense with revisions
+                   assert_error=not client.cache.config.revisions_enabled)
+        if not client.cache.config.revisions_enabled:  # The --no-overwrite makes no sense with revisions
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading conan_package.tgz", client.out)
 
@@ -359,8 +359,8 @@ class MyPkg(ConanFile):
             client.run("create . frodo/stable")
         # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
-                   assert_error=not client.revisions_enabled)
-        if not client.revisions_enabled:
+                   assert_error=not client.cache.config.revisions_enabled)
+        if not client.cache.config.revisions_enabled:
             self.assertIn("Recipe is up to date, upload skipped", client.out)
             self.assertIn("ERROR: Local package is different from the remote package", client.out)
             self.assertIn("Forbidden overwrite", client.out)
@@ -416,8 +416,8 @@ class MyPkg(ConanFile):
         client.run("create . frodo/stable")
         # upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
-                   assert_error=not client.revisions_enabled)
-        if not client.revisions_enabled:
+                   assert_error=not client.cache.config.revisions_enabled)
+        if not client.cache.config.revisions_enabled:
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading package", client.out)
 

@@ -68,7 +68,7 @@ class TestConan(ConanFile):
                    '-s compiler.libcxx="libstdc++" '
                    '-s cppstd=gnu14 '
                    '--build missing')
-        if client.revisions_enabled:
+        if client.cache.config.revisions_enabled:
             self.assertIn("doesn't belong to the installed recipe revision, removing folder",
                           client.out)
             self.assertIn("BUILDING!", client.out)

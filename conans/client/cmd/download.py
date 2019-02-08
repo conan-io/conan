@@ -17,7 +17,7 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     try:
         ref = remote_manager.get_recipe(ref, remote)
     except NotFoundException:
-        raise NotFoundException("'%s' not found in remote '%s'" % (str(ref), remote.name))
+        raise NotFoundException("'%s' not found in remote '%s'" % (ref.full_repr(), remote.name))
     registry.refs.set(ref, remote.name)
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)

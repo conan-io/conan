@@ -1091,13 +1091,12 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
 
 
+@unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        if client.revisions_enabled:
-            self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     name = "Test"
@@ -1136,6 +1135,8 @@ class Test(ConanFile):
 """
         the_time = time.time()
         time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
+
+        time.sleep(1)
 
         client.save({"conanfile.py": conanfile})
         client.run("export . lib/1.0@user/testing")
@@ -1213,6 +1214,12 @@ class Test(ConanFile):
 
         # The time is not updated locally until we install the package
         self.assertIn("%s (No time)" % first_prev, client.out)
+
+        # If we update, (no updates availables) there is no time either
+        client.run("install lib/1.0@user/testing --update")
+        client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
+        self.assertIn("%s (No time)" % first_prev, client.out)
+
         client.run("remove lib/1.0@user/testing -f")
         client.run("install lib/1.0@user/testing")
         # Now installed the package the time is ok

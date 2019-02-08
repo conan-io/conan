@@ -60,7 +60,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        if not client.revisions_enabled:
+        if not client.cache.config.revisions_enabled:
             expected_calls = [('ping', None),
                               ('get_conan_manifest_url', None),
                               ('check_credentials', None),

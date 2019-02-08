@@ -39,7 +39,12 @@ class Pkg(ConanFile):
                                   settings=settings)
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
+        revisions_enabled = self.client.cache.config.revisions_enabled
+        self.client.disable_revisions()
+        # Trick to allow export a new recipe without removing old binary packages
         self.client.run("export . %s" % (channel or "lasote/stable"))
+        if revisions_enabled:
+            self.client.enable_revisions()
 
     @property
     def conaninfo(self):
@@ -67,7 +72,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        if not self.client.revisions_enabled:
+        if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
             self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
                           self.client.out)
@@ -92,7 +97,7 @@ class Pkg(ConanFile):
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
 
-        if not self.client.revisions_enabled:
+        if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
             self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
                           self.client.out)
@@ -121,7 +126,7 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        if not self.client.revisions_enabled:
+        if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
             self.assertIn("Hello2/2.3.8@lasote/stable:3ec60bb399a8bcb937b7af196f6685ba878aab02",
                           self.client.out)
@@ -219,7 +224,7 @@ class Pkg(ConanFile):
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         # Not needed to rebuild Hello2, it doesn't matter its requires
-        if not self.client.revisions_enabled:
+        if not self.client.cache.config.revisions_enabled:
             self.client.run("install .")
         else:  # We have changed hello2, so a new binary is required, but same id
             self.client.run("install .", assert_error=True)

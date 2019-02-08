@@ -13,6 +13,7 @@ from conans.errors import ConanException
 from conans.migrations import Migrator
 from conans.model.version import Version
 from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
 
 
@@ -148,10 +149,10 @@ def _get_refs(cache):
     return [ConanFileReference(*s.split("/")) for s in folders]
 
 
-def _get_prefs(cache, ref):
-    packages_folder = cache.packages(ref)
+def _get_prefs(layout):
+    packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
-    return [PackageReference(ref, s) for s in folders]
+    return [PackageReference(layout._ref, s) for s in folders]
 
 
 def _migrate_create_metadata(cache, out):
@@ -160,16 +161,20 @@ def _migrate_create_metadata(cache, out):
 
     for ref in refs:
         try:
-            folder = cache.export(ref)
+            base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
+            # Force using a package cache layout for everything, we want to alter the cache,
+            # not the editables
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
+            folder = layout.export()
             manifest = FileTreeManifest.load(folder)
-            metadata_path = os.path.join(cache.conan(ref), PACKAGE_METADATA)
+            metadata_path = os.path.join(layout.conan(), PACKAGE_METADATA)
             if not os.path.exists(metadata_path):
                 out.info("Creating {} for {}".format(PACKAGE_METADATA, ref))
-                prefs = _get_prefs(cache, ref)
+                prefs = _get_prefs(layout)
                 metadata = PackageMetadata()
                 metadata.recipe.revision = manifest.summary_hash
                 for pref in prefs:
-                    pmanifest = FileTreeManifest.load(cache.package(pref))
+                    pmanifest = FileTreeManifest.load(layout.package(pref))
                     metadata.packages[pref.id].revision = pmanifest.summary_hash
                     metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
                 save(metadata_path, metadata.dumps())
@@ -177,7 +182,7 @@ def _migrate_create_metadata(cache, out):
             raise ConanException("Something went wrong while generating the metadata.json files "
                                  "in the cache, please try to fix the issue or wipe the cache: {}"
                                  ":{}".format(ref, e))
-    out.warn("Migration: Generating missing metadata files finished OK!\n")
+    out.success("Migration: Generating missing metadata files finished OK!\n")
 
 
 def _migrate_lock_files(cache, out):

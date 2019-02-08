@@ -7,13 +7,14 @@ import six
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
+from conans.client.remover import DiskRemover
 from conans.client.tools import Git, SVN
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
 from conans.model.scm import detect_repo_type
 from conans.paths import CONANFILE
-from conans.search.search import search_recipes
+from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
@@ -114,6 +115,19 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
             output.error("Unable to delete source folder. Will be marked as corrupted for deletion")
             output.warn(str(e))
             set_dirty(source_folder)
+
+    # When revisions enabled, remove the packages not matching the revision
+    if cache.config.revisions_enabled:
+        packages = search_packages(cache, ref, query=None)
+        metadata = cache.package_layout(ref).load_metadata()
+        recipe_revision = metadata.recipe.revision
+        to_remove = [pid for pid in packages if
+                     metadata.packages.get(pid) and
+                     metadata.packages.get(pid).recipe_revision != recipe_revision]
+        if to_remove:
+            output.info("Removing the local binary packages from different recipe revisions")
+            remover = DiskRemover(cache)
+            remover.remove_packages(ref, ids_filter=to_remove)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, ref):
@@ -219,9 +233,9 @@ def _update_revision_in_metadata(cache, output, path, ref, digest):
 
     scm_revision_detected, repo_type = _detect_scm_revision(path)
     revision = scm_revision_detected or digest.summary_hash
-    if cache.revisions_enabled:
+    if cache.config.revisions_enabled:
         if scm_revision_detected:
-            output.info("Using {} commit from as the recipe"
+            output.info("Using {} commit as the recipe"
                         " revision: {} ".format(repo_type, revision))
         else:
             output.info("Using the exported files summary hash as the recipe"

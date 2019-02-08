@@ -57,7 +57,7 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-@unittest.skipIf(TestClient().revisions_enabled,
+@unittest.skipIf(TestClient().cache.config.revisions_enabled,
                  "We cannot know the folder of the revision without knowing the hash of "
                  "the contents")
 class UploadTest(unittest.TestCase):
@@ -87,7 +87,6 @@ class UploadTest(unittest.TestCase):
         fake_metadata = PackageMetadata()
         fake_metadata.recipe.revision = DEFAULT_REVISION_V1
         fake_metadata.packages[self.pref.id].revision = DEFAULT_REVISION_V1
-        fake_metadata.dumps()
         self.client.save({"metadata.json": fake_metadata.dumps()},
                          path=self.client.cache.conan(self.ref))
         self.client.save(files, path=reg_folder)
@@ -271,7 +270,7 @@ class TestConan(ConanFile):
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
-        if not self.client.revisions_enabled:
+        if not self.client.cache.config.revisions_enabled:
             self.assertFalse(os.path.exists(self.server_pack_folder))
 
         # Upload package
@@ -338,7 +337,7 @@ class TestConan(ConanFile):
                                  "Uploading conaninfo.txt",
                                  "Uploading conan_package.tgz",
                                  ])
-        if self.client.revisions_enabled:
+        if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
             rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
@@ -356,7 +355,7 @@ class TestConan(ConanFile):
         # Upload all conans and packages
         self.client.run('upload %s --all' % str(self.ref))
 
-        if self.client.revisions_enabled:
+        if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
             rev, _ = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
