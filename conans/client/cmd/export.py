@@ -12,26 +12,21 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE
 from conans.search.search import search_recipes
-from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
-def export_alias(reference, target_reference, cache):
-    if reference.name != target_reference.name:
-        raise ConanException("An alias can only be defined to a package with the same name")
+def export_alias(ref_layout, target_reference):
     conanfile = """
 from conans import ConanFile
 
 class AliasConanfile(ConanFile):
     alias = "%s"
-""" % str(target_reference)
+""" % target_reference
 
-    export_path = cache.export(reference)
-    mkdir(export_path)
-    save(os.path.join(export_path, CONANFILE), conanfile)
-    mkdir(cache.export_sources(reference))
-    digest = FileTreeManifest.create(export_path)
-    digest.save(export_path)
+    save(ref_layout.conanfile(), conanfile)
+    digest = FileTreeManifest.create(ref_layout.export())
+    digest.save(folder=ref_layout.export_sources())
 
 
 def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):

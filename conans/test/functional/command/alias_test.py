@@ -6,6 +6,7 @@ from parameterized.parameterized import parameterized
 from conans.client.tools.files import replace_in_file
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
+import textwrap
 
 
 class ConanAliasTest(unittest.TestCase):
@@ -469,3 +470,35 @@ class TestConan(ConanFile):
         client.run("install . --build=missing")
         self.assertIn("Hello/0.2", client.user_io.out)
         self.assertNotIn("Hello/0.1", client.user_io.out)
+
+    def test_not_override_package(self):
+        """ Do not override a package with an alias
+
+            If we create an alias with the same name as an existing package, it will
+            override the package without any warning.
+        """
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                description = "{}"
+            """)
+
+        # Create two packages
+        reference1 = "PkgA/0.1@user/testing"
+        t.save({"conanfile.py": conanfile.format(reference1)})
+        t.run("export . {}".format(reference1))
+
+        reference2 = "PkgA/0.2@user/testing"
+        t.save({"conanfile.py": conanfile.format(reference2)})
+        t.run("export . {}".format(reference2))
+
+        # Now create an alias overriding one of them
+        alias = reference2
+        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1),
+              assert_error=True)
+        self.assertIn("ERROR: Reference '{}' is already a package".format(alias), t.out)
+
+        # Check that the package is not damaged
+        t.run("inspect {} -a description".format(reference2))
+        self.assertIn("description: {}".format(reference2), t.out)
