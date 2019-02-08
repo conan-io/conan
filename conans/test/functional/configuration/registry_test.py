@@ -28,7 +28,7 @@ class RegistryTest(unittest.TestCase):
         save(f, """conan.io https://server.conan.io True
 
 lib/1.0@conan/stable conan.io
-other/1.0@lasote/testing conan.io        
+other/1.0@lasote/testing conan.io
 """)
         client = TestClient(base_folder=tmp, servers=False)
         registry = client.cache.registry
@@ -78,21 +78,6 @@ other/1.0@lasote/testing conan.io
         with self.assertRaises(ConanException):
             registry.remotes.remove("new2")
 
-    def refs_test(self):
-        f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}))
-        registry = RemoteRegistry(f, TestBufferConanOutput())
-        ref = ConanFileReference.loads("MyLib/0.1@lasote/stable")
-
-        remotes = registry.remotes.list
-        registry.refs.set(ref, remotes[0].name)
-        remote = registry.refs.get(ref)
-        self.assertEqual(remote, remotes[0])
-
-        registry.refs.set(ref, remotes[0].name)
-        remote = registry.refs.get(ref)
-        self.assertEqual(remote, remotes[0])
-
     def insert_test(self):
         f = os.path.join(temp_folder(), "aux_file")
         save(f, """
@@ -129,12 +114,3 @@ other/1.0@lasote/testing conan.io
         reg = dump_registry(remotes, refs, {})
         save(f, reg)
         return RemoteRegistry(f, TestBufferConanOutput())
-
-    def revisions_reference_already_exist_test(self):
-
-        registry = self._get_registry()
-        ref = ConanFileReference.loads("lib/1.0@user/channel")
-        # Test already exists
-        registry.refs.set(ref, "conan.io", check_exists=True)
-        with self.assertRaisesRegexp(ConanException, "already exists"):
-            registry.refs.set(ref.copy_with_rev("revision"), "conan.io", check_exists=True)

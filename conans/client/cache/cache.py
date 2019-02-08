@@ -58,6 +58,10 @@ class ClientCache(SimplePaths):
         super(ClientCache, self).__init__(self._store_folder)
         self.editable_packages = EditablePackages(self.conan_folder)
 
+    def all_refs(self):
+        subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
+        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+
     def package_layout(self, ref, short_paths=False):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())

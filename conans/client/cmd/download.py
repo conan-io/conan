@@ -18,7 +18,8 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
         remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise NotFoundException("'%s' not found in remote '%s'" % (str(ref), remote.name))
-    registry.refs.set(ref, remote.name)
+    with cache.package_layout(ref).update_metadata() as metadata:
+        metadata.recipe.remote = remote
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
 

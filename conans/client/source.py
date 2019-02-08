@@ -27,7 +27,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref):
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = cache.registry.refs.get(ref)
+    current_remote = cache.package_layout(ref).load_metadata().recipe.remote
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(ref))

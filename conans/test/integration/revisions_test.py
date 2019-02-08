@@ -217,13 +217,15 @@ from conans import ConanFile
 class HelloConan(ConanFile):
     settings = "os"
     def build(self):
-        self.output.warn("Revision 1")        
+        self.output.warn("Revision 1")
 '''
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux")
         self.client.run("info %s" % str(self.ref))
         self.assertIn("Revision: c5485544fd84cf85e45cc742feb8b34c", self.client.out)
 
-        self.client.cache.registry.refs.remove(self.ref)
+        with self.client.cache.package_layout(self.ref).update_metadata() as metadata:
+            metadata.recipe.remote = None
+
         # Upload to a non-revisions server, the revision should be always there in the registry
         self._create_and_upload(conanfile, self.ref, args="-s os=Linux", remote="remote_norevisions")
         self.client.run("info %s" % str(self.ref))

@@ -28,7 +28,7 @@ class CmdUpload(object):
 
     def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
                confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
-               remote_name=None, query=None):
+               remote=None, query=None):
         """ If package_id is provided, reference_or_pattern is a ConanFileReference """
 
         if package_id and not check_valid_ref(reference_or_pattern, allow_pattern=False):
@@ -48,14 +48,12 @@ class CmdUpload(object):
 
         # Group recipes by remote
         refs_by_remote = defaultdict(list)
-        default_remote = (self._registry.remotes.get(remote_name) if remote_name else
-                          self._registry.remotes.default)
+        default_remote = remote or self._registry.remotes.default
 
         for ref in refs:
-            if not remote_name:
-                remote = self._registry.refs.get(ref) or default_remote
-            else:
-                remote = default_remote
+            if not remote:
+                ref_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
+                remote = ref_remote or default_remote
 
             upload = True
             if not confirm:
@@ -143,7 +141,7 @@ class CmdUpload(object):
 
     def _upload_recipe(self, ref, retry, retry_wait, policy, remote, remote_manifest):
         conan_file_path = self._cache.conanfile(ref)
-        current_remote = self._registry.refs.get(ref)
+        current_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
 
         if remote != current_remote:
             conanfile = self._loader.load_class(conan_file_path)
@@ -153,7 +151,8 @@ class CmdUpload(object):
 
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote and policy != UPLOAD_POLICY_SKIP:
-            self._registry.refs.set(ref, remote.name)
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.remote = remote
 
         return ref
 
@@ -177,10 +176,10 @@ class CmdUpload(object):
                                             policy)
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_remote = self._registry.prefs.get(new_pref.copy_clear_rev())
+        cur_package_remote = self._cache.package_layout(pref.ref).load_metadata().packages[new_pref.id].remote
         if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
-            self._registry.prefs.set(new_pref, p_remote.name)
-
+            with self._cache.package_layout(new_pref.ref).update_metadata() as metadata:
+                metadata.packages[new_pref.id].remote = p_remote
         return new_pref
 
     def _check_recipe_date(self, ref, remote):

@@ -140,7 +140,7 @@ class CommandOutputer(object):
                     item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
 
             try:
-                reg_remote = self.cache.registry.refs.get(ref)
+                reg_remote = self.cache.package_layout(ref).load_metadata().recipe.remote
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
             except:

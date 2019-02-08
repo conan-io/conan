@@ -53,7 +53,7 @@ class ConanProxy(object):
 
         metadata = self._cache.package_layout(ref).load_metadata()
         cur_revision = metadata.recipe.revision
-        remote = self._registry.refs.get(ref)
+        remote = metadata.recipe.remote
         named_remote = self._registry.remotes.get(remote_name) if remote_name else None
         update_remote = named_remote or remote
 
@@ -65,7 +65,8 @@ class ConanProxy(object):
 
             output.info("Retrieving from remote '%s'..." % update_remote.name)
             new_ref = self._remote_manager.get_recipe(ref, update_remote)
-            self._registry.refs.set(new_ref, update_remote.name)
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.remote = update_remote
             status = RECIPE_UPDATED
             return conanfile_path, status, update_remote, new_ref
 
@@ -96,7 +97,8 @@ class ConanProxy(object):
                     DiskRemover(self._cache).remove_recipe(ref)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     new_ref = self._remote_manager.get_recipe(ref, update_remote)
-                    self._registry.refs.set(new_ref, update_remote.name)
+                    with self._cache.package_layout(ref).update_metadata() as metadata:
+                        metadata.recipe.remote = update_remote
                     status = RECIPE_UPDATED
                     return conanfile_path, status, update_remote, new_ref
                 else:
@@ -109,19 +111,19 @@ class ConanProxy(object):
         ref = ref.copy_with_rev(cur_revision)
         return conanfile_path, status, update_remote, ref
 
-    def _download_recipe(self, ref, output, remote_name, recorder):
+    def _download_recipe(self, ref, output, remote, recorder):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             _new_ref = self._remote_manager.get_recipe(ref, the_remote)
-            self._registry.refs.set(_new_ref, the_remote.name)
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.remote = the_remote
             recorder.recipe_downloaded(ref, the_remote.url)
             return _new_ref
 
-        if remote_name:
-            output.info("Not found, retrieving from server '%s' " % remote_name)
-            remote = self._registry.remotes.get(remote_name)
+        if remote:
+            output.info("Not found, retrieving from server '%s' " % remote.name)
         else:
-            remote = self._registry.refs.get(ref)
+            remote = self._cache.package_layout(ref).load_metadata().recipe.remote
             if remote:
                 output.info("Retrieving from predefined remote '%s'" % remote.name)
 
