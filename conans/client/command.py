@@ -1358,7 +1358,7 @@ class Command(object):
                                  'conanfile if only a reference is specified and a conaninfo.txt '
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
-        parser.add_argument("-p", "--package", default=None, help='Package ID',
+        parser.add_argument("-p", "--package", default=None, help=argparse.SUPPRESS,
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='Get from this specific remote')
@@ -1366,13 +1366,21 @@ class Command(object):
                             help='Do not decorate the text')
         args = parser.parse_args(*args)
 
-        ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote)
-        if isinstance(ret, list):
-            self._outputer.print_dir_list(ret, path, args.raw)
-        else:
-            self._outputer.print_file_contents(ret, path, args.raw)
+        try:
+            pref = PackageReference.loads(args.reference)
+            reference = pref.ref.full_repr()
+            package_id = pref.id
+        except ConanException:
+            reference = args.reference
+            package_id = args.package
+        finally:
+            ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
+            if isinstance(ret, list):
+                self._outputer.print_dir_list(ret, path, args.raw)
+            else:
+                self._outputer.print_file_contents(ret, path, args.raw)
 
-        return
+            return
 
     def alias(self, *args):
         """Creates and exports an 'alias package recipe'.
