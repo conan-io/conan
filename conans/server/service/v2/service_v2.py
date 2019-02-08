@@ -46,13 +46,15 @@ class ConanServiceV2(CommonService):
 
     def get_recipe_revisions(self, ref, auth_user):
         self._authorizer.check_read_conan(auth_user, ref)
-        if not self._server_store.path_exists(self._server_store.conan(ref)):
+        root = self._server_store.conan_revisions_root(ref.copy_clear_rev())
+        if not self._server_store.path_exists(root):
             raise NotFoundException("Recipe not found: '%s'" % str(ref))
         return self._server_store.get_recipe_revisions(ref)
 
     def get_package_revisions(self, pref, auth_user):
         self._authorizer.check_read_conan(auth_user, pref.ref)
-        if not self._server_store.path_exists(self._server_store.conan(pref.ref)):
+        root = self._server_store.conan_revisions_root(pref.ref.copy_clear_rev())
+        if not self._server_store.path_exists(root):
             raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
         # Will raise if no package is there
         self._server_store.package(pref)

@@ -44,72 +44,55 @@ class ClientBaseRouterBuilder(object):
                          p_revision=pref.revision, path=path)
         return url
 
+    def for_conan_revisions_root(self, ref):
+        assert ref.revision is None
+        tmp = self.routes.recipe
+        return self.format_ref(tmp, ref)
+
     def for_recipe(self, ref):
-        """url for a recipe with or without revisions"""
-        if not ref.revision:
-            tmp = self.routes.recipe
-        else:
-            tmp = self.routes.recipe_revision
+        """url for a recipe with or without revisions (without rev,
+        only for delete the root recipe)"""
+        assert ref.revision is not None
+        tmp = self.routes.recipe_revision
         return self.format_ref(tmp, ref)
 
     def for_packages(self, ref):
         """url for a recipe with or without revisions"""
-        if not ref.revision:
-            tmp = self.routes.packages
-        else:
-            tmp = self.routes.packages_revision
+        assert ref.revision is not None
+        tmp = self.routes.packages_revision
         return self.format_ref(tmp, ref)
 
     def for_recipe_file(self, ref, path):
         """url for a recipe file, with or without revisions"""
-        if not ref.revision:
-            tmp = self.routes.recipe_file
-        else:
-            tmp = self.routes.recipe_revision_file
+        assert ref.revision is not None
+        tmp = self.routes.recipe_revision_file
         return self.format_ref_path(tmp, ref, path)
 
     def for_recipe_files(self, ref):
         """url for getting the recipe list"""
-        if not ref.revision:
-            tmp = self.routes.recipe_files
-        else:
-            tmp = self.routes.recipe_revision_files
+        assert ref.revision is not None
+        tmp = self.routes.recipe_revision_files
         return self.format_ref(tmp, ref)
 
     def for_package(self, pref):
         """url for the package with or without revisions"""
-        if not pref.ref.revision:
-            if pref.revision:
-                raise ConanException(self.bad_package_revision)
-            tmp = self.routes.package
-        elif not pref.revision:
-            tmp = self.routes.package_recipe_revision
-        else:
-            tmp = self.routes.package_revision
-
+        assert pref.ref.revision is not None
+        assert pref.revision is not None
+        tmp = self.routes.package_revision
         return self.format_pref(tmp, pref)
 
     def for_package_file(self, pref, path):
         """url for getting a file from a package, with or without revisions"""
-        if not pref.ref.revision:
-            raise ConanException("Cannot get a package file without a recipe revision")
-        elif not pref.revision:
-            tmp = self.routes.package_recipe_revision_file
-        else:
-            tmp = self.routes.package_revision_file
-
+        assert pref.ref.revision is not None
+        assert pref.revision is not None
+        tmp = self.routes.package_revision_file
         return self.format_pref_path(tmp, pref, path)
 
     def for_package_files(self, pref):
         """url for getting the recipe list"""
-        if not pref.ref.revision:
-            if pref.revision:
-                raise ConanException(self.bad_package_revision)
-            tmp = self.routes.package_files
-        elif not pref.revision:
-            tmp = self.routes.package_recipe_revision_files
-        else:
-            tmp = self.routes.package_revision_files
+        assert pref.revision is not None
+        assert pref.ref.revision is not None
+        tmp = self.routes.package_revision_files
 
         return self.format_pref(tmp, pref)
 

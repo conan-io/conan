@@ -93,6 +93,7 @@ class RestV2Methods(RestCommonMethods):
         return ConanInfo.loads(decode_text(content))
 
     def get_recipe(self, ref, dest_folder):
+        assert ref.revision is not None
         url = self.conans_router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
@@ -103,7 +104,7 @@ class RestV2Methods(RestCommonMethods):
             files.remove(EXPORT_SOURCES_TGZ_NAME)
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.conans_router.recipe_file(ref, fn) for fn in files}
+        urls = {fn: self.conans_router.recipe_revision_file(ref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret, new_ref, rev_time

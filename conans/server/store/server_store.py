@@ -22,7 +22,7 @@ class ServerStore(SimplePaths):
         tmp = normpath(join(self.store, ref.dir_repr()))
         return join(tmp, ref.revision)
 
-    def conan_parent(self, ref):
+    def conan_revisions_root(self, ref):
         """Parent folder of the conan package, for all the revisions"""
         assert not ref.revision
         return normpath(join(self.store, ref.dir_repr()))
@@ -30,7 +30,7 @@ class ServerStore(SimplePaths):
     def packages(self, ref):
         return join(self.conan(ref), PACKAGES_FOLDER)
 
-    def package_parent(self, pref):
+    def package_revisions_root(self, pref):
         assert pref.revision is None
         assert pref.ref.revision is not None
         tmp = join(self.packages(pref.ref), pref.id)
@@ -93,7 +93,7 @@ class ServerStore(SimplePaths):
     def remove_conanfile(self, ref):
         assert isinstance(ref, ConanFileReference)
         if not ref.revision:
-            self._storage_adapter.delete_folder(self.conan_parent(ref))
+            self._storage_adapter.delete_folder(self.conan_revisions_root(ref))
         else:
             self._storage_adapter.delete_folder(self.conan(ref))
             self._remove_revision_from_index(ref)
@@ -110,7 +110,7 @@ class ServerStore(SimplePaths):
             for package_id in package_ids_filter:
                 pref = PackageReference(ref, package_id)
                 # Remove all package revisions
-                package_folder = self.package_parent(pref)
+                package_folder = self.package_revisions_root(pref)
                 self._storage_adapter.delete_folder(package_folder)
         self._storage_adapter.delete_empty_dirs([ref])
 
