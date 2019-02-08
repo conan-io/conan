@@ -1,7 +1,8 @@
-import platform
-import unittest
-
 import mock
+import os
+import platform
+import re
+import unittest
 from parameterized import parameterized
 
 from conans.client.build.msbuild import MSBuild
@@ -131,17 +132,6 @@ class MSBuildTest(unittest.TestCase):
         self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
-    def custom_properties_test(self):
-        settings = MockSettings({"build_type": "Debug",
-                                 "compiler": "Visual Studio",
-                                 "arch": "x86_64"})
-        conanfile = MockConanfile(settings)
-        msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("project_should_flags_test_file.sln",
-                                      properties={"MyProp1": "MyValue1", "MyProp2": "MyValue2"})
-        self.assertIn('/p:MyProp1="MyValue1"', command)
-        self.assertIn('/p:MyProp2="MyValue2"', command)
-
     @parameterized.expand([("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
@@ -246,3 +236,19 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
         self.assertIn('/verbosity:quiet', command)
 
+    def properties_injection_test(self):
+        # https://github.com/conan-io/conan/issues/4471
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("dummy.sln", props_file_path="conan_build.props")
+
+        match = re.search('/p:ForceImportBeforeCppTargets="(.+?)"', command)
+        self.assertTrue(
+            match, "Haven't been able to find the ForceImportBeforeCppTargets")
+
+        props_file_path = match.group(1)
+        self.assertTrue(os.path.isabs(props_file_path))
+        self.assertEquals(os.path.basename(props_file_path), "conan_build.props")
