@@ -256,7 +256,9 @@ class WorkspaceTest(unittest.TestCase):
 
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
+        self.assertNotIn("Debug", client.out)
         client.runner('cmake --build . --config Release', cwd=base_release)
+        self.assertNotIn("Debug", client.out)
 
         cmd_release = os.path.normpath("./A/build/Release/bin/app")
         cmd_debug = os.path.normpath("./A/build/Debug/bin/app")
@@ -270,6 +272,7 @@ class WorkspaceTest(unittest.TestCase):
                               "Hello World", "Bye Moon", output=client.out)
 
         client.runner('cmake --build . --config Release', cwd=base_release)
+        self.assertNotIn("Debug", client.out)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
@@ -280,13 +283,23 @@ class WorkspaceTest(unittest.TestCase):
                               "Hello World", "Bye Moon", output=client.out)
         time.sleep(1)
         client.runner('cmake --build . --config Release', cwd=base_release)
+        self.assertNotIn("Debug", client.out)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        client.runner("dir")
+        print "LS OUT ", client.out
+        client.runner("dir")
+        print "LS OUT ", client.out
+        client.runner("dir")
+        print "LS OUT ", client.out
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
+        print client.out
+        self.assertNotIn("Release", client.out)
         client.runner('cmake --build . --config Debug', cwd=base_debug)
+        self.assertNotIn("Release", client.out)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
@@ -298,6 +311,7 @@ class WorkspaceTest(unittest.TestCase):
 
         time.sleep(1)
         client.runner('cmake --build . --config Debug', cwd=base_debug)
+        self.assertNotIn("Release", client.out)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
@@ -364,7 +378,9 @@ class WorkspaceTest(unittest.TestCase):
 
         generator = "Visual Studio 15 Win64"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=build)
+        self.assertNotIn("Debug", client.out)
         client.runner('cmake --build . --config Release', cwd=build)
+        self.assertNotIn("Debug", client.out)
 
         cmd_release = os.path.normpath("./A/build/Release/app")
         cmd_debug = os.path.normpath("./A/build/Debug/app")
@@ -378,6 +394,7 @@ class WorkspaceTest(unittest.TestCase):
                               "Hello World", "Bye Moon", output=client.out)
 
         client.runner('cmake --build . --config Release', cwd=build)
+        self.assertNotIn("Debug", client.out)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
@@ -387,13 +404,16 @@ class WorkspaceTest(unittest.TestCase):
                               "Hello World", "Bye Moon", output=client.out)
 
         client.runner('cmake --build . --config Release', cwd=build)
+        self.assertNotIn("Debug", client.out)
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=build)
+        self.assertNotIn("Release", client.out)
         client.runner('cmake --build . --config Debug', cwd=build)
+        self.assertNotIn("Release", client.out)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
@@ -403,6 +423,7 @@ class WorkspaceTest(unittest.TestCase):
                               "Bye Moon", "Hello World", output=client.out)
 
         client.runner('cmake --build . --config Debug', cwd=build)
+        self.assertNotIn("Release", client.out)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
