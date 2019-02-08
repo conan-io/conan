@@ -28,7 +28,7 @@ class HelloConan(ConanFile):
 
     def build(self):
         msbuild = MSBuild(self)
-        msbuild.build("MyProject.sln")
+        msbuild.build("MyProject.sln", verbosity="normal")
 
     def package(self):
         self.copy(pattern="*.exe")
@@ -45,53 +45,53 @@ class HelloConan(ConanFile):
                    'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
         client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
                    '-s compiler="Visual Studio" -s compiler.version=14')
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         files = get_vs_project_files()
         files[CONANFILE] = conan_build_vs
 
         # Try to not update the project
-        client.client_cache._conan_config = None  # Invalidate cached config
-        tools.replace_in_file(client.client_cache.conan_conf_path, "[general]",
+        client.cache._conan_config = None  # Invalidate cached config
+        tools.replace_in_file(client.cache.conan_conf_path, "[general]",
                               "[general]\nskip_vs_projects_upgrade = True")
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build")
         self.assertNotIn("devenv", client.user_io.out)
-        self.assertIn("Skipped sln project upgrade", client.user_io.out)
+        self.assertIn("Skipped sln project upgrade", client.out)
 
         # Try with x86_64
         client.save(files)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
         self.assertIn("Release|x64", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         # Try with x86
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
         self.assertIn("Release|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         # Try with x86 debug
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         # Try with a custom property file name
-        files[CONANFILE] = conan_build_vs.replace('msbuild.build("MyProject.sln")',
-                                                  'msbuild.build("MyProject.sln", '
-                                                  'property_file_name="myprops.props")')
+        files[CONANFILE] = conan_build_vs.replace(
+                'msbuild.build("MyProject.sln", verbosity="normal")',
+                'msbuild.build("MyProject.sln", verbosity="normal", property_file_name="mp.props")')
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' file: MyProject.exe", client.user_io.out)
+        self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
         full_ref = "Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1"
         pref = PackageReference.loads(full_ref)
-        build_folder = client.client_cache.build(pref)
-        self.assertTrue(os.path.exists(os.path.join(build_folder, "myprops.props")))
+        build_folder = client.cache.build(pref)
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def reuse_msbuild_object_test(self):

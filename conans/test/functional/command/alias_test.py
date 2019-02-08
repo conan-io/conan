@@ -71,16 +71,19 @@ class Pkg(ConanFile):
             client.save({"conanfile.py": conanfile})
             client.run("export . %s/0.1@user/testing" % name)
             client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
-        for name, conanfile in [("CA", conanfile0),
-                                ("CB", conanfile % "CA/ALIAS@user/testing"),
-                                ("CC", conanfile % "CA/ALIAS@user/testing"),
-                                ("CD", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CE", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CF", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CG", conanfile3 % ("CA/ALIAS@user/testing", "CD/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CI", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CH", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ]:
+
+        for name, conanfile in [
+            ("CA", conanfile0),
+            ("CB", conanfile % "CA/ALIAS@user/testing"),
+            ("CC", conanfile % "CA/ALIAS@user/testing"),
+            ("CD", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CE", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CF", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CG", conanfile3 %
+                ("CA/ALIAS@user/testing", "CD/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CI", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CH", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+        ]:
             export_alias(name, conanfile)
 
         cj = """from conans import ConanFile
@@ -421,7 +424,7 @@ class Pkg(ConanFile):
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.3@lasote/channel")
 
-    def basic_test(self):
+    def test_basic_test(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})

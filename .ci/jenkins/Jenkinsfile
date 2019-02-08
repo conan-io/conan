@@ -96,6 +96,61 @@ echo "STAGES: ${flavors}"
 echo "PYVERS: ${all_pyvers}"
 echo "EXCLUDED TAGS: ${excluded_tags}"
 
+
+
+// FIRST rest api tests, fail ASAP
+rest_builders = [:]
+for (n in ["Windows", "Linux"]) {
+    def the_node = n
+    def pyver = "py36"
+    rest_builders["${the_node} Rest API Test"] = {
+        node(the_node){
+            stage("REST tests ${the_node}"){
+                def vars = checkout scm
+                def base_dir = (the_node == "Windows") ? win_tmp_base : rest_tmp_base
+                base_dir = base_dir + "rest" + vars["GIT_COMMIT"].substring(0, 4)
+                def venv_dir = base_dir + "/venv"
+                def src_dir = base_dir + "/src"
+
+                while(fileExists(src_dir)){
+                    src_dir = src_dir + "_"
+                }
+                while(fileExists(venv_dir)){
+                    venv_dir = venv_dir + "_"
+                }
+
+                // Copy SRC to a clean folder
+                dir(base_dir){ // Trick to create the parent
+                    def escaped_ws = "${WORKSPACE}".replace("\\", "/")
+                    def cmd = "python -c \"import shutil; shutil.copytree('${escaped_ws}', '${src_dir}')\""
+                    if (the_node == "Windows"){
+                        bat(script: cmd)
+                    }
+                    else{
+                        sh(script: cmd)
+                    }
+                }
+
+                if(the_node == "Windows"){
+                    try{
+                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} \"${venv_dir}\"")
+                    }
+                    finally{
+                      bat(script: "rd /s /q \"${base_dir}\"")
+                    }
+                }
+                else{
+                    docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${src_dir} -v${src_dir}:${src_dir}") {
+                      sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} /tmp")
+                    }
+                }
+            }
+        }
+    }
+}
+parallel rest_builders
+
+
 try{
     for (flavor in flavors){
         def builders = [:]
@@ -183,46 +238,6 @@ try{
         parallel builders
     }
 
-
-
-
-    // Run rest_api_test without concurrency between same node
-    pyvers = ['py36']
-    for (y in pyvers) {
-        builders = [:]
-        def pyver = y
-        builders["Windows Rest API Test"] = {
-            node("Windows"){
-                stage("REST tests Windows ${pyver}"){
-                    try{
-                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
-                    }
-                    finally{
-                      bat(script: "rd /s /q \"${win_tmp_base}${commit}\"")
-                    }
-                }
-            }
-        }
-        builders["Linux Rest API Test"] = {
-            node("Linux"){
-                stage("REST tests Linux ${pyver}"){
-                    docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                        sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
-                    }
-                }
-            }
-        }
-        /*builders["Mac Rest API Test"] = {
-            node("Macos"){
-                stage("REST tests Windows ${pyver}"){
-                    withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                        sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.functional.remote.rest_api_test")
-                    }
-                }
-            }
-        }*/ // EXTREMELY SLOW, INVESTIGATE
-        parallel builders
-    }
     if (env.BRANCH_NAME == "develop") {
         // Deploy snapshot to test pypi if branch develop
         node("Linux") {

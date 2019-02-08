@@ -34,7 +34,7 @@ class Test(ConanFile):
         client.run('remove "*" -f')
         client.run("remote list_pref Test/0.1@lasote/testing")
         self.assertNotIn("Test/0.1@lasote/testing", client.out)
-        registry_content = load(client.client_cache.registry_path)
+        registry_content = load(client.cache.registry_path)
         self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 
@@ -136,7 +136,7 @@ class RemoveTest(unittest.TestCase):
                             "O": 'Other/1.2@myuser/testing'}
 
         files = {}
-        pack_refs = []
+        prefs = []
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             folder = folder.replace("@", "/")
@@ -146,27 +146,27 @@ class RemoveTest(unittest.TestCase):
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
-                pack_refs.append(PackageReference(ref, str(pack_id)))
+                prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
-            exports_sources_dir = client.client_cache.export_sources(ref)
+            exports_sources_dir = client.cache.export_sources(ref)
             os.makedirs(exports_sources_dir)
 
-        client.save(files, client.client_cache.store)
+        client.save(files, client.cache.store)
 
         # Create the manifests to be able to upload
-        for pack_ref in pack_refs:
-            pkg_folder = client.client_cache.package(pack_ref)
+        for pref in prefs:
+            pkg_folder = client.cache.package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
-            files["%s/%s/%s/%s" % (pack_ref.conan.dir_repr(),
+            files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
-                                   pack_ref.package_id,
+                                   pref.id,
                                    CONAN_MANIFEST)] = repr(expected_manifest)
 
-        client.save(files, client.client_cache.store)
+        client.save(files, client.cache.store)
 
         self.client = client
 
@@ -179,7 +179,7 @@ class RemoveTest(unittest.TestCase):
                             {"H1": True, "H2": True, "B": True, "O": True})
 
     def assert_folders(self, local_folders, remote_folders, build_folders, src_folders):
-        for base_path, folders in [(self.client.client_cache, local_folders),
+        for base_path, folders in [(self.client.cache, local_folders),
                                    (self.server.server_store, remote_folders)]:
             root_folder = base_path.store
             for k, shas in folders.items():
@@ -188,7 +188,7 @@ class RemoveTest(unittest.TestCase):
                 if isinstance(base_path, ServerStore):
                     if not self.client.block_v2:
                         try:
-                            rev = self.client.get_revision(ref)
+                            rev, _ = self.client.cache.package_layout(ref).recipe_revision()
                         except:
                             # This whole test is a crap, we cannot guess remote revision
                             # if the package is not in local anymore
@@ -206,7 +206,8 @@ class RemoveTest(unittest.TestCase):
                             if not self.client.block_v2:
                                 pref = PackageReference(ref, sha)
                                 try:
-                                    prev = self.client.get_package_revision(pref)
+                                    layout = self.client.cache.package_layout(pref.ref)
+                                    prev, _ = layout.package_revision(pref)
                                 except:
                                     # This whole test is a crap, we cannot guess remote revision
                                     # if the package is not in local anymore
@@ -220,7 +221,7 @@ class RemoveTest(unittest.TestCase):
                         else:
                             self.assertFalse(os.path.exists(package_folder))
 
-        root_folder = self.client.client_cache.store
+        root_folder = self.client.cache.store
         for k, shas in build_folders.items():
             folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
             if shas is None:

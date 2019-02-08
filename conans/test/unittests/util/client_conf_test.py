@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.client_cache import CONAN_CONF
+from conans.client.cache.cache import CONAN_CONF
 from conans.client.conf import ConanClientConfigParser
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.test_files import temp_folder

@@ -23,7 +23,7 @@ class RequesterTest(unittest.TestCase):
 [general]
 request_timeout=2
 """
-        save(client.client_cache.conan_conf_path, conf)
+        save(client.cache.conan_conf_path, conf)
         client.init_dynamic_vars()
 
         self.assertEquals(client.requester.get("MyUrl"), 2.0)
@@ -39,7 +39,7 @@ request_timeout=2
 [general]
 request_timeout=any_string
 """
-        save(client.client_cache.conan_conf_path, conf)
+        save(client.cache.conan_conf_path, conf)
         with self.assertRaisesRegexp(Exception, "Specify a numeric parameter for 'request_timeout'"):
             client.run("install Lib/1.0@conan/stable")
 
@@ -49,7 +49,7 @@ request_timeout=any_string
         conf = """
 [general]
 """
-        save(client.client_cache.conan_conf_path, conf)
+        save(client.cache.conan_conf_path, conf)
         client.init_dynamic_vars()
         self.assertEquals(client.requester.get("MyUrl"), "NOT SPECIFIED")
 

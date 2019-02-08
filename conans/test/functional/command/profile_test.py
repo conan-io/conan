@@ -29,9 +29,9 @@ class ProfileTest(unittest.TestCase):
 
     def list_test(self):
         client = TestClient()
-        create_profile(client.client_cache.profiles_path, "profile3")
-        create_profile(client.client_cache.profiles_path, "profile1")
-        create_profile(client.client_cache.profiles_path, "profile2")
+        create_profile(client.cache.profiles_path, "profile3")
+        create_profile(client.cache.profiles_path, "profile1")
+        create_profile(client.cache.profiles_path, "profile2")
         # Make sure local folder doesn't interact with profiles
         os.mkdir(os.path.join(client.current_folder, "profile3"))
         client.run("profile list")
@@ -40,9 +40,9 @@ class ProfileTest(unittest.TestCase):
 
     def show_test(self):
         client = TestClient()
-        create_profile(client.client_cache.profiles_path, "profile1", settings={"os": "Windows"},
+        create_profile(client.cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
-        create_profile(client.client_cache.profiles_path, "profile3",
+        create_profile(client.cache.profiles_path, "profile3",
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
@@ -159,6 +159,6 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("Profile already exists", client.user_io.out)
 
         client.run("profile new MyProfile3")
-        pr_path = os.path.join(client.client_cache.profiles_path, "MyProfile3")
+        pr_path = os.path.join(client.cache.profiles_path, "MyProfile3")
         self.assertTrue(os.path.exists(pr_path))
         self.assertNotIn("os=", load(pr_path))

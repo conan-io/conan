@@ -37,6 +37,8 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.to_apple_arch('armv7s'), 'armv7s')
         self.assertEqual(tools.to_apple_arch('armv7k'), 'armv7k')
         self.assertEqual(tools.to_apple_arch('armv8'), 'arm64')
+        self.assertEqual(tools.to_apple_arch('armv8.3'), 'arm64e')
+        self.assertEqual(tools.to_apple_arch('armv8_32'), 'arm64_32')
         self.assertIsNone(tools.to_apple_arch('mips'))
 
     def test_apple_sdk_name(self):

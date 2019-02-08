@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from conans.client.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
+from conans.client.cache.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
     load_registry_txt, migrate_registry_file
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -31,7 +31,7 @@ lib/1.0@conan/stable conan.io
 other/1.0@lasote/testing conan.io        
 """)
         client = TestClient(base_folder=tmp, servers=False)
-        registry = client.client_cache.registry
+        registry = client.cache.registry
         self.assertEqual(registry.remotes.list, [("conan.io", "https://server.conan.io", True)])
         expected = {'lib/1.0@conan/stable': 'conan.io',
                     'other/1.0@lasote/testing': 'conan.io'}

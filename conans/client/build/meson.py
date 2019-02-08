@@ -28,7 +28,8 @@ class Meson(object):
         self.backend = backend or "ninja"  # Other backends are poorly supported, not default other.
 
         self.options = dict()
-        self.options['prefix'] = self._conanfile.package_folder
+        if self._conanfile.package_folder:
+            self.options['prefix'] = self._conanfile.package_folder
 
         # C++ standard
         cppstd = self._ss("cppstd")
