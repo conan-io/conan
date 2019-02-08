@@ -60,6 +60,11 @@ class MesonTest(unittest.TestCase):
         defs = {
             'default_library': 'shared',
             'prefix': package_folder,
+            'libdir': 'lib',
+            'bindir': 'bin',
+            'sbindir': 'bin',
+            'libexecdir': 'bin',
+            'includedir': 'include',
             'cpp_std': 'none'
         }
 
