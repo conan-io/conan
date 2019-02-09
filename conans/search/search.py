@@ -126,40 +126,41 @@ def _partial_match(pattern, ref):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(ref_layout, query):
+def search_packages(package_layout, query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
                            version: "2.14",
                            settings: {os: Windows}}}
-    param ref_layout: Layout for the given reference
+    param package_layout: Layout for the given reference
     """
-    if not os.path.exists(ref_layout.conan()) or (
-           ref_layout._ref.revision and ref_layout.recipe_revision()[0] != ref_layout._ref.revision):
-        raise NotFoundException("Recipe not found: %s" % ref_layout._ref.full_repr())
-    infos = _get_local_infos_min(ref_layout)
+    if not os.path.exists(package_layout.conan()) or (
+            package_layout.ref.revision and
+            package_layout.recipe_revision()[0] != package_layout.ref.revision):
+        raise NotFoundException("Recipe not found: %s" % package_layout.ref.full_repr())
+    infos = _get_local_infos_min(package_layout)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(ref_layout):
+def _get_local_infos_min(package_layout):
     result = OrderedDict()
 
-    packages_path = ref_layout.packages()
+    packages_path = package_layout.packages()
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
-        pref = PackageReference(ref_layout._ref, package_id)
-        info_path = os.path.join(ref_layout.package(pref), CONANINFO)
+        pref = PackageReference(package_layout.ref, package_id)
+        info_path = os.path.join(package_layout.package(pref), CONANINFO)
         if not os.path.exists(info_path):
             logger.error("There is no ConanInfo: %s" % str(info_path))
             continue
         conan_info_content = load(info_path)
 
         info = ConanInfo.loads(conan_info_content)
-        if ref_layout._ref.revision:
-            metadata = ref_layout.load_metadata()
+        if package_layout.ref.revision:
+            metadata = package_layout.load_metadata()
             recipe_revision = metadata.packages[package_id].recipe_revision
-            if recipe_revision and recipe_revision != ref_layout._ref.revision:
+            if recipe_revision and recipe_revision != package_layout.ref.revision:
                 continue
         conan_vars_info = info.serialize_min()
         result[package_id] = conan_vars_info

@@ -38,6 +38,10 @@ class PackageCacheLayout(object):
         self._short_paths = short_paths
         self._no_lock = no_lock
 
+    @property
+    def ref(self):
+        return self._ref
+
     def conan(self):
         """ Returns the base folder for this package reference """
         return self._base_folder

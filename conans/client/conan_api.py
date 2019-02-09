@@ -358,8 +358,8 @@ class ConanAPIV1(object):
             # Forcing an export!
             if not not_export:
                 check_casing_conflict(cache=self._cache, ref=ref)
-                ref_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
-                cmd_export(ref_layout, conanfile_path, conanfile, keep_source,
+                package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
+                cmd_export(package_layout, conanfile_path, conanfile, keep_source,
                            self._cache.config.revisions_enabled, self._user_io.out,
                            self._hook_manager)
 
@@ -427,8 +427,8 @@ class ConanAPIV1(object):
             recorder.recipe_exported(ref)
             recorder.add_recipe_being_developed(ref)
             check_casing_conflict(cache=self._cache, ref=ref)
-            ref_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
-            cmd_export(ref_layout, conanfile_path, conanfile, False,
+            package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
+            cmd_export(package_layout, conanfile_path, conanfile, False,
                        self._cache.config.revisions_enabled, self._user_io.out,
                        self._hook_manager)
             export_pkg(self._cache, self._graph_manager, self._hook_manager, recorder,
@@ -722,8 +722,8 @@ class ConanAPIV1(object):
         ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
                                  conanfile.channel)
         check_casing_conflict(cache=self._cache, ref=ref)
-        ref_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
-        cmd_export(ref_layout, conanfile_path, conanfile, keep_source,
+        package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
+        cmd_export(package_layout, conanfile_path, conanfile, keep_source,
                    self._cache.config.revisions_enabled, self._user_io.out,
                    self._hook_manager)
 
@@ -957,8 +957,8 @@ class ConanAPIV1(object):
                 raise ConanException("Reference '{}' is already a package, remove it before creating"
                                      " and alias with the same name".format(ref))
 
-        ref_layout = self._cache.package_layout(ref)
-        return export_alias(ref_layout, str(target_ref),
+        package_layout = self._cache.package_layout(ref)
+        return export_alias(package_layout, str(target_ref),
                             revisions_enabled=self._cache.config.revisions_enabled,
                             output=self._user_io.out)
 

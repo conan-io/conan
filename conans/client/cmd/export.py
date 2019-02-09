@@ -19,7 +19,7 @@ from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
-def export_alias(ref_layout, target_reference, output, revisions_enabled):
+def export_alias(package_layout, target_reference, output, revisions_enabled):
     conanfile = """
 from conans import ConanFile
 
@@ -27,12 +27,12 @@ class AliasConanfile(ConanFile):
     alias = "%s"
 """ % target_reference
 
-    save(ref_layout.conanfile(), conanfile)
-    digest = FileTreeManifest.create(ref_layout.export())
-    digest.save(folder=ref_layout.export())
+    save(package_layout.conanfile(), conanfile)
+    digest = FileTreeManifest.create(package_layout.export())
+    digest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
-    _update_revision_in_metadata(ref_layout=ref_layout, revisions_enabled=revisions_enabled,
+    _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
                                  output=output, path=None, digest=digest)
 
 
@@ -53,7 +53,7 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
                        conanfile.py
     """
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=package_layout._ref)
+                         reference=package_layout.ref)
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
@@ -80,7 +80,7 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
                                  scm_src_file=package_layout.scm_folder())
 
         # Execute post-export hook before computing the digest
-        hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout._ref,
+        hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
@@ -95,7 +95,7 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
         digest.save(package_layout.export())
 
     # Compute the revision for the recipe
-    _update_revision_in_metadata(ref_layout=package_layout,
+    _update_revision_in_metadata(package_layout=package_layout,
                                  revisions_enabled=revisions_enabled,
                                  output=output,
                                  path=os.path.dirname(conanfile_path),
@@ -229,7 +229,7 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type
 
 
-def _update_revision_in_metadata(ref_layout, revisions_enabled, output, path, digest):
+def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
 
     scm_revision_detected, repo_type = _detect_scm_revision(path)
     revision = scm_revision_detected or digest.summary_hash
@@ -240,7 +240,7 @@ def _update_revision_in_metadata(ref_layout, revisions_enabled, output, path, di
         else:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
-    with ref_layout.update_metadata() as metadata:
+    with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
         metadata.recipe.time = None
 
