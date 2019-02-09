@@ -17,6 +17,10 @@ class PackageEditableLayout(object):
         self._base_folder = base_folder
         self._layout_file = layout_file
 
+    @property
+    def ref(self):
+        return self._ref
+
     def conan(self):
         """ Returns the base folder for this package reference """
         return self._base_folder
