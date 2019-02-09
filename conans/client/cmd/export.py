@@ -36,31 +36,31 @@ class AliasConanfile(ConanFile):
                                  output=output, path=None, digest=digest)
 
 
-def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):
+def check_casing_conflict(cache, ref):
+    # Check for casing conflict
+    # Maybe a platform check could be added, but depends on disk partition
+    refs = search_recipes(cache, ref, ignorecase=True)
+    if refs and ref not in [r.copy_clear_rev() for r in refs]:
+        raise ConanException("Cannot export package with same name but different case\n"
+                             "You exported '%s' but already existing '%s'"
+                             % (str(ref), " ".join(str(s) for s in refs)))
+
+
+def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions_enabled,
+               output, hook_manager):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=ref)
+                         reference=package_layout._ref)
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
     conan_linter(conanfile_path, output)
-
-    # Check for casing conflict
-    # Maybe a platform check could be added, but depends on disk partition
-    reference = str(ref)
-    refs = search_recipes(cache, reference, ignorecase=True)
-    if refs and ref not in [r.copy_clear_rev() for r in refs]:
-        raise ConanException("Cannot export package with same name but different case\n"
-                             "You exported '%s' but already existing '%s'"
-                             % (reference, " ".join(str(s) for s in refs)))
-
     output = conanfile.output
 
     # Get previous digest
-    package_layout = cache.package_layout(ref, conanfile.short_paths)
     try:
         previous_digest = FileTreeManifest.load(package_layout.export())
     except IOError:
@@ -69,17 +69,18 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
         _recreate_folders(package_layout.export(), package_layout.export_sources())
 
     # Copy sources to target folders
-    with cache.conanfile_write_lock(ref):
+    with package_layout.conanfile_write_lock(output=output):
         origin_folder = os.path.dirname(conanfile_path)
         export_recipe(conanfile, origin_folder, package_layout.export())
         export_source(conanfile, origin_folder, package_layout.export_sources())
         shutil.copy2(conanfile_path, package_layout.conanfile())
 
         _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path),
-                                 package_layout.export(), output, cache, ref)
+                                 package_layout.export(), output,
+                                 scm_src_file=package_layout.scm_folder())
 
         # Execute post-export hook before computing the digest
-        hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
+        hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout._ref,
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
@@ -95,7 +96,7 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
 
     # Compute the revision for the recipe
     _update_revision_in_metadata(ref_layout=package_layout,
-                                 revisions_enabled=cache.config.revisions_enabled,
+                                 revisions_enabled=revisions_enabled,
                                  output=output,
                                  path=os.path.dirname(conanfile_path),
                                  digest=digest)
@@ -117,22 +118,21 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
             set_dirty(source_folder)
 
     # When revisions enabled, remove the packages not matching the revision
-    if cache.config.revisions_enabled:
-        packages = search_packages(cache, ref, query=None)
-        metadata = cache.package_layout(ref).load_metadata()
+    if revisions_enabled:
+        packages = search_packages(package_layout, query=None)
+        metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
         to_remove = [pid for pid in packages if
                      metadata.packages.get(pid) and
                      metadata.packages.get(pid).recipe_revision != recipe_revision]
         if to_remove:
             output.info("Removing the local binary packages from different recipe revisions")
-            remover = DiskRemover(cache)
-            remover.remove_packages(ref, ids_filter=to_remove)
+            remover = DiskRemover()
+            remover.remove_packages(package_layout, ids_filter=to_remove)
 
 
-def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, ref):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
 
-    scm_src_file = paths.scm_folder(ref)
     if os.path.exists(scm_src_file):
         os.unlink(scm_src_file)
 

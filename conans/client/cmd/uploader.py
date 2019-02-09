@@ -74,10 +74,11 @@ class CmdUpload(object):
         for remote, refs in refs_by_remote.items():
             self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
             for (ref, conanfile) in refs:
+                ref_layout = self._cache.package_layout(ref)
                 if all_packages:
-                    packages_ids = self._cache.conan_packages(ref)
+                    packages_ids = ref_layout.conan_packages()
                 elif query:
-                    packages = search_packages(self._cache, ref, query)
+                    packages = search_packages(ref_layout, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
