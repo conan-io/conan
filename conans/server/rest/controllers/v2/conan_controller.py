@@ -15,21 +15,19 @@ class ConanControllerV2(Controller):
         conan_service = ConanServiceV2(app.authorizer, app.server_store)
         r = BottleRoutes(self.route)
 
-        @app.route(r.package_files, method=["GET"])
         @app.route(r.package_recipe_revision_files, method=["GET"])
         @app.route(r.package_revision_files, method=["GET"])
         def get_package_file_list(name, version, username, channel, package_id, auth_user,
-                                  revision=None, p_revision=None):
+                                  revision, p_revision=None):
             pref = get_package_ref(name, version, username, channel, package_id,
                                    revision, p_revision)
             ret = conan_service.get_package_file_list(pref, auth_user)
             return ret
 
-        @app.route(r.package_file, method=["GET"])
         @app.route(r.package_recipe_revision_file, method=["GET"])
         @app.route(r.package_revision_file, method=["GET"])
         def get_package_file(name, version, username, channel, package_id, the_path, auth_user,
-                             revision=None, p_revision=None):
+                             revision, p_revision=None):
             pref = get_package_ref(name, version, username, channel, package_id,
                                    revision, p_revision)
             file_generator = conan_service.get_package_file(pref, the_path, auth_user)
@@ -37,7 +35,7 @@ class ConanControllerV2(Controller):
 
         @app.route(r.package_revision_file, method=["PUT"])
         def upload_package_file(name, version, username, channel, package_id,
-                                the_path, auth_user, revision=None, p_revision=None):
+                                the_path, auth_user, revision, p_revision):
 
             if "X-Checksum-Deploy" in request.headers:
                 raise NotFoundException("Non checksum storage")

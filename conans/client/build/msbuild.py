@@ -73,9 +73,11 @@ class MSBuild(object):
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents(definitions)
+            property_file_name = os.path.abspath(property_file_name)
             save(property_file_name, props_file_contents)
             vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
-                                    vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+                                    vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
+                                    output=self._output)
             command = self.get_command(project_file, property_file_name,
                                        targets=targets, upgrade_project=upgrade_project,
                                        build_type=build_type, arch=arch, parallel=parallel,
@@ -160,7 +162,8 @@ class MSBuild(object):
             command.append('/verbosity:%s' % verbosity)
 
         if props_file_path:
-            command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
+            command.append('/p:ForceImportBeforeCppTargets="%s"'
+                           % os.path.abspath(props_file_path))
 
         for name, value in properties.items():
             command.append('/p:%s="%s"' % (name, value))

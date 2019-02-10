@@ -4,7 +4,7 @@ import traceback
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2ConanRouterBuilder
-from conans.client.rest.rest_client_common import RestCommonMethods
+from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import ConanInfo
@@ -242,14 +242,21 @@ class RestV2Methods(RestCommonMethods):
         self.check_credentials()
         if not package_ids:
             url = self.conans_router.remove_all_packages(ref)
-            self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
-                                  verify=self.verify_ssl)
-            return
+            response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                             verify=self.verify_ssl)
+            if response.status_code != 200:  # Error message is text
+                response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
+                raise get_exception_from_error(response.status_code)(response.text)
         for pid in package_ids:
             pref = PackageReference(ref, pid)
             url = self.conans_router.remove_package(pref)
-            self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
-                                  verify=self.verify_ssl)
+            response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                             verify=self.verify_ssl)
+            if response.status_code == 404:
+                raise NotFoundException("Package not found: {}".format(pref.full_repr()))
+            if response.status_code != 200:  # Error message is text
+                response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
+                raise get_exception_from_error(response.status_code)(response.text)
 
     def get_recipe_revisions(self, ref):
         url = self.conans_router.recipe_revisions(ref)
