@@ -107,6 +107,7 @@ class Workspace(object):
             template = """# conanws
 cmake_minimum_required(VERSION 3.3)
 project({name} CXX)
+enable_testing()
 
 """
             cmake = template.format(name=self._name)
