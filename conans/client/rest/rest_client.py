@@ -42,8 +42,8 @@ class RestApiClient(object):
             return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers)
 
-    def get_conan_manifest(self, ref):
-        return self._get_api().get_conan_manifest(ref)
+    def get_recipe_manifest(self, ref):
+        return self._get_api().get_recipe_manifest(ref)
 
     def get_package_manifest(self, pref):
         return self._get_api().get_package_manifest(pref)
