@@ -8,8 +8,6 @@ from parameterized.parameterized import parameterized
 
 from conans.client.build.cmake import CMake
 from conans.model.version import Version
-from conans.test.utils.conanfile import MockSettings, MockConanfile, MockOptions
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
