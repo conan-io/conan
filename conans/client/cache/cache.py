@@ -16,8 +16,10 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.paths.simple_paths import SimplePaths
+from conans.paths.simple_paths import check_ref_case
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock
@@ -65,8 +67,10 @@ class ClientCache(SimplePaths):
             layout_file = edited_ref["layout"]
             return PackageEditableLayout(base_path, layout_file, ref)
         else:
-            return super(ClientCache, self).package_layout(ref, short_paths=short_paths,
-                                                           no_lock=self._no_locks())
+            check_ref_case(ref, self.store)
+            base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
+            return PackageCacheLayout(base_folder=base_folder, ref=ref,
+                                      short_paths=short_paths, no_lock=self._no_locks())
 
     @property
     def registry(self):
