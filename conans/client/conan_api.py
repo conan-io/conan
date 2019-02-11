@@ -5,6 +5,7 @@ from collections import OrderedDict
 import requests
 
 import conans
+
 from conans import __version__ as client_version
 from conans.client import packager, tools
 from conans.client.cache.cache import ClientCache
@@ -21,11 +22,13 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph_manager import GraphManager
+from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
+from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
@@ -45,6 +48,7 @@ from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import get_env_context_manager
+from conans.model.editable_cpp_info import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -56,9 +60,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.editable_cpp_info import get_editable_abs_path
-from conans.client.graph.printer import print_graph
-from conans.client.installer import BinaryInstaller
+
 
 default_manifest_folder = '.conan_manifests'
 
@@ -948,6 +950,16 @@ class ConanAPIV1(object):
     def export_alias(self, reference, target_reference):
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
+
+        # Do not allow to override an existing package
+        alias_conanfile_path = self._cache.package_layout(ref).conanfile()
+        if os.path.exists(alias_conanfile_path):
+            conanfile_class = self._loader.load_class(alias_conanfile_path)
+            conanfile = conanfile_class(self._user_io.out, None, str(ref))
+            if not getattr(conanfile, 'alias', None):
+                raise ConanException("Reference '{}' is already a package, remove it before creating"
+                                     " and alias with the same name".format(ref))
+
         return export_alias(ref, target_ref, self._cache, self._user_io.out)
 
     @api_method
