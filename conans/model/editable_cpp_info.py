@@ -67,7 +67,7 @@ class EditableCppInfo(object):
                                      % (cpp_info_dir, filepath))
             if ref:
                 try:
-                    r = ConanFileReference.loads(ref)
+                    r = ConanFileReference.loads(ref, validate=True)
                     if r.revision:
                         raise ConanException("Don't provide revision in Editable layouts")
                 except ConanException:

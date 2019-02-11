@@ -324,7 +324,7 @@ class BinaryInstaller(object):
                                                     settings=node.conanfile.settings,
                                                     options=node.conanfile.options)
             if build_folder is not None:
-                build_folder = os.path.join(package_layout.conan(), build_folder)
+                build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
                 write_generators(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())

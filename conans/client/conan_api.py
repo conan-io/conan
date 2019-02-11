@@ -465,10 +465,7 @@ class ConanAPIV1(object):
                           remote_name=None, build=None, profile_name=None,
                           update=False, cwd=None):
         cwd = cwd or get_cwd()
-        if os.path.isabs(path):
-            abs_path = path
-        else:
-            abs_path = os.path.normpath(os.path.join(cwd, path))
+        abs_path = os.path.normpath(os.path.join(cwd, path))
 
         workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
