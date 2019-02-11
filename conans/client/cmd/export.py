@@ -15,25 +15,30 @@ from conans.model.scm import SCM, get_scm_data
 from conans.model.scm import detect_repo_type
 from conans.paths import CONANFILE
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir
 from conans.util.log import logger
 
 
-def export_alias(ref_layout, target_reference, output, revisions_enabled):
+def export_alias(reference, target_reference, cache, output):
+    if reference.name != target_reference.name:
+        raise ConanException("An alias can only be defined to a package with the same name")
+
     conanfile = """
 from conans import ConanFile
 
 class AliasConanfile(ConanFile):
     alias = "%s"
-""" % target_reference
+""" % target_reference.full_repr()
 
-    save(ref_layout.conanfile(), conanfile)
-    digest = FileTreeManifest.create(ref_layout.export())
-    digest.save(folder=ref_layout.export())
+    export_path = cache.export(reference)
+    mkdir(export_path)
+    save(os.path.join(export_path, CONANFILE), conanfile)
+    mkdir(cache.export_sources(reference))
+    digest = FileTreeManifest.create(export_path)
+    digest.save(export_path)
 
     # Create the metadata for the alias
-    _update_revision_in_metadata(ref_layout=ref_layout, revisions_enabled=revisions_enabled,
-                                 output=output, path=None, digest=digest)
+    _update_revision_in_metadata(cache, output, None, reference, digest)
 
 
 def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):
@@ -94,11 +99,7 @@ def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_
         digest.save(package_layout.export())
 
     # Compute the revision for the recipe
-    _update_revision_in_metadata(ref_layout=package_layout,
-                                 revisions_enabled=cache.config.revisions_enabled,
-                                 output=output,
-                                 path=os.path.dirname(conanfile_path),
-                                 digest=digest)
+    _update_revision_in_metadata(cache, output, os.path.dirname(conanfile_path), ref, digest)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source_folder = package_layout.source()
@@ -229,18 +230,18 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type
 
 
-def _update_revision_in_metadata(ref_layout, revisions_enabled, output, path, digest):
+def _update_revision_in_metadata(cache, output, path, ref, digest):
 
     scm_revision_detected, repo_type = _detect_scm_revision(path)
     revision = scm_revision_detected or digest.summary_hash
-    if revisions_enabled:
+    if cache.config.revisions_enabled:
         if scm_revision_detected:
             output.info("Using {} commit as the recipe"
                         " revision: {} ".format(repo_type, revision))
         else:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
-    with ref_layout.update_metadata() as metadata:
+    with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.revision = revision
         metadata.recipe.time = None
 

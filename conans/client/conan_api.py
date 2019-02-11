@@ -935,9 +935,6 @@ class ConanAPIV1(object):
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
 
-        if ref.name != target_ref.name:
-            raise ConanException("An alias can only be defined to a package with the same name")
-
         # Do not allow to override an existing package
         alias_conanfile_path = self._cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
@@ -947,10 +944,7 @@ class ConanAPIV1(object):
                 raise ConanException("Reference '{}' is already a package, remove it before creating"
                                      " and alias with the same name".format(ref))
 
-        ref_layout = self._cache.package_layout(ref)
-        return export_alias(ref_layout, target_ref.full_repr(),
-                            revisions_enabled=self._cache.config.revisions_enabled,
-                            output=self._user_io.out)
+        return export_alias(ref, target_ref, self._cache, self._user_io.out)
 
     @api_method
     def get_default_remote(self):
