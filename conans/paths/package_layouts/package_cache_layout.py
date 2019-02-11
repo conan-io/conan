@@ -97,25 +97,24 @@ class PackageCacheLayout(object):
 
     def recipe_exists(self):
         return os.path.exists(self.export()) and \
-               (not self._ref.revision or self.recipe_revision()[0] == self._ref.revision)
+               (not self._ref.revision or self.recipe_revision() == self._ref.revision)
 
     def package_exists(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         return (self.recipe_exists() and
                 os.path.exists(self.package(pref)) and
-                (not pref.revision or self.package_revision(pref)[0] == pref.revision))
+                (not pref.revision or self.package_revision(pref) == pref.revision))
 
     def recipe_revision(self):
         metadata = self.load_metadata()
-        return metadata.recipe.revision, metadata.recipe.time
+        return metadata.recipe.revision
 
     def package_revision(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref.copy_clear_rev() == self._ref.copy_clear_rev()
         metadata = self.load_metadata()
-        tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
-        return metadata.packages[pref.id].revision, tm
+        return metadata.packages[pref.id].revision
 
     # Metadata
     def load_metadata(self):

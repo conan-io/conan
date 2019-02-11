@@ -1,15 +1,14 @@
 import os
-import time
 import traceback
 
+import time
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV1Router
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, NoRestV2Available
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -194,8 +193,7 @@ class RestV1Methods(RestCommonMethods):
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        rev_time = None
-        return zipped_files, ref.copy_with_rev(DEFAULT_REVISION_V1), rev_time
+        return zipped_files
 
     def get_recipe_sources(self, ref, dest_folder):
         urls = self._get_recipe_urls(ref)
@@ -217,9 +215,7 @@ class RestV1Methods(RestCommonMethods):
         urls = self._get_package_urls(pref)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
-        rev_time = None
-        ret_ref = pref.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
-        return zipped_files, ret_ref, rev_time
+        return zipped_files
 
     def _get_package_urls(self, pref):
         """Gets a dict of filename:contents from package"""
@@ -296,7 +292,13 @@ class RestV1Methods(RestCommonMethods):
         return self._post_json(url, payload)
 
     def get_recipe_revisions(self, ref):
-        raise ConanException("The remote doesn't support revisions")
+        raise NoRestV2Available("The remote doesn't support revisions")
 
     def get_package_revisions(self, pref):
-        raise ConanException("The remote doesn't support revisions")
+        raise NoRestV2Available("The remote doesn't support revisions")
+
+    def get_latest_recipe_revision(self, ref):
+        raise NoRestV2Available("The remote doesn't support revisions")
+
+    def get_latest_package_revision(self, pref):
+        raise NoRestV2Available("The remote doesn't support revisions")

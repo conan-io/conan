@@ -1,6 +1,7 @@
+from conans import DEFAULT_REVISION_V1
 from conans.client.output import ScopedOutput
 from conans.client.source import complete_recipe_sources
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, NoRestV2Available
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -13,9 +14,15 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     remote = registry.remotes.get(remote_name) if remote_name else registry.remotes.default
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
+
     # First of all download package recipe
+    if ref.revision is None:
+        try:
+            ref = remote_manager.get_latest_recipe_revision(ref, remote)
+        except NoRestV2Available:
+            ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
     try:
-        ref = remote_manager.get_recipe(ref, remote)
+        remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise NotFoundException("'%s' not found in remote '%s'" % (ref.full_repr(), remote.name))
     registry.refs.set(ref, remote.name)
@@ -26,7 +33,7 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
         # Download the sources too, don't be lazy
         complete_recipe_sources(remote_manager, cache, conanfile, ref)
 
-        if not package_ids:  # User didnt specify a specific package binary
+        if not package_ids:  # User didn't specify a specific package binary
             output.info("Getting the complete package list from '%s'..." % ref.full_repr())
             packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
@@ -39,7 +46,8 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
                          remote=remote)
 
 
-def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output, recorder):
+def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output,
+                       recorder):
     short_paths = conanfile.short_paths
 
     for package_id in package_ids:

@@ -339,9 +339,9 @@ class TestConan(ConanFile):
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
-            rev, _ = layout.recipe_revision()
+            rev = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
-            prev, _ = layout.package_revision(self.pref)
+            prev = layout.package_revision(self.pref)
             self.pref = self.pref.copy_with_revs(rev, prev)
 
         server_reg_folder = self.test_server.server_store.export(self.ref)
@@ -357,9 +357,9 @@ class TestConan(ConanFile):
 
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
-            rev, _ = layout.recipe_revision()
+            rev = layout.recipe_revision()
             self.ref = self.ref.copy_with_rev(rev)
-            prev, _ = layout.package_revision(self.pref)
+            prev = layout.package_revision(self.pref)
             self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)

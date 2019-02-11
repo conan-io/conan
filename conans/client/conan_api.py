@@ -954,9 +954,8 @@ class ConanAPIV1(object):
             layout = self._cache.package_layout(ref)
             if not layout.recipe_exists():
                 raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-            rev, tm = layout.recipe_revision()
-            return {"reference": ref.full_repr(),
-                    "revisions": [{"revision": rev, "time": tm}]}
+            rev = layout.recipe_revision()
+            return {"revisions": [{"revision": rev}]}
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_recipe_revisions(ref, remote=remote)
@@ -977,8 +976,8 @@ class ConanAPIV1(object):
             if not layout.package_exists(pref):
                 raise NotFoundException("Package not found: '%s'" % pref.full_repr())
 
-            rev, tm = layout.package_revision(pref)
-            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
+            rev = layout.package_revision(pref)
+            return {"reference": pref.full_repr(), "revisions": [{"revision": rev}]}
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_package_revisions(pref, remote=remote)

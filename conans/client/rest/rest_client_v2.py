@@ -12,6 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
+from conans.util.dates import iso8601_to_str
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -74,17 +75,15 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        rev_time = data["time"]
         check_compressed_files(EXPORT_TGZ_NAME, files)
-        new_ref = ConanFileReference.loads(data["reference"])
         if EXPORT_SOURCES_TGZ_NAME in files:
             files.remove(EXPORT_SOURCES_TGZ_NAME)
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.recipe_revision_file(ref, fn) for fn in files}
+        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, new_ref, rev_time
+        return ret
 
     def get_recipe_sources(self, ref, dest_folder):
         url = self.router.recipe_snapshot(ref)
@@ -106,14 +105,13 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        rev_time = data["time"]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         pref = PackageReference.loads(data["reference"])
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret, pref, rev_time
+        return ret
 
     def get_path(self, ref, package_id, path):
 
@@ -239,19 +237,23 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_revisions(self, ref):
         url = self.router.recipe_revisions(ref)
         data = self.get_json(url)
-        return data
+        return {"revisions": [iso8601_to_str(r) for r in data["revisions"]]}
 
     def get_package_revisions(self, pref):
         url = self.router.package_revisions(pref)
         data = self.get_json(url)
-        return data
+        return {"revisions": [iso8601_to_str(r) for r in data["revisions"]]}
 
     def get_latest_recipe_revision(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
-        return data
+        rev = data["revision"]
+        # Ignored data["time"]
+        return ref.copy_with_rev(rev)
 
-    def get_latest_package_revision(self, ref):
-        url = self.router.package_latest(ref)
+    def get_latest_package_revision(self, pref):
+        url = self.router.package_latest(pref)
         data = self.get_json(url)
-        return data
+        prev = data["revision"]
+        # Ignored data["time"]
+        return pref.copy_with_rev(prev)

@@ -118,7 +118,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                'conanmanifest.txt']
 
         server = server or self.server
-        rev = server.server_store.get_last_revision(self.ref).revision
+        rev, _ = server.server_store.get_last_revision(self.ref)
         ref = self.ref.copy_with_rev(rev)
         self.assertEqual(scan_folder(server.server_store.export(ref)), expected_server)
 

@@ -33,7 +33,7 @@ class SynchronizeTest(unittest.TestCase):
 
         # Verify the files are there
         if client.cache.config.revisions_enabled:
-            rev, _ = client.cache.package_layout(ref).recipe_revision()
+            rev = client.cache.package_layout(ref).recipe_revision()
             ref = ref.copy_with_rev(rev)
         server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -47,7 +47,7 @@ class SynchronizeTest(unittest.TestCase):
         client.run("export . lasote/stable")
         client.run("upload %s" % str(ref))
         if client.cache.config.revisions_enabled:
-            rev, _ = client.cache.package_layout(ref).recipe_revision()
+            rev = client.cache.package_layout(ref).recipe_revision()
             ref = ref.copy_with_rev(rev)
         server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -65,7 +65,7 @@ class SynchronizeTest(unittest.TestCase):
         client.run("upload %s" % str(ref))
 
         if client.cache.config.revisions_enabled:
-            rev, _ = client.cache.package_layout(ref).recipe_revision()
+            rev = client.cache.package_layout(ref).recipe_revision()
             ref = ref.copy_with_rev(rev)
         server_conan_path = remote_paths.export(ref)
 

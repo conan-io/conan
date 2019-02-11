@@ -135,7 +135,7 @@ def search_packages(cache, ref, query):
     param ref: ConanFileReference object
     """
     if not os.path.exists(cache.conan(ref)) or (
-           ref.revision and cache.package_layout(ref).recipe_revision()[0] != ref.revision):
+           ref.revision and cache.package_layout(ref).recipe_revision() != ref.revision):
         raise NotFoundException("Recipe not found: %s" % ref.full_repr())
     infos = _get_local_infos_min(cache, ref)
     return filter_packages(query, infos)

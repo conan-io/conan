@@ -126,10 +126,11 @@ class CmdUpload(object):
                                      "no packages can be uploaded")
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
+                pref = PackageReference(ref, package_id)
                 p_remote = recipe_remote
-                new_pref = self._upload_package(ref, package_id, metadata, index + 1, total, retry, retry_wait,
-                                                integrity_check, policy, p_remote)
-                upload_recorder.add_package(new_pref, p_remote.name, p_remote.url)
+                self._upload_package(ref, package_id, metadata, index + 1, total, retry, retry_wait,
+                                     integrity_check, policy, p_remote)
+                upload_recorder.add_package(pref, p_remote.name, p_remote.url)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one

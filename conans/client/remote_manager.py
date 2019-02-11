@@ -189,13 +189,16 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
+
+        assert ref.revision is not None, "Cannot get a recipe without revision"
+
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
         dest_folder = self._cache.export(ref)
         rmdir(dest_folder)
 
         t1 = time.time()
         tmp = self._call_remote(remote, "get_recipe", ref, dest_folder)
-        zipped_files, ref, rev_time = tmp
+        zipped_files = tmp
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
@@ -204,14 +207,12 @@ class RemoteManager(object):
         rm_conandir(self._cache.source(ref))
         touch_folder(dest_folder)
         conanfile_path = self._cache.conanfile(ref)
-        self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
 
         with self._cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
-            metadata.recipe.time = rev_time
 
-        return ref
+        self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
+                                   reference=ref, remote=remote)
 
     def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
         t1 = time.time()
@@ -219,7 +220,7 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_recipe_sources", ref, export_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
-            return ref
+            return
 
         duration = time.time() - t1
         log_recipe_sources_download(ref, duration, remote.name, zipped_files)
@@ -232,7 +233,7 @@ class RemoteManager(object):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
-        return ref
+        return
 
     def get_package(self, pref, dest_folder, remote, output, recorder):
         package_id = pref.id
@@ -243,13 +244,11 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            zipped_files, new_pref, rev_time = self._call_remote(remote, "get_package",
-                                                                 pref, dest_folder)
+            zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
-            with self._cache.package_layout(new_pref.ref).update_metadata() as metadata:
-                metadata.packages[new_pref.id].revision = new_pref.revision
-                metadata.packages[new_pref.id].recipe_revision = new_pref.ref.revision
-                metadata.packages[new_pref.id].time = rev_time
+            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+                metadata.packages[pref.id].revision = pref.revision
+                metadata.packages[pref.id].recipe_revision = pref.ref.revision
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
@@ -275,7 +274,6 @@ class RemoteManager(object):
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=package_id, remote=remote)
-        return new_pref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
@@ -313,12 +311,10 @@ class RemoteManager(object):
         return self._call_remote(remote, 'authenticate', name, password)
 
     def get_recipe_revisions(self, ref, remote):
-        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
-        return revisions
+        return self._call_remote(remote, "get_recipe_revisions", ref)
 
     def get_recipe_revisions(self, ref, remote):
-        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
-        return revisions
+        return self._call_remote(remote, "get_recipe_revisions", ref)
 
     def get_package_revisions(self, pref, remote):
         revisions = self._call_remote(remote, "get_package_revisions", pref)

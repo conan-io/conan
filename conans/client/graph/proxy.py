@@ -2,13 +2,14 @@ import os
 
 from requests.exceptions import RequestException
 
+from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
                                        RECIPE_UPDATED, RECIPE_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, NoRestV2Available
 from conans.model.manifest import FileTreeManifest
 from conans.util.tracer import log_recipe_got_from_local_cache
 
@@ -56,7 +57,7 @@ class ConanProxy(object):
 
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
-        cur_revision, _ = self._cache.package_layout(ref).recipe_revision()
+        cur_revision = self._cache.package_layout(ref).recipe_revision()
         requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
         if requested_different_revision and not check_updates:
             raise NotFoundException("The recipe in the local cache doesn't match the specified "
@@ -91,10 +92,10 @@ class ConanProxy(object):
                 if update:
                     DiskRemover(self._cache).remove_recipe(ref)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
-                    new_ref = self._remote_manager.get_recipe(ref, update_remote)
-                    self._registry.refs.set(new_ref, update_remote.name)
+                    self._download_recipe(ref, output, update_remote.name, recorder)
+                    self._registry.refs.set(ref, update_remote.name)
                     status = RECIPE_UPDATED
-                    return conanfile_path, status, update_remote, new_ref
+                    return conanfile_path, status, update_remote, ref
                 else:
                     status = RECIPE_UPDATEABLE
             else:
@@ -106,15 +107,22 @@ class ConanProxy(object):
         return conanfile_path, status, update_remote, ref
 
     def _download_recipe(self, ref, output, remote_name, recorder):
-        def _retrieve_from_remote(the_remote):
+
+        def _retrieve_from_remote(_ref, the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
-            _new_ref = self._remote_manager.get_recipe(ref, the_remote)
-            self._registry.refs.set(_new_ref, the_remote.name)
+            if _ref.revision is None:
+                try:
+                    _ref = self._remote_manager.get_latest_recipe_revision(_ref, the_remote)
+                except NoRestV2Available:
+                    _ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+
+            self._remote_manager.get_recipe(_ref, the_remote)
+            self._registry.refs.set(_ref, the_remote.name)
             recorder.recipe_downloaded(ref, the_remote.url)
-            return _new_ref
+            return _ref
 
         if remote_name:
-            output.info("Not found, retrieving from server '%s' " % remote_name)
+            output.info("Retrieving from server '%s' " % remote_name)
             remote = self._registry.remotes.get(remote_name)
         else:
             remote = self._registry.refs.get(ref)
@@ -123,7 +131,7 @@ class ConanProxy(object):
 
         if remote:
             try:
-                new_ref = _retrieve_from_remote(remote)
+                new_ref = _retrieve_from_remote(ref, remote)
                 return remote, new_ref
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
@@ -141,7 +149,7 @@ class ConanProxy(object):
             raise ConanException("No remote defined")
         for remote in remotes:
             try:
-                new_ref = _retrieve_from_remote(remote)
+                new_ref = _retrieve_from_remote(ref, remote)
                 return remote, new_ref
             # If not found continue with the next, else raise
             except NotFoundException:

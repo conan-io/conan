@@ -145,7 +145,6 @@ class _ConanPackageBuilder(object):
         with self._cache.package_layout(self._ref).update_metadata() as metadata:
             if metadata.packages[package_id].revision != package_hash:
                 metadata.packages[package_id].revision = package_hash
-                metadata.packages[package_id].time = None
             metadata.packages[package_id].recipe_revision = self._ref.revision
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
@@ -342,10 +341,10 @@ class BinaryInstaller(object):
                     self._build_package(node, pref, output, keep_build)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     if not self._node_concurrently_installed(node, package_folder):
-                        new_ref = self._remote_manager.get_package(pref, package_folder,
-                                                                   node.binary_remote, output,
-                                                                   self._recorder)
-                        self._registry.prefs.set(new_ref, node.binary_remote.name)
+                        self._remote_manager.get_package(pref, package_folder,
+                                                         node.binary_remote, output,
+                                                         self._recorder)
+                        self._registry.prefs.set(pref, node.binary_remote.name)
                     else:
                         output.success('Download skipped. Probable concurrent download')
                         log_package_got_from_local_cache(pref)

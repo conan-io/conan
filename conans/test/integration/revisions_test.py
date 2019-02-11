@@ -169,18 +169,17 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
 
         # Read current revision
-        self.assertEquals(pref.ref.revision, self.c_v2.recipe_revision(self.ref)[0])
+        self.assertEquals(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
 
     @parameterized.expand([(True,), (False,)])
     def test_install_rev0(self, v1):
         """If we upload a revision with a v1 client it is stored as rev0 in the server then:
-         0. In the cache the revision is kept, not overwrite with the "0" & the timestamp is NOT
-         updated.
+         0. In the cache the revision is kept, not overwrite with the "0"
 
          If we install it with a fresh client:
 
-         1. With revisions enabled, it is 0 in the metadata, with None time (not supported)
-         2. Without revisions,  it is 0 in the metadata, with not null time"""
+         1. With revisions enabled, it is 0 in the metadata (not supported)
+         2. Without revisions,  it is 0 in the metadata"""
 
         # Upload with v1
         pref = self.c_v1.create(self.ref)
@@ -194,10 +193,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         remote_rev_time = self.server.recipe_revision_time(remote_ref)
         self.assertIsNotNone(remote_rev_time)
 
-        local_rev, rev_time = self.c_v1.recipe_revision(self.ref)
+        local_rev = self.c_v1.recipe_revision(self.ref)
 
         self.assertNotEquals(local_rev, DEFAULT_REVISION_V1)
-        self.assertIsNone(rev_time)
+
         self.assertEquals(local_rev, pref.ref.revision)
 
         # Remove all from c_v1
@@ -205,52 +204,33 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         client = self.c_v1 if v1 else self.c_v2
         client.run("install {}".format(self.ref))
-        local_rev, rev_time = client.recipe_revision(self.ref)
-        local_prev, prev_time = client.package_revision(pref)
+        local_rev = client.recipe_revision(self.ref)
+        local_prev = client.package_revision(pref)
         self.assertEquals(local_rev, DEFAULT_REVISION_V1)
-        if v1:
-            self.assertIsNone(rev_time)
-        else:
-            self.assertIsNotNone(rev_time)  # Able to receive the time from the server
-
         self.assertEquals(local_prev, DEFAULT_REVISION_V1)
 
-        if v1:
-            self.assertIsNone(prev_time)
-        else:
-            self.assertIsNotNone(prev_time)  # Able to receive the time from the server
-
     def test_revision_metadata_update_on_install(self):
-        """If a clean v2 client installs a RREV/PREV from a server, it get the time and
+        """If a clean v2 client installs a RREV/PREV from a server, it get
         the revision from upstream"""
         # Upload with v2
         pref = self.c_v2.create(self.ref)
         self.c_v2.upload_all(self.ref)
-
-        rev_time_remote = self.server.recipe_revision_time(pref.ref)
-        prev_time_remote = self.server.package_revision_time(pref)
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
         self.assertRaises(IOError, self.c_v2.recipe_revision, self.ref)
 
         self.c_v2.run("install {}".format(self.ref))
-        local_rev, rev_time = self.c_v2.recipe_revision(self.ref)
-        local_prev, prev_time = self.c_v2.package_revision(pref)
+        local_rev = self.c_v2.recipe_revision(self.ref)
+        local_prev = self.c_v2.package_revision(pref)
         self.assertEquals(local_rev, pref.ref.revision)
         self.assertEquals(local_prev, pref.revision)
-
-        self.assertEquals(rev_time, rev_time_remote)
-        self.assertEquals(prev_time, prev_time_remote)
-
-        self.assertIsNotNone(rev_time)
-        self.assertIsNotNone(prev_time)
 
     def test_revision_metadata_update_on_update(self):
         """
         A client v2 upload a recipe revision
         Another client v2 upload a new recipe revision
-        The first client can upgrade from the remote, getting the right time"""
+        The first client can upgrade from the remote"""
         client = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
         client2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
 
@@ -274,15 +254,11 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run("install {} --update".format(self.ref))
         self.assertIn("Package installed {}".format(pref2.id), client.out)
 
-        rrev, rrev_time = client.recipe_revision(self.ref)
+        rrev = client.recipe_revision(self.ref)
         self.assertIsNotNone(rrev)
-        self.assertIsNotNone(rrev_time)
-        self.assertEquals(rrev_time, rrev2_time_remote)
 
-        prev, prev_time = client.package_revision(pref2)
+        prev = client.package_revision(pref2)
         self.assertIsNotNone(prev)
-        self.assertIsNotNone(prev_time)
-        self.assertEquals(prev_time, prev2_time_remote)
 
     def test_revision_update_on_package_update(self):
         """
@@ -311,9 +287,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run("install {} --update".format(self.ref))
         self.assertIn("{} from 'default' - Cache".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.id), client.out)
-
-        _, rrev_time = client.recipe_revision(self.ref)
-        self.assertIsNone(rrev_time)  # Is None because it has not been downloaded
 
         prev, prev_time = client.package_revision(pref)
         self.assertIsNotNone(prev)
@@ -409,42 +382,25 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         client = self.c_v1 if v1 else self.c_v2
         pref = client.create(self.ref)
         # Check recipe revision
-        rev, rev_time = client.recipe_revision(self.ref)
+        rev = client.recipe_revision(self.ref)
         self.assertEquals(pref.ref.revision, rev)
         self.assertIsNotNone(rev)
-        self.assertIsNone(rev_time)  # Time is none until installed
 
         # Check package revision
-        prev, prev_time = client.package_revision(pref)
+        prev = client.package_revision(pref)
         self.assertEquals(pref.revision, prev)
         self.assertIsNotNone(prev)
-        self.assertIsNone(prev_time)
 
         # Create new revision, check that it changes
         client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-        rev2, rev_time2 = client.recipe_revision(self.ref)
-        prev2, prev_time2 = client.package_revision(pref)
+        rev2 = client.recipe_revision(self.ref)
+        prev2 = client.package_revision(pref)
 
         self.assertNotEqual(rev2, rev)
         self.assertNotEqual(prev2, prev)
 
         self.assertIsNotNone(rev2)
         self.assertIsNotNone(prev2)
-        self.assertIsNone(prev_time2)
-
-    def test_new_exported_revision_always_clear_time(self):
-        self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
-
-        self.c_v2.remove_all()
-        self.c_v2.run("install {}".format(self.ref))
-        rrev, rtime = self.c_v2.recipe_revision(self.ref)
-        self.assertIsNotNone(rrev)
-        self.assertIsNotNone(rtime)
-
-        self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-        _, rtime = self.c_v2.recipe_revision(self.ref)
-        self.assertIsNone(rtime)
 
     @parameterized.expand([(True,), (False,)])
     def test_new_exported_recipe_clears_outdated_packages(self, v1):
@@ -470,18 +426,16 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         client = self.c_v1 if v1 else self.c_v2
         ref = client.export(self.ref)
         # Check recipe revision
-        rev, rev_time = client.recipe_revision(self.ref)
+        rev = client.recipe_revision(self.ref)
         self.assertEquals(ref.revision, rev)
         self.assertIsNotNone(rev)
-        self.assertIsNone(rev_time)  # Time is none until installed
 
         # Export new revision, check that it changes
         client.export(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-        rev2, rev_time2 = client.recipe_revision(self.ref)
+        rev2 = client.recipe_revision(self.ref)
 
         self.assertNotEqual(rev2, rev)
         self.assertIsNotNone(rev2)
-        self.assertIsNone(rev_time2)
 
     def test_remove_metadata(self):
         """If I remote a package, the metadata is cleared"""
@@ -491,12 +445,10 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref))
 
         self.c_v2.run("remove {} -p {} -f".format(pref.ref, pref.id))
-        prev, prev_time = self.c_v2.package_revision(pref)
-        rev, rev_time = self.c_v2.recipe_revision(pref.ref)
+        prev = self.c_v2.package_revision(pref)
+        rev = self.c_v2.recipe_revision(pref.ref)
         self.assertIsNone(prev)
-        self.assertIsNone(prev_time)
         self.assertIsNotNone(rev)
-        self.assertIsNotNone(rev_time)
         self.c_v2.remove_all()
         self.assertRaises(IOError, self.c_v2.recipe_revision, pref.ref)
 
@@ -1271,10 +1223,10 @@ class UploadPackagesWithRevisions(unittest.TestCase):
             self.assertIn("Local package is different from the remote package. "
                           "Forbidden overwrite.", client.out)
         else:
-            self.assertEquals(self.server.server_store.get_last_package_revision(pref2)[0],
+            self.assertEquals(self.server.server_store.get_last_package_revision(pref2),
                               pref.revision)
             client.upload_all(self.ref, args="--no-overwrite")
-            self.assertEquals(self.server.server_store.get_last_package_revision(pref2)[0],
+            self.assertEquals(self.server.server_store.get_last_package_revision(pref2),
                               pref2.revision)
 
 
@@ -1290,12 +1242,12 @@ class SCMRevisions(unittest.TestCase):
         conanfile = GenConanfile()
         commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref)[0], commit)
+        self.assertEquals(client.recipe_revision(ref), commit)
 
         # Change the conanfile and make another create, the revision should be the same
         client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref)[0], commit)
+        self.assertEquals(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
     @attr("svn")
@@ -1310,12 +1262,12 @@ class SCMRevisions(unittest.TestCase):
                                       files={"file.txt": "hey", "conanfile.py": str(conanfile)})
         client.current_folder = os.path.join(client.current_folder, "project")
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref)[0], commit)
+        self.assertEquals(client.recipe_revision(ref), commit)
 
         # Change the conanfile and make another create, the revision should be the same
         client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref)[0], commit)
+        self.assertEquals(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
 
@@ -1332,7 +1284,7 @@ class CapabilitiesRevisionsTest(unittest.TestCase):
         c_v2.upload_all(ref)
         c_v2.remove_all()
         c_v2.run("install {}".format(ref))
-        self.assertEquals(c_v2.recipe_revision(ref)[0], DEFAULT_REVISION_V1)
+        self.assertEquals(c_v2.recipe_revision(ref), DEFAULT_REVISION_V1)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
@@ -1349,7 +1301,7 @@ class InfoRevisions(unittest.TestCase):
         client = c_v1 if v1 else c_v2
         client.create(ref)
         client.run("info {}".format(ref))
-        revision = client.recipe_revision(ref)[0]
+        revision = client.recipe_revision(ref)
         if v1:
             self.assertNotIn("Revision:", client.out)
         else:
@@ -1407,17 +1359,17 @@ class ServerRevisionsIndexes(unittest.TestCase):
         with environment_append({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1),
                           pref1.revision)
         with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1),
                           pref2.revision)
         with environment_append({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         server_pref3 = self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1),
                           pref3.revision)
 
         self.assertEquals(pref1.ref.revision, pref2.ref.revision)
@@ -1428,12 +1380,11 @@ class ServerRevisionsIndexes(unittest.TestCase):
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEquals(revs, [pref3.revision, pref2.revision, pref1.revision])
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref).revision,
-                          pref3.revision)
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref), pref3.revision)
 
         # Delete the latest from the server
         self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_repr(),
-                                                                pref3.id, pref3.revision))
+                                                                pref3.id, pref3))
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEquals(revs, [pref2.revision, pref1.revision])

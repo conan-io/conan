@@ -59,10 +59,10 @@ class ConanServiceV2(CommonService):
         return ret
 
     def get_latest_revision(self, ref, auth_user):
-        return self.get_recipe_revisions(ref, auth_user)[-1]
+        return list(self.get_recipe_revisions(ref, auth_user))[-1]
 
     def get_latest_package_revision(self, pref, auth_user):
-        return self.get_package_revisions(pref, auth_user)[-1]
+        return list(self.get_package_revisions(pref, auth_user))[-1]
 
     # PACKAGE METHODS
     def get_package_file_list(self, pref, auth_user):

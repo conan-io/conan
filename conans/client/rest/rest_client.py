@@ -102,3 +102,9 @@ class RestApiClient(object):
 
     def get_package_revisions(self, pref):
         return self._get_api().get_package_revisions(pref)
+
+    def get_latest_recipe_revision(self, ref):
+        return self._get_api().get_latest_recipe_revision(ref)
+
+    def get_latest_package_revision(self, pref):
+        return self._get_api().get_latest_package_revision(pref)

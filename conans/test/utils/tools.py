@@ -290,7 +290,7 @@ class TestServer(object):
     def latest_package(self, pref):
         if not pref.ref.revision:
             raise Exception("Pass a pref with .rev.revision (Testing framework)")
-        prev, _ = self.test_server.server_store.get_last_package_revision(pref)
+        prev = self.test_server.server_store.get_last_package_revision(pref)
         return pref.copy_with_revs(pref.ref.revision, prev)
 
     def package_revision_time(self, pref):
@@ -728,7 +728,7 @@ class TurboTestClient(TestClient):
         self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_repr(), args or ""),
                  assert_error=assert_error)
-        rrev, _ = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
     def create(self, ref, conanfile=None, args=None, assert_error=False):
@@ -737,21 +737,21 @@ class TurboTestClient(TestClient):
         self.run("create . {} {} --json {}".format(ref.full_repr(),
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev, _ = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.package_layout(ref).recipe_revision()
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev, _ = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
         self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
                  assert_error=assert_error)
-        remote_rrev = self.servers[remote].server_store.get_last_revision(ref).revision
+        remote_rrev = self.servers[remote].server_store.get_last_revision(ref)
         return ref.copy_with_rev(remote_rrev)
 
     def remove_all(self):
