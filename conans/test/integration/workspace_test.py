@@ -1,12 +1,14 @@
 import os
 import platform
+import time
 import unittest
+
 from textwrap import dedent
+
 
 from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import time
 
 
 conanfile_build = """from conans import ConanFile, CMake

@@ -1,12 +1,12 @@
 import os
-import time
 from collections import defaultdict
+
+import time
 
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.search.search import search_packages, search_recipes
-from conans.util.env_reader import get_env
 from conans.util.files import load
 from conans.util.log import logger
 
@@ -112,8 +112,7 @@ class CmdUpload(object):
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision
-            revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-            if revisions_enabled and ref.revision:
+            if self._cache.config.revisions_enabled and ref.revision:
                 recipe_package_ids = []
                 for package_id in packages_ids:
                     rec_rev = metadata.packages[package_id].recipe_revision
@@ -130,11 +129,10 @@ class CmdUpload(object):
                                      "no packages can be uploaded")
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
-                pref = PackageReference(ref, package_id)
                 p_remote = recipe_remote
-                self._upload_package(pref, metadata, index + 1, total, retry, retry_wait,
-                                     integrity_check, policy, p_remote)
-                upload_recorder.add_package(pref, p_remote.name, p_remote.url)
+                new_pref = self._upload_package(ref, package_id, metadata, index + 1, total, retry, retry_wait,
+                                                integrity_check, policy, p_remote)
+                upload_recorder.add_package(new_pref, p_remote.name, p_remote.url)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
@@ -157,18 +155,18 @@ class CmdUpload(object):
 
         return ref
 
-    def _upload_package(self, pref, metadata, index=1, total=1, retry=None, retry_wait=None,
+    def _upload_package(self, ref, package_id, metadata, index=1, total=1, retry=None, retry_wait=None,
                         integrity_check=False, policy=None, p_remote=None):
         """Uploads the package identified by package_id"""
 
-        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(pref.id), p_remote.name))
+        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(package_id), p_remote.name))
         t1 = time.time()
         self._user_io.out.info(msg)
 
         # Read the revisions and build a correct package reference for the server
-        package_revision = metadata.packages[pref.id].revision
+        package_revision = metadata.packages[package_id].revision
         # Copy to not modify the original with the revisions
-        new_pref = pref.copy_with_revs(pref.ref.revision, package_revision)
+        new_pref = PackageReference(ref, package_id, package_revision)
 
         assert (new_pref.revision is not None)
         assert (new_pref.ref.revision is not None)
@@ -185,11 +183,11 @@ class CmdUpload(object):
 
     def _check_recipe_date(self, ref, remote):
         try:
-            remote_recipe_manifest = self._remote_manager.get_conan_manifest(ref, remote)
+            remote_recipe_manifest = self._remote_manager.get_recipe_manifest(ref, remote)
         except NotFoundException:
             return  # First time uploading this package
 
-        local_manifest = self._cache.package_layout(ref).load_manifest()
+        local_manifest = self._cache.package_layout(ref).recipe_manifest()
         if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
             self._print_manifest_information(remote_recipe_manifest, local_manifest, ref, remote)

@@ -85,11 +85,10 @@ class ServerStore(SimplePaths):
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, ref):
         assert isinstance(ref, ConanFileReference)
-        result = self._storage_adapter.delete_folder(self.conan(ref, resolve_latest=False))
+        self._storage_adapter.delete_folder(self.conan(ref, resolve_latest=False))
         if ref.revision:
             self._remove_revision_from_index(ref)
         self._storage_adapter.delete_empty_dirs([ref])
-        return result
 
     def remove_packages(self, ref, package_ids_filter):
         assert isinstance(ref, ConanFileReference)
@@ -207,26 +206,6 @@ class ServerStore(SimplePaths):
             return []
         return revs
 
-    def get_latest_package_reference(self, pref):
-        assert(isinstance(pref, PackageReference))
-        rev_file_path = self._recipe_revisions_file(pref.ref)
-        revs = self._get_revisions_list(rev_file_path).as_list()
-        if not revs:
-            raise NotFoundException("Recipe not found: '%s'" % str(pref.ref))
-
-        for rev in revs:
-            pref = PackageReference(pref.ref.copy_with_rev(rev.revision), pref.id)
-            tmp = self.get_last_package_revision(pref)
-            if tmp:
-                pref = pref.copy_with_revs(rev.revision, tmp.revision)
-            try:
-                folder = self.package(pref)
-                if self._storage_adapter.path_exists(folder):
-                    return pref
-            except NotFoundException:
-                pass
-        raise NotFoundException("Package not found: '%s'" % str(pref))
-
     def get_last_package_revision(self, pref):
         assert(isinstance(pref, PackageReference))
         rev_file_path = self._package_revisions_file(pref)
@@ -328,11 +307,6 @@ class ServerStore(SimplePaths):
 
     def p_ref_with_rev(self, pref):
         if pref.revision and pref.ref.revision:
-            return pref
-
-        if not pref.ref.revision:
-            # Search the latest recipe revision with the requested package
-            pref = self.get_latest_package_reference(pref)
             return pref
 
         ref = self.ref_with_rev(pref.ref)

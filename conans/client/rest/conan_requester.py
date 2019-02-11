@@ -13,7 +13,7 @@ from conans.util.tracer import log_client_rest_api_call
 class ConanRequester(object):
 
     def __init__(self, requester, cache, timeout):
-        self.proxies = cache.conan_config.proxies or {}
+        self.proxies = cache.config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
         self._timeout_seconds = timeout

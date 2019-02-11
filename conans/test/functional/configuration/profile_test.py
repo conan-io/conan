@@ -294,7 +294,7 @@ class ProfileTest(unittest.TestCase):
     def default_including_another_profile_test(self):
         p1 = "include(p2)\n[env]\nA_VAR=1"
         p2 = "include(default)\n[env]\nA_VAR=2"
-        self.client.cache.conan_config  # Create the default conf
+        self.client.cache.config  # Create the default conf
         self.client.cache.default_profile  # Create default profile
         save(os.path.join(self.client.cache.profiles_path, "p1"), p1)
         save(os.path.join(self.client.cache.profiles_path, "p2"), p2)

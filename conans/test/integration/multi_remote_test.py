@@ -119,7 +119,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
-    @unittest.skipIf(TestClient().revisions,
+    @unittest.skipIf(TestClient().cache.config.revisions_enabled,
                      "This test is not valid for revisions, where we keep iterating the remotes "
                      "for searching a package for the same recipe revision")
     def package_binary_remote_test(self):
@@ -171,9 +171,3 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", self.client.out)
         self.assertIn("Downloading conan_package.tgz", self.client.out)
-
-        if not self.client.revisions and not self.client.block_v2:
-            self.client.run("install %s#%s --update" % (reference, rev1))
-
-            self.assertIn("Hello/0.1@lasote/stable:"
-                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", self.client.out)

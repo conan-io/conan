@@ -9,6 +9,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
 
 
@@ -177,6 +178,9 @@ class HelloPythonConan(ConanFile):
         self.assertIn("optionOne: 123", client.out)
 
     @parameterized.expand([(False, ), (True, )])
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False),
+                     "This test exports several RREVS assuming that the "
+                     "packages will be preserved and they will be removed")
     def test_basic(self, short_paths):
         client = TestClient()
         conanfile = """

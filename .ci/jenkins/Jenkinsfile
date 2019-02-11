@@ -69,10 +69,10 @@ if(is_pr){ // Read the PR body to
 
 def flavors
 if(test_revisions){
-    flavors = ["enabled_revisions", "disabled_revisions",  "blocked_v2"]
+    flavors = ["disabled_revisions", "enabled_revisions"]
 }
 else{
-    flavors = ["blocked_v2"]
+    flavors = ["disabled_revisions"]
 }
 
 def module = "\"conans.test\""

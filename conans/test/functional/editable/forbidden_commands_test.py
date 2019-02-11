@@ -27,6 +27,12 @@ class ForbiddenRemoveTest(unittest.TestCase):
         self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
                       "using command 'conan link lib/version@user/name --remove'", t.out)
 
+        # Also with a pattern, but only a warning
+        t.run('remove lib* --force')
+        self.assertIn("WARN: Package 'lib/version@user/name' is installed as editable, "
+                      "unlink it first using command 'conan link lib/version@user/name --remove'",
+                      t.out)
+        self.assertTrue(t.cache.installed_as_editable(ref))
 
 class ForbiddenCommandsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""\
