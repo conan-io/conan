@@ -1,12 +1,13 @@
 
 class RestRoutes(object):
 
-    def __init__(self, base_url):
-        self.base_url = base_url
+    @property
+    def ping(self):
+        return "ping"
 
     @property
     def recipe(self):
-        return '%s/{name}/{version}/{username}/{channel}' % self.base_url
+        return 'conans/{name}/{version}/{username}/{channel}'
 
     @property
     def recipe_latest(self):
@@ -71,6 +72,10 @@ class RestRoutes(object):
 
     # ONLY V1
     @property
+    def v1_updown_file(self):
+        return "files/{path}"
+
+    @property
     def v1_recipe_digest(self):
         return "%s/digest" % self.recipe
 
@@ -105,11 +110,11 @@ class RestRoutes(object):
     # COMMON URLS
     @property
     def ping(self):
-        return "%s/ping" % self.base_url
+        return "ping"
 
     @property
     def common_search(self):
-        return "%s/search" % self.base_url
+        return "conans/search"
 
     @property
     def common_search_packages(self):
@@ -121,8 +126,8 @@ class RestRoutes(object):
 
     @property
     def common_authenticate(self):
-        return "%s/authenticate" % self.base_url
+        return "users/authenticate"
 
     @property
     def common_check_credentials(self):
-        return "%s/check_credentials" % self.base_url
+        return "users/check_credentials"

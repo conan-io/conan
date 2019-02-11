@@ -106,7 +106,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading package 1/1", client.user_io.out)
 
         client.run("upload Hello1/*@user/testing --confirm -q 'arch=armv8'")
-        for i in range(1, 4):º
+        for i in range(1, 4):
             self.assertIn("Uploading package %d/3" % i, client.user_io.out)
         self.assertIn("Package is up to date, upload skipped", client.user_io.out)
 
@@ -215,10 +215,15 @@ class UploadTest(unittest.TestCase):
                       client2.out)
 
         # first client tries to upload again
-        client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
-        self.assertIn("Remote recipe is newer than local recipe", client.user_io.out)
-        self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.user_io.out)
-        self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.user_io.out)
+        if not client.cache.config.revisions_enabled:
+            client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
+            self.assertIn("Remote recipe is newer than local recipe", client.user_io.out)
+            self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.user_io.out)
+            self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.user_io.out)
+        else:
+            # The client tries to upload exactly the same revision already uploaded, so no changes
+            client.run("upload Hello0/1.2.1@frodo/stable")
+            self.assertIn("Recipe is up to date, upload skipped", client.user_io.out)
 
     def upload_unmodified_recipe_test(self):
         client = self._client()

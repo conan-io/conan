@@ -1,17 +1,17 @@
 from conans.model.ref import ConanFileReference
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.rest.controller.controller import Controller
 from conans.server.rest.controller.v2 import get_package_ref
 from conans.server.service.v2.service_v2 import ConanServiceV2
 
 
-class RevisionsController(Controller):
+class RevisionsController(object):
     """
         Serve requests related with Conan
     """
-    def attach_to(self, app):
+    @staticmethod
+    def attach_to(app):
 
-        r = BottleRoutes(self.route)
+        r = BottleRoutes()
 
         @app.route(r.recipe_revisions, method="GET")
         def get_recipe_revisions(name, version, username, channel, auth_user):
@@ -28,7 +28,7 @@ class RevisionsController(Controller):
             """
             conan_reference = ConanFileReference(name, version, username, channel)
             conan_service = ConanServiceV2(app.authorizer, app.server_store)
-            rev = conan_service.get_latest_revision(conan_reference)
+            rev = conan_service.get_latest_revision(conan_reference, auth_user)
             return _format_rev_return(rev)
 
         @app.route(r.package_revisions, method="GET")
@@ -52,10 +52,12 @@ class RevisionsController(Controller):
             rev = conan_service.get_latest_package_revision(package_reference, auth_user)
             return _format_rev_return(rev)
 
-        def _format_rev_return(rev):
-            return {"revision": rev[0],
-                    "time": rev[1]}
 
-        def _format_revs_return(ref, revs):
-            return {"reference": ref.full_repr(),
-                    "revisions": [self._format_rev_return(rev)for rev in revs]}
+def _format_rev_return(rev):
+    return {"revision": rev[0],
+            "time": rev[1]}
+
+
+def _format_revs_return(ref, revs):
+    return {"reference": ref.full_repr(),
+            "revisions": [_format_rev_return(rev)for rev in revs]}

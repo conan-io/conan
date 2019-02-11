@@ -1,17 +1,17 @@
 from conans.model.ref import ConanFileReference
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.rest.controller.controller import Controller
 from conans.server.rest.controller.v2 import get_package_ref
 from conans.server.service.v1.service import ConanService
 
 
-class DeleteControllerV2(Controller):
+class DeleteControllerV2(object):
     """
         Serve requests related with Conan
     """
-    def attach_to(self, app):
+    @staticmethod
+    def attach_to(app):
 
-        r = BottleRoutes(self.route)
+        r = BottleRoutes()
 
         @app.route(r.recipe, method="DELETE")
         @app.route(r.recipe_revision, method="DELETE")

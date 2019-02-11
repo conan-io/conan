@@ -3,17 +3,17 @@ from bottle import request
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.rest.controller.controller import Controller
 from conans.server.rest.controller.v2 import get_package_ref
 from conans.server.service.v2.service_v2 import ConanServiceV2
 
 
-class ConanControllerV2(Controller):
+class ConanControllerV2(object):
 
-    def attach_to(self, app):
+    @staticmethod
+    def attach_to(app):
 
         conan_service = ConanServiceV2(app.authorizer, app.server_store)
-        r = BottleRoutes(self.route)
+        r = BottleRoutes()
 
         @app.route(r.package_revision_files, method=["GET"])
         def get_package_file_list(name, version, username, channel, package_id, auth_user,

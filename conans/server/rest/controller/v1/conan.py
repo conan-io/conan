@@ -8,17 +8,17 @@ from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.rest.controller.controller import Controller
 from conans.server.service.v1.service import ConanService
 
 
-class ConanController(Controller):
+class ConanController(object):
     """
         Serve requests related with Conan
     """
-    def attach_to(self, app):
+    @staticmethod
+    def attach_to(app):
 
-        r = BottleRoutes(self.route)
+        r = BottleRoutes()
 
         @app.route(r.v1_recipe_digest, method=["GET"])
         def get_conan_manifest_url(name, version, username, channel, auth_user):

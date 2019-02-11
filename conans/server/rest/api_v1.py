@@ -27,19 +27,19 @@ class ApiV1(Bottle):
         self.install_plugins()
 
         # Capabilities in a ping
-        PingController("").attach_to(self)
+        PingController().attach_to(self)
 
         # Install conans controller
-        ConanController("/conans").attach_to(self)
-        SearchController("/conans").attach_to(self)
-        DeleteController("/conans").attach_to(self)
+        ConanController().attach_to(self)
+        SearchController().attach_to(self)
+        DeleteController().attach_to(self)
 
         # Install users controller
-        UsersController("/users").attach_to(self)
+        UsersController().attach_to(self)
 
         # Install updown controller
         if self.updown_auth_manager:
-            FileUploadDownloadController("/files").attach_to(self)
+            FileUploadDownloadController().attach_to(self)
 
     def install_plugins(self):
         # Second, check Http Basic Auth

@@ -21,13 +21,12 @@ class ApiV2(ApiV1):
         self.install_plugins()
 
         # Capabilities in a ping
-        PingController("").attach_to(self)
+        PingController().attach_to(self)
 
-        conan_endpoint = "/conans"
-        SearchControllerV2(conan_endpoint).attach_to(self)
-        DeleteControllerV2(conan_endpoint).attach_to(self)
-        ConanControllerV2(conan_endpoint).attach_to(self)
-        RevisionsController(conan_endpoint).attach_to(self)
+        SearchControllerV2().attach_to(self)
+        DeleteControllerV2().attach_to(self)
+        ConanControllerV2().attach_to(self)
+        RevisionsController().attach_to(self)
 
         # Install users controller
-        UsersController("/users").attach_to(self)
+        UsersController().attach_to(self)

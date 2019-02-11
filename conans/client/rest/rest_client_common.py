@@ -6,12 +6,11 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
-from conans.client.rest.client_routes import ClientUsersRouterBuilder, \
-    ClientSearchRouterBuilder, ClientBaseRouterBuilder
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException)
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
+from conans.model.rest_routes import RestRoutes
 from conans.search.search import filter_packages
 from conans.util.files import decode_text, load
 from conans.util.log import logger
@@ -79,23 +78,11 @@ class RestCommonMethods(object):
     def auth(self):
         return JWTAuth(self.token)
 
-    @property
-    def users_router(self):
-        return ClientUsersRouterBuilder(self.remote_api_url)
-
-    @property
-    def search_router(self):
-        return ClientSearchRouterBuilder(self.remote_api_url)
-
-    @property
-    def base_router(self):
-        return ClientBaseRouterBuilder(self.remote_api_url)
-
     @handle_return_deserializer()
     def authenticate(self, user, password):
         """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
-        url = self.users_router.common_authenticate()
+        url = self.router.common_authenticate()
         logger.debug("REST: Authenticate: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
@@ -111,7 +98,7 @@ class RestCommonMethods(object):
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
-        url = self.users_router.common_check_credentials()
+        url = self.router.common_check_credentials()
         logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
@@ -119,7 +106,7 @@ class RestCommonMethods(object):
 
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
-        url = self.base_router.ping()
+        url = self.router.ping()
         logger.debug("REST: ping: %s" % url)
 
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
@@ -176,10 +163,10 @@ class RestCommonMethods(object):
         self.check_credentials()
 
         # Get the remote snapshot
-        remote_snapshot, ref_snapshot, _ = self.get_recipe_snapshot(ref)
+        remote_snapshot = self.get_recipe_snapshot(ref)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = remote_manifest or self.get_conan_manifest(ref_snapshot)
+            remote_manifest = remote_manifest or self.get_conan_manifest(ref)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
@@ -200,6 +187,16 @@ class RestCommonMethods(object):
 
         return bool(files_to_upload or deleted)
 
+    def get_recipe_snapshot(self, ref):
+        url = self.router.recipe_snapshot(ref)
+        snap = self._get_snapshot(url)
+        return snap
+
+    def get_package_snapshot(self, pref):
+        url = self.router.package_snapshot(pref)
+        snap = self._get_snapshot(url)
+        return snap
+
     def upload_package(self, pref, the_files, retry, retry_wait, policy):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
@@ -209,10 +206,10 @@ class RestCommonMethods(object):
 
         t1 = time.time()
         # Get the remote snapshot
-        remote_snapshot, pref_snapshot, _ = self.get_package_snapshot(pref)
+        remote_snapshot = self.get_package_snapshot(pref)
 
         if remote_snapshot:
-            remote_manifest = self.get_package_manifest(pref_snapshot)
+            remote_manifest = self.get_package_manifest(pref)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
@@ -238,14 +235,14 @@ class RestCommonMethods(object):
         """
         the_files: dict with relative_path: content
         """
-        url = self.search_router.search(pattern, ignorecase)
+        url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
         return [ConanFileReference.loads(reference) for reference in response]
 
     def search_packages(self, reference, query):
 
         if not query:
-            url = self.search_router.search_packages(reference)
+            url = self.router.search_packages(reference)
             package_infos = self.get_json(url)
             return package_infos
 
@@ -256,11 +253,11 @@ class RestCommonMethods(object):
             capabilities = []
 
         if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url = self.search_router.search_packages(reference, query)
+            url = self.router.search_packages(reference, query)
             package_infos = self.get_json(url)
             return package_infos
         else:
-            url = self.search_router.search_packages(reference)
+            url = self.router.search_packages(reference)
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
 
@@ -268,7 +265,7 @@ class RestCommonMethods(object):
     def remove_conanfile(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
-        url = self.conans_router.remove_recipe(ref)
+        url = self.router.remove_recipe(ref)
         logger.debug("REST: remove: %s" % url)
         response = self.requester.delete(url,
                                          auth=self.auth,
