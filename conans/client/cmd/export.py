@@ -15,14 +15,13 @@ from conans.model.scm import SCM, get_scm_data
 from conans.model.scm import detect_repo_type
 from conans.paths import CONANFILE
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir
+from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
 def export_alias(reference, target_reference, cache, output):
     if reference.name != target_reference.name:
         raise ConanException("An alias can only be defined to a package with the same name")
-
     conanfile = """
 from conans import ConanFile
 
