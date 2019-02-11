@@ -1358,7 +1358,8 @@ class Command(object):
                                  'conanfile if only a reference is specified and a conaninfo.txt '
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
-        parser.add_argument("-p", "--package", default=None, help=argparse.SUPPRESS,
+        parser.add_argument("-p", "--package", default=None,
+                            help="Package ID (deprecated, use full reference)",
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='Get from this specific remote')
@@ -1373,6 +1374,11 @@ class Command(object):
         except ConanException:
             reference = args.reference
             package_id = args.package
+
+            if package_id:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan get [...] {}:{}`".format(reference, package_id))
         else:
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"

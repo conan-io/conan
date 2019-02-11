@@ -87,7 +87,8 @@ class ConanGetTest(unittest.TestCase):
 
         # List package dir
         self.client.run('get {} "." {} --raw'.format(args_reference, args_package))
-        self.assertEquals("conaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
+        assert_cmp = self.assertEqual if use_pkg_reference else self.assertIn
+        assert_cmp("conaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
 
     def test_get_remote_reference(self):
         self.client.run('upload "Hello*" --all -c')
@@ -111,8 +112,8 @@ class ConanGetTest(unittest.TestCase):
 
         # List package dir
         self.client.run('get {} "." {} --raw -r default'.format(args_reference, args_package))
-        self.assertEquals("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n",
-                          self.client.user_io.out)
+        assert_cmp = self.assertEqual if use_pkg_reference else self.assertIn
+        assert_cmp("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
 
     def test_not_found_reference(self):
         self.client.run('get {} "." -r default'.format(self.reference), assert_error=True)
@@ -137,3 +138,11 @@ class ConanGetTest(unittest.TestCase):
                         assert_error=True)
         self.assertIn("Use a full package reference (preferred) or the `--package` "
                       "command argument, but not both.", self.client.out)
+
+    def test_deprecated_argument(self):
+        """ Argument `-p` should print a deprecation warning (and work)"""
+        self.client.run('get {reference} -p {pkg_id}'.format(reference=self.reference,
+                                                             pkg_id=NO_SETTINGS_PACKAGE_ID))
+        self.assertIn("WARN: Usage of `--package` argument is deprecated. Use a full reference "
+                      "instead: `conan get [...] ", self.client.out)
+
