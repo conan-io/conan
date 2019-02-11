@@ -45,6 +45,7 @@ from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import get_env_context_manager
+from conans.model.editable_cpp_info import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -56,7 +57,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.editable_cpp_info import get_editable_abs_path
 
 default_manifest_folder = '.conan_manifests'
 
@@ -934,6 +934,16 @@ class ConanAPIV1(object):
     def export_alias(self, reference, target_reference):
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
+
+        # Do not allow to override an existing package
+        alias_conanfile_path = self._cache.package_layout(ref).conanfile()
+        if os.path.exists(alias_conanfile_path):
+            conanfile_class = self._loader.load_class(alias_conanfile_path)
+            conanfile = conanfile_class(self._user_io.out, None, str(ref))
+            if not getattr(conanfile, 'alias', None):
+                raise ConanException("Reference '{}' is already a package, remove it before creating"
+                                     " and alias with the same name".format(ref))
+
         return export_alias(ref, target_ref, self._cache, self._user_io.out)
 
     @api_method
