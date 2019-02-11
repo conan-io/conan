@@ -1373,14 +1373,14 @@ class Command(object):
         except ConanException:
             reference = args.reference
             package_id = args.package
-        finally:
-            ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
-            if isinstance(ret, list):
-                self._outputer.print_dir_list(ret, path, args.raw)
-            else:
-                self._outputer.print_file_contents(ret, path, args.raw)
 
-            return
+        ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
+        if isinstance(ret, list):
+            self._outputer.print_dir_list(ret, path, args.raw)
+        else:
+            self._outputer.print_file_contents(ret, path, args.raw)
+
+        return
 
     def alias(self, *args):
         """Creates and exports an 'alias package recipe'.
