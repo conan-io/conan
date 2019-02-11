@@ -28,7 +28,7 @@ class CmdUpload(object):
 
     def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
                confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
-               remote=None, query=None):
+               remote_name=None, query=None):
         """ If package_id is provided, reference_or_pattern is a ConanFileReference """
 
         if package_id and not check_valid_ref(reference_or_pattern, allow_pattern=False):
@@ -48,12 +48,15 @@ class CmdUpload(object):
 
         # Group recipes by remote
         refs_by_remote = defaultdict(list)
-        default_remote = remote or self._registry.remotes.default
+        default_remote = self._registry.get(remote_name) if remote_name else self._registry.default
 
         for ref in refs:
-            if not remote:
+            if not remote_name:
                 ref_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
-                remote = ref_remote or default_remote
+                remote = self._registry.get(ref_remote) if remote_name else default_remote
+            else:
+                remote = self._registry.get(remote_name)
+            print remote
 
             upload = True
             if not confirm:
@@ -150,7 +153,7 @@ class CmdUpload(object):
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote and policy != UPLOAD_POLICY_SKIP:
             with self._cache.package_layout(ref).update_metadata() as metadata:
-                metadata.recipe.remote = remote
+                metadata.recipe.remote = remote.name
 
         return ref
 

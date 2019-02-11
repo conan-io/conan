@@ -27,7 +27,7 @@ def _handle_remotes(cache, remote_file):
     # FIXME: Should we encourage to pass the remotes in json?
     remotes, _ = load_registry_txt(load(remote_file))
     registry = cache.registry
-    registry.remotes.define(remotes)
+    registry.define(remotes)
 
 
 def _handle_profiles(source_folder, target_folder, output):

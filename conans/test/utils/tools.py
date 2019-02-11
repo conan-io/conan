@@ -577,9 +577,9 @@ servers["r2"] = TestServer()
 
         def add_server_to_registry(name, server):
             if isinstance(server, TestServer):
-                registry.remotes.add(name, server.fake_url)
+                registry.add(name, server.fake_url)
             else:
-                registry.remotes.add(name, server)
+                registry.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":

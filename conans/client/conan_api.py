@@ -825,34 +825,34 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return self._cache.registry.remotes.list
+        return self._cache.registry.remotes_list
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        return self._cache.registry.remotes.add(remote_name, url, verify_ssl, insert, force)
+        return self._cache.registry.add(remote_name, url, verify_ssl, insert, force)
 
     @api_method
     def remote_remove(self, remote_name):
-        return self._cache.registry.remotes.remove(remote_name)
+        return self._cache.registry.remove(remote_name)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
-        return self._cache.registry.remotes.update(remote_name, url, verify_ssl, insert)
+        return self._cache.registry.update(remote_name, url, verify_ssl, insert)
 
     @api_method
     def remote_rename(self, remote_name, new_new_remote):
-        return self._cache.registry.remotes.rename(remote_name, new_new_remote)
+        return self._cache.registry.rename(remote_name, new_new_remote)
 
     @api_method
     def remote_list_ref(self):
-        return {r: remote_name for r, remote_name in self._cache.registry.refs.list.items()}
+        return {str(r): remote_name for r, remote_name in self._cache.registry.refs_list.items()}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
-        remote = self._cache.registry.remotes.get(remote_name)
+        remote = self._cache.registry.get(remote_name)
         with self._cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote
+            metadata.recipe.remote = remote.name
 
     @api_method
     def remote_remove_ref(self, reference):
@@ -863,17 +863,16 @@ class ConanAPIV1(object):
     @api_method
     def remote_update_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
-        remote = self._cache.registry.remotes.get(remote_name)
+        remote = self._cache.registry.get(remote_name)
         with self._cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote
+            metadata.recipe.remote = remote.name
 
     @api_method
     def remote_list_pref(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
         ret = {}
-        tmp = self._cache.registry.prefs.list
-        for package_reference, remote in tmp.items():
-            pref = PackageReference.loads(package_reference)
+        tmp = self._cache.registry.prefs_list
+        for pref, remote in tmp.items():
             if pref.ref == ref:
                 ret[pref.full_repr()] = remote
         return ret
@@ -881,7 +880,12 @@ class ConanAPIV1(object):
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
-        return self._cache.registry.prefs.set(pref, remote_name, check_exists=True)
+        remote = self._cache.registry.get(remote_name)
+        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            m = metadata.packages.get(pref.id)
+            if m and m.remote:
+                raise ConanException("%s already exists. Use update" % str(pref))
+            metadata.packages[pref.id].remote = remote.name
 
     @api_method
     def remote_remove_pref(self, package_reference):
@@ -891,10 +895,13 @@ class ConanAPIV1(object):
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
-        return self._cache.registry.prefs.update(pref, remote_name)
+        remote = self._cache.registry.get(remote_name)
+        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            m = metadata.packages.get(pref.id)
+            m.remote = remote.name
 
     def remote_clean(self):
-        return self._cache.registry.remotes.clean()
+        return self._cache.registry.clean()
 
     @api_method
     def profile_list(self):
@@ -943,7 +950,7 @@ class ConanAPIV1(object):
 
     @api_method
     def get_default_remote(self):
-        return self._cache.registry.remotes.default
+        return self._cache.registry.default
 
     @api_method
     def get_remote_by_name(self, remote_name):

@@ -8,6 +8,7 @@ from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
 from conans.util.log import logger
+from conans.model.ref import PackageReference
 
 default_remotes = OrderedDict({"conan-center": ("https://conan.bintray.com", True)})
 
@@ -170,6 +171,10 @@ class RemoteRegistry(object):
         return self._remotes
 
     @property
+    def remotes_list(self):
+        return self.remotes.values()
+
+    @property
     def default(self):
         try:
             return next(iter(self.remotes))
@@ -186,6 +191,13 @@ class RemoteRegistry(object):
     def remove(self, remote_name):
         self.get(remote_name)
         del self._remotes[remote_name]
+        for ref in self._cache.all_refs():
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                if metadata.recipe.remote == remote_name:
+                    metadata.recipe.remote = None
+                for pkg_metadata in metadata.packages.values():
+                    if pkg_metadata.remote == remote_name:
+                        pkg_metadata.remote = None
         self._save()
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
@@ -245,7 +257,7 @@ class RemoteRegistry(object):
                 raise ConanException("insert argument must be an integer")
             remotes.pop(remote_name, None)  # Remove if exists (update)
             remotes_list = list(remotes.items())
-            remotes_list.insert(insert_index, updated_remote)
+            remotes_list.insert(insert_index, (remote_name, updated_remote))
             self._remotes = OrderedDict(remotes_list)
         else:
             remotes[remote_name] = updated_remote
@@ -253,11 +265,29 @@ class RemoteRegistry(object):
 
     def _save(self):
         ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v}
-                           for r, (u, v) in self._remotes.items()]}
-        return json.dumps(ret, indent=True)
+                           for r, (_, u, v) in self._remotes.items()]}
+        save(self._filename, json.dumps(ret, indent=True))
 
     def clean(self):
         self._remotes = {}
+        for ref in self._cache.all_refs():
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.remote = None
+                for pkg_metadata in metadata.packages.values():
+                    pkg_metadata.remote = None
+        self._save()
+
+    def define(self, remotes):
+        remotes = OrderedDict([(name, Remote(name, url, ssl))
+                               for name, (url, ssl) in remotes.items()])
+        self._remotes = remotes
+        for ref in self._cache.all_refs():
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                if metadata.recipe.remote not in remotes:
+                    metadata.recipe.remote = None
+                for pkg_metadata in metadata.packages.values():
+                    if pkg_metadata.remote not in remotes:
+                        pkg_metadata.remote = None
         self._save()
 
     def rename(self, remote_name, new_remote_name):
@@ -265,23 +295,35 @@ class RemoteRegistry(object):
         if new_remote_name in remotes:
             raise ConanException("Remote '%s' already exists" % new_remote_name)
 
-        try:
-            remote = remotes.pop(remote_name)
-        except KeyError:
-            raise ConanException("Remote '%s' not found in remotes" % remote_name)
-
+        remote = self.get(remote_name)
         new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
-        self._remotes[new_remote_name] = new_remote
+        self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
+                                     else (k, v) for k, v in remotes.items()])
 
         for ref in self._cache.all_refs():
             with self._cache.package_layout(ref).update_metadata() as metadata:
-                if metadata.recipe.remote.name == remote_name:
-                    metadata.recipe.remote = new_remote
+                if metadata.recipe.remote == remote_name:
+                    metadata.recipe.remote = new_remote_name
                 for pkg_metadata in metadata.packages.values():
-                    if pkg_metadata.remote.name == remote_name:
-                        pkg_metadata.remote = new_remote
+                    if pkg_metadata.remote == remote_name:
+                        pkg_metadata.remote = new_remote_name
         self._save()
 
     @property
-    def ref_list(self):
-        pass
+    def refs_list(self):
+        result = {}
+        for ref in self._cache.all_refs():
+            metadata = self._cache.package_layout(ref).load_metadata()
+            if metadata.recipe.remote:
+                result[ref] = metadata.recipe.remote
+        return result
+
+    @property
+    def prefs_list(self):
+        result = {}
+        for ref in self._cache.all_refs():
+            metadata = self._cache.package_layout(ref).load_metadata()
+            for pid, pkg_metadata in metadata.packages.items():
+                pref = PackageReference(ref, pid)
+                result[pref] = pkg_metadata.remote
+        return result

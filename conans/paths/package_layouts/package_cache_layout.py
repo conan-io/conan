@@ -4,6 +4,8 @@ import os
 import platform
 from contextlib import contextmanager
 
+import fasteners
+
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
@@ -11,6 +13,7 @@ from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
 from conans.util.files import load, save
+from conans.util.log import logger
 
 
 def short_path(func):
@@ -124,12 +127,14 @@ class PackageCacheLayout(object):
 
     @contextmanager
     def update_metadata(self):
-        try:
-            metadata = self.load_metadata()
-        except IOError:
-            metadata = PackageMetadata()
-        yield metadata
-        save(self.package_metadata(), metadata.dumps())
+        lockfile = self.package_metadata() + ".lock"
+        with fasteners.InterProcessLock(lockfile, logger=logger):
+            try:
+                metadata = self.load_metadata()
+            except IOError:
+                metadata = PackageMetadata()
+            yield metadata
+            save(self.package_metadata(), metadata.dumps())
 
     # Revisions
     def package_summary_hash(self, pref):

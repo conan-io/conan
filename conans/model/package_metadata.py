@@ -3,7 +3,6 @@ from collections import defaultdict
 
 from conans import DEFAULT_REVISION_V1
 from conans.util.dates import valid_iso8601
-from conans.client.cache.remote_registry import Remote
 
 
 class _RecipeMetadata(object):
@@ -43,9 +42,7 @@ class _RecipeMetadata(object):
     def loads(data):
         ret = _RecipeMetadata()
         ret.revision = data["revision"]
-        remote = data.get("remote")
-        if remote:
-            ret.remote = Remote(remote[0], remote[1], remote[2])
+        ret.remote = data.get("remote")
         ret.properties = data["properties"]
         ret.time = data["time"]
         return ret
@@ -100,9 +97,7 @@ class _BinaryPackageMetadata(object):
         ret.revision = data.get("revision")
         ret.recipe_revision = data.get("recipe_revision")
         ret.properties = data.get("properties")
-        remote = data.get("remote")
-        if remote:
-            ret.remote = Remote(remote[0], remote[1], remote[2])
+        ret.remote = data.get("remote")
         ret.time = data.get("time")
         return ret
 

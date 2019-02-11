@@ -119,9 +119,13 @@ class ConanProxy(object):
         if remote:
             output.info("Not found, retrieving from server '%s' " % remote.name)
         else:
-            remote = self._cache.package_layout(ref).load_metadata().recipe.remote
-            if remote:
-                output.info("Retrieving from predefined remote '%s'" % remote.name)
+            try:
+                remote = self._cache.package_layout(ref).load_metadata().recipe.remote
+            except IOError:
+                pass
+            else:
+                if remote:
+                    output.info("Retrieving from predefined remote '%s'" % remote.name)
 
         if remote:
             try:
@@ -138,7 +142,7 @@ class ConanProxy(object):
                 raise exc
 
         output.info("Not found in local cache, looking in remotes...")
-        remotes = self._registry.remotes.list
+        remotes = self._registry.remotes_list
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
@@ -160,7 +164,7 @@ class ConanProxy(object):
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             return search_result
 
-        for remote in self._registry.remotes.list:
+        for remote in self._registry.remotes_list:
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             if search_result:
                 return search_result

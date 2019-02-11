@@ -120,7 +120,7 @@ class ConanRemover(object):
         if package_ids is not None:
             remover.remove_packages(ref, package_ids)
             layout = self._cache.package_layout(ref)
-            with layout.udpate_metadata() as metadata:
+            with layout.update_metadata() as metadata:
                 for package_id in package_ids:
                     metadata.clear_package(package_id)
 

@@ -83,20 +83,16 @@ class ConfigInstallTest(unittest.TestCase):
 {
  "remotes": [
   {
-   "url": "https://myrepo2.com", 
-   "verify_ssl": true, 
+   "url": "https://myrepo2.com",
+   "verify_ssl": true,
    "name": "my-repo-2"
-  }, 
+  },
   {
-   "url": "https://conan-center.com", 
-   "verify_ssl": true, 
+   "url": "https://conan-center.com",
+   "verify_ssl": true,
    "name": "conan-center"
   }
- ], 
- "references": {
-  "MyPkg/0.1@user/channel": "my-repo-2", 
-  "Other/1.2@user/channel": "conan-center"
- }
+ ]
 }
 """)
         save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
@@ -136,10 +132,9 @@ class ConfigInstallTest(unittest.TestCase):
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         registry = self.client.cache.registry
-        self.assertEqual(registry.remotes.list, [Remote("myrepo1", "https://myrepourl.net", False),
+        self.assertEqual(registry.remotes_list, [Remote("myrepo1", "https://myrepourl.net", False),
                                                  Remote("my-repo-2", "https://myrepo2.com", True),
                                                  ])
-        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
@@ -423,7 +418,7 @@ class Pkg(ConanFile):
         http_server = StoppableThreadBottle()
         path = self._create_zip()
 
-        from bottle import static_file, auth_basic
+        from bottle import static_file
 
         @http_server.server.get("/myconfig.zip")
         def get_zip():

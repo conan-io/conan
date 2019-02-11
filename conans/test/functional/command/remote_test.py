@@ -292,10 +292,10 @@ class HelloConan(ConanFile):
 
     def errors_test(self):
         self.client.run("remote update origin url", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: No remote 'origin' defined in remotes", self.client.out)
 
     def duplicated_error_tests(self):
         """ check remote name and URL are not duplicated

@@ -98,7 +98,7 @@ class GraphBinariesAnalyzer(object):
             # If it is defined it won't iterate (might change in conan2.0)
             metadata = self._cache.package_layout(pref.ref).load_metadata()
             remote = metadata.recipe.remote or metadata.packages[pref.id].remote
-        remotes = self._registry.remotes.list
+        remotes = self._registry.remotes_list
 
         if os.path.exists(package_folder):
             if update:
