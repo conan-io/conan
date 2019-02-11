@@ -116,6 +116,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.save(files)
         client.run("export . lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
+        print(client.out)
         client.run("copy lib/0.1@lasote/channel memsharded/stable --all")
         client.run("search")
         self.assertIn("lib/0.1@lasote/channel", client.user_io.out)
