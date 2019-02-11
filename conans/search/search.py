@@ -1,5 +1,6 @@
 import os
 import re
+from collections import OrderedDict
 from fnmatch import translate
 
 from conans.errors import ConanException, NotFoundException
@@ -12,7 +13,9 @@ from conans.util.log import logger
 
 
 def filter_outdated(packages_infos, recipe_hash):
-    result = {}
+    if not recipe_hash:
+        return packages_infos
+    result = OrderedDict()
     for package_id, info in packages_infos.items():
         try:  # Existing package_info of old package might not have recipe_hash
             if info["recipe_hash"] != recipe_hash:
@@ -20,6 +23,19 @@ def filter_outdated(packages_infos, recipe_hash):
         except KeyError:
             pass
     return result
+
+
+def filter_by_revision(metadata, packages_infos):
+    ok = OrderedDict()
+    recipe_revision = metadata.recipe.revision
+    for package_id, info in packages_infos.items():
+        try:
+            rec_rev = metadata.packages[package_id].recipe_revision
+            if rec_rev == recipe_revision:
+                ok[package_id] = info
+        except KeyError:
+            pass
+    return ok
 
 
 def filter_packages(query, package_infos):
@@ -31,7 +47,7 @@ def filter_packages(query, package_infos):
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
-        result = {}
+        result = OrderedDict()
         for package_id, info in package_infos.items():
             if evaluate_postfix_with_info(postfix, info):
                 result[package_id] = info
@@ -74,7 +90,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
     return False
 
 
-def search_recipes(paths, pattern=None, ignorecase=True):
+def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
         if isinstance(pattern, ConanFileReference):
@@ -82,7 +98,7 @@ def search_recipes(paths, pattern=None, ignorecase=True):
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
-    subdirs = list_folder_subdirs(basedir=paths.store, level=4)
+    subdirs = list_folder_subdirs(basedir=cache.store, level=4)
     if not pattern:
         return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
     else:
@@ -99,7 +115,7 @@ def _partial_match(pattern, ref):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').split()
+    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
 
     def partial_sums(iterable):
         partial = ''
@@ -118,35 +134,34 @@ def search_packages(cache, ref, query):
                            settings: {os: Windows}}}
     param ref: ConanFileReference object
     """
-    if not os.path.exists(cache.conan(ref)):
-        raise NotFoundException("Recipe not found: %s" % str(ref))
+    if not os.path.exists(cache.conan(ref)) or (
+           ref.revision and cache.package_layout(ref).recipe_revision()[0] != ref.revision):
+        raise NotFoundException("Recipe not found: %s" % ref.full_repr())
     infos = _get_local_infos_min(cache, ref)
     return filter_packages(query, infos)
 
 
 def _get_local_infos_min(cache, ref):
-    result = {}
+    result = OrderedDict()
+
     packages_path = cache.packages(ref)
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
-        try:
-            pref = PackageReference(ref, package_id)
-            info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
-            if not os.path.exists(info_path):
-                raise NotFoundException("")
-            conan_info_content = load(info_path)
+        pref = PackageReference(ref, package_id)
+        info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
+        if not os.path.exists(info_path):
+            logger.error("There is no ConanInfo: %s" % str(info_path))
+            continue
+        conan_info_content = load(info_path)
 
+        info = ConanInfo.loads(conan_info_content)
+        if ref.revision:
             metadata = cache.package_layout(pref.ref).load_metadata()
             recipe_revision = metadata.packages[package_id].recipe_revision
-            info = ConanInfo.loads(conan_info_content)
-            if ref.revision and recipe_revision and recipe_revision != ref.revision:
+            if recipe_revision and recipe_revision != ref.revision:
                 continue
-            conan_vars_info = info.serialize_min()
-            result[package_id] = conan_vars_info
+        conan_vars_info = info.serialize_min()
+        result[package_id] = conan_vars_info
 
-        except Exception as exc:
-            logger.error("Package %s has no ConanInfo file" % str(pref))
-            if str(exc):
-                logger.error(str(exc))
     return result

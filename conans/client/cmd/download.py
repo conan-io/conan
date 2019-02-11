@@ -15,11 +15,12 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     hook_manager.execute("pre_download", reference=ref, remote=remote)
     # First of all download package recipe
     try:
-        remote_manager.get_recipe(ref, remote)
+        ref = remote_manager.get_recipe(ref, remote)
     except NotFoundException:
-        raise NotFoundException("'%s' not found in remote '%s'" % (str(ref), remote.name))
+        raise NotFoundException("'%s' not found in remote '%s'" % (ref.full_repr(), remote.name))
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.remote = remote
+
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
 
@@ -28,7 +29,7 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
         complete_recipe_sources(remote_manager, cache, conanfile, ref)
 
         if not package_ids:  # User didnt specify a specific package binary
-            output.info("Getting the complete package list from '%s'..." % str(ref))
+            output.info("Getting the complete package list from '%s'..." % ref.full_repr())
             packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:

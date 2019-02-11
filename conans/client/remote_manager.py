@@ -63,16 +63,6 @@ class RemoteManager(object):
 
         ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
                                 policy, remote_manifest)
-
-        # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._cache.package_layout(ref).update_metadata() as metadata:
-            if metadata.recipe.time is None:
-                _, _, rev_time = self._call_remote(remote, "get_recipe_snapshot", ref)
-                # Only if we hadn't time locally update it, otherwise we are uploading
-                # the recipe to a different server, but in the upload never the registry
-                # is updated, so the time should be kept to the first upload
-                metadata.recipe.time = rev_time
-
         duration = time.time() - t1
         log_recipe_upload(ref, duration, the_files, remote.name)
         if ret:
@@ -159,16 +149,6 @@ class RemoteManager(object):
 
         uploaded = self._call_remote(remote, "upload_package", pref,
                                      the_files, retry, retry_wait, policy)
-
-        # Update package revision with the rev_time (Created locally but with rev_time None)
-        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
-            if metadata.packages[pref.id].time is None:
-                _, _, rev_time = self._call_remote(remote, "get_package_snapshot", pref)
-                # Only if we hadn't time locally update it, otherwise we are uploading
-                # the package to a different server, but in the upload never the registry
-                # is updated, so the time should be kept to the first upload
-                metadata.packages[pref.id].time = rev_time
-
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, remote)
         logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
@@ -179,13 +159,13 @@ class RemoteManager(object):
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
-    def get_conan_manifest(self, ref, remote):
+    def get_recipe_manifest(self, ref, remote):
         """
         Read ConanDigest from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-        return self._call_remote(remote, "get_conan_manifest", ref)
+        return self._call_remote(remote, "get_recipe_manifest", ref)
 
     def get_package_manifest(self, pref, remote):
         """
@@ -322,6 +302,11 @@ class RemoteManager(object):
         return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
     def get_path(self, ref, package_id, path, remote):
+        if package_id and self._cache.config.revisions_enabled and not ref.revision:
+            # With revisions we resolve to latest to get the file, otherwise we can't
+            # FIXME: Dedicated endpoint to resolve the latest ref?
+            _, ref, _ = self._call_remote(remote, "get_recipe_snapshot", ref)
+
         return self._call_remote(remote, "get_path", ref, package_id, path)
 
     def authenticate(self, remote, name, password):

@@ -69,7 +69,7 @@ class RestV1Methods(RestCommonMethods):
             dedup = True
         return auth, dedup
 
-    def get_conan_manifest(self, ref):
+    def get_recipe_manifest(self, ref):
         """Gets a FileTreeManifest from conans"""
 
         # Obtain the URLs
@@ -102,16 +102,16 @@ class RestV1Methods(RestCommonMethods):
             logger.error(traceback.format_exc())
             raise ConanException(msg)
 
-    def get_package_info(self, package_reference):
+    def get_package_info(self, pref):
         """Gets a ConanInfo file from a package"""
 
-        url = self.conans_router.package_download_urls(package_reference)
+        url = self.conans_router.package_download_urls(pref)
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
 
         if CONANINFO not in urls:
-            raise NotFoundException("Package %s doesn't have the %s file!" % (package_reference,
+            raise NotFoundException("Package %s doesn't have the %s file!" % (pref,
                                                                               CONANINFO))
         # Get the info (in memory)
         contents = self._download_files({CONANINFO: urls[CONANINFO]}, quiet=True)
@@ -319,3 +319,6 @@ class RestV1Methods(RestCommonMethods):
 
     def get_package_revisions(self, pref):
         raise ConanException("The remote doesn't support revisions")
+
+    def search_packages(self, reference, query):
+        return super(RestV1Methods, self).search_packages(reference.copy_clear_rev(), query)

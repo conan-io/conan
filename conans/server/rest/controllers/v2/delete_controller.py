@@ -45,8 +45,7 @@ class DeleteControllerV2(Controller):
         @app.route(r.packages, method="DELETE")
         @app.route(r.packages_revision, method="DELETE")
         def remove_all_packages(name, version, username, channel, auth_user, revision=None):
-            """ Remove a file from a recipe. The revision is mandatory, because it comes from
-            the upload and the revision is mandatory in v2"""
+            """ Remove all packages from a RREV"""
             ref = ConanFileReference(name, version, username, channel, revision)
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             conan_service.remove_all_packages(ref)

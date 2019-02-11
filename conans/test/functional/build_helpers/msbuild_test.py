@@ -51,7 +51,7 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         # Try to not update the project
-        client.cache._conan_config = None  # Invalidate cached config
+        client.cache._config = None  # Invalidate cached config
         tools.replace_in_file(client.cache.conan_conf_path, "[general]",
                               "[general]\nskip_vs_projects_upgrade = True")
         client.save(files, clean_first=True)

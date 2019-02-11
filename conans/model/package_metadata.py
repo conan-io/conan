@@ -9,7 +9,7 @@ from conans.client.cache.remote_registry import Remote
 class _RecipeMetadata(object):
 
     def __init__(self):
-        self._revision = DEFAULT_REVISION_V1
+        self._revision = None
         self._time = None
         self.properties = {}
         self.remote = None
@@ -30,7 +30,7 @@ class _RecipeMetadata(object):
 
     @revision.setter
     def revision(self, r):
-        self._revision = DEFAULT_REVISION_V1 if r is None else r
+        self._revision = r
 
     def to_dict(self):
         ret = {"revision": self.revision,
@@ -54,8 +54,8 @@ class _RecipeMetadata(object):
 class _BinaryPackageMetadata(object):
 
     def __init__(self):
-        self._revision = DEFAULT_REVISION_V1
-        self._recipe_revision = DEFAULT_REVISION_V1
+        self._revision = None
+        self._recipe_revision = None
         self._time = None
         self.properties = {}
         self.remote = None
@@ -110,8 +110,9 @@ class _BinaryPackageMetadata(object):
 class PackageMetadata(object):
 
     def __init__(self):
-        self.recipe = _RecipeMetadata()
-        self.packages = defaultdict(_BinaryPackageMetadata)
+        self.recipe = None
+        self.packages = None
+        self.clear()
 
     @staticmethod
     def loads(content):
@@ -132,3 +133,11 @@ class PackageMetadata(object):
 
     def __eq__(self, other):
         return self.dumps() == other.dumps()
+
+    def clear(self):
+        self.recipe = _RecipeMetadata()
+        self.packages = defaultdict(_BinaryPackageMetadata)
+
+    def clear_package(self, package_id):
+        if package_id in self.packages:
+            del self.packages[package_id]
