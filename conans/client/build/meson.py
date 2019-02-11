@@ -4,7 +4,6 @@ import subprocess
 from conans.client import defs_to_string, join_arguments, tools
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
-from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
 from conans.model.version import Version
 from conans.util.files import decode_text, get_abs_path, mkdir
 
@@ -31,11 +30,6 @@ class Meson(object):
         self.options = dict()
         if self._conanfile.package_folder:
             self.options['prefix'] = self._conanfile.package_folder
-        self.options['libdir'] = DEFAULT_LIB
-        self.options['bindir'] = DEFAULT_BIN
-        self.options['sbindir'] = DEFAULT_BIN
-        self.options['libexecdir'] = DEFAULT_BIN
-        self.options['includedir'] = DEFAULT_INCLUDE
 
         # C++ standard
         cppstd = self._ss("cppstd")
@@ -51,7 +45,7 @@ class Meson(object):
 
         # shared
         shared = self._so("shared")
-        self.options['default_library'] = "shared" if shared is None or shared else "static"
+        self.options['default-library'] = "shared" if shared is None or shared else "static"
 
         # fpic
         if self._os and "Windows" not in self._os:

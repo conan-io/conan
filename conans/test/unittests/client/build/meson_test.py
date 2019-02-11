@@ -58,13 +58,8 @@ class MesonTest(unittest.TestCase):
         meson = Meson(conan_file)
 
         defs = {
-            'default_library': 'shared',
+            'default-library': 'shared',
             'prefix': package_folder,
-            'libdir': 'lib',
-            'bindir': 'bin',
-            'sbindir': 'bin',
-            'libexecdir': 'bin',
-            'includedir': 'include',
             'cpp_std': 'none'
         }
 
@@ -124,9 +119,9 @@ class MesonTest(unittest.TestCase):
         self._check_commands(cmd_expected, conan_file.command)
 
         args = ['--werror', '--warnlevel 3']
-        defs['default_library'] = 'static'
+        defs['default-library'] = 'static'
         meson.configure(source_folder="source", build_folder="build", args=args,
-                        defs={'default_library': 'static'})
+                        defs={'default-library': 'static'})
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s %s --buildtype=release' \
