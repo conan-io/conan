@@ -16,9 +16,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.paths.simple_paths import SimplePaths, check_ref_case
+from conans.paths.simple_paths import SimplePaths
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock
