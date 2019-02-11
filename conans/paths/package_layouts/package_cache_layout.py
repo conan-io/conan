@@ -93,7 +93,7 @@ class PackageCacheLayout(object):
     def package_metadata(self):
         return os.path.join(self.conan(), PACKAGE_METADATA)
 
-    def load_manifest(self):
+    def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
 
     def package_manifests(self, pref):

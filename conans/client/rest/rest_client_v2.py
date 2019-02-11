@@ -70,7 +70,7 @@ class RestV2Methods(RestCommonMethods):
         pref = PackageReference.loads(package_reference)
         return snap, pref, rev_time
 
-    def get_conan_manifest(self, ref):
+    def get_recipe_manifest(self, ref):
         url = self.conans_router.recipe_manifest(ref)
         content = self._get_remote_file_contents(url)
         return FileTreeManifest.loads(decode_text(content))
@@ -87,8 +87,8 @@ class RestV2Methods(RestCommonMethods):
             logger.error(traceback.format_exc())
             raise ConanException(msg)
 
-    def get_package_info(self, package_reference):
-        url = self.conans_router.package_info(package_reference)
+    def get_package_info(self, pref):
+        url = self.conans_router.package_info(pref)
         content = self._get_remote_file_contents(url)
         return ConanInfo.loads(decode_text(content))
 
