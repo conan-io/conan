@@ -60,7 +60,7 @@ class Search(object):
         return self._search_packages_in(remote_name, ref, query, outdated)
 
     def _search_packages_in_local(self, ref=None, query=None, outdated=False):
-        package_layout = self._cache.package_layout(ref)
+        package_layout = self._cache.package_layout(ref, short_paths=None)
         packages_props = search_packages(package_layout, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
 
