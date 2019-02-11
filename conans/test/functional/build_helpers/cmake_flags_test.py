@@ -1,12 +1,15 @@
 import os
 import platform
 import unittest
+from textwrap import dedent
 
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.client.build.cmake import CMake
 from conans.model.version import Version
+from conans.test.utils.conanfile import MockSettings, MockConanfile, MockOptions
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
@@ -431,3 +434,31 @@ conan_basic_setup()
         client.save({"CMakeLists.txt": tmp, "conanfile.py": conanfile}, clean_first=True)
         client.run("create . user/channel -o MyLib:fPIC=True")
         self.assertNotIn("Conan: Adjusting fPIC flag", client.out)
+
+    def header_only_generator_test(self):
+        """ Test cmake.install() is possible although Generetaor could not be deduced from
+        settings
+        """
+        conanfile = dedent("""
+        from conans import ConanFile, CMake
+
+        class TestConan(ConanFile):
+            name = "kk"
+            version = "1.0"
+            exports = "*"
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.install()
+        """)
+        cmakelists = dedent("""
+        cmake_minimum_required(VERSION 3.3)
+        project(test)
+
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists, "include/file.h": ""})
+        client.run("create . danimtb/testing")
