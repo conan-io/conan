@@ -129,3 +129,11 @@ class ConanGetTest(unittest.TestCase):
                         assert_error=True)
         self.assertIn("Package {}:{} not found".format(self.reference, fake_package_id),
                       self.client.user_io.out)
+
+    def test_duplicated_input(self):
+        """ Fail if given the full reference and the `-p` argument (even if they are equal)"""
+        self.client.run('get {reference}:{pkg_id} -p {pkg_id}'.format(reference=self.reference,
+                                                                      pkg_id=NO_SETTINGS_PACKAGE_ID),
+                        assert_error=True)
+        self.assertIn("Use a full package reference (preferred) or the `--package` "
+                      "command argument, but not both.", self.client.out)

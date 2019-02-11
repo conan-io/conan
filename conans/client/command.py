@@ -1367,12 +1367,16 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            pref = PackageReference.loads(args.reference)
+            pref = PackageReference.loads(args.reference, validate=True)
             reference = pref.ref.full_repr()
             package_id = pref.id
         except ConanException:
             reference = args.reference
             package_id = args.package
+        else:
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
 
         ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
         if isinstance(ret, list):
