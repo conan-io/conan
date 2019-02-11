@@ -1389,14 +1389,12 @@ class Command(object):
         self._conan.export_alias(args.reference, args.target)
 
     def workspace(self, *args):
-        """ handle workspaces
-
+        """ command to manage workspaces
         """
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
                                          prog="conan workspace")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
-        # create the parser for the "a" command
         install_parser = subparsers.add_parser('install', help='install this workspace')
         install_parser.add_argument('path', help='path to workspace file or folder')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)

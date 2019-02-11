@@ -476,8 +476,7 @@ class ConanAPIV1(object):
         self._cache.editable_packages.update(workspace.get_editable_dict())
 
         recorder = ActionRecorder()
-        references = workspace.root
-        deps_graph, _ = self._graph_manager.load_graph(references, None, graph_info, build,
+        deps_graph, _ = self._graph_manager.load_graph(workspace.root, None, graph_info, build,
                                                        False, update, remote_name, recorder)
 
         print_graph(deps_graph, self._user_io.out)

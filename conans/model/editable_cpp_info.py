@@ -49,7 +49,7 @@ class EditableCppInfo(object):
 
     @staticmethod
     def load(filepath):
-        parser = configparser.ConfigParser(allow_no_value=True,)
+        parser = configparser.ConfigParser(allow_no_value=True)
         parser.optionxform = str
         try:
             parser.read(filepath)

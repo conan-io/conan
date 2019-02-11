@@ -101,19 +101,19 @@ class WorkspaceTest(unittest.TestCase):
         client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-                            HelloB/0.1@lasote/stable:
-                                folder: B
-                            HelloC/0.1@lasote/stable:
-                                folder: C
-                            HelloA/0.1@lasote/stable:
-                                folder: A
-                            layout: layout
-                            root: HelloA/0.1@lasote/stable
-                          """)
+            HelloB/0.1@lasote/stable:
+                folder: B
+            HelloC/0.1@lasote/stable:
+                folder: C
+            HelloA/0.1@lasote/stable:
+                folder: A
+            layout: layout
+            root: HelloA/0.1@lasote/stable
+            """)
         layout = dedent("""
-                        [folders]
-                        build:
-                        """)
+            [folders]
+            build:
+            """)
         client.save({"conanws.yml": project,
                      "layout": layout})
         client.run("workspace install conanws.yml")
@@ -146,25 +146,25 @@ class WorkspaceTest(unittest.TestCase):
         client.save(a, path=A)
 
         project = dedent("""
-                        HelloB/0.1@lasote/stable:
-                            folder: B
-                        HelloC/0.1@lasote/stable:
-                            folder: C
-                        HelloA/0.1@lasote/stable:
-                            folder: A
-                        layout: layout
-                        root: HelloA/0.1@lasote/stable
-                      """)
+            HelloB/0.1@lasote/stable:
+                folder: B
+            HelloC/0.1@lasote/stable:
+                folder: C
+            HelloA/0.1@lasote/stable:
+                folder: A
+            layout: layout
+            root: HelloA/0.1@lasote/stable
+            """)
         layout = dedent("""
-                        [folders]
-                        build: build/{settings.build_type}
+            [folders]
+            build: build/{settings.build_type}
 
-                        [includedirs]
-                        src
+            [includedirs]
+            src
 
-                        [libdirs]
-                        build/{settings.build_type}/lib
-                        """)
+            [libdirs]
+            build/{settings.build_type}/lib
+            """)
         client.save({"conanws.yml": project,
                      "layout": layout})
         client.run("workspace install conanws.yml")
@@ -218,32 +218,32 @@ class WorkspaceTest(unittest.TestCase):
         client.save(a, path=A)
 
         project = dedent("""
-                        HelloB/0.1@lasote/stable:
-                            folder: B
-                        HelloC/0.1@lasote/stable:
-                            folder: C
-                        HelloA/0.1@lasote/stable:
-                            folder: A
-                        layout: layout
-                        generator: cmake
-                        root: HelloA/0.1@lasote/stable
-                      """)
+            HelloB/0.1@lasote/stable:
+                folder: B
+            HelloC/0.1@lasote/stable:
+                folder: C
+            HelloA/0.1@lasote/stable:
+                folder: A
+            layout: layout
+            generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """)
         layout = dedent("""
-                        [folders]
-                        build: build/{settings.build_type}
-                        src: src
+            [folders]
+            build: build/{settings.build_type}
+            src: src
 
-                        [includedirs]
-                        src
+            [includedirs]
+            src
 
-                        [libdirs]
-                        build/{settings.build_type}/lib
-                        """)
+            [libdirs]
+            build/{settings.build_type}/lib
+            """)
         metacmake = dedent("""
-                        cmake_minimum_required(VERSION 3.3)
-                        project(MyProject CXX)
-                        include(${CMAKE_BINARY_DIR}/conanworkspace.cmake)
-        """)
+            cmake_minimum_required(VERSION 3.3)
+            project(MyProject CXX)
+            include(${CMAKE_BINARY_DIR}/conanworkspace.cmake)
+            """)
         client.save({"conanws.yml": project,
                      "layout": layout,
                      "CMakeLists.txt": metacmake})
@@ -334,32 +334,32 @@ class WorkspaceTest(unittest.TestCase):
         client.save(a, path=A)
 
         project = dedent("""
-                        HelloB/0.1@lasote/stable:
-                            folder: B
-                        HelloC/0.1@lasote/stable:
-                            folder: C
-                        HelloA/0.1@lasote/stable:
-                            folder: A
-                        layout: layout
-                        generator: cmake
-                        root: HelloA/0.1@lasote/stable
-                      """)
+            HelloB/0.1@lasote/stable:
+                folder: B
+            HelloC/0.1@lasote/stable:
+                folder: C
+            HelloA/0.1@lasote/stable:
+                folder: A
+            layout: layout
+            generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """)
         layout = dedent("""
-                        [folders]
-                        build: build
-                        src: src
+            [folders]
+            build: build
+            src: src
 
-                        [includedirs]
-                        src
+            [includedirs]
+            src
 
-                        [libdirs]
-                        build/{settings.build_type}
-                        """)
+            [libdirs]
+            build/{settings.build_type}
+            """)
         metacmake = dedent("""
-                        cmake_minimum_required(VERSION 3.3)
-                        project(MyProject CXX)
-                        include(${CMAKE_BINARY_DIR}/conanworkspace.cmake)
-        """)
+            cmake_minimum_required(VERSION 3.3)
+            project(MyProject CXX)
+            include(${CMAKE_BINARY_DIR}/conanworkspace.cmake)
+            """)
         client.save({"conanws.yml": project,
                      "layout": layout,
                      "CMakeLists.txt": metacmake})
@@ -461,9 +461,9 @@ class Pkg(ConanFile):
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
-                        [folders]
-                        build: build
-                        """)
+            [folders]
+            build: build
+            """)
         client.save({"conanws.yml": project,
                      "layout": layout})
 
