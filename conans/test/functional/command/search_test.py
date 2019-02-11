@@ -1,8 +1,16 @@
 import json
 import os
 import shutil
+import textwrap
+import time
 import unittest
 from collections import OrderedDict
+<<<<<<< HEAD
+=======
+from textwrap import dedent
+
+from mock import patch
+>>>>>>> add test
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
@@ -1076,3 +1084,28 @@ class Test(ConanFile):
             client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
             self.assertIn("os: Windows", client.user_io.out)
             self.assertNotIn("os: Linux", client.user_io.out)
+
+
+class SearchRemoteAllTestCase(unittest.TestCase):
+    def setUp(self):
+        """ Create a remote called 'all' with some recipe in it """
+        self.remote_name = 'all'
+        servers = {self.remote_name: TestServer(users={"user": "passwd"})}
+        self.client = TestClient(servers=servers, users={self.remote_name: [("user", "passwd")], })
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyLib(ConanFile):
+                pass
+            """)
+
+        self.reference = "name/version@user/channel"
+        self.client.save({'conanfile.py': conanfile})
+        self.client.run("export . {}".format(self.reference))
+        self.client.run("upload --force -r {} {}".format(self.remote_name, self.reference))
+
+    def test_search_by_name(self):
+        self.client.run("remote list")
+        self.assertIn("all: http://fake", self.client.out)
+        self.client.run("search -r {} {}".format(self.remote_name, self.reference))
+        self.assertIn("Existing recipe in remote 'all':", self.client.out)  # Searching in 'all'
