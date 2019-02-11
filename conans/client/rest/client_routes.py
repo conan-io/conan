@@ -62,6 +62,10 @@ class ClientV1Router(ClientCommonRouter):
     def __init__(self, base_url):
         self.base_url = "{}/v1/".format(base_url)
 
+    def search_packages(self, ref, query=None):
+        ref = ref.copy_clear_rev()
+        return super(ClientV1Router, self).search_packages(ref, query)
+
     def remove_recipe(self, ref):
         """Remove recipe"""
         return self.base_url + self._for_recipe(ref.copy_clear_rev())
