@@ -5,6 +5,7 @@ import shutil
 import time
 import unittest
 
+from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.client import tools
@@ -146,6 +147,7 @@ root: HelloA
 
     @parameterized.expand([(True, ), (False, )])
     # @unittest.skipUnless(platform.system() in ("Windows", "Linux"), "Test doesn't work on OSX")
+    @attr("slow")
     def cmake_outsource_build_test(self, targets):
         client = TestClient()
 
@@ -236,6 +238,7 @@ name: MyProject
         self.assertIn("Bye! Mars B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
+    @attr("slow")
     def insource_build_test(self):
         client = TestClient()
 

@@ -36,7 +36,7 @@ class Printer(object):
             else:
                 self._out.writeln("%s: %s" % (k, str(v)))
 
-    def print_info(self, data, _info, package_filter=None, show_paths=False):
+    def print_info(self, data, _info, package_filter=None, show_paths=False, show_revisions=False):
         """ Print in console the dependency information for a conan file
         """
         if _info is None:  # No filter
@@ -93,7 +93,8 @@ class Printer(object):
                 self._out.writeln("    Topics: %s" % ", ".join(it["topics"]), Color.BRIGHT_GREEN)
 
             _print("recipe", name="Recipe", color=None)
-            _print("revision", name="Revision", color=None)
+            if show_revisions:
+                _print("revision", name="Revision", color=None)
             _print("binary", name="Binary", color=None)
 
             if show("binary_remote") and is_ref:

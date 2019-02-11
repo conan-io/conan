@@ -3,7 +3,7 @@ import json
 import time
 from requests.auth import AuthBase, HTTPBasicAuth
 
-from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
+from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 from conans.client.rest.client_routes import ClientUsersRouterBuilder, \
@@ -11,9 +11,8 @@ from conans.client.rest.client_routes import ClientUsersRouterBuilder, \
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException)
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.search.search import filter_packages
-from conans.util.env_reader import get_env
 from conans.util.files import decode_text, load
 from conans.util.log import logger
 
@@ -176,19 +175,6 @@ class RestCommonMethods(object):
         """
         self.check_credentials()
 
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        if not revisions_enabled and policy in (UPLOAD_POLICY_NO_OVERWRITE,
-                                                UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
-            # Check if the latest revision is not the one we are uploading, with the compatibility
-            # mode this is supposed to fail if someone tries to upload a different recipe
-            latest_ref = ref.copy_clear_rev()
-            latest_snapshot, ref_latest_snapshot, _ = self.get_recipe_snapshot(latest_ref)
-            server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
-            if latest_snapshot and server_with_revisions and \
-                    ref_latest_snapshot.revision != ref.revision:
-                raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbidden overwrite")
-
         # Get the remote snapshot
         remote_snapshot, ref_snapshot, _ = self.get_recipe_snapshot(ref)
 
@@ -221,17 +207,6 @@ class RestCommonMethods(object):
         """
         self.check_credentials()
 
-        revisions_enabled = get_env("CONAN_CLIENT_REVISIONS_ENABLED", False)
-        if not revisions_enabled and policy == UPLOAD_POLICY_NO_OVERWRITE:
-            # Check if the latest revision is not the one we are uploading, with the compatibility
-            # mode this is supposed to fail if someone tries to upload a different recipe
-            latest_pref = PackageReference(pref.ref, pref.id)
-            latest_snapshot, ref_latest_snapshot, _ = self.get_package_snapshot(latest_pref)
-            server_with_revisions = ref_latest_snapshot.revision != DEFAULT_REVISION_V1
-            if latest_snapshot and server_with_revisions and \
-                    ref_latest_snapshot.revision != pref.revision:
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite")
         t1 = time.time()
         # Get the remote snapshot
         remote_snapshot, pref_snapshot, _ = self.get_package_snapshot(pref)

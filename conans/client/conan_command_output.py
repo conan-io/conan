@@ -80,7 +80,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self.cache.package_layout(ref).load_manifest()
+                manifest = self.cache.package_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
@@ -119,6 +119,8 @@ class CommandOutputer(object):
             conanfile = node.conanfile
             if node.recipe == RECIPE_CONSUMER:
                 ref = str(conanfile)
+            else:
+                item_data["revision"] = str(ref.revision)
 
             item_data["reference"] = str(ref)
             item_data["is_ref"] = isinstance(ref, ConanFileReference)
@@ -198,7 +200,8 @@ class CommandOutputer(object):
     def info(self, deps_graph, only, package_filter, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self.user_io.out).print_info(data, only,  package_filter=package_filter,
-                                             show_paths=show_paths)
+                                             show_paths=show_paths,
+                                             show_revisions=self.cache.config.revisions_enabled)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):

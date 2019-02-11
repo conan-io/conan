@@ -7,7 +7,7 @@ RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being us
 RECIPE_UPDATED = "Updated"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
-RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
+RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_WORKSPACE = "Workspace"
 RECIPE_EDITABLE = "Editable"
@@ -51,9 +51,8 @@ class Node(object):
             closure.update(current)
             for n, private in current.items():
                 for edge in n.dependencies:
-                    private = private or edge.private
                     if edge.dst not in new_current and edge.dst not in closure:
-                        new_current[edge.dst] = private
+                        new_current[edge.dst] = private or edge.private or edge.build_require
             current = new_current
         return closure
 
@@ -64,6 +63,10 @@ class Node(object):
     def full_closure(self):
         # Used to mark as BINARY_SKIP private dependencies
         return self.closure().keys()
+
+    def full_public_closure(self):
+        # Used to BinaryInstaller._propagate_info()
+        return [n for n, private in self.closure().items() if not private]
 
     def partial_copy(self):
         result = Node(self.ref, self.conanfile)
@@ -199,37 +202,6 @@ class DepsGraph(object):
         for level in ordered:
             for node in level:
                 yield node
-
-    def full_closure(self, node, private=False):
-        # Needed to propagate correctly the cpp_info even with privates
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n] = n
-            for n in current:
-                neighbors = n.public_neighbors() if not private else n.neighbors()
-                for neigh in neighbors:
-                    if neigh not in new_current and neigh not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
-
-    def closure(self, node):
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n.ref.name] = n
-            for n in current:
-                neighs = n.public_neighbors()
-                for neigh in neighs:
-                    if neigh not in new_current and neigh.ref.name not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
 
     def _inverse_closure(self, references):
         closure = set()

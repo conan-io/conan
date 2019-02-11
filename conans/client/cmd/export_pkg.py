@@ -3,6 +3,7 @@ import os
 from conans.client import packager
 from conans.client.graph.graph_manager import load_deps_info
 from conans.errors import ConanException
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir
 
@@ -37,7 +38,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
             raise ConanException("Package already exists. Please use --force, -f to "
                                  "overwrite it")
 
-    recipe_hash = cache.package_layout(ref).load_manifest().summary_hash
+    recipe_hash = cache.package_layout(ref).recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:
@@ -47,4 +48,9 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
         packager.create_package(conanfile, package_id, source_folder, build_folder,
                                 dest_package_folder, install_folder, hook_manager, conan_file_path,
                                 ref, local=True)
+        with cache.package_layout(ref).update_metadata() as metadata:
+            readed_manifest = FileTreeManifest.load(dest_package_folder)
+            metadata.packages[package_id].revision = readed_manifest.summary_hash
+            metadata.packages[package_id].recipe_revision = metadata.recipe.revision
+
     recorder.package_exported(pref)

@@ -92,9 +92,7 @@ class ClientBaseRouterBuilder(object):
     def for_package_file(self, pref, path):
         """url for getting a file from a package, with or without revisions"""
         if not pref.ref.revision:
-            if pref.revision:
-                raise ConanException(self.bad_package_revision)
-            tmp = self.routes.package_file
+            raise ConanException("Cannot get a package file without a recipe revision")
         elif not pref.revision:
             tmp = self.routes.package_recipe_revision_file
         else:

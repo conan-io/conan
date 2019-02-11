@@ -60,7 +60,8 @@ class RestApiTest(unittest.TestCase):
             cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
             cls.server.start()
 
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests,
+                                    revisions_enabled=False)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 
             # Authenticate user

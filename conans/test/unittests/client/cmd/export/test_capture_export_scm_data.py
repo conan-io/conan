@@ -31,7 +31,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         # Mock the cache item (return the cache_ref_folder)
         self.cache_ref_folder = os.path.join(temp_folder(), ref.dir_repr())
         self.paths = mock.MagicMock(side_effect=None)
-        self.paths.scm_folder.side_effect = lambda _: os.path.join(self.cache_ref_folder, SCM_FOLDER)
+        self.paths.scm_folder.side_effect = lambda _: os.path.join(self.cache_ref_folder,
+                                                                   SCM_FOLDER)
 
     @parameterized.expand([(True, ), (False, )])
     def test_url_auto_revision_auto(self, _, local_origin):
@@ -45,7 +46,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = self.git.folder if local_origin else "https://remote.url"
         self.git.run("remote add origin \"{}\"".format(url))
 
-        scm_data, captured_revision = _capture_export_scm_data(
+        scm_data = _capture_export_scm_data(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
@@ -53,7 +54,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             paths=self.paths,
             ref=None)
 
-        self.assertTrue(captured_revision)
         self.assertEquals(scm_data.url, url)
         self.assertEquals(scm_data.revision, self.rev)
         self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
@@ -76,7 +76,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         if not is_pristine:
             save(os.path.join(self.git.folder, "other"), "ccc")
 
-        scm_data, captured_revision = _capture_export_scm_data(
+        scm_data = _capture_export_scm_data(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
             destination_folder="",
@@ -84,7 +84,6 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             paths=self.paths,
             ref=None)
 
-        self.assertTrue(captured_revision)
         self.assertEquals(scm_data.url, url)
         self.assertEquals(scm_data.revision, self.rev)
         self.assertNotIn("Repo origin deduced", output)
@@ -107,15 +106,14 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         url = "https://remote.url"
         self.git.run("remote add origin \"{}\"".format(url))
 
-        scm_data, captured_revision = _capture_export_scm_data(
-            conanfile=conanfile,
-            conanfile_dir=self.conanfile_dir,
-            destination_folder="",
-            output=output,
-            paths=self.paths,
-            ref=None)
+        scm_data = _capture_export_scm_data(
+                    conanfile=conanfile,
+                    conanfile_dir=self.conanfile_dir,
+                    destination_folder="",
+                    output=output,
+                    paths=self.paths,
+                    ref=None)
 
-        self.assertFalse(captured_revision)
         self.assertEquals(scm_data.url, url)
         self.assertEquals(scm_data.revision, self.rev)
         self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)

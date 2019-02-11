@@ -79,7 +79,7 @@ the old general
             old_conf_path = os.path.join(old_conan_folder, "conan.conf")
             old_attribute_checker_plugin = os.path.join(old_conan_folder, "plugins",
                                                         "attribute_checker.py")
-            save(old_conf_path, "\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
+            save(old_conf_path, "\n[general]\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
             save(old_attribute_checker_plugin, "")
             # Do not adjust cpu_count, it is reusing a cache
             cache = TestClient(base_folder=old_user_home, cpu_count=False).cache
