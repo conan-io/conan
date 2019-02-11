@@ -958,7 +958,7 @@ class ConanAPIV1(object):
                                      " and alias with the same name".format(ref))
 
         package_layout = self._cache.package_layout(ref)
-        return export_alias(package_layout, str(target_ref),
+        return export_alias(package_layout, target_ref.full_repr(),
                             revisions_enabled=self._cache.config.revisions_enabled,
                             output=self._user_io.out)
 

@@ -15,7 +15,7 @@ from conans.model.scm import SCM, get_scm_data
 from conans.model.scm import detect_repo_type
 from conans.paths import CONANFILE
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir
 from conans.util.log import logger
 
 
