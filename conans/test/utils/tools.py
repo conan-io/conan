@@ -651,7 +651,7 @@ servers["r2"] = TestServer()
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)
 
-    def run(self, command_line, user_io=None, assert_error=False):
+    def run(self, command_line, user_io=None, assert_error=False, lock=False, lockfile=None):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
@@ -661,7 +661,9 @@ servers["r2"] = TestServer()
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
-                          self.hook_manager, requester, interactive=interactive)
+                          self.hook_manager, requester, interactive=interactive,
+                          lock=lock, lockfile=lockfile)
+
         outputer = CommandOutputer(self.user_io, self.cache)
         command = Command(conan, self.cache, self.user_io, outputer)
         args = shlex.split(command_line)
