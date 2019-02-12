@@ -337,15 +337,18 @@ class BinaryInstaller(object):
         with self._cache.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
-                set_dirty(package_folder)
                 if node.binary == BINARY_BUILD:
+                    set_dirty(package_folder)
                     self._build_package(node, pref, output, keep_build)
+                    clean_dirty(package_folder)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     if not self._node_concurrently_installed(node, package_folder):
+                        set_dirty(package_folder)
                         new_ref = self._remote_manager.get_package(pref, package_folder,
                                                                    node.binary_remote, output,
                                                                    self._recorder)
                         self._registry.prefs.set(new_ref, node.binary_remote.name)
+                        clean_dirty(package_folder)
                     else:
                         output.success('Download skipped. Probable concurrent download')
                         log_package_got_from_local_cache(pref)
@@ -354,7 +357,7 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
-                clean_dirty(package_folder)
+
             # Call the info method
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(pref, conan_file.cpp_info)
