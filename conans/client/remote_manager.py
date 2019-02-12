@@ -14,7 +14,6 @@ from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
-from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_DIR_OLD, \
     EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
