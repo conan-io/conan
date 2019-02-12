@@ -1359,7 +1359,7 @@ class Command(object):
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
         parser.add_argument("-p", "--package", default=None,
-                            help="Package ID (deprecated, use full reference)",
+                            help="Package ID [DEPRECATED: use full reference instead]",
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='Get from this specific remote')
