@@ -1037,7 +1037,7 @@ build_type: [ Release]
         self.assertEquals(cmake.generator, "Unix Makefiles")
 
         cmake = instance_with_os_build("Windows")
-        self.assertEquals(cmake.generator, "MinGW Makefiles")
+        self.assertEquals(cmake.generator, None)
 
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "MyCoolGenerator"}):
             cmake = instance_with_os_build("Windows")
