@@ -36,7 +36,8 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            return "MinGW Makefiles"
+            logger.warning("No compiler has been detected for Windows platform")
+            return None
         return "Unix Makefiles"
 
     if compiler == "Visual Studio":
