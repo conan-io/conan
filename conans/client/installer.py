@@ -450,7 +450,6 @@ class BinaryInstaller(object):
     def _propagate_info(node, inverse_levels):
         # Get deps_cpp_info from upstream nodes
         closure = node.full_public_closure()
-        print "CLOSURE ", closure
         node_order = [n for n in closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         node_order.sort(key=lambda n: inverse_levels[n])

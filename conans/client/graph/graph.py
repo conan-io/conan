@@ -45,7 +45,7 @@ class Node(object):
 
     def closure(self):
         closure = OrderedDict()
-        current = {edge.dst: False for edge in self.dependencies}
+        current = OrderedDict([(edge.dst, False) for edge in self.dependencies])
         while current:
             new_current = OrderedDict()
             closure.update(current)
