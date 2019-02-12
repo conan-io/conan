@@ -55,6 +55,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         if generator:
             self.assertIn('cmake -G "{}"'.format(generator), client.out)
             self.assertTrue(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
+        else:
+            self.assertNotIn("cmake -G", client.out)
+            self.assertFalse(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
 
     @unittest.skipUnless(tools.os_info.is_linux, "Compilation with real gcc needed")
     def test_cmake_default_generator_linux(self):
