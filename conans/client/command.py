@@ -96,12 +96,13 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, cache, user_io, outputer):
+    def __init__(self, conan_api, cache, user_io, outputer, help_message=None):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
         self._cache = cache
         self._user_io = user_io
         self._outputer = outputer
+        self._help_message = help_message
 
     def help(self, *args):
         """Show help of a specific command.
@@ -1455,6 +1456,9 @@ class Command(object):
                 self._user_io.out.write(fmt % name, Color.GREEN)
                 self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0].strip())
 
+        if self._help_message:
+            self._user_io.out.writeln("")
+            self._user_io.out.writeln(self._help_message)
         self._user_io.out.writeln("")
         self._user_io.out.writeln('Conan commands. Type "conan <command> -h" for help',
                                   Color.BRIGHT_YELLOW)
@@ -1609,6 +1613,23 @@ def _add_common_install_arguments(parser, build_help):
                         help="Check updates exist from upstream remotes")
 
 
+def _parse_api_arguments(args):
+    """Conan API arguments, can be applied to all commands."""
+    parser = argparse.ArgumentParser(description=_parse_api_arguments.__doc__,
+                                     add_help=False, usage=argparse.SUPPRESS)
+
+    parser.add_argument("--lock", action='store_true', default=False,
+                        help="Generate or update lockfile")
+    parser.add_argument("--skip-lockfile", action='store_true', default=False,
+                        help="Even if lockfile is found, do not use it")
+    parser.add_argument("--lockfile", action=OnceArgument, default="conan.lock",
+                        help="Change default lockfile name from \"conan.lock\"")
+
+    api_args, rest_of_args = parser.parse_known_args(args)
+
+    return api_args, rest_of_args, parser.format_help()
+
+
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
 
     --build            Build all from sources, do not use binary packages.
@@ -1639,13 +1660,16 @@ def main(args):
         5: SIGTERM
         6: Invalid configuration (done)
     """
+
+    api_args, args, help_message = _parse_api_arguments(args)
+
     try:
-        conan_api, cache, user_io = Conan.factory()
+        conan_api, cache, user_io = Conan.factory(**vars(api_args))
     except ConanException:  # Error migrating
         sys.exit(ERROR_MIGRATION)
 
     outputer = CommandOutputer(user_io, cache)
-    command = Command(conan_api, cache, user_io, outputer)
+    command = Command(conan_api, cache, user_io, outputer, help_message)
     current_dir = get_cwd()
     try:
         import signal

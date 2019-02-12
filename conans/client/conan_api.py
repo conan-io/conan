@@ -24,6 +24,7 @@ from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
+from conans.client.graph.range_resolver_locked import RangeResolverLocked
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.loader import ConanFileLoader
@@ -85,7 +86,9 @@ def api_method(f):
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._cache.config.env_vars):
                 # Patch the globals in tools
-                return f(*args, **kwargs)
+                r = f(*args, **kwargs)
+                the_self.flush()
+                return r
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
@@ -165,7 +168,7 @@ class ConanAPIV1(object):
         return localdb, rest_api_client, remote_manager
 
     @staticmethod
-    def factory(interactive=None):
+    def factory(interactive=None, lock=False, skip_lockfile=False, lockfile=None):
         """Factory"""
         # Respect color env setting or check tty if unset
         color_set = "CONAN_COLOR_DISPLAY" in os.environ
@@ -212,13 +215,24 @@ class ConanAPIV1(object):
             # Settings preprocessor
             if interactive is None:
                 interactive = not get_env("CONAN_NON_INTERACTIVE", False)
+
+            # Check lockfile
+            if lock and lockfile:
+                try:
+                    open(lockfile, "w+").close()
+                except Exception as e:
+                    out.error(str(e))
+                    raise
+            elif skip_lockfile or (lockfile and not os.path.isfile(lockfile)):
+                lockfile = None
+
             conan = ConanAPIV1(cache, user_io, get_conan_runner(), remote_manager,
-                               hook_manager, requester, interactive=interactive)
+                               hook_manager, requester, interactive=interactive, lock=lock, lockfile=lockfile)
 
         return conan, cache, user_io
 
     def __init__(self, cache, user_io, runner, remote_manager, hook_manager, requester,
-                 interactive=True):
+                 interactive=True, lock=False, lockfile=None):
         assert isinstance(user_io, UserIO)
         assert isinstance(cache, ClientCache)
         self._cache = cache
@@ -230,18 +244,26 @@ class ConanAPIV1(object):
             self._user_io.disable_input()
 
         self._proxy = ConanProxy(cache, self._user_io.out, remote_manager)
-        resolver = RangeResolver(cache, self._proxy)
-        python_requires = ConanPythonRequire(self._proxy, resolver)
+        self._lockfile = lockfile
+        if self._lockfile:
+            self._resolver = RangeResolverLocked(lockfile, lock, cache, self._proxy)
+        else:
+            self._resolver = RangeResolver(cache, self._proxy)
+        python_requires = ConanPythonRequire(self._proxy, self._resolver)
         self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
 
         self._graph_manager = GraphManager(self._user_io.out, self._cache,
                                            self._remote_manager, self._loader, self._proxy,
-                                           resolver)
+                                           self._resolver)
         self._hook_manager = hook_manager
 
     def invalidate_caches(self):
         self._loader.invalidate_caches()
         self._cache.invalidate()
+
+    def flush(self):
+        if self._lockfile:
+            self._resolver.flush()
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
