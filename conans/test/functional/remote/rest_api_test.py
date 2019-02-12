@@ -15,6 +15,7 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 
 
@@ -189,6 +190,7 @@ class RestApiTest(unittest.TestCase):
         results = [r.copy_clear_rev() for r in results]
         self.assertEqual(results, [ref1])
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
     def remove_test(self):
         # Upload a conans
         ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
@@ -200,6 +202,7 @@ class RestApiTest(unittest.TestCase):
         self.api.remove_conanfile(ref)
         self.assertFalse(os.path.exists(path1))
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
     def remove_packages_test(self):
         ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
                                        % DEFAULT_REVISION_V1)
