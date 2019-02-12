@@ -8,7 +8,6 @@
     see return_plugin.py
 
 """
-from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.util.env_reader import get_env
@@ -149,7 +148,7 @@ class RecipeNotFoundException(NotFoundException):
 
     def __init__(self, ref, print_rev=False):
         from conans.model.ref import ConanFileReference
-        assert isinstance(ref, ConanFileReference), "NotFoundException requires a " \
+        assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
                                                     "ConanFileReference"
         self._str_ref = ref.full_repr() if print_rev else str(ref)
 
@@ -179,11 +178,11 @@ class UserInterfaceErrorException(RequestErrorException):
     pass
 
 
-EXCEPTION_CODE_MAPPING = OrderedDict({InternalErrorException: 500,
-                                      RequestErrorException: 400,
-                                      AuthenticationException: 401,
-                                      ForbiddenException: 403,
-                                      NotFoundException: 404,
-                                      RecipeNotFoundException: 404,
-                                      PackageNotFoundException: 404,
-                                      UserInterfaceErrorException: 420})
+EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
+                          RequestErrorException: 400,
+                          AuthenticationException: 401,
+                          ForbiddenException: 403,
+                          NotFoundException: 404,
+                          RecipeNotFoundException: 404,
+                          PackageNotFoundException: 404,
+                          UserInterfaceErrorException: 420}

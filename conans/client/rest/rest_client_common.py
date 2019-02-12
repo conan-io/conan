@@ -7,7 +7,8 @@ from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
     UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
-                           AuthenticationException)
+                           AuthenticationException, RecipeNotFoundException,
+                           PackageNotFoundException)
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
@@ -35,7 +36,7 @@ def get_exception_from_error(error_code):
     try:
         tmp = {}
         for key, value in EXCEPTION_CODE_MAPPING.items():
-            if value not in tmp:
+            if key not in (RecipeNotFoundException, PackageNotFoundException):
                 tmp[value] = key
         if error_code in tmp:
             logger.debug("REST ERROR: %s" % str(tmp[error_code]))
