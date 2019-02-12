@@ -187,8 +187,12 @@ class ConanApiAuthManager(object):
         return self._rest_client.remove_packages(ref, package_ids)
 
     @input_credentials_if_unauthorized
-    def get_path(self, ref, path, package_id):
-        return self._rest_client.get_path(ref, path, package_id)
+    def get_recipe_path(self, ref, path):
+        return self._rest_client.get_recipe_path(ref, path)
+
+    @input_credentials_if_unauthorized
+    def get_package_path(self, pref, path):
+        return self._rest_client.get_package_path(pref, path)
 
     @input_credentials_if_unauthorized
     def get_recipe_revisions(self, ref):

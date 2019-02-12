@@ -33,7 +33,10 @@ def _base_error(error_code):
 
 def get_exception_from_error(error_code):
     try:
-        tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.items()}
+        tmp = {}
+        for key, value in EXCEPTION_CODE_MAPPING.items():
+            if value not in tmp:
+                tmp[value] = key
         if error_code in tmp:
             logger.debug("REST ERROR: %s" % str(tmp[error_code]))
             return tmp[error_code]
@@ -239,10 +242,10 @@ class RestCommonMethods(object):
         response = self.get_json(url)["results"]
         return [ConanFileReference.loads(reference) for reference in response]
 
-    def search_packages(self, reference, query):
+    def search_packages(self, ref, query):
 
         if not query:
-            url = self.router.search_packages(reference)
+            url = self.router.search_packages(ref)
             package_infos = self.get_json(url)
             return package_infos
 
@@ -253,25 +256,13 @@ class RestCommonMethods(object):
             capabilities = []
 
         if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url = self.router.search_packages(reference, query)
+            url = self.router.search_packages(ref, query)
             package_infos = self.get_json(url)
             return package_infos
         else:
-            url = self.router.search_packages(reference)
+            url = self.router.search_packages(ref)
             package_infos = self.get_json(url)
             return filter_packages(query, package_infos)
-
-    @handle_return_deserializer()
-    def remove_conanfile(self, ref):
-        """ Remove a recipe and packages """
-        self.check_credentials()
-        url = self.router.remove_recipe(ref)
-        logger.debug("REST: remove: %s" % url)
-        response = self.requester.delete(url,
-                                         auth=self.auth,
-                                         headers=self.custom_headers,
-                                         verify=self.verify_ssl)
-        return response
 
     def _post_json(self, url, payload):
         logger.debug("REST: post: %s" % url)

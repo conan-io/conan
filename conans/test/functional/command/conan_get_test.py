@@ -99,9 +99,13 @@ class HelloConan(ConanFile):
 
     def test_not_found(self):
         self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
-        self.assertIn("Recipe Hello0/0.1@lasote/channel not found", self.client.user_io.out)
+        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.user_io.out)
 
         self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
                         assert_error=True)
-        self.assertIn("Package Hello0/0.1@lasote/channel:123123123123123 not found",
-                      self.client.user_io.out)
+        if self.client.cache.config.revisions_enabled:
+            # It has to resolve the latest so it fails again with the recipe
+            self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.user_io.out)
+        else:
+            self.assertIn("Binary package not found: 'Hello0/0.1@lasote/channel:123123123123123'",
+                          self.client.user_io.out)

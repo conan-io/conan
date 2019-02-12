@@ -3,7 +3,8 @@ import re
 from fnmatch import translate
 
 from conans import load
-from conans.errors import NotFoundException, ConanException, ForbiddenException
+from conans.errors import NotFoundException, ConanException, ForbiddenException, \
+    RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
@@ -55,12 +56,12 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
                            settings: {os: Windows}}}
     param ref: ConanFileReference object
     """
-    if not look_in_all_rrevs:
-        assert ref.revision is not None
-    else:
-        assert ref.revision is None
+    if not look_in_all_rrevs and ref.revision is None:
+        latest_rev = server_store.get_last_revision(ref).revision
+        ref = ref.copy_with_rev(latest_rev)
+
     if not os.path.exists(server_store.conan_revisions_root(ref.copy_clear_rev())):
-        raise NotFoundException("Recipe not found: %s" % str(ref))
+        raise RecipeNotFoundException(ref)
     infos = _get_local_infos_min(server_store, ref, look_in_all_rrevs)
     return filter_packages(query, infos)
 

@@ -10,6 +10,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths.simple_paths import SimplePaths
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
+from conans.util.dates import iso8601_to_str
 from conans.util.env_reader import get_env
 from conans.util.files import save
 
@@ -235,9 +236,9 @@ class CommandOutputer(object):
     def print_revisions(self, reference, revisions, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
         self.user_io.out.info("Revisions for '%s'%s:" % (reference, remote_test))
-
-        the_time = "!!!" "No time"
-        lines = ["%s (%s)" % (r["revision"], the_time) for r in revisions]
+        lines = ["%s (%s)" % (r["revision"],
+                              iso8601_to_str(r["time"]) if r["time"] else "No time")
+                 for r in revisions]
         self.user_io.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):

@@ -1056,7 +1056,7 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-                self._outputer.print_revisions(ref, info["revisions"], remote_name=args.remote)
+                self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
@@ -1363,9 +1363,9 @@ class Command(object):
 
         ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote)
         if isinstance(ret, list):
-            self._outputer.print_dir_list(ret, path, args.raw)
+            self._outputer.print_dir_list(ret, args.path, args.raw)
         else:
-            self._outputer.print_file_contents(ret, path, args.raw)
+            self._outputer.print_file_contents(ret, args.path, args.raw)
 
         return
 
@@ -1535,8 +1535,6 @@ class Command(object):
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
         except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)

@@ -411,7 +411,7 @@ class RemoveTest(unittest.TestCase):
         self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)
         if platform.system() == "Linux":
-            self.assertIn("No recipe found 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
+            self.assertIn("Recipe not found: 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
         else:
             self.assertIn("Requested 'hello/1.4.10@myuser/testing' but found "
                           "case incompatible 'Hello'\n"

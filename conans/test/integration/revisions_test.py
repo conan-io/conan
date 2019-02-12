@@ -9,6 +9,7 @@ from parameterized.parameterized import parameterized
 
 from conans import DEFAULT_REVISION_V1, load
 from conans.client.tools import environment_append
+from conans.errors import RecipeNotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
@@ -264,7 +265,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         """
         A client v2 upload RREV with PREV1
         Another client v2 upload the same RREV with PREV2
-        The first client can upgrade from the remote, getting the right time, only
+        The first client can upgrade from the remote, only
         in the package, because the recipe is the same and it is not updated"""
         client = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
         client2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
@@ -288,11 +289,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("{} from 'default' - Cache".format(self.ref), client.out)
         self.assertIn("Retrieving package {}".format(pref.id), client.out)
 
-        prev, prev_time = client.package_revision(pref)
+        prev = client.package_revision(pref)
         self.assertIsNotNone(prev)
-        self.assertIsNotNone(prev_time)
-        # Local package revision time is the pref2
-        self.assertEquals(prev_time, prev2_time_remote)
 
     @parameterized.expand([(True,), (False,)])
     def test_revision_mismatch_packages_in_local(self, v1):
@@ -1136,9 +1134,6 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         else:
             self.assertEquals(revs, [pref.ref.revision])
 
-        _, rev_time = client.recipe_revision(self.ref)
-        self.assertIsNone(rev_time)
-
     @parameterized.expand([(True,), (False,)])
     def upload_discarding_outdated_packages_test(self, v1):
         """If we upload all packages to a server,
@@ -1359,17 +1354,17 @@ class ServerRevisionsIndexes(unittest.TestCase):
         with environment_append({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1),
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
                           pref1.revision)
         with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1),
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
                           pref2.revision)
         with environment_append({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         server_pref3 = self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1),
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
                           pref3.revision)
 
         self.assertEquals(pref1.ref.revision, pref2.ref.revision)
@@ -1380,11 +1375,12 @@ class ServerRevisionsIndexes(unittest.TestCase):
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEquals(revs, [pref3.revision, pref2.revision, pref1.revision])
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref), pref3.revision)
+        self.assertEquals(self.server.server_store.get_last_package_revision(pref).revision,
+                          pref3.revision)
 
         # Delete the latest from the server
         self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_repr(),
-                                                                pref3.id, pref3))
+                                                                pref3.id, pref3.revision))
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEquals(revs, [pref2.revision, pref1.revision])
@@ -1407,8 +1403,8 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.run("remove {} -r default -f".format(ref2.full_repr()))
         self.c_v2.run("remove {} -r default -f".format(ref3.full_repr()))
 
-        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
-        self.assertEquals(revs, [])
+        self.assertRaises(RecipeNotFoundException,
+                          self.server.server_store.get_recipe_revisions, self.ref)
 
         ref4 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev4"))
         self.c_v2.upload_all(ref4)

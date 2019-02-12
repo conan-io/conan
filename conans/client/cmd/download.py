@@ -1,7 +1,6 @@
-from conans import DEFAULT_REVISION_V1
 from conans.client.output import ScopedOutput
 from conans.client.source import complete_recipe_sources
-from conans.errors import NotFoundException, NoRestV2Available
+from conans.errors import NotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -15,16 +14,13 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
-    # First of all download package recipe
-    if ref.revision is None:
-        try:
-            ref = remote_manager.get_latest_recipe_revision(ref, remote)
-        except NoRestV2Available:
-            ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
     try:
+        if ref.revision is None:
+            ref = remote_manager.resolve_latest_ref(ref, remote)
+        # First of all download package recipe
         remote_manager.get_recipe(ref, remote)
     except NotFoundException:
-        raise NotFoundException("'%s' not found in remote '%s'" % (ref.full_repr(), remote.name))
+        raise RecipeNotFoundException(ref, print_rev=cache.config.revisions_enabled)
     registry.refs.set(ref, remote.name)
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
@@ -54,4 +50,6 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         pref = PackageReference(ref, package_id)
         package_folder = cache.package(pref, short_paths=short_paths)
         output.info("Downloading %s" % str(pref))
+        if not pref.revision:
+            pref = remote_manager.resolve_latest_pref(pref, remote)
         remote_manager.get_package(pref, package_folder, remote, output, recorder)

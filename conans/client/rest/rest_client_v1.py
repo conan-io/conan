@@ -8,10 +8,10 @@ from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV1Router
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
 from conans.client.rest.uploader_downloader import Downloader, Uploader
-from conans.errors import ConanException, NotFoundException, NoRestV2Available
+from conans.errors import ConanException, NotFoundException, NoRestV2Available, \
+    PackageNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import PackageReference
 from conans.paths import CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, \
     PACKAGE_TGZ_NAME
 from conans.util.files import decode_text
@@ -102,7 +102,7 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.package_download_urls(pref)
         urls = self._get_file_to_url_dict(url)
         if not urls:
-            raise NotFoundException("Package not found!")
+            raise PackageNotFoundException(pref)
 
         if CONANINFO not in urls:
             raise NotFoundException("Package %s doesn't have the %s file!" % (pref,
@@ -222,33 +222,29 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.package_download_urls(pref)
         urls = self._get_file_to_url_dict(url)
         if not urls:
-            raise NotFoundException("Package not found!")
+            raise PackageNotFoundException(pref)
 
         return urls
 
-    def get_path(self, ref, package_id, path):
+    def get_recipe_path(self, ref, path):
+        url = self.router.recipe_download_urls(ref)
+        return self._get_path(url, path)
+
+    def get_package_path(self, pref, path):
         """Gets a file content or a directory list"""
-        if not package_id:
-            url = self.router.recipe_download_urls(ref)
-        else:
-            pref = PackageReference(ref, package_id)
-            url = self.router.package_download_urls(pref)
-        try:
-            urls = self._get_file_to_url_dict(url)
-        except NotFoundException:
-            if package_id:
-                raise NotFoundException("Package %s:%s not found" % (ref, package_id))
-            else:
-                raise NotFoundException("Recipe %s not found" % str(ref))
+        url = self.router.package_download_urls(pref)
+        return self._get_path(url, path)
+
+    def _get_path(self, url, path):
+        urls = self._get_file_to_url_dict(url)
 
         def is_dir(the_path):
             if the_path == ".":
                 return True
-
-            for the_file in urls:
-                if the_path == the_file:
+            for _the_file in urls:
+                if the_path == _the_file:
                     return False
-                elif the_file.startswith(the_path):
+                elif _the_file.startswith(the_path):
                     return True
             raise NotFoundException("The specified path doesn't exist")
 
@@ -256,7 +252,7 @@ class RestV1Methods(RestCommonMethods):
             ret = []
             for the_file in urls:
                 if path == "." or the_file.startswith(path):
-                    tmp = the_file[len(path)-1:].split("/", 1)[0]
+                    tmp = the_file[len(path) - 1:].split("/", 1)[0]
                     if tmp not in ret:
                         ret.append(tmp)
             return sorted(ret)
@@ -291,6 +287,16 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.remove_packages(ref)
         return self._post_json(url, payload)
 
+    @handle_return_deserializer()
+    def remove_conanfile(self, ref):
+        """ Remove a recipe and packages """
+        self.check_credentials()
+        url = self.router.remove_recipe(ref)
+        logger.debug("REST: remove: %s" % url)
+        response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                         verify=self.verify_ssl)
+        return response
+
     def get_recipe_revisions(self, ref):
         raise NoRestV2Available("The remote doesn't support revisions")
 
@@ -302,3 +308,5 @@ class RestV1Methods(RestCommonMethods):
 
     def get_latest_package_revision(self, pref):
         raise NoRestV2Available("The remote doesn't support revisions")
+
+

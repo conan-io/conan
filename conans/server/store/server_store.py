@@ -2,7 +2,7 @@ import os
 from os.path import join, normpath, relpath
 
 from conans import DEFAULT_REVISION_V1
-from conans.errors import ConanException
+from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.paths.simple_paths import SimplePaths
@@ -18,26 +18,28 @@ class ServerStore(SimplePaths):
         self._storage_adapter = storage_adapter
 
     def conan(self, ref):
-        assert ref.revision is not None
+        assert ref.revision is not None, "BUG: server store needs RREV to get recipe reference"
         tmp = normpath(join(self.store, ref.dir_repr()))
         return join(tmp, ref.revision)
 
     def conan_revisions_root(self, ref):
         """Parent folder of the conan package, for all the revisions"""
-        assert not ref.revision
+        assert not ref.revision, "BUG: server store doesn't need RREV to conan_revisions_root"
         return normpath(join(self.store, ref.dir_repr()))
 
     def packages(self, ref):
         return join(self.conan(ref), PACKAGES_FOLDER)
 
     def package_revisions_root(self, pref):
-        assert pref.revision is None
-        assert pref.ref.revision is not None
+        assert pref.revision is None, "BUG: server store doesn't need PREV to " \
+                                      "package_revisions_root"
+        assert pref.ref.revision is not None, "BUG: server store needs RREV to " \
+                                              "package_revisions_root"
         tmp = join(self.packages(pref.ref), pref.id)
         return tmp
 
     def package(self, pref):
-        assert pref.revision is not None
+        assert pref.revision is not None, "BUG: server store needs PREV for package"
         tmp = join(self.packages(pref.ref), pref.id)
         return join(tmp, pref.revision)
 
@@ -116,14 +118,14 @@ class ServerStore(SimplePaths):
 
     def remove_package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.revision is not None
-        assert pref.ref.revision is not None
+        assert pref.revision is not None, "BUG: server store needs PREV remove_package"
+        assert pref.ref.revision is not None, "BUG: server store needs RREV remove_package"
         package_folder = self.package(pref)
         self._storage_adapter.delete_folder(package_folder)
         self._remove_package_revision_from_index(pref)
 
     def remove_all_packages(self, ref):
-        assert ref.revision is not None
+        assert ref.revision is not None, "BUG: server store needs RREV remove_all_packages"
         assert isinstance(ref, ConanFileReference)
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
@@ -213,7 +215,7 @@ class ServerStore(SimplePaths):
         rev_file_path = self._recipe_revisions_file(ref)
         revs = self._get_revisions_list(rev_file_path).as_list()
         if not revs:
-            return []
+            raise RecipeNotFoundException(ref, print_rev=True)
         return revs
 
     def get_last_package_revision(self, pref):
@@ -246,7 +248,7 @@ class ServerStore(SimplePaths):
 
     def get_package_revisions(self, pref):
         """Returns a RevisionList"""
-        assert pref.ref.revision is not None
+        assert pref.ref.revision is not None, "BUG: server store needs PREV get_package_revisions"
         if pref.revision:
             tmp = RevisionList()
             tmp.add_revision(pref.revision)
@@ -254,6 +256,8 @@ class ServerStore(SimplePaths):
 
         tmp = self._package_revisions_file(pref)
         ret = self._get_revisions_list(tmp).as_list()
+        if not ret:
+            raise PackageNotFoundException(pref, print_rev=True)
         return ret
 
     def _get_revisions_list(self, rev_file_path):

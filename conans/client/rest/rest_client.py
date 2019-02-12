@@ -66,8 +66,11 @@ class RestApiClient(object):
     def get_package_snapshot(self, ref):
         return self._get_api().get_package_snapshot(ref)
 
-    def get_path(self, ref, package_id, path):
-        return self._get_api().get_path(ref, package_id, path)
+    def get_recipe_path(self, ref, path):
+        return self._get_api().get_recipe_path(ref, path)
+
+    def get_package_path(self, pref, path):
+        return self._get_api().get_package_path(pref, path)
 
     def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
         return self._get_api().upload_recipe(ref, the_files, retry, retry_wait,

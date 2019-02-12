@@ -32,6 +32,7 @@ class Node(object):
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
+        self.pref = None
         self.binary = None
         self.recipe = recipe
         self.remote = None

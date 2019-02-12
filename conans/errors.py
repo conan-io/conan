@@ -8,6 +8,7 @@
     see return_plugin.py
 
 """
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.util.env_reader import get_env
@@ -139,7 +140,36 @@ class NotFoundException(ConanException):  # 404
     """
         404 error
     """
-    pass
+
+    def __init__(self, *args, **kwargs):
+        super(NotFoundException, self).__init__(*args, **kwargs)
+
+
+class RecipeNotFoundException(NotFoundException):
+
+    def __init__(self, ref, print_rev=False):
+        from conans.model.ref import ConanFileReference
+        assert isinstance(ref, ConanFileReference), "NotFoundException requires a " \
+                                                    "ConanFileReference"
+        self._str_ref = ref.full_repr() if print_rev else str(ref)
+
+        super(RecipeNotFoundException, self).__init__()
+
+    def __str__(self):
+        return "Recipe not found: '{}'".format(self._str_ref)
+
+
+class PackageNotFoundException(NotFoundException):
+
+    def __init__(self, pref, print_rev=False):
+        from conans.model.ref import PackageReference
+        assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
+                                                   "PackageReference"
+        self._str_ref = pref.full_repr() if print_rev else str(pref)
+        super(PackageNotFoundException, self).__init__()
+
+    def __str__(self):
+        return "Binary package not found: '{}'".format(self._str_ref)
 
 
 class UserInterfaceErrorException(RequestErrorException):
@@ -149,9 +179,11 @@ class UserInterfaceErrorException(RequestErrorException):
     pass
 
 
-EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
-                          RequestErrorException: 400,
-                          AuthenticationException: 401,
-                          ForbiddenException: 403,
-                          NotFoundException: 404,
-                          UserInterfaceErrorException: 420}
+EXCEPTION_CODE_MAPPING = OrderedDict({InternalErrorException: 500,
+                                      RequestErrorException: 400,
+                                      AuthenticationException: 401,
+                                      ForbiddenException: 403,
+                                      NotFoundException: 404,
+                                      RecipeNotFoundException: 404,
+                                      PackageNotFoundException: 404,
+                                      UserInterfaceErrorException: 420})

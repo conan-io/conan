@@ -2,16 +2,19 @@ import os
 import shutil
 import stat
 import tarfile
-import time
 import traceback
 
+import time
 from requests.exceptions import ConnectionError
 
-from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
+from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
+from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
 from conans.client.source import merge_directories
-from conans.errors import ConanConnectionError, ConanException, NotFoundException
+from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
+    NoRestV2Available, PackageNotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files
+from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_DIR_OLD, \
     EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
@@ -22,7 +25,8 @@ from conans.util.files import clean_dirty, exception_message_safe, gzopen_withou
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_compressed_files, log_package_download, log_package_upload,
-                                log_recipe_download, log_recipe_sources_download, log_recipe_upload,
+                                log_recipe_download, log_recipe_sources_download,
+                                log_recipe_upload,
                                 log_uncompressed_file)
 
 
@@ -165,6 +169,8 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
+
+        # If incomplete, resolve the full revision
         return self._call_remote(remote, "get_conan_manifest", ref)
 
     def get_package_manifest(self, pref, remote):
@@ -173,6 +179,8 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
+
+        # If incomplete, resolve the full revision
         return self._call_remote(remote, "get_package_manifest", pref)
 
     def get_package_info(self, pref, remote):
@@ -181,6 +189,8 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanInfo, remote_name)"""
+
+        # If incomplete, resolve the full revision
         return self._call_remote(remote, "get_package_info", pref)
 
     def get_recipe(self, ref, remote):
@@ -189,8 +199,6 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-
-        assert ref.revision is not None, "Cannot get a recipe without revision"
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
         dest_folder = self._cache.export(ref)
@@ -236,11 +244,11 @@ class RemoteManager(object):
         return
 
     def get_package(self, pref, dest_folder, remote, output, recorder):
-        package_id = pref.id
+
         conanfile_path = self._cache.conanfile(pref.ref)
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=package_id, remote=remote)
-        output.info("Retrieving package %s from remote '%s' " % (package_id, remote.name))
+                                   reference=pref.ref, package_id=pref.id, remote=remote)
+        output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
@@ -258,10 +266,9 @@ class RemoteManager(object):
             if get_env("CONAN_READ_ONLY_CACHE", False):
                 make_read_only(dest_folder)
             recorder.package_downloaded(pref, remote.url)
-            output.success('Package installed %s' % package_id)
+            output.success('Package installed %s' % pref.id)
         except NotFoundException:
-            raise NotFoundException("Package binary '%s' not found in '%s'" % (pref,
-                                                                               remote.name))
+            raise PackageNotFoundException(pref)
         except BaseException as e:
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
@@ -273,7 +280,7 @@ class RemoteManager(object):
                                      "Close any app using it, and retry" % (str(e), dest_folder))
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=package_id, remote=remote)
+                                   reference=pref.ref, package_id=pref.id, remote=remote)
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
@@ -299,13 +306,11 @@ class RemoteManager(object):
         """
         return self._call_remote(remote, "remove_packages", ref, remove_ids)
 
-    def get_path(self, ref, package_id, path, remote):
-        if package_id and self._cache.config.revisions_enabled and not ref.revision:
-            # With revisions we resolve to latest to get the file, otherwise we can't
-            # FIXME: Dedicated endpoint to resolve the latest ref?
-            _, ref, _ = self._call_remote(remote, "get_recipe_snapshot", ref)
+    def get_recipe_path(self, ref, path, remote):
+        return self._call_remote(remote, "get_recipe_path", ref, path)
 
-        return self._call_remote(remote, "get_path", ref, package_id, path)
+    def get_package_path(self, pref, path, remote):
+        return self._call_remote(remote, "get_package_path", pref, path)
 
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)
@@ -328,6 +333,22 @@ class RemoteManager(object):
         revision = self._call_remote(remote, "get_latest_package_revision", pref)
         return revision
 
+    def resolve_latest_ref(self, ref, remote):
+        if ref.revision is None:
+            try:
+                ref = self.get_latest_recipe_revision(ref, remote)
+            except NoRestV2Available:
+                ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+        return ref
+
+    def resolve_latest_pref(self, pref, remote):
+        if pref.revision is None:
+            try:
+                pref = self.get_latest_package_revision(pref, remote)
+            except NoRestV2Available:
+                pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
+        return pref
+
     def _call_remote(self, remote, method, *argc, **argv):
         assert(isinstance(remote, Remote))
         self._auth_manager.remote = remote
@@ -336,6 +357,10 @@ class RemoteManager(object):
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
+        except RecipeNotFoundException as exc:
+            raise NotFoundException("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
+        except PackageNotFoundException as exc:
+            raise NotFoundException("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
         except ConanException as exc:
             raise exc.__class__("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
         except Exception as exc:

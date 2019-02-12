@@ -1,7 +1,7 @@
 import os
 
 from conans.client.cache.remote_registry import Remote
-from conans.errors import ConanException
+from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
@@ -73,7 +73,7 @@ class DiskRemover(object):
             for id_ in ids_filter:  # remove just the specified packages
                 pref = PackageReference(ref, id_)
                 if not self._cache.package_layout(ref).package_exists(pref):
-                    raise NotFoundException("The package doesn't exist: %s" % pref.full_repr())
+                    raise PackageNotFoundException(pref)
                 pkg_folder = self._cache.package(pref)
                 self._remove(pkg_folder, ref, "package:%s" % id_)
                 self._remove_file(pkg_folder + ".dirty", ref, "dirty flag")
@@ -173,7 +173,8 @@ class ConanRemover(object):
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))
                 if not self._cache.package_layout(input_ref).recipe_exists():
-                    raise NotFoundException("No recipe found '%s'" % input_ref.full_repr())
+                    raise RecipeNotFoundException(input_ref,
+                                                  print_rev=self._cache.config.revisions_enabled)
                 refs.append(input_ref)
             else:
                 refs = search_recipes(self._cache, pattern)

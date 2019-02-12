@@ -751,7 +751,7 @@ class TurboTestClient(TestClient):
         remote = remote or list(self.servers.keys())[0]
         self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
                  assert_error=assert_error)
-        remote_rrev = self.servers[remote].server_store.get_last_revision(ref)
+        remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
         return ref.copy_with_rev(remote_rrev)
 
     def remove_all(self):

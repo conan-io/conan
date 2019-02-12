@@ -151,6 +151,7 @@ class ClientV2Router(ClientCommonRouter):
 
     def remove_package(self, pref):
         """Remove package url"""
+        assert pref.revision is not None, "remove_package v2 needs PREV"
         return self.base_url + self._for_package(pref)
 
     def remove_all_packages(self, ref):
@@ -183,8 +184,7 @@ class ClientV2Router(ClientCommonRouter):
 
     def package_latest(self, pref):
         """Get the latest of a package"""
-        assert pref.ref.revision is not None
-        assert pref.revision is None
+        assert pref.ref.revision is not None, "Cannot get the latest package without RREV"
         return self.base_url + _format_pref(routes.package_revision_latest, pref)
 
     def recipe_latest(self, ref):
@@ -195,15 +195,15 @@ class ClientV2Router(ClientCommonRouter):
     @staticmethod
     def _for_package_file(pref, path):
         """url for getting a file from a package, with revisions"""
-        assert pref.ref.revision is not None
-        assert pref.revision is not None
+        assert pref.ref.revision is not None, "_for_package_file needs RREV"
+        assert pref.revision is not None, "_for_package_file needs PREV"
         return ClientV2Router._format_pref_path(routes.package_revision_file, pref, path)
 
     @staticmethod
     def _for_package_files(pref):
         """url for getting the recipe list"""
-        assert pref.revision is not None
-        assert pref.ref.revision is not None
+        assert pref.revision is not None, "_for_package_files needs PREV"
+        assert pref.ref.revision is not None, "_for_package_files needs RREV"
         return _format_pref(routes.package_revision_files, pref)
 
     @staticmethod

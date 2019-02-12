@@ -2,14 +2,13 @@ import os
 
 from requests.exceptions import RequestException
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
                                        RECIPE_UPDATED, RECIPE_EDITABLE)
 from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException, NotFoundException, NoRestV2Available
+from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.util.tracer import log_recipe_got_from_local_cache
 
@@ -79,6 +78,7 @@ class ConanProxy(object):
             return conanfile_path, status, remote, new_ref
 
         try:  # get_conan_manifest can fail, not in server
+            ref = self._remote_manager.resolve_latest_ref(ref, remote)
             upstream_manifest = self._remote_manager.get_conan_manifest(ref, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
@@ -110,12 +110,8 @@ class ConanProxy(object):
 
         def _retrieve_from_remote(_ref, the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
-            if _ref.revision is None:
-                try:
-                    _ref = self._remote_manager.get_latest_recipe_revision(_ref, the_remote)
-                except NoRestV2Available:
-                    _ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-
+            # If incomplete, resolve the latest in server
+            _ref = self._remote_manager.resolve_latest_ref(_ref, remote)
             self._remote_manager.get_recipe(_ref, the_remote)
             self._registry.refs.set(_ref, the_remote.name)
             recorder.recipe_downloaded(ref, the_remote.url)

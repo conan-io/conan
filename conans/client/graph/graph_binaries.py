@@ -20,6 +20,7 @@ class GraphBinariesAnalyzer(object):
         self._workspace = workspace
 
     def _get_package_info(self, pref, remote):
+        assert pref.revision is not None, "Revision needed to get a package_info"
         try:
             remote_info = self._remote_manager.get_package_info(pref, remote)
             return remote_info
@@ -45,11 +46,12 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
-        assert node.binary is None
+        assert node.binary is None, "Node binary is None"
 
         ref, conanfile = node.ref, node.conanfile
         package_id = conanfile.info.package_id()
         pref = PackageReference(ref, package_id)
+        node.pref = pref
         # Check that this same reference hasn't already been checked
         previous_node = evaluated_nodes.get(pref)
         if previous_node:
@@ -69,8 +71,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_BUILD
             return
 
-        package_folder = self._cache.package(pref,
-                                             short_paths=conanfile.short_paths)
+        package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
         local_project = self._workspace[ref] if self._workspace else None
@@ -104,10 +105,16 @@ class GraphBinariesAnalyzer(object):
         if os.path.exists(package_folder):
             if update:
                 if remote:
-                    if self._check_update(package_folder, pref, remote, output, node):
-                        node.binary = BINARY_UPDATE
-                        if build_mode.outdated:
-                            package_hash = self._get_package_info(pref, remote).recipe_hash
+                    try:
+                        pref = self._remote_manager.resolve_latest_pref(pref, remote)
+                    except NotFoundException:
+                        output.warn("Can't update, no package in remote")
+                    else:
+                        if self._check_update(package_folder, pref, remote, output, node):
+                            node.binary = BINARY_UPDATE
+                            node.pref = pref  # With revision
+                            if build_mode.outdated:
+                                package_hash = self._get_package_info(pref, remote).recipe_hash()
                 elif remotes:
                     pass
                 else:
@@ -119,20 +126,30 @@ class GraphBinariesAnalyzer(object):
         else:  # Binary does NOT exist locally
             remote_info = None
             if remote:
-                remote_info = self._get_package_info(pref, remote)
+                try:
+                    pref = self._remote_manager.resolve_latest_pref(pref, remote)
+                    remote_info = self._get_package_info(pref, remote)
+                except NotFoundException:
+                    pass
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
             if not remote or (not remote_info and self._cache.config.revisions_enabled
                               and not remote_name):
                 for r in remotes:
-                    remote_info = self._get_package_info(pref, r)
-                    if remote_info:
-                        remote = r
-                        break
+                    try:
+                        pref = self._remote_manager.resolve_latest_pref(pref, r)
+                    except NotFoundException:
+                        pass
+                    else:
+                        remote_info = self._get_package_info(pref, r)
+                        if remote_info:
+                            remote = r
+                            break
 
             if remote_info:
                 node.binary = BINARY_DOWNLOAD
+                node.pref = pref  # With PREF
                 package_hash = remote_info.recipe_hash
             else:
                 if build_mode.allowed(conanfile):

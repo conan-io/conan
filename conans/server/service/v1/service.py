@@ -1,5 +1,6 @@
 from conans import DEFAULT_REVISION_V1
-from conans.errors import NotFoundException, RequestErrorException
+from conans.errors import NotFoundException, RequestErrorException, RecipeNotFoundException, \
+    PackageNotFoundException
 from conans.model.ref import PackageReference
 from conans.server.service.common.common import CommonService
 
@@ -21,7 +22,7 @@ class ConanService(CommonService):
         latest_ref = self._get_latest_ref(ref)
         snap = self._server_store.get_recipe_snapshot(latest_ref)
         if not snap:
-            raise NotFoundException("conanfile not found")
+            raise RecipeNotFoundException(latest_ref)
         return snap
 
     def get_conanfile_download_urls(self, ref, files_subset=None):
@@ -33,7 +34,7 @@ class ConanService(CommonService):
         urls = self._server_store.get_download_conanfile_urls(latest_ref,
                                                               files_subset, self._auth_user)
         if not urls:
-            raise NotFoundException("conanfile not found")
+            raise RecipeNotFoundException(latest_ref)
         return urls
 
     def get_conanfile_upload_urls(self, ref, filesizes):
@@ -71,7 +72,7 @@ class ConanService(CommonService):
         try:
             self._server_store.get_recipe_snapshot(new_pref.ref)
         except NotFoundException:
-            raise NotFoundException("There are no remote conanfiles like %s" % str(new_pref.ref))
+            raise PackageNotFoundException(new_pref)
         self._authorizer.check_write_package(self._auth_user, new_pref)
         urls = self._server_store.get_upload_package_urls(new_pref, filesizes, self._auth_user)
         return urls
