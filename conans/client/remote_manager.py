@@ -162,17 +162,16 @@ class RemoteManager(object):
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
 
-    def get_conan_manifest(self, ref, remote):
+    def get_recipe_manifest(self, ref, remote):
         """
         Read ConanDigest from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-
         if ref.revision is None:
             ref = self._resolve_latest_ref(ref, remote)
 
-        return self._call_remote(remote, "get_conan_manifest", ref), ref
+        return self._call_remote(remote, "get_recipe_manifest", ref), ref
 
     def get_package_manifest(self, pref, remote):
         """

@@ -64,7 +64,7 @@ class RestV1Methods(RestCommonMethods):
             dedup = True
         return auth, dedup
 
-    def get_conan_manifest(self, ref):
+    def get_recipe_manifest(self, ref):
         """Gets a FileTreeManifest from conans"""
         # Obtain the URLs
         url = self.router.recipe_manifest(ref)

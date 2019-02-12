@@ -51,7 +51,7 @@ class RestV2Methods(RestCommonMethods):
             files_list = []
         return files_list
 
-    def get_conan_manifest(self, ref):
+    def get_recipe_manifest(self, ref):
         # If revision not specified, check latest
         if not ref.revision:
             ref = self.get_latest_recipe_revision(ref)
@@ -71,8 +71,8 @@ class RestV2Methods(RestCommonMethods):
             logger.error(traceback.format_exc())
             raise ConanException(msg)
 
-    def get_package_info(self, package_reference):
-        url = self.router.package_info(package_reference)
+    def get_package_info(self, pref):
+        url = self.router.package_info(pref)
         content = self._get_remote_file_contents(url)
         return ConanInfo.loads(decode_text(content))
 

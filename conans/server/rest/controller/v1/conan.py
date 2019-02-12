@@ -21,7 +21,7 @@ class ConanController(object):
         r = BottleRoutes()
 
         @app.route(r.v1_recipe_digest, method=["GET"])
-        def get_conan_manifest_url(name, version, username, channel, auth_user):
+        def get_recipe_manifest_url(name, version, username, channel, auth_user):
             """
             Get a dict with all files and the download url
             """

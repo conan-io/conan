@@ -199,11 +199,11 @@ class ConanRemover(object):
                     packages = search_packages(self._cache, ref, packages_query)
                 if outdated:
                     if remote_name:
-                        manifest, ref = self._remote_manager.get_conan_manifest(ref, remote)
+                        manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
                         recipe_hash = manifest.summary_hash
                     else:
-                        recipe_hash = self._cache.package_layout(ref).load_manifest().summary_hash
-
+                        layout = self._cache.package_layout(ref)
+                        recipe_hash = layout.recipe_manifest().summary_hash
                     packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
