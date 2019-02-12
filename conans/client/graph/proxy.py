@@ -78,8 +78,7 @@ class ConanProxy(object):
             return conanfile_path, status, remote, new_ref
 
         try:  # get_conan_manifest can fail, not in server
-            ref = self._remote_manager.resolve_latest_ref(ref, remote)
-            upstream_manifest = self._remote_manager.get_conan_manifest(ref, update_remote)
+            upstream_manifest, ref = self._remote_manager.get_conan_manifest(ref, update_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
             ref = ref.copy_with_rev(cur_revision)
@@ -111,8 +110,7 @@ class ConanProxy(object):
         def _retrieve_from_remote(_ref, the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
-            _ref = self._remote_manager.resolve_latest_ref(_ref, remote)
-            self._remote_manager.get_recipe(_ref, the_remote)
+            _ref = self._remote_manager.get_recipe(_ref, the_remote)
             self._registry.refs.set(_ref, the_remote.name)
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref

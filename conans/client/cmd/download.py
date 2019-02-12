@@ -15,10 +15,8 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
     try:
-        if ref.revision is None:
-            ref = remote_manager.resolve_latest_ref(ref, remote)
         # First of all download package recipe
-        remote_manager.get_recipe(ref, remote)
+        ref = remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref, print_rev=cache.config.revisions_enabled)
     registry.refs.set(ref, remote.name)
@@ -50,6 +48,4 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         pref = PackageReference(ref, package_id)
         package_folder = cache.package(pref, short_paths=short_paths)
         output.info("Downloading %s" % str(pref))
-        if not pref.revision:
-            pref = remote_manager.resolve_latest_pref(pref, remote)
         remote_manager.get_package(pref, package_folder, remote, output, recorder)

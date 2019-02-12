@@ -170,8 +170,10 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
 
-        # If incomplete, resolve the full revision
-        return self._call_remote(remote, "get_conan_manifest", ref)
+        if ref.revision is None:
+            ref = self._resolve_latest_ref(ref, remote)
+
+        return self._call_remote(remote, "get_conan_manifest", ref), ref
 
     def get_package_manifest(self, pref, remote):
         """
@@ -180,8 +182,10 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
 
-        # If incomplete, resolve the full revision
-        return self._call_remote(remote, "get_package_manifest", pref)
+        if pref.revision is None:
+            pref = self._resolve_latest_pref(pref, remote)
+
+        return self._call_remote(remote, "get_package_manifest", pref), pref
 
     def get_package_info(self, pref, remote):
         """
@@ -189,9 +193,10 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanInfo, remote_name)"""
+        if pref.revision is None:
+            pref = self._resolve_latest_pref(pref, remote)
 
-        # If incomplete, resolve the full revision
-        return self._call_remote(remote, "get_package_info", pref)
+        return self._call_remote(remote, "get_package_info", pref), pref
 
     def get_recipe(self, ref, remote):
         """
@@ -204,9 +209,11 @@ class RemoteManager(object):
         dest_folder = self._cache.export(ref)
         rmdir(dest_folder)
 
+        if ref.revision is None:
+            ref = self._resolve_latest_ref(ref, remote)
+
         t1 = time.time()
-        tmp = self._call_remote(remote, "get_recipe", ref, dest_folder)
-        zipped_files = tmp
+        zipped_files = self._call_remote(remote, "get_recipe", ref, dest_folder)
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
@@ -221,6 +228,8 @@ class RemoteManager(object):
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
+
+        return ref
 
     def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
         t1 = time.time()
@@ -241,7 +250,6 @@ class RemoteManager(object):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
         touch_folder(export_sources_folder)
-        return
 
     def get_package(self, pref, dest_folder, remote, output, recorder):
 
@@ -252,6 +260,9 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
+            if not pref.revision:
+                pref = self._resolve_latest_pref(pref, remote)
+
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
@@ -273,7 +284,7 @@ class RemoteManager(object):
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
             try:
-                output.warn("Trying to remove package folder: %s" % dest_folder)
+                output.warn( "Trying to remove package folder: %s" % dest_folder)
                 rmdir(dest_folder)
             except OSError as e:
                 raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
@@ -281,6 +292,8 @@ class RemoteManager(object):
             raise
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote)
+
+        return pref
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
@@ -318,9 +331,6 @@ class RemoteManager(object):
     def get_recipe_revisions(self, ref, remote):
         return self._call_remote(remote, "get_recipe_revisions", ref)
 
-    def get_recipe_revisions(self, ref, remote):
-        return self._call_remote(remote, "get_recipe_revisions", ref)
-
     def get_package_revisions(self, pref, remote):
         revisions = self._call_remote(remote, "get_package_revisions", pref)
         return revisions
@@ -333,7 +343,7 @@ class RemoteManager(object):
         revision = self._call_remote(remote, "get_latest_package_revision", pref)
         return revision
 
-    def resolve_latest_ref(self, ref, remote):
+    def _resolve_latest_ref(self, ref, remote):
         if ref.revision is None:
             try:
                 ref = self.get_latest_recipe_revision(ref, remote)
@@ -341,7 +351,7 @@ class RemoteManager(object):
                 ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         return ref
 
-    def resolve_latest_pref(self, pref, remote):
+    def _resolve_latest_pref(self, pref, remote):
         if pref.revision is None:
             try:
                 pref = self.get_latest_package_revision(pref, remote)

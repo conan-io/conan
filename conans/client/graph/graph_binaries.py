@@ -19,31 +19,15 @@ class GraphBinariesAnalyzer(object):
         self._registry = cache.registry
         self._workspace = workspace
 
-    def _get_package_info(self, pref, remote):
-        assert pref.revision is not None, "Revision needed to get a package_info"
-        try:
-            remote_info = self._remote_manager.get_package_info(pref, remote)
-            return remote_info
-        except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
-            return False
-
-    def _check_update(self, package_folder, pref, remote, output, node):
-
-        try:  # get_conan_digest can fail, not in server
-            upstream_manifest = self._remote_manager.get_package_manifest(pref, remote)
-        except NotFoundException:
-            output.warn("Can't update, no package in remote")
-        except NoRemoteAvailable:
-            output.warn("Can't update, no remote defined")
-        else:
-            read_manifest = FileTreeManifest.load(package_folder)
-            if upstream_manifest != read_manifest:
-                if upstream_manifest.time > read_manifest.time:
-                    output.warn("Current package is older than remote upstream one")
-                    node.update_manifest = upstream_manifest
-                    return True
-                else:
-                    output.warn("Current package is newer than remote upstream one")
+    def _check_update(self, upstream_manifest, package_folder, output, node):
+        read_manifest = FileTreeManifest.load(package_folder)
+        if upstream_manifest != read_manifest:
+            if upstream_manifest.time > read_manifest.time:
+                output.warn("Current package is older than remote upstream one")
+                node.update_manifest = upstream_manifest
+                return True
+            else:
+                output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
         assert node.binary is None, "Node binary is None"
@@ -106,15 +90,19 @@ class GraphBinariesAnalyzer(object):
             if update:
                 if remote:
                     try:
-                        pref = self._remote_manager.resolve_latest_pref(pref, remote)
+                        tmp = self._remote_manager.get_package_manifest(pref, remote)
+                        upstream_manifest, pref = tmp
                     except NotFoundException:
                         output.warn("Can't update, no package in remote")
+                    except NoRemoteAvailable:
+                        output.warn("Can't update, no remote defined")
                     else:
-                        if self._check_update(package_folder, pref, remote, output, node):
+                        if self._check_update(upstream_manifest, package_folder, output, node):
                             node.binary = BINARY_UPDATE
                             node.pref = pref  # With revision
                             if build_mode.outdated:
-                                package_hash = self._get_package_info(pref, remote).recipe_hash()
+                                info, pref = self._remote_manager.get_package_info(pref, remote)
+                                package_hash = info.recipe_hash()
                 elif remotes:
                     pass
                 else:
@@ -127,8 +115,7 @@ class GraphBinariesAnalyzer(object):
             remote_info = None
             if remote:
                 try:
-                    pref = self._remote_manager.resolve_latest_pref(pref, remote)
-                    remote_info = self._get_package_info(pref, remote)
+                    remote_info, pref = self._remote_manager.get_package_info(pref, remote)
                 except NotFoundException:
                     pass
 
@@ -138,11 +125,10 @@ class GraphBinariesAnalyzer(object):
                               and not remote_name):
                 for r in remotes:
                     try:
-                        pref = self._remote_manager.resolve_latest_pref(pref, r)
+                        remote_info, pref = self._remote_manager.get_package_info(pref, r)
                     except NotFoundException:
                         pass
                     else:
-                        remote_info = self._get_package_info(pref, r)
                         if remote_info:
                             remote = r
                             break

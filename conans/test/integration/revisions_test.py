@@ -50,10 +50,12 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Same RREV, different PREV
         with environment_append({"MY_VAR": "2"}):
-            self.c_v2.create(self.ref, conanfile=conanfile)
+            pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
 
         self.c_v2.upload_all(self.ref, remote="remote2")
         self.c_v2.remove_all()
+
+        self.assertEquals(pref.ref.revision, pref2.ref.revision)
 
         self.c_v2.run("install {}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
