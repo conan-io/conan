@@ -123,7 +123,7 @@ class DepsGraphBuilder(object):
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:
-                    closure = node.public_closure()
+                    closure = dep_graph.closure(node)
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
                     self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.ref,

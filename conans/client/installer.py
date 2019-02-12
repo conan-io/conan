@@ -296,7 +296,7 @@ class BinaryInstaller(object):
                     self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
                                                 graph_info)
                 else:
-                    self._propagate_info(node, inverse_levels)
+                    self._propagate_info(node, inverse_levels, deps_graph)
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
                     pref = PackageReference(ref, package_id)
@@ -304,7 +304,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, pref, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, inverse_levels)
+        self._propagate_info(root_node, inverse_levels, deps_graph)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
@@ -376,7 +376,7 @@ class BinaryInstaller(object):
             for p in lib_paths:
                 mkdir(p)
 
-        self._propagate_info(node, inverse_levels)
+        self._propagate_info(node, inverse_levels, deps_graph)
 
         build_folder = workspace_package.build_folder
         write_generators(conan_file, build_folder, output)
@@ -447,10 +447,10 @@ class BinaryInstaller(object):
         self._recorder.package_built(pref)
 
     @staticmethod
-    def _propagate_info(node, inverse_levels):
+    def _propagate_info(node, inverse_levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
-        closure = node.full_public_closure()
-        node_order = [n for n in closure if n.binary != BINARY_SKIP]
+        closure = deps_graph.full_closure(node)
+        node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         node_order.sort(key=lambda n: inverse_levels[n])
 

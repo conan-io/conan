@@ -173,13 +173,10 @@ class GraphBinariesAnalyzer(object):
         conanfile.build_requires_options = conanfile.options.values
         conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
-        closure = node.full_public_closure()
-        full_requires = [n.pref for n in closure]
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
                                           direct_reqs,
-                                          indirect_reqs,
-                                          full_requires)
+                                          indirect_reqs)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
@@ -188,13 +185,13 @@ class GraphBinariesAnalyzer(object):
         info = node.conanfile.info
         node.bid = info.package_id()
 
-    def _handle_private(self, node):
+    def _handle_private(self, node, deps_graph):
         private_neighbours = node.private_neighbors()
         if private_neighbours:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                 for neigh in private_neighbours:
                     neigh.binary = BINARY_SKIP
-                    closure = neigh.full_closure()
+                    closure = deps_graph.full_closure(neigh, private=True)
                     for n in closure:
                         n.binary = BINARY_SKIP
 
@@ -205,4 +202,4 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
-            self._handle_private(node)
+            self._handle_private(node, deps_graph)

@@ -218,16 +218,17 @@ class ConanInfo(object):
         return result
 
     @staticmethod
-    def create(settings, options, requires, indirect_requires, full_requires):
+    def create(settings, options, requires, indirect_requires):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
         result.options = options.copy()
         result.options.clear_indirect()
-        result.full_requires = _PackageReferenceList(full_requires)
+        result.full_requires = _PackageReferenceList(requires)
         result.requires = RequirementsInfo(requires)
         result.requires.add(indirect_requires)
+        result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()

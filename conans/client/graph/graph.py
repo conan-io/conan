@@ -28,7 +28,6 @@ class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
         self.bid = None
-        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -38,35 +37,6 @@ class Node(object):
         self.binary_remote = None
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
-
-    @property
-    def pref(self):
-        return PackageReference(self.ref, self.bid, self.prev)
-
-    def closure(self):
-        closure = OrderedDict()
-        current = OrderedDict([(edge.dst, False) for edge in self.dependencies])
-        while current:
-            new_current = OrderedDict()
-            closure.update(current)
-            for n, private in current.items():
-                for edge in n.dependencies:
-                    if edge.dst not in new_current and edge.dst not in closure:
-                        new_current[edge.dst] = private or edge.private or edge.build_require
-            current = new_current
-        return closure
-
-    def public_closure(self):
-        # Used for GraphBuilder to not recurse repeatedly
-        return {n.ref.name: n for n, private in self.closure().items() if not private}
-
-    def full_closure(self):
-        # Used to mark as BINARY_SKIP private dependencies
-        return self.closure().keys()
-
-    def full_public_closure(self):
-        # Used to BinaryInstaller._propagate_info()
-        return [n for n, private in self.closure().items() if not private]
 
     def partial_copy(self):
         result = Node(self.ref, self.conanfile)
@@ -202,6 +172,37 @@ class DepsGraph(object):
         for level in ordered:
             for node in level:
                 yield node
+
+    def full_closure(self, node, private=False):
+        # Needed to propagate correctly the cpp_info even with privates
+        closure = OrderedDict()
+        current = node.neighbors()
+        while current:
+            new_current = []
+            for n in current:
+                closure[n] = n
+            for n in current:
+                neighbors = n.public_neighbors() if not private else n.neighbors()
+                for neigh in neighbors:
+                    if neigh not in new_current and neigh not in closure:
+                        new_current.append(neigh)
+            current = new_current
+        return closure
+
+    def closure(self, node):
+        closure = OrderedDict()
+        current = node.neighbors()
+        while current:
+            new_current = []
+            for n in current:
+                closure[n.ref.name] = n
+            for n in current:
+                neighs = n.public_neighbors()
+                for neigh in neighs:
+                    if neigh not in new_current and neigh.ref.name not in closure:
+                        new_current.append(neigh)
+            current = new_current
+        return closure
 
     def _inverse_closure(self, references):
         closure = set()
