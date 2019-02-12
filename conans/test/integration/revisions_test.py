@@ -548,11 +548,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
         # If I remove a ref with a wrong revision, the revision is not removed
         ref1 = client.export(self.ref)
-        full_ref = ref1.copy_with_rev("fakerev").full_repr()
-        client.run("remove {} -f".format(full_ref), assert_error=True)
-        self.assertIn("ERROR: No recipe found '%s'" % full_ref, client.out)
+        fakeref = ref1.copy_with_rev("fakerev")
+        full_ref = fakeref.full_repr() if not v1 else str(fakeref)
+        client.run("remove {} -f".format(fakeref.full_repr()), assert_error=True)
+        self.assertIn("ERROR: Recipe not found: '%s'" % full_ref, client.out)
         self.assertTrue(client.recipe_exists(self.ref))
-        self.assertIn("ERROR: No recipe found '%s'" % full_ref, client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_remove_local_package(self, v1):
@@ -570,10 +570,11 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
         # If I remove the ref with fake RREV, the packages are not removed
         pref1 = client.create(self.ref)
-        fakeref = pref1.ref.copy_with_rev("fakerev").full_repr()
-        client.run("remove {} -f".format(fakeref), assert_error=True)
+        fakeref = pref1.ref.copy_with_rev("fakerev")
+        str_ref = fakeref.full_repr() if not v1 else str(fakeref)
+        client.run("remove {} -f".format(fakeref.full_repr()), assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("No recipe found '{}'".format(fakeref), client.out)
+        self.assertIn("Recipe not found: '{}'".format(str_ref), client.out)
 
         # If I remove the ref with valid RREV, the packages are removed
         pref1 = client.create(self.ref)
@@ -593,7 +594,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         command = "remove {} -f -p {}#fakeprev".format(pref1.ref.full_repr(), pref1.id)
         client.run(command, assert_error=True)
         self.assertTrue(client.package_exists(pref1))
-        self.assertIn("The package doesn't exist", client.out)
+        self.assertIn("Binary package not found", client.out)
 
         # Everything correct, removes the unique local package revision
         pref1 = client.create(self.ref)
@@ -733,7 +734,8 @@ class RemoveWithRevisionsTest(unittest.TestCase):
                                                                      pref2.id)
             remover_client.run(command, assert_error=True)
             fakeref = pref2.copy_with_revs(pref2.ref.revision, "fakerev")
-            self.assertIn("Package not found: {}".format(fakeref.full_repr()), remover_client.out)
+            self.assertIn("Binary package not found: '{}'".format(fakeref.full_repr()),
+                          remover_client.out)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
@@ -779,7 +781,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertEquals([], data["results"][0]["items"][0]["packages"])
 
         client.search("{}#fakerev".format(ref), args="--outdated", assert_error=True)
-        self.assertIn("Recipe not found: lib/1.0@conan/testing#fakerev", client.out)
+        self.assertIn("Recipe not found: 'lib/1.0@conan/testing#fakerev'", client.out)
 
     def search_outdated_packages_remote_test(self):
         """If we search for outdated packages in a remote, it has to be
@@ -1009,7 +1011,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
                               args="-s os=Linux")
 
         client.run("search {}".format(pref1.ref.full_repr()), assert_error=True)
-        self.assertIn("Recipe not found: {}".format(pref1.ref.full_repr()), client.out)
+        self.assertIn("Recipe not found: '{}'".format(pref1.ref.full_repr()), client.out)
 
         client.run("search {}".format(pref2.ref.full_repr()))
         self.assertIn("Existing packages for recipe {}:".format(pref2.ref), client.out)
@@ -1218,10 +1220,10 @@ class UploadPackagesWithRevisions(unittest.TestCase):
             self.assertIn("Local package is different from the remote package. "
                           "Forbidden overwrite.", client.out)
         else:
-            self.assertEquals(self.server.server_store.get_last_package_revision(pref2),
+            self.assertEquals(self.server.server_store.get_last_package_revision(pref2).revision,
                               pref.revision)
             client.upload_all(self.ref, args="--no-overwrite")
-            self.assertEquals(self.server.server_store.get_last_package_revision(pref2),
+            self.assertEquals(self.server.server_store.get_last_package_revision(pref2).revision,
                               pref2.revision)
 
 

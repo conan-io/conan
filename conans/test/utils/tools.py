@@ -266,14 +266,20 @@ class TestServer(object):
 
     def recipe_exists(self, ref):
         try:
-            path = self.test_server.server_store.conan(ref)
+            if not ref.revision:
+                path = self.test_server.server_store.conan_revisions_root(ref)
+            else:
+                path = self.test_server.server_store.conan(ref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
 
     def package_exists(self, pref):
         try:
-            path = self.test_server.server_store.package(pref)
+            if pref.revision:
+                path = self.test_server.server_store.package(pref)
+            else:
+                path = self.test_server.server_store.package_revisions_root(pref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False

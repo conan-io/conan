@@ -91,6 +91,9 @@ class RestV2Methods(RestCommonMethods):
         return ret
 
     def get_recipe_sources(self, ref, dest_folder):
+        # If revision not specified, check latest
+        if not ref.revision:
+            ref = self.get_latest_recipe_revision(ref)
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
@@ -253,7 +256,6 @@ class RestV2Methods(RestCommonMethods):
                             response.charset = "utf-8"
                             raise get_exception_from_error(response.status_code)(response.text)
 
-    @handle_return_deserializer()
     def remove_conanfile(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
@@ -269,7 +271,12 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("REST: remove: %s" % url)
             response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                              verify=self.verify_ssl)
-            return response
+            if response.status_code == 404:
+                raise RecipeNotFoundException(ref)
+            if response.status_code != 200:  # Error message is text
+                # To be able to access ret.text (ret.content are bytes)
+                response.charset = "utf-8"
+                raise get_exception_from_error(response.status_code)(response.text)
 
     def get_recipe_revisions(self, ref):
         url = self.router.recipe_revisions(ref)
