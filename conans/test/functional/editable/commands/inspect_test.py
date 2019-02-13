@@ -33,11 +33,11 @@ class InspectCommandTest(unittest.TestCase):
                            self.conanfile_base.format(
                                body='requires = "{}"'.format(self.ref_parent)),
                            "mylayout": self.conan_package_layout, })
-        self.t.run('link . {}'.format(self.ref))
+        self.t.run('editable add . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.ref))
+        self.t.run('editable remove {}'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
     def test_reference(self):

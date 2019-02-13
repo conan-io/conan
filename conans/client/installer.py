@@ -320,7 +320,7 @@ class BinaryInstaller(object):
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
 
-            build_folder = editable_cpp_info.folder(node.ref, "build",
+            build_folder = editable_cpp_info.folder(node.ref, "build_folder",
                                                     settings=node.conanfile.settings,
                                                     options=node.conanfile.options)
             if build_folder is not None:

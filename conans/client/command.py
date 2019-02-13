@@ -1406,50 +1406,53 @@ class Command(object):
                                           args.remote, args.build,
                                           args.profile, args.update)
 
-    def link(self, *args):
-        """ Links a conan reference (e.g lib/1.0@conan/stable) with a local folder path.
-
+    def editable(self, *args):
+        """ Manage editable packages
         """
-        parser = argparse.ArgumentParser(description=self.link.__doc__,
-                                         prog="conan link")
-        parser.add_argument('target', help='Path to the package folder in the user workspace',
-                            nargs='?',)
-        parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
-        parser.add_argument("--remove", action='store_true', default=False,
-                            help='Remove linked reference (target not required)')
-        parser.add_argument("-l", "--layout",
-                            help='Relative or absolute path to a file containing the layout.'
-                            ' Relative paths will be resolved first relative to current dir, '
-                            'then to local cache "layouts" folder')
+        parser = argparse.ArgumentParser(description=self.editable.__doc__,
+                                         prog="conan editable")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
+        add_parser.add_argument('target', help='Path to the package folder in the user workspace')
+        add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
+        add_parser.add_argument("-l", "--layout",
+                                help='Relative or absolute path to a file containing the layout.'
+                                ' Relative paths will be resolved first relative to current dir, '
+                                'then to local cache "layouts" folder')
+
+        remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
+        remove_parser.add_argument('reference',
+                                   help='Package reference e.g.: mylib/1.X@user/channel')
+
+        subparsers.add_parser('list', help='List packages in editable mode')
 
         args = parser.parse_args(*args)
         self._warn_python2()
 
-        # Args sanity check
-        if args.remove and args.target:
-            raise ConanException("Do not provide the 'target' argument for removal")
-
-        if not args.remove and not args.target:
-            raise ConanException("Argument 'target' is required to link a reference")
-
-        if not args.remove:
-            self._conan.link(args.target, args.reference, args.layout, cwd=os.getcwd())
+        if args.subcommand == "add":
+            self._conan.editable_add(args.target, args.reference, args.layout, cwd=os.getcwd())
             self._outputer.writeln("Reference '{}' linked to directory "
                                    "'{}'".format(args.reference, os.path.dirname(args.target)))
-        else:
-            ret = self._conan.unlink(args.reference)
+        elif args.subcommand == "remove":
+            ret = self._conan.editable_remove(args.reference)
             if ret:
                 self._outputer.writeln("Removed linkage for reference '{}'".format(args.reference))
             else:
                 self._user_io.out.warn("Reference '{}' was not installed "
                                        "as editable".format(args.reference))
+        elif args.subcommand == "list":
+            for k, v in self._conan.editable_list().items():
+                self._user_io.out.info("%s" % k)
+                self._user_io.out.writeln("    Path: %s" % v["path"])
+                self._user_io.out.writeln("    Layout: %s" % v["layout"])
 
     def _show_help(self):
         """Prints a summary of all commands
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package", "link",
+                ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help"))]

@@ -111,8 +111,8 @@ class WorkspaceTest(unittest.TestCase):
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
-            [folders]
-            build:
+            [build_folder]
+
             """)
         client.save({"conanws.yml": project,
                      "layout": layout})
@@ -156,8 +156,8 @@ class WorkspaceTest(unittest.TestCase):
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
-            [folders]
-            build: build/{settings.build_type}
+            [build_folder]
+            build/{settings.build_type}
 
             [includedirs]
             src
@@ -229,9 +229,11 @@ class WorkspaceTest(unittest.TestCase):
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
-            [folders]
-            build: build/{settings.build_type}
-            src: src
+            [build_folder]
+            build/{settings.build_type}
+
+            [source_folder]
+            src
 
             [includedirs]
             src
@@ -345,10 +347,10 @@ class WorkspaceTest(unittest.TestCase):
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
-            [folders]
-            build: build
-            src: src
-
+            [build_folder]
+            build
+            [source_folder]
+            src
             [includedirs]
             src
 
@@ -461,8 +463,8 @@ class Pkg(ConanFile):
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
-            [folders]
-            build: build
+            [build_folder]
+            build
             """)
         client.save({"conanws.yml": project,
                      "layout": layout})

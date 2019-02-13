@@ -38,8 +38,8 @@ class Workspace(object):
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
                 conanfile = editables[ref]
-                build = editable.folder(ref, "build", conanfile.settings, conanfile.options)
-                src = editable.folder(ref, "src", conanfile.settings, conanfile.options)
+                build = editable.folder(ref, "build_folder", conanfile.settings, conanfile.options)
+                src = editable.folder(ref, "source_folder", conanfile.settings, conanfile.options)
                 if src:
                     src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)

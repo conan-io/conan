@@ -3,7 +3,7 @@
 import os
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.editable_cpp_info import EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
@@ -30,7 +30,7 @@ class PackageEditableLayout(object):
     def editable_cpp_info(self):
         if self._layout_file:
             if os.path.isfile(self._layout_file):
-                return EditableCppInfo.load(self._layout_file)
+                return EditableLayout.load(self._layout_file)
             else:
                 raise ConanException("Layout file not found: %s" % self._layout_file)
 

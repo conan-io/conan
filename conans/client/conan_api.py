@@ -472,7 +472,7 @@ class ConanAPIV1(object):
                                     self._cache, self._user_io.out)
         self._user_io.out.success("Using workspace file from %s" % workspace._base_folder)
 
-        self._cache.editable_packages.update(workspace.get_editable_dict())
+        self._cache.editable_packages = workspace.get_editable_dict()
 
         recorder = ActionRecorder()
         deps_graph, _ = self._graph_manager.load_graph(workspace.root, None, graph_info, build,
@@ -1006,7 +1006,8 @@ class ConanAPIV1(object):
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_package_revisions(pref, remote=remote)
 
-    def link(self, path, reference, layout, cwd):
+    @api_method
+    def editable_add(self, path, reference, layout, cwd):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
@@ -1025,9 +1026,13 @@ class ConanAPIV1(object):
         self._cache.editable_packages.link(ref, os.path.dirname(target_path), layout_abs_path)
 
     @api_method
-    def unlink(self, reference):
+    def editable_remove(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
         return self._cache.editable_packages.remove(ref)
+
+    @api_method
+    def editable_list(self):
+        return {str(k): v for k, v in self._cache.editable_packages.refs().items()}
 
 
 Conan = ConanAPIV1

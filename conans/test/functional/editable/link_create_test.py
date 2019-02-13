@@ -25,15 +25,28 @@ class CreateEditablePackageTest(unittest.TestCase):
         ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
         t.save(files={'conanfile.py': self.conanfile, "mylayout": ""})
-        t.run('link . {} --layout=missing'.format(ref), assert_error=True)
+        t.run('editable add . {} --layout=missing'.format(ref), assert_error=True)
         self.assertIn("ERROR: Couldn't find layout file: missing", t.out)
 
     def test_install_ok(self):
         ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
         t.save(files={'conanfile.py': self.conanfile})
-        t.run('link . {}'.format(ref))
+        t.run('editable add . {}'.format(ref))
         self.assertIn("Reference 'lib/version@user/name' linked to directory '", t.out)
+
+    def test_editable_list_search(self):
+        ref = ConanFileReference.loads('lib/version@user/name')
+        t = TestClient()
+        t.save(files={'conanfile.py': self.conanfile})
+        t.run('editable add . {}'.format(ref))
+        t.run("editable list")
+        self.assertIn("lib/version@user/name", t.out)
+        self.assertIn("    Layout: None", t.out)
+        self.assertIn("    Path:", t.out)
+
+        t.run("search")
+        self.assertIn("lib/version@user/name", t.out)
 
     def test_install_wrong_reference(self):
         ref = ConanFileReference.loads('lib/version@user/name')
@@ -47,6 +60,6 @@ class CreateEditablePackageTest(unittest.TestCase):
                 version = "version"
             """)})
         t.run('export  . {}'.format(ref))
-        t.run('link . wrong/version@user/channel', assert_error=True)
+        t.run('editable add . wrong/version@user/channel', assert_error=True)
         self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
                       "target conanfile.py (lib/version) must match", t.out)
