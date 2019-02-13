@@ -135,7 +135,7 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuild.get_version(self._settings)
+            msbuild_version = MSBuild.get_version(self._settings, self._output)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)
@@ -219,9 +219,9 @@ class MSBuild(object):
         return template
 
     @staticmethod
-    def get_version(settings):
+    def get_version(settings, output=None):
         msbuild_cmd = "msbuild -version"
-        vcvars = vcvars_command(settings)
+        vcvars = vcvars_command(settings, output=output)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
             out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
