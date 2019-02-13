@@ -296,7 +296,8 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
         new_node.ancestors = current_node.ancestors.copy()
-        new_node.ancestors.add(current_node.ref.copy_clear_rev() if current_node.ref else None)
+        new_node.ancestors.add(current_node.ref.copy_clear_rev()
+                               if current_node.ref and current_node.ref.revision else None)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private)
         return new_node
