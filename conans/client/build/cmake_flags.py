@@ -36,7 +36,7 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            logger.warning("No compiler has been detected for Windows platform")
+            logger.warning("No generator has been detected for CMake")
             return None
         return "Unix Makefiles"
 
