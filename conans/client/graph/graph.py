@@ -36,9 +36,16 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
+        # all the public deps to which this node belongs
+        self.public_deps = None  # {ref.name: Node}
+        # all the public deps only in the closure of this node
+        self.public_closure = None  # {ref.name: Node}
+        self.ancestors = set()  # of refs
 
     def partial_copy(self):
+        # Used for collapse_graph
         result = Node(self.ref, self.conanfile)
         result.dependants = set()
         result.dependencies = []
@@ -143,6 +150,7 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
         self.root = None
+        self.aliased = {}
 
     def add_graph(self, node, graph, build_require=False):
         for n in graph.nodes:
