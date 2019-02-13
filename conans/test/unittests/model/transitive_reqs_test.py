@@ -108,13 +108,7 @@ class GraphTest(unittest.TestCase):
 
 class ConanRequirementsTest(GraphTest):
 
-    def test_basic(self):
-        deps_graph = self.build_graph(say_content)
-        self.assertEqual(_get_edges(deps_graph), set())
-        self.assertEqual(1, len(deps_graph.nodes))
-        node = _get_nodes(deps_graph, "Say")[0]
-        self.assertEqual(node.ref, None)
-        self._check_say(node.conanfile)
+
 
     def _check_say(self, conanfile, version="0.1", options=""):
         self.assertEqual(conanfile.version, version)
@@ -1060,12 +1054,9 @@ class ChatConan(ConanFile):
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_conditional_diamond(self):
-        say_content = """
-from conans import ConanFile
+        say_content = """from conans import ConanFile
 
 class SayConan(ConanFile):
-    name = "Say"
-    version = "0.1"
     options = {"zip": [True, False]}
     default_options = "zip=False"
     requires = "Base/0.1@user/testing"
@@ -1076,12 +1067,9 @@ class SayConan(ConanFile):
         else:
             self.requires("png/0.1@user/testing")
 """
-        hello_content = """
-from conans import ConanFile
+        hello_content = """from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
     requires = "Say/0.1@user/testing"
     default_options = "Say:zip=True"
 """
@@ -1098,8 +1086,9 @@ class HelloConan(ConanFile):
     Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
-            _ = self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
-                                                                        "Hello/1.2@user/testing"]))
+            self.build_graph(TestConanFile("Chat", "2.3",
+                                           requires=["Say/0.1@user/testing",
+                                                     "Hello/1.2@user/testing"]))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)

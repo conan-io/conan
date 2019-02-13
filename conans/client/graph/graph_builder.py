@@ -28,8 +28,9 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node.public_deps = {}
-        root_node.public_closure = {}
+        name = root_node.ref.name if root_node.ref else None
+        root_node.public_deps = {name: root_node}
+        root_node.public_closure = {name: root_node}
         dep_graph.add_node(root_node)
 
         # enter recursive computation
@@ -48,7 +49,7 @@ class DepsGraphBuilder(object):
         for name, require in build_requires.items():
             new_profile_build_requires = node.profile_build_requires.copy()
             new_profile_build_requires.pop(name, None)
-            loop_ancestors = [require.ref]
+            loop_ancestors = [require.ref.copy_clear_rev()]
             new_node = self._create_new_node(node, deps_graph, require, public_deps, name,
                                              aliased, check_updates, update, remote_name,
                                              processed_profile, build_require=True)
@@ -115,7 +116,7 @@ class DepsGraphBuilder(object):
                                                  check_updates, update, remote_name,
                                                  processed_profile)
 
-                new_node.public_closure = {}
+                new_node.public_closure = {new_node.ref.name: new_node}
                 if require.private:
                     new_node.public_deps = node.public_closure
                     node.public_closure[require.ref.name] = new_node
@@ -137,7 +138,7 @@ class DepsGraphBuilder(object):
                                 new_options, check_updates, update,
                                 remote_name, processed_profile)
             else:  # a public node already exist with this name
-                previous.ancestors.add(node.ref)
+                previous.ancestors.add(node.ref.copy_clear_rev())
 
                 alias_ref = dep_graph.aliased.get(require.ref)
                 # Necessary to make sure that it is pointing to the correct aliased
@@ -295,7 +296,7 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
         new_node.ancestors = current_node.ancestors.copy()
-        new_node.ancestors.add(current_node.ref)
+        new_node.ancestors.add(current_node.ref.copy_clear_rev() if current_node.ref else None)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private)
         return new_node
