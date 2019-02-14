@@ -452,15 +452,18 @@ class BinaryInstaller(object):
     @staticmethod
     def _propagate_info(node, inverse_levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
-        closure = deps_graph.full_closure(node)
-        node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
+        closure = node.public_closure
+        node_order = [n for n in closure.values() if n.binary != BINARY_SKIP and n is not node]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         node_order.sort(key=lambda n: inverse_levels[n])
 
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:
-                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
+                try:
+                    conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
+                except:
+                    pass
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info

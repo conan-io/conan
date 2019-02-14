@@ -6,9 +6,10 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
-from conans.model.requires import Requirements
+from conans.model.requires import Requirements, Requirement
 from conans.model.workspace import WORKSPACE_FILE
 from conans.util.log import logger
+from collections import OrderedDict
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
 
@@ -30,7 +31,7 @@ class DepsGraphBuilder(object):
         # compute the conanfile entry point for this dependency graph
         name = root_node.name
         root_node.public_deps = {name: root_node}
-        root_node.public_closure = {name: root_node}
+        root_node.public_closure = OrderedDict([(name, root_node)])
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -42,25 +43,40 @@ class DepsGraphBuilder(object):
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
-    def extend_build_requires(self, deps_graph, node, build_requires_refs, check_updates, update,
+    def extend_build_requires(self, dep_graph, node, build_requires_refs, check_updates, update,
                               remote_name, processed_profile):
-        public_deps = {name: (n, None) for name, n in node.public_closure().items()}
-        aliased = {}
 
-        for name, require in build_requires.items():
-            new_profile_build_requires = node.profile_build_requires.copy()
-            new_profile_build_requires.pop(name, None)
-            loop_ancestors = [require.ref.copy_clear_rev()]
-            new_node = self._create_new_node(node, deps_graph, require, public_deps, name,
-                                             aliased, check_updates, update, remote_name,
-                                             processed_profile, build_require=True)
-            # RECURSION!
-            # Make sure the subgraph is truly private
-            self._load_deps(new_node, new_reqs, deps_graph, public_deps, node.ref,
-                            new_options, loop_ancestors, aliased, check_updates, update,
-                            remote_name, processed_profile)
+        node.conanfile.build_requires_options.clear_unscoped_options()
+        new_options = node.conanfile.build_requires_options
+        new_options = OrderedDict(new_options.as_list())
+        assert new_options is not None
+        new_reqs = Requirements()
 
-        return new_nodes_to_check_subgraph
+        conanfile = node.conanfile
+        scope = conanfile.display_name
+        requires = [Requirement(ref) for ref in build_requires_refs]
+        for require in requires:
+            self._resolver.resolve(require, scope, update, remote_name)
+
+        # After resolving ranges,
+        for require in requires:
+            alias = dep_graph.aliased.get(require.ref)
+            if alias:
+                require.ref = alias
+
+        for require in requires:
+            name = require.ref.name
+
+            self._handle_node(name, node, require, dep_graph, check_updates, update,
+                              remote_name, processed_profile, new_reqs, new_options)
+
+        subgraph = DepsGraph()
+        subgraph.nodes = set([n for n in dep_graph.nodes if n.bid is None])
+        for n in subgraph.nodes:
+            n.build_require = True
+        subgraph.aliased = dep_graph.aliased
+        subgraph.prefs = dep_graph.prefs
+        return subgraph
 
     def _resolve_deps(self, dep_graph, node, update, remote_name):
         # Resolve possible version ranges of the current node requirements
@@ -107,59 +123,69 @@ class DepsGraphBuilder(object):
         for name, require in node.conanfile.requires.items():
             if require.override:
                 continue
-            if require.ref.name in node.ancestors:
-                raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
+
+            self._handle_require(name, node, require, dep_graph, check_updates, update,
+                                 remote_name, processed_profile, new_reqs, new_options)
+
+    def _handle_require(self, name, node, require, dep_graph, check_updates, update,
+                        remote_name, processed_profile, new_reqs, new_options):
+        if name in node.ancestors:
+            raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
+                                 % (node.ref, require.ref))
+
+        previous = node.public_deps.get(name)
+        if require.private or not previous:  # new node, must be added and expanded
+            new_node = self._create_new_node(node, dep_graph, require, name,
+                                             check_updates, update, remote_name,
+                                             processed_profile)
+
+            new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
+            node.public_closure[name] = new_node
+            if require.private:
+                new_node.public_deps = node.public_closure
+            else:
+                new_node.public_deps = node.public_deps
+
+                # add this new node to the public deps
+                node.public_deps[name] = new_node
+
+                # Update the closure of each dependent
+                for dep_node_name, dep_node in node.public_deps.items():
+                    if dep_node is node:
+                        continue
+                    if dep_node_name in new_node.ancestors:
+                        dep_node.public_closure[dep_node_name] = new_node
+
+            # RECURSION!
+            self._load_deps(dep_graph, new_node, new_reqs, node.ref,
+                            new_options, check_updates, update,
+                            remote_name, processed_profile)
+        else:  # a public node already exist with this name
+            previous.ancestors.add(node.name)
+            node.public_closure[name] = previous
+            alias_ref = dep_graph.aliased.get(require.ref)
+            # Necessary to make sure that it is pointing to the correct aliased
+            if alias_ref:
+                require.ref = alias_ref
+            conflict = self._conflicting_references(previous.ref, require.ref)
+            if conflict == REVISION_CONFLICT:  # Revisions conflict
+                raise ConanException("Conflict in %s\n"
+                                     "    Different revisions of %s has been requested"
                                      % (node.ref, require.ref))
+            elif conflict == REFERENCE_CONFLICT:
+                raise ConanException("Conflict in %s\n"
+                                     "    Requirement %s conflicts with already defined %s\n"
+                                     "    Keeping %s\n"
+                                     "    To change it, override it in your base requirements"
+                                     % (node.ref, require.ref,
+                                        previous.ref, previous.ref))
 
-            previous = node.public_deps.get(require.ref.name)
-            if require.private or not previous:  # new node, must be added and expanded
-                new_node = self._create_new_node(node, dep_graph, require, name,
-                                                 check_updates, update, remote_name,
-                                                 processed_profile)
-
-                new_node.public_closure = {new_node.ref.name: new_node}
-                if require.private:
-                    new_node.public_deps = node.public_closure
-                    node.public_closure[require.ref.name] = new_node
-                else:
-                    new_node.public_deps = node.public_deps
-                    # add this new node to the public deps
-                    node.public_deps[require.ref.name] = new_node
-                    # Update the closure of each dependent
-                    for name, dep_node in node.public_deps.items():
-                        if name in new_node.ancestors:
-                            dep_node.public_closure[require.ref.name] = new_node
-
-                # RECURSION!
-                self._load_deps(dep_graph, new_node, new_reqs, node.ref,
+            dep_graph.add_edge(node, previous)
+            # RECURSION!
+            if self._recurse(previous.public_closure, new_reqs, new_options):
+                self._load_deps(dep_graph, previous, new_reqs, node.ref,
                                 new_options, check_updates, update,
                                 remote_name, processed_profile)
-            else:  # a public node already exist with this name
-                previous.ancestors.add(node.name)
-
-                alias_ref = dep_graph.aliased.get(require.ref)
-                # Necessary to make sure that it is pointing to the correct aliased
-                if alias_ref:
-                    require.ref = alias_ref
-                conflict = self._conflicting_references(previous.ref, require.ref)
-                if conflict == REVISION_CONFLICT:  # Revisions conflict
-                    raise ConanException("Conflict in %s\n"
-                                         "    Different revisions of %s has been requested"
-                                         % (node.ref, require.ref))
-                elif conflict == REFERENCE_CONFLICT:
-                    raise ConanException("Conflict in %s\n"
-                                         "    Requirement %s conflicts with already defined %s\n"
-                                         "    Keeping %s\n"
-                                         "    To change it, override it in your base requirements"
-                                         % (node.ref, require.ref,
-                                            previous.ref, previous.ref))
-
-                dep_graph.add_edge(node, previous)
-                # RECURSION!
-                if self._recurse(previous.public_closure, new_reqs, new_options):
-                    self._load_deps(dep_graph, previous, new_reqs, node.ref,
-                                    new_options, check_updates, update,
-                                    remote_name, processed_profile)
 
     @staticmethod
     def _conflicting_references(previous_ref, new_ref):

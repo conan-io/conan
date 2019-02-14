@@ -155,6 +155,7 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
+        self.prefs = {}  # {pref: [nodes]}
 
     def add_graph(self, node, graph, build_require=False):
         for n in graph.nodes:

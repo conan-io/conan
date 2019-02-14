@@ -51,12 +51,14 @@ class GraphBinariesAnalyzer(object):
         ref, conanfile = node.ref, node.conanfile
         pref = PackageReference(ref, node.bid)
         # Check that this same reference hasn't already been checked
-        previous_node = evaluated_nodes.get(pref)
-        if previous_node:
+        previous_nodes = evaluated_nodes.get(pref)
+        if previous_nodes:
+            previous_nodes.append(node)
+            previous_node = previous_nodes[0]
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             return
-        evaluated_nodes[pref] = node
+        evaluated_nodes[pref] = [node]
 
         output = conanfile.output
 
@@ -196,10 +198,9 @@ class GraphBinariesAnalyzer(object):
                         n.binary = BINARY_SKIP
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
-        evaluated_nodes = {}
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
+            self._evaluate_node(node, build_mode, update, deps_graph.prefs, remote_name)
             self._handle_private(node, deps_graph)

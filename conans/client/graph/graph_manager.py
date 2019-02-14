@@ -15,6 +15,7 @@ from conans.model.graph_info import GraphInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
+from platform import node
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -169,8 +170,12 @@ class GraphManager(object):
 
         return conanfile.build_requires
 
-    def _recurse_build_requires(self, graph, check_updates, update, build_mode, remote_name,
+    def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
+                                build_mode, remote_name,
                                 profile_build_requires, recorder, workspace, processed_profile):
+
+        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
+
         for node in list(graph.nodes):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
@@ -189,42 +194,31 @@ class GraphManager(object):
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
                                 if build_require.name in package_build_requires:  # Override existing
-                                    # this is a way to have only one package Name for all versions (no conflicts)
+                                    # this is a way to have only one package Name for all versions
+                                    # (no conflicts)
                                     # but the dict key is not used at all
                                     package_build_requires[build_require.name] = build_require
                                 else:  # Profile one
                                     new_profile_build_requires.append(build_require)
 
             if package_build_requires:
-                node.conanfile.build_requires_options.clear_unscoped_options()
-                build_requires_options = node.conanfile.build_requires_options
-                virtual = self._loader.load_virtual(package_build_requires.values(),
-                                                    scope_options=False,
-                                                    build_requires_options=build_requires_options,
-                                                    processed_profile=processed_profile)
-                virtual_node = Node(None, virtual, recipe=RECIPE_VIRTUAL)
-                build_requires_package_graph = self._load_graph(virtual_node, check_updates, update,
-                                                                build_mode, remote_name,
-                                                                profile_build_requires,
-                                                                recorder, workspace,
-                                                                processed_profile)
-                graph.add_graph(node, build_requires_package_graph, build_require=True)
+                subgraph = builder.extend_build_requires(graph, node,
+                                                         package_build_requires.values(),
+                                                         check_updates, update, remote_name,
+                                                         processed_profile)
+                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
+                                             update, build_mode,
+                                             remote_name, profile_build_requires, recorder,
+                                             workspace, processed_profile)
 
             if new_profile_build_requires:
-                node.conanfile.build_requires_options.clear_unscoped_options()
-                build_requires_options = node.conanfile.build_requires_options
-                virtual = self._loader.load_virtual(new_profile_build_requires,
-                                                    scope_options=False,
-                                                    build_requires_options=build_requires_options,
-                                                    processed_profile=processed_profile)
-                virtual_node = Node(None, virtual, recipe=RECIPE_VIRTUAL)
-                # Profile build-requires do NOT recurse
-                build_requires_profile_graph = self._load_graph(virtual_node, check_updates, update,
-                                                                build_mode, remote_name,
-                                                                {},  # profile_build_requires
-                                                                recorder, workspace,
-                                                                processed_profile)
-                graph.add_graph(node, build_requires_profile_graph, build_require=True)
+                subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
+                                                         check_updates, update, remote_name,
+                                                         processed_profile)
+                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
+                                             update, build_mode,
+                                             remote_name, {}, recorder,
+                                             workspace, processed_profile)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile):
@@ -234,10 +228,11 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager, workspace)
-        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
-        self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
+        self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
+                                     build_mode, remote_name,
                                      profile_build_requires, recorder, workspace, processed_profile)
+
         return graph
 
 
