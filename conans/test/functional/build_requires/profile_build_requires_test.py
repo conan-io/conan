@@ -108,6 +108,33 @@ class Pkg(ConanFile):
         self.assertIn("MyLib/0.1@user/testing: Applying build-requirement: "
                       "build_require/0.1@user/testing", client.out)
 
+    def recursive_build_requires_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        profile = """[build_requires]
+build1/0.1@user/testing
+build2/0.1@user/testing
+"""
+        client.save({"conanfile.py": conanfile,
+                     "myprofile": profile})
+        client.run("create . build1/0.1@user/testing")
+        client.run("create . build2/0.1@user/testing")
+
+        client.run("create . MyLib/0.1@user/testing -pr=myprofile --build")
+        self.assertEqual(2, str(client.out).count(
+            "Applying build-requirement"))
+        self.assertEqual(1, str(client.out).count(
+            "MyLib/0.1@user/testing: Applying build-requirement: build1/0.1@user/testing"))
+        self.assertEqual(1, str(client.out).count(
+            "MyLib/0.1@user/testing: Applying build-requirement: build2/0.1@user/testing"))
+
+        client.run("info MyLib/0.1@user/testing -pr=myprofile --dry-build")
+        # Only 1 node has build requires
+        self.assertEqual(1, str(client.out).count("Build Requires"))
+
     def _create(self, client):
         name = "mytool.bat" if platform.system() == "Windows" else "mytool"
         client.save({CONANFILE: tool_conanfile,
