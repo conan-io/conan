@@ -42,7 +42,11 @@ class Node(object):
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         self.public_closure = None  # {ref.name: Node}
-        self.ancestors = set()  # of refs
+        self.ancestors = None  # set{ref.name}
+
+    @property
+    def name(self):
+        return self.ref.name if self.ref else None
 
     def partial_copy(self):
         # Used for collapse_graph

@@ -28,9 +28,10 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        name = root_node.ref.name if root_node.ref else None
+        name = root_node.name
         root_node.public_deps = {name: root_node}
         root_node.public_closure = {name: root_node}
+        root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
         # enter recursive computation
@@ -106,7 +107,7 @@ class DepsGraphBuilder(object):
         for name, require in node.conanfile.requires.items():
             if require.override:
                 continue
-            if require.ref in node.ancestors:
+            if require.ref.name in node.ancestors:
                 raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                      % (node.ref, require.ref))
 
@@ -124,21 +125,17 @@ class DepsGraphBuilder(object):
                     new_node.public_deps = node.public_deps
                     # add this new node to the public deps
                     node.public_deps[require.ref.name] = new_node
-                    # add to the closure of dependents
-                    # Find the dependents
-                    dependents = set(node.public_deps).intersection([ref.name
-                                                                     for ref in new_node.ancestors
-                                                                     if ref])
                     # Update the closure of each dependent
-                    for d in dependents:
-                        node.public_deps[d].public_closure[require.ref.name] = new_node
+                    for name, dep_node in node.public_deps.items():
+                        if name in new_node.ancestors:
+                            dep_node.public_closure[require.ref.name] = new_node
 
                 # RECURSION!
                 self._load_deps(dep_graph, new_node, new_reqs, node.ref,
                                 new_options, check_updates, update,
                                 remote_name, processed_profile)
             else:  # a public node already exist with this name
-                previous.ancestors.add(node.ref.copy_clear_rev())
+                previous.ancestors.add(node.name)
 
                 alias_ref = dep_graph.aliased.get(require.ref)
                 # Necessary to make sure that it is pointing to the correct aliased
@@ -296,8 +293,7 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
         new_node.ancestors = current_node.ancestors.copy()
-        new_node.ancestors.add(current_node.ref.copy_clear_rev()
-                               if current_node.ref and current_node.ref.revision else None)
+        new_node.ancestors.add(current_node.name)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private)
         return new_node
