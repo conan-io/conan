@@ -971,7 +971,11 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(ref)
-            rev = layout.recipe_revision()
+            try:
+                rev = layout.recipe_revision()
+            except RecipeNotFoundException as e:
+                e.print_rev = True
+                raise e
 
             # Check the time in the associated remote if any
             remote = self._cache.registry.refs.get(ref)
@@ -1002,7 +1006,11 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(pref.ref)
-            rev = layout.package_revision(pref)
+            try:
+                rev = layout.package_revision(pref)
+            except (RecipeNotFoundException, PackageNotFoundException) as e:
+                e.print_rev = True
+                raise e
 
             # Check the time in the associated remote if any
             remote = self._cache.registry.refs.get(pref.ref)

@@ -115,6 +115,8 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref.copy_clear_rev() == self._ref.copy_clear_rev()
         metadata = self.load_metadata()
+        if pref.id not in metadata.packages:
+            raise PackageNotFoundException(pref)
         return metadata.packages[pref.id].revision
 
     # Metadata

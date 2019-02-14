@@ -150,12 +150,13 @@ class RecipeNotFoundException(NotFoundException):
         from conans.model.ref import ConanFileReference
         assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
                                                     "ConanFileReference"
-        self._str_ref = ref.full_repr() if print_rev else str(ref)
-
+        self.ref = ref
+        self.print_rev = print_rev
         super(RecipeNotFoundException, self).__init__()
 
     def __str__(self):
-        return "Recipe not found: '{}'".format(self._str_ref)
+        tmp = self.ref.full_repr() if self.print_rev else str(self.ref)
+        return "Recipe not found: '{}'".format(tmp)
 
 
 class PackageNotFoundException(NotFoundException):
@@ -164,11 +165,14 @@ class PackageNotFoundException(NotFoundException):
         from conans.model.ref import PackageReference
         assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
                                                    "PackageReference"
-        self._str_ref = pref.full_repr() if print_rev else str(pref)
+        self.pref = pref
+        self.print_rev = print_rev
+
         super(PackageNotFoundException, self).__init__()
 
     def __str__(self):
-        return "Binary package not found: '{}'".format(self._str_ref)
+        tmp = self.pref.full_repr() if self.print_rev else str(self.pref)
+        return "Binary package not found: '{}'".format(tmp)
 
 
 class UserInterfaceErrorException(RequestErrorException):

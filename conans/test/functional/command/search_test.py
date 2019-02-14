@@ -1287,7 +1287,8 @@ class Test(ConanFile):
         # Search the wrong revision
         client.run("search lib/1.0@conan/stable#revision:234234234234234234 --revisions",
                    assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'lib/1.0@conan/stable#revision'", client.out)
+        self.assertIn("ERROR: Binary package not found: "
+                      "'lib/1.0@conan/stable#revision:234234234234234234'", client.out)
         # Search the right revision but wrong package
         client.run("search lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                    "234234234234234234 --revisions", assert_error=True)

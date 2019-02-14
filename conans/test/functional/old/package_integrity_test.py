@@ -38,9 +38,8 @@ class PackageIngrityTest(unittest.TestCase):
         pref = PackageReference(ref, "12345")
         package_folder = client.cache.package(pref)
         recipe_rev = client.cache.package_layout(ref).recipe_revision()
-        p_rev = client.cache.package_layout(ref).package_revision(pref)
         with client.cache.package_layout(pref.ref).update_metadata() as metadata:
-            metadata.packages[pref.id].revision = p_rev
+            metadata.packages[pref.id].revision = "Fakerevision"
             metadata.packages[pref.id].recipe_revision = recipe_rev
         save(os.path.join(package_folder, "conanmanifest.txt"), "888")
         set_dirty(package_folder)
