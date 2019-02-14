@@ -43,8 +43,8 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import ConanException, RecipeNotFoundException, \
-    PackageNotFoundException
+from conans.errors import (ConanException, RecipeNotFoundException,
+                           PackageNotFoundException, NoRestV2Available, NotFoundException)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_cpp_info import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
@@ -971,8 +971,6 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(ref)
-            if not layout.recipe_exists():
-                raise RecipeNotFoundException(ref, print_rev=True)
             rev = layout.recipe_revision()
 
             # Check the time in the associated remote if any
@@ -983,6 +981,8 @@ class ConanAPIV1(object):
                     revisions = self._remote_manager.get_recipe_revisions(ref, remote)
                 except RecipeNotFoundException:
                     pass
+                except (NoRestV2Available, NotFoundException):
+                    rev_time = None
                 else:
                     tmp = {r["revision"]: r["time"] for r in revisions}
                     rev_time = tmp.get(rev)
@@ -1002,12 +1002,6 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(pref.ref)
-            if not layout.recipe_exists():
-                raise RecipeNotFoundException(pref.ref, print_rev=True)
-
-            if not layout.package_exists(pref):
-                raise PackageNotFoundException(pref, print_rev=True)
-
             rev = layout.package_revision(pref)
 
             # Check the time in the associated remote if any
@@ -1018,6 +1012,8 @@ class ConanAPIV1(object):
                     revisions = self._remote_manager.get_package_revisions(pref, remote)
                 except RecipeNotFoundException:
                     pass
+                except (NoRestV2Available, NotFoundException):
+                    rev_time = None
                 else:
                     tmp = {r["revision"]: r["time"] for r in revisions}
                     rev_time = tmp.get(rev)

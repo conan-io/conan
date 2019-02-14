@@ -1,5 +1,7 @@
 import unittest
 
+import mock
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
@@ -51,6 +53,18 @@ class HelloConan(ConanFile):
         # Local search, conanfile print
         self.client.run('get Hello0/0.1@lasote/channel --raw')
         self.assertIn(self.conanfile, self.client.user_io.out)
+
+        # Get conanfile, verify the formatter applied
+        def verify_python_lexer(contents, lexer, formatter):
+            from pygments.lexers import PythonLexer
+            self.assertIsInstance(lexer, PythonLexer)
+            self.assertIn("class HelloConan", contents)
+            return "Hi there! I'm a mock!"
+
+        with mock.patch("pygments.highlight", verify_python_lexer):
+            with mock.patch("conans.client.output.ConanOutput.is_terminal", True):
+                self.client.run('get Hello0/0.1@lasote/channel')
+        self.assertIn("Hi there! I'm a mock!", self.client.out)
 
         # Local search print package info
         self.client.run('get Hello0/0.1@lasote/channel -p %s --raw' % NO_SETTINGS_PACKAGE_ID)

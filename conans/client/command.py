@@ -1363,9 +1363,9 @@ class Command(object):
 
         ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote)
         if isinstance(ret, list):
-            self._outputer.print_dir_list(ret, args.path, args.raw)
+            self._outputer.print_dir_list(ret, path, args.raw)
         else:
-            self._outputer.print_file_contents(ret, args.path, args.raw)
+            self._outputer.print_file_contents(ret, path, args.raw)
 
         return
 

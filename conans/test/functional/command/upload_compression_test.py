@@ -78,9 +78,7 @@ class UploadCompressionTest(unittest.TestCase):
 
         # Check that conans exists on server
         server_paths = self.servers["default"].server_store
-        rev = server_paths.get_last_revision(ref).revision
-        ref = ref.copy_with_rev(rev)
-        conan_path = server_paths.export(ref)
+        conan_path = server_paths.conan_revisions_root(ref)
         self.assertTrue(os.path.exists(conan_path))
         package_ids = self.client.cache.conan_packages(ref)
         pref = PackageReference(ref, package_ids[0])

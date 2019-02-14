@@ -168,8 +168,7 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanDigest, remote_name)"""
-        if ref.revision is None:
-            ref = self._resolve_latest_ref(ref, remote)
+        ref = self._resolve_latest_ref(ref, remote)
 
         return self._call_remote(remote, "get_recipe_manifest", ref), ref
 
@@ -180,9 +179,7 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
 
-        if pref.revision is None:
-            pref = self._resolve_latest_pref(pref, remote)
-
+        pref = self._resolve_latest_pref(pref, remote)
         return self._call_remote(remote, "get_package_manifest", pref), pref
 
     def get_package_info(self, pref, remote):
@@ -191,9 +188,7 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (ConanInfo, remote_name)"""
-        if pref.revision is None:
-            pref = self._resolve_latest_pref(pref, remote)
-
+        pref = self._resolve_latest_pref(pref, remote)
         return self._call_remote(remote, "get_package_info", pref), pref
 
     def get_recipe(self, ref, remote):
@@ -207,8 +202,7 @@ class RemoteManager(object):
         dest_folder = self._cache.export(ref)
         rmdir(dest_folder)
 
-        if ref.revision is None:
-            ref = self._resolve_latest_ref(ref, remote)
+        ref = self._resolve_latest_ref(ref, remote)
 
         t1 = time.time()
         zipped_files = self._call_remote(remote, "get_recipe", ref, dest_folder)
@@ -258,9 +252,7 @@ class RemoteManager(object):
         rm_conandir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
         try:
-            if not pref.revision:
-                pref = self._resolve_latest_pref(pref, remote)
-
+            pref = self._resolve_latest_pref(pref, remote)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:

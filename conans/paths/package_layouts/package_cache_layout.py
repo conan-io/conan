@@ -4,6 +4,7 @@ import os
 import platform
 from contextlib import contextmanager
 
+from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
@@ -118,14 +119,17 @@ class PackageCacheLayout(object):
 
     # Metadata
     def load_metadata(self):
-        text = load(self.package_metadata())
+        try:
+            text = load(self.package_metadata())
+        except IOError:
+            raise RecipeNotFoundException(self._ref)
         return PackageMetadata.loads(text)
 
     @contextmanager
     def update_metadata(self):
         try:
             metadata = self.load_metadata()
-        except IOError:
+        except RecipeNotFoundException:
             metadata = PackageMetadata()
         yield metadata
         save(self.package_metadata(), metadata.dumps())
@@ -133,5 +137,8 @@ class PackageCacheLayout(object):
     # Revisions
     def package_summary_hash(self, pref):
         package_folder = self.package(pref)
-        readed_manifest = FileTreeManifest.load(package_folder)
-        return readed_manifest.summary_hash
+        try:
+            read_manifest = FileTreeManifest.load(package_folder)
+        except IOError:
+            raise PackageNotFoundException(pref)
+        return read_manifest.summary_hash

@@ -221,7 +221,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
-        self.assertRaises(IOError, self.c_v2.recipe_revision, self.ref)
+        self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, self.ref)
 
         self.c_v2.run("install {}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
@@ -450,7 +450,7 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertIsNone(prev)
         self.assertIsNotNone(rev)
         self.c_v2.remove_all()
-        self.assertRaises(IOError, self.c_v2.recipe_revision, pref.ref)
+        self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, pref.ref)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
@@ -1111,6 +1111,43 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
         self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+
+    def search_revisions_locally_with_v1_server_test(self):
+        """If I upload a recipe to a v1 server and then I check the revisions locally, it
+        will return None to the time because the v1 doesn't support revisions"""
+        old_server = TestServer(server_capabilities=[])
+        servers = OrderedDict([("default", old_server)])
+        c_v1 = TurboTestClient(revisions_enabled=False, servers=servers)
+        pref = c_v1.create(self.ref)
+        c_v1.upload_all(self.ref)
+        c_v1.enable_revisions()
+
+        # Local searchs
+        c_v1.run("search {} --revisions".format(pref.ref))
+        self.assertIn("{} (No time)".format(pref.ref.revision), c_v1.out)
+
+        pref_rev = pref.copy_with_revs(pref.ref.revision, None)
+        c_v1.run("search {} --revisions".format(pref_rev.full_repr()))
+        self.assertIn("{} (No time)".format(pref.revision), c_v1.out)
+
+    def search_revisions_remotely_with_v1_server_test(self):
+        """If I upload a recipe to a v1 server and then I check the revisions locally, it
+        will return None to the time because the v1 doesn't support revisions"""
+        old_server = TestServer(server_capabilities=[])
+        servers = OrderedDict([("default", old_server)])
+        c_v1 = TurboTestClient(revisions_enabled=False, servers=servers)
+        pref = c_v1.create(self.ref)
+        c_v1.upload_all(self.ref)
+        c_v1.enable_revisions()
+
+        # Local searchs
+        c_v1.run("search {} --revisions -r default".format(pref.ref), assert_error=True)
+        self.assertIn("The remote doesn't support revisions", c_v1.out)
+
+        pref_rev = pref.copy_with_revs(pref.ref.revision, None)
+        c_v1.run("search {} --revisions -r default".format(pref_rev.full_repr()),
+                 assert_error=True)
+        self.assertIn("The remote doesn't support revisions", c_v1.out)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
