@@ -270,11 +270,11 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
+        time.sleep(1)
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
-
+        time.sleep(1)
         client.runner('cmake --build . --config Release', cwd=base_release)
-
         client.runner(cmd_release, cwd=client.current_folder)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
