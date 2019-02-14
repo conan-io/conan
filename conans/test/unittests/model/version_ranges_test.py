@@ -10,9 +10,9 @@ from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-from conans.paths.simple_paths import SimplePaths
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import TestBufferConanOutput, test_processed_profile
+from conans.client.cache.cache import ClientCache
 
 
 def _clear_revs(requires):
@@ -165,7 +165,7 @@ class VersionRangesTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         self.remote_search = MockSearchRemote()
-        paths = SimplePaths(self.retriever.folder)
+        paths = ClientCache(self.retriever.folder, self.retriever.folder, self.output)
         self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver,
                                         None)
