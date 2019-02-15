@@ -1,11 +1,11 @@
-import argparse
 import inspect
 import json
 import os
 import sys
-from argparse import ArgumentError
 
+import argparse
 import six
+from argparse import ArgumentError
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
