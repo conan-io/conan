@@ -39,6 +39,10 @@ class Node(object):
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
 
+    @property
+    def pref(self):
+        return PackageReference(self.ref, self.bid, self.prev)
+
     def partial_copy(self):
         result = Node(self.ref, self.conanfile)
         result.dependants = set()

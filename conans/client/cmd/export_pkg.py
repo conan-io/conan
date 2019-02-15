@@ -5,6 +5,7 @@ from conans.client.graph.graph_manager import load_deps_info
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.util.files import rmdir
+from conans.model.ref import PackageReference
 
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
@@ -25,8 +26,9 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     from conans.client.conan_api import existing_info_files
     if install_folder and existing_info_files(install_folder):
         load_deps_info(install_folder, conanfile, required=True)
-    pref = nodes[0].pref
-    output.info("Packaging to %s" % pref.id)
+    package_id = nodes[0].bid
+    output.info("Packaging to %s" % package_id)
+    pref = PackageReference(ref, package_id)
     dest_package_folder = cache.package(pref, short_paths=conanfile.short_paths)
 
     if os.path.exists(dest_package_folder):

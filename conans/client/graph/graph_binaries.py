@@ -31,11 +31,11 @@ class GraphBinariesAnalyzer(object):
                 output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
-        assert node.binary is None, "Node binary is None"
+        assert node.binary is None, "Node binary should be None"
+        assert node.bid is not None, "Node.bid shouldn't be None"
 
         ref, conanfile = node.ref, node.conanfile
-        pref = node.pref
-        assert pref.revision is None, "pref revision should be None before evaluate"
+        pref = PackageReference(ref, node.bid)
 
         # Check that this same reference hasn't already been checked
         previous_node = evaluated_nodes.get(pref)
@@ -100,7 +100,7 @@ class GraphBinariesAnalyzer(object):
                     else:
                         if self._check_update(upstream_manifest, package_folder, output, node):
                             node.binary = BINARY_UPDATE
-                            node.pref = pref  # With revision
+                            node.prev = pref.revision  # With revision
                             if build_mode.outdated:
                                 info, pref = self._remote_manager.get_package_info(pref, remote)
                                 package_hash = info.recipe_hash()
@@ -136,7 +136,7 @@ class GraphBinariesAnalyzer(object):
 
             if remote_info:
                 node.binary = BINARY_DOWNLOAD
-                node.pref = pref  # With PREF
+                node.prev = pref.revision
                 package_hash = remote_info.recipe_hash
             else:
                 if build_mode.allowed(conanfile):
