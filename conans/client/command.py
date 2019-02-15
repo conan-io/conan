@@ -1528,12 +1528,10 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except Exception as exc:
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)

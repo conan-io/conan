@@ -73,7 +73,21 @@ class ConanException(Exception):
     """
     def __init__(self, *args, **kwargs):
         self.info = None
+        self.remote = kwargs.pop("remote", None)
         super(ConanException, self).__init__(*args, **kwargs)
+
+    def remote_message(self):
+        if self.remote:
+            return " [Remote: {}]".format(self.remote.name)
+        return ""
+
+    def __str__(self):
+        from conans.util.files import exception_message_safe
+        msg = super(ConanException, self).__str__()
+        if self.remote:
+            return "{}.{}".format(exception_message_safe(msg), self.remote_message())
+
+        return exception_message_safe(msg)
 
 
 class NoRestV2Available(ConanException):
@@ -141,38 +155,39 @@ class NotFoundException(ConanException):  # 404
     """
 
     def __init__(self, *args, **kwargs):
+        self.remote = kwargs.pop("remote", None)
         super(NotFoundException, self).__init__(*args, **kwargs)
 
 
 class RecipeNotFoundException(NotFoundException):
 
-    def __init__(self, ref, print_rev=False):
+    def __init__(self, ref, remote=None, print_rev=False):
         from conans.model.ref import ConanFileReference
         assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
                                                     "ConanFileReference"
         self.ref = ref
         self.print_rev = print_rev
-        super(RecipeNotFoundException, self).__init__()
+        super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
         tmp = self.ref.full_repr() if self.print_rev else str(self.ref)
-        return "Recipe not found: '{}'".format(tmp)
+        return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
 class PackageNotFoundException(NotFoundException):
 
-    def __init__(self, pref, print_rev=False):
+    def __init__(self, pref, remote=None, print_rev=False):
         from conans.model.ref import PackageReference
         assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
                                                    "PackageReference"
         self.pref = pref
         self.print_rev = print_rev
 
-        super(PackageNotFoundException, self).__init__()
+        super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
         tmp = self.pref.full_repr() if self.print_rev else str(self.pref)
-        return "Binary package not found: '{}'".format(tmp)
+        return "Binary package not found: '{}'%s".format(tmp, self.remote_message())
 
 
 class UserInterfaceErrorException(RequestErrorException):

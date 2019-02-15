@@ -1,9 +1,9 @@
 import os
-import shutil
 import stat
 import tarfile
 import traceback
 
+import shutil
 import time
 from requests.exceptions import ConnectionError
 
@@ -12,14 +12,14 @@ from conans.client.cache.remote_registry import Remote
 from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
 from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    NoRestV2Available, PackageNotFoundException, RecipeNotFoundException
+    NoRestV2Available, PackageNotFoundException
 from conans.model.manifest import gather_files
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_DIR_OLD, \
     EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import clean_dirty, exception_message_safe, gzopen_without_timestamps, \
+from conans.util.files import clean_dirty, gzopen_without_timestamps, \
     is_dirty, make_read_only, mkdir, rmdir, set_dirty, tar_extract, touch_folder
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
@@ -357,15 +357,12 @@ class RemoteManager(object):
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
-        except RecipeNotFoundException as exc:
-            raise NotFoundException("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
-        except PackageNotFoundException as exc:
-            raise NotFoundException("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
         except ConanException as exc:
-            raise exc.__class__("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
+            exc.remote = remote
+            raise
         except Exception as exc:
             logger.error(traceback.format_exc())
-            raise ConanException(exc)
+            raise ConanException(exc, remote=remote)
 
 
 def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):

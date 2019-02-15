@@ -1,6 +1,5 @@
 from conans.client.output import ScopedOutput
 from conans.client.source import complete_recipe_sources
-from conans.errors import NotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -14,11 +13,7 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
-    try:
-        # First of all download package recipe
-        ref = remote_manager.get_recipe(ref, remote)
-    except NotFoundException:
-        raise RecipeNotFoundException(ref, print_rev=cache.config.revisions_enabled)
+    ref = remote_manager.get_recipe(ref, remote)
     registry.refs.set(ref, remote.name)
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
