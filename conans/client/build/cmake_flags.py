@@ -36,7 +36,7 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            logger.warning("No generator has been detected for CMake")
+            logger.warning("CMake generator could not be deduced from settings")
             return None
         return "Unix Makefiles"
 
@@ -65,6 +65,8 @@ def get_generator(settings):
 
 
 def is_multi_configuration(generator):
+    if not generator:
+        return False
     return "Visual" in generator or "Xcode" in generator
 
 
