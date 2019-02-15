@@ -15,7 +15,6 @@ from conans.model.graph_info import GraphInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from platform import node
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -172,11 +171,13 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
                                 build_mode, remote_name,
-                                profile_build_requires, recorder, workspace, processed_profile):
+                                profile_build_requires, recorder, workspace, processed_profile,
+                                nodes_to_iterate=None):
 
-        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
+        nodes_to_iterate = nodes_to_iterate if nodes_to_iterate is not None else graph.nodes
+        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name, nodes_to_iterate)
 
-        for node in list(graph.nodes):
+        for node in list(nodes_to_iterate):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
             if node.recipe == RECIPE_VIRTUAL:
@@ -202,23 +203,23 @@ class GraphManager(object):
                                     new_profile_build_requires.append(build_require)
 
             if package_build_requires:
-                subgraph = builder.extend_build_requires(graph, node,
-                                                         package_build_requires.values(),
-                                                         check_updates, update, remote_name,
-                                                         processed_profile)
-                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
+                new_nodes = builder.extend_build_requires(graph, node,
+                                                          package_build_requires.values(),
+                                                          check_updates, update, remote_name,
+                                                          processed_profile)
+                self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remote_name, profile_build_requires, recorder,
-                                             workspace, processed_profile)
+                                             workspace, processed_profile, new_nodes)
 
             if new_profile_build_requires:
-                subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
-                                                         check_updates, update, remote_name,
-                                                         processed_profile)
-                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
+                new_nodes = builder.extend_build_requires(graph, node, new_profile_build_requires,
+                                                          check_updates, update, remote_name,
+                                                          processed_profile)
+                self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remote_name, {}, recorder,
-                                             workspace, processed_profile)
+                                             workspace, processed_profile, new_nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
                     profile_build_requires, recorder, workspace, processed_profile):

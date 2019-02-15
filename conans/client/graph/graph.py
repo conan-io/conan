@@ -180,8 +180,8 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def ordered_iterate(self):
-        ordered = self.by_levels()
+    def ordered_iterate(self, nodes_to_iterate):
+        ordered = self.by_levels(nodes_to_iterate)
         for level in ordered:
             for node in level:
                 yield node
@@ -287,13 +287,13 @@ class DepsGraph(object):
                     ret.append(node.ref.copy_clear_rev())
         return ret
 
-    def by_levels(self):
-        return self._order_levels(True)
+    def by_levels(self, nodes_to_iterate=None):
+        return self._order_levels(True, nodes_to_iterate)
 
     def inverse_levels(self):
-        return self._order_levels(False)
+        return self._order_levels(False, None)
 
-    def _order_levels(self, direct):
+    def _order_levels(self, direct, nodes_to_iterate):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
@@ -301,7 +301,8 @@ class DepsGraph(object):
         """
         current_level = []
         result = [current_level]
-        opened = self.nodes.copy()
+        opened = nodes_to_iterate if nodes_to_iterate is not None else self.nodes.copy()
+        # FIXME: This surely fails for inverse_levels
         while opened:
             current = opened.copy()
             for o in opened:

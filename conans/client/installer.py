@@ -452,11 +452,21 @@ class BinaryInstaller(object):
     @staticmethod
     def _propagate_info(node, inverse_levels, deps_graph):
         # Get deps_cpp_info from upstream nodes
+        print "\nPropagating info to node ", node
+        print "    Closure", node.public_closure
         closure = node.public_closure
         node_order = [n for n in closure.values() if n.binary != BINARY_SKIP and n is not node]
+        print "    Oredered", node_order
         # List sort is stable, will keep the original order of the closure, but prioritize levels
+        print "    Inverse levels", inverse_levels
+        print inverse_levels[node]
+        for k, v in inverse_levels.items():
+            print k, type(k)
+            print k == node
+            print v, type(v)
+        print "NODE ", node
         node_order.sort(key=lambda n: inverse_levels[n])
-
+        print "ORDERED ", node_order
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:

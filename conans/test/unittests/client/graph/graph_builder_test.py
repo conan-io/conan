@@ -16,6 +16,7 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestBufferConanOutput,\
     test_processed_profile
 from conans.model.ref import ConanFileReference
+from collections import OrderedDict
 
 
 class GraphBuilderTest(unittest.TestCase):
@@ -51,19 +52,57 @@ class GraphBuilderTest(unittest.TestCase):
         self.assertEqual(len(node.dependants), 0)
 
     def test_transitive(self):
-        say_ref = ConanFileReference.loads("Say/0.1@user/testing")
-        self.retriever.conan(say_ref, TestConanFile("Say", "0.1"))
-        deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
-                                                    requires=["Say/0.1@user/testing"]))
+        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
+        self.retriever.conan(libb_ref, TestConanFile("libb", "0.1"))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=["libb/0.1@user/testing"]))
         self.assertEqual(2, len(deps_graph.nodes))
-        hello = deps_graph.root
-        self.assertEqual(hello.conanfile.name, "Hello")
-        self.assertEqual(len(hello.dependencies), 1)
-        self.assertEqual(len(hello.dependants), 0)
+        app = deps_graph.root
+        self.assertEqual(app.conanfile.name, "app")
+        self.assertEqual(len(app.dependencies), 1)
+        self.assertEqual(len(app.dependants), 0)
 
-        say = hello.dependencies[0].dst
-        self.assertEqual(say.conanfile.name, "Say")
-        self.assertEqual(len(say.dependencies), 0)
-        self.assertEqual(len(say.dependants), 1)
-        self.assertEqual(say.inverse_neighbors(), [hello])
-        self.assertEqual(say.ancestors, set([hello.ref]))
+        libb = app.dependencies[0].dst
+        self.assertEqual(libb.conanfile.name, "libb")
+        self.assertEqual(len(libb.dependencies), 0)
+        self.assertEqual(len(libb.dependants), 1)
+        self.assertEqual(libb.inverse_neighbors(), [app])
+        self.assertEqual(libb.ancestors, set([app.ref]))
+
+    def test_transitive_two_levels(self):
+        liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
+        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
+        self.retriever.conan(liba_ref, TestConanFile("liba", "0.1"))
+        self.retriever.conan(libb_ref, TestConanFile("libb", "0.1",
+                                                     requires=["liba/0.1@user/testing"]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=["libb/0.1@user/testing"]))
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        self.assertEqual(app.conanfile.name, "app")
+        self.assertEqual(len(app.dependencies), 1)
+        self.assertEqual(len(app.dependants), 0)
+
+        libb = app.dependencies[0].dst
+        self.assertEqual(libb.conanfile.name, "libb")
+        self.assertEqual(len(libb.dependencies), 1)
+        self.assertEqual(len(libb.dependants), 1)
+        self.assertEqual(libb.inverse_neighbors(), [app])
+        self.assertEqual(libb.ancestors, set([app.name]))
+
+        liba = libb.dependencies[0].dst
+        self.assertEqual(liba.conanfile.name, "liba")
+        self.assertEqual(len(liba.dependencies), 0)
+        self.assertEqual(len(liba.dependants), 1)
+        self.assertEqual(liba.inverse_neighbors(), [libb])
+        self.assertEqual(liba.ancestors, set([libb.name, app.name]))
+
+        # Closures and public_deps
+        app_closure = OrderedDict([(app.name, app), (libb.name, libb), (liba.name, liba)])
+        public_deps = dict(app_closure)
+        self.assertEqual(app.public_closure, app_closure)
+        self.assertEqual(app.public_deps, public_deps)
+        self.assertEqual(libb.public_closure, OrderedDict([(libb.name, libb), (liba.name, liba)]))
+        self.assertEqual(libb.public_deps, public_deps)
+        self.assertEqual(liba.public_closure, OrderedDict([(liba.name, liba)]))
+        self.assertEqual(liba.public_deps, public_deps)
