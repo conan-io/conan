@@ -468,4 +468,4 @@ conan_basic_setup()
                           '-DCMAKE_INSTALL_PREFIX=', client.out)
         else:
             self.assertIn('Configure command: -G "Unix Makefiles" -DCONAN_EXPORTED="1" '
-                          '-DCONAN_IN_LOCAL_CACHE="ON" -DCMAKE_INSTALL_PREFIX =', client.out)
+                          '-DCONAN_IN_LOCAL_CACHE="ON" -DCMAKE_INSTALL_PREFIX=', client.out)
