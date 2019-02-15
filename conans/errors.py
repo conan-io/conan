@@ -94,10 +94,6 @@ class NoRestV2Available(ConanException):
     pass
 
 
-class NoRestV2Available(ConanException):
-    pass
-
-
 class NoRemoteAvailable(ConanException):
     """ No default remote configured or the specified remote do not exists
     """
