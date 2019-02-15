@@ -11,7 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
-from conans.util.files import load, save
+from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 
 
@@ -186,4 +186,4 @@ class PackageCacheLayout(object):
     def remove_package_locks(self):
         conan_folder = self.conan()
         Lock.clean(conan_folder)
-        shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+        rmdir(os.path.join(conan_folder, "locks"))
