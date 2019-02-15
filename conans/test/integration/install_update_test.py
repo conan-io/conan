@@ -200,7 +200,7 @@ class Pkg(ConanFile):
         self.client.run("remote list_pref Hello0/1.0@lasote/stable")
         # FIXME Conan 2.0 It should be a assertNotIn
         self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
-                         self.client.out)
+                      self.client.out)
 
         rebuild_timestamps = timestamps()
         self.assertNotEqual(rebuild_timestamps, initial_timestamps)

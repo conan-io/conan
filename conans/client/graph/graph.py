@@ -28,6 +28,7 @@ class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
         self.bid = None
+        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges

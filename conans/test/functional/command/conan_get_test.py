@@ -1,5 +1,7 @@
 import unittest
 
+import mock
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
@@ -52,6 +54,18 @@ class HelloConan(ConanFile):
         self.client.run('get Hello0/0.1@lasote/channel --raw')
         self.assertIn(self.conanfile, self.client.user_io.out)
 
+        # Get conanfile, verify the formatter applied
+        def verify_python_lexer(contents, lexer, formatter):
+            from pygments.lexers import PythonLexer
+            self.assertIsInstance(lexer, PythonLexer)
+            self.assertIn("class HelloConan", contents)
+            return "Hi there! I'm a mock!"
+
+        with mock.patch("pygments.highlight", verify_python_lexer):
+            with mock.patch("conans.client.output.ConanOutput.is_terminal", True):
+                self.client.run('get Hello0/0.1@lasote/channel')
+        self.assertIn("Hi there! I'm a mock!", self.client.out)
+
         # Local search print package info
         self.client.run('get Hello0/0.1@lasote/channel -p %s --raw' % NO_SETTINGS_PACKAGE_ID)
         self.assertIn("""
@@ -99,9 +113,13 @@ class HelloConan(ConanFile):
 
     def test_not_found(self):
         self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
-        self.assertIn("Recipe Hello0/0.1@lasote/channel not found", self.client.user_io.out)
+        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.user_io.out)
 
         self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
                         assert_error=True)
-        self.assertIn("Package Hello0/0.1@lasote/channel:123123123123123 not found",
-                      self.client.user_io.out)
+        if self.client.cache.config.revisions_enabled:
+            # It has to resolve the latest so it fails again with the recipe
+            self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.user_io.out)
+        else:
+            self.assertIn("Binary package not found: 'Hello0/0.1@lasote/channel:123123123123123'",
+                          self.client.user_io.out)

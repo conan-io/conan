@@ -230,8 +230,8 @@ class DepsGraphBuilder(object):
             new_ref = requirement.ref
         else:
             try:
-                result = self._proxy.get_recipe(requirement.ref,
-                                                check_updates, update, remote_name, self._recorder)
+                result = self._proxy.get_recipe(requirement.ref, check_updates, update,
+                                                remote_name, self._recorder)
             except ConanException as e:
                 if current_node.ref:
                     self._output.error("Failed requirement '%s' from '%s'"
