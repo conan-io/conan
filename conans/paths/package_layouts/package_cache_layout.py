@@ -5,6 +5,7 @@ import platform
 from contextlib import contextmanager
 
 from conans.errors import NotFoundException
+from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.manifest import discarded_file
 from conans.model.package_metadata import PackageMetadata
@@ -20,8 +21,9 @@ def short_path(func):
         from conans.util.windows import path_shortener
 
         def wrap(self, *args, **kwargs):
-            p = func(self,  *args, **kwargs)
+            p = func(self, *args, **kwargs)
             return path_shortener(p, self._short_paths)
+
         return wrap
     else:
         return func
@@ -87,7 +89,7 @@ class PackageCacheLayout(object):
     def package_metadata(self):
         return os.path.join(self.conan(), PACKAGE_METADATA)
 
-    def load_manifest(self):
+    def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
 
     def package_manifests(self, pref):
@@ -98,46 +100,52 @@ class PackageCacheLayout(object):
 
     def recipe_exists(self):
         return os.path.exists(self.export()) and \
-               (not self._ref.revision or self.recipe_revision()[0] == self._ref.revision)
+               (not self._ref.revision or self.recipe_revision() == self._ref.revision)
 
     def package_exists(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return self.recipe_exists() and \
-               os.path.exists(self.package(pref)) and \
-               (not pref.revision or self.package_revision(pref)[0] ==  pref.revision)
+        return (self.recipe_exists() and
+                os.path.exists(self.package(pref)) and
+                (not pref.revision or self.package_revision(pref) == pref.revision))
 
     def recipe_revision(self):
         metadata = self.load_metadata()
-        the_time = metadata.recipe.time if metadata.recipe.time else None
-        return metadata.recipe.revision, the_time
+        return metadata.recipe.revision
 
     def package_revision(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref.copy_clear_rev() == self._ref.copy_clear_rev()
         metadata = self.load_metadata()
-        tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
-        return metadata.packages[pref.id].revision, tm
+        if pref.id not in metadata.packages:
+            raise PackageNotFoundException(pref)
+        return metadata.packages[pref.id].revision
 
     # Metadata
     def load_metadata(self):
         try:
             text = load(self.package_metadata())
-            return PackageMetadata.loads(text)
         except IOError:
-            return PackageMetadata()
+            raise RecipeNotFoundException(self._ref)
+        return PackageMetadata.loads(text)
 
     @contextmanager
     def update_metadata(self):
-        metadata = self.load_metadata()
+        try:
+            metadata = self.load_metadata()
+        except RecipeNotFoundException:
+            metadata = PackageMetadata()
         yield metadata
         save(self.package_metadata(), metadata.dumps())
 
     # Revisions
     def package_summary_hash(self, pref):
         package_folder = self.package(pref)
-        readed_manifest = FileTreeManifest.load(package_folder)
-        return readed_manifest.summary_hash
+        try:
+            read_manifest = FileTreeManifest.load(package_folder)
+        except IOError:
+            raise PackageNotFoundException(pref)
+        return read_manifest.summary_hash
 
     # Raw access to file
     def get_path(self, path, package_id=None):

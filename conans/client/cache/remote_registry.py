@@ -101,7 +101,8 @@ class _GenericReferencesRegistry(_Registry):
         return str(ref.copy_clear_rev())
 
     def remove(self, ref, quiet=False, remote_name=None):
-        assert(isinstance(ref, (ConanFileReference, PackageReference)))
+        assert isinstance(ref, (ConanFileReference, PackageReference)), \
+            "remote_registry needs known ref to remove"
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs = self._partial_load()
             try:
@@ -113,7 +114,8 @@ class _GenericReferencesRegistry(_Registry):
                     self._output.warn("Couldn't delete '%s' from remote registry" % str(ref))
 
     def get(self, ref):
-        assert(isinstance(ref, (ConanFileReference, PackageReference)))
+        assert isinstance(ref, (ConanFileReference, PackageReference)), \
+            "remote_registry needs known ref to get"
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs = self._partial_load()
             remote_name = refs.get(self._key(ref), None)
@@ -122,7 +124,8 @@ class _GenericReferencesRegistry(_Registry):
             return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
 
     def set(self, ref, remote_name, check_exists=False):
-        assert(isinstance(ref, (ConanFileReference, PackageReference)))
+        assert isinstance(ref, (ConanFileReference, PackageReference)), \
+            "remote_registry needs known ref to set"
         with fasteners.InterProcessLock(self._lockfile, logger=logger):
             remotes, refs = self._partial_load()
             if check_exists and (self._key(ref) in refs):

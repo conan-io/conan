@@ -1,8 +1,10 @@
 import json
 import os
+import subprocess
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+from conans.tools import chdir
 
 
 def get_scm_data(conanfile):
@@ -50,6 +52,28 @@ class SCMData(object):
         return json.dumps(d, sort_keys=True)
 
 
+def detect_repo_type(folder):
+    if not folder:
+        return None
+
+    def _run_command_ignore_output(cmd):
+        with chdir(folder):
+            try:
+                ret = subprocess.call(cmd, shell=True,
+                                      stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
+                if ret != 0:
+                    return False
+            except Exception:
+                return False
+        return True
+
+    if _run_command_ignore_output("git status"):
+        return "git"
+    elif _run_command_ignore_output("svn info"):
+        return "svn"
+    return None
+
+
 class SCM(object):
     def __init__(self, data, repo_folder, output):
         self._data = data
@@ -75,7 +99,8 @@ class SCM(object):
         output = ""
         if self._data.type == "git":
             output += self.repo.clone(url=self._data.url)
-            output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
+            output += self.repo.checkout(element=self._data.revision,
+                                         submodule=self._data.submodule)
         else:
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output

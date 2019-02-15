@@ -200,7 +200,7 @@ class Pkg(ConanFile):
         self.client.run("remote list_pref Hello0/1.0@lasote/stable")
         # FIXME Conan 2.0 It should be a assertNotIn
         self.assertIn("Hello0/1.0@lasote/stable:55a3af76272ead64e6f543c12ecece30f94d3eda",
-                         self.client.out)
+                      self.client.out)
 
         rebuild_timestamps = timestamps()
         self.assertNotEqual(rebuild_timestamps, initial_timestamps)
@@ -277,7 +277,15 @@ class ConanLib(ConanFile):
         upload("mycontent2")
 
         client.run("install Pkg/0.1@lasote/channel -u")
-        self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID, client.out)
+
+        if client.cache.config.revisions_enabled:
+            # The binary package is not updated but downloaded, because the local one we have
+            # belongs to a different revision and it is removed
+            self.assertIn("Pkg/0.1@lasote/channel:%s - Download" % NO_SETTINGS_PACKAGE_ID,
+                          client.out)
+        else:
+            self.assertIn("Pkg/0.1@lasote/channel:%s - Update" % NO_SETTINGS_PACKAGE_ID,
+                          client.out)
         self.assertIn("Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")

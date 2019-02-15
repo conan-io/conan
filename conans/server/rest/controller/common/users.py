@@ -1,17 +1,20 @@
 from bottle import response
 
 from conans.errors import AuthenticationException
-from conans.server.rest.controllers.controller import Controller
+
+from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.user_service import UserService
 
 
-class UsersController(Controller):
+class UsersController(object):
     """
         Serve requests related with users
     """
     def attach_to(self, app):
 
-        @app.route(self.route + '/authenticate', method=["GET"])
+        r = BottleRoutes()
+
+        @app.route(r.common_authenticate, method=["GET"])
         def authenticate(http_basic_credentials):
             if not http_basic_credentials:
                 raise AuthenticationException("Wrong user or password")
@@ -25,7 +28,7 @@ class UsersController(Controller):
             response.content_type = 'text/plain'
             return token
 
-        @app.route(self.route + '/check_credentials', method=["GET"])
+        @app.route(r.common_check_credentials, method=["GET"])
         def check_credentials(auth_user):
             """Just check if valid token. It not exception
             is raised from Bottle plugin"""

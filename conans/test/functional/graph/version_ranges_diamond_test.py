@@ -188,8 +188,7 @@ class HelloReuseConan(ConanFile):
         content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         self.assertIn("Hello0/0.2@lasote/stable", content)
 
-    @parameterized.expand([(False, ), (True,)
-                           ])
+    @parameterized.expand([(False, ), (True,)])
     def reuse_test(self, upload):
         self._export("Hello0", "0.1", upload=upload)
         self._export("Hello0", "0.2", upload=upload)

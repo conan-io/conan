@@ -1,23 +1,24 @@
-import datetime
 import json
 import os
-import shutil
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
 
+import shutil
 import time
 from mock import patch
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
-from conans.client.tools import environment_append
 from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
+from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
+from conans.util.files import save
 
 conan_vars1 = '''
 [settings]
@@ -175,6 +176,24 @@ class SearchTest(unittest.TestCase):
                                                PACKAGES_FOLDER,
                                                CONANINFO): conan_vars_tool_linx64},
                          self.client.cache.store)
+        # Fake metadata
+
+        def create_metadata(folder, pids):
+            metadata = PackageMetadata()
+            metadata.recipe.revision = DEFAULT_REVISION_V1
+            for pid in pids:
+                metadata.packages[pid].revision = DEFAULT_REVISION_V1
+            save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
+
+        create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
+                                       "LinuxPackageSHA"])
+        create_metadata(root_folder11, ["WindowsPackageSHA"])
+        create_metadata(root_folder12, ["WindowsPackageSHA"])
+        create_metadata(root_folder2, ["a44f541cd44w57"])
+        create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
@@ -291,7 +310,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                           "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
-        self.assertEquals("ERROR: Recipe not found: Hello/1.4.10@myuser/test\n", self.client.out)
+        self.assertEquals("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
 
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
@@ -641,7 +660,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_local_test(self):
         client = TestClient()
         client.run("search nonexist/1.0@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: nonexist/1.0@lasote/stable", client.out)
+        self.assertIn("ERROR: Recipe not found: 'nonexist/1.0@lasote/stable'", client.out)
 
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
@@ -1047,7 +1066,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_packages_with_reference_not_exported_test(self):
         self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: my_pkg/1.0@conan/stable", self.client.out)
+        self.assertIn("ERROR: Recipe not found: 'my_pkg/1.0@conan/stable'", self.client.out)
 
     def initial_search_without_registry_test(self):
         client = TestClient()
@@ -1056,14 +1075,27 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
+    def test_usage_of_list_revisions(self):
+        client = TestClient()
+        conanfile = dedent("""
+                    from conans import ConanFile
+                    class Test(ConanFile):
+                        pass
+                    """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . lib/1.0@conan/stable")
+        client.run("search lib/1.0@conan/stable --revisions")
+        self.assertIn("Revisions for 'lib/1.0@conan/stable':", client.out)
+        # FIXME: Should be "0" when no revisions are enabled?
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
 
+
+@unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        if client.revisions:
-            self.skipTest("Makes no sense with revisions")
         conanfile = """from conans import ConanFile
 class Test(ConanFile):
     name = "Test"
@@ -1086,8 +1118,8 @@ class Test(ConanFile):
             self.assertNotIn("os: Linux", client.user_io.out)
 
 
-@unittest.skipUnless(TestClient().revisions,
-                     "The test needs revisions activated, set CONAN_CLIENT_REVISIONS_ENABLED=1")
+@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),
+                     "set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
     def search_recipe_revisions_test(self):
@@ -1103,12 +1135,19 @@ class Test(ConanFile):
         the_time = time.time()
         time_str = iso8601_to_str(from_timestamp_to_iso8601(the_time))
 
+        time.sleep(1)
+
         client.save({"conanfile.py": conanfile})
         client.run("export . lib/1.0@user/testing")
+
+        # If the recipe doesn't have associated remote, there is no time
+        client.run("search lib/1.0@user/testing --revisions")
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
 
-        # List locally
+        # Now the revision exists in the server, so it is printed
         client.run("search lib/1.0@user/testing --revisions")
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
 
@@ -1123,6 +1162,9 @@ class Test(ConanFile):
         # List remote
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
+        client.run("remove -f lib*")
+        client.run("install lib/1.0@user/testing --build")  # To update the local time
+
         client.run("search lib/1.0@user/testing -r default --revisions")
 
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f ({})".format(time_str), client.out)
@@ -1135,20 +1177,18 @@ class Test(ConanFile):
         client.run('search lib/1.0@user/testing -r default '
                    '--revisions --json "{}"'.format(json_path))
         j = json.loads(load(json_path))
-        self.assertEquals(j["reference"], "lib/1.0@user/testing")
-        self.assertEquals(j["revisions"][0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
-        self.assertIsNotNone(j["revisions"][0]["time"])
-        self.assertEquals(j["revisions"][1]["revision"], "bd761686d5c57b31f4cd85fd0329751f")
-        self.assertIsNotNone(j["revisions"][1]["time"])
-        self.assertEquals(len(j["revisions"]), 2)
+        self.assertEquals(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
+        self.assertIsNotNone(j[0]["time"])
+        self.assertEquals(j[1]["revision"], "bd761686d5c57b31f4cd85fd0329751f")
+        self.assertIsNotNone(j[1]["time"])
+        self.assertEquals(len(j), 2)
 
         # JSON output local
         client.run('search lib/1.0@user/testing --revisions --json "{}"'.format(json_path))
         j = json.loads(load(json_path))
-        self.assertEquals(j["reference"], "lib/1.0@user/testing")
-        self.assertEquals(j["revisions"][0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
-        self.assertIsNotNone(j["revisions"][0]["time"])
-        self.assertEquals(len(j["revisions"]), 1)
+        self.assertEquals(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
+        self.assertIsNotNone(j[0]["time"])
+        self.assertEquals(len(j), 1)
 
     def search_package_revisions_test(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
@@ -1172,6 +1212,19 @@ class Test(ConanFile):
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
+        client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
+
+        # The time is checked from the remote, so it is present
+        self.assertIn("%s (%s)" % (first_prev, time_str), client.out)
+
+        # If we update, (no updates available) there also time
+        client.run("install lib/1.0@user/testing --update")
+        client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
+        self.assertIn("%s (%s)" % (first_prev, time_str),  client.out)
+
+        client.run("remove lib/1.0@user/testing -f")
+        client.run("install lib/1.0@user/testing")
+        # Now installed the package the time is ok
         client.run("search %s --revisions" % full_ref.format(rrev=first_rrev))
         self.assertIn("%s (%s)" % (first_prev, time_str), client.out)
 
@@ -1206,10 +1259,9 @@ class Test(ConanFile):
         client.run("search %s -r default --revisions "
                    "--json \"%s\"" % (full_ref.format(rrev=first_rrev), json_path))
         j = json.loads(load(json_path))
-        self.assertEquals(j["reference"], full_ref.format(rrev=first_rrev))
-        self.assertEquals(j["revisions"][0]["revision"], first_prev)
-        self.assertIsNotNone(j["revisions"][0]["time"])
-        self.assertEquals(len(j["revisions"]), 1)
+        self.assertEquals(j[0]["revision"], first_prev)
+        self.assertIsNotNone(j[0]["time"])
+        self.assertEquals(len(j), 1)
 
     def search_not_found_test(self):
         # Search not found for both package and recipe
@@ -1235,11 +1287,12 @@ class Test(ConanFile):
         # Search the wrong revision
         client.run("search lib/1.0@conan/stable#revision:234234234234234234 --revisions",
                    assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'lib/1.0@conan/stable#revision'", client.out)
+        self.assertIn("ERROR: Binary package not found: "
+                      "'lib/1.0@conan/stable#revision:234234234234234234'", client.out)
         # Search the right revision but wrong package
         client.run("search lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                    "234234234234234234 --revisions", assert_error=True)
-        self.assertIn("ERROR: Package not found: "
+        self.assertIn("ERROR: Binary package not found: "
                       "'lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                       "234234234234234234'", client.out)
 
@@ -1258,12 +1311,13 @@ class Test(ConanFile):
         client.run("upload lib/1.0@conan/stable -c --all")
         client.run("search lib/1.0@conan/stable#revision:234234234234234234 --revisions "
                    "-r default", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'lib/1.0@conan/stable#revision'", client.out)
+        self.assertIn("ERROR: Binary package not found: "
+                      "'lib/1.0@conan/stable#revision:234234234234234234'", client.out)
 
         # Search the right revision but wrong package
         client.run("search lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                    "234234234234234234 --revisions -r default", assert_error=True)
-        self.assertIn("ERROR: Package not found: "
+        self.assertIn("ERROR: Binary package not found: "
                       "'lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                       "234234234234234234'", client.out)
 
@@ -1300,26 +1354,3 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions -r fake",
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
-
-    def test_not_revisions_enabled_but_usage_of_search(self):
-
-        def create_local_revision(assert_error):
-            client = TestClient()
-            conanfile = dedent("""
-                        from conans import ConanFile
-                        class Test(ConanFile):
-                            pass
-                        """)
-            client.save({"conanfile.py": conanfile})
-            client.run("create . lib/1.0@conan/stable")
-            client.run("search lib/1.0@conan/stable --revisions", assert_error=assert_error)
-            return client
-
-        with environment_append({"CONAN_API_V2_BLOCKED": "1"}):
-            client = create_local_revision(assert_error=True)
-            # Cannot check easily the output from arg parse, but no conan output is printed
-            self.assertIn("ERROR: Exiting with code: 2", client.out)
-
-        with environment_append({"CONAN_API_V2_BLOCKED": "0"}):
-            client = create_local_revision(assert_error=False)
-            self.assertIn("Revisions for 'lib/1.0@conan/stable':", client.out)

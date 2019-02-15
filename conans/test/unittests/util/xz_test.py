@@ -66,9 +66,9 @@ class Pkg(ConanFile):
 """
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, DEFAULT_REVISION_V1)
         server.server_store.update_last_package_revision(pref.copy_with_revs(DEFAULT_REVISION_V1,
-                                                                         DEFAULT_REVISION_V1))
+                                                                             DEFAULT_REVISION_V1))
 
         package = server.server_store.package(pref)
         save_files(package, {"conaninfo.txt": "#",

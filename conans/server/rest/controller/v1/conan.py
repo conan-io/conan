@@ -4,24 +4,24 @@ import json
 from bottle import request
 
 from conans import DEFAULT_REVISION_V1
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.rest.controllers.controller import Controller
-from conans.server.service.service import ConanService
+from conans.server.service.v1.service import ConanService
 
 
-class ConanController(Controller):
+class ConanController(object):
     """
         Serve requests related with Conan
     """
-    def attach_to(self, app):
+    @staticmethod
+    def attach_to(app):
 
-        r = BottleRoutes(self.route)
+        r = BottleRoutes()
 
         @app.route(r.v1_recipe_digest, method=["GET"])
-        def get_conan_manifest_url(name, version, username, channel, auth_user):
+        def get_recipe_manifest_url(name, version, username, channel, auth_user):
             """
             Get a dict with all files and the download url
             """
@@ -29,7 +29,7 @@ class ConanController(Controller):
             ref = ConanFileReference(name, version, username, channel)
             urls = conan_service.get_conanfile_download_urls(ref, [CONAN_MANIFEST])
             if not urls:
-                raise NotFoundException("No digest found")
+                raise RecipeNotFoundException(ref)
             return urls
 
         @app.route(r.v1_package_digest, method=["GET"])
@@ -43,7 +43,7 @@ class ConanController(Controller):
 
             urls = conan_service.get_package_download_urls(pref, [CONAN_MANIFEST])
             if not urls:
-                raise NotFoundException("No digest found")
+                raise PackageNotFoundException(pref)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
@@ -79,7 +79,10 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             ref = ConanFileReference(name, version, username, channel)
-            urls = conan_service.get_conanfile_download_urls(ref)
+            try:
+                urls = conan_service.get_conanfile_download_urls(ref)
+            except NotFoundException:
+                raise RecipeNotFoundException(ref)
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
@@ -92,7 +95,11 @@ class ConanController(Controller):
             conan_service = ConanService(app.authorizer, app.server_store, auth_user)
             ref = ConanFileReference(name, version, username, channel)
             pref = PackageReference(ref, package_id)
-            urls = conan_service.get_package_download_urls(pref)
+            try:
+                urls = conan_service.get_package_download_urls(pref)
+            except NotFoundException:
+                raise PackageNotFoundException(pref)
+
             urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 

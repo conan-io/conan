@@ -1,11 +1,11 @@
-import argparse
 import inspect
 import json
 import os
 import sys
-from argparse import ArgumentError
 
+import argparse
 import six
+from argparse import ArgumentError
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -18,7 +18,6 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
-from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
@@ -890,7 +889,7 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=ref or args.pattern_or_reference, query=args.query,
+        return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
@@ -996,8 +995,6 @@ class Command(object):
         has to be used. For case insensitive file systems, like Windows, case
         sensitive search can be forced with '--case-sensitive'.
         """
-        v2_blocked = get_env("CONAN_API_V2_BLOCKED", True)
-
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-o', '--outdated', default=False, action='store_true',
@@ -1017,10 +1014,9 @@ class Command(object):
                             "reference search")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the search information will be written to')
-        if not v2_blocked:
-            parser.add_argument("-rev", "--revisions", default=False, action='store_true',
-                                help='Get a list of revisions for a reference or a '
-                                     'package reference.')
+        parser.add_argument("-rev", "--revisions", default=False, action='store_true',
+                            help='Get a list of revisions for a reference or a '
+                                 'package reference.')
         args = parser.parse_args(*args)
 
         if args.table and args.json:
@@ -1034,12 +1030,15 @@ class Command(object):
                 ref = None
         except (TypeError, ConanException):
             ref = None
+            if args.query:
+                raise ConanException("-q parameter only allowed with a valid recipe reference, "
+                                     "not with a pattern")
 
         cwd = os.getcwd()
         info = None
 
         try:
-            if not v2_blocked and args.revisions:
+            if args.revisions:
                 try:
                     pref = PackageReference.loads(args.pattern_or_reference)
                 except (TypeError, ConanException):
@@ -1057,8 +1056,7 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-                self._outputer.print_revisions(info["reference"], info["revisions"],
-                                               remote_name=args.remote)
+                self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
@@ -1073,9 +1071,6 @@ class Command(object):
                     raise ConanException("'--table' argument can only be used with a reference")
                 elif args.outdated:
                     raise ConanException("'--outdated' argument can only be used with a reference")
-
-                self._check_query_parameter_and_get_reference(args.pattern_or_reference,
-                                                              args.query)
 
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
@@ -1551,15 +1546,11 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)

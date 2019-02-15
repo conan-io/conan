@@ -78,8 +78,7 @@ def _process_folder(folder, cache, output):
                 shutil.copy(os.path.join(root, f), settings_path)
             elif f == "conan.conf":
                 output.info("Processing conan.conf")
-                conan_conf = cache.conan_config
-                _handle_conan_conf(conan_conf, os.path.join(root, f))
+                _handle_conan_conf(cache.config, os.path.join(root, f))
             elif f == "remotes.txt":
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
@@ -120,7 +119,7 @@ def configuration_install(path_or_url, cache, output, verify_ssl, requester, con
                           args=None):
     if path_or_url is None:
         try:
-            item = cache.conan_config.get_item("general.config_install")
+            item = cache.config.get_item("general.config_install")
             _config_type, path_or_url, _verify_ssl, _args = _process_config_install_item(item)
         except ConanException:
             raise ConanException("Called config install without arguments and "
@@ -158,7 +157,7 @@ def configuration_install(path_or_url, cache, output, verify_ssl, requester, con
     finally:
         if config_type is not None and path_or_url is not None:
             value = "%s, %s, %s, %s" % (config_type, path_or_url, verify_ssl, args)
-            cache.conan_config.set_item("general.config_install", value)
+            cache.config.set_item("general.config_install", value)
         rmdir(tmp_folder)
 
 

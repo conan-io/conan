@@ -43,8 +43,10 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import ConanException, NotFoundException
+from conans.errors import (ConanException, RecipeNotFoundException,
+                           PackageNotFoundException, NoRestV2Available, NotFoundException)
 from conans.model.conan_file import get_env_context_manager
+from conans.model.editable_cpp_info import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
@@ -56,7 +58,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.editable_cpp_info import get_editable_abs_path
 
 default_manifest_folder = '.conan_manifests'
 
@@ -83,7 +84,7 @@ def api_method(f):
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
-            with tools.environment_append(the_self._cache.conan_config.env_vars):
+            with tools.environment_append(the_self._cache.config.env_vars):
                 # Patch the globals in tools
                 return f(*args, **kwargs)
         except Exception as exc:
@@ -153,7 +154,8 @@ class ConanAPIV1(object):
 
         # To handle remote connections
         put_headers = cache.read_put_headers()
-        rest_api_client = RestApiClient(user_io.out, requester=requester,
+        rest_api_client = RestApiClient(user_io.out, requester,
+                                        revisions_enabled=cache.config.revisions_enabled,
                                         put_headers=put_headers)
         # To store user and token
         localdb = LocalDB(cache.localdb)
@@ -191,7 +193,7 @@ class ConanAPIV1(object):
             out.error(str(e))
             raise
 
-        with tools.environment_append(cache.conan_config.env_vars):
+        with tools.environment_append(cache.config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
             conans.util.log.logger = configure_logger()
             conans.util.log.logger.debug("INIT: Using config '%s'" % cache.conan_conf_path)
@@ -436,12 +438,18 @@ class ConanAPIV1(object):
 
     @api_method
     def download(self, reference, remote_name=None, package=None, recipe=False):
+        # FIXME: The "package" parameter name is very bad, it is a list of package_ids
         if package and recipe:
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         ref = ConanFileReference.loads(reference)
 
         if check_valid_ref(ref, allow_pattern=False):
+            if package and ref.revision is None:
+                for package_id in package:
+                    if "#" in package_id:
+                        raise ConanException("It is needed to specify the recipe revision if you "
+                                             "specify a package revision")
             recorder = ActionRecorder()
             download(ref, package, remote_name, recipe, self._remote_manager,
                      self._cache, self._user_io.out, recorder, self._loader,
@@ -921,13 +929,31 @@ class ConanAPIV1(object):
             return package_layout.get_path(path=path, package_id=package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)
-            return self._remote_manager.get_path(ref, package_id, path, remote), path
+            if self._cache.config.revisions_enabled and not ref.revision:
+                ref = self._remote_manager.get_latest_recipe_revision(ref, remote)
+            if package_id:
+                pref = PackageReference(ref, package_id)
+                if self._cache.config.revisions_enabled and not pref.revision:
+                    pref = self._remote_manager.get_latest_package_revision(pref, remote)
+                return self._remote_manager.get_package_path(pref, path, remote), path
+            else:
+                return self._remote_manager.get_recipe_path(ref, path, remote), path
 
     @api_method
     def export_alias(self, reference, target_reference):
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
-        return export_alias(ref, target_ref, self._cache)
+
+        # Do not allow to override an existing package
+        alias_conanfile_path = self._cache.package_layout(ref).conanfile()
+        if os.path.exists(alias_conanfile_path):
+            conanfile_class = self._loader.load_class(alias_conanfile_path)
+            conanfile = conanfile_class(self._user_io.out, None, str(ref))
+            if not getattr(conanfile, 'alias', None):
+                raise ConanException("Reference '{}' is already a package, remove it before creating"
+                                     " and alias with the same name".format(ref))
+
+        return export_alias(ref, target_ref, self._cache, self._user_io.out)
 
     @api_method
     def get_default_remote(self):
@@ -945,11 +971,27 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(ref)
-            if not layout.recipe_exists():
-                raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-            rev, tm = layout.recipe_revision()
-            return {"reference": ref.full_repr(),
-                    "revisions": [{"revision": rev, "time": tm}]}
+            try:
+                rev = layout.recipe_revision()
+            except RecipeNotFoundException as e:
+                e.print_rev = True
+                raise e
+
+            # Check the time in the associated remote if any
+            remote = self._cache.registry.refs.get(ref)
+            rev_time = None
+            if remote:
+                try:
+                    revisions = self._remote_manager.get_recipe_revisions(ref, remote)
+                except RecipeNotFoundException:
+                    pass
+                except (NoRestV2Available, NotFoundException):
+                    rev_time = None
+                else:
+                    tmp = {r["revision"]: r["time"] for r in revisions}
+                    rev_time = tmp.get(rev)
+
+            return [{"revision": rev, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_recipe_revisions(ref, remote=remote)
@@ -964,14 +1006,27 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(pref.ref)
-            if not layout.recipe_exists():
-                raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
+            try:
+                rev = layout.package_revision(pref)
+            except (RecipeNotFoundException, PackageNotFoundException) as e:
+                e.print_rev = True
+                raise e
 
-            if not layout.package_exists(pref):
-                raise NotFoundException("Package not found: '%s'" % pref.full_repr())
+            # Check the time in the associated remote if any
+            remote = self._cache.registry.refs.get(pref.ref)
+            rev_time = None
+            if remote:
+                try:
+                    revisions = self._remote_manager.get_package_revisions(pref, remote)
+                except RecipeNotFoundException:
+                    pass
+                except (NoRestV2Available, NotFoundException):
+                    rev_time = None
+                else:
+                    tmp = {r["revision"]: r["time"] for r in revisions}
+                    rev_time = tmp.get(rev)
 
-            rev, tm = layout.package_revision(pref)
-            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
+            return [{"revision": rev, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_package_revisions(pref, remote=remote)

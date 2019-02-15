@@ -15,6 +15,7 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 
 
@@ -60,7 +61,8 @@ class RestApiTest(unittest.TestCase):
             cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
             cls.server.start()
 
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests,
+                                    revisions_enabled=False)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 
             # Authenticate user
@@ -89,13 +91,13 @@ class RestApiTest(unittest.TestCase):
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
-    def get_conan_manifest_test(self):
+    def get_recipe_manifest_test(self):
         # Upload a conans
         ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing")
         self._upload_recipe(ref)
 
         # Get the conans digest
-        digest = self.api.get_conan_manifest(ref)
+        digest = self.api.get_recipe_manifest(ref)
         self.assertEquals(digest.summary_hash, "e925757129f5c49ecb2e8c84ce17e294")
         self.assertEquals(digest.time, 123123123)
 
@@ -188,16 +190,19 @@ class RestApiTest(unittest.TestCase):
         results = [r.copy_clear_rev() for r in results]
         self.assertEqual(results, [ref1])
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
     def remove_test(self):
         # Upload a conans
         ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
         self._upload_recipe(ref)
+        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         path1 = self.server.server_store.conan(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages
         self.api.remove_conanfile(ref)
         self.assertFalse(os.path.exists(path1))
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
     def remove_packages_test(self):
         ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
                                        % DEFAULT_REVISION_V1)
