@@ -4,7 +4,7 @@ import traceback
 
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException
+    NotFoundException, ForbiddenException
 from conans.util.files import exception_message_safe, mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
@@ -28,6 +28,10 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
@@ -49,6 +53,12 @@ class Uploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+            if response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
+        except ConanException:
+            raise
         except Exception as exc:
             raise ConanException(exception_message_safe(exc))
 
