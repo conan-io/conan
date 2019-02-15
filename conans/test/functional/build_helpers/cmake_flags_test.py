@@ -462,6 +462,10 @@ conan_basic_setup()
         client = TestClient()
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists, "include/file.h": ""})
         client.run("create . danimtb/testing")
-        self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="ON" '
-                      '-DCMAKE_INSTALL_PREFIX=', client.out)
-        self.assertIn("WARN: CMake generator could not be deduced from settings", client.out)
+        if platform.system() == "Windows":
+            self.assertIn("WARN: CMake generator could not be deduced from settings", client.out)
+            self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="ON" '
+                          '-DCMAKE_INSTALL_PREFIX=', client.out)
+        else:
+            self.assertIn('-G "Unix Makefiles" - DCONAN_EXPORTED = "1" - DCONAN_IN_LOCAL_CACHE = '
+                          '"ON" -DCMAKE_INSTALL_PREFIX =', client.out)
