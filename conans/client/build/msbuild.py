@@ -11,6 +11,7 @@ from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
+from conans.tools import vcvars_command as tools_vcvars_command
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save
 
@@ -135,7 +136,7 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuild.get_version(self._settings, self._output)
+            msbuild_version = MSBuild.get_version(self._settings)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)
@@ -219,9 +220,9 @@ class MSBuild(object):
         return template
 
     @staticmethod
-    def get_version(settings, output=None):
+    def get_version(settings):
         msbuild_cmd = "msbuild -version"
-        vcvars = vcvars_command(settings, output=output)
+        vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
             out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
