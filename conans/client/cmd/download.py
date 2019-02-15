@@ -14,7 +14,6 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
     ref = remote_manager.get_recipe(ref, remote)
-
     registry.refs.set(ref, remote.name)
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
