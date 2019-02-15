@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.client import tools
-from conans.client.client_cache import PROFILES_FOLDER
+from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
@@ -18,7 +18,7 @@ class MyConanfile(ConanFile):
 '''
 
         client = TestClient()
-        save(client.client_cache.default_profile_path, "[env]\nValue1=A")
+        save(client.cache.default_profile_path, "[env]\nValue1=A")
 
         client.save({CONANFILE: conanfile})
         client.run("create . Pkg/0.1@lasote/stable")
@@ -53,7 +53,7 @@ class MyConanfile(ConanFile):
 
         # Now use a name, in the default profile folder
         os.unlink(default_profile_path)
-        save(os.path.join(client.client_cache.profiles_path, "other"), "[env]\nValue1=A")
+        save(os.path.join(client.cache.profiles_path, "other"), "[env]\nValue1=A")
         client.run("config set general.default_profile=other")
         client.save({CONANFILE: br})
         client.run("export . lasote/stable")
@@ -89,7 +89,7 @@ mypackage:option1=2
 [build_requires]
 br/1.0@lasote/stable
 """
-        save(client.client_cache.default_profile_path, default_profile)
+        save(client.cache.default_profile_path, default_profile)
 
         client.save({CONANFILE: br})
         client.run("export . lasote/stable")
@@ -126,7 +126,7 @@ class MyConanfile(ConanFile):
 
         # Then declare in the default profile the var, it should be prioritized from the br
         default_profile_2 = default_profile + "\n[env]\nMyVAR=23"
-        save(client.client_cache.default_profile_path, default_profile_2)
+        save(client.cache.default_profile_path, default_profile_2)
         client.save({CONANFILE: cf % "23"}, clean_first=True)
         client.run("export . lasote/stable")
         client.run('install mypackage/0.1@lasote/stable --build missing')
@@ -147,7 +147,7 @@ class MyConanfile(ConanFile):
 
         # Test with the 'default' profile
         env_variable = "env_variable=profile_default"
-        save(client.client_cache.default_profile_path, "[env]\n" + env_variable)
+        save(client.cache.default_profile_path, "[env]\n" + env_variable)
         client.run("create . name/version@user/channel")
         self.assertIn(">>> " + env_variable, client.out)
 
@@ -164,7 +164,7 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=relative_profile"
         rel_path = os.path.join('..', 'env_rel_profile')
         self.assertFalse(os.path.isabs(rel_path))
-        default_profile_path = os.path.join(client.client_cache.conan_folder,
+        default_profile_path = os.path.join(client.cache.conan_folder,
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[env]\n" + env_variable)
         with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': rel_path}):

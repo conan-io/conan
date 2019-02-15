@@ -93,8 +93,35 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
+MSVS_DEFAULT_TOOLSETS = {"15": "v141",
+                         "14": "v140",
+                         "12": "v120",
+                         "11": "v110",
+                         "10": "v100",
+                         "9": "v90",
+                         "8": "v80"}
+
+# inverse version of the above MSVS_DEFAULT_TOOLSETS (keys and values are swapped)
+MSVS_DEFAULT_TOOLSETS_INVERSE = {"v141": "15",
+                                 "v140": "14",
+                                 "v120": "12",
+                                 "v110": "11",
+                                 "v100": "10",
+                                 "v90": "9",
+                                 "v80": "8"}
+
+
+def msvs_toolset(settings):
+    toolset = settings.get_safe("compiler.toolset")
+    if not toolset:
+        vs_version = settings.get_safe("compiler.version")
+        toolset = MSVS_DEFAULT_TOOLSETS.get(vs_version)
+    return toolset
+
+
 def latest_visual_studio_version_installed(output):
-    for version in reversed(["8", "9", "10", "11", "12", "14", "15"]):
+    msvc_sersions = reversed(sorted(list(MSVS_DEFAULT_TOOLSETS.keys()), key=int))
+    for version in msvc_sersions:
         vs = _visual_compiler(output, version)
         if vs:
             return vs[1]
@@ -120,7 +147,8 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None, output=None):
+                      arch=None, parallel=True, toolset=None, platforms=None, output=None,
+                      verbosity=None, definitions=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -133,7 +161,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     tmp._output = output
 
     # Generate the properties file
-    props_file_contents = tmp._get_props_file_contents()
+    props_file_contents = tmp._get_props_file_contents(definitions)
     tmp_path = os.path.join(mkdir_tmp(), ".conan_properties")
     save(tmp_path, props_file_contents)
 
@@ -141,7 +169,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     command = tmp.get_command(sln_path, tmp_path,
                               targets=targets, upgrade_project=upgrade_project,
                               build_type=build_type, arch=arch, parallel=parallel,
-                              toolset=toolset, platforms=platforms, use_env=False)
+                              toolset=toolset, platforms=platforms, use_env=False,
+                              verbosity=verbosity)
 
     return command
 

@@ -1,5 +1,6 @@
 import os
 import time
+import traceback
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
@@ -68,11 +69,11 @@ class RestV1Methods(RestCommonMethods):
             dedup = True
         return auth, dedup
 
-    def get_conan_manifest(self, conan_reference):
+    def get_recipe_manifest(self, ref):
         """Gets a FileTreeManifest from conans"""
 
         # Obtain the URLs
-        url = self.conans_router.recipe_manifest(conan_reference)
+        url = self.conans_router.recipe_manifest(ref)
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
@@ -81,29 +82,36 @@ class RestV1Methods(RestCommonMethods):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def get_package_manifest(self, package_reference):
+    def get_package_manifest(self, pref):
         """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs
-        url = self.conans_router.package_manifest(package_reference)
+        url = self.conans_router.package_manifest(pref)
         urls = self._get_file_to_url_dict(url)
 
         # Get the digest
         contents = self._download_files(urls, quiet=True)
-        # Unroll generator and decode shas (plain text)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}
-        return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+        try:
+            # Unroll generator and decode shas (plain text)
+            content = dict(contents)[CONAN_MANIFEST]
+            return FileTreeManifest.loads(decode_text(content))
+        except Exception as e:
+            msg = "Error retrieving manifest file for package " \
+                  "'{}' from remote ({}): '{}'".format(pref.full_repr(), self.remote_url, e)
+            logger.error(msg)
+            logger.error(traceback.format_exc())
+            raise ConanException(msg)
 
-    def get_package_info(self, package_reference):
+    def get_package_info(self, pref):
         """Gets a ConanInfo file from a package"""
 
-        url = self.conans_router.package_download_urls(package_reference)
+        url = self.conans_router.package_download_urls(pref)
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
 
         if CONANINFO not in urls:
-            raise NotFoundException("Package %s doesn't have the %s file!" % (package_reference,
+            raise NotFoundException("Package %s doesn't have the %s file!" % (pref,
                                                                               CONANINFO))
         # Get the info (in memory)
         contents = self._download_files({CONANINFO: urls[CONANINFO]}, quiet=True)
@@ -117,9 +125,9 @@ class RestV1Methods(RestCommonMethods):
         urls = self.get_json(url, data=data)
         return {filepath: complete_url(self.remote_url, url) for filepath, url in urls.items()}
 
-    def _upload_recipe(self, conan_reference, files_to_upload, retry, retry_wait):
+    def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         # Get the upload urls and then upload files
-        url = self.conans_router.recipe_upload_urls(conan_reference)
+        url = self.conans_router.recipe_upload_urls(ref)
         filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                      for filename, abs_path in files_to_upload.items()}
         urls = self._get_file_to_url_dict(url, data=filesizes)
@@ -186,16 +194,16 @@ class RestV1Methods(RestCommonMethods):
             ret[filename] = abs_path
         return ret
 
-    def get_recipe(self, conan_reference, dest_folder):
-        urls = self._get_recipe_urls(conan_reference)
+    def get_recipe(self, ref, dest_folder):
+        urls = self._get_recipe_urls(ref)
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         rev_time = None
-        return zipped_files, conan_reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
+        return zipped_files, ref.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
-    def get_recipe_sources(self, conan_reference, dest_folder):
-        urls = self._get_recipe_urls(conan_reference)
+    def get_recipe_sources(self, ref, dest_folder):
+        urls = self._get_recipe_urls(ref)
         check_compressed_files(EXPORT_SOURCES_TGZ_NAME, urls)
         if EXPORT_SOURCES_TGZ_NAME not in urls:
             return None
@@ -203,45 +211,45 @@ class RestV1Methods(RestCommonMethods):
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         return zipped_files
 
-    def _get_recipe_urls(self, conan_reference):
+    def _get_recipe_urls(self, ref):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
-        url = self.conans_router.recipe_download_urls(conan_reference)
+        url = self.conans_router.recipe_download_urls(ref)
         urls = self._get_file_to_url_dict(url)
         return urls
 
-    def get_package(self, package_reference, dest_folder):
-        urls = self._get_package_urls(package_reference)
+    def get_package(self, pref, dest_folder):
+        urls = self._get_package_urls(pref)
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         zipped_files = self._download_files_to_folder(urls, dest_folder)
         rev_time = None
-        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        ret_ref = pref.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
         return zipped_files, ret_ref, rev_time
 
-    def _get_package_urls(self, package_reference):
+    def _get_package_urls(self, pref):
         """Gets a dict of filename:contents from package"""
-        url = self.conans_router.package_download_urls(package_reference)
+        url = self.conans_router.package_download_urls(pref)
         urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
 
         return urls
 
-    def get_path(self, conan_reference, package_id, path):
+    def get_path(self, ref, package_id, path):
         """Gets a file content or a directory list"""
 
         if not package_id:
-            url = self.conans_router.recipe_download_urls(conan_reference)
+            url = self.conans_router.recipe_download_urls(ref)
         else:
-            pref = PackageReference(conan_reference, package_id)
+            pref = PackageReference(ref, package_id)
             url = self.conans_router.package_download_urls(pref)
         try:
             urls = self._get_file_to_url_dict(url)
         except NotFoundException:
             if package_id:
-                raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))
+                raise NotFoundException("Package %s:%s not found" % (ref, package_id))
             else:
-                raise NotFoundException("Recipe %s not found" % str(conan_reference))
+                raise NotFoundException("Recipe %s not found" % str(ref))
 
         def is_dir(the_path):
             if the_path == ".":
@@ -278,30 +286,39 @@ class RestV1Methods(RestCommonMethods):
             snapshot = []
         return snapshot
 
-    def _get_recipe_snapshot(self, reference):
-        url = self.conans_router.recipe_snapshot(reference)
+    def get_recipe_snapshot(self, ref):
+        url = self.conans_router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         rev_time = None
-        return snap, reference.copy_with_rev(DEFAULT_REVISION_V1), rev_time
+        return snap, ref.copy_with_rev(DEFAULT_REVISION_V1), rev_time
 
-    def _get_package_snapshot(self, package_reference):
-        url = self.conans_router.package_snapshot(package_reference)
+    def get_package_snapshot(self, pref):
+        url = self.conans_router.package_snapshot(pref)
         snap = self._get_snapshot(url)
         rev_time = None
-        ret_ref = package_reference.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
+        ret_ref = pref.copy_with_revs(DEFAULT_REVISION_V1, DEFAULT_REVISION_V1)
         return snap, ret_ref, rev_time
 
     @handle_return_deserializer()
-    def _remove_conanfile_files(self, conan_reference, files):
+    def _remove_conanfile_files(self, ref, files):
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
-        url = self.conans_router.remove_recipe_files(conan_reference)
+        url = self.conans_router.remove_recipe_files(ref)
         return self._post_json(url, payload)
 
     @handle_return_deserializer()
-    def remove_packages(self, conan_reference, package_ids=None):
+    def remove_packages(self, ref, package_ids=None):
         """ Remove any packages specified by package_ids"""
         self.check_credentials()
         payload = {"package_ids": package_ids}
-        url = self.conans_router.remove_packages(conan_reference)
+        url = self.conans_router.remove_packages(ref)
         return self._post_json(url, payload)
+
+    def get_recipe_revisions(self, ref):
+        raise ConanException("The remote doesn't support revisions")
+
+    def get_package_revisions(self, pref):
+        raise ConanException("The remote doesn't support revisions")
+
+    def search_packages(self, reference, query):
+        return super(RestV1Methods, self).search_packages(reference.copy_clear_rev(), query)

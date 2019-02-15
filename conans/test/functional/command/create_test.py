@@ -95,7 +95,7 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
         # keep the source
         client.save({"conanfile.py": conanfile + " "})
         client.run("create . Pkg/0.1@lasote/testing --keep-source")
@@ -103,7 +103,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
         # keep build
         client.run("create . Pkg/0.1@lasote/testing --keep-build")
         self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build",
@@ -111,7 +111,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
 
         # Changes in the recipe again
         client.save({"conanfile.py": conanfile})
@@ -123,7 +123,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
 
     def keep_build_error_test(self):
         client = TestClient()
@@ -346,7 +346,7 @@ class MyPkg(ConanFile):
     requires = "Other/1.0@user/channel"
     def build(self):
         for r in self.requires.values():
-            self.output.info("build() Requires: %s" % str(r.conan_reference))
+            self.output.info("build() Requires: %s" % str(r.ref))
         import os
         for dep in self.deps_cpp_info.deps:
             self.output.info("build() cpp_info dep: %s" % dep)

@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
@@ -71,16 +72,19 @@ class Pkg(ConanFile):
             client.save({"conanfile.py": conanfile})
             client.run("export . %s/0.1@user/testing" % name)
             client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
-        for name, conanfile in [("CA", conanfile0),
-                                ("CB", conanfile % "CA/ALIAS@user/testing"),
-                                ("CC", conanfile % "CA/ALIAS@user/testing"),
-                                ("CD", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CE", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CF", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CG", conanfile3 % ("CA/ALIAS@user/testing", "CD/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CI", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ("CH", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
-                                ]:
+
+        for name, conanfile in [
+            ("CA", conanfile0),
+            ("CB", conanfile % "CA/ALIAS@user/testing"),
+            ("CC", conanfile % "CA/ALIAS@user/testing"),
+            ("CD", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CE", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CF", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CG", conanfile3 %
+                ("CA/ALIAS@user/testing", "CD/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CI", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+            ("CH", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+        ]:
             export_alias(name, conanfile)
 
         cj = """from conans import ConanFile
@@ -421,28 +425,29 @@ class Pkg(ConanFile):
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.3@lasote/channel")
 
-    def basic_test(self):
+    def test_basic_test(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         for i in (1, 2):
-            conanfile = """from conans import ConanFile
+            conanfile = textwrap.dedent("""
+                from conans import ConanFile
 
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.%s"
-    """ % i
+                class TestConan(ConanFile):
+                    name = "Hello"
+                    version = "0.%s"
+                    """ % i)
             client.save({"conanfile.py": conanfile})
             client.run("export . lasote/channel")
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
-        conanfile_chat = """from conans import ConanFile
-
-class TestConan(ConanFile):
-    name = "Chat"
-    version = "1.0"
-    requires = "Hello/0.X@lasote/channel"
-    """
+        conanfile_chat = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Chat"
+                version = "1.0"
+                requires = "Hello/0.X@lasote/channel"
+                """)
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
         client.run("export . lasote/channel")
         client.save({"conanfile.txt": "[requires]\nChat/1.0@lasote/channel"}, clean_first=True)
@@ -466,3 +471,43 @@ class TestConan(ConanFile):
         client.run("install . --build=missing")
         self.assertIn("Hello/0.2", client.user_io.out)
         self.assertNotIn("Hello/0.1", client.user_io.out)
+
+    def test_not_override_package(self):
+        """ Do not override a package with an alias
+
+            If we create an alias with the same name as an existing package, it will
+            override the package without any warning.
+        """
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                description = "{}"
+            """)
+
+        # Create two packages
+        reference1 = "PkgA/0.1@user/testing"
+        t.save({"conanfile.py": conanfile.format(reference1)})
+        t.run("export . {}".format(reference1))
+
+        reference2 = "PkgA/0.2@user/testing"
+        t.save({"conanfile.py": conanfile.format(reference2)})
+        t.run("export . {}".format(reference2))
+
+        # Now create an alias overriding one of them
+        alias = reference2
+        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1),
+              assert_error=True)
+        self.assertIn("ERROR: Reference '{}' is already a package".format(alias), t.out)
+
+        # Check that the package is not damaged
+        t.run("inspect {} -a description".format(reference2))
+        self.assertIn("description: {}".format(reference2), t.out)
+
+        # Remove it, and create the alias again (twice, override an alias is allowed)
+        t.run("remove {} -f".format(reference2))
+        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1))
+        t.run("alias {alias} {reference}".format(alias=alias, reference=reference1))
+
+        t.run("inspect {} -a description".format(reference2))
+        self.assertIn("description: None", t.out)  # The alias conanfile doesn't have description

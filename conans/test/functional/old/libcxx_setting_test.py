@@ -39,15 +39,9 @@ endforeach()
 '''
 
 
-def nowintest(func):
-    if platform.system() == "Windows":
-        func.__test__ = False
-    return func
-
-
 class LibcxxSettingTest(unittest.TestCase):
 
-    @nowintest
+    @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
     def test_declared_stdlib_and_passed(self):
         client = TestClient()
         client.save({"conanfile.py": file_content,

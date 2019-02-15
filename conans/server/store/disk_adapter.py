@@ -4,7 +4,7 @@ import fasteners
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.paths import SimplePaths
+from conans.paths.simple_paths import SimplePaths
 from conans.server.store.server_store import REVISIONS_FILE
 from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
 

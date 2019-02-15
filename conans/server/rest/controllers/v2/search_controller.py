@@ -27,9 +27,8 @@ class SearchControllerV2(Controller):
         @app.route('%s/search' % r.recipe, method=["GET"])
         @app.route('%s/search' % r.recipe_revision, method=["GET"])
         def search_packages(name, version, username, channel, auth_user, revision=None):
-            v2_compatibility_mode = request.headers.get("V2_COMPATIBILITY_MODE", "0") == "1"
             query = request.params.get("q", None)
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
-            conan_reference = ConanFileReference(name, version, username, channel, revision)
-            info = search_service.search_packages(conan_reference, query, v2_compatibility_mode)
+            ref = ConanFileReference(name, version, username, channel, revision)
+            info = search_service.search_packages(ref, query, look_in_all_rrevs=False)
             return info

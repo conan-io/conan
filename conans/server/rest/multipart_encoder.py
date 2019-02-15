@@ -77,7 +77,7 @@ def read_in_chunks(file_object, chunk_size=1024):
 #             yield buf1
 #         else:
         yield buf1
-        #yield buf2
+        # yield buf2
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE,\
+    RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -52,10 +53,10 @@ class DepsGraphBuilder(object):
             self._resolver.resolve(require, scope, update, remote_name)
 
         # After resolving ranges,
-        for req in conanfile.requires.values():
-            alias = aliased.get(req.conan_reference)
+        for require in conanfile.requires.values():
+            alias = aliased.get(require.ref)
             if alias:
-                req.conan_reference = alias
+                require.ref = alias
 
         if not hasattr(conanfile, "_conan_evaluated_requires"):
             conanfile._conan_evaluated_requires = conanfile.requires.copy()
@@ -87,11 +88,11 @@ class DepsGraphBuilder(object):
         for name, require in node.conanfile.requires.items():
             if require.override:
                 continue
-            if require.conan_reference in loop_ancestors:
+            if require.ref in loop_ancestors:
                 raise ConanException("Loop detected: %s"
                                      % "->".join(str(r) for r in loop_ancestors))
             new_loop_ancestors = loop_ancestors[:]  # Copy for propagating
-            new_loop_ancestors.append(require.conan_reference)
+            new_loop_ancestors.append(require.ref)
             previous = public_deps.get(name)
             if require.private or not previous:  # new node, must be added and expanded
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name,
@@ -100,28 +101,27 @@ class DepsGraphBuilder(object):
                 # RECURSION!
                 # Make sure the subgraph is truly private
                 new_public_deps = {} if require.private else public_deps
-                self._load_deps(new_node, new_reqs, dep_graph, new_public_deps, node.conan_ref,
+                self._load_deps(new_node, new_reqs, dep_graph, new_public_deps, node.ref,
                                 new_options, new_loop_ancestors, aliased, check_updates, update,
                                 remote_name, processed_profile)
             else:  # a public node already exist with this name
                 previous_node, closure = previous
-                alias_ref = aliased.get(require.conan_reference, None)
+                alias_ref = aliased.get(require.ref, None)
                 # Necessary to make sure that it is pointing to the correct aliased
                 if alias_ref:
-                    require.conan_reference = alias_ref
-                conflict = self._conflicting_references(previous_node.conan_ref,
-                                                        require.conan_reference)
+                    require.ref = alias_ref
+                conflict = self._conflicting_references(previous_node.ref, require.ref)
                 if conflict == REVISION_CONFLICT:  # Revisions conflict
                     raise ConanException("Conflict in %s\n"
                                          "    Different revisions of %s has been requested"
-                                         % (node.conan_ref, require.conan_reference))
+                                         % (node.ref, require.ref))
                 elif conflict == REFERENCE_CONFLICT:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
                                          "    Keeping %s\n"
                                          "    To change it, override it in your base requirements"
-                                         % (node.conan_ref, require.conan_reference,
-                                            previous_node.conan_ref, previous_node.conan_ref))
+                                         % (node.ref, require.ref,
+                                            previous_node.ref, previous_node.ref))
 
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
@@ -129,7 +129,7 @@ class DepsGraphBuilder(object):
                     closure = dep_graph.closure(node)
                     public_deps[name] = previous_node, closure
                 if self._recurse(closure, new_reqs, new_options):
-                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.conan_ref,
+                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, node.ref,
                                     new_options, new_loop_ancestors, aliased, check_updates, update,
                                     remote_name, processed_profile)
 
@@ -137,11 +137,10 @@ class DepsGraphBuilder(object):
     def _conflicting_references(previous_ref, new_ref):
         if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
             return REFERENCE_CONFLICT
-        # Computed node, has to have a revision, at least 0
-        assert(previous_ref.revision is not None)
+        # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
-        if new_ref.revision and previous_ref.revision != new_ref.revision:
+        if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
             return REVISION_CONFLICT
         return False
 
@@ -150,8 +149,8 @@ class DepsGraphBuilder(object):
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
-            n = closure.get(req.conan_reference.name)
-            if n and self._conflicting_references(n.conan_ref, req.conan_reference):
+            n = closure.get(req.ref.name)
+            if n and self._conflicting_references(n.ref, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
@@ -168,18 +167,18 @@ class DepsGraphBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            conanfile, conanref = node.conanfile, node.conan_ref
+            conanfile, ref = node.conanfile, node.ref
             # Avoid extra time manipulating the sys.path for python
             with get_env_context_manager(conanfile, without_python=True):
                 if hasattr(conanfile, "config"):
-                    if not conanref:
+                    if not ref:
                         conanfile.output.warn("config() has been deprecated."
                                               " Use config_options and configure")
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
-                conanfile.options.propagate_upstream(down_options, down_ref, conanref)
+                conanfile.options.propagate_upstream(down_options, down_ref, ref)
                 if hasattr(conanfile, "config"):
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
@@ -210,14 +209,12 @@ class DepsGraphBuilder(object):
                 new_options = conanfile.options.deps_package_values
                 if aliased:
                     for req in conanfile.requires.values():
-                        req.conan_reference = aliased.get(req.conan_reference,
-                                                          req.conan_reference)
-                new_down_reqs = conanfile.requires.update(down_reqs, self._output,
-                                                          conanref, down_ref)
+                        req.ref = aliased.get(req.ref, req.ref)
+                new_down_reqs = conanfile.requires.update(down_reqs, self._output, ref, down_ref)
         except ConanExceptionInUserConanfileMethod:
             raise
         except ConanException as e:
-            raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
+            raise ConanException("%s: %s" % (ref or "Conanfile", str(e)))
         except Exception as e:
             raise ConanException(e)
 
@@ -227,42 +224,44 @@ class DepsGraphBuilder(object):
                          check_updates, update, remote_name, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        workspace_package = self._workspace[requirement.conan_reference] if self._workspace else None
+        workspace_package = self._workspace[requirement.ref] if self._workspace else None
 
         if workspace_package:
             conanfile_path = workspace_package.conanfile_path
             recipe_status = RECIPE_WORKSPACE
             remote = WORKSPACE_FILE
-            new_ref = requirement.conan_reference
+            new_ref = requirement.ref
         else:
             try:
-                result = self._proxy.get_recipe(requirement.conan_reference,
+                result = self._proxy.get_recipe(requirement.ref,
                                                 check_updates, update, remote_name, self._recorder)
             except ConanException as e:
-                if current_node.conan_ref:
+                if current_node.ref:
                     self._output.error("Failed requirement '%s' from '%s'"
-                                       % (requirement.conan_reference,
+                                       % (requirement.ref,
                                           current_node.conanfile.display_name))
                 raise e
             conanfile_path, recipe_status, remote, new_ref = result
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
-                                                    ref=requirement.conan_reference)
+                                                    ref=requirement.ref)
+        if recipe_status == RECIPE_EDITABLE:
+            dep_conanfile.in_local_cache = False
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile
         if getattr(dep_conanfile, "alias", None):
-            alias_reference = alias_ref or new_ref.copy_clear_rev()
-            requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
-            aliased[alias_reference] = requirement.conan_reference
+            alias_ref = alias_ref or new_ref.copy_clear_rev()
+            requirement.ref = ConanFileReference.loads(dep_conanfile.alias)
+            aliased[alias_ref] = requirement.ref
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req, aliased, check_updates, update,
                                          remote_name, processed_profile,
-                                         alias_ref=alias_reference)
+                                         alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile)
-        new_node.revision_pinned = requirement.conan_reference.revision is not None
+        new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
         dep_graph.add_node(new_node)

@@ -79,8 +79,8 @@ class HelloReuseConan(ConanFile):
 
         # Make sure timestamp increases, in some machines in testing,
         # it can fail due to same timestamp
-        inc_recipe_manifest_timestamp(client2.client_cache, "Pkg/1.2@lasote/testing", 1)
-        inc_package_manifest_timestamp(client2.client_cache,
+        inc_recipe_manifest_timestamp(client2.cache, "Pkg/1.2@lasote/testing", 1)
+        inc_package_manifest_timestamp(client2.cache,
                                        "Pkg/1.2@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
                                        1)
 
@@ -188,8 +188,7 @@ class HelloReuseConan(ConanFile):
         content = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         self.assertIn("Hello0/0.2@lasote/stable", content)
 
-    @parameterized.expand([(False, ), (True,)
-                           ])
+    @parameterized.expand([(False, ), (True,)])
     def reuse_test(self, upload):
         self._export("Hello0", "0.1", upload=upload)
         self._export("Hello0", "0.2", upload=upload)

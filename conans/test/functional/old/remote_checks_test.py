@@ -1,13 +1,16 @@
-import time
 import unittest
 from collections import OrderedDict
 
+import time
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
+from conans.util.env_reader import get_env
 
 
 class RemoteChecksTest(unittest.TestCase):
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def test_recipe_updates(self):
         servers = OrderedDict()
         servers["server1"] = TestServer()
@@ -33,10 +36,10 @@ class Pkg(ConanFile):
             client.save({"conanfile.py": conanfile % server_name,
                          "data.data": "MyData%s" % server})
             client.run("create . Pkg/0.1@lasote/testing")
-            inc_recipe_manifest_timestamp(client.client_cache, "Pkg/0.1@lasote/testing", (server-1)*20)
-            inc_package_manifest_timestamp(client.client_cache,
+            inc_recipe_manifest_timestamp(client.cache, "Pkg/0.1@lasote/testing", (server - 1) * 20)
+            inc_package_manifest_timestamp(client.cache,
                                            "Pkg/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
-                                           (server-1)*20)
+                                           (server-1) * 20)
             client.run("upload Pkg* -r=server%s --confirm --all" % server)
 
         # Fresh install from server1
@@ -98,7 +101,8 @@ class Pkg(ConanFile):
         # Remove all, install a package for debug
         client.run('remove -f "*"')
         # If revision it is able to fetch the binary from server2
-        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug', assert_error=not client.revisions)
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug',
+                   assert_error=not client.cache.config.revisions_enabled)
         # Force binary from server2
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 

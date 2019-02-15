@@ -30,17 +30,17 @@ class ClientBaseRouterBuilder(object):
 
     @staticmethod
     def format_pref(url, pref):
-        ref = pref.conan
+        ref = pref.ref
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                         channel=ref.channel, revision=ref.revision, package_id=pref.package_id,
+                         channel=ref.channel, revision=ref.revision, package_id=pref.id,
                          p_revision=pref.revision)
         return url
 
     @staticmethod
     def format_pref_path(url, pref, path):
-        ref = pref.conan
+        ref = pref.ref
         url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                         channel=ref.channel, revision=ref.revision, package_id=pref.package_id,
+                         channel=ref.channel, revision=ref.revision, package_id=pref.id,
                          p_revision=pref.revision, path=path)
         return url
 
@@ -78,7 +78,7 @@ class ClientBaseRouterBuilder(object):
 
     def for_package(self, pref):
         """url for the package with or without revisions"""
-        if not pref.conan.revision:
+        if not pref.ref.revision:
             if pref.revision:
                 raise ConanException(self.bad_package_revision)
             tmp = self.routes.package
@@ -91,10 +91,8 @@ class ClientBaseRouterBuilder(object):
 
     def for_package_file(self, pref, path):
         """url for getting a file from a package, with or without revisions"""
-        if not pref.conan.revision:
-            if pref.revision:
-                raise ConanException(self.bad_package_revision)
-            tmp = self.routes.package_file
+        if not pref.ref.revision:
+            raise ConanException("Cannot get a package file without a recipe revision")
         elif not pref.revision:
             tmp = self.routes.package_recipe_revision_file
         else:
@@ -104,7 +102,7 @@ class ClientBaseRouterBuilder(object):
 
     def for_package_files(self, pref):
         """url for getting the recipe list"""
-        if not pref.conan.revision:
+        if not pref.ref.revision:
             if pref.revision:
                 raise ConanException(self.bad_package_revision)
             tmp = self.routes.package_files
@@ -225,6 +223,10 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
         """Remove recipe url"""
         return self.for_recipe(ref)
 
+    def recipe_revisions(self, ref):
+        """Get revisions for a recipe url"""
+        return self.format_ref(self.routes.recipe_revisions, ref)
+
     def remove_package(self, pref):
         """Remove package url"""
         return self.for_package(pref)
@@ -252,3 +254,7 @@ class ClientV2ConanRouterBuilder(ClientBaseRouterBuilder):
     def package_snapshot(self, pref):
         """get recipe manifest url"""
         return self.for_package_files(pref)
+
+    def package_revisions(self, pref):
+        """get revisions for a package url"""
+        return self.format_pref(self.routes.package_revisions, pref)
