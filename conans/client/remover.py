@@ -108,9 +108,11 @@ class ConanRemover(object):
             self._user_io.out.warn(self._message_removing_editable(ref))
             return
 
-        # Make sure to clean the locks too
-        package_layout = self._cache.package_layout(ref)
-        package_layout.remove_package_locks()
+        # Get the package layout using 'short_paths=False', remover will make use of the
+        #  function 'rm_conandir' which already takes care of the linked folder.
+        package_layout = self._cache.package_layout(ref, short_paths=False)
+
+        package_layout.remove_package_locks()  # Make sure to clean the locks too
         remover = DiskRemover()
         if src:
             remover.remove_src(package_layout)
