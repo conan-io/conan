@@ -45,3 +45,7 @@ class SaveTestCase(unittest.TestCase):
             folder = unicode(folder)
         a_file = [f[0] for _, _, f in walk(folder)][0]
         self.assertTrue(a_file.endswith("badfile.txt"))
+
+    def surrogates_content_test(self):
+        content = to_file_bytes("pepe\xE3\x81\x82\udcc3foobarqux")
+        self.assertEqual(b"pepe\xc3\xa3\xc2\x81\xc2\x82foobarqux", content)

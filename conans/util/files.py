@@ -158,7 +158,7 @@ def mkdir_tmp():
 def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
-            content = bytes(content, "utf-8")
+            content = bytes(content, "utf-8", "ignore")
     elif isinstance(content, unicode):
         content = content.encode("utf-8")
     return content
