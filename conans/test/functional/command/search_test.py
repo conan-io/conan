@@ -1,10 +1,10 @@
 import json
 import os
-import shutil
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
 
+import shutil
 import time
 from mock import patch
 

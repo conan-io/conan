@@ -4,8 +4,8 @@ import traceback
 
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException, ForbiddenException
-from conans.util.files import exception_message_safe, mkdir, save_append, sha1sum, to_file_bytes
+    NotFoundException
+from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -60,7 +60,7 @@ class Uploader(object):
         except ConanException:
             raise
         except Exception as exc:
-            raise ConanException(exception_message_safe(exc))
+            raise ConanException(exc)
 
         return response
 
@@ -152,7 +152,7 @@ class Downloader(object):
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
                                           headers=headers)
         except Exception as exc:
-            raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
+            raise ConanException("Error downloading file %s: '%s'" % (url, exc))
 
         if not response.ok:
             if response.status_code == 404:
@@ -258,7 +258,6 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
                 raise
             else:
                 if out:
-                    msg = exception_message_safe(exc)
-                    out.error(msg)
+                    out.error(exc)
                     out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)
