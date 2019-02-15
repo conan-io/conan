@@ -91,7 +91,8 @@ class CmdUpload(object):
     def _upload(self, conan_file, ref, packages_ids, retry, retry_wait,
                 integrity_check, policy, recipe_remote, upload_recorder):
         """Uploads the recipes and binaries identified by conan_ref"""
-
+        metadata = self._cache.package_layout(ref).load_metadata()
+        ref = ref.copy_with_rev(metadata.recipe.revision)
         conanfile_path = self._cache.conanfile(ref)
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
@@ -104,11 +105,7 @@ class CmdUpload(object):
             remote_manifest = None
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
-
-        metadata = self._cache.package_layout(ref).load_metadata()
-        ref = ref.copy_with_rev(metadata.recipe.revision)
         self._upload_recipe(ref, retry, retry_wait, policy, recipe_remote, remote_manifest)
-
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         if packages_ids:
             # Filter packages that don't match the recipe revision
@@ -129,10 +126,15 @@ class CmdUpload(object):
                                      "no packages can be uploaded")
             total = len(packages_ids)
             for index, package_id in enumerate(packages_ids):
+
+                # Read the revisions and build a correct package reference for the server
+                package_revision = metadata.packages[package_id].revision
+                # Copy to not modify the original with the revisions
+                pref = PackageReference(ref, package_id, package_revision)
                 p_remote = recipe_remote
-                new_pref = self._upload_package(ref, package_id, metadata, index + 1, total, retry, retry_wait,
-                                                integrity_check, policy, p_remote)
-                upload_recorder.add_package(new_pref, p_remote.name, p_remote.url)
+                self._upload_package(pref, index + 1, total, retry, retry_wait,
+                                     integrity_check, policy, p_remote)
+                upload_recorder.add_package(pref, p_remote.name, p_remote.url)
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
@@ -155,35 +157,30 @@ class CmdUpload(object):
 
         return ref
 
-    def _upload_package(self, ref, package_id, metadata, index=1, total=1, retry=None, retry_wait=None,
+    def _upload_package(self, pref, index=1, total=1, retry=None, retry_wait=None,
                         integrity_check=False, policy=None, p_remote=None):
         """Uploads the package identified by package_id"""
 
-        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(package_id), p_remote.name))
+        msg = ("Uploading package %d/%d: %s to '%s'" % (index, total, str(pref.id), p_remote.name))
         t1 = time.time()
         self._user_io.out.info(msg)
 
-        # Read the revisions and build a correct package reference for the server
-        package_revision = metadata.packages[package_id].revision
-        # Copy to not modify the original with the revisions
-        new_pref = PackageReference(ref, package_id, package_revision)
+        assert (pref.revision is not None), "Cannot upload a package without RREV"
+        assert (pref.ref.revision is not None), "Cannot upload a package without PREV"
 
-        assert (new_pref.revision is not None)
-        assert (new_pref.ref.revision is not None)
-
-        self._remote_manager.upload_package(new_pref, p_remote, retry, retry_wait, integrity_check,
+        self._remote_manager.upload_package(pref, p_remote, retry, retry_wait, integrity_check,
                                             policy)
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        cur_package_remote = self._registry.prefs.get(new_pref.copy_clear_rev())
+        cur_package_remote = self._registry.prefs.get(pref.copy_clear_rev())
         if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
-            self._registry.prefs.set(new_pref, p_remote.name)
+            self._registry.prefs.set(pref, p_remote.name)
 
-        return new_pref
+        return pref
 
     def _check_recipe_date(self, ref, remote):
         try:
-            remote_recipe_manifest = self._remote_manager.get_recipe_manifest(ref, remote)
+            remote_recipe_manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
         except NotFoundException:
             return  # First time uploading this package
 
@@ -209,8 +206,8 @@ class CmdUpload(object):
                 contents = load(os.path.join(self._cache.export(ref), "conanfile.py"))
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
-                remote_contents = self._remote_manager.get_path(ref, package_id=None,
-                                                                path="conanfile.py", remote=remote)
+                remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
+                                                                       remote=remote)
                 endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
                 self._user_io.out.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
             self._user_io.out.info("\n%s" % ("-"*40))
