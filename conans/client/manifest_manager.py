@@ -38,7 +38,7 @@ class ManifestManager(object):
 
     def _handle_package(self, node, verify, interactive):
         ref = node.ref
-        pref = PackageReference(ref, node.bid)
+        pref = PackageReference(ref, node.package_id)
         package_folder = self._cache.package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)

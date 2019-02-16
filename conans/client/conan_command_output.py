@@ -107,7 +107,7 @@ class CommandOutputer(object):
         """ Convert 'deps_graph' into consumible information for json and cli """
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.ref, node.bid), []).append(node)
+            compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -133,9 +133,9 @@ class CommandOutputer(object):
                 item_data["export_folder"] = self.cache.export(ref)
                 item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
                 if isinstance(self.cache, SimplePaths):
-                    # @todo: check if this is correct or if it must always be package_id()
-                    bid = build_id(conanfile) or package_id
-                    pref = PackageReference(ref, bid)
+                    # @todo: check if this is correct or if it must always be package_id
+                    package_id = build_id(conanfile) or package_id
+                    pref = PackageReference(ref, package_id)
                     item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
 
                     pref = PackageReference(ref, package_id)

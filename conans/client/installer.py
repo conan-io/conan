@@ -280,7 +280,7 @@ class BinaryInstaller(object):
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
-                package_id = node.bid
+                package_id = node.package_id
                 if node.binary == BINARY_MISSING:
                     dependencies = [str(dep.dst) for dep in node.dependencies]
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,
