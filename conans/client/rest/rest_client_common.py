@@ -164,11 +164,15 @@ class RestCommonMethods(object):
             self._remove_conanfile_files(ref, deleted)
 
     def get_recipe_snapshot(self, ref):
+        self.check_credentials()
+
         url = self.router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         return snap
 
     def get_package_snapshot(self, pref):
+        self.check_credentials()
+
         url = self.router.package_snapshot(pref)
         snap = self._get_snapshot(url)
         return snap

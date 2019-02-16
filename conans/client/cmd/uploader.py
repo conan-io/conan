@@ -166,6 +166,7 @@ class CmdUpload(object):
                                    remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote):
+        assert (ref.revision is not None), "Cannot upload a recipe without RREV"
         if policy != UPLOAD_POLICY_FORCE:
             remote_manifest = self._check_recipe_date(ref, remote)
         else:
@@ -181,7 +182,7 @@ class CmdUpload(object):
                                    reference=ref, remote=remote)
 
         t1 = time.time()
-        the_files = self._compres_recipe_files(ref)
+        the_files = self._compress_recipe_files(ref)
         if policy == UPLOAD_POLICY_SKIP:
             return ref
         files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, the_files,
@@ -206,8 +207,8 @@ class CmdUpload(object):
     def _upload_package(self, pref, retry=None, retry_wait=None,
                         integrity_check=False, policy=None, p_remote=None):
 
-        assert (pref.revision is not None), "Cannot upload a package without RREV"
-        assert (pref.ref.revision is not None), "Cannot upload a package without PREV"
+        assert (pref.revision is not None), "Cannot upload a package without PREV"
+        assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
         conanfile_path = self._cache.conanfile(pref.ref)
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
@@ -216,7 +217,7 @@ class CmdUpload(object):
                                    remote=p_remote)
 
         t1 = time.time()
-        the_files = self._compress_package_files(pref, integrity_check, t1)
+        the_files = self._compress_package_files(pref, integrity_check)
         if policy == UPLOAD_POLICY_SKIP:
             return None
         files_to_upload, deleted = self._package_files_to_upload(pref, policy, the_files, p_remote)
@@ -225,23 +226,22 @@ class CmdUpload(object):
             self._remote_manager.upload_package(pref, files_to_upload, deleted, p_remote, retry,
                                                 retry_wait)
             logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
-            duration = time.time() - t1
-            log_package_upload(pref, duration, the_files, p_remote)
         else:
             self._user_io.out.info("Package is up to date, upload skipped")
 
+        duration = time.time() - t1
+        log_package_upload(pref, duration, the_files, p_remote)
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=p_remote)
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
-
         cur_package_remote = self._registry.prefs.get(pref.copy_clear_rev())
         if not cur_package_remote and policy != UPLOAD_POLICY_SKIP:
             self._registry.prefs.set(pref, p_remote.name)
 
         return pref
 
-    def _compres_recipe_files(self, ref):
+    def _compress_recipe_files(self, ref):
         export_folder = self._cache.export(ref)
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
@@ -260,8 +260,9 @@ class CmdUpload(object):
                                            self._user_io.out)
         return the_files
 
-    def _compress_package_files(self, pref, integrity_check, t1):
+    def _compress_package_files(self, pref, integrity_check):
 
+        t1 = time.time()
         # existing package, will use short paths if defined
         package_folder = self._cache.package(pref, short_paths=None)
 
@@ -282,6 +283,7 @@ class CmdUpload(object):
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
 
+        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
         if integrity_check:
             self._package_integrity_check(pref, files, package_folder)
             logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
