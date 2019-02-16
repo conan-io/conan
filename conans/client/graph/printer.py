@@ -23,7 +23,7 @@ def print_graph(deps_graph, out):
         python_requires.update(_get_python_requires(node.conanfile))
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
-        pref = PackageReference(node.ref, node.bid)
+        pref = PackageReference(node.ref, node.package_id)
         if node.build_require:
             build_requires.setdefault(pref, []).append(node)
         else:

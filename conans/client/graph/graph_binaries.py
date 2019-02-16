@@ -31,11 +31,11 @@ class GraphBinariesAnalyzer(object):
                 output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
-        assert node.binary is None, "Node binary should be None"
-        assert node.bid is not None, "Node.bid shouldn't be None"
+        assert node.binary is None, "Node.binary should be None"
+        assert node.package_id is not None, "Node.package_id shouldn't be None"
 
         ref, conanfile = node.ref, node.conanfile
-        pref = PackageReference(ref, node.bid)
+        pref = PackageReference(ref, node.package_id)
 
         # Check that this same reference hasn't already been checked
         previous_node = evaluated_nodes.get(pref)
@@ -163,7 +163,7 @@ class GraphBinariesAnalyzer(object):
         indirect_reqs = set()   # of PackageReference, avoid duplicates
         for neighbor in neighbors:
             ref, nconan = neighbor.ref, neighbor.conanfile
-            pref = PackageReference(ref, neighbor.bid)
+            pref = PackageReference(ref, neighbor.package_id)
             direct_reqs.append(pref)
             indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
@@ -187,7 +187,7 @@ class GraphBinariesAnalyzer(object):
             conanfile.package_id()
 
         info = node.conanfile.info
-        node.bid = info.package_id()
+        node.package_id = info.package_id()
 
     def _handle_private(self, node, deps_graph):
         private_neighbours = node.private_neighbors()
