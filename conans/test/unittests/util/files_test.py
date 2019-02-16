@@ -47,5 +47,8 @@ class SaveTestCase(unittest.TestCase):
         self.assertTrue(a_file.endswith("badfile.txt"))
 
     def surrogates_content_test(self):
-        content = to_file_bytes("pepe\xE3\x81\x82\udcc3foobarqux")
-        self.assertEqual(b"pepe\xc3\xa3\xc2\x81\xc2\x82foobarqux", content)
+        content = to_file_bytes(u"pepe\xE3\x81\x82\udcc3foobarqux")
+        if six.PY3:
+            self.assertEqual(b"pepe\xc3\xa3\xc2\x81\xc2\x82foobarqux", content)
+        else:
+            self.assertEqual(b"pepe\xc3\xa3\xc2\x81\xc2\x82\xed\xb3\x83foobarqux", content)
