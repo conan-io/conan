@@ -4,8 +4,8 @@ from conans.client import packager
 from conans.client.graph.graph_manager import load_deps_info
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.util.files import rmdir
 from conans.model.ref import PackageReference
+from conans.util.files import rmdir
 
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
@@ -16,6 +16,8 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(ref))
 
+    # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
+    # to be downloaded from remotes
     deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
                                              check_updates=False, update=False,
                                              remote_name=None, recorder=recorder, workspace=None)
