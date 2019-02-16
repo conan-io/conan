@@ -1,6 +1,4 @@
 import os
-import stat
-import tarfile
 import traceback
 
 import shutil
@@ -9,23 +7,19 @@ from requests.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
-from conans.client.cmd.uploader import UPLOAD_POLICY_SKIP
 from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
-from conans.model.manifest import gather_files
-from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_SOURCES_DIR_OLD, \
+from conans.paths import EXPORT_SOURCES_DIR_OLD, \
     EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import clean_dirty, gzopen_without_timestamps, \
-    is_dirty, make_read_only, mkdir, rmdir, set_dirty, tar_extract, touch_folder
+from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
-from conans.util.tracer import (log_compressed_files, log_package_download, log_package_upload,
+from conans.util.tracer import (log_package_download,
                                 log_recipe_download, log_recipe_sources_download,
-                                log_recipe_upload,
                                 log_uncompressed_file)
 
 
@@ -38,129 +32,21 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
-    def upload_recipe(self, ref, remote, retry, retry_wait, policy, remote_manifest):
-        conanfile_path = self._cache.conanfile(ref)
-        self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
+    def get_recipe_snapshot(self, ref, remote):
+        assert ref.revision, "get_recipe_snapshot requires revision"
+        return self._call_remote(remote, "get_recipe_snapshot", ref)
 
-        t1 = time.time()
-        export_folder = self._cache.export(ref)
+    def get_package_snapshot(self, pref, remote):
+        assert pref.revision, "get_recipe_snapshot requires revision"
+        return self._call_remote(remote, "get_package_snapshot", pref)
 
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
-            tgz_path = os.path.join(export_folder, f)
-            if is_dirty(tgz_path):
-                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
-                os.remove(tgz_path)
-                clean_dirty(tgz_path)
+    def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
+        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
+                          retry, retry_wait)
 
-        files, symlinks = gather_files(export_folder)
-        if CONANFILE not in files or CONAN_MANIFEST not in files:
-            raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
-        export_src_folder = self._cache.export_sources(ref, short_paths=None)
-        src_files, src_symlinks = gather_files(export_src_folder)
-        the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
-                                           self._output)
-
-        if policy == UPLOAD_POLICY_SKIP:
-            return ref
-
-        ret = self._call_remote(remote, "upload_recipe", ref, the_files, retry, retry_wait,
-                                policy, remote_manifest)
-        duration = time.time() - t1
-        log_recipe_upload(ref, duration, the_files, remote.name)
-        if ret:
-            msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
-            url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
-            msg += ": %s" % url
-        else:
-            msg = "Recipe is up to date, upload skipped"
-        self._output.info(msg)
-        self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
-
-    def _package_integrity_check(self, pref, files, package_folder):
-        # If package has been modified remove tgz to regenerate it
-        self._output.rewrite_line("Checking package integrity...")
-
-        # short_paths = None is enough if there exist short_paths
-        layout = self._cache.package_layout(pref.ref, short_paths=None)
-        read_manifest, expected_manifest = layout.package_manifests(pref)
-
-        if read_manifest != expected_manifest:
-            self._output.writeln("")
-            diff = read_manifest.difference(expected_manifest)
-            for fname, (h1, h2) in diff.items():
-                self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                  % (fname, h1, h2))
-
-            if PACKAGE_TGZ_NAME in files:
-                try:
-                    tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
-                    os.unlink(tgz_path)
-                except Exception:
-                    pass
-            error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                        % (fname, h1, h2) for fname, (h1, h2) in diff.items())
-            logger.error("Manifests doesn't match!\n%s" % error_msg)
-            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
-        else:
-            self._output.rewrite_line("Package integrity OK!")
-        self._output.writeln("")
-
-    def upload_package(self, pref, remote, retry, retry_wait, integrity_check=False, policy=None):
-
-        """Will upload the package to the first remote"""
-        conanfile_path = self._cache.conanfile(pref.ref)
-        self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref,
-                                   package_id=pref.id,
-                                   remote=remote)
-        t1 = time.time()
-        # existing package, will use short paths if defined
-        package_folder = self._cache.package(pref, short_paths=None)
-
-        if is_dirty(package_folder):
-            raise ConanException("Package %s is corrupted, aborting upload.\n"
-                                 "Remove it with 'conan remove %s -p=%s'"
-                                 % (pref, pref.ref, pref.id))
-        tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
-        if is_dirty(tgz_path):
-            self._output.warn("%s: Removing %s, marked as dirty"
-                              % (str(pref), PACKAGE_TGZ_NAME))
-            os.remove(tgz_path)
-            clean_dirty(tgz_path)
-        # Get all the files in that directory
-        files, symlinks = gather_files(package_folder)
-
-        if CONANINFO not in files or CONAN_MANIFEST not in files:
-            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
-
-        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
-
-        if integrity_check:
-            self._package_integrity_check(pref, files, package_folder)
-            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
-                         % (time.time() - t1))
-
-        the_files = compress_package_files(files, symlinks, package_folder, self._output)
-        if policy == UPLOAD_POLICY_SKIP:
-            return None
-
-        assert(pref.revision is not None)
-        assert(pref.ref.revision is not None)
-
-        uploaded = self._call_remote(remote, "upload_package", pref,
-                                     the_files, retry, retry_wait, policy)
-        duration = time.time() - t1
-        log_package_upload(pref, duration, the_files, remote)
-        logger.debug("UPLOAD: Time remote_manager upload_package: %f" % duration)
-        if not uploaded:
-            self._output.rewrite_line("Package is up to date, upload skipped")
-            self._output.writeln("")
-
-        self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
-                                   reference=pref.ref, package_id=pref.id, remote=remote)
+    def upload_package(self, pref, files_to_upload, deleted, remote, retry, retry_wait):
+        self._call_remote(remote, "upload_package", pref,
+                          files_to_upload, deleted, retry, retry_wait)
 
     def get_recipe_manifest(self, ref, remote):
         """
@@ -274,7 +160,7 @@ class RemoteManager(object):
             output.error("Exception while getting package: %s" % str(pref.id))
             output.error("Exception: %s %s" % (type(e), str(e)))
             try:
-                output.warn( "Trying to remove package folder: %s" % dest_folder)
+                output.warn("Trying to remove package folder: %s" % dest_folder)
                 rmdir(dest_folder)
             except OSError as e:
                 raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. "
@@ -365,41 +251,6 @@ class RemoteManager(object):
             raise ConanException(exc, remote=remote)
 
 
-def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):
-    # This is the minimum recipe
-    result = {CONANFILE: files.pop(CONANFILE),
-              CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
-
-    export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
-    sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
-
-    def add_tgz(tgz_name, tgz_path, tgz_files, tgz_symlinks, msg):
-        if tgz_path:
-            result[tgz_name] = tgz_path
-        elif tgz_files:
-            output.rewrite_line(msg)
-            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
-            result[tgz_name] = tgz_path
-
-    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
-    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
-            "Compressing recipe sources...")
-
-    return result
-
-
-def compress_package_files(files, symlinks, dest_folder, output):
-    tgz_path = files.get(PACKAGE_TGZ_NAME)
-    if not tgz_path:
-        output.writeln("Compressing package...")
-        tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
-
-    return {PACKAGE_TGZ_NAME: tgz_path,
-            CONANINFO: files[CONANINFO],
-            CONAN_MANIFEST: files[CONAN_MANIFEST]}
-
-
 def check_compressed_files(tgz_name, files):
     bare_name = os.path.splitext(tgz_name)[0]
     for f in files:
@@ -408,63 +259,6 @@ def check_compressed_files(tgz_name, files):
         if bare_name == os.path.splitext(f)[0]:
             raise ConanException("This Conan version is not prepared to handle '%s' file format. "
                                  "Please upgrade conan client." % f)
-
-
-def compress_files(files, symlinks, name, dest_dir, output=None):
-    t1 = time.time()
-    # FIXME, better write to disk sequentially and not keep tgz contents in memory
-    tgz_path = os.path.join(dest_dir, name)
-    set_dirty(tgz_path)
-    with open(tgz_path, "wb") as tgz_handle:
-        # tgz_contents = BytesIO()
-        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
-
-        for filename, dest in sorted(symlinks.items()):
-            info = tarfile.TarInfo(name=filename)
-            info.type = tarfile.SYMTYPE
-            info.linkname = dest
-            tgz.addfile(tarinfo=info)
-
-        mask = ~(stat.S_IWOTH | stat.S_IWGRP)
-        i_file = 0
-        n_files = len(files)
-        last_progress = None
-        if output and n_files > 1 and not output.is_terminal:
-            output.write("[")
-        for filename, abs_path in sorted(files.items()):
-            info = tarfile.TarInfo(name=filename)
-            info.size = os.stat(abs_path).st_size
-            info.mode = os.stat(abs_path).st_mode & mask
-            if os.path.islink(abs_path):
-                info.type = tarfile.SYMTYPE
-                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                tgz.addfile(tarinfo=info)
-            else:
-                with open(abs_path, 'rb') as file_handler:
-                    tgz.addfile(tarinfo=info, fileobj=file_handler)
-            if output and n_files > 1:
-                i_file = i_file + 1
-                units = min(50, int(50 * i_file / n_files))
-                if last_progress != units:  # Avoid screen refresh if nothing has change
-                    if output.is_terminal:
-                        text = "%s/%s files" % (i_file, n_files)
-                        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), text))
-                    else:
-                        output.write('=' * (units - (last_progress or 0)))
-                    last_progress = units
-
-        if output and n_files > 1:
-            if output.is_terminal:
-                output.writeln("")
-            else:
-                output.writeln("]")
-        tgz.close()
-
-    clean_dirty(tgz_path)
-    duration = time.time() - t1
-    log_compressed_files(files, duration, tgz_path)
-
-    return tgz_path
 
 
 def unzip_and_get_files(files, destination_dir, tgz_name, output):

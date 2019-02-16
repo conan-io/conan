@@ -1,19 +1,14 @@
 import json
 
-import time
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from conans import COMPLEX_SEARCH_CAPABILITY
-from conans.client.cmd.uploader import UPLOAD_POLICY_NO_OVERWRITE, \
-    UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_FORCE
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
-from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
-from conans.model.rest_routes import RestRoutes
 from conans.search.search import filter_packages
-from conans.util.files import decode_text, load
+from conans.util.files import decode_text
 from conans.util.log import logger
 
 
@@ -160,36 +155,13 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
-        """
-        the_files: dict with relative_path: content
-        """
+    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
         self.check_credentials()
-
-        # Get the remote snapshot
-        remote_snapshot = self.get_recipe_snapshot(ref)
-
-        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            remote_manifest = remote_manifest or self.get_recipe_manifest(ref)
-            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-
-            if remote_manifest == local_manifest:
-                return False
-
-            if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
-                raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbidden overwrite")
-
-        files_to_upload = {filename.replace("\\", "/"): path
-                           for filename, path in the_files.items()}
-        deleted = set(remote_snapshot).difference(the_files)
 
         if files_to_upload:
             self._upload_recipe(ref, files_to_upload, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(ref, deleted)
-
-        return bool(files_to_upload or deleted)
 
     def get_recipe_snapshot(self, ref):
         url = self.router.recipe_snapshot(ref)
@@ -201,39 +173,19 @@ class RestCommonMethods(object):
         snap = self._get_snapshot(url)
         return snap
 
-    def upload_package(self, pref, the_files, retry, retry_wait, policy):
+    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
         """
         self.check_credentials()
 
-        t1 = time.time()
-        # Get the remote snapshot
-        remote_snapshot = self.get_package_snapshot(pref)
-
-        if remote_snapshot:
-            remote_manifest = self.get_package_manifest(pref)
-            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-
-            if remote_manifest == local_manifest:
-                return False
-
-            if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite")
-
-        files_to_upload = the_files
-        deleted = set(remote_snapshot).difference(the_files)
         if files_to_upload:
             self._upload_package(pref, files_to_upload, retry, retry_wait)
         if deleted:
             raise Exception("This shouldn't be happening, deleted files "
                             "in local package present in remote: %s.\n Please, report it at "
                             "https://github.com/conan-io/conan/issues " % str(deleted))
-
-        logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
-        return True
 
     def search(self, pattern=None, ignorecase=True):
         """

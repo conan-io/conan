@@ -5,8 +5,7 @@ import time
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
-from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error, \
-    handle_return_deserializer
+from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException
