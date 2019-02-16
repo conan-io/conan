@@ -17,6 +17,12 @@ class CMakePathsGenerator(Generator):
         # 3. The "install_folder" ones, in case there is no FindXXX.cmake, try with the install dir
         #    if the user used the "cmake_find_package" will find the auto-generated
         # 4. The CMake installation dir/Modules ones.
+        # In addition, add all CONAN_*_ROOT package variables to resolve
+        # transitive package dependencies
+        conan_root_vars = "\n"
+        for dep, cpp_info in self.deps_build_info.dependencies:
+            conan_root_vars += "set(CONAN_%s_ROOT %s)\n" % (dep.upper(), cpp_info.build_paths[0])
         return """set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
 set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})
-""".format(deps=deps)
+{conan_root_vars}
+""".format(deps=deps, conan_root_vars=conan_root_vars)
