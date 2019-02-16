@@ -156,8 +156,6 @@ class RestCommonMethods(object):
         return result
 
     def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
-        self.check_credentials()
-
         if files_to_upload:
             self._upload_recipe(ref, files_to_upload, retry, retry_wait)
         if deleted:
@@ -178,12 +176,6 @@ class RestCommonMethods(object):
         return snap
 
     def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        """
-        basedir: Base directory with the files to upload (for read the files in disk)
-        relative_files: relative paths to upload
-        """
-        self.check_credentials()
-
         if files_to_upload:
             self._upload_package(pref, files_to_upload, retry, retry_wait)
         if deleted:
