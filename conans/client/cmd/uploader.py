@@ -339,7 +339,7 @@ class CmdUpload(object):
 
             if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
                 raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbidden overwrite")
+                                     "Forbidden overwrite.")
 
         files_to_upload = {filename.replace("\\", "/"): path
                            for filename, path in the_files.items()}
@@ -359,7 +359,7 @@ class CmdUpload(object):
 
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
                 raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite")
+                                     "Forbidden overwrite.")
         files_to_upload = the_files
         deleted = set(remote_snapshot).difference(the_files)
 
