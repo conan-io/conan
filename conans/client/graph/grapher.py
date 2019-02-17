@@ -54,7 +54,7 @@ class ConanHTMLGrapher(object):
             label = "%s/%s" % (ref.name, ref.version) if ref else conanfile.display_name
             fulllabel = ["<h3>%s</h3>" % conanfile.display_name]
             fulllabel.append("<ul>")
-            for name, data in [("id", node.bid),
+            for name, data in [("id", node.package_id),
                                ("build_id", build_id(conanfile)),
                                ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
                                ("homepage",

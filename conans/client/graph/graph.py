@@ -27,7 +27,8 @@ BINARY_EDITABLE = "Editable"
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
-        self.bid = None
+        self.package_id = None
+        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -47,6 +48,10 @@ class Node(object):
     @property
     def name(self):
         return self.ref.name if self.ref else None
+
+    @property
+    def pref(self):
+        return PackageReference(self.ref, self.package_id, self.prev)
 
     def partial_copy(self):
         # Used for collapse_graph
@@ -244,7 +249,7 @@ class DepsGraph(object):
         for node in self.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            pref = PackageReference(node.ref, node.bid)
+            pref = PackageReference(node.ref, node.package_id)
             if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)

@@ -1,13 +1,15 @@
 from bottle import response
 
-from conans.server.rest.controllers.controller import Controller
+from conans.server.rest.bottle_routes import BottleRoutes
 
 
-class PingController(Controller):
+class PingController(object):
 
-    def attach_to(self, app):
+    @staticmethod
+    def attach_to(app):
+        r = BottleRoutes()
 
-        @app.route("%s/ping" % self.route, method=["GET"])
+        @app.route(r.ping, method=["GET"])
         def ping():
             """
             Response OK. Useful to get server capabilities

@@ -20,36 +20,23 @@ class GraphBinariesAnalyzer(object):
         self._registry = cache.registry
         self._workspace = workspace
 
-    def _get_package_info(self, pref, remote):
-        try:
-            remote_info = self._remote_manager.get_package_info(pref, remote)
-            return remote_info
-        except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
-            return False
-
-    def _check_update(self, package_folder, pref, remote, output, node):
-
-        try:  # get_conan_digest can fail, not in server
-            upstream_manifest = self._remote_manager.get_package_manifest(pref, remote)
-        except NotFoundException:
-            output.warn("Can't update, no package in remote")
-        except NoRemoteAvailable:
-            output.warn("Can't update, no remote defined")
-        else:
-            read_manifest = FileTreeManifest.load(package_folder)
-            if upstream_manifest != read_manifest:
-                if upstream_manifest.time > read_manifest.time:
-                    output.warn("Current package is older than remote upstream one")
-                    node.update_manifest = upstream_manifest
-                    return True
-                else:
-                    output.warn("Current package is newer than remote upstream one")
+    def _check_update(self, upstream_manifest, package_folder, output, node):
+        read_manifest = FileTreeManifest.load(package_folder)
+        if upstream_manifest != read_manifest:
+            if upstream_manifest.time > read_manifest.time:
+                output.warn("Current package is older than remote upstream one")
+                node.update_manifest = upstream_manifest
+                return True
+            else:
+                output.warn("Current package is newer than remote upstream one")
 
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
-        assert node.binary is None
+        assert node.binary is None, "Node.binary should be None"
+        assert node.package_id is not None, "Node.package_id shouldn't be None"
 
         ref, conanfile = node.ref, node.conanfile
-        pref = PackageReference(ref, node.bid)
+        pref = PackageReference(ref, node.package_id)
+
         # Check that this same reference hasn't already been checked
         previous_nodes = evaluated_nodes.get(pref)
         if previous_nodes:
@@ -71,8 +58,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_BUILD
             return
 
-        package_folder = self._cache.package(pref,
-                                             short_paths=conanfile.short_paths)
+        package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
         local_project = self._workspace[ref] if self._workspace else None
@@ -106,10 +92,20 @@ class GraphBinariesAnalyzer(object):
         if os.path.exists(package_folder):
             if update:
                 if remote:
-                    if self._check_update(package_folder, pref, remote, output, node):
-                        node.binary = BINARY_UPDATE
-                        if build_mode.outdated:
-                            package_hash = self._get_package_info(pref, remote).recipe_hash
+                    try:
+                        tmp = self._remote_manager.get_package_manifest(pref, remote)
+                        upstream_manifest, pref = tmp
+                    except NotFoundException:
+                        output.warn("Can't update, no package in remote")
+                    except NoRemoteAvailable:
+                        output.warn("Can't update, no remote defined")
+                    else:
+                        if self._check_update(upstream_manifest, package_folder, output, node):
+                            node.binary = BINARY_UPDATE
+                            node.prev = pref.revision  # With revision
+                            if build_mode.outdated:
+                                info, pref = self._remote_manager.get_package_info(pref, remote)
+                                package_hash = info.recipe_hash()
                 elif remotes:
                     pass
                 else:
@@ -121,20 +117,28 @@ class GraphBinariesAnalyzer(object):
         else:  # Binary does NOT exist locally
             remote_info = None
             if remote:
-                remote_info = self._get_package_info(pref, remote)
+                try:
+                    remote_info, pref = self._remote_manager.get_package_info(pref, remote)
+                except NotFoundException:
+                    pass
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
             if not remote or (not remote_info and self._cache.config.revisions_enabled
                               and not remote_name):
                 for r in remotes:
-                    remote_info = self._get_package_info(pref, r)
-                    if remote_info:
-                        remote = r
-                        break
+                    try:
+                        remote_info, pref = self._remote_manager.get_package_info(pref, r)
+                    except NotFoundException:
+                        pass
+                    else:
+                        if remote_info:
+                            remote = r
+                            break
 
             if remote_info:
                 node.binary = BINARY_DOWNLOAD
+                node.prev = pref.revision
                 package_hash = remote_info.recipe_hash
             else:
                 if build_mode.allowed(conanfile):
@@ -161,7 +165,7 @@ class GraphBinariesAnalyzer(object):
         indirect_reqs = set()   # of PackageReference, avoid duplicates
         for neighbor in neighbors:
             ref, nconan = neighbor.ref, neighbor.conanfile
-            pref = PackageReference(ref, neighbor.bid)
+            pref = PackageReference(ref, neighbor.package_id)
             direct_reqs.append(pref)
             indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
@@ -185,7 +189,7 @@ class GraphBinariesAnalyzer(object):
             conanfile.package_id()
 
         info = node.conanfile.info
-        node.bid = info.package_id()
+        node.package_id = info.package_id()
 
     def _handle_private(self, node, deps_graph):
         private_neighbours = node.private_neighbors()

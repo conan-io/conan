@@ -308,9 +308,9 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        bid = getattr(self, "_package_id", None)
-        if bid:
-            return bid
+        package_id = getattr(self, "_package_id", None)
+        if package_id:
+            return package_id
 
         result = []
         result.append(self.settings.sha)
