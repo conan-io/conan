@@ -2,7 +2,8 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load
 
 
 class CopyPackagesTest(unittest.TestCase):
@@ -40,3 +41,35 @@ class Pkg(ConanFile):
         client.run("copy Hello0/0.1@lasote/stable pepe/alpha")
         pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/alpha"))
         self.assertFalse(os.path.exists(pkgdir))
+
+    def test_copy_exports_sources_with_revision_command(self):
+        server = TestServer()
+        client = TestClient(servers={"default": server},
+                            users={"default": [("lasote", "mypass")]})
+
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    exports_sources = "*"
+"""
+
+        client.save({"conanfile.py": conanfile,
+                     "myfile.txt": "my data!"})
+        client.run("export . pkg/0.1@lasote/stable")
+        client.run("upload pkg/0.1@lasote/stable")
+
+        client2 = TestClient(servers={"default": server})
+        client2.run("info pkg/0.1@lasote/stable")
+        # Now the otehr client uploads a new revision
+        client.save({"conanfile.py": conanfile + "# Recipe revision 2",
+                     "myfile.txt": "my data rev2!"})
+        client.run("export . pkg/0.1@lasote/stable")
+        client.run("upload pkg/0.1@lasote/stable")
+
+        client2.run("copy pkg/0.1@lasote/stable other/channel --all")
+        self.assertIn("Downloading conan_sources.tgz", client2.out)
+
+        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        conanfile = load(client2.cache.conanfile(ref))
+        self.assertNotIn("# Recipe revision 2", conanfile)
+        data = load(os.path.join(client2.cache.export_sources(ref), "myfile.txt"))
+        self.assertIn("my data!", data)
