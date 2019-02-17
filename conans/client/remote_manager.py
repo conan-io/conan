@@ -37,43 +37,32 @@ class RemoteManager(object):
         return self._call_remote(remote, "get_recipe_snapshot", ref)
 
     def get_package_snapshot(self, pref, remote):
-        assert pref.revision, "get_recipe_snapshot requires revision"
+        assert pref.ref.revision, "upload_package requires RREV"
+        assert pref.revision, "get_package_snapshot requires PREV"
         return self._call_remote(remote, "get_package_snapshot", pref)
 
     def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
+        assert ref.revision, "upload_recipe requires RREV"
         self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
                           retry, retry_wait)
 
     def upload_package(self, pref, files_to_upload, deleted, remote, retry, retry_wait):
+        assert pref.ref.revision, "upload_package requires RREV"
+        assert pref.revision, "upload_package requires PREV"
         self._call_remote(remote, "upload_package", pref,
                           files_to_upload, deleted, retry, retry_wait)
 
     def get_recipe_manifest(self, ref, remote):
-        """
-        Read ConanDigest from remotes
-        Will iterate the remotes to find the conans unless remote was specified
-
-        returns (ConanDigest, remote_name)"""
         ref = self._resolve_latest_ref(ref, remote)
-
         return self._call_remote(remote, "get_recipe_manifest", ref), ref
 
     def get_package_manifest(self, pref, remote):
-        """
-        Read ConanDigest from remotes
-        Will iterate the remotes to find the conans unless remote was specified
-
-        returns (ConanDigest, remote_name)"""
-
         pref = self._resolve_latest_pref(pref, remote)
         return self._call_remote(remote, "get_package_manifest", pref), pref
 
     def get_package_info(self, pref, remote):
+        """ Read a package ConanInfo from remote
         """
-        Read a package ConanInfo from remotes
-        Will iterate the remotes to find the conans unless remote was specified
-
-        returns (ConanInfo, remote_name)"""
         pref = self._resolve_latest_pref(pref, remote)
         return self._call_remote(remote, "get_package_info", pref), pref
 
@@ -110,6 +99,7 @@ class RemoteManager(object):
         return ref
 
     def get_recipe_sources(self, ref, export_folder, export_sources_folder, remote):
+        assert ref.revision, "get_recipe_sources requires RREV"
         t1 = time.time()
 
         zipped_files = self._call_remote(remote, "get_recipe_sources", ref, export_folder)

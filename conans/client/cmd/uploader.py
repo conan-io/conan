@@ -1,22 +1,22 @@
 import os
-from collections import defaultdict
-
+import stat
+import tarfile
 import time
+from collections import defaultdict
 
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
-from conans.search.search import search_packages, search_recipes
-from conans.util.files import load, clean_dirty, is_dirty,\
-    gzopen_without_timestamps, set_dirty
-from conans.util.log import logger
-from conans.util.tracer import log_recipe_upload, log_compressed_files,\
-    log_package_upload
-from conans.paths import CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,\
-    EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO
 from conans.model.manifest import gather_files, FileTreeManifest
-import tarfile
-import stat
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
+                          EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
+from conans.search.search import search_packages, search_recipes
+from conans.util.files import (load, clean_dirty, is_dirty,
+                               gzopen_without_timestamps, set_dirty)
+from conans.util.log import logger
+from conans.util.tracer import (log_recipe_upload, log_compressed_files,
+                                log_package_upload)
+
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
@@ -25,7 +25,45 @@ UPLOAD_POLICY_SKIP = "skip-upload"
 
 
 class CmdUpload(object):
+    """ This class is responsible for uploading packages to remotes. The flow is:
+    - Collect all the data from the local cache:
+        - Collect the refs that matches the given pattern _collect_refs_to_upload
+        - Collect for every ref all the binaries IDs that has to be uploaded
+          "_collect_packages_to_upload". This may discard binaries that do not
+          belong to the current RREV
+        The collection of this does the interactivity (ask user if yes/no),
+        the errors (don't upload packages with policy=build_always, and computing
+        the full REVISIONS for every that has to be uploaded.
+        No remote API calls are done in this step, everything is local
+    - Execute the upload. For every ref:
+        - Upload the recipe of the ref: "_upload_recipe"
+            - If not FORCE, check the date "_check_recipe_date", i.e. if there are
+              changes, do not allow uploading if the remote date is newer than the
+              local cache one
+            - Retrieve the sources (exports_sources), if they are not cached, and
+              uploading to a different remote. "complete_recipe_sources"
+            - Gather files and create 2 .tgz (exports, exports_sources) with
+              "_compress_recipe_files"
+            - Decide which files have to be uploaded and deleted from the server
+              based on the different with the remote snapshot "_recipe_files_to_upload"
+              This can raise if upload policy is not overwrite
+            - Execute the real transfer "remote_manager.upload_recipe()"
+        - For every package_id of every ref: "_upload_package"
+            - Gather files and create package.tgz. "_compress_package_files"
+            - (Optional) Do the integrity check of the package
+            - Decide which files to upload and delete from server:
+              "_package_files_to_upload". Can raise if policy is NOT overwrite
+            - Do the actual upload
 
+    All the REVISIONS are local defined, not retrieved from servers
+
+    This requires calling to the remote API methods:
+    - get_recipe_sources() to get the export_sources if they are missing
+    - get_recipe_snapshot() to do the diff and know what files to upload
+    - get_package_snapshot() to do the diff and know what files to upload
+    - get_recipe_manifest() to check the date and raise if policy requires
+    - get_package_manifest() to raise if policy!=force and manifests change
+    """
     def __init__(self, cache, user_io, remote_manager, loader, hook_manager):
         self._cache = cache
         self._user_io = user_io
@@ -33,6 +71,22 @@ class CmdUpload(object):
         self._registry = cache.registry
         self._loader = loader
         self._hook_manager = hook_manager
+
+    def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
+               confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
+               remote_name=None, query=None):
+        t1 = time.time()
+        refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
+        refs_by_remote = self._collect_packages_to_upload(refs, confirm, remote_name, all_packages,
+                                                          query, package_id)
+        # Do the job
+        for remote, refs in refs_by_remote.items():
+            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
+            for (ref, conanfile, prefs) in refs:
+                self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
+                                 integrity_check, policy, remote, upload_recorder)
+
+        logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
         """ validate inputs and compute the refs (without revisions) to be uploaded
@@ -115,29 +169,11 @@ class CmdUpload(object):
 
         return refs_by_remote
 
-    def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
-               confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
-               remote_name=None, query=None):
-        """ If package_id is provided, reference_or_pattern must be a ConanFileReference
-        """
-
-        t1 = time.time()
-        refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
-        refs_by_remote = self._collect_packages_to_upload(refs, confirm, remote_name, all_packages,
-                                                          query, package_id)
-        # Do the job
-        for remote, refs in refs_by_remote.items():
-            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
-            for (ref, conanfile, prefs) in refs:
-                self._upload(conanfile, ref, prefs, retry, retry_wait,
-                             integrity_check, policy, remote, upload_recorder)
-
-        logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
-
-    def _upload(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
-                recipe_remote, upload_recorder):
+    def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
+                    recipe_remote, upload_recorder):
         """ Uploads the recipes and binaries identified by ref
         """
+        assert (ref.revision is not None), "Cannot upload a recipe without RREV"
         conanfile_path = self._cache.conanfile(ref)
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
@@ -166,7 +202,6 @@ class CmdUpload(object):
                                    remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote):
-        assert (ref.revision is not None), "Cannot upload a recipe without RREV"
         if policy != UPLOAD_POLICY_FORCE:
             remote_manifest = self._check_recipe_date(ref, remote)
         else:
@@ -204,8 +239,8 @@ class CmdUpload(object):
 
         return ref
 
-    def _upload_package(self, pref, retry=None, retry_wait=None,
-                        integrity_check=False, policy=None, p_remote=None):
+    def _upload_package(self, pref, retry=None, retry_wait=None, integrity_check=False,
+                        policy=None, p_remote=None):
 
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
