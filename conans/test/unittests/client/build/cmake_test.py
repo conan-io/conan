@@ -707,7 +707,8 @@ build_type: [ Release]
 
         cross = '-DCMAKE_SYSTEM_NAME="Android"' \
                 ' -DCMAKE_SYSROOT="/path/to/sysroot"' \
-                ' -DCMAKE_ANDROID_ARCH_ABI="armeabi-v7a"'
+                ' -DCMAKE_ANDROID_ARCH_ABI="armeabi-v7a"' \
+                ' -DANDROID_ABI="armeabi-v7a"'
         target_test = CMakeTest.scape('--target test')
 
         cmake.configure()

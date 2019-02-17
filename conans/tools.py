@@ -20,6 +20,7 @@ from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
+from conans.client.tools.android import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \

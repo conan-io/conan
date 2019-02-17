@@ -190,12 +190,7 @@ class CMakeDefinitionsBuilder(object):
 
             # Adjust Android stuff
             if os_ == "Android":
-                arch_abi_settings = {"armv8": "arm64-v8a",
-                                     "armv7": "armeabi-v7a",
-                                     "armv7hf": "armeabi-v7a",
-                                     "armv6": "armeabi-v6",
-                                     "armv5": "armeabi"
-                                     }.get(arch, arch)
+                arch_abi_settings = tools.to_android_abi(arch)
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
 
