@@ -1,7 +1,5 @@
-from conans import DEFAULT_REVISION_V1
 from conans.errors import NotFoundException, RequestErrorException, RecipeNotFoundException, \
     PackageNotFoundException
-from conans.model.ref import PackageReference
 from conans.server.service.common.common import CommonService
 
 
