@@ -8,7 +8,7 @@ from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.client.rest.uploader_downloader import Downloader, Uploader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
-    RecipeNotFoundException
+    RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -191,6 +191,8 @@ class RestV2Methods(RestCommonMethods):
                     failed.append(filename)
                 else:
                     pass
+            except (AuthenticationException, ForbiddenException):
+                raise
             except Exception as exc:
                 self._output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)

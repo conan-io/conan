@@ -187,7 +187,7 @@ class PackageNotFoundException(NotFoundException):
 
     def __str__(self):
         tmp = self.pref.full_repr() if self.print_rev else str(self.pref)
-        return "Binary package not found: '{}'%s".format(tmp, self.remote_message())
+        return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 
 class UserInterfaceErrorException(RequestErrorException):
