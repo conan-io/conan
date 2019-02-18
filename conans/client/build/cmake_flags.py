@@ -193,15 +193,14 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_name is not True:  # String not empty
             definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
-            if cross_building(self._conanfile.settings):  # We are cross building
-                if os_ != os_build:
-                    if os_:  # the_os is the host (regular setting)
-                        definitions["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
-                                                            "tvOS": "Darwin",
-                                                            "watchOS": "Darwin",
-                                                            "Neutrino": "QNX"}.get(os_, os_)
-                    else:
-                        definitions["CMAKE_SYSTEM_NAME"] = "Generic"
+            if cross_building(self._conanfile.settings, skip_x64_x86=True):  # We are cross building
+                if os_:  # the_os is the host (regular setting)
+                    definitions["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
+                                                        "tvOS": "Darwin",
+                                                        "watchOS": "Darwin",
+                                                        "Neutrino": "QNX"}.get(os_, os_)
+                else:
+                    definitions["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
             definitions["CMAKE_SYSTEM_VERSION"] = os_ver
             if str(os_) == "Macos":
