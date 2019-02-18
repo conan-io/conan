@@ -16,8 +16,11 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(ref))
 
-    deps_graph = graph_manager.load_simple_graph(ref, graph_info.profile, recorder)
-
+    # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
+    # to be downloaded from remotes
+    deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
+                                             check_updates=False, update=False,
+                                             remote_name=None, recorder=recorder, workspace=None)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
@@ -25,7 +28,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     from conans.client.conan_api import existing_info_files
     if install_folder and existing_info_files(install_folder):
         load_deps_info(install_folder, conanfile, required=True)
-    package_id = conanfile.info.package_id()
+    package_id = nodes[0].package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
     dest_package_folder = cache.package(pref, short_paths=conanfile.short_paths)
