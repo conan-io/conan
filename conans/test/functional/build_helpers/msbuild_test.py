@@ -5,7 +5,7 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
-from conans.client import tools
+from conans.client.tools.files import replace_in_file
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
@@ -51,9 +51,10 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         # Try to not update the project
-        client.cache._conan_config = None  # Invalidate cached config
-        tools.replace_in_file(client.cache.conan_conf_path, "[general]",
-                              "[general]\nskip_vs_projects_upgrade = True")
+        client.cache._config = None  # Invalidate cached config
+        replace_in_file(client.cache.conan_conf_path, "[general]",
+                        "[general]\nskip_vs_projects_upgrade = True", output=client.out)
+
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build")
         self.assertNotIn("devenv", client.user_io.out)
