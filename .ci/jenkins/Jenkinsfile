@@ -5,7 +5,6 @@ def test_revisions = true
 def is_pr = false
 def excluded_tags = []
 
-
 if(env.JOB_NAME == "ConanNightly"){
     full_py_vers = true
     test_revisions = true

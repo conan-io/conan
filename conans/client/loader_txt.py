@@ -8,7 +8,8 @@ class ConanFileTextLoader(object):
     def __init__(self, input_text):
         # Prefer composition over inheritance, the __getattr__ was breaking things
         self._config_parser = ConfigParser(input_text,  ["requires", "generators", "options",
-                                                         "imports", "build_requires"], parse_lines=True)
+                                                         "imports", "build_requires"],
+                                           parse_lines=True)
 
     @property
     def requirements(self):
@@ -33,8 +34,13 @@ class ConanFileTextLoader(object):
         def _parse_args(param_string):
             root_package, ignore_case, folder, excludes, keep_path = None, False, False, None, True
             params = param_string.split(",")
-            params = [p.split("=") for p in params if p]
-            for (var, value) in params:
+            params = [p.strip() for p in params if p.strip()]
+            for param in params:
+                try:
+                    var, value = param.split("=")
+                except ValueError:
+                    raise ConanException("Wrong imports argument '%s'. "
+                                         "Need a 'arg=value' pair." % param)
                 var = var.strip()
                 value = value.strip()
                 if var == "root_package":
@@ -52,11 +58,15 @@ class ConanFileTextLoader(object):
             return root_package, ignore_case, folder, excludes, keep_path
 
         def _parse_import(line):
-            pair = line.split("->")
-            source = pair[0].strip().split(',', 1)
-            dest = pair[1].strip()
-            src, pattern = source[0].strip(), source[1].strip()
-            return pattern, dest, src
+            try:
+                pair = line.split("->", 1)
+                source = pair[0].strip().split(',', 1)
+                dest = pair[1].strip()
+                src, pattern = source[0].strip(), source[1].strip()
+                return pattern, dest, src
+            except Exception:
+                raise ConanException("Wrong imports line: %s\n"
+                                     "Use syntax: path, pattern -> local-folder" % line)
 
         ret = []
         local_install_text = self._config_parser.imports
@@ -72,7 +82,7 @@ class ConanFileTextLoader(object):
                 raise ConanException("%s\n%s" % (invalid_line_msg,
                                                  "Import's paths can't begin with '/' or '..'"))
             try:
-                tokens = line.split("@", 1)
+                tokens = line.rsplit("@", 1)
                 if len(tokens) > 1:
                     line = tokens[0]
                     params = tokens[1]
@@ -80,7 +90,8 @@ class ConanFileTextLoader(object):
                     params = ""
                 root_package, ignore_case, folder, excludes, keep_path = _parse_args(params)
                 pattern, dest, src = _parse_import(line)
-                ret.append((pattern, dest, src, root_package, folder, ignore_case, excludes, keep_path))
+                ret.append((pattern, dest, src, root_package, folder, ignore_case, excludes,
+                            keep_path))
             except Exception as e:
                 raise ConanException("%s\n%s" % (invalid_line_msg, str(e)))
         return ret

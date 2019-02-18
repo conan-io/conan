@@ -30,7 +30,7 @@ class _RecipeMetadata(object):
         ret = _RecipeMetadata()
         ret.revision = data["revision"]
         ret.properties = data["properties"]
-        ret.time = data["time"]
+        ret.time = data.get("time")
         return ret
 
 

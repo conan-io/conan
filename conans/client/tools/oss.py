@@ -184,6 +184,8 @@ class OSInfo(object):
 
         os_version = _OSVERSIONINFOEXW()
         os_version.dwOSVersionInfoSize = ctypes.sizeof(os_version)
+        if not hasattr(ctypes, "windll"):
+            return None
         retcode = ctypes.windll.Ntdll.RtlGetVersion(ctypes.byref(os_version))
         if retcode != 0:
             return None
