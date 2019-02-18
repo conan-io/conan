@@ -35,7 +35,11 @@ class Workspace(object):
         if self._generator == "cmake":
             cmake = ""
             add_subdirs = ""
-            for ref, ws_pkg in self._workspace_packages.items():
+            for node in graph.ordered_iterate():
+                if node.recipe != RECIPE_EDITABLE:
+                    continue
+                ref = node.ref
+                ws_pkg = self._workspace_packages[ref]
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
                 conanfile = editables[ref]
