@@ -13,7 +13,7 @@ class ConanGetTest(unittest.TestCase):
         self.reference = "Hello0/0.1@lasote/channel"
         self.conanfile = textwrap.dedent('''
             from conans import ConanFile
-            
+
             class HelloConan(ConanFile):
                 name = "Hello0"
                 version = "0.1"
@@ -28,8 +28,7 @@ class ConanGetTest(unittest.TestCase):
                  "path/to/exported_source": "1",
                  "other/path/to/exported": "2"}
         self.client.save(files)
-        self.client.run("export . lasote/channel")
-        self.client.run("install {} --build missing".format(self.reference))
+        self.client.run("create . lasote/channel")
 
     def test_get_local_reference(self):
         # Local search, dir list
@@ -38,24 +37,24 @@ class ConanGetTest(unittest.TestCase):
  conanfile.py
  conanmanifest.txt
  other
-""", self.client.user_io.out)
+""", self.client.out)
 
         self.client.run('get {} other --raw'.format(self.reference))
-        self.assertEquals("path\n", self.client.user_io.out)
+        self.assertEquals("path\n", self.client.out)
 
         self.client.run('get {} other/path --raw'.format(self.reference))
-        self.assertEquals("to\n", self.client.user_io.out)
+        self.assertEquals("to\n", self.client.out)
 
         self.client.run('get {} other/path/to'.format(self.reference))
         self.assertEquals("Listing directory 'other/path/to':\n exported\n",
-                          self.client.user_io.out)
+                          self.client.out)
 
         self.client.run('get {} other/path/to/exported'.format(self.reference))
-        self.assertEquals("2\n", self.client.user_io.out)
+        self.assertEquals("2\n", self.client.out)
 
         # Local search, conanfile print
         self.client.run('get {} --raw'.format(self.reference))
-        self.assertIn(self.conanfile, self.client.user_io.out)
+        self.assertIn(self.conanfile, self.client.out)
 
         # Get conanfile, verify the formatter applied
         def verify_python_lexer(contents, lexer, formatter):
@@ -79,29 +78,29 @@ class ConanGetTest(unittest.TestCase):
         self.client.run('get {} {} --raw'.format(args_reference, args_package))
         self.assertIn(textwrap.dedent("""
             [requires]
-            
-            
+
+
             [options]
-            
-            
+
+
             [full_settings]
-            
-            
+
+
             [full_requires]
-            
-            
+
+
             [full_options]
-            
-            
+
+
             [recipe_hash]
                 07e4bf611af374672215a94d84146e2d
-            
-            """), self.client.user_io.out)
+
+            """), self.client.out)
 
         # List package dir
         self.client.run('get {} "." {} --raw'.format(args_reference, args_package))
         assert_cmp = self.assertEqual if use_pkg_reference else self.assertIn
-        assert_cmp("conaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
+        assert_cmp("conaninfo.txt\nconanmanifest.txt\n", self.client.out)
 
     def test_get_remote_reference(self):
         self.client.run('upload "Hello*" --all -c')
@@ -109,11 +108,11 @@ class ConanGetTest(unittest.TestCase):
         # Remote search, dir list
         self.client.run('get {} . -r default --raw'.format(self.reference))
         self.assertIn("conan_export.tgz\nconan_sources.tgz\nconanfile.py\nconanmanifest.txt",
-                      self.client.user_io.out)
+                      self.client.out)
 
         # Remote search, conanfile print
         self.client.run('get {} -r default --raw'.format(self.reference))
-        self.assertIn(self.conanfile, self.client.user_io.out)
+        self.assertIn(self.conanfile, self.client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_get_remote_package_reference(self, use_pkg_reference):
@@ -126,11 +125,11 @@ class ConanGetTest(unittest.TestCase):
         # List package dir
         self.client.run('get {} "." {} --raw -r default'.format(args_reference, args_package))
         assert_cmp = self.assertEqual if use_pkg_reference else self.assertIn
-        assert_cmp("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
+        assert_cmp("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n", self.client.out)
 
     def test_not_found_reference(self):
         self.client.run('get {} "." -r default'.format(self.reference), assert_error=True)
-        self.assertIn("Recipe not found: '{}'".format(self.reference), self.client.user_io.out)
+        self.assertIn("Recipe not found: '{}'".format(self.reference), self.client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_not_found_package_reference(self, use_pkg_reference):
@@ -139,11 +138,19 @@ class ConanGetTest(unittest.TestCase):
             "{}:{}".format(self.reference, fake_package_id)
         args_package = " -p {}".format(fake_package_id) if not use_pkg_reference else ""
 
+        self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
+        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.out)
+
         self.client.run('get {} "." -r default {}'.format(args_reference, args_package),
                         assert_error=True)
-        self.assertIn("ERROR: Binary package not found: '{}:{}'".format(self.reference,
-                                                                        fake_package_id),
-                      self.client.user_io.out)
+        if self.client.cache.config.revisions_enabled:
+            # It has to resolve the latest so it fails again with the recipe
+            self.assertIn("ERROR: Recipe not found: '{}'. [Remote: default]".format(self.reference),
+                          self.client.out)
+        else:
+            self.assertIn("ERROR: Binary package not found: "
+                          "'Hello0/0.1@lasote/channel:123123123123123'. "
+                          "[Remote: default]", self.client.out)
 
     def test_duplicated_input(self):
         """ Fail if given the full reference and the `-p` argument (even if they are equal)"""
@@ -159,17 +166,3 @@ class ConanGetTest(unittest.TestCase):
                                                              pkg_id=NO_SETTINGS_PACKAGE_ID))
         self.assertIn("WARN: Usage of `--package` argument is deprecated. Use a full reference "
                       "instead: `conan get [...] ", self.client.out)
-
-    """
-        self.client.run('get Hello0/0.1@lasote/channel "." -r default', assert_error=True)
-        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.user_io.out)
-
-        self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
-                        assert_error=True)
-        if self.client.cache.config.revisions_enabled:
-            # It has to resolve the latest so it fails again with the recipe
-            self.assertIn("Recipe not found: 'Hello0/0.1@lasote/channel'", self.client.user_io.out)
-        else:
-            self.assertIn("Binary package not found: 'Hello0/0.1@lasote/channel:123123123123123'",
-                          self.client.user_io.out)
-    """
