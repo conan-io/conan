@@ -17,7 +17,7 @@ from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.conanfile import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
 
@@ -1037,7 +1037,7 @@ build_type: [ Release]
         self.assertEquals(cmake.generator, "Unix Makefiles")
 
         cmake = instance_with_os_build("Windows")
-        self.assertEquals(cmake.generator, "MinGW Makefiles")
+        self.assertEquals(cmake.generator, None)
 
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "MyCoolGenerator"}):
             cmake = instance_with_os_build("Windows")
@@ -1231,3 +1231,14 @@ build_type: [ Release]
             self.assertEquals(conanfile.captured_env["CTEST_OUTPUT_ON_FAILURE"], "1")
             self.assertEquals(conanfile.captured_env["CTEST_PARALLEL_LEVEL"], "666")
 
+    def test_unkown_generator_does_not_raise(self):
+        # https://github.com/conan-io/conan/issues/4265
+        settings = MockSettings({"os_build": "Windows", "compiler": "random",
+                                 "compiler.version": "15", "build_type": "Release"})
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        cmake = CMake(conanfile)
+        self.assertIsNone(cmake.generator)
+        self.assertIn("WARN: CMake generator could not be deduced from settings", conanfile.output)
+        cmake.configure()
+        cmake.build()
