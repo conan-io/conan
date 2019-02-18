@@ -106,42 +106,44 @@ for (n in ["Windows", "Linux"]) {
     rest_builders["${the_node} Rest API Test"] = {
         node(the_node){
             stage("REST tests ${the_node}"){
-                def vars = checkout scm
-                def base_dir = (the_node == "Windows") ? win_tmp_base : rest_tmp_base
-                base_dir = base_dir + "rest" + vars["GIT_COMMIT"].substring(0, 4)
-                def venv_dir = base_dir + "/venv"
-                def src_dir = base_dir + "/src"
+                lock('restApiTestsLock') {
+                    def vars = checkout scm
+                    def base_dir = (the_node == "Windows") ? win_tmp_base : rest_tmp_base
+                    base_dir = base_dir + "rest" + vars["GIT_COMMIT"].substring(0, 4)
+                    def venv_dir = base_dir + "/venv"
+                    def src_dir = base_dir + "/src"
 
-                while(fileExists(src_dir)){
-                    src_dir = src_dir + "_"
-                }
-                while(fileExists(venv_dir)){
-                    venv_dir = venv_dir + "_"
-                }
+                    while(fileExists(src_dir)){
+                        src_dir = src_dir + "_"
+                    }
+                    while(fileExists(venv_dir)){
+                        venv_dir = venv_dir + "_"
+                    }
 
-                // Copy SRC to a clean folder
-                dir(base_dir){ // Trick to create the parent
-                    def escaped_ws = "${WORKSPACE}".replace("\\", "/")
-                    def cmd = "python -c \"import shutil; shutil.copytree('${escaped_ws}', '${src_dir}')\""
-                    if (the_node == "Windows"){
-                        bat(script: cmd)
+                    // Copy SRC to a clean folder
+                    dir(base_dir){ // Trick to create the parent
+                        def escaped_ws = "${WORKSPACE}".replace("\\", "/")
+                        def cmd = "python -c \"import shutil; shutil.copytree('${escaped_ws}', '${src_dir}')\""
+                        if (the_node == "Windows"){
+                            bat(script: cmd)
+                        }
+                        else{
+                            sh(script: cmd)
+                        }
+                    }
+
+                    if(the_node == "Windows"){
+                        try{
+                          bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} \"${venv_dir}\"")
+                        }
+                        finally{
+                          bat(script: "rd /s /q \"${base_dir}\"")
+                        }
                     }
                     else{
-                        sh(script: cmd)
-                    }
-                }
-
-                if(the_node == "Windows"){
-                    try{
-                      bat(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} \"${venv_dir}\"")
-                    }
-                    finally{
-                      bat(script: "rd /s /q \"${base_dir}\"")
-                    }
-                }
-                else{
-                    docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${src_dir} -v${src_dir}:${src_dir}") {
-                      sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} /tmp")
+                        docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${src_dir} -v${src_dir}:${src_dir}") {
+                          sh(script: "python ${runner} conans.test.functional.remote.rest_api_test ${pyver} ${src_dir} /tmp")
+                        }
                     }
                 }
             }
