@@ -91,7 +91,7 @@ class Search(object):
                     continue
             return references
 
-        return self._search_packages_in(self, 'all', ref, query, outdated)
+        return self._search_packages_in('all', ref, query, outdated)
 
     def _search_packages_in(self, remote_name, ref=None, query=None, outdated=False):
         remote = self._registry.remotes.get(remote_name)
