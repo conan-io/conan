@@ -2,15 +2,8 @@ import json
 import os
 import shutil
 import textwrap
-import time
 import unittest
 from collections import OrderedDict
-<<<<<<< HEAD
-=======
-from textwrap import dedent
-
-from mock import patch
->>>>>>> add test
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
