@@ -1,11 +1,11 @@
-import argparse
 import inspect
 import json
 import os
 import sys
-from argparse import ArgumentError
 
+import argparse
 import six
+from argparse import ArgumentError
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -1056,8 +1056,7 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-                self._outputer.print_revisions(info["reference"], info["revisions"],
-                                               remote_name=args.remote)
+                self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
@@ -1395,8 +1394,9 @@ class Command(object):
                                          prog="conan workspace")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
-        install_parser = subparsers.add_parser('install', help='install this workspace')
-        install_parser.add_argument('path', help='path to workspace file or folder')
+        install_parser = subparsers.add_parser('install', help='same as a "conan install" command '
+                                               'but using the workspace data from the file')
+        install_parser.add_argument('path', help='path to workspace definition file')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
@@ -1551,15 +1551,11 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)

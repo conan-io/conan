@@ -46,7 +46,8 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import ConanException, NotFoundException
+from conans.errors import (ConanException, RecipeNotFoundException,
+                           PackageNotFoundException, NoRestV2Available, NotFoundException)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_cpp_info import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
@@ -470,9 +471,8 @@ class ConanAPIV1(object):
         workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
-        self._user_io.out.success("Using workspace file from %s" % workspace._base_folder)
 
-        self._cache.editable_packages = workspace.get_editable_dict()
+        self._cache.editable_packages.override(workspace.get_editable_dict())
 
         recorder = ActionRecorder()
         deps_graph, _ = self._graph_manager.load_graph(workspace.root, None, graph_info, build,
@@ -941,7 +941,15 @@ class ConanAPIV1(object):
             return get_path(self._cache, ref, package_id, path), path
         else:
             remote = self.get_remote_by_name(remote_name)
-            return self._remote_manager.get_path(ref, package_id, path, remote), path
+            if self._cache.config.revisions_enabled and not ref.revision:
+                ref = self._remote_manager.get_latest_recipe_revision(ref, remote)
+            if package_id:
+                pref = PackageReference(ref, package_id)
+                if self._cache.config.revisions_enabled and not pref.revision:
+                    pref = self._remote_manager.get_latest_package_revision(pref, remote)
+                return self._remote_manager.get_package_path(pref, path, remote), path
+            else:
+                return self._remote_manager.get_recipe_path(ref, path, remote), path
 
     @api_method
     def export_alias(self, reference, target_reference):
@@ -975,11 +983,27 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(ref)
-            if not layout.recipe_exists():
-                raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-            rev, tm = layout.recipe_revision()
-            return {"reference": ref.full_repr(),
-                    "revisions": [{"revision": rev, "time": tm}]}
+            try:
+                rev = layout.recipe_revision()
+            except RecipeNotFoundException as e:
+                e.print_rev = True
+                raise e
+
+            # Check the time in the associated remote if any
+            remote = self._cache.registry.refs.get(ref)
+            rev_time = None
+            if remote:
+                try:
+                    revisions = self._remote_manager.get_recipe_revisions(ref, remote)
+                except RecipeNotFoundException:
+                    pass
+                except (NoRestV2Available, NotFoundException):
+                    rev_time = None
+                else:
+                    tmp = {r["revision"]: r["time"] for r in revisions}
+                    rev_time = tmp.get(rev)
+
+            return [{"revision": rev, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_recipe_revisions(ref, remote=remote)
@@ -994,14 +1018,27 @@ class ConanAPIV1(object):
 
         if not remote_name:
             layout = self._cache.package_layout(pref.ref)
-            if not layout.recipe_exists():
-                raise NotFoundException("Recipe not found: '%s'" % pref.ref.full_repr())
+            try:
+                rev = layout.package_revision(pref)
+            except (RecipeNotFoundException, PackageNotFoundException) as e:
+                e.print_rev = True
+                raise e
 
-            if not layout.package_exists(pref):
-                raise NotFoundException("Package not found: '%s'" % pref.full_repr())
+            # Check the time in the associated remote if any
+            remote = self._cache.registry.refs.get(pref.ref)
+            rev_time = None
+            if remote:
+                try:
+                    revisions = self._remote_manager.get_package_revisions(pref, remote)
+                except RecipeNotFoundException:
+                    pass
+                except (NoRestV2Available, NotFoundException):
+                    rev_time = None
+                else:
+                    tmp = {r["revision"]: r["time"] for r in revisions}
+                    rev_time = tmp.get(rev)
 
-            rev, tm = layout.package_revision(pref)
-            return {"reference": pref.full_repr(), "revisions": [{"revision": rev, "time": tm}]}
+            return [{"revision": rev, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
             return self._remote_manager.get_package_revisions(pref, remote=remote)

@@ -3,7 +3,7 @@ import re
 from collections import OrderedDict
 from fnmatch import translate
 
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
@@ -101,9 +101,9 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     subdirs = list_folder_subdirs(basedir=cache.store, level=4)
     refs = [ConanFileReference(*folder.split("/")) for folder in subdirs]
     refs.extend(cache.editable_packages.refs().keys())
-    refs = sorted(refs)
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, r)]
+    refs = sorted(refs)
     return refs
 
 
@@ -131,8 +131,8 @@ def search_packages(cache, ref, query):
     param ref: ConanFileReference object
     """
     if not os.path.exists(cache.conan(ref)) or (
-           ref.revision and cache.package_layout(ref).recipe_revision()[0] != ref.revision):
-        raise NotFoundException("Recipe not found: %s" % ref.full_repr())
+           ref.revision and cache.package_layout(ref).recipe_revision() != ref.revision):
+        raise RecipeNotFoundException(ref, print_rev=True)
     infos = _get_local_infos_min(cache, ref)
     return filter_packages(query, infos)
 

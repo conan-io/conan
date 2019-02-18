@@ -193,7 +193,7 @@ class GraphManager(object):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.ref)
-            new_profile_build_requires = OrderedDict()
+            new_profile_build_requires = []
             profile_build_requires = profile_build_requires or {}
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
@@ -201,9 +201,11 @@ class GraphManager(object):
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
                                 if build_require.name in package_build_requires:  # Override existing
+                                    # this is a way to have only one package Name for all versions (no conflicts)
+                                    # but the dict key is not used at all
                                     package_build_requires[build_require.name] = build_require
                                 else:  # Profile one
-                                    new_profile_build_requires[build_require.name] = build_require
+                                    new_profile_build_requires.append(build_require)
 
             if package_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
@@ -223,14 +225,15 @@ class GraphManager(object):
             if new_profile_build_requires:
                 node.conanfile.build_requires_options.clear_unscoped_options()
                 build_requires_options = node.conanfile.build_requires_options
-                virtual = self._loader.load_virtual(new_profile_build_requires.values(),
+                virtual = self._loader.load_virtual(new_profile_build_requires,
                                                     scope_options=False,
                                                     build_requires_options=build_requires_options,
                                                     processed_profile=processed_profile)
                 virtual_node = Node(None, virtual, recipe=RECIPE_VIRTUAL)
+                # Profile build-requires do NOT recurse
                 build_requires_profile_graph = self._load_graph(virtual_node, check_updates, update,
                                                                 build_mode, remote_name,
-                                                                new_profile_build_requires,
+                                                                {},  # profile_build_requires
                                                                 recorder,
                                                                 processed_profile)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)

@@ -46,5 +46,5 @@ class EditablePackages(object):
             return True
         return False
 
-    def update(self, workspace_edited):
-        self._edited_refs.update(workspace_edited)
+    def override(self, workspace_edited):
+        self._edited_refs = workspace_edited

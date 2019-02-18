@@ -21,6 +21,9 @@ class BrokenDownloadTest(unittest.TestCase):
         client.run("upload Hello/0.1@lasote/stable")
         client.run("remove Hello/0.1@lasote/stable -f")
         self.assertFalse(os.path.exists(client.cache.export(ref)))
+
+        rev = server.server_store.get_last_revision(ref).revision
+        ref = ref.copy_with_rev(rev)
         path = server.test_server.server_store.export(ref)
         tgz = os.path.join(path, "conan_export.tgz")
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail

@@ -34,6 +34,7 @@ class Workspace(object):
                      if node.recipe == RECIPE_EDITABLE}
         if self._generator == "cmake":
             cmake = ""
+            add_subdirs = ""
             for ref, ws_pkg in self._workspace_packages.items():
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
@@ -48,8 +49,12 @@ class Workspace(object):
                     cmake += 'set(PACKAGE_%s_BUILD "%s")\n' % (ref.name, build)
 
                 if src and build:
-                    cmake += ('add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})\n'
-                              % (ref.name, ref.name))
+                    add_subdirs += ('    add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})\n'
+                                    % (ref.name, ref.name))
+            if add_subdirs:
+                cmake += "macro(conan_workspace_subdirectories)\n"
+                cmake += add_subdirs
+                cmake += "endmacro()"
             cmake_path = os.path.join(cwd, "conanworkspace.cmake")
             save(cmake_path, cmake)
 
