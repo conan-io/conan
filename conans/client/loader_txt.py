@@ -58,11 +58,15 @@ class ConanFileTextLoader(object):
             return root_package, ignore_case, folder, excludes, keep_path
 
         def _parse_import(line):
-            pair = line.split("->", 1)
-            source = pair[0].strip().split(',', 1)
-            dest = pair[1].strip()
-            src, pattern = source[0].strip(), source[1].strip()
-            return pattern, dest, src
+            try:
+                pair = line.split("->", 1)
+                source = pair[0].strip().split(',', 1)
+                dest = pair[1].strip()
+                src, pattern = source[0].strip(), source[1].strip()
+                return pattern, dest, src
+            except Exception:
+                raise ConanException("Wrong imports line: %s\n"
+                                     "Use syntax: path, pattern -> local-folder" % line)
 
         ret = []
         local_install_text = self._config_parser.imports

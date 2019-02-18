@@ -107,6 +107,17 @@ LibC/0.1@lasote/testing
         client.run("install .", assert_error=True)
         self.assertIn("Wrong imports argument 'something'. Need a 'arg=value' pair.", client.out)
 
+    def imports_wrong_line_txt_test(self):
+        client = TestClient()
+        conanfile = """
+[imports]
+., license*
+"""
+        client.save({"conanfile.txt": conanfile})
+        client.run("install .", assert_error=True)
+        self.assertIn("Wrong imports line: ., license*", client.out)
+        self.assertIn("Use syntax: path, pattern -> local-folder", client.out)
+
     def imports_folders_extrachars_txt_test(self):
         # https://github.com/conan-io/conan/issues/4524
         client = self._set_up()
