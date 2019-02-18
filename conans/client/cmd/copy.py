@@ -31,7 +31,7 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
     # It is important to get the revision early, so "complete_recipe_sources" can
-    # get the rigth revision sources, not latest
+    # get the right revision sources, not latest
     src_metadata = cache.package_layout(ref).load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
     short_paths = _prepare_sources(cache, ref, remote_manager, loader)

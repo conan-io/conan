@@ -57,14 +57,16 @@ class Pkg(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "my data!"})
+        # Not necessary to create binary packages, faster test
         client.run("export . pkg/0.1@lasote/stable")
         client.run("upload pkg/0.1@lasote/stable")
 
         client2 = TestClient(servers={"default": server},
                              revisions_enabled=revision_enabled)
+        # To install the recipe without needing to install the binary packages
         client2.run("info pkg/0.1@lasote/stable")
 
-        # Now the otehr client uploads a new revision
+        # Now the other client uploads a new revision
         client.save({"conanfile.py": conanfile + "# Recipe revision 2",
                      "myfile.txt": "my data rev2!"})
         client.run("export . pkg/0.1@lasote/stable")
