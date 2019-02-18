@@ -121,7 +121,7 @@ LibC/0.1@lasote/testing
         client.run("install . --build=missing")
         self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/LibA/LICENSE.txt")),
                          "LicenseA")
-        self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/license.md")),
+        self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/LICENSE.md")),
                          "LicenseB")
         self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/LibC/license.txt")),
                          "LicenseC")
