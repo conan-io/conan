@@ -10,7 +10,7 @@ from conans.model.requires import Requirements, Requirement
 from conans.model.workspace import WORKSPACE_FILE
 from conans.util.log import logger
 from collections import OrderedDict
-from platform import node
+
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
 
@@ -48,8 +48,7 @@ class DepsGraphBuilder(object):
                               remote_name, processed_profile):
 
         node.conanfile.build_requires_options.clear_unscoped_options()
-        new_options = node.conanfile.build_requires_options
-        new_options = OrderedDict(new_options.as_list())
+        new_options = node.conanfile.build_requires_options._reqs_options
         new_reqs = Requirements()
 
         conanfile = node.conanfile
@@ -66,7 +65,6 @@ class DepsGraphBuilder(object):
 
         previous_closure = node.public_closure.copy()
         for require in requires:
-            print "\nEXTENDING NODE ", node, " BR ", require.ref
             name = require.ref.name
             require.private = True  # FIXME: abused model
 
@@ -77,8 +75,14 @@ class DepsGraphBuilder(object):
                                            if k not in previous_closure])
         node.public_closure.update(previous_closure)
 
-        new_nodes = set([n for n in dep_graph.nodes if n.bid is None])
-        return new_nodes
+        subgraph = DepsGraph()
+        subgraph.aliased = dep_graph.aliased
+        subgraph.prefs = dep_graph.prefs
+        subgraph.nodes = set([n for n in dep_graph.nodes if n.package_id is None])
+        for n in subgraph.nodes:
+            n.build_require = True
+
+        return subgraph
 
     def _resolve_deps(self, dep_graph, node, update, remote_name):
         # Resolve possible version ranges of the current node requirements
@@ -137,14 +141,11 @@ class DepsGraphBuilder(object):
 
         previous = node.public_deps.get(name)
         if require.private or not previous:  # new node, must be added and expanded
-            print "CREATING A NEW NODE ", require.ref
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remote_name,
                                              processed_profile)
-            print "NEW NODE ", id(new_node)
+
             new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
-            
-            print "PARENT NODE ", node, node.public_closure
             node.public_closure[name] = new_node
             if require.private:
                 new_node.public_deps = node.public_closure

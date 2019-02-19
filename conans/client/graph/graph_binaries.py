@@ -201,8 +201,7 @@ class GraphBinariesAnalyzer(object):
                     for n in closure:
                         n.binary = BINARY_SKIP
 
-
-    def evaluate_graph(self, deps_graph, build_mode, update, remote_name, nodes_to_iterate=None):
+    def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_nodes = {}
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node)
