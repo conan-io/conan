@@ -235,6 +235,7 @@ class DepsGraphBuilder(object):
                                                     ref=requirement.ref)
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
+            dep_conanfile.develop = True
 
         if getattr(dep_conanfile, "alias", None):
             alias_ref = alias_ref or new_ref.copy_clear_rev()

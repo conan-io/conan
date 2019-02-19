@@ -157,6 +157,27 @@ class LayoutTest(unittest.TestCase):
             include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
             self.assertTrue(include_dirs.endswith("include_%s" % build_type.lower()))
 
+    def test_develop(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                def package_info(self):
+                    if not self.in_local_cache:
+                        self.output.info("Develop!!=%s!!" % self.develop)
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("editable add . mytool/0.1@user/testing")
+        client2 = TestClient(client.base_folder)
+        consumer = textwrap.dedent("""
+            [requires]
+            mytool/0.1@user/testing
+            """)
+        client2.save({"conanfile.txt": consumer})
+        client2.run("install .")
+        self.assertIn("mytool/0.1@user/testing: Develop!!=True!!", client2.out)
+
     def test_parameterized_paths(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
