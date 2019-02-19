@@ -106,8 +106,6 @@ class GraphTest(unittest.TestCase):
 
 class ConanRequirementsTest(GraphTest):
 
-
-
     def _check_say(self, conanfile, version="0.1", options=""):
         self.assertEqual(conanfile.version, version)
         self.assertEqual(conanfile.name, "Say")
@@ -1052,8 +1050,8 @@ class ChatConan(ConanFile):
                          "Say/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID)
 
     def test_conditional_diamond(self):
-        say_content = """from conans import ConanFile
 
+        say_content = """from conans import ConanFile
 class SayConan(ConanFile):
     options = {"zip": [True, False]}
     default_options = "zip=False"
@@ -1084,9 +1082,8 @@ class HelloConan(ConanFile):
     Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
-            self.build_graph(TestConanFile("Chat", "2.3",
-                                           requires=["Say/0.1@user/testing",
-                                                     "Hello/1.2@user/testing"]))
+            self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
+                                                                    "Hello/1.2@user/testing"]))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)

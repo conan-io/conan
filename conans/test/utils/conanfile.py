@@ -1,7 +1,7 @@
 import os
 from collections import namedtuple
 
-from conans import ConanFile, Options
+from conans import Options
 from conans.model.conan_file import ConanFile
 from conans.model.options import PackageOptions
 from conans.test.utils.tools import TestBufferConanOutput

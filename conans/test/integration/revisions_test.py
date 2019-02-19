@@ -2,7 +2,6 @@ import os
 import unittest
 from collections import OrderedDict
 
-import patch
 import time
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
@@ -22,7 +21,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.server = TestServer()
         self.server2 = TestServer()
         self.servers = OrderedDict([("default", self.server),
-                               ("remote2", self.server2)])
+                                    ("remote2", self.server2)])
         self.c_v2 = TurboTestClient(revisions_enabled=True, servers=self.servers)
         self.c_v1 = TurboTestClient(revisions_enabled=False, servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
@@ -1091,7 +1090,12 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
     def search_in_remote_by_revision_pattern_test(self, v1):
         """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
          1. With v2 client: We get the revs without refs matching the pattern
-         2. With v1 client: Same"""
+         2. With v1 client: Same
+
+         The same for "lib/*@conan/stable#rev" and "*lib/*@conan/stable#rev"
+
+         But if we search an invalid revision it is not found
+         """
 
         # Upload to the server two rrevs for "lib" and one rrevs for "lib2"
         self.c_v2.create(self.ref)
@@ -1110,6 +1114,24 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
         self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+
+        data = client.search("{}".format(pref2_lib.ref.full_repr()).replace("1.0", "*"),
+                             remote="default")
+        items = data["results"][0]["items"]
+        expected = [str(self.ref)]
+        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+
+        data = client.search("*{}".format(pref2_lib.ref.full_repr()).replace("1.0", "*"),
+                             remote="default")
+        items = data["results"][0]["items"]
+        expected = [str(self.ref)]
+        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+
+        data = client.search("*{}#fakerev".format(pref2_lib.ref),
+                             remote="default")
+        items = data["results"]
+        expected = []
+        self.assertEquals(expected, items)
 
     def search_revisions_locally_with_v1_server_test(self):
         """If I upload a recipe to a v1 server and then I check the revisions locally, it
@@ -1348,6 +1370,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
+        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
         self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
@@ -1482,3 +1505,19 @@ class ServerRevisionsIndexes(unittest.TestCase):
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEquals(revs, [pref4.revision])
+
+    def v1_get_always_latest_test(self):
+        conanfile = GenConanfile()
+        self.c_v1.create(self.ref, conanfile=conanfile)
+        self.c_v1.upload_all(self.ref)
+        pref = self.c_v2.create(self.ref, conanfile=conanfile.with_build_msg("Rev2"))
+        self.c_v2.upload_all(self.ref)
+
+        latest = self.server.server_store.get_last_revision(self.ref)
+        self.assertEquals(latest.revision, pref.ref.revision)
+
+        self.c_v1.create(self.ref, conanfile=conanfile.with_build_msg("Rev3"))
+        self.c_v1.upload_all(self.ref)
+
+        latest = self.server.server_store.get_last_revision(self.ref)
+        self.assertEquals(latest.revision, DEFAULT_REVISION_V1)

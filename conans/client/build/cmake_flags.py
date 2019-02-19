@@ -36,7 +36,8 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            return "MinGW Makefiles"
+            logger.warning("CMake generator could not be deduced from settings")
+            return None
         return "Unix Makefiles"
 
     if compiler == "Visual Studio":
@@ -64,6 +65,8 @@ def get_generator(settings):
 
 
 def is_multi_configuration(generator):
+    if not generator:
+        return False
     return "Visual" in generator or "Xcode" in generator
 
 
