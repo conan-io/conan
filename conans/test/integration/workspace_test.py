@@ -569,3 +569,50 @@ class Pkg(ConanFile):
         cmake = load(os.path.join(client.current_folder, "A", "build", "conanbuildinfo.cmake"))
         self.assertIn("myincludeC", cmake)
         self.assertIn("myincludeB", cmake)
+
+    def generators_test(self):
+        client = TestClient()
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+
+        project = dedent("""
+            HelloB/0.1@lasote/stable:
+                folder: B
+                generators: [make, qmake]
+            HelloC/0.1@lasote/stable:
+                folder: C
+            HelloA/0.1@lasote/stable:
+                folder: A
+                generators: visual_studio
+            layout: layout
+            generators: cmake
+            generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """)
+        layout = dedent("""
+            [build_folder]
+
+            """)
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
+
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
+                                                    "conanbuildinfo.mak")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
+                                                    "conanbuildinfo.pri")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "A",
+                                                    "conanbuildinfo.props")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "C",
+                                                    "conanbuildinfo.cmake")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
+                                                    "conanworkspace.cmake")))

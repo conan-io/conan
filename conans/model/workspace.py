@@ -12,7 +12,7 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 class LocalPackage(object):
-    def __init__(self, base_folder, data, cache, ws_layout):
+    def __init__(self, base_folder, data, cache, ws_layout, ws_generators):
         self._base_folder = base_folder
         self._conanfile_folder = data.get("folder")  # The folder with the conanfile
         layout = data.get("layout")
@@ -21,6 +21,13 @@ class LocalPackage(object):
                                                 cache.conan_folder)
         else:
             self.layout = ws_layout
+
+        generators = data.get("generators")
+        if isinstance(generators, str):
+            generators = [generators]
+        if generators is None:
+            generators = ws_generators
+        self.generators = generators
 
     @property
     def root_folder(self):
@@ -91,17 +98,20 @@ class Workspace(object):
         yml = yaml.safe_load(text)
         self._generator = yml.pop("generator", None)
         yml.pop("name", None)
-        self._layout = yml.pop("layout", None)
-        if self._layout:
-            self._layout = get_editable_abs_path(self._layout, self._base_folder,
-                                                 self._cache.conan_folder)
+        layout = yml.pop("layout", None)
+        if layout:
+            layout = get_editable_abs_path(layout, self._base_folder,
+                                           self._cache.conan_folder)
+        generators = yml.pop("generators", None)
+        if isinstance(generators, str):
+            generators = [generators]
         self._root = [ConanFileReference.loads(s.strip())
                       for s in yml.pop("root", "").split(",") if s.strip()]
         if not self._root:
             raise ConanException("Conan workspace needs at least 1 root conanfile")
         for package_name, data in yml.items():
             workspace_package = LocalPackage(self._base_folder, data,
-                                             self._cache, self._layout)
+                                             self._cache, layout, generators)
             package_name = ConanFileReference.loads(package_name)
             self._workspace_packages[package_name] = workspace_package
         for package_name in self._root:

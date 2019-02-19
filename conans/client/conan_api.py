@@ -61,6 +61,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 default_manifest_folder = '.conan_manifests'
@@ -479,6 +480,13 @@ class ConanAPIV1(object):
                                                        False, update, remote_name, recorder)
 
         print_graph(deps_graph, self._user_io.out)
+
+        # Inject the generators before installing
+        for node in deps_graph.nodes:
+            if node.recipe == RECIPE_EDITABLE:
+                generators = workspace[node.ref].generators
+                if generators is not None:
+                    node.conanfile.generators = generators
 
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=recorder, hook_manager=self._hook_manager)
