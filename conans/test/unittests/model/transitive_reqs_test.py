@@ -16,12 +16,16 @@ from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
     test_processed_profile
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+import os
+
 from mock import Mock
+
+from conans.client.cache.cache import ClientCache
 from conans.client.graph.build_mode import BuildMode
-from conans.test.utils.conanfile import TestConanFile
-from conans.paths.simple_paths import SimplePaths
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.range_resolver import RangeResolver
+from conans.test.utils.conanfile import TestConanFile
+
 
 say_content = TestConanFile("Say", "0.1")
 say_content2 = TestConanFile("Say", "0.2")
@@ -77,7 +81,8 @@ class GraphTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
-        paths = SimplePaths(self.retriever.folder)
+        paths = ClientCache(self.retriever.folder, self.retriever.folder,
+                            self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
