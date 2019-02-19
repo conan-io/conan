@@ -1551,6 +1551,8 @@ class Command(object):
             ret_code = ERROR_GENERAL
             self._user_io.out.error(exc)
         except Exception as exc:
+            import traceback
+            print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
