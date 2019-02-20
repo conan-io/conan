@@ -462,10 +462,7 @@ class BinaryInstaller(object):
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:
-                try:
-                    conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-                except:
-                    pass
+                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info

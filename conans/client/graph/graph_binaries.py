@@ -202,10 +202,10 @@ class GraphBinariesAnalyzer(object):
                         n.binary = BINARY_SKIP
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
-        evaluated_nodes = {}
+        evaluated = deps_graph.evaluated
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
+            self._evaluate_node(node, build_mode, update, evaluated, remote_name)
             self._handle_private(node, deps_graph)

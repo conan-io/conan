@@ -160,19 +160,8 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
-        self.prefs = {}  # {pref: [nodes]}
-
-    def add_graph(self, node, graph, build_require=False):
-        for n in graph.nodes:
-            if n != graph.root:
-                n.build_require = build_require
-                self.add_node(n)
-
-        for e in graph.root.dependencies:
-            e.src = node
-            e.build_require = build_require
-
-        node.dependencies = graph.root.dependencies + node.dependencies
+        # These are the nodes with pref (not including PREV) that have been evaluated
+        self.evaluated = {}  # {pref: [nodes]}
 
     def add_node(self, node):
         if not self.nodes:
@@ -203,21 +192,6 @@ class DepsGraph(object):
                 neighbors = n.public_neighbors() if not private else n.neighbors()
                 for neigh in neighbors:
                     if neigh not in new_current and neigh not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
-
-    def closure(self, node):
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n.ref.name] = n
-            for n in current:
-                neighs = n.public_neighbors()
-                for neigh in neighs:
-                    if neigh not in new_current and neigh.ref.name not in closure:
                         new_current.append(neigh)
             current = new_current
         return closure
@@ -306,8 +280,7 @@ class DepsGraph(object):
         """
         current_level = []
         result = [current_level]
-        opened = self.nodes
-        # FIXME: This surely fails for inverse_levels
+        opened = self.nodes.copy()
         while opened:
             current = opened.copy()
             for o in opened:

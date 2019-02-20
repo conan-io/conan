@@ -77,7 +77,7 @@ class DepsGraphBuilder(object):
 
         subgraph = DepsGraph()
         subgraph.aliased = dep_graph.aliased
-        subgraph.prefs = dep_graph.prefs
+        subgraph.evaluated = dep_graph.evaluated
         subgraph.nodes = set([n for n in dep_graph.nodes if n.package_id is None])
         for n in subgraph.nodes:
             n.build_require = True
@@ -115,9 +115,6 @@ class DepsGraphBuilder(object):
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
                     values
-        param deps: DepsGraph result
-        param public_deps: {name: Node} of already expanded public Nodes, not to be repeated
-                           in graph
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration
