@@ -1,73 +1,82 @@
 # coding=utf-8
-import ntpath
 import os
-import posixpath
-import six
-from collections import defaultdict
+from collections import OrderedDict
+
 from six.moves import configparser
 
-from conans.client.tools.files import load
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+
+DEFAULT_LAYOUT_FILE = "default"
+LAYOUTS_FOLDER = 'layouts'
+
+
+def get_editable_abs_path(path, cwd, cache_folder):
+    # Check the layout file exists, is correct, and get its abs-path
+    if path:
+        layout_abs_path = path if os.path.isabs(path) else os.path.normpath(os.path.join(cwd, path))
+        if not os.path.isfile(layout_abs_path):
+            layout_abs_path = os.path.join(cache_folder, LAYOUTS_FOLDER, path)
+        if not os.path.isfile(layout_abs_path):
+            raise ConanException("Couldn't find layout file: %s" % path)
+        EditableCppInfo.load(layout_abs_path)  # Try if it loads ok
+        return layout_abs_path
+
+    # Default only in cache
+    layout_abs_path = os.path.join(cache_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+    if os.path.isfile(layout_abs_path):
+        EditableCppInfo.load(layout_abs_path)
+        return layout_abs_path
 
 
 class EditableCppInfo(object):
-    WILDCARD = "*"
-    cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs']
+    cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs', 'builddirs', 'srcdirs']
 
-    def __init__(self, data, uses_namespace):
+    def __init__(self, data):
         self._data = data
-        self._uses_namespace = uses_namespace
-
-    @classmethod
-    def load(cls, filepath, require_namespace):
-        """ Returns a dictionary containing information about paths for a CppInfo object: includes,
-        libraries, resources, binaries,... """
-
-        parser = configparser.ConfigParser(allow_no_value=True)
-        parser.optionxform = str
-        parser.read(filepath)
-
-        if not require_namespace:
-            ret = {k: [] for k in cls.cpp_info_dirs}
-            for section in ret.keys():
-                if section in parser.sections():
-                    ret[section] = [k for k, v in parser.items(section)]  # keys used as values
-        else:
-            ret = defaultdict(lambda: {k: [] for k in cls.cpp_info_dirs})
-            for section in parser.sections():
-                if ':' in section:
-                    namespace, key = section.split(':', 1)
-                    if key in cls.cpp_info_dirs:
-                        # keys used as values
-                        ret[namespace][key] = [k for k, v in parser.items(section)]
-        return EditableCppInfo(ret, uses_namespace=require_namespace)
 
     @staticmethod
-    def _work_on_item(value, base_path, settings, options):
-        value = value.replace('\\', '/')
-        isabs = ntpath.isabs(value) or posixpath.isabs(value)
-        if base_path and not isabs:
-            value = os.path.abspath(os.path.join(base_path, value))
-        value = os.path.normpath(value)
+    def load(filepath):
+        parser = configparser.ConfigParser(allow_no_value=True)
+        parser.optionxform = str
+        try:
+            parser.read(filepath)
+        except configparser.Error as e:
+            raise ConanException("Error parsing layout file: %s\n%s" % (filepath, str(e)))
+        data = OrderedDict()
+        for section in parser.sections():
+            ref, cpp_info_dir = section.rsplit(":", 1) if ':' in section else (None, section)
+            if cpp_info_dir not in EditableCppInfo.cpp_info_dirs:
+                raise ConanException("Wrong cpp_info field '%s' in layout file: %s"
+                                     % (cpp_info_dir, filepath))
+            if ref:
+                try:
+                    r = ConanFileReference.loads(ref)
+                    if r.revision:
+                        raise ConanException
+                except ConanException:
+                    raise ConanException("Wrong package reference '%s' in layout file: %s"
+                                         % (ref, filepath))
+            data.setdefault(ref, {})[cpp_info_dir] = [k for k, _ in parser.items(section)]
+
+        return EditableCppInfo(data)
+
+    @staticmethod
+    def _work_on_item(value, settings, options):
         value = value.format(settings=settings, options=options)
+        value = value.replace('\\', '/')
         return value
 
-    def has_info_for(self, pck_name, use_wildcard=True):
-        if self._uses_namespace:
-            return pck_name in self._data or (use_wildcard and self.WILDCARD in self._data)
-        else:
-            return True
+    def apply_to(self, ref, cpp_info, settings=None, options=None):
+        d = self._data
+        data = d.get(str(ref)) or d.get(None) or {}
 
-    def apply_to(self, pkg_name, cpp_info, base_path, settings=None, options=None, use_wildcard=True):
-        if self._uses_namespace:
-            if pkg_name in self._data:
-                data_to_apply = self._data[pkg_name]
-            elif use_wildcard and self.WILDCARD in self._data:
-                data_to_apply = self._data[self.WILDCARD]
-            else:
-                data_to_apply = {k: [] for k in self.cpp_info_dirs}
-        else:
-            data_to_apply = self._data
-
-        for key, items in data_to_apply.items():
-            setattr(cpp_info, key, [self._work_on_item(item, base_path, settings, options)
-                                    for item in items])
+        if data:  # Invalidate previously existing dirs
+            for info_dir in self.cpp_info_dirs:
+                setattr(cpp_info, info_dir, [])
+        try:
+            for key, items in data.items():
+                setattr(cpp_info, key, [self._work_on_item(item, settings, options)
+                                        for item in items])
+        except Exception as e:
+            raise ConanException("Error applying layout in '%s': %s" % (str(ref), str(e)))

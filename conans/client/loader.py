@@ -36,6 +36,10 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
         self.cached_conanfiles = {}
 
+    def invalidate_caches(self):
+        self.cached_conanfiles = {}
+        self._python_requires.invalidate_caches()
+
     def load_class(self, conanfile_path):
         try:
             return self.cached_conanfiles[conanfile_path]
@@ -86,6 +90,11 @@ class ConanFileLoader(object):
                       channel=None, test=None):
 
         conanfile_class = self.load_class(conanfile_path)
+        if name and conanfile_class.name and name != conanfile_class.name:
+            raise ConanException("Package recipe name %s!=%s" % (name, conanfile_class.name))
+        if version and conanfile_class.version and version != conanfile_class.version:
+            raise ConanException("Package recipe version %s!=%s"
+                                 % (version, conanfile_class.version))
         conanfile_class.name = name or conanfile_class.name
         conanfile_class.version = version or conanfile_class.version
         if test:
@@ -126,13 +135,14 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile_txt(self, conan_txt_path, processed_profile):
+    def load_conanfile_txt(self, conan_txt_path, processed_profile, ref=None):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path, basename = os.path.split(conan_txt_path)
-        conanfile = self._parse_conan_txt(contents, path, basename, processed_profile)
+        display_name = "%s (%s)" % (basename, ref) if ref and ref.name else basename
+        conanfile = self._parse_conan_txt(contents, path, display_name, processed_profile)
         return conanfile
 
     def _parse_conan_txt(self, contents, path, display_name, processed_profile):
@@ -164,7 +174,6 @@ class ConanFileLoader(object):
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
-        conanfile._conan_env_values.update(processed_profile._env_values)
         return conanfile
 
     def load_virtual(self, references, processed_profile, scope_options=True,
@@ -209,7 +218,7 @@ def _parse_module(conanfile_module, module_id):
             else:
                 raise ConanException("More than 1 conanfile in the file")
         elif issubclass(attr, Generator) and attr != Generator:
-            registered_generators.add(attr.__name__, attr)
+            registered_generators.add(attr.__name__, attr, custom=True)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")

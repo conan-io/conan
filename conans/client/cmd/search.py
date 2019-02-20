@@ -1,7 +1,8 @@
 from collections import OrderedDict, namedtuple
 
-from conans.errors import NotFoundException
-from conans.search.search import filter_outdated, search_packages, search_recipes
+from conans.errors import NotFoundException, ConanException
+from conans.search.search import (filter_outdated, search_packages, search_recipes,
+                                  filter_by_revision)
 
 
 class Search(object):
@@ -49,6 +50,10 @@ class Search(object):
         if not remote_name:
             return self._search_packages_in_local(ref, query, outdated)
 
+        if ref.revision and not self._cache.config.revisions_enabled:
+            raise ConanException("Revisions not enabled in the client, specify a "
+                                 "reference without revision")
+
         if remote_name == 'all':
             return self._search_packages_in_all(ref, query, outdated)
 
@@ -57,13 +62,19 @@ class Search(object):
     def _search_packages_in_local(self, ref=None, query=None, outdated=False):
         packages_props = search_packages(self._cache, ref, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
+
         try:
-            recipe_hash = self._cache.package_layout(ref).load_manifest().summary_hash
+            recipe_hash = self._cache.package_layout(ref).recipe_manifest().summary_hash
         except IOError:  # It could not exist in local
             recipe_hash = None
 
-        if outdated and recipe_hash:
+        if outdated:
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
+        elif self._cache.config.revisions_enabled:
+            # With revisions, by default filter the packages not belonging to the recipe
+            # unless outdated is specified.
+            metadata = self._cache.package_layout(ref).load_metadata()
+            ordered_packages = filter_by_revision(metadata, ordered_packages)
 
         references = OrderedDict()
         references[None] = self.remote_ref(ordered_packages, recipe_hash)
@@ -80,7 +91,8 @@ class Search(object):
                     packages_props = self._remote_manager.search_packages(remote, ref, query)
                     if packages_props:
                         ordered_packages = OrderedDict(sorted(packages_props.items()))
-                        manifest = self._remote_manager.get_conan_manifest(ref, remote)
+                        manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
+
                         recipe_hash = manifest.summary_hash
 
                         if outdated and recipe_hash:
@@ -91,13 +103,14 @@ class Search(object):
                     continue
             return references
 
-        return self._search_packages_in(self, 'all', ref, query, outdated)
+        return self._search_packages_in('all', ref, query, outdated)
 
     def _search_packages_in(self, remote_name, ref=None, query=None, outdated=False):
         remote = self._registry.remotes.get(remote_name)
         packages_props = self._remote_manager.search_packages(remote, ref, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
-        manifest = self._remote_manager.get_conan_manifest(ref, remote)
+        manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
+
         recipe_hash = manifest.summary_hash
 
         if outdated and recipe_hash:

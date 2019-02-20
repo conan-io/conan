@@ -1,6 +1,6 @@
 import os
 
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.generators import write_generators
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph

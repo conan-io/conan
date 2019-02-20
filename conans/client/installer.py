@@ -19,7 +19,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
-from conans.model.editable_cpp_info import EditableCppInfo
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -115,7 +114,7 @@ class _ConanPackageBuilder(object):
         """
 
         # FIXME: Is weak to assign here the recipe_hash
-        manifest = self._cache.package_layout(self._ref).load_manifest()
+        manifest = self._cache.package_layout(self._ref).recipe_manifest()
         self._conan_file.info.recipe_hash = manifest.summary_hash
 
         # Creating ***info.txt files
@@ -132,19 +131,20 @@ class _ConanPackageBuilder(object):
             source_folder = self.build_folder
         with get_env_context_manager(self._conan_file):
             install_folder = self.build_folder  # While installing, the infos goes to build folder
-            pkg_id = self._conan_file.info.package_id()
+            pkg_id = self._pref.id
             conanfile_path = self._cache.conanfile(self._ref)
 
             create_package(self._conan_file, pkg_id, source_folder, self.build_folder,
                            self.package_folder, install_folder, self._hook_manager,
                            conanfile_path, self._ref)
 
-        package_hash = self._cache.package_layout(self._pref.ref,
-                                                  self._conan_file.short_paths).package_summary_hash(self._pref)
+        layout = self._cache.package_layout(self._pref.ref, self._conan_file.short_paths)
+        package_hash = layout.package_summary_hash(self._pref)
         package_id = self._pref.id
 
         with self._cache.package_layout(self._ref).update_metadata() as metadata:
-            metadata.packages[package_id].revision = package_hash
+            if metadata.packages[package_id].revision != package_hash:
+                metadata.packages[package_id].revision = package_hash
             metadata.packages[package_id].recipe_revision = self._ref.revision
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
@@ -180,14 +180,14 @@ class _ConanPackageBuilder(object):
             with conanfile_exception_formatter(str(self._conan_file), "build"):
                 self._conan_file.build()
 
-            self._out.success("Package '%s' built" % self._conan_file.info.package_id())
+            self._out.success("Package '%s' built" % self._pref.id)
             self._out.info("Build folder %s" % self.build_folder)
             self._hook_manager.execute("post_build", conanfile=self._conan_file,
                                        reference=self._ref,
                                        package_id=self._pref.id)
         except Exception as exc:
             self._out.writeln("")
-            self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())
+            self._out.error("Package '%s' build failed" % self._pref.id)
             self._out.warn("Build folder %s" % self.build_folder)
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
@@ -263,7 +263,6 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._workspace = workspace
         self._hook_manager = hook_manager
-        self._editable_cpp_info = self._load_editables_cpp_info()
 
     def install(self, deps_graph, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
@@ -281,7 +280,7 @@ class BinaryInstaller(object):
             for node in level:
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
-                package_id = conan_file.info.package_id()
+                package_id = node.package_id
                 if node.binary == BINARY_MISSING:
                     dependencies = [str(dep.dst) for dep in node.dependencies]
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,
@@ -299,9 +298,8 @@ class BinaryInstaller(object):
                     self._propagate_info(node, inverse_levels, deps_graph)
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
-                    pref = PackageReference(ref, package_id)
-                    _handle_system_requirements(conan_file, pref, self._cache, output)
-                    self._handle_node_cache(node, pref, keep_build, processed_package_refs)
+                    _handle_system_requirements(conan_file, node.pref, self._cache, output)
+                    self._handle_node_cache(node, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, inverse_levels, deps_graph)
@@ -314,42 +312,23 @@ class BinaryInstaller(object):
             if node.update_manifest == read_manifest:
                 return True
 
-    def _load_editables_cpp_info(self):
-        editables_path = self._cache.default_editable_path
-        if os.path.exists(editables_path):
-            return EditableCppInfo.load(editables_path, require_namespace=True)
-        return None
-
     def _handle_node_editable(self, node):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
         base_path = package_layout.conan()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
+        node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
-        package_layout_file = package_layout.editable_package_layout_file()
-        if os.path.exists(package_layout_file):
-            editable_cpp_info = EditableCppInfo.load(package_layout_file,
-                                                     require_namespace=False)
-            editable_cpp_info.apply_to(node.conanfile.name,
+        editable_cpp_info = package_layout.editable_cpp_info()
+        if editable_cpp_info:
+            editable_cpp_info.apply_to(node.ref,
                                        node.conanfile.cpp_info,
-                                       base_path=base_path,
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
 
-        # Try with the profile-like file
-        elif self._editable_cpp_info and self._editable_cpp_info.has_info_for(node.conanfile.name):
-            self._editable_cpp_info.apply_to(node.conanfile.name,
-                                             node.conanfile.cpp_info,
-                                             base_path=base_path,
-                                             settings=node.conanfile.settings,
-                                             options=node.conanfile.options)
-
-        # Use `package_info()` data
-        else:
-            pass  # It will use `package_info()` data relative to path used as 'package_folder'
-
-    def _handle_node_cache(self, node, pref, keep_build, processed_package_references):
+    def _handle_node_cache(self, node, keep_build, processed_package_references):
+        pref = node.pref
         conan_file = node.conanfile
         output = conan_file.output
         package_folder = self._cache.package(pref, conan_file.short_paths)
@@ -357,15 +336,19 @@ class BinaryInstaller(object):
         with self._cache.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
-                set_dirty(package_folder)
                 if node.binary == BINARY_BUILD:
+                    set_dirty(package_folder)
                     self._build_package(node, pref, output, keep_build)
+                    clean_dirty(package_folder)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     if not self._node_concurrently_installed(node, package_folder):
-                        new_ref = self._remote_manager.get_package(pref, package_folder,
-                                                                   node.binary_remote, output,
-                                                                   self._recorder)
-                        self._registry.prefs.set(new_ref, node.binary_remote.name)
+                        set_dirty(package_folder)
+                        assert pref.revision is not None, "Installer should receive #PREV always"
+                        self._remote_manager.get_package(pref, package_folder,
+                                                         node.binary_remote, output,
+                                                         self._recorder)
+                        self._registry.prefs.set(pref, node.binary_remote.name)
+                        clean_dirty(package_folder)
                     else:
                         output.success('Download skipped. Probable concurrent download')
                         log_package_got_from_local_cache(pref)
@@ -374,7 +357,7 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
-                clean_dirty(package_folder)
+
             # Call the info method
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(pref, conan_file.cpp_info)
@@ -418,6 +401,8 @@ class BinaryInstaller(object):
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
         for name, python_require in conan_file.python_requires.items():
+            assert python_require.ref.revision is not None, \
+                "Installer should receive python_require.ref always"
             complete_recipe_sources(self._remote_manager, self._cache,
                                     conan_file, python_require.ref)
 
@@ -440,8 +425,9 @@ class BinaryInstaller(object):
         else:
             with self._cache.conanfile_write_lock(ref):
                 set_dirty(builder.build_folder)
-                complete_recipe_sources(self._remote_manager, self._cache,
-                                        conan_file, ref)
+                assert ref.revision is not None, \
+                    "Installer should receive RREV always"
+                complete_recipe_sources(self._remote_manager, self._cache, conan_file, ref)
                 builder.prepare_build()
 
         with self._cache.conanfile_read_lock(ref):

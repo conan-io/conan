@@ -20,6 +20,7 @@ class Retriever(object):
         return Node(None, conanfile, "rootpath")
 
     def conan(self, ref, content):
+        content = str(content)
         if isinstance(ref, str):
             ref = ConanFileReference.loads(ref)
         conan_path = os.path.join(self.folder, ref.dir_repr(), CONANFILE)

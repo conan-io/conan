@@ -60,9 +60,9 @@ class AuthorizeBearerTest(unittest.TestCase):
         errors = client.run("upload Hello/0.1@lasote/stable")
         self.assertFalse(errors)
 
-        if get_env("CONAN_API_V2_BLOCKED", True):
+        if not client.cache.config.revisions_enabled:
             expected_calls = [('ping', None),
-                              ('get_conan_manifest_url', None),
+                              ('get_recipe_manifest_url', None),
                               ('check_credentials', None),
                               ('authenticate', 'Basic'),
                               ('get_recipe_snapshot', 'Bearer'),
@@ -83,7 +83,7 @@ class AuthorizeBearerTest(unittest.TestCase):
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
 
-    @unittest.skipUnless(get_env("CONAN_API_V2_BLOCKED", True), "ApiV1 test")
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "ApiV1 test")
     def no_signature_test(self):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()
@@ -97,7 +97,7 @@ class AuthorizeBearerTest(unittest.TestCase):
         self.assertTrue(errors)
 
         expected_calls = [('ping', None),
-                          ('get_conan_manifest_url', None),
+                          ('get_recipe_manifest_url', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
                           ('get_recipe_snapshot', 'Bearer'),

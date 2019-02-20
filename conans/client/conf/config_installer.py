@@ -5,7 +5,7 @@ from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.remote_registry import load_registry_txt
+from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -78,8 +78,7 @@ def _process_folder(folder, cache, output):
                 shutil.copy(os.path.join(root, f), settings_path)
             elif f == "conan.conf":
                 output.info("Processing conan.conf")
-                conan_conf = cache.conan_config
-                _handle_conan_conf(conan_conf, os.path.join(root, f))
+                _handle_conan_conf(cache.config, os.path.join(root, f))
             elif f == "remotes.txt":
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
@@ -116,11 +115,11 @@ def _process_download(item, cache, output, tmp_folder, verify_ssl, requester):
         raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
 
 
-def configuration_install(path_or_url, cache, output, verify_ssl, requester,
-                          config_type=None, args=None):
+def configuration_install(path_or_url, cache, output, verify_ssl, requester, config_type=None,
+                          args=None):
     if path_or_url is None:
         try:
-            item = cache.conan_config.get_item("general.config_install")
+            item = cache.config.get_item("general.config_install")
             _config_type, path_or_url, _verify_ssl, _args = _process_config_install_item(item)
         except ConanException:
             raise ConanException("Called config install without arguments and "
@@ -158,7 +157,7 @@ def configuration_install(path_or_url, cache, output, verify_ssl, requester,
     finally:
         if config_type is not None and path_or_url is not None:
             value = "%s, %s, %s, %s" % (config_type, path_or_url, verify_ssl, args)
-            cache.conan_config.set_item("general.config_install", value)
+            cache.config.set_item("general.config_install", value)
         rmdir(tmp_folder)
 
 
@@ -202,18 +201,13 @@ def _handle_hooks(src_hooks_path, dst_hooks_path, output):
     :param dst_hooks_path:  Folder where the hooks should finally go
     :param output: Output to indicate the files copied
     """
-    hooks_dirs = []
     for root, dirs, files in walk(src_hooks_path):
-        if root == src_hooks_path:
-            hooks_dirs = dirs
-        else:
-            copied_files = False
-            relpath = os.path.relpath(root, src_hooks_path)
-            for f in files:
-                if ".git" not in f:
-                    dst = os.path.join(dst_hooks_path, relpath)
-                    mkdir(dst)
-                    shutil.copy(os.path.join(root, f), dst)
-                    copied_files = True
-            if copied_files and relpath in hooks_dirs:
+        if ".git" in root:
+            continue
+        relpath = os.path.relpath(root, src_hooks_path)
+        for f in files:
+            if ".git" not in f:
+                dst = os.path.join(dst_hooks_path, relpath)
+                mkdir(dst)
+                shutil.copy(os.path.join(root, f), dst)
                 output.info(" - %s" % relpath)

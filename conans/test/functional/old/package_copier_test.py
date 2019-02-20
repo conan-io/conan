@@ -4,6 +4,7 @@ import unittest
 
 from conans.client.cmd.copy import package_copy
 from conans.client.userio import UserIO
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths.simple_paths import SimplePaths
 from conans.test.utils.test_files import temp_folder
@@ -122,6 +123,7 @@ class PackageCopierTest(unittest.TestCase):
         origin_reg = paths.export(ref)
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
+        save(os.path.join(paths.conan(ref), "metadata.json"), PackageMetadata().dumps())
         mkdir(paths.export_sources(ref))
 
     def _create_package(self, ref, package_id, paths, content="default_content"):

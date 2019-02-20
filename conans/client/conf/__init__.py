@@ -34,11 +34,11 @@ os:
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     watchOS:
-        version: ["4.0"]
+        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1"]
     tvOS:
-        version: ["11.0"]
+        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
     Arduino:
@@ -105,6 +105,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # non_interactive = False             # environment CONAN_NON_INTERACTIVE
 
 # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
+# conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -205,6 +206,7 @@ class ConanClientConfigParser(ConfigParser, object):
 
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
+               "CONAN_CMAKE_PROGRAM": self._env_c("general.conan_cmake_program", "CONAN_CMAKE_PROGRAM", None),
                "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False"),
                "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
@@ -304,7 +306,7 @@ class ConanClientConfigParser(ConfigParser, object):
         ret = os.environ.get("CONAN_DEFAULT_PROFILE_PATH", None)
         if ret:
             if not os.path.isabs(ret):
-                from conans.client.cache import PROFILES_FOLDER
+                from conans.client.cache.cache import PROFILES_FOLDER
                 profiles_folder = os.path.join(os.path.dirname(self.filename), PROFILES_FOLDER)
                 ret = os.path.abspath(os.path.join(profiles_folder, ret))
 
@@ -335,6 +337,19 @@ class ConanClientConfigParser(ConfigParser, object):
             return self.get_item("general.request_timeout")
         except ConanException:
             return None
+
+    @property
+    def revisions_enabled(self):
+        try:
+            revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
+            if revisions_enabled is None:
+                try:
+                    revisions_enabled = self.get_item("general.revisions_enabled")
+                except ConanException:
+                    return False
+            return revisions_enabled.lower() in ("1", "true")
+        except ConanException:
+            return False
 
     @property
     def storage_path(self):

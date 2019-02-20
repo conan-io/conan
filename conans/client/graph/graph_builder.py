@@ -1,6 +1,7 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_WORKSPACE,\
+    RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -37,9 +38,6 @@ class DepsGraphBuilder(object):
                         loop_ancestors, aliased, check_updates, update, remote_name,
                         processed_profile)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
-        t1 = time.time()
-        dep_graph.compute_package_ids()
-        logger.debug("GRAPH: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
     def _resolve_deps(self, node, aliased, update, remote_name):
@@ -136,11 +134,10 @@ class DepsGraphBuilder(object):
     def _conflicting_references(previous_ref, new_ref):
         if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
             return REFERENCE_CONFLICT
-        # Computed node, has to have a revision, at least 0
-        assert(previous_ref.revision is not None)
+        # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
-        if new_ref.revision and previous_ref.revision != new_ref.revision:
+        if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
             return REVISION_CONFLICT
         return False
 
@@ -233,8 +230,8 @@ class DepsGraphBuilder(object):
             new_ref = requirement.ref
         else:
             try:
-                result = self._proxy.get_recipe(requirement.ref,
-                                                check_updates, update, remote_name, self._recorder)
+                result = self._proxy.get_recipe(requirement.ref, check_updates, update,
+                                                remote_name, self._recorder)
             except ConanException as e:
                 if current_node.ref:
                     self._output.error("Failed requirement '%s' from '%s'"
@@ -245,6 +242,8 @@ class DepsGraphBuilder(object):
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
                                                     ref=requirement.ref)
+        if recipe_status == RECIPE_EDITABLE:
+            dep_conanfile.in_local_cache = False
 
         if workspace_package:
             workspace_package.conanfile = dep_conanfile

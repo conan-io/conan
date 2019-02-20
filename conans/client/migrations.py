@@ -1,12 +1,20 @@
 import os
 import shutil
 
-from conans.client.cache import CONAN_CONF, PROFILES_FOLDER
+from conans import DEFAULT_REVISION_V1
+from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
+
+from conans.model.ref import ConanFileReference, PackageReference
+
+from conans.paths import PACKAGE_METADATA
+from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
 from conans.model.version import Version
 from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
 
 
@@ -43,7 +51,7 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-        if old_version < Version("1.12.0"):
+        if old_version < Version("1.13.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
@@ -68,11 +76,11 @@ os:
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     watchOS:
-        version: ["4.0"]
+        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1"]
     tvOS:
-        version: ["11.0"]
+        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
     Arduino:
@@ -112,6 +120,11 @@ build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
             self._update_settings_yml(old_settings)
+
+            # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
+            _migrate_create_metadata(self.cache, self.out)
+
+        if old_version < Version("1.12.0"):
             migrate_plugins_to_hooks(self.cache)
 
         if old_version < Version("1.0"):
@@ -130,6 +143,55 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.cache, self.out)
+
+
+def _get_refs(cache):
+    folders = list_folder_subdirs(cache.store, 4)
+    return [ConanFileReference(*s.split("/")) for s in folders]
+
+
+def _get_prefs(layout):
+    packages_folder = layout.packages()
+    folders = list_folder_subdirs(packages_folder, 1)
+    return [PackageReference(layout._ref, s) for s in folders]
+
+
+def _migrate_create_metadata(cache, out):
+    out.warn("Migration: Generating missing metadata files")
+    refs = _get_refs(cache)
+
+    for ref in refs:
+        try:
+            base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
+            # Force using a package cache layout for everything, we want to alter the cache,
+            # not the editables
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
+            folder = layout.export()
+            try:
+                manifest = FileTreeManifest.load(folder)
+                rrev = manifest.summary_hash
+            except:
+                rrev = DEFAULT_REVISION_V1
+            metadata_path = os.path.join(layout.conan(), PACKAGE_METADATA)
+            if not os.path.exists(metadata_path):
+                out.info("Creating {} for {}".format(PACKAGE_METADATA, ref))
+                prefs = _get_prefs(layout)
+                metadata = PackageMetadata()
+                metadata.recipe.revision = rrev
+                for pref in prefs:
+                    try:
+                        pmanifest = FileTreeManifest.load(layout.package(pref))
+                        prev = pmanifest.summary_hash
+                    except:
+                        prev = DEFAULT_REVISION_V1
+                    metadata.packages[pref.id].revision = prev
+                    metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
+                save(metadata_path, metadata.dumps())
+        except Exception as e:
+            raise ConanException("Something went wrong while generating the metadata.json files "
+                                 "in the cache, please try to fix the issue or wipe the cache: {}"
+                                 ":{}".format(ref, e))
+    out.success("Migration: Generating missing metadata files finished OK!\n")
 
 
 def _migrate_lock_files(cache, out):

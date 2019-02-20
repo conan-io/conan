@@ -1,11 +1,9 @@
 # coding=utf-8
 
-import os
 import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient
 
 
@@ -34,14 +32,13 @@ class LinkedPackageAsProject(unittest.TestCase):
         self.t.save(files={'conanfile.py':
                            self.conanfile_base.format(
                                body='requires = "{}"'.format(self.ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: self.conan_package_layout, })
+                           "mylayout": self.conan_package_layout, })
         self.t.run('link . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def tearDown(self):
         self.t.run('link {} --remove'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
 
 class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
@@ -73,15 +70,18 @@ class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
 
     def test_no_args(self):
         self.t.run('info {}'.format(self.ref))
-        self.assertIn("lib/version@user/name\n"
-                      "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
-                      "    BuildID: None\n"
-                      "    Remote: None\n"
-                      "    Recipe: Editable\n"
-                      "    Binary: Editable\n"
-                      "    Binary remote: None\n"
-                      "    Requires:\n"
-                      "        parent/version@user/name\n", self.t.out)
+        rev = "    Revision: None\n" \
+            if self.t.cache.config.revisions_enabled else ""  # Project revision is None
+        expected = "lib/version@user/name\n" \
+                   "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n" \
+                   "    BuildID: None\n" \
+                   "    Remote: None\n" \
+                   "    Recipe: Editable\n{}" \
+                   "    Binary: Editable\n" \
+                   "    Binary remote: None\n" \
+                   "    Requires:\n" \
+                   "        parent/version@user/name\n".format(rev)
+        self.assertIn(expected, self.t.out)
 
     def test_only_none(self):
         self.t.run('info {} --only None'.format(self.ref))

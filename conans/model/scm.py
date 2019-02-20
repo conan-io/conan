@@ -1,7 +1,10 @@
 import json
+import os
+import subprocess
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+from conans.tools import chdir
 
 
 def get_scm_data(conanfile):
@@ -49,6 +52,28 @@ class SCMData(object):
         return json.dumps(d, sort_keys=True)
 
 
+def detect_repo_type(folder):
+    if not folder:
+        return None
+
+    def _run_command_ignore_output(cmd):
+        with chdir(folder):
+            try:
+                ret = subprocess.call(cmd, shell=True,
+                                      stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
+                if ret != 0:
+                    return False
+            except Exception:
+                return False
+        return True
+
+    if _run_command_ignore_output("git status"):
+        return "git"
+    elif _run_command_ignore_output("svn info"):
+        return "svn"
+    return None
+
+
 class SCM(object):
     def __init__(self, data, repo_folder, output):
         self._data = data
@@ -74,7 +99,8 @@ class SCM(object):
         output = ""
         if self._data.type == "git":
             output += self.repo.clone(url=self._data.url)
-            output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
+            output += self.repo.checkout(element=self._data.revision,
+                                         submodule=self._data.submodule)
         else:
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output
@@ -99,3 +125,27 @@ class SCM(object):
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
+
+    @staticmethod
+    def clean_url(url):
+        _, last_chunk = url.rsplit('/', 1)
+        if '@' in last_chunk:  # Remove peg_revision
+            url, peg_revision = url.rsplit('@', 1)
+            return url
+        return url
+
+    def get_local_path_to_url(self, url):
+        """ Compute the local path to the directory where the URL is pointing to (only make sense
+            for CVS where chunks of the repository can be checked out isolated). The argument
+            'url' should be contained inside the root url.
+        """
+        src_root = self.get_repo_root()
+
+        if self._data.type == "git":
+            return src_root
+
+        url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
+        if url_root:
+            url = self.clean_url(url)
+            src_path = os.path.join(src_root, os.path.relpath(url, url_root))
+            return src_path

@@ -1,18 +1,15 @@
+import mock
 import os
 import platform
+import re
 import unittest
-
-import mock
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
-from conans.client import tools
 from conans.client.build.msbuild import MSBuild
+from conans.client import tools
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockConanfile, MockSettings
-from conans.test.utils.visual_project_files import get_vs_project_files
 
 
 class MSBuildTest(unittest.TestCase):
@@ -135,16 +132,81 @@ class MSBuildTest(unittest.TestCase):
         self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
-    def custom_properties_test(self):
+    @parameterized.expand([("15", "v141"),
+                           ("14", "v140"),
+                           ("12", "v120"),
+                           ("11", "v110"),
+                           ("10", "v100"),
+                           ("9", "v90"),
+                           ("8", "v80")])
+    def default_toolset_test(self, compiler_version, expected_toolset):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
+                                 "compiler.version": compiler_version,
                                  "arch": "x86_64"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("projecshould_flags_testt_file.sln", properties={"MyProp1": "MyValue1",
-                                                                      "MyProp2": "MyValue2"})
-        self.assertIn('/p:MyProp1="MyValue1"', command)
-        self.assertIn('/p:MyProp2="MyValue2"', command)
+        command = msbuild.get_command("project_should_flags_test_file.sln")
+        self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
+
+    @parameterized.expand([("v141",),
+                           ("v140",),
+                           ("v120",),
+                           ("v110",),
+                           ("v100",),
+                           ("v90",),
+                           ("v80",)])
+    def explicit_toolset_test(self, expected_toolset):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("project_should_flags_test_file.sln", toolset=expected_toolset)
+        self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
+
+    @parameterized.expand([("16", "v141_xp"),
+                           ("15", "v141_xp"),
+                           ("14", "v140_xp"),
+                           ("12", "v120_xp"),
+                           ("11", "v110_xp")])
+    def custom_toolset_test(self, compiler_version, expected_toolset):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": compiler_version,
+                                 "compiler.toolset": expected_toolset,
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("project_should_flags_test_file.sln")
+        self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
+
+    def definitions_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={'_WIN32_WINNT': "0x0501"})
+
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_WIN32_WINNT=0x0501;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
+
+    def definitions_no_value_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64",
+                                 "compiler.runtime": "MDd"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        template = msbuild._get_props_file_contents(definitions={'_DEBUG': None})
+
+        self.assertIn("<PreprocessorDefinitions>"
+                      "_DEBUG;"
+                      "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
 
     def verbosity_default_test(self):
         settings = MockSettings({"build_type": "Debug",
@@ -173,3 +235,20 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
         self.assertIn('/verbosity:quiet', command)
+
+    def properties_injection_test(self):
+        # https://github.com/conan-io/conan/issues/4471
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "arch": "x86_64"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("dummy.sln", props_file_path="conan_build.props")
+
+        match = re.search('/p:ForceImportBeforeCppTargets="(.+?)"', command)
+        self.assertTrue(
+            match, "Haven't been able to find the ForceImportBeforeCppTargets")
+
+        props_file_path = match.group(1)
+        self.assertTrue(os.path.isabs(props_file_path))
+        self.assertEquals(os.path.basename(props_file_path), "conan_build.props")

@@ -4,7 +4,7 @@ import unittest
 from collections import OrderedDict
 
 from conans.client import tools
-from conans.client.cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import CONANFILE_TXT
 from conans.test.utils.test_files import temp_folder
