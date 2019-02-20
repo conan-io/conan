@@ -189,6 +189,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
+    comments = []
     for i_body, item in enumerate(tree.body):
         if isinstance(item, ast.ClassDef):
             statements = item.body
@@ -207,11 +208,15 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                             next_line = stmt.lineno
                         replace = [line for line in lines[(stmt.lineno-1):next_line]]
                         to_replace.append("".join(replace).lstrip())
+                        comments = [line.strip('\n') for line in replace
+                                    if line.strip().startswith("#") or not line.strip()]
                         break
     if len(to_replace) != 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
+    if comments:
+        new_text += '\n'.join(comments) + "\n"
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
 

@@ -40,7 +40,7 @@ class LibConan(ConanFile):
         finally:
             shutil.rmtree(self._tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
-    def _get_conanfile(self, header='', author="jgsogo", encoding="ascii", footer=''):
+    def _get_conanfile(self, header='', author="jgsogo", encoding="ascii", footer=""):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
         with codecs.open(tmp, 'w', encoding=encoding) as f:
             f.write(self.conanfile.format(header=header, author=author, footer=footer))
@@ -57,7 +57,7 @@ class LibConan(ConanFile):
         try:
             ast.parse(content)
         except Exception as e:
-            self.fail("Invalid python file: {}".format(e))
+            self.fail("Invalid python file: {}\n\n{}".format(e, content))
 
     def test_base(self):
         conanfile = self._get_conanfile()
@@ -84,6 +84,13 @@ class LibConan(ConanFile):
     def test_shebang_several(self):
         header = "#!/usr/bin/env python2\n# -*- coding: utf-8 -*-\n# -*- coding: utf-8 -*-"
         conanfile = self._get_conanfile(author=six.u("¡Ñandú!"), header=header, encoding='utf-8')
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+
+    def test_multiline_statement(self):
+        """ Statement with several lines below the scm attribute """
+        statement = "\n    long_list = 'a', 'b', 'c' \\\n        'd', 'e'"
+        conanfile = self._get_conanfile(footer=statement)
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
 
