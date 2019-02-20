@@ -262,7 +262,6 @@ class ArtifactoryServerStore(object):
         if not the_json["revisions"]:
             raise RecipeNotFoundException(ref)
         tmp = [_RevisionEntry(i["revision"], i["time"]) for i in the_json["revisions"]]
-        tmp.reverse()
         return tmp
 
     def get_package_revisions(self, pref):
@@ -274,16 +273,15 @@ class ArtifactoryServerStore(object):
         if not the_json["revisions"]:
             raise PackageNotFoundException(pref)
         tmp = [_RevisionEntry(i["revision"], i["time"]) for i in the_json["revisions"]]
-        tmp.reverse()
         return tmp
 
     def get_last_revision(self, ref):
         revisions = self.get_recipe_revisions(ref)
-        return revisions[-1]
+        return revisions[0]
 
     def get_last_package_revision(self, ref):
         revisions = self.get_package_revisions(ref)
-        return revisions[-1]
+        return revisions[0]
 
     def package_exists(self, pref):
         try:
