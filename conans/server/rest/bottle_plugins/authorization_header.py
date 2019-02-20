@@ -30,7 +30,7 @@ class AuthorizationHeader(object):
 
     def apply(self, callback, context):
         """ Test if the original callback accepts a 'self.keyword' keyword. """
-        args = inspect.getargspec(context.callback)[0]
+        args = inspect.getfullargspec(context.callback)[0]
         logger.debug("Call: %s" % str(callback))
         if self.keyword not in args:
             return callback
