@@ -1,30 +1,23 @@
+import os
 import unittest
 
-from conans.client.conf import default_settings_yml
-from conans.client.graph.graph_builder import DepsGraphBuilder
+
+from conans.client.cache.cache import ClientCache
+from conans.client.graph.graph_manager import GraphManager
+from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.loader import ConanFileLoader
+from conans.client.recorder.action_recorder import ActionRecorder
+from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
-from conans.model.settings import Settings
-from conans.model.values import Values
-from conans.paths.simple_paths import SimplePaths
-from conans.test.unittests.model.fake_retriever import Retriever
+from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockSearchRemote
 from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import TestBufferConanOutput,\
-    test_processed_profile
-from conans.model.ref import ConanFileReference
-from conans.client.graph.graph_manager import GraphManager
-from conans.client.cache.cache import ClientCache
 from conans.test.utils.test_files import temp_folder
-import os
-from conans.client.graph.proxy import ConanProxy
-from conans.client.recorder.action_recorder import ActionRecorder
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
-from conans.model.graph_info import GraphInfo
-from platform import node
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -166,23 +159,19 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(len(gtest.dependants), 1)
 
         mingw_gtest = gtest.dependencies[0].dst
-        print gtest, id(mingw_gtest)
         self.assertEqual(mingw_gtest.conanfile.name, "mingw")
         self.assertEqual(len(mingw_gtest.dependencies), 0)
         self.assertEqual(len(mingw_gtest.dependants), 1)
 
         mingw_lib = lib.dependencies[1].dst
-        print lib, id(mingw_lib)
         self.assertEqual(mingw_lib.conanfile.name, "mingw")
         self.assertEqual(len(mingw_lib.dependencies), 0)
         self.assertEqual(len(mingw_lib.dependants), 1)
 
         mingw_hello = hello.dependencies[1].dst
-        print hello, id(mingw_hello)
         self.assertEqual(mingw_hello.conanfile.name, "mingw")
         self.assertEqual(len(mingw_hello.dependencies), 0)
         self.assertEqual(len(mingw_hello.dependants), 1)
         self.assertNotEqual(id(mingw_hello), id(mingw_lib))
         self.assertNotEqual(id(mingw_hello), id(mingw_gtest))
         self.assertNotEqual(id(mingw_lib), id(mingw_gtest))
-
