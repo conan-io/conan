@@ -136,10 +136,6 @@ class CmdUpload(object):
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
 
-        # Do the job
-        for remote, refs in refs_by_remote.items():
-            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
-            for (ref, conanfile) in refs:
                 package_layout = self._cache.package_layout(ref)
                 if all_packages:
                     packages_ids = package_layout.conan_packages()
