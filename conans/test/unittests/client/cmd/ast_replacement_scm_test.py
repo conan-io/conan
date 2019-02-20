@@ -29,6 +29,8 @@ class LibConan(ConanFile):
     scm = {{"type": "git",
            "url": "auto",
            "revision": "auto"}}
+           
+    # Some comment
     """)
 
     def run(self, *args, **kwargs):
