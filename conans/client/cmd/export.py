@@ -205,8 +205,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                 next_line = statements[i+1].lineno - 1
                         except IndexError:
                             next_line = stmt.lineno
-                        replace = [line for line in lines[(stmt.lineno-1):next_line]
-                                   if line.strip()]
+                        replace = [line for line in lines[(stmt.lineno-1):next_line]]
                         to_replace.append("".join(replace).lstrip())
                         break
     if len(to_replace) != 1:

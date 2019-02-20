@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import ast
 import codecs
 import os
 import shutil
@@ -29,8 +30,7 @@ class LibConan(ConanFile):
     scm = {{"type": "git",
            "url": "auto",
            "revision": "auto"}}
-           
-    # Some comment
+{footer}
     """)
 
     def run(self, *args, **kwargs):
@@ -40,10 +40,10 @@ class LibConan(ConanFile):
         finally:
             shutil.rmtree(self._tmp_folder, ignore_errors=False, onerror=try_remove_readonly)
 
-    def _get_conanfile(self, header='', author="jgsogo", encoding="ascii"):
+    def _get_conanfile(self, header='', author="jgsogo", encoding="ascii", footer=''):
         tmp = os.path.join(self._tmp_folder, str(uuid.uuid4()))
         with codecs.open(tmp, 'w', encoding=encoding) as f:
-            f.write(self.conanfile.format(header=header, author=author))
+            f.write(self.conanfile.format(header=header, author=author, footer=footer))
         return tmp
 
     def _check_result(self, conanfile):
@@ -53,6 +53,11 @@ class LibConan(ConanFile):
         self.assertEqual(content.count(self.scm_data['revision']), 1)
         self.assertIn(self.scm_data['url'], content)
         self.assertIn(self.scm_data['revision'], content)
+
+        try:
+            ast.parse(content)
+        except Exception as e:
+            self.fail("Invalid python file: {}".format(e))
 
     def test_base(self):
         conanfile = self._get_conanfile()
@@ -81,3 +86,54 @@ class LibConan(ConanFile):
         conanfile = self._get_conanfile(author=six.u("¡Ñandú!"), header=header, encoding='utf-8')
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
+
+    # Add comments below the SCM
+    def test_comment_file_level(self):
+        comment = "# This is a comment, file level"
+        conanfile = self._get_conanfile(footer=comment)
+        self.assertIn(comment, load(conanfile))
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+        self.assertIn(comment, load(conanfile))
+
+    def test_comment_class_level(self):
+        comment = "    # This is a comment, file level"
+        conanfile = self._get_conanfile(footer=comment)
+        self.assertIn(comment, load(conanfile))
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+        self.assertIn(comment, load(conanfile))
+
+    def test_two_comments(self):
+        comment = "    # line1\n    # line2"
+        conanfile = self._get_conanfile(footer=comment)
+        self.assertIn(comment, load(conanfile))
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+        self.assertIn(comment, load(conanfile))
+
+    def test_multiline_comment(self):
+        comment = '    """\n    line1\n    line2\n    """'
+        conanfile = self._get_conanfile(footer=comment)
+        self.assertIn(comment, load(conanfile))
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+        self.assertIn(comment, load(conanfile))
+
+    # Something below the comment
+    def test_comment_and_attribute(self):
+        comment = '    # line1\n    url=23'
+        conanfile = self._get_conanfile(footer=comment)
+        self.assertIn(comment, load(conanfile))
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+        self.assertIn(comment, load(conanfile))
+
+    def test_multiline_comment_and_attribute(self):
+        comment = '    """\n    line1\n    line2\n    """\n    url=23'
+        conanfile = self._get_conanfile(footer=comment)
+        self.assertIn(comment, load(conanfile))
+        _replace_scm_data_in_conanfile(conanfile, self.scm_data)
+        self._check_result(conanfile)
+        self.assertIn(comment, load(conanfile))
+
