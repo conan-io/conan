@@ -2,7 +2,6 @@ import os
 import unittest
 from collections import OrderedDict
 
-import patch
 import time
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
@@ -22,7 +21,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.server = TestServer()
         self.server2 = TestServer()
         self.servers = OrderedDict([("default", self.server),
-                               ("remote2", self.server2)])
+                                    ("remote2", self.server2)])
         self.c_v2 = TurboTestClient(revisions_enabled=True, servers=self.servers)
         self.c_v1 = TurboTestClient(revisions_enabled=False, servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")

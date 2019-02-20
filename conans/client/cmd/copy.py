@@ -3,23 +3,22 @@ import shutil
 
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import rmdir, save
+from conans.util.files import rmdir
 
 
-def _prepare_sources(cache, reference, remote_manager, loader):
-    conan_file_path = cache.conanfile(reference)
+def _prepare_sources(cache, ref, remote_manager, loader):
+    conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
-    complete_recipe_sources(remote_manager, cache, conanfile, reference)
+    complete_recipe_sources(remote_manager, cache, conanfile, ref)
     return conanfile.short_paths
 
 
-def _get_package_ids(cache, reference, package_ids):
+def _get_package_ids(cache, ref, package_ids):
     if not package_ids:
         return []
     if package_ids is True:
-        packages = cache.packages(reference)
+        packages = cache.packages(ref)
         if os.path.exists(packages):
             package_ids = os.listdir(packages)
         else:
@@ -31,6 +30,10 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
+    # It is important to get the revision early, so "complete_recipe_sources" can
+    # get the right revision sources, not latest
+    src_metadata = cache.package_layout(ref).load_metadata()
+    ref = ref.copy_with_rev(src_metadata.recipe.revision)
     short_paths = _prepare_sources(cache, ref, remote_manager, loader)
     package_ids = _get_package_ids(cache, ref, package_ids)
     package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
