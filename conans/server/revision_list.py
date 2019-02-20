@@ -61,7 +61,7 @@ class RevisionList(object):
         return self._data[tmp].time
 
     def as_list(self):
-        return reversed(self._data)
+        return list(reversed(self._data))
 
     def remove_revision(self, revision_id):
         index = self._find_revision_index(revision_id)

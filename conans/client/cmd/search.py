@@ -92,7 +92,8 @@ class Search(object):
                     packages_props = self._remote_manager.search_packages(remote, ref, query)
                     if packages_props:
                         ordered_packages = OrderedDict(sorted(packages_props.items()))
-                        manifest = self._remote_manager.get_recipe_manifest(ref, remote)
+                        manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
+
                         recipe_hash = manifest.summary_hash
 
                         if outdated and recipe_hash:
@@ -103,13 +104,14 @@ class Search(object):
                     continue
             return references
 
-        return self._search_packages_in(self, 'all', ref, query, outdated)
+        return self._search_packages_in('all', ref, query, outdated)
 
     def _search_packages_in(self, remote_name, ref=None, query=None, outdated=False):
         remote = self._registry.remotes.get(remote_name)
         packages_props = self._remote_manager.search_packages(remote, ref, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
-        manifest = self._remote_manager.get_recipe_manifest(ref, remote)
+        manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
+
         recipe_hash = manifest.summary_hash
 
         if outdated and recipe_hash:

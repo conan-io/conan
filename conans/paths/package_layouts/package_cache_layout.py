@@ -2,10 +2,12 @@
 
 import os
 import platform
-import shutil
 from contextlib import contextmanager
 
+from conans.errors import NotFoundException
+from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
+from conans.model.manifest import discarded_file
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
@@ -104,25 +106,26 @@ class PackageCacheLayout(object):
 
     def recipe_exists(self):
         return os.path.exists(self.export()) and \
-               (not self._ref.revision or self.recipe_revision()[0] == self._ref.revision)
+               (not self._ref.revision or self.recipe_revision() == self._ref.revision)
 
     def package_exists(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         return (self.recipe_exists() and
                 os.path.exists(self.package(pref)) and
-                (not pref.revision or self.package_revision(pref)[0] == pref.revision))
+                (not pref.revision or self.package_revision(pref) == pref.revision))
 
     def recipe_revision(self):
         metadata = self.load_metadata()
-        return metadata.recipe.revision, metadata.recipe.time
+        return metadata.recipe.revision
 
     def package_revision(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref.copy_clear_rev() == self._ref.copy_clear_rev()
         metadata = self.load_metadata()
-        tm = metadata.packages[pref.id].time if metadata.packages[pref.id].time else None
-        return metadata.packages[pref.id].revision, tm
+        if pref.id not in metadata.packages:
+            raise PackageNotFoundException(pref)
+        return metadata.packages[pref.id].revision
 
     def conan_builds(self):
         builds_dir = self.builds()
@@ -144,14 +147,17 @@ class PackageCacheLayout(object):
 
     # Metadata
     def load_metadata(self):
-        text = load(self.package_metadata())
+        try:
+            text = load(self.package_metadata())
+        except IOError:
+            raise RecipeNotFoundException(self._ref)
         return PackageMetadata.loads(text)
 
     @contextmanager
     def update_metadata(self):
         try:
             metadata = self.load_metadata()
-        except IOError:
+        except RecipeNotFoundException:
             metadata = PackageMetadata()
         yield metadata
         save(self.package_metadata(), metadata.dumps())
@@ -159,8 +165,11 @@ class PackageCacheLayout(object):
     # Revisions
     def package_summary_hash(self, pref):
         package_folder = self.package(pref)
-        readed_manifest = FileTreeManifest.load(package_folder)
-        return readed_manifest.summary_hash
+        try:
+            read_manifest = FileTreeManifest.load(package_folder)
+        except IOError:
+            raise PackageNotFoundException(pref)
+        return read_manifest.summary_hash
 
     # Locks
     def conanfile_read_lock(self, output):
@@ -187,3 +196,28 @@ class PackageCacheLayout(object):
         conan_folder = self.conan()
         Lock.clean(conan_folder)
         rmdir(os.path.join(conan_folder, "locks"))
+
+    # Raw access to file
+    def get_path(self, path, package_id=None):
+        """ Return the contents for the given `path` inside current layout, it can
+            be a single file or the list of files in a directory
+
+            :param package_id: will retrieve the contents from the package directory
+            :param path: path relative to the cache reference or package folder
+        """
+
+        assert not os.path.isabs(path)
+
+        if package_id is None:  # Get the file in the exported files
+            folder = self.export()
+        else:
+            pref = PackageReference(self._ref, package_id)
+            folder = self.package(pref)
+
+        abs_path = os.path.join(folder, path)
+        if not os.path.exists(abs_path):
+            raise NotFoundException("The specified path doesn't exist")
+        if os.path.isdir(abs_path):
+            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
+        else:
+            return load(abs_path)

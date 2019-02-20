@@ -1,11 +1,11 @@
-import argparse
 import inspect
 import json
 import os
 import sys
-from argparse import ArgumentError
 
+import argparse
 import six
+from argparse import ArgumentError
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -1056,8 +1056,7 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-                self._outputer.print_revisions(info["reference"], info["revisions"],
-                                               remote_name=args.remote)
+                self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
@@ -1354,7 +1353,8 @@ class Command(object):
                                  'conanfile if only a reference is specified and a conaninfo.txt '
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
-        parser.add_argument("-p", "--package", default=None, help='Package ID',
+        parser.add_argument("-p", "--package", default=None,
+                            help="Package ID [DEPRECATED: use full reference instead]",
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='Get from this specific remote')
@@ -1362,7 +1362,24 @@ class Command(object):
                             help='Do not decorate the text')
         args = parser.parse_args(*args)
 
-        ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote)
+        try:
+            pref = PackageReference.loads(args.reference, validate=True)
+            reference = pref.ref.full_repr()
+            package_id = pref.id
+        except ConanException:
+            reference = args.reference
+            package_id = args.package
+
+            if package_id:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan get [...] {}:{}`".format(reference, package_id))
+        else:
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
+
+        ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
         if isinstance(ret, list):
             self._outputer.print_dir_list(ret, path, args.raw)
         else:
@@ -1529,12 +1546,10 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())

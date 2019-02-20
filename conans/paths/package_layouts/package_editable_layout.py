@@ -57,3 +57,6 @@ class PackageEditableLayout(object):
 
     def package_metadata(self):
         raise ConanException("Package metadata is not available for editable packages")
+
+    def get_path(self, package_id=None, path=None):
+        raise ConanException("Operation not allowed on a package installed as editable")

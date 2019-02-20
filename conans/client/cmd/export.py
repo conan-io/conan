@@ -242,7 +242,6 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
                         " revision: {} ".format(revision))
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
-        metadata.recipe.time = None
 
 
 def _recreate_folders(destination_folder, destination_src_folder):

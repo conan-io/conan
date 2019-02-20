@@ -3,7 +3,7 @@ import re
 from collections import OrderedDict
 from fnmatch import translate
 
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, RecipeNotFoundException
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
@@ -87,7 +87,6 @@ def evaluate(prop_name, prop_value, conan_vars_info):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)
-    return False
 
 
 def search_recipes(cache, pattern=None, ignorecase=True):
@@ -136,8 +135,8 @@ def search_packages(package_layout, query):
     """
     if not os.path.exists(package_layout.conan()) or (
             package_layout.ref.revision and
-            package_layout.recipe_revision()[0] != package_layout.ref.revision):
-        raise NotFoundException("Recipe not found: %s" % package_layout.ref.full_repr())
+            package_layout.recipe_revision() != package_layout.ref.revision):
+        raise RecipeNotFoundException(package_layout.ref, print_rev=True)
     infos = _get_local_infos_min(package_layout)
     return filter_packages(query, infos)
 

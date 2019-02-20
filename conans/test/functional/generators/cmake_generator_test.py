@@ -52,16 +52,20 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("install . -p my_profile")
         client.run("build .")
 
-        self.assertIn('cmake -G "{}"'.format(generator), client.out)
-        self.assertTrue(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
+        if generator:
+            self.assertIn('cmake -G "{}"'.format(generator), client.out)
+            self.assertTrue(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
+        else:
+            self.assertNotIn("cmake -G", client.out)
+            self.assertFalse(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
 
     @unittest.skipUnless(tools.os_info.is_linux, "Compilation with real gcc needed")
     def test_cmake_default_generator_linux(self):
         self._check_build_generator("Linux", "Unix Makefiles")
 
-    @unittest.skipUnless(tools.os_info.is_windows, "MinGW is only supported on Windows")
+    @unittest.skipUnless(tools.os_info.is_windows, "Windows does not support default compiler")
     def test_cmake_default_generator_windows(self):
-        self._check_build_generator("Windows", "MinGW Makefiles")
+        self._check_build_generator("Windows", None)
 
     @unittest.skipUnless(tools.os_info.is_macos, "Compilation with real clang is needed")
     def test_cmake_default_generator_osx(self):

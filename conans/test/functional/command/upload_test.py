@@ -57,8 +57,7 @@ class UploadTest(unittest.TestCase):
         """
         client = TestClient(servers={"default": TestServer()})
         client.run("upload Pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: There is no local conanfile exported as Pkg/0.1@user/channel",
-                      client.user_io.out)
+        self.assertIn("Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
     def non_existing_package_error_test(self):
         """ Trying to upload a non-existing package must raise an Error
@@ -66,8 +65,7 @@ class UploadTest(unittest.TestCase):
         servers = {"default": TestServer()}
         client = TestClient(servers=servers)
         client.run("upload Pkg/0.1@user/channel -p hash1", assert_error=True)
-        self.assertIn("ERROR: There is no local conanfile exported as Pkg/0.1@user/channel",
-                      client.user_io.out)
+        self.assertIn("ERROR: Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
     def _client(self):
         if not hasattr(self, "_servers"):
@@ -92,9 +90,9 @@ class UploadTest(unittest.TestCase):
         client = self._client()
         client.save({"conanfile.py": conanfile_upload_query})
 
-        for os, arch in itertools.product(["Macos", "Linux", "Windows"],
-                                          ["armv8", "x86_64"]):
-            client.run("create . user/testing -s os=%s -s arch=%s" % (os, arch))
+        for _os, arch in itertools.product(["Macos", "Linux", "Windows"],
+                                           ["armv8", "x86_64"]):
+            client.run("create . user/testing -s os=%s -s arch=%s" % (_os, arch))
 
         # Check that the right number of packages are picked up by the queries
         client.run("upload Hello1/*@user/testing --confirm -q 'os=Windows or os=Macos'")
@@ -128,7 +126,7 @@ class UploadTest(unittest.TestCase):
 
         def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
-        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps',
+        with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
                         new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_sources.tgz", client.out)
@@ -156,7 +154,7 @@ class UploadTest(unittest.TestCase):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
-        with mock.patch('conans.client.remote_manager.gzopen_without_timestamps',
+        with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
                         new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
@@ -215,10 +213,15 @@ class UploadTest(unittest.TestCase):
                       client2.out)
 
         # first client tries to upload again
-        client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
-        self.assertIn("Remote recipe is newer than local recipe", client.user_io.out)
-        self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.user_io.out)
-        self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.user_io.out)
+        if not client.cache.config.revisions_enabled:
+            client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
+            self.assertIn("Remote recipe is newer than local recipe", client.user_io.out)
+            self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.user_io.out)
+            self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.user_io.out)
+        else:
+            # The client tries to upload exactly the same revision already uploaded, so no changes
+            client.run("upload Hello0/1.2.1@frodo/stable")
+            self.assertIn("Recipe is up to date, upload skipped", client.user_io.out)
 
     def upload_unmodified_recipe_test(self):
         client = self._client()
