@@ -14,7 +14,7 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 class LocalPackage(object):
     def __init__(self, base_folder, data, cache, ws_layout, ws_generators):
         self._base_folder = base_folder
-        self._conanfile_folder = data.get("folder")  # The folder with the conanfile
+        self._conanfile_folder = data.get("path")  # The folder with the conanfile
         layout = data.get("layout")
         if layout:
             self.layout = get_editable_abs_path(data.get("layout"), self._base_folder,
@@ -39,7 +39,7 @@ class Workspace(object):
     def generate(self, cwd, graph):
         editables = {node.ref: node.conanfile for node in graph.nodes
                      if node.recipe == RECIPE_EDITABLE}
-        if self._generator == "cmake":
+        if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
             for node in graph.ordered_iterate():
@@ -71,7 +71,7 @@ class Workspace(object):
 
     def __init__(self, path, cache):
         self._cache = cache
-        self._generator = None
+        self._ws_generator = None
         self._workspace_packages = OrderedDict()  # {reference: LocalPackage}
         self._base_folder = os.path.dirname(path)
         try:
@@ -96,12 +96,12 @@ class Workspace(object):
 
     def _loads(self, text):
         yml = yaml.safe_load(text)
-        self._generator = yml.pop("generator", None)
+        self._ws_generator = yml.pop("workspace_generator", None)
         yml.pop("name", None)
-        layout = yml.pop("layout", None)
-        if layout:
-            layout = get_editable_abs_path(layout, self._base_folder,
-                                           self._cache.conan_folder)
+        ws_layout = yml.pop("layout", None)
+        if ws_layout:
+            ws_layout = get_editable_abs_path(ws_layout, self._base_folder,
+                                              self._cache.conan_folder)
         generators = yml.pop("generators", None)
         if isinstance(generators, str):
             generators = [generators]
@@ -109,9 +109,11 @@ class Workspace(object):
                       for s in yml.pop("root", "").split(",") if s.strip()]
         if not self._root:
             raise ConanException("Conan workspace needs at least 1 root conanfile")
-        for package_name, data in yml.items():
+
+        editables = yml.pop("editables", None)
+        for package_name, data in editables.items():
             workspace_package = LocalPackage(self._base_folder, data,
-                                             self._cache, layout, generators)
+                                             self._cache, ws_layout, generators)
             package_name = ConanFileReference.loads(package_name)
             self._workspace_packages[package_name] = workspace_package
         for package_name in self._root:

@@ -92,9 +92,6 @@ class EditableLayout(object):
         d = self._data
         data = d.get(str(ref)) or d.get(None) or {}
 
-        if data:  # Invalidate previously existing dirs
-            for info_dir in self.cpp_info_dirs:
-                setattr(cpp_info, info_dir, [])
         try:
             for key, items in data.items():
                 setattr(cpp_info, key, [self._work_on_item(item, settings, options)

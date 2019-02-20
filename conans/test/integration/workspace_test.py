@@ -101,12 +101,13 @@ class WorkspaceTest(unittest.TestCase):
         client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-            HelloC/0.1@lasote/stable:
-                folder: C
-            HelloA/0.1@lasote/stable:
-                folder: A
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)
@@ -145,12 +146,13 @@ class WorkspaceTest(unittest.TestCase):
         client.save(a, path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-            HelloC/0.1@lasote/stable:
-                folder: C
-            HelloA/0.1@lasote/stable:
-                folder: A
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)
@@ -216,14 +218,15 @@ class WorkspaceTest(unittest.TestCase):
         client.save(a, path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-            HelloC/0.1@lasote/stable:
-                folder: C
-            HelloA/0.1@lasote/stable:
-                folder: A
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
             layout: layout
-            generator: cmake
+            workspace_generator: cmake
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
@@ -334,14 +337,15 @@ class WorkspaceTest(unittest.TestCase):
         client.save(a, path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-            HelloC/0.1@lasote/stable:
-                folder: C
-            HelloA/0.1@lasote/stable:
-                folder: A
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
             layout: layout
-            generator: cmake
+            workspace_generator: cmake
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
@@ -452,12 +456,13 @@ class Pkg(ConanFile):
         client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-            HelloC/0.1@lasote/stable:
-                folder: C
-            HelloA/0.1@lasote/stable:
-                folder: A
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)
@@ -505,10 +510,11 @@ class Pkg(ConanFile):
         client.save(files("A"), path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloA/0.1@lasote/stable:
-                folder: A
-            Tool/0.1@user/testing:
-                folder: Tool
+            editables:
+                HelloA/0.1@lasote/stable:
+                    path: A
+                Tool/0.1@user/testing:
+                    path: Tool
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)
@@ -539,15 +545,16 @@ class Pkg(ConanFile):
         client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-                layout: B/layoutB
-            HelloC/0.1@lasote/stable:
-                folder: C
-                layout: C/layoutC
-            HelloA/0.1@lasote/stable:
-                folder: A
-                layout: A/layoutA
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                    layout: B/layoutB
+                HelloC/0.1@lasote/stable:
+                    path: C
+                    layout: C/layoutC
+                HelloA/0.1@lasote/stable:
+                    path: A
+                    layout: A/layoutA
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
@@ -582,17 +589,18 @@ class Pkg(ConanFile):
         client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
 
         project = dedent("""
-            HelloB/0.1@lasote/stable:
-                folder: B
-                generators: [make, qmake]
-            HelloC/0.1@lasote/stable:
-                folder: C
-            HelloA/0.1@lasote/stable:
-                folder: A
-                generators: visual_studio
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                    generators: [make, qmake]
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
+                    generators: visual_studio
             layout: layout
             generators: cmake
-            generator: cmake
+            workspace_generator: cmake
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
