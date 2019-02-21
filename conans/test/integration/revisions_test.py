@@ -1170,6 +1170,20 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
                  assert_error=True)
         self.assertIn("The remote doesn't support revisions", c_v1.out)
 
+    def search_revisions_regular_results_test(self):
+        """If I upload several revisions to a server, we can list the times"""
+        server = TestServer()
+        servers = OrderedDict([("default", server)])
+        c_v2 = TurboTestClient(revisions_enabled=True, servers=servers)
+        pref = c_v2.create(self.ref)
+        c_v2.upload_all(self.ref)
+        pref_rev = pref.copy_with_revs(pref.ref.revision, None)
+
+        c_v2.run("search {} --revisions -r default".format(pref_rev.full_repr()))
+        # I don't want to mock here because I want to run this test against Artifactory
+        self.assertIn("83c38d3b4e5f1b8450434436eec31b00 (", c_v2.out)
+        self.assertIn(" UTC)", c_v2.out)
+
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class UploadPackagesWithRevisions(unittest.TestCase):
