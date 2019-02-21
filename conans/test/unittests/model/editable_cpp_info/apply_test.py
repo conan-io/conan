@@ -48,8 +48,8 @@ class ApplyEditableLayoutTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
-        # The default defined by package_info() is removed
-        self.assertListEqual(cpp_info.bindirs, [])
+        # The default defined by package_info() is respected
+        self.assertListEqual(cpp_info.bindirs, ["bin"])
 
     def test_require_namespace(self):
         content = '\n\n'.join([
@@ -63,8 +63,8 @@ class ApplyEditableLayoutTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['libA/dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['libA/dirs/resdirs'])
-        # The default defined by package_info() is removed
-        self.assertListEqual(cpp_info.bindirs, [])
+        # The default defined by package_info() is respected
+        self.assertListEqual(cpp_info.bindirs, ['bin'])
 
         cpp_info = CppInfo(None)
         other = ConanFileReference.loads("other/0.1@user/channel")
@@ -72,5 +72,5 @@ class ApplyEditableLayoutTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
-        # The default defined by package_info() is removed
-        self.assertListEqual(cpp_info.bindirs, [])
+        # The default defined by package_info() is respected
+        self.assertListEqual(cpp_info.bindirs, ['bin'])
