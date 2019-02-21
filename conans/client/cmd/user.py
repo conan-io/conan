@@ -6,7 +6,7 @@ def users_list(localdb_file, remotes):
     if not remotes:
         raise ConanException("No remotes defined")
 
-    localdb = LocalDB(localdb_file)
+    localdb = LocalDB.create(localdb_file)
     remotes_info = []
     for remote in remotes:
         user_info = {}
@@ -19,12 +19,11 @@ def users_list(localdb_file, remotes):
 
 
 def users_clean(localdb_file):
-    localdb = LocalDB(localdb_file)
-    localdb.init(clean=True)
+    LocalDB.create(localdb_file, clean=True)
 
 
 def user_set(localdb_file, user, remote_name=None):
-    localdb = LocalDB(localdb_file)
+    localdb = LocalDB.create(localdb_file)
 
     if user.lower() == "none":
         user = None
