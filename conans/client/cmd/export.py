@@ -204,6 +204,9 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                     next_line = tree.body[i_body+1].lineno - 1
                             else:
                                 next_line = statements[i+1].lineno - 1
+                                next_line_content = lines[next_line].strip()
+                                if next_line_content.endswith('"""') or next_line_content.endswith("'''"):
+                                    next_line += 1
                         except IndexError:
                             next_line = stmt.lineno
                         replace = [line for line in lines[(stmt.lineno-1):next_line]]
