@@ -21,13 +21,18 @@ def _get_profile_keys(key):
 
 
 def cmd_profile_list(cache_profiles_path, output):
-    folder = cache_profiles_path
-    if os.path.exists(folder):
-        return [name for name in os.listdir(folder)
-                if not os.path.isdir(os.path.join(folder, name))]
-    else:
+    profiles = []
+    if os.path.exists(cache_profiles_path):
+        for current_directory, dirs, files in os.walk(cache_profiles_path, followlinks=True):
+            for filename in files:
+                relative_to_profile_dir = os.path.relpath(current_directory, cache_profiles_path)
+                rel_path = os.path.relpath(os.path.join(current_directory, filename), cache_profiles_path)
+                profiles.append(rel_path)
+
+    if len(profiles) == 0:
         output.info("No profiles defined")
-        return []
+    profiles.sort()
+    return profiles
 
 
 def cmd_profile_create(profile_name, cache_profiles_path, output, detect=False):

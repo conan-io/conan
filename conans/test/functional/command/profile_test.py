@@ -29,14 +29,24 @@ class ProfileTest(unittest.TestCase):
 
     def list_test(self):
         client = TestClient()
-        create_profile(client.cache.profiles_path, "profile3")
-        create_profile(client.cache.profiles_path, "profile1")
-        create_profile(client.cache.profiles_path, "profile2")
+        profiles = ["profile1", "profile2", "profile3",
+                    "nested" + os.path.sep + "profile4",
+                    "nested" + os.path.sep + "two" + os.path.sep + "profile5",
+                    "nested" + os.path.sep + "profile6",
+                    "symlink_me" + os.path.sep + "profile7"]
+        profiles.sort()
+        for profile in profiles:
+            create_profile(client.cache.profiles_path, profile)
+
+        os.symlink(os.path.join(client.cache.profiles_path, 'symlink_me'), os.path.join(client.cache.profiles_path, 'link'))
+        # profile7 will be shown twice because it is symlinked.
+        profiles.append("link" + os.path.sep + "profile7")
+
         # Make sure local folder doesn't interact with profiles
         os.mkdir(os.path.join(client.current_folder, "profile3"))
         client.run("profile list")
-        self.assertEqual(list(["profile1", "profile2", "profile3"]),
-                         list(str(client.user_io.out).splitlines()))
+        profiles.sort()
+        self.assertEqual(profiles, list(str(client.user_io.out).splitlines()))
 
     def show_test(self):
         client = TestClient()
