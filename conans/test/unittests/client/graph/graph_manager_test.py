@@ -18,6 +18,8 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
+from collections import OrderedDict
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -71,6 +73,68 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(node.conanfile.name, "Say")
         self.assertEqual(len(node.dependencies), 0)
         self.assertEqual(len(node.dependants), 0)
+
+    def test_transitive(self):
+        libb_ref = "libb/0.1@user/testing"
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1"))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=[libb_ref]))
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        self.assertEqual(app.conanfile.name, "app")
+        self.assertEqual(len(app.dependencies), 1)
+        self.assertEqual(len(app.dependants), 0)
+        self.assertEqual(app.recipe, RECIPE_CONSUMER)
+
+        libb = app.dependencies[0].dst
+        self.assertEqual(libb.conanfile.name, "libb")
+        self.assertEqual(len(libb.dependencies), 0)
+        self.assertEqual(len(libb.dependants), 1)
+        self.assertEqual(libb.inverse_neighbors(), [app])
+        self.assertEqual(libb.ancestors, set([app.ref.name]))
+        self.assertEqual(libb.recipe, RECIPE_INCACHE)
+
+        self.assertEqual(app.public_closure, OrderedDict([("app", app), ("libb", libb)]))
+        self.assertEqual(libb.public_closure, OrderedDict([("libb", libb)]))
+        self.assertEqual(app.public_deps, {"app": app, "libb": libb})
+        self.assertEqual(libb.public_deps, app.public_deps)
+
+    def test_transitive_two_levels(self):
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        self.assertEqual(app.conanfile.name, "app")
+        self.assertEqual(len(app.dependencies), 1)
+        self.assertEqual(len(app.dependants), 0)
+
+        libb = app.dependencies[0].dst
+        self.assertEqual(libb.conanfile.name, "libb")
+        self.assertEqual(len(libb.dependencies), 1)
+        self.assertEqual(len(libb.dependants), 1)
+        self.assertEqual(libb.inverse_neighbors(), [app])
+        self.assertEqual(libb.ancestors, set([app.name]))
+
+        liba = libb.dependencies[0].dst
+        self.assertEqual(liba.conanfile.name, "liba")
+        self.assertEqual(len(liba.dependencies), 0)
+        self.assertEqual(len(liba.dependants), 1)
+        self.assertEqual(liba.inverse_neighbors(), [libb])
+        self.assertEqual(liba.ancestors, set([libb.name, app.name]))
+
+        # Closures and public_deps
+        app_closure = OrderedDict([(app.name, app), (libb.name, libb), (liba.name, liba)])
+        public_deps = dict(app_closure)
+        self.assertEqual(app.public_closure, app_closure)
+        self.assertEqual(app.public_deps, public_deps)
+        self.assertEqual(libb.public_closure, OrderedDict([(libb.name, libb), (liba.name, liba)]))
+        self.assertEqual(libb.public_deps, public_deps)
+        self.assertEqual(liba.public_closure, OrderedDict([(liba.name, liba)]))
+        self.assertEqual(liba.public_deps, public_deps)
 
     def test_basic_build_require_recipe(self):
         self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1"))

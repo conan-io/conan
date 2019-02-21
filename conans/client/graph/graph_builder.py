@@ -71,6 +71,7 @@ class DepsGraphBuilder(object):
             self._handle_require(name, node, require, dep_graph, check_updates, update,
                                  remote_name, processed_profile, new_reqs, new_options)
 
+        # This is to make sure that build_requires have precedence over the normal requires
         node.public_closure = OrderedDict([(k, v) for k, v in node.public_closure.items()
                                            if k not in previous_closure])
         node.public_closure.update(previous_closure)
