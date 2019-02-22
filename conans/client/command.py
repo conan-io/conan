@@ -1432,7 +1432,7 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
-        add_parser.add_argument('target', help='Path to the package folder in the user workspace')
+        add_parser.add_argument('path', help='Path to the package folder in the user workspace')
         add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
         add_parser.add_argument("-l", "--layout",
                                 help='Relative or absolute path to a file containing the layout.'
@@ -1449,9 +1449,9 @@ class Command(object):
         self._warn_python2()
 
         if args.subcommand == "add":
-            self._conan.editable_add(args.target, args.reference, args.layout, cwd=os.getcwd())
+            self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
             self._outputer.writeln("Reference '{}' linked to directory "
-                                   "'{}'".format(args.reference, os.path.dirname(args.target)))
+                                   "'{}'".format(args.reference, os.path.dirname(args.path)))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)
             if ret:
