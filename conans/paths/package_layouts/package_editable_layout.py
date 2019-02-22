@@ -30,7 +30,7 @@ class PackageEditableLayout(object):
     def editable_cpp_info(self):
         if self._layout_file:
             if os.path.isfile(self._layout_file):
-                return EditableCppInfo.load(self._layout_file)
+                return EditableCppInfo(self._layout_file)
             else:
                 raise ConanException("Layout file not found: %s" % self._layout_file)
 

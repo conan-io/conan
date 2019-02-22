@@ -166,7 +166,7 @@ class LayoutTest(unittest.TestCase):
             """)
         layout_repo = textwrap.dedent("""
             [includedirs]
-            include_{settings.build_type}
+            include_{{settings.build_type}}
             """)
 
         client.save({"conanfile.py": conanfile,
@@ -179,8 +179,9 @@ class LayoutTest(unittest.TestCase):
             """)
         client2.save({"conanfile.txt": consumer})
         client2.run("install . -g cmake -s build_type=Debug", assert_error=True)
-        self.assertIn("ERROR: Error applying layout in 'mytool/0.1@user/testing': "
-                      "'settings.build_type' doesn't exist", client2.out)
+        self.assertIn("ERROR: Error parsing layout file '{}' (for reference "
+                      "'mytool/0.1@user/testing')\n'settings.build_type' doesn't exist".format(
+            os.path.join(client.current_folder, 'layout')), client2.out)
 
         # Now add settings to conanfile
         client.save({"conanfile.py": conanfile.replace("pass", 'settings = "build_type"')})
