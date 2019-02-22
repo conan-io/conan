@@ -473,6 +473,9 @@ class ConanAPIV1(object):
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
 
+        self._user_io.out.info("Configuration:")
+        self._user_io.out.writeln(graph_info.profile.dumps())
+
         self._cache.editable_packages.override(workspace.get_editable_dict())
 
         recorder = ActionRecorder()
