@@ -1,17 +1,17 @@
 # coding=utf-8
 
-import textwrap
 import os
 import shutil
+import textwrap
 import unittest
 
-from conans.errors import ConanException
+from conans.client.conf import default_settings_yml
 from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.options import Options, PackageOptions
+from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.client.conf import default_settings_yml
-from conans.model.settings import Settings
-from conans.model.options import Options, OptionsValues, PackageOptions
+
 
 class ParseTest(unittest.TestCase):
     def setUp(self):

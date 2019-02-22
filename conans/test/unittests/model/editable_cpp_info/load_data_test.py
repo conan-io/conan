@@ -1,8 +1,8 @@
 # coding=utf-8
 
-import textwrap
 import os
 import shutil
+import textwrap
 import unittest
 
 from conans.errors import ConanException

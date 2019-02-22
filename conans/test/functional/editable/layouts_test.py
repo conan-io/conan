@@ -5,10 +5,10 @@ import re
 import textwrap
 import unittest
 
-from conans.test.utils.tools import TestClient
-from conans.util.files import load, save_files, save
 from conans.model.editable_cpp_info import LAYOUTS_FOLDER
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
+from conans.util.files import load, save_files, save
 
 
 class LayoutTest(unittest.TestCase):

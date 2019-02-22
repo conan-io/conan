@@ -1,14 +1,14 @@
 # coding=utf-8
 import os
 from collections import OrderedDict
-import tempfile
 from io import StringIO
+
 from six.moves import configparser
-from conans.util.files import load
-from conans.util.jinja import render_layout_file
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
+from conans.util.files import load
+from conans.util.templates import render_layout_file
 
 DEFAULT_LAYOUT_FILE = "default"
 LAYOUTS_FOLDER = 'layouts'
