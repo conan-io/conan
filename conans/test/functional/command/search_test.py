@@ -1359,6 +1359,12 @@ class Test(ConanFile):
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
 
+    def test_exception_client_without_revs(self):
+        client = TestClient()
+        client.run("search whatever --revisions", assert_error=True)
+        self.assertIn("ERROR: This client doesn't support revisions", client.out)
+
+
 class SearchRemoteAllTestCase(unittest.TestCase):
     def setUp(self):
         """ Create a remote called 'all' with some recipe in it """
