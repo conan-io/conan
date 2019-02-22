@@ -259,6 +259,7 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
         with client.chdir("build_debug"):
             client.run("workspace install ../conanws.yml -s build_type=Debug")
+        client.init_dynamic_vars()
 
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
@@ -375,6 +376,7 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
             client.run("workspace install ../conanws.yml -s build_type=Debug")
 
+        client.init_dynamic_vars()
         generator = "Visual Studio 15 Win64"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=build)
         client.runner('cmake --build . --config Release', cwd=build)
