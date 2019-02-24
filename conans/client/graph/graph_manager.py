@@ -234,6 +234,15 @@ class GraphManager(object):
                                      build_mode, remote_name,
                                      profile_build_requires, recorder, workspace, processed_profile)
 
+        # Sort of closures, for linking order and exact BinaryID computation
+        inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
+        for node in graph.nodes:
+            closure = node.public_closure
+            closure.pop(node.name)
+            node_order = closure.values()
+            # List sort is stable, will keep the original order of the closure, but prioritize levels
+            node_order.sort(key=lambda n: inverse_levels[n])
+            node.public_closure = node_order
         return graph
 
 

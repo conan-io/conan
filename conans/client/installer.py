@@ -273,7 +273,6 @@ class BinaryInstaller(object):
         self._build(nodes_by_level, deps_graph, keep_build, root_node, graph_info)
 
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node, graph_info):
-        inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
 
         processed_package_refs = set()
         for level in nodes_by_level:
@@ -292,17 +291,17 @@ class BinaryInstaller(object):
 
                 workspace_package = self._workspace[node.ref] if self._workspace else None
                 if workspace_package:
-                    self._handle_node_workspace(node, workspace_package, inverse_levels, deps_graph,
+                    self._handle_node_workspace(node, workspace_package, deps_graph,
                                                 graph_info)
                 else:
-                    self._propagate_info(node, inverse_levels)
+                    self._propagate_info(node)
                     if node.binary == BINARY_SKIP:  # Privates not necessary
                         continue
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, inverse_levels)
+        self._propagate_info(root_node,)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
@@ -362,8 +361,7 @@ class BinaryInstaller(object):
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(pref, conan_file.cpp_info)
 
-    def _handle_node_workspace(self, node, workspace_package, inverse_levels, deps_graph,
-                               graph_info):
+    def _handle_node_workspace(self, node, workspace_package, deps_graph, graph_info):
         conan_file = node.conanfile
         output = ScopedOutput("Workspace %s" % conan_file.display_name, self._out)
         include_dirs = workspace_package.includedirs
@@ -379,7 +377,7 @@ class BinaryInstaller(object):
             for p in lib_paths:
                 mkdir(p)
 
-        self._propagate_info(node, inverse_levels)
+        self._propagate_info(node)
 
         build_folder = workspace_package.build_folder
         write_generators(conan_file, build_folder, output)
@@ -453,12 +451,10 @@ class BinaryInstaller(object):
         self._recorder.package_built(pref)
 
     @staticmethod
-    def _propagate_info(node, inverse_levels):
+    def _propagate_info(node):
         # Get deps_cpp_info from upstream nodes
-        closure = node.public_closure
-        node_order = [n for n in closure.values() if n.binary != BINARY_SKIP and n is not node]
+        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
-        node_order.sort(key=lambda n: inverse_levels[n])
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:

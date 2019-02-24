@@ -165,8 +165,6 @@ class DepsGraphBuilder(object):
                             new_options, check_updates, update,
                             remote_name, processed_profile)
         else:  # a public node already exist with this name
-            previous.ancestors.add(node.name)
-            node.public_closure[name] = previous
             alias_ref = dep_graph.aliased.get(require.ref)
             # Necessary to make sure that it is pointing to the correct aliased
             if alias_ref:
@@ -179,11 +177,11 @@ class DepsGraphBuilder(object):
             elif conflict == REFERENCE_CONFLICT:
                 raise ConanException("Conflict in %s\n"
                                      "    Requirement %s conflicts with already defined %s\n"
-                                     "    Keeping %s\n"
                                      "    To change it, override it in your base requirements"
-                                     % (node.ref, require.ref,
-                                        previous.ref, previous.ref))
+                                     % (node.ref, require.ref, previous.ref))
 
+            previous.ancestors.add(node.name)
+            node.public_closure[name] = previous
             dep_graph.add_edge(node, previous)
             # RECURSION!
             if self._recurse(previous.public_closure, new_reqs, new_options):
