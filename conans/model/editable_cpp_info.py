@@ -88,7 +88,7 @@ class EditableLayout(object):
                 except ConanException:
                     raise ConanException("Wrong package reference '%s' in layout file: %s"
                                          % (reference, self._filepath))
-            data.setdefault(ref, {})[section_name] = [k for k, _ in parser.items(section)]
+            data.setdefault(reference, {})[section_name] = [k for k, _ in parser.items(section)]
         return data, folders
 
     def apply_to(self, ref, cpp_info, settings=None, options=None):
