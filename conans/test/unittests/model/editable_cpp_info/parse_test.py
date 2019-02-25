@@ -6,12 +6,12 @@ import textwrap
 import unittest
 
 from conans.client.conf import default_settings_yml
+from conans.errors import ConanException
 from conans.model.editable_cpp_info import EditableLayout
 from conans.model.options import Options, PackageOptions
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.errors import ConanException
 
 
 class ParseTest(unittest.TestCase):
@@ -40,8 +40,8 @@ class ParseTest(unittest.TestCase):
             """)
         save(self.layout_filepath, content)
 
-        data = self.editable_cpp_info._load_data(ref=None, settings=self.settings,
-                                                 options=self.options)
+        data, folders = self.editable_cpp_info._load_data(ref=None, settings=self.settings,
+                                                          options=self.options)
         self.assertEqual(data[None], {'includedirs': ["path/to/shared/Debug"]})
 
     def test_wrong_field(self):

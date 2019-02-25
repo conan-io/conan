@@ -82,7 +82,7 @@ class EditableLayout(object):
                                      % (section_name, self._filepath))
             if reference:
                 try:
-                    r = ConanFileReference.loads(ref, validate=True)
+                    r = ConanFileReference.loads(reference, validate=True)
                     if r.revision:
                         raise ConanException("Don't provide revision in Editable layouts")
                 except ConanException:
