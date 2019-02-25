@@ -191,15 +191,14 @@ class GraphBinariesAnalyzer(object):
         info = node.conanfile.info
         node.package_id = info.package_id()
 
-    def _handle_private(self, node, deps_graph):
-        private_neighbours = node.private_neighbors()
-        if private_neighbours:
-            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                for neigh in private_neighbours:
-                    neigh.binary = BINARY_SKIP
-                    closure = deps_graph.full_closure(neigh, private=True)
-                    for n in closure:
-                        n.binary = BINARY_SKIP
+    def _handle_private(self, node):
+        if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
+            private_neighbours = node.private_neighbors()
+            for neigh in private_neighbours:
+                # Current closure contains own node to be skipped
+                for n in neigh.public_closure.values():
+                    n.binary = BINARY_SKIP
+                    self._handle_private(n)
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated = deps_graph.evaluated
@@ -208,4 +207,4 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated, remote_name)
-            self._handle_private(node, deps_graph)
+            self._handle_private(node)
