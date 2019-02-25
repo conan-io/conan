@@ -58,11 +58,13 @@ class MockConanfile(ConanFile):
 
 class TestConanFile(object):
     def __init__(self, name="Hello", version="0.1", settings=None, requires=None, options=None,
-                 default_options=None, package_id=None, build_requires=None, info=None):
+                 default_options=None, package_id=None, build_requires=None, info=None,
+                 private_requires=None):
         self.name = name
         self.version = version
         self.settings = settings
         self.requires = requires
+        self.private_requires = private_requires
         self.build_requires = build_requires
         self.options = options
         self.default_options = default_options
@@ -80,6 +82,9 @@ class {name}Conan(ConanFile):
             base += "    settings = %s\n" % self.settings
         if self.requires:
             base += "    requires = %s\n" % (", ".join('"%s"' % r for r in self.requires))
+        if self.private_requires:
+            base += "    requires = %s\n" % (", ".join("('%s', 'private')" % r
+                                                       for r in self.private_requires))
         if self.build_requires:
             base += "    build_requires = %s\n" % (", ".join('"%s"' % r
                                                              for r in self.build_requires))

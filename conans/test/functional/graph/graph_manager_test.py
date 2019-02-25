@@ -259,6 +259,16 @@ class GraphManagerTest(unittest.TestCase):
         self._check_node(tool, "tool/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[lib], closure=[], public_deps=[tool, lib])
 
+    def test_loop_build_require(self):
+        lib_ref = "lib/0.1@user/testing"
+        self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1", requires=[lib_ref]))
+        self._cache_recipe(lib_ref,
+                           TestConanFile("lib", "0.1",
+                                         build_requires=["tool/0.1@user/testing"]))
+        with self.assertRaisesRegexp(ConanException, "Loop detected: 'tool/0.1@user/testing' "
+                                     "requires 'lib/0.1@user/testing'"):
+            self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
+
     def test_transitive_build_require_recipe_profile(self):
         self._cache_recipe("mingw/0.1@user/testing", TestConanFile("mingw", "0.1"))
         self._cache_recipe("gtest/0.1@user/testing", TestConanFile("gtest", "0.1"))
@@ -336,3 +346,15 @@ class GraphManagerTest(unittest.TestCase):
 
         self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[zlib2],
                          dependents=[lib], closure=[zlib2], public_deps=[gtest, lib, zlib])
+
+    def test_conflict_private(self):
+        liba_ref = "liba/0.1@user/testing"
+        liba_ref2 = "liba/0.2@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(liba_ref2, TestConanFile("liba", "0.2"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
+        with self.assertRaisesRegexp(ConanException, "Requirement liba/0.2@user/testing conflicts"):
+            self.build_graph(TestConanFile("app", "0.1", private_requires=[libb_ref, libc_ref]))

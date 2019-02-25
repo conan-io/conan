@@ -301,7 +301,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node,)
+        self._propagate_info(root_node)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
