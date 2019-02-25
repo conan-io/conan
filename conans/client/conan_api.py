@@ -158,7 +158,7 @@ class ConanAPIV1(object):
                                         revisions_enabled=cache.config.revisions_enabled,
                                         put_headers=put_headers)
         # To store user and token
-        localdb = LocalDB(cache.localdb)
+        localdb = LocalDB.create(cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
         # Handle remote connections
