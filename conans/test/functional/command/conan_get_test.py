@@ -31,24 +31,24 @@ class HelloConan(ConanFile):
     def test_get_local(self):
         # Local search, dir list
         self.client.run('get Hello0/0.1@lasote/channel .')
-        self.assertEquals("""Listing directory '.':
+        self.assertEqual("""Listing directory '.':
  conanfile.py
  conanmanifest.txt
  other
 """, self.client.user_io.out)
 
         self.client.run('get Hello0/0.1@lasote/channel other --raw')
-        self.assertEquals("path\n", self.client.user_io.out)
+        self.assertEqual("path\n", self.client.user_io.out)
 
         self.client.run('get Hello0/0.1@lasote/channel other/path --raw')
-        self.assertEquals("to\n", self.client.user_io.out)
+        self.assertEqual("to\n", self.client.user_io.out)
 
         self.client.run('get Hello0/0.1@lasote/channel other/path/to')
-        self.assertEquals("Listing directory 'other/path/to':\n exported\n",
+        self.assertEqual("Listing directory 'other/path/to':\n exported\n",
                           self.client.user_io.out)
 
         self.client.run('get Hello0/0.1@lasote/channel other/path/to/exported')
-        self.assertEquals("2\n", self.client.user_io.out)
+        self.assertEqual("2\n", self.client.user_io.out)
 
         # Local search, conanfile print
         self.client.run('get Hello0/0.1@lasote/channel --raw')
@@ -91,7 +91,7 @@ class HelloConan(ConanFile):
 
         # List package dir
         self.client.run('get Hello0/0.1@lasote/channel "." -p %s --raw' % NO_SETTINGS_PACKAGE_ID)
-        self.assertEquals("conaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
+        self.assertEqual("conaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
 
     def test_get_remote(self):
         self.client.run('upload "Hello*" --all -c')
@@ -108,7 +108,7 @@ class HelloConan(ConanFile):
         # List package dir
         self.client.run('get Hello0/0.1@lasote/channel "." '
                         '  -p %s --raw -r default' % NO_SETTINGS_PACKAGE_ID)
-        self.assertEquals("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n",
+        self.assertEqual("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n",
                           self.client.user_io.out)
 
     def test_not_found(self):

@@ -229,20 +229,20 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def recipe_search_test(self):
         self.client.run("search Hello*")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n"
                           "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Bye/0.14@myuser/testing\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
@@ -259,62 +259,62 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def search_partial_match_test(self):
         self.client.run("search Hello")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search hello")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello --case-sensitive")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search Hel")
-        self.assertEquals("There are no packages matching the 'Hel' pattern\n", self.client.out)
+        self.assertEqual("There are no packages matching the 'Hel' pattern\n", self.client.out)
 
         self.client.run("search Hello/")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4")
-        self.assertEquals("There are no packages matching the 'Hello/1.4' pattern\n",
+        self.assertEqual("There are no packages matching the 'Hello/1.4' pattern\n",
                           self.client.out)
 
         self.client.run("search Hello/1.4.10@")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@fen")
-        self.assertEquals("There are no packages matching the 'Hello/1.4.10@fen' pattern\n",
+        self.assertEqual("There are no packages matching the 'Hello/1.4.10@fen' pattern\n",
                           self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/")
-        self.assertEquals("Existing package recipes:\n\n"
+        self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
-        self.assertEquals("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
+        self.assertEqual("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
 
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
-        self.assertEquals("Hello/1.4.10@myuser/testing\n"
+        self.assertEqual("Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n"
                           "helloTest/1.4.10@myuser/stable\n", self.client.out)
@@ -412,7 +412,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run(command)
 
         for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA"]:
-            self.assertEquals(pack_name in self.client.out,
+            self.assertEqual(pack_name in self.client.out,
                               pack_name in packages_found, "%s fail" % pack_name)
 
     def _assert_pkg_query_tool(self, query, packages_found, remote):
@@ -422,7 +422,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run(command)
 
         for pack_name in ["winx86", "winx64", "linx86", "linx64"]:
-            self.assertEquals(pack_name in self.client.out,
+            self.assertEqual(pack_name in self.client.out,
                               pack_name in packages_found, "%s fail" % pack_name)
 
     def package_search_complex_queries_test(self):
@@ -614,7 +614,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing -q "arch=x86"')
         # One package will be outdated from recipe and another don't
-        self.assertEquals("""Existing packages for recipe Hello/1.4.10@myuser/testing:
+        self.assertEqual("""Existing packages for recipe Hello/1.4.10@myuser/testing:
 
     Package_ID: LinuxPackageSHA
         [options]
@@ -1177,18 +1177,18 @@ class Test(ConanFile):
         client.run('search lib/1.0@user/testing -r default '
                    '--revisions --json "{}"'.format(json_path))
         j = json.loads(load(json_path))
-        self.assertEquals(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
+        self.assertEqual(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
         self.assertIsNotNone(j[0]["time"])
-        self.assertEquals(j[1]["revision"], "bd761686d5c57b31f4cd85fd0329751f")
+        self.assertEqual(j[1]["revision"], "bd761686d5c57b31f4cd85fd0329751f")
         self.assertIsNotNone(j[1]["time"])
-        self.assertEquals(len(j), 2)
+        self.assertEqual(len(j), 2)
 
         # JSON output local
         client.run('search lib/1.0@user/testing --revisions --json "{}"'.format(json_path))
         j = json.loads(load(json_path))
-        self.assertEquals(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
+        self.assertEqual(j[0]["revision"], "a94417fca6b55779c3b158f2ff50c40a")
         self.assertIsNotNone(j[0]["time"])
-        self.assertEquals(len(j), 1)
+        self.assertEqual(len(j), 1)
 
     def search_package_revisions_test(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
@@ -1259,9 +1259,9 @@ class Test(ConanFile):
         client.run("search %s -r default --revisions "
                    "--json \"%s\"" % (full_ref.format(rrev=first_rrev), json_path))
         j = json.loads(load(json_path))
-        self.assertEquals(j[0]["revision"], first_prev)
+        self.assertEqual(j[0]["revision"], first_prev)
         self.assertIsNotNone(j[0]["time"])
-        self.assertEquals(len(j), 1)
+        self.assertEqual(len(j), 1)
 
     def search_not_found_test(self):
         # Search not found for both package and recipe

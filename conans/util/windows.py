@@ -74,7 +74,7 @@ def path_shortener(path, short_paths):
 
     redirect = hashed_redirect(short_home, path)
     if not redirect:
-        logger.warn("Failed to create a deterministic short path in %s", short_home)
+        logger.warning("Failed to create a deterministic short path in %s", short_home)
         redirect = tempfile.mkdtemp(dir=short_home, prefix="")
 
     # Save the full path of the local cache directory where the redirect is from.

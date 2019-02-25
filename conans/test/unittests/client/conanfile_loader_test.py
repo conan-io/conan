@@ -97,7 +97,7 @@ OpenCV2:other_option=Cosa #
         exp = ['OpenCV/2.4.10@phil/stable',
                'OpenCV2/2.4.10@phil/stable',
                'OpenCV3/2.4.10@phil/stable']
-        self.assertEquals(parser.requirements, exp)
+        self.assertEqual(parser.requirements, exp)
 
     def load_conan_txt_test(self):
         file_content = '''[requires]
@@ -132,10 +132,10 @@ OpenCV2:other_option=Cosa""")
         build_requirements = []
         build_requirements.append("MyPkg/1.0.0@phil/stable")
 
-        self.assertEquals(ret.requires, requirements)
-        self.assertEquals(ret.build_requires, build_requirements)
-        self.assertEquals(ret.generators, ["one", "two"])
-        self.assertEquals(ret.options.values.dumps(), options1.dumps())
+        self.assertEqual(ret.requires, requirements)
+        self.assertEqual(ret.build_requires, build_requirements)
+        self.assertEqual(ret.generators, ["one", "two"])
+        self.assertEqual(ret.options.values.dumps(), options1.dumps())
 
         ret.copy = Mock()
         ret.imports()
@@ -212,13 +212,13 @@ class MyTest(ConanFile):
 
         recipe = loader.load_consumer(conanfile_path,
                                       test_processed_profile(profile))
-        self.assertEquals(recipe.settings.os, "Windows")
+        self.assertEqual(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
         recipe = loader.load_consumer(conanfile_path,
                                       test_processed_profile(profile))
-        self.assertEquals(recipe.settings.os, "Linux")
+        self.assertEqual(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}

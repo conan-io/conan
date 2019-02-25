@@ -44,7 +44,7 @@ demo: %s
 
         save(conf_path, server_conf % "manol ito!@")
         server_config = ConanServerConfigParser(tmp_dir)
-        self.assertEquals(server_config.users, {"demo": "manol ito!@"})
+        self.assertEqual(server_config.users, {"demo": "manol ito!@"})
 
         # Now test from ENV
         server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo: cönan"})
@@ -52,7 +52,7 @@ demo: %s
             server_config.users
 
         server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo:manolito!@"})
-        self.assertEquals(server_config.users, {"demo": "manolito!@"})
+        self.assertEqual(server_config.users, {"demo": "manolito!@"})
 
     def test_relative_public_url(self):
         tmp_dir = temp_folder()
@@ -69,4 +69,4 @@ demo: %s
         save(conf_path, server_conf)
 
         server_config = ConanServerConfigParser(tmp_dir)
-        self.assertEquals(server_config.public_url, "v1")
+        self.assertEqual(server_config.public_url, "v1")

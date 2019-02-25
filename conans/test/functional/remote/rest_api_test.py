@@ -24,26 +24,26 @@ class RestApiUnitTest(unittest.TestCase):
     def relative_url_completion_test(self):
 
         # test absolute urls
-        self.assertEquals(complete_url("http://host2", "http://host"), "http://host")
-        self.assertEquals(complete_url("http://host2", "http://host:1234"), "http://host:1234")
-        self.assertEquals(complete_url("http://host2", "https://host"), "https://host")
-        self.assertEquals(complete_url("http://host2", "https://host:1234"), "https://host:1234")
+        self.assertEqual(complete_url("http://host2", "http://host"), "http://host")
+        self.assertEqual(complete_url("http://host2", "http://host:1234"), "http://host:1234")
+        self.assertEqual(complete_url("http://host2", "https://host"), "https://host")
+        self.assertEqual(complete_url("http://host2", "https://host:1234"), "https://host:1234")
 
         # test relative urls
-        self.assertEquals(complete_url("http://host", "v1/path_to_file.txt"),
+        self.assertEqual(complete_url("http://host", "v1/path_to_file.txt"),
                           "http://host/v1/path_to_file.txt")
 
-        self.assertEquals(complete_url("http://host:1234", "v1/path_to_file.txt"),
+        self.assertEqual(complete_url("http://host:1234", "v1/path_to_file.txt"),
                           "http://host:1234/v1/path_to_file.txt")
 
-        self.assertEquals(complete_url("https://host", "v1/path_to_file.txt"),
+        self.assertEqual(complete_url("https://host", "v1/path_to_file.txt"),
                           "https://host/v1/path_to_file.txt")
 
-        self.assertEquals(complete_url("https://host:1234", "v1/path_to_file.txt"),
+        self.assertEqual(complete_url("https://host:1234", "v1/path_to_file.txt"),
                           "https://host:1234/v1/path_to_file.txt")
 
         # test relative urls with subdirectory
-        self.assertEquals(complete_url("https://host:1234/subdir/", "v1/path_to_file.txt"),
+        self.assertEqual(complete_url("https://host:1234/subdir/", "v1/path_to_file.txt"),
                           "https://host:1234/subdir/v1/path_to_file.txt")
 
 
@@ -78,7 +78,7 @@ class RestApiTest(unittest.TestCase):
 
     def server_info_test(self):
         _, _, capabilities = self.api.server_info()
-        self.assertEquals(capabilities, ["ImCool", "TooCool"])
+        self.assertEqual(capabilities, ["ImCool", "TooCool"])
 
     def get_conan_test(self):
         # Upload a conans
@@ -98,8 +98,8 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans digest
         digest = self.api.get_recipe_manifest(ref)
-        self.assertEquals(digest.summary_hash, "e925757129f5c49ecb2e8c84ce17e294")
-        self.assertEquals(digest.time, 123123123)
+        self.assertEqual(digest.summary_hash, "e925757129f5c49ecb2e8c84ce17e294")
+        self.assertEqual(digest.time, 123123123)
 
     def get_package_test(self):
         # Upload a conans
@@ -139,7 +139,7 @@ class RestApiTest(unittest.TestCase):
         # Get the package info
         info = self.api.get_package_info(pref)
         self.assertIsInstance(info, ConanInfo)
-        self.assertEquals(info, ConanInfo.loads(conan_info))
+        self.assertEqual(info, ConanInfo.loads(conan_info))
 
     def upload_huge_conan_test(self):
         if platform.system() != "Windows":

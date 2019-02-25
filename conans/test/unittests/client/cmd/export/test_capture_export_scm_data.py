@@ -54,8 +54,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             paths=self.paths,
             ref=None)
 
-        self.assertEquals(scm_data.url, url)
-        self.assertEquals(scm_data.revision, self.rev)
+        self.assertEqual(scm_data.url, url)
+        self.assertEqual(scm_data.revision, self.rev)
         self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
         self.assertIn("Revision deduced by 'auto': {}".format(self.rev), output)
         if local_origin:
@@ -84,8 +84,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
             paths=self.paths,
             ref=None)
 
-        self.assertEquals(scm_data.url, url)
-        self.assertEquals(scm_data.revision, self.rev)
+        self.assertEqual(scm_data.url, url)
+        self.assertEqual(scm_data.revision, self.rev)
         self.assertNotIn("Repo origin deduced", output)
         self.assertIn("Revision deduced by 'auto': {}".format(self.rev), output)
         if not is_pristine:
@@ -114,8 +114,8 @@ class CaptureExportSCMDataTest(unittest.TestCase):
                     paths=self.paths,
                     ref=None)
 
-        self.assertEquals(scm_data.url, url)
-        self.assertEquals(scm_data.revision, self.rev)
+        self.assertEqual(scm_data.url, url)
+        self.assertEqual(scm_data.revision, self.rev)
         self.assertIn("Repo origin deduced by 'auto': {}".format(url), output)
         self.assertNotIn("Revision deduced", output)
 

@@ -16,7 +16,7 @@ class PackageMetadataTest(unittest.TestCase):
 
         b = PackageMetadata.loads(tmp)
 
-        self.assertEquals(b, a)
+        self.assertEqual(b, a)
         self.assertEqual(b.packages["ID"].properties["Someprop"], "23")
 
     def test_other_types_than_str(self):
@@ -30,6 +30,6 @@ class PackageMetadataTest(unittest.TestCase):
 
         b = PackageMetadata.loads(tmp)
 
-        self.assertEquals(b, a)
+        self.assertEqual(b, a)
         self.assertEqual(b.packages["ID"].revision, {"23": 45})
         self.assertEqual(b.packages["ID"].properties["Someprop"], [23, 2444])

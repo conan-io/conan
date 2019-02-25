@@ -39,7 +39,7 @@ class BoostJamGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = BoostBuildGenerator(conanfile)
 
-        self.assertEquals(generator.content, """lib MyLib1 :
+        self.assertEqual(generator.content, """lib MyLib1 :
 	: # requirements
 	<name>MyLib1
 	: # default-build

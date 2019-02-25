@@ -332,7 +332,7 @@ if $(__define_targets__) {
         }
 
         for ck, cv in generator.content.items():
-            self.assertEquals(cv, content[ck])
+            self.assertEqual(cv, content[ck])
 
     def b2_empty_settings_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)

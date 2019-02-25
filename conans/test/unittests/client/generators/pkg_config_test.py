@@ -34,7 +34,7 @@ class PkgGeneratorTest(unittest.TestCase):
         generator = PkgConfigGenerator(conanfile)
         files = generator.content
 
-        self.assertEquals(files["MyPkg2.pc"], """prefix=dummy_root_folder2
+        self.assertEqual(files["MyPkg2.pc"], """prefix=dummy_root_folder2
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
@@ -46,7 +46,7 @@ Cflags: -I${includedir} -cppflag -DMYDEFINE2
 Requires: MyPkg
 """)
 
-        self.assertEquals(files["MyPkg.pc"], """prefix=dummy_root_folder1
+        self.assertEqual(files["MyPkg.pc"], """prefix=dummy_root_folder1
 libdir=${prefix}/lib
 includedir=${prefix}/include
 

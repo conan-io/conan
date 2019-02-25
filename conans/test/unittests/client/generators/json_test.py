@@ -37,8 +37,8 @@ class JsonTest(unittest.TestCase):
 
         parsed = json.loads(json_out)
         dependencies = parsed["dependencies"]
-        self.assertEquals(len(dependencies), 2)
+        self.assertEqual(len(dependencies), 2)
         my_pkg = dependencies[0]
-        self.assertEquals(my_pkg["name"], "MyPkg")
-        self.assertEquals(my_pkg["description"], "My cool description")
-        self.assertEquals(my_pkg["defines"], ["MYDEFINE1"])
+        self.assertEqual(my_pkg["name"], "MyPkg")
+        self.assertEqual(my_pkg["description"], "My cool description")
+        self.assertEqual(my_pkg["defines"], ["MYDEFINE1"])
