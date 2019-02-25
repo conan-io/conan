@@ -30,11 +30,21 @@ def get_editable_abs_path(path, cwd, cache_folder):
         return layout_default_path
 
 
-class EditableCppInfo(object):
+class EditableLayout(object):
     cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs', 'builddirs', 'srcdirs']
+    folders = ['build_folder', 'source_folder']
 
     def __init__(self, filepath):
         self._filepath = filepath
+
+    def folder(self, ref, name, settings, options):
+        _, folders = self._load_data(ref, settings=settings, options=options)
+        try:
+            path = folders.get(str(ref)) or folders.get(None) or {}
+            path = path[name]
+            return path
+        except KeyError:
+            return None
 
     def _parse_layout_file(self, ref, settings, options):
         content = load(self._filepath)
@@ -55,30 +65,40 @@ class EditableCppInfo(object):
 
         # Build a convenient data structure
         data = OrderedDict()
+        folders = {}
         for section in parser.sections():
-            reference, cpp_info_dir = section.rsplit(":", 1) if ':' in section else (None, section)
-            if cpp_info_dir not in EditableCppInfo.cpp_info_dirs:
+            reference, section_name = section.rsplit(":", 1) if ':' in section else (None, section)
+
+            if section_name in EditableLayout.folders:
+                items = [k for k, _ in parser.items(section)] or [""]
+                if len(items) > 1:
+                    raise ConanException("'%s' with more than one value in layout file: %s"
+                                         % (section_name, self._filepath))
+                folders.setdefault(reference, {})[section_name] = items[0]
+                continue
+
+            if section_name not in EditableLayout.cpp_info_dirs:
                 raise ConanException("Wrong cpp_info field '%s' in layout file: %s"
-                                     % (cpp_info_dir, self._filepath))
+                                     % (section_name, self._filepath))
             if reference:
                 try:
-                    r = ConanFileReference.loads(reference, validate=True)
+                    r = ConanFileReference.loads(ref, validate=True)
                     if r.revision:
-                        raise ConanException
+                        raise ConanException("Don't provide revision in Editable layouts")
                 except ConanException:
                     raise ConanException("Wrong package reference '%s' in layout file: %s"
                                          % (reference, self._filepath))
-            data.setdefault(reference, {})[cpp_info_dir] = [k for k, _ in parser.items(section)]
-        return data
+            data.setdefault(ref, {})[section_name] = [k for k, _ in parser.items(section)]
+        return data, folders
 
     def apply_to(self, ref, cpp_info, settings=None, options=None):
-        data = self._load_data(ref, settings=settings, options=options)
+        data, _ = self._load_data(ref, settings=settings, options=options)
 
         # Apply the data to the cpp_info
         data = data.get(str(ref)) or data.get(None) or {}
 
-        if data:  # Invalidate previously existing dirs
-            for info_dir in self.cpp_info_dirs:
-                setattr(cpp_info, info_dir, [])
-        for key, items in data.items():
-            setattr(cpp_info, key, items)
+        try:
+            for key, items in data.items():
+                setattr(cpp_info, key, items)
+        except Exception as e:
+            raise ConanException("Error applying layout in '%s': %s" % (str(ref), str(e)))

@@ -21,6 +21,9 @@ class EditablePackages(object):
         else:
             self._edited_refs = {}  # {ref: {"path": path, "layout": layout}}
 
+    def refs(self):
+        return self._edited_refs
+
     def save(self):
         d = {str(ref): d for ref, d in self._edited_refs.items()}
         save(self._edited_file, json.dumps(d))
@@ -42,3 +45,6 @@ class EditablePackages(object):
             self.save()
             return True
         return False
+
+    def override(self, workspace_edited):
+        self._edited_refs = workspace_edited

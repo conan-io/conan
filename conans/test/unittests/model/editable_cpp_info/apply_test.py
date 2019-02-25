@@ -7,7 +7,7 @@ import textwrap
 import unittest
 
 from conans.model.build_info import CppInfo
-from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.editable_cpp_info import EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
@@ -28,13 +28,13 @@ base_content = textwrap.dedent("""\
     """)
 
 
-class ApplyEditableCppInfoTest(unittest.TestCase):
+class ApplyEditableLayoutTest(unittest.TestCase):
 
     def setUp(self):
         self.test_folder = temp_folder()
         self.layout_filepath = os.path.join(self.test_folder, "layout")
         self.ref = ConanFileReference.loads("libA/0.1@user/channel")
-        self.editable_cpp_info = EditableCppInfo(self.layout_filepath)
+        self.editable_cpp_info = EditableLayout(self.layout_filepath)
 
     def tearDown(self):
         shutil.rmtree(self.test_folder)
@@ -47,8 +47,8 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
-        # The default defined by package_info() is removed
-        self.assertListEqual(cpp_info.bindirs, [])
+        # The default defined by package_info() is respected
+        self.assertListEqual(cpp_info.bindirs, ["bin"])
 
     def test_require_namespace(self):
         content = '\n\n'.join([
@@ -61,8 +61,8 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['libA/dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['libA/dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['libA/dirs/resdirs'])
-        # The default defined by package_info() is removed
-        self.assertListEqual(cpp_info.bindirs, [])
+        # The default defined by package_info() is respected
+        self.assertListEqual(cpp_info.bindirs, ['bin'])
 
         cpp_info = CppInfo(None)
         other = ConanFileReference.loads("other/0.1@user/channel")
@@ -70,5 +70,5 @@ class ApplyEditableCppInfoTest(unittest.TestCase):
         self.assertListEqual(cpp_info.includedirs, ['dirs/includedirs'])
         self.assertListEqual(cpp_info.libdirs, ['dirs/libdirs'])
         self.assertListEqual(cpp_info.resdirs, ['dirs/resdirs'])
-        # The default defined by package_info() is removed
-        self.assertListEqual(cpp_info.bindirs, [])
+        # The default defined by package_info() is respected
+        self.assertListEqual(cpp_info.bindirs, ['bin'])

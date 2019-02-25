@@ -1,7 +1,7 @@
 import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_SKIP, BINARY_UPDATE, BINARY_WORKSPACE,
+                                       BINARY_SKIP, BINARY_UPDATE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
 from conans.errors import NoRemoteAvailable, NotFoundException,\
@@ -13,12 +13,12 @@ from conans.util.files import is_dirty, rmdir
 
 
 class GraphBinariesAnalyzer(object):
-    def __init__(self, cache, output, remote_manager, workspace):
+
+    def __init__(self, cache, output, remote_manager):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
         self._registry = cache.registry
-        self._workspace = workspace
 
     def _check_update(self, upstream_manifest, package_folder, output, node):
         read_manifest = FileTreeManifest.load(package_folder)
@@ -59,11 +59,6 @@ class GraphBinariesAnalyzer(object):
         package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
 
         # Check if dirty, to remove it
-        local_project = self._workspace[ref] if self._workspace else None
-        if local_project:
-            node.binary = BINARY_WORKSPACE
-            return
-
         with self._cache.package_lock(pref):
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if is_dirty(package_folder):

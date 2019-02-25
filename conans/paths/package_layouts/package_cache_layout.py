@@ -43,51 +43,51 @@ class PackageCacheLayout(object):
         return self._base_folder
 
     def export(self):
-        return os.path.join(self.conan(), EXPORT_FOLDER)
-
-    @short_path
-    def export_sources(self):
-        return os.path.join(self.conan(), EXPORT_SRC_FOLDER)
-
-    @short_path
-    def source(self):
-        return os.path.join(self.conan(), SRC_FOLDER)
+        return os.path.join(self._base_folder, EXPORT_FOLDER)
 
     def conanfile(self):
         export = self.export()
         return os.path.join(export, CONANFILE)
 
+    @short_path
+    def export_sources(self):
+        return os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
+
+    @short_path
+    def source(self):
+        return os.path.join(self._base_folder, SRC_FOLDER)
+
     def builds(self):
-        return os.path.join(self.conan(), BUILD_FOLDER)
+        return os.path.join(self._base_folder, BUILD_FOLDER)
 
     @short_path
     def build(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), BUILD_FOLDER, pref.id)
+        return os.path.join(self._base_folder, BUILD_FOLDER, pref.id)
 
     def system_reqs(self):
-        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, SYSTEM_REQS)
+        return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, SYSTEM_REQS)
 
     def system_reqs_package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
+        return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
 
     def packages(self):
-        return os.path.join(self.conan(), PACKAGES_FOLDER)
+        return os.path.join(self._base_folder, PACKAGES_FOLDER)
 
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), PACKAGES_FOLDER, pref.id)
+        return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
-        return os.path.join(self.conan(), SCM_FOLDER)
+        return os.path.join(self._base_folder, SCM_FOLDER)
 
     def package_metadata(self):
-        return os.path.join(self.conan(), PACKAGE_METADATA)
+        return os.path.join(self._base_folder, PACKAGE_METADATA)
 
     def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
