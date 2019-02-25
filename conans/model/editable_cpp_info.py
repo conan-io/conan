@@ -62,7 +62,7 @@ class EditableCppInfo(object):
                                      % (cpp_info_dir, self._filepath))
             if reference:
                 try:
-                    r = ConanFileReference.loads(reference)
+                    r = ConanFileReference.loads(reference, validate=True)
                     if r.revision:
                         raise ConanException
                 except ConanException:
