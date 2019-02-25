@@ -158,7 +158,7 @@ class ConanAPIV1(object):
                                         revisions_enabled=cache.config.revisions_enabled,
                                         put_headers=put_headers)
         # To store user and token
-        localdb = LocalDB(cache.localdb)
+        localdb = LocalDB.create(cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
         # Handle remote connections
@@ -925,8 +925,8 @@ class ConanAPIV1(object):
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
         if not remote_name:
-            from conans.client.local_file_getter import get_path
-            return get_path(self._cache, ref, package_id, path), path
+            package_layout = self._cache.package_layout(ref, short_paths=None)
+            return package_layout.get_path(path=path, package_id=package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)
             if self._cache.config.revisions_enabled and not ref.revision:

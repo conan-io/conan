@@ -79,8 +79,7 @@ class UploadTest(unittest.TestCase):
         reg_folder = self.client.cache.export(self.ref)
 
         self.client.run('upload %s' % str(self.ref), assert_error=True)
-        self.assertIn("There is no local conanfile exported as %s" % str(self.ref),
-                      self.client.user_io.out)
+        self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
         files = hello_source_files()
 

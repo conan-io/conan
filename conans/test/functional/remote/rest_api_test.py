@@ -251,8 +251,7 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0,
-                                no_overwrite=None)
+        self.api.upload_package(package_reference, abs_paths, None, retry=1, retry_wait=0)
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 
@@ -280,4 +279,4 @@ class MyConan(ConanFile):
         abs_paths[CONAN_MANIFEST] = os.path.join(tmp_dir, CONAN_MANIFEST)
         conan_digest.save(tmp_dir)
 
-        self.api.upload_recipe(ref, abs_paths, retry, retry_wait, None, None)
+        self.api.upload_recipe(ref, abs_paths, None, retry, retry_wait)
