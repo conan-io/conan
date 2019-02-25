@@ -6,7 +6,7 @@ import textwrap
 import unittest
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.editable_cpp_info import EditableLayout
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -15,7 +15,7 @@ class ParseTest(unittest.TestCase):
     def setUp(self):
         self.test_folder = temp_folder()
         self.layout_filepath = os.path.join(self.test_folder, "layout")
-        self.editable_cpp_info = EditableCppInfo(self.layout_filepath)
+        self.editable_cpp_info = EditableLayout(self.layout_filepath)
 
     def tearDown(self):
         shutil.rmtree(self.test_folder)

@@ -43,25 +43,3 @@ class ParseTest(unittest.TestCase):
         data, folders = self.editable_cpp_info._load_data(ref=None, settings=self.settings,
                                                           options=self.options)
         self.assertEqual(data[None], {'includedirs': ["path/to/shared/Debug"]})
-
-    def test_wrong_field(self):
-        content = textwrap.dedent("""
-            [*:includedirs]
-            something
-            """)
-        save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong package reference '\*' in layout file"):
-            self.editable_cpp_info._load_data(ref=None, settings=self.settings,
-                                              options=self.options)
-
-    def test_wrong_reference(self):
-        content = textwrap.dedent("""
-            [pkg/version@user/channel:revision:includedirs]
-            something
-            """)
-        save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong package reference"
-                                                     " 'pkg/version@user/channel:revision' in layout"
-                                                     " file"):
-            self.editable_cpp_info._load_data(ref=None, settings=self.settings,
-                                              options=self.options)
