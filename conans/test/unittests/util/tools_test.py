@@ -397,7 +397,7 @@ class SystemPackageToolTest(unittest.TestCase):
             return
         if platform.system() == "Windows" and not which("choco.exe"):
             return
-        spt = SystemPackageTool()
+        spt = SystemPackageTool(output=self.out)
         expected_package = "git"
         if platform.system() == "Windows" and which("choco.exe"):
             spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
