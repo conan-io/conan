@@ -70,7 +70,7 @@ class RefTest(unittest.TestCase):
         self.assertEqual(pref.revision, "989")
         self.assertEqual(pref.ref.revision, "23")
 
-        pref = PackageReference(ref, "123123123#989")
+        pref = PackageReference(ref, "123123123", "989")
         self.assertEqual(pref.ref.revision, "34")
 
     def equal_test(self):
