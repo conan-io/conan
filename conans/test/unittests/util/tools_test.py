@@ -6,6 +6,7 @@ import subprocess
 import sys
 import unittest
 import uuid
+import warnings
 from collections import namedtuple
 
 import mock
@@ -684,17 +685,30 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
+
         # test build_type and arch override, for multi-config packages
-        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("ignore")
+            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+            self.assertEqual(len(w),1)
+            self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("ignore")
+                tools.msvc_build_command(settings, "project.sln")
+                self.assertEqual(len(w), 1)
+                self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("ignore")
+                tools.msvc_build_command(settings, "project.sln")
+                self.assertEqual(len(w), 1)
+                self.assertEqual(issubclass(w[0].category, DeprecationWarning))
 
         # successful definition via settings
         settings.build_type = "Debug"
