@@ -139,6 +139,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
 
     def __new__(cls, ref, package_id, revision=None, validate=True):
         if "#" in package_id:
+            raise Exception("BOOOM!")
             package_id, revision = package_id.rsplit("#", 1)
         obj = super(cls, PackageReference).__new__(cls, ref, package_id, revision)
         if validate:
@@ -158,7 +159,11 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
             package_id = tmp[1].strip()
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)
-        return PackageReference(ref, package_id, validate=validate)
+        if "#" in package_id:
+            package_id, revision = package_id.rsplit("#", 1)
+        else:
+            revision = None
+        return PackageReference(ref, package_id, revision, validate=validate)
 
     def __repr__(self):
         return "%s:%s" % (self.ref, self.id)
