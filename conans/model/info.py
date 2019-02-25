@@ -153,7 +153,7 @@ class RequirementsInfo(object):
 
     def copy(self):
         # For build_id() implementation
-        result = RequirementsInfo()
+        result = RequirementsInfo([], None)
         result._data = {pref: req_info.copy() for pref, req_info in self._data.items()}
         return result
 
