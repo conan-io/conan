@@ -12,6 +12,8 @@ from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
 
+PREV_MISSING = "prevmissing"
+
 
 class RequirementInfo(object):
     def __init__(self, pref, indirect=False, package_id_mode=None):
@@ -59,8 +61,8 @@ class RequirementInfo(object):
         # This is done later to NOT affect existing package-IDs (before revisions)
         if self.revision:
             vals.append(self.revision)
-        if self.package_revision is False:
-            return False
+        if self.package_revision == PREV_MISSING:
+            return PREV_MISSING
         if self.package_revision:
             # A package revision is required = True, but didn't get a real value
             vals.append(self.package_revision)
@@ -141,7 +143,7 @@ class RequirementInfo(object):
         self.package_id = self.full_package_id
         self.revision = self.full_revision
         # It is requested to use, but not defined (binary not build yet)
-        self.package_revision = self.full_package_revision or False
+        self.package_revision = self.full_package_revision or PREV_MISSING
 
 
 class RequirementsInfo(object):
@@ -198,8 +200,8 @@ class RequirementsInfo(object):
         data = {k: v for k, v in self._data.items() if v.name}
         for key in sorted(data):
             s = data[key].sha
-            if s is False:
-                return False
+            if s is PREV_MISSING:
+                return PREV_MISSING
             result.append(s)
         return sha1('\n'.join(result).encode())
 
@@ -372,8 +374,8 @@ class ConanInfo(object):
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
         requires_sha = self.requires.sha
-        if requires_sha is False:
-            return False
+        if requires_sha == PREV_MISSING:
+            return PREV_MISSING
         result.append(requires_sha)
 
         package_id = sha1('\n'.join(result).encode())

@@ -6,7 +6,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
 from conans.errors import NoRemoteAvailable, NotFoundException,\
     conanfile_exception_formatter
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, PREV_MISSING
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import is_dirty, rmdir
@@ -44,6 +44,7 @@ class GraphBinariesAnalyzer(object):
             previous_node = previous_nodes[0]
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
+            node.prev = previous_node.prev
             return
         evaluated_nodes[pref] = [node]
 
@@ -51,11 +52,13 @@ class GraphBinariesAnalyzer(object):
 
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE
+            # TODO: PREV?
             return
 
         if build_mode.forced(conanfile, ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
+            node.prev = PREV_MISSING
             return
 
         package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
@@ -112,6 +115,8 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = BINARY_CACHE
+                metadata = self._cache.package_layout(pref.ref).load_metadata()
+                node.prev = metadata.packages[pref.id].revision
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
 
         else:  # Binary does NOT exist locally
@@ -145,6 +150,7 @@ class GraphBinariesAnalyzer(object):
                     node.binary = BINARY_BUILD
                 else:
                     node.binary = BINARY_MISSING
+                node.prev = PREV_MISSING
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
@@ -152,6 +158,7 @@ class GraphBinariesAnalyzer(object):
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD
+                    node.prev = PREV_MISSING
                 else:
                     output.info("Package is up to date")
 
