@@ -489,7 +489,9 @@ class ConanAPIV1(object):
             if node.recipe == RECIPE_EDITABLE:
                 generators = workspace[node.ref].generators
                 if generators is not None:
-                    node.conanfile.generators.extend(generators)
+                    tmp = list(node.conanfile.generators)
+                    tmp.extend([g for g in generators if g not in tmp])
+                    node.conanfile.generators = tmp
 
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=recorder, hook_manager=self._hook_manager)
