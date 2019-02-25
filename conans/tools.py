@@ -177,7 +177,6 @@ vs_installation_path = tools_win.vs_installation_path
 vswhere = tools_win.vswhere
 vs_comntools = tools_win.vs_comntools
 find_windows_10_sdk = tools_win.find_windows_10_sdk
-vcvars = tools_win.vcvars
 escape_windows_cmd = tools_win.escape_windows_cmd
 get_cased_path = tools_win.get_cased_path
 MSYS2 = tools_win.MSYS2
@@ -187,6 +186,11 @@ WSL = tools_win.WSL
 SFU = tools_win.SFU
 unix_path = tools_win.unix_path
 run_in_windows_bash = tools_win.run_in_windows_bash
+
+
+@contextmanager
+def vcvars(*args, **kwargs):
+    yield tools_win.vcvars(output=_global_output, *args, **kwargs)
 
 
 def build_sln_command(*args, **kwargs):
