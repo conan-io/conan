@@ -158,13 +158,13 @@ class WorkspaceTest(unittest.TestCase):
             """)
         layout = dedent("""
             [build_folder]
-            build/{settings.build_type}
+            build/{{settings.build_type}}
 
             [includedirs]
             src
 
             [libdirs]
-            build/{settings.build_type}/lib
+            build/{{settings.build_type}}/lib
             """)
         client.save({"conanws.yml": project,
                      "layout": layout})
@@ -231,7 +231,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         layout = dedent("""
             [build_folder]
-            build/{settings.build_type}
+            build/{{settings.build_type}}
 
             [source_folder]
             src
@@ -240,7 +240,7 @@ class WorkspaceTest(unittest.TestCase):
             src
 
             [libdirs]
-            build/{settings.build_type}/lib
+            build/{{settings.build_type}}/lib
             """)
 
         metacmake = dedent("""
@@ -358,7 +358,7 @@ class WorkspaceTest(unittest.TestCase):
             src
 
             [libdirs]
-            build/{settings.build_type}
+            build/{{settings.build_type}}
             """)
         metacmake = dedent("""
             cmake_minimum_required(VERSION 3.3)
