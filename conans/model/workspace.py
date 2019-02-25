@@ -4,11 +4,11 @@ from collections import OrderedDict
 
 import yaml
 
+from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
+from conans.model.editable_cpp_info import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
-from conans.model.editable_cpp_info import get_editable_abs_path
-from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 class LocalPackage(object):
@@ -37,8 +37,6 @@ class LocalPackage(object):
 class Workspace(object):
 
     def generate(self, cwd, graph):
-        editables = {node.ref: node.conanfile for node in graph.nodes
-                     if node.recipe == RECIPE_EDITABLE}
         if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
@@ -49,9 +47,11 @@ class Workspace(object):
                 ws_pkg = self._workspace_packages[ref]
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
-                conanfile = editables[ref]
-                build = editable.folder(ref, "build_folder", conanfile.settings, conanfile.options)
-                src = editable.folder(ref, "source_folder", conanfile.settings, conanfile.options)
+                conanfile = node.conanfile
+                build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
+                                        conanfile.options)
+                src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
+                                      conanfile.options)
                 if src:
                     src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)

@@ -8,7 +8,7 @@ from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
     BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
-from conans.client.importer import remove_imports
+from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
@@ -18,6 +18,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
+from conans.model.editable_cpp_info import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -163,7 +164,6 @@ class _ConanPackageBuilder(object):
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
-        from conans.client.importer import run_imports
         copied_files = run_imports(self._conan_file, self.build_folder)
 
         try:
@@ -318,7 +318,7 @@ class BinaryInstaller(object):
                                        settings=node.conanfile.settings,
                                        options=node.conanfile.options)
 
-            build_folder = editable_cpp_info.folder(node.ref, "build_folder",
+            build_folder = editable_cpp_info.folder(node.ref, EditableLayout.BUILD_FOLDER,
                                                     settings=node.conanfile.settings,
                                                     options=node.conanfile.options)
             if build_folder is not None:
@@ -333,7 +333,6 @@ class BinaryInstaller(object):
                 output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
                 # So execute imports() before build, storing the list of copied_files
-                from conans.client.importer import run_imports
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 

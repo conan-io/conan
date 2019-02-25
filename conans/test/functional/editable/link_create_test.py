@@ -33,7 +33,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t = TestClient()
         t.save(files={'conanfile.py': self.conanfile})
         t.run('editable add . {}'.format(ref))
-        self.assertIn("Reference 'lib/version@user/name' linked to directory '", t.out)
+        self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
 
     def test_editable_list_search(self):
         ref = ConanFileReference.loads('lib/version@user/name')

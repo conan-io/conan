@@ -26,7 +26,7 @@ class RemoveEditablePackageTest(unittest.TestCase):
 
     def test_unlink(self):
         self.t.run('editable remove {}'.format(self.ref))
-        self.assertIn("Removed linkage for reference '{}'".format(self.ref), self.t.out)
+        self.assertIn("Removed editable mode for reference '{}'".format(self.ref), self.t.out)
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
     def test_unlink_not_linked(self):

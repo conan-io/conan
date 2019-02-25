@@ -100,7 +100,7 @@ def search_recipes(cache, pattern=None, ignorecase=True):
 
     subdirs = list_folder_subdirs(basedir=cache.store, level=4)
     refs = [ConanFileReference(*folder.split("/")) for folder in subdirs]
-    refs.extend(cache.editable_packages.refs().keys())
+    refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, r)]
     refs = sorted(refs)

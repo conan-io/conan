@@ -30,8 +30,10 @@ def get_editable_abs_path(path, cwd, cache_folder):
 
 
 class EditableLayout(object):
+    BUILD_FOLDER = "build_folder"
+    SOURCE_FOLDER = "source_folder"
     cpp_info_dirs = ['includedirs', 'libdirs', 'resdirs', 'bindirs', 'builddirs', 'srcdirs']
-    folders = ['build_folder', 'source_folder']
+    folders = [BUILD_FOLDER, SOURCE_FOLDER]
 
     def __init__(self, data, folders):
         self._data = data
