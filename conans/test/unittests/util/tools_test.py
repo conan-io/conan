@@ -486,6 +486,7 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+    output = TestBufferConanOutput()
 
     def replace_paths_test(self):
         folder = temp_folder()
@@ -800,7 +801,7 @@ class HelloConan(ConanFile):
         settings.arch_build = "x86_64"
 
         # Set the env with a PATH containing the vcvars paths
-        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = tools.vcvars_dict(settings, only_diff=False, output=self.output)
         tmp = {key.lower(): value for key, value in tmp.items()}
         with tools.environment_append({"path": tmp["path"]}):
             previous_path = os.environ["PATH"].split(";")
@@ -822,11 +823,13 @@ class HelloConan(ConanFile):
         settings.arch = "x86"
         settings.arch_build = "x86_64"
         with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=True, output=self.output)
             with tools.environment_append(tmp):
                 self.assertNotIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake",  os.environ["PATH"])
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=False, output=self.output)
             with tools.environment_append(tmp):
                 self.assertIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake", os.environ["PATH"])
@@ -930,22 +933,22 @@ compiler:
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         with tools.environment_append({"MYVAR": "1"}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             self.assertIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
-            ret = vcvars_dict(settings)
+            ret = vcvars_dict(settings, output=self.output)
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
         my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
         with tools.environment_append({"LIBPATH": my_lib_paths}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             str_var_value = os.pathsep.join(ret["LIBPATH"])
             self.assertTrue(str_var_value.endswith(my_lib_paths))
 
             # Now only a diff, it should return the values as a list, but without the old values
-            ret = vcvars_dict(settings, only_diff=True)
+            ret = vcvars_dict(settings, only_diff=True, output=self.output)
             self.assertEqual(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
 
             # But if we apply both environments, they are composed correctly
@@ -983,7 +986,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vcvars = tools.vcvars_dict(None, only_diff=False)
+                vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
