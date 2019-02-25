@@ -41,10 +41,14 @@ class EditableLayout(object):
         _, folders = self._load_data(ref, settings=settings, options=options)
         try:
             path = folders.get(str(ref)) or folders.get(None) or {}
-            path = path[name]
-            return path
+            return path[name]
         except KeyError:
             return None
+
+    @staticmethod
+    def _work_on_item(value):
+        value = value.replace('\\', '/')
+        return value
 
     def _parse_layout_file(self, ref, settings, options):
         content = load(self._filepath)
@@ -74,7 +78,7 @@ class EditableLayout(object):
                 if len(items) > 1:
                     raise ConanException("'%s' with more than one value in layout file: %s"
                                          % (section_name, self._filepath))
-                folders.setdefault(reference, {})[section_name] = items[0]
+                folders.setdefault(reference, {})[section_name] = self._work_on_item(items[0])
                 continue
 
             if section_name not in EditableLayout.cpp_info_dirs:
@@ -88,7 +92,8 @@ class EditableLayout(object):
                 except ConanException:
                     raise ConanException("Wrong package reference '%s' in layout file: %s"
                                          % (reference, self._filepath))
-            data.setdefault(reference, {})[section_name] = [k for k, _ in parser.items(section)]
+            data.setdefault(reference, {})[section_name] =\
+                [self._work_on_item(k) for k, _ in parser.items(section)]
         return data, folders
 
     def apply_to(self, ref, cpp_info, settings=None, options=None):

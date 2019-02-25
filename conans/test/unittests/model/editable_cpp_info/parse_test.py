@@ -6,7 +6,6 @@ import textwrap
 import unittest
 
 from conans.client.conf import default_settings_yml
-from conans.errors import ConanException
 from conans.model.editable_cpp_info import EditableLayout
 from conans.model.options import Options, PackageOptions
 from conans.model.settings import Settings
@@ -26,7 +25,7 @@ class ParseTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_folder)
 
-    def test_jinja_render(self):
+    def test_render_basic(self):
         self.options.shared = True
         self.settings.build_type = "Debug"
 
@@ -43,3 +42,20 @@ class ParseTest(unittest.TestCase):
         data, folders = self.editable_cpp_info._load_data(ref=None, settings=self.settings,
                                                           options=self.options)
         self.assertEqual(data[None], {'includedirs': ["path/to/shared/Debug"]})
+
+    def test_render_loop(self):
+        self.settings.build_type = "Debug"
+
+        content = textwrap.dedent("""
+            [includedirs]
+            {% for item in ["cmp1", "cmp2", "cmp3"] %}
+            components\{{ item }}\include\{% if item != "cmp3" %}{{ settings.build_type }}{% endif %}
+            {% endfor %}
+            """)
+        save(self.layout_filepath, content)
+
+        data, folders = self.editable_cpp_info._load_data(ref=None, settings=self.settings,
+                                                          options=self.options)
+        self.assertEqual(data[None], {'includedirs': ["components/cmp1/include/Debug",
+                                                      "components/cmp2/include/Debug",
+                                                      "components/cmp3/include/"]})
