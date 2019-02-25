@@ -234,7 +234,7 @@ class GraphManager(object):
                                      build_mode, remote_name,
                                      profile_build_requires, recorder, workspace, processed_profile)
 
-        # Sort of closures, for linking order and exact BinaryID computation
+        # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
         for node in graph.nodes:
             closure = node.public_closure

@@ -78,6 +78,35 @@ class GraphManagerTest(unittest.TestCase):
         self.binary_installer.install(deps_graph, False, graph_info)
         return deps_graph
 
+    def _check_node(self, node, ref, deps, build_deps, dependents, closure, public_deps):
+        conanfile = node.conanfile
+        ref = ConanFileReference.loads(str(ref))
+        self.assertEqual(node.ref.full_repr(), ref.full_repr())
+        self.assertEqual(conanfile.name, ref.name)
+        self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
+        self.assertEqual(len(node.dependants), len(dependents))
+
+        public_deps = {n.name: n for n in public_deps}
+        self.assertEqual(node.public_deps, public_deps)
+
+        # The recipe requires is resolved to the reference WITH revision!
+        self.assertEqual(len(deps), len(conanfile.requires))
+        for dep in deps:
+            self.assertEqual(conanfile.requires[dep.name].ref,
+                             dep.ref)
+
+        self.assertEqual(closure, node.public_closure)
+        libs = []
+        envs = []
+        for n in closure:
+            libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
+            envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
+        self.assertEqual(conanfile.deps_cpp_info.libs, libs)
+        env = {"MYENV": envs} if envs else {}
+        self.assertEqual(conanfile.deps_env_info.vars, env)
+
+
+class TransitiveGraphTest(GraphManagerTest):
     def test_basic(self):
         deps_graph = self.build_graph(TestConanFile("Say", "0.1"))
         self.assertEqual(1, len(deps_graph.nodes))
@@ -110,33 +139,6 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(libb.public_closure, [])
         self.assertEqual(app.public_deps, {"app": app, "libb": libb})
         self.assertEqual(libb.public_deps, app.public_deps)
-
-    def _check_node(self, node, ref, deps, build_deps, dependents, closure, public_deps):
-        conanfile = node.conanfile
-        ref = ConanFileReference.loads(str(ref))
-        self.assertEqual(node.ref.full_repr(), ref.full_repr())
-        self.assertEqual(conanfile.name, ref.name)
-        self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
-        self.assertEqual(len(node.dependants), len(dependents))
-
-        public_deps = {n.name: n for n in public_deps}
-        self.assertEqual(node.public_deps, public_deps)
-
-        # The recipe requires is resolved to the reference WITH revision!
-        self.assertEqual(len(deps), len(conanfile.requires))
-        for dep in deps:
-            self.assertEqual(conanfile.requires[dep.name].ref,
-                             dep.ref)
-
-        self.assertEqual(closure, node.public_closure)
-        libs = []
-        envs = []
-        for n in closure:
-            libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
-            envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertEqual(conanfile.deps_cpp_info.libs, libs)
-        env = {"MYENV": envs} if envs else {}
-        self.assertEqual(conanfile.deps_env_info.vars, env)
 
     def test_transitive_two_levels(self):
         liba_ref = "liba/0.1@user/testing"
@@ -358,3 +360,84 @@ class GraphManagerTest(unittest.TestCase):
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
         with self.assertRaisesRegexp(ConanException, "Requirement liba/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", private_requires=[libb_ref, libc_ref]))
+
+
+class PackageIDGraphTests(GraphManagerTest):
+    def test_default_semver_mode(self):
+        liba_ref1 = "liba/1.1.1@user/testing"
+        liba_ref2 = "liba/1.1.2@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        self._cache_recipe(liba_ref1, TestConanFile("liba", "1.1.1"))
+        self._cache_recipe(liba_ref2, TestConanFile("liba", "1.1.2"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref1]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(libb.package_id, "8ecbf93ba63522ffb32573610c80ab4dcb399b52")
+
+        # Now we depend on liba_ref2, but ID keeps the same (semver)
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref2]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(libb.package_id, "8ecbf93ba63522ffb32573610c80ab4dcb399b52")
+
+    def test_full_recipe_mode(self):
+        self.cache.config.set_item("general.package_id_mode", "full_recipe_mode")
+        liba_ref1 = "liba/0.1.1@user/testing"
+        liba_ref2 = "liba/0.1.2@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        self._cache_recipe(liba_ref1, TestConanFile("liba", "0.1.1"))
+        self._cache_recipe(liba_ref2, TestConanFile("liba", "0.1.2"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref1]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(libb.package_id, "10184594c2c0ea54ea4df09aea1ef83bfdbd0c94")
+
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref2]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(libb.package_id, "01add11f2981e9d427ef145d7ad9bcf1aed3dfb2")
+
+    def test_full_package_revision_mode(self):
+        self.cache.config.set_item("general.package_id_mode", "full_package_revision_mode")
+        liba_ref1 = "liba/0.1.1@user/testing"
+        liba_ref2 = "liba/0.1.2@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        self._cache_recipe(liba_ref1, TestConanFile("liba", "0.1.1"))
+        self._cache_recipe(liba_ref2, TestConanFile("liba", "0.1.2"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref1]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(libb.package_id, False)
+
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref2]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertEqual(libb.package_id, "01add11f2981e9d427ef145d7ad9bcf1aed3dfb2")
