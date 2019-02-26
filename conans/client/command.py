@@ -1019,7 +1019,14 @@ class Command(object):
         parser.add_argument("-rev", "--revisions", default=False, action='store_true',
                             help='Get a list of revisions for a reference or a '
                                  'package reference.')
+
         args = parser.parse_args(*args)
+
+        if args.revisions and not self._cache.config.revisions_enabled:
+            raise ConanException("The client doesn't have the revisions feature enabled."
+                                 " Enable this feature setting to '1' the environment variable"
+                                 " 'CONAN_REVISIONS_ENABLED' or the config value"
+                                 " 'general.revisions_enabled' in your conan.conf file")
 
         if args.table and args.json:
             raise ConanException("'--table' argument cannot be used together with '--json'")
