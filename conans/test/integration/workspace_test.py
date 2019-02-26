@@ -137,7 +137,7 @@ class WorkspaceTest(unittest.TestCase):
 
         with self.assertRaisesRegexp(ConanException,
                                      "Workspace editable HelloB/0.1@lasote/stable "
-                                     "does not define data"):
+                                     "does not define path"):
             Workspace(path, None)
 
         project = dedent("""
@@ -149,7 +149,8 @@ class WorkspaceTest(unittest.TestCase):
         save(path, project)
 
         with self.assertRaisesRegexp(ConanException,
-                                     "Workspace editable does not define path"):
+                                     "Workspace editable HelloB/0.1@lasote/stable "
+                                     "does not define path"):
             Workspace(path, None)
 
     def simple_test(self):

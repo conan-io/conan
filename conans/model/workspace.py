@@ -12,11 +12,13 @@ from conans.util.files import load, save
 
 
 class LocalPackage(object):
-    def __init__(self, base_folder, data, cache, ws_layout, ws_generators):
+    def __init__(self, base_folder, data, cache, ws_layout, ws_generators, ref):
+        if not data:
+            raise ConanException("Workspace editable %s does not define path" % str(ref))
         self._base_folder = base_folder
         self._conanfile_folder = data.pop("path", None)  # The folder with the conanfile
         if self._conanfile_folder is None:
-            raise ConanException("Workspace editable does not define path")
+            raise ConanException("Workspace editable %s does not define path" % str(ref))
         layout = data.pop("layout", None)
         if layout:
             self.layout = get_editable_abs_path(layout, self._base_folder,
@@ -122,13 +124,10 @@ class Workspace(object):
             raise ConanException("Conan workspace needs at least 1 root conanfile")
 
         editables = yml.pop("editables", {})
-        for package_name, data in editables.items():
-            if not data:
-                raise ConanException("Workspace editable %s does not define data"
-                                     % str(package_name))
+        for ref, data in editables.items():
             workspace_package = LocalPackage(self._base_folder, data,
-                                             self._cache, ws_layout, generators)
-            package_name = ConanFileReference.loads(package_name)
+                                             self._cache, ws_layout, generators, ref)
+            package_name = ConanFileReference.loads(ref)
             self._workspace_packages[package_name] = workspace_package
         for package_name in self._root:
             if package_name not in self._workspace_packages:
