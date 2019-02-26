@@ -6,7 +6,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
 from conans.errors import NoRemoteAvailable, NotFoundException,\
     conanfile_exception_formatter
-from conans.model.info import ConanInfo, PREV_MISSING
+from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import is_dirty, rmdir
@@ -58,7 +58,7 @@ class GraphBinariesAnalyzer(object):
         if build_mode.forced(conanfile, ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
-            node.prev = PREV_MISSING
+            node.prev = None
             return
 
         package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
@@ -150,7 +150,7 @@ class GraphBinariesAnalyzer(object):
                     node.binary = BINARY_BUILD
                 else:
                     node.binary = BINARY_MISSING
-                node.prev = PREV_MISSING
+                node.prev = None
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
@@ -158,7 +158,7 @@ class GraphBinariesAnalyzer(object):
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD
-                    node.prev = PREV_MISSING
+                    node.prev = None
                 else:
                     output.info("Package is up to date")
 

@@ -120,6 +120,7 @@ class BuildIdTest(unittest.TestCase):
             client.save({"conanfile.py": consumer_py}, clean_first=True)
         else:
             client.save({"conanfile.txt": consumer}, clean_first=True)
+        # Windows Debug
         client.run('install . -s os=Windows -s build_type=Debug')
         self.assertIn("Building package from source as defined by build_policy='missing'",
                       client.user_io.out)
@@ -127,12 +128,14 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("Packaging Debug!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
         self.assertEqual("Debug file1", content)
+        # Package Windows Release, it will reuse the previous build
         client.run('install . -s os=Windows -s build_type=Release')
         self.assertNotIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Release!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
         self.assertEqual("Release file1", content)
-        # Now Linux
+
+        # Now Linux Debug
         client.run('install . -s os=Linux -s build_type=Debug')
         self.assertIn("Building package from source as defined by build_policy='missing'",
                       client.user_io.out)
@@ -140,6 +143,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("Packaging Debug!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
         self.assertEqual("Debug file1", content)
+        # Linux Release must build again, as it is not affected by build_id()
         client.run('install . -s os=Linux -s build_type=Release')
         self.assertIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Release!", client.user_io.out)
@@ -149,11 +153,13 @@ class BuildIdTest(unittest.TestCase):
 
         # Check that repackaging works, not necessary to re-build
         client.run("remove Pkg/0.1@user/channel -p -f")
+        # Windows Debug
         client.run('install . -s os=Windows -s build_type=Debug')
         self.assertNotIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Debug!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
         self.assertEqual("Debug file1", content)
+        # Windows Release
         client.run('install . -s os=Windows -s build_type=Release')
         self.assertNotIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Release!", client.user_io.out)

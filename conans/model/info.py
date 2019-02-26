@@ -379,7 +379,6 @@ class ConanInfo(object):
         result.append(requires_sha)
 
         package_id = sha1('\n'.join(result).encode())
-        self._package_id = package_id
         return package_id
 
     def serialize_min(self):
