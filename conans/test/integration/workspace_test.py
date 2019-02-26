@@ -8,7 +8,10 @@ from textwrap import dedent
 
 from conans.client import tools
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.util.files import load, save
+from conans.test.utils.test_files import temp_folder
+from conans.model.workspace import Workspace
+from conans.errors import ConanException
 
 
 conanfile_build = """from conans import ConanFile, CMake
@@ -89,6 +92,66 @@ target_link_libraries(hello{name} {dep})
 
 
 class WorkspaceTest(unittest.TestCase):
+
+    def parse_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "conanws.yml")
+        project = "root: Hellob/0.1@lasote/stable"
+        save(path, project)
+        with self.assertRaisesRegexp(ConanException,
+                                     "Root Hellob/0.1@lasote/stable is not defined as editable"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                    random: something
+            root: HelloB/0.1@lasote/stable
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace unrecognized fields: {'random': 'something'}"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+            root: HelloB/0.1@lasote/stable
+            random: something
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace unrecognized fields: {'random': 'something'}"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+            root: HelloB/0.1@lasote/stable
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace editable HelloB/0.1@lasote/stable "
+                                     "does not define data"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    layout: layout
+            root: HelloB/0.1@lasote/stable
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace editable does not define path"):
+            Workspace(path, None)
+
     def simple_test(self):
         client = TestClient()
 
