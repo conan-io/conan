@@ -687,7 +687,7 @@ class HelloConan(ConanFile):
         settings.compiler.version = "14"
 
         # test build_type and arch override, for multi-config packages
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True, module="conans.*") as w:
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
             self.assertEqual(len(w), 1)
@@ -697,14 +697,14 @@ class HelloConan(ConanFile):
 
         # tests errors if args not defined
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True) as w:
+            with warnings.catch_warnings(record=True, module="conans.*") as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln")
                 self.assertEqual(len(w), 1)
                 self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True) as w:
+            with warnings.catch_warnings(record=True, module="conans.*") as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln")
                 self.assertEqual(len(w), 1)
@@ -712,7 +712,7 @@ class HelloConan(ConanFile):
 
         # successful definition via settings
         settings.build_type = "Debug"
-        with warnings.catch_warnings(record=True) as w:
+        with warnings.catch_warnings(record=True, module="conans.*") as w:
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln")
             self.assertEqual(len(w), 1)
@@ -801,7 +801,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
             runner = TestRunner(output)
-            cmd = tools.vcvars_command(settings)
+            cmd = tools.vcvars_command(settings, output=self.output)
             runner(cmd + " && set vs140comntools")
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
@@ -866,7 +866,7 @@ class HelloConan(ConanFile):
 
         # It follows arch_build first
         settings.arch_build = "x86"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
 
     def vcvars_raises_when_not_found_test(self):
