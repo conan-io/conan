@@ -788,7 +788,7 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         output = TestBufferConanOutput()
         runner = TestRunner(output)
         runner(cmd + " && set vs140comntools")
@@ -820,7 +820,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"path": tmp["path"]}):
             previous_path = os.environ["PATH"].split(";")
             # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
-            with tools.vcvars(settings):
+            with tools.vcvars(settings, output=self.output):
                 path = os.environ["PATH"].split(";")
                 values_count = {value: path.count(value) for value in path}
                 for value, counter in values_count.items():
@@ -857,7 +857,7 @@ class HelloConan(ConanFile):
         settings.compiler.version = "15"
         settings.arch = "x86"
         settings.arch_build = "x86_64"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
