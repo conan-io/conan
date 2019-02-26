@@ -172,7 +172,6 @@ class ZypperTool(tools_system_pm.ZypperTool):
 
 
 # from conans.client.tools.win
-msvc_build_command = tools_win.msvc_build_command
 vs_installation_path = tools_win.vs_installation_path
 vswhere = tools_win.vswhere
 vs_comntools = tools_win.vs_comntools
@@ -190,7 +189,12 @@ run_in_windows_bash = tools_win.run_in_windows_bash
 
 @contextmanager
 def vcvars(*args, **kwargs):
-    yield tools_win.vcvars(output=_global_output, *args, **kwargs)
+    with tools_win.vcvars(output=_global_output, *args, **kwargs):
+        yield
+
+
+def msvc_build_command(*args, **kwargs):
+    return tools_win.msvc_build_command(output=_global_output, *args, **kwargs)
 
 
 def build_sln_command(*args, **kwargs):

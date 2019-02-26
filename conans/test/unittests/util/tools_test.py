@@ -1190,6 +1190,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "aarch64-linux-gnu_ilp32")
 
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabi")
+        
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabihf")
+       
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "i686-linux-android")

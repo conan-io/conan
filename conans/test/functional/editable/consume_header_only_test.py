@@ -95,9 +95,9 @@ class EditableReferenceTest(unittest.TestCase):
                                                   use_cache_file=use_cache_file,
                                                   base_folder=base_folder)
         if use_repo_file:
-            client_editable.run("link . MyLib/0.1@user/editable --layout=mylayout")
+            client_editable.run("editable add . MyLib/0.1@user/editable --layout=mylayout")
         else:
-            client_editable.run("link . MyLib/0.1@user/editable")
+            client_editable.run("editable add . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)
