@@ -9,8 +9,6 @@ from conans.client.conf import default_settings_yml
 from conans.model.editable_cpp_info import EditableLayout
 from conans.model.options import Options, PackageOptions
 from conans.model.settings import Settings
-from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableLayout
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
