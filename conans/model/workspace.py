@@ -36,7 +36,7 @@ class LocalPackage(object):
 
 class Workspace(object):
 
-    def generate(self, cwd, graph):
+    def generate(self, cwd, graph, output):
         if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
@@ -52,16 +52,22 @@ class Workspace(object):
                                         conanfile.options)
                 src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
                                       conanfile.options)
-                if src:
+                if src is not None:
                     src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)
-                if build:
+                else:
+                    output.warn("CMake workspace: source_folder is not defined for %s" % str(ref))
+                if build is not None:
                     build = os.path.join(ws_pkg.root_folder, build).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_BUILD "%s")\n' % (ref.name, build)
+                else:
+                    output.warn("CMake workspace: build_folder is not defined for %s" % str(ref))
 
                 if src and build:
                     add_subdirs += ('    add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})\n'
                                     % (ref.name, ref.name))
+                else:
+                    output.warn("CMake workspace: cannot 'add_subdirectory()'")
             if add_subdirs:
                 cmake += "macro(conan_workspace_subdirectories)\n"
                 cmake += add_subdirs
