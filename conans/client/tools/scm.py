@@ -15,6 +15,24 @@ from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
 
 
+def _run_muted(cmd, folder=None):
+    with chdir(folder) if folder else no_op():
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process.communicate()
+        return process.returncode
+
+
+def _check_repo(cmd, folder, msg=None):
+    msg = msg or "Not a valid '{}' repository".format(cmd[0])
+    try:
+        ret = _run_muted(cmd, folder=folder)
+    except Exception:
+        raise ConanException(msg)
+    else:
+        if bool(ret):
+            raise ConanException(msg)
+
+
 class SCMBase(object):
     cmd_command = None
 
@@ -90,7 +108,7 @@ class Git(SCMBase):
         return output
 
     def checkout(self, element, submodule=None):
-        self._check_git_repo()
+        self.check_repo()
         output = self.run('checkout "%s"' % element)
 
         if submodule:
@@ -130,7 +148,7 @@ class Git(SCMBase):
         return ret
 
     def get_remote_url(self, remote_name=None, remove_credentials=False):
-        self._check_git_repo()
+        self.check_repo()
         remote_name = remote_name or "origin"
         remotes = self.run("remote -v")
         for remote in remotes.splitlines():
@@ -147,7 +165,7 @@ class Git(SCMBase):
         return os.path.exists(url)
 
     def get_commit(self):
-        self._check_git_repo()
+        self.check_repo()
         try:
             commit = self.run("rev-parse HEAD")
             commit = commit.strip()
@@ -158,7 +176,7 @@ class Git(SCMBase):
     get_revision = get_commit
 
     def is_pristine(self):
-        self._check_git_repo()
+        self.check_repo()
         status = self.run("status --porcelain").strip()
         if not status:
             return True
@@ -166,11 +184,11 @@ class Git(SCMBase):
             return False
 
     def get_repo_root(self):
-        self._check_git_repo()
+        self.check_repo()
         return self.run("rev-parse --show-toplevel")
 
     def get_branch(self):
-        self._check_git_repo()
+        self.check_repo()
         try:
             status = self.run("status -bs --porcelain")
             # ## feature/scm_branch...myorigin/feature/scm_branch
@@ -180,7 +198,7 @@ class Git(SCMBase):
             raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
 
     def get_tag(self):
-        self._check_git_repo()
+        self.check_repo()
         try:
             status = self.run("describe --exact-match --tags")
             tag = status.strip()
@@ -188,11 +206,9 @@ class Git(SCMBase):
         except Exception:
             return None
 
-    def _check_git_repo(self):
-        try:
-            self.run("status")
-        except Exception:
-            raise ConanException("Not a valid git repository")
+    def check_repo(self):
+        """ Check if it is a valid GIT repo """
+        _check_repo(["git", "status"], folder=self.folder)
 
 
 class SVN(SCMBase):
@@ -234,7 +250,7 @@ class SVN(SCMBase):
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def _show_item(self, item, target='.'):
-        self._check_svn_repo()
+        self.check_repo()
         if self.version >= SVN.API_CHANGE_VERSION:
             value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
             return value.strip()
@@ -260,7 +276,7 @@ class SVN(SCMBase):
     def checkout(self, url, revision="HEAD"):
         output = ""
         try:
-            self._check_svn_repo()
+            self.check_repo()
         except ConanException:
             output += self.run('co "{url}" .'.format(url=url))
         else:
@@ -272,11 +288,11 @@ class SVN(SCMBase):
         return output
 
     def update(self, revision='HEAD'):
-        self._check_svn_repo()
+        self.check_repo()
         return self.run("update -r {rev}".format(rev=revision))
 
     def excluded_files(self):
-        self._check_svn_repo()
+        self.check_repo()
         excluded_list = []
         output = self.run("status --no-ignore")
         for it in output.splitlines():
@@ -362,15 +378,6 @@ class SVN(SCMBase):
         item = re.search(pattern, url)
         return item.group(0) if item else None
 
-    def _check_svn_repo(self):
+    def check_repo(self):
         """ Check if it is a valid SVN repo """
-        try:
-            with chdir(self.folder) if self.folder else no_op():
-                process = subprocess.Popen(['svn', 'info'], stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE)
-                process.communicate()
-        except FileNotFoundError:
-            raise ConanException("Command 'svn' does not exists")
-        else:
-            if bool(process.returncode):
-                raise ConanException("Not a valid SVN repository")
+        _check_repo(["svn", "info"], folder=self.folder)

@@ -1696,7 +1696,7 @@ class GitToolsTests(unittest.TestCase):
         Try to get tag out of a git repo
         """
         git = Git(folder=temp_folder())
-        with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
+        with self.assertRaisesRegexp(ConanException, "Not a valid 'git' repository"):
             git.get_tag()
 
     def test_excluded_files(self):
@@ -1715,11 +1715,11 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        with self.assertRaisesRegexp(ConanException, "Not a valid SVN repository"):
-            svn._check_svn_repo()
+        with self.assertRaisesRegexp(ConanException, "Not a valid 'svn' repository"):
+            svn.check_repo()
         svn.checkout(url=project_url)
         try:
-            svn._check_svn_repo()
+            svn.check_repo()
         except Exception:
             self.fail("After checking out, it should be a valid SVN repository")
 
