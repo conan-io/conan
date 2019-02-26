@@ -13,12 +13,10 @@ from conans.util.files import load, save
 
 class LocalPackage(object):
     def __init__(self, base_folder, data, cache, ws_layout, ws_generators, ref):
-        if not data:
+        if not data or not data.get("path"):
             raise ConanException("Workspace editable %s does not define path" % str(ref))
         self._base_folder = base_folder
         self._conanfile_folder = data.pop("path", None)  # The folder with the conanfile
-        if self._conanfile_folder is None:
-            raise ConanException("Workspace editable %s does not define path" % str(ref))
         layout = data.pop("layout", None)
         if layout:
             self.layout = get_editable_abs_path(layout, self._base_folder,
