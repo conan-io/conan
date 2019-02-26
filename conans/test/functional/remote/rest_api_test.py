@@ -15,6 +15,7 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
 from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.env_reader import get_env
 from conans.util.files import md5, save
 
 
@@ -189,16 +190,19 @@ class RestApiTest(unittest.TestCase):
         results = [r.copy_clear_rev() for r in results]
         self.assertEqual(results, [ref1])
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
     def remove_test(self):
         # Upload a conans
         ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
         self._upload_recipe(ref)
+        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
         path1 = self.server.server_store.conan(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages
         self.api.remove_conanfile(ref)
         self.assertFalse(os.path.exists(path1))
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
     def remove_packages_test(self):
         ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
                                        % DEFAULT_REVISION_V1)
@@ -247,8 +251,7 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0,
-                                no_overwrite=None)
+        self.api.upload_package(package_reference, abs_paths, None, retry=1, retry_wait=0)
 
     def _upload_recipe(self, ref, base_files=None, retry=1, retry_wait=0):
 
@@ -276,4 +279,4 @@ class MyConan(ConanFile):
         abs_paths[CONAN_MANIFEST] = os.path.join(tmp_dir, CONAN_MANIFEST)
         conan_digest.save(tmp_dir)
 
-        self.api.upload_recipe(ref, abs_paths, retry, retry_wait, None, None)
+        self.api.upload_recipe(ref, abs_paths, None, retry, retry_wait)

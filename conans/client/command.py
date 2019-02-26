@@ -1,11 +1,11 @@
-import argparse
 import inspect
 import json
 import os
 import sys
-from argparse import ArgumentError
 
+import argparse
 import six
+from argparse import ArgumentError
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -392,12 +392,13 @@ class Command(object):
                     raise ConanException("A full reference was provided as first argument, second "
                                          "argument not allowed")
 
+                manifest_interactive = args.manifests_interactive
                 info = self._conan.install_reference(ref, settings=args.settings,
                                                      options=args.options,
                                                      env=args.env,
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
-                                                     manifests_interactive=args.manifests_interactive,
+                                                     manifests_interactive=manifest_interactive,
                                                      build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
@@ -636,8 +637,8 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="Directory to install the package (when the build system or build() "
-                                 "method does it). Defaulted to the '{build_folder}/package' folder"
+                            help="Directory to install the package (when the build system or build()"
+                                 " method does it). Defaulted to the '{build_folder}/package' folder"
                                  ". A relative path can be specified, relative to the current "
                                  " folder. Also an absolute path is allowed.")
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
@@ -840,7 +841,7 @@ class Command(object):
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
-                            help="Remove only outdated from recipe packages. " \
+                            help="Remove only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Select package to remove specifying the package ID")
@@ -972,7 +973,8 @@ class Command(object):
                 name = args.name
                 password = args.password
                 if not password:
-                    name, password = self._user_io.request_login(remote_name=remote_name, username=name)
+                    name, password = self._user_io.request_login(remote_name=remote_name,
+                                                                 username=name)
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
                                                                         password=password)
@@ -998,7 +1000,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-o', '--outdated', default=False, action='store_true',
-                            help="Show only outdated from recipe packages. " \
+                            help="Show only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
@@ -1017,7 +1019,14 @@ class Command(object):
         parser.add_argument("-rev", "--revisions", default=False, action='store_true',
                             help='Get a list of revisions for a reference or a '
                                  'package reference.')
+
         args = parser.parse_args(*args)
+
+        if args.revisions and not self._cache.config.revisions_enabled:
+            raise ConanException("The client doesn't have the revisions feature enabled."
+                                 " Enable this feature setting to '1' the environment variable"
+                                 " 'CONAN_REVISIONS_ENABLED' or the config value"
+                                 " 'general.revisions_enabled' in your conan.conf file")
 
         if args.table and args.json:
             raise ConanException("'--table' argument cannot be used together with '--json'")
@@ -1056,8 +1065,7 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-                self._outputer.print_revisions(info["reference"], info["revisions"],
-                                               remote_name=args.remote)
+                self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
@@ -1179,7 +1187,8 @@ class Command(object):
         # create the parser for the "a" command
         parser_list = subparsers.add_parser('list', help='List current remotes')
         parser_list.add_argument("-raw", "--raw", action='store_true', default=False,
-                                 help='Raw format. Valid for "remotes.txt" file for "conan config install"')
+                                 help='Raw format. Valid for "remotes.txt" file for '
+                                 '"conan config install"')
         parser_add = subparsers.add_parser('add', help='Add a remote')
         parser_add.add_argument('remote', help='Name of the remote')
         parser_add.add_argument('url', help='URL of the remote')
@@ -1217,7 +1226,6 @@ class Command(object):
         parser_pupd.add_argument('reference', help='Package recipe reference')
         parser_pupd.add_argument('remote', help='Name of the remote')
 
-
         list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
                                                             'its associated remotes')
         list_pref.add_argument('reference', help='Package recipe reference')
@@ -1228,7 +1236,7 @@ class Command(object):
         add_pref.add_argument('remote', help='Name of the remote')
 
         remove_pref = subparsers.add_parser('remove_pref', help="Dissociate a package's reference "
-                                                              "and its remote")
+                                                                "and its remote")
         remove_pref.add_argument('package_reference', help='Binary package reference')
 
         update_pref = subparsers.add_parser('update_pref', help="Update the remote associated with "
@@ -1354,7 +1362,8 @@ class Command(object):
                                  'conanfile if only a reference is specified and a conaninfo.txt '
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
-        parser.add_argument("-p", "--package", default=None, help='Package ID',
+        parser.add_argument("-p", "--package", default=None,
+                            help="Package ID [DEPRECATED: use full reference instead]",
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", action=OnceArgument,
                             help='Get from this specific remote')
@@ -1362,7 +1371,24 @@ class Command(object):
                             help='Do not decorate the text')
         args = parser.parse_args(*args)
 
-        ret, path = self._conan.get_path(args.reference, args.package, args.path, args.remote)
+        try:
+            pref = PackageReference.loads(args.reference, validate=True)
+            reference = pref.ref.full_repr()
+            package_id = pref.id
+        except ConanException:
+            reference = args.reference
+            package_id = args.package
+
+            if package_id:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan get [...] {}:{}`".format(reference, package_id))
+        else:
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
+
+        ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
         if isinstance(ret, list):
             self._outputer.print_dir_list(ret, path, args.raw)
         else:
@@ -1388,50 +1414,73 @@ class Command(object):
 
         self._conan.export_alias(args.reference, args.target)
 
-    def link(self, *args):
-        """ Links a conan reference (e.g lib/1.0@conan/stable) with a local folder path.
-
+    def workspace(self, *args):
+        """ command to manage workspaces
         """
-        parser = argparse.ArgumentParser(description=self.link.__doc__,
-                                         prog="conan link")
-        parser.add_argument('target', help='Path to the package folder in the user workspace',
-                            nargs='?',)
-        parser.add_argument('reference', help='Reference to link. e.g.: mylib/1.X@user/channel')
-        parser.add_argument("--remove", action='store_true', default=False,
-                            help='Remove linked reference (target not required)')
-        parser.add_argument("-l", "--layout",
-                            help='Relative or absolute path to a file containing the layout.'
-                            ' Relative paths will be resolved first relative to current dir, '
-                            'then to local cache "layouts" folder')
+        parser = argparse.ArgumentParser(description=self.workspace.__doc__,
+                                         prog="conan workspace")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        install_parser = subparsers.add_parser('install', help='same as a "conan install" command '
+                                               'but using the workspace data from the file')
+        install_parser.add_argument('path', help='path to workspace definition file')
+        _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+
+        args = parser.parse_args(*args)
+
+        if args.subcommand == "install":
+            self._conan.workspace_install(args.path, args.settings, args.options, args.env,
+                                          args.remote, args.build,
+                                          args.profile, args.update)
+
+    def editable(self, *args):
+        """ Manage editable packages
+        """
+        parser = argparse.ArgumentParser(description=self.editable.__doc__,
+                                         prog="conan editable")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
+        add_parser.add_argument('path', help='Path to the package folder in the user workspace')
+        add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
+        add_parser.add_argument("-l", "--layout",
+                                help='Relative or absolute path to a file containing the layout.'
+                                ' Relative paths will be resolved first relative to current dir, '
+                                'then to local cache "layouts" folder')
+
+        remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
+        remove_parser.add_argument('reference',
+                                   help='Package reference e.g.: mylib/1.X@user/channel')
+
+        subparsers.add_parser('list', help='List packages in editable mode')
 
         args = parser.parse_args(*args)
         self._warn_python2()
 
-        # Args sanity check
-        if args.remove and args.target:
-            raise ConanException("Do not provide the 'target' argument for removal")
-
-        if not args.remove and not args.target:
-            raise ConanException("Argument 'target' is required to link a reference")
-
-        if not args.remove:
-            self._conan.link(args.target, args.reference, args.layout, cwd=os.getcwd())
-            self._outputer.writeln("Reference '{}' linked to directory "
-                                   "'{}'".format(args.reference, os.path.dirname(args.target)))
-        else:
-            ret = self._conan.unlink(args.reference)
+        if args.subcommand == "add":
+            self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
+            self._user_io.out.success("Reference '{}' in editable mode".format(args.reference))
+        elif args.subcommand == "remove":
+            ret = self._conan.editable_remove(args.reference)
             if ret:
-                self._outputer.writeln("Removed linkage for reference '{}'".format(args.reference))
+                self._user_io.out.success("Removed editable mode for reference "
+                                          "'{}'".format(args.reference))
             else:
                 self._user_io.out.warn("Reference '{}' was not installed "
                                        "as editable".format(args.reference))
+        elif args.subcommand == "list":
+            for k, v in self._conan.editable_list().items():
+                self._user_io.out.info("%s" % k)
+                self._user_io.out.writeln("    Path: %s" % v["path"])
+                self._user_io.out.writeln("    Layout: %s" % v["layout"])
 
     def _show_help(self):
         """Prints a summary of all commands
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package", "link")),
+                ("Package development commands", ("source", "build", "package", "editable",
+                                                  "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help"))]
 
@@ -1529,12 +1578,10 @@ class Command(object):
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._user_io.out.error(exc)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())

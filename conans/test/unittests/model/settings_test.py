@@ -23,6 +23,22 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.values.dumps())
 
+    def getattr_none_test(self):
+        yml = "os: [None, Windows]"
+        settings = Settings.loads(yml)
+        self.assertEqual(settings.os, None)
+        _os = getattr(settings, "os")
+        self.assertEqual(_os, None)
+        self.assertEqual(str(_os), "None")
+
+    def test_get_safe(self):
+        yml = "os: [None, Windows]"
+        settings = Settings.loads(yml)
+        settings.os = "Windows"
+        self.assertEqual(settings.os, "Windows")
+        self.assertEqual(settings.get_safe("compiler.version"), None)
+        self.assertEqual(settings.get_safe("build_type"), None)
+
     def test_none_subsetting(self):
         yml = """os:
     None:

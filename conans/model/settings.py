@@ -85,7 +85,7 @@ class SettingsItem(object):
         return self.__bool__()
 
     def __str__(self):
-        return self._value
+        return str(self._value)
 
     def __eq__(self, other):
         if other is None:

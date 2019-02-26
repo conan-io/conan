@@ -19,7 +19,6 @@ class RevisionListTest(unittest.TestCase):
 
         loaded.remove_revision("rev2")
         self.assertEquals(loaded.latest_revision().revision, "rev1")
-        self.assertIsNotNone(loaded.latest_revision().time)
 
     def test_remove_non_latest(self):
         rev = RevisionList()
@@ -30,7 +29,6 @@ class RevisionListTest(unittest.TestCase):
         loaded = RevisionList.loads(dumped)
         loaded.remove_revision("rev1")
         self.assertEquals(loaded.latest_revision().revision, "rev2")
-        self.assertIsNotNone(loaded.latest_revision().time)
 
     def test_compatibility_with_timestamps(self):
         the_time = time.time()

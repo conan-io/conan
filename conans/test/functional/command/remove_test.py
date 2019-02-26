@@ -194,7 +194,7 @@ class RemoveTest(unittest.TestCase):
                 if isinstance(base_path, ServerStore):
                     if self.client.cache.config.revisions_enabled:
                         try:
-                            rev, _ = self.client.cache.package_layout(ref).recipe_revision()
+                            rev = self.client.cache.package_layout(ref).recipe_revision()
                         except:
                             # This whole test is a crap, we cannot guess remote revision
                             # if the package is not in local anymore
@@ -213,7 +213,7 @@ class RemoveTest(unittest.TestCase):
                                 pref = PackageReference(ref, sha)
                                 try:
                                     layout = self.client.cache.package_layout(pref.ref)
-                                    prev, _ = layout.package_revision(pref)
+                                    prev = layout.package_revision(pref)
                                 except:
                                     # This whole test is a crap, we cannot guess remote revision
                                     # if the package is not in local anymore
@@ -411,7 +411,7 @@ class RemoveTest(unittest.TestCase):
         self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)
         if platform.system() == "Linux":
-            self.assertIn("No recipe found 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
+            self.assertIn("Recipe not found: 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
         else:
             self.assertIn("Requested 'hello/1.4.10@myuser/testing' but found "
                           "case incompatible 'Hello'\n"

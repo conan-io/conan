@@ -66,15 +66,18 @@ class RestApiClient(object):
     def get_package_snapshot(self, ref):
         return self._get_api().get_package_snapshot(ref)
 
-    def get_path(self, ref, package_id, path):
-        return self._get_api().get_path(ref, package_id, path)
+    def get_recipe_path(self, ref, path):
+        return self._get_api().get_recipe_path(ref, path)
 
-    def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
-        return self._get_api().upload_recipe(ref, the_files, retry, retry_wait,
-                                             policy, remote_manifest)
+    def get_package_path(self, pref, path):
+        return self._get_api().get_package_path(pref, path)
 
-    def upload_package(self, pref, the_files, retry, retry_wait, no_overwrite):
-        return self._get_api().upload_package(pref, the_files, retry, retry_wait, no_overwrite)
+    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry,
+                                             retry_wait)
+
+    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
+        return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
         return self._get_api().authenticate(user, password)
@@ -102,3 +105,9 @@ class RestApiClient(object):
 
     def get_package_revisions(self, pref):
         return self._get_api().get_package_revisions(pref)
+
+    def get_latest_recipe_revision(self, ref):
+        return self._get_api().get_latest_recipe_revision(ref)
+
+    def get_latest_package_revision(self, pref):
+        return self._get_api().get_latest_package_revision(pref)

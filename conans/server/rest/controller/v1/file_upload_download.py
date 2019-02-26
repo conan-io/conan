@@ -4,36 +4,37 @@ from unicodedata import normalize
 import six
 from bottle import FileUpload, cached_property, request, static_file
 
-from conans.server.rest.controllers.controller import Controller
+from conans.server.rest.bottle_routes import BottleRoutes
 from conans.server.service.mime import get_mime_type
-from conans.server.service.service import FileUploadDownloadService
+from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 
 
-class FileUploadDownloadController(Controller):
+class FileUploadDownloadController(object):
     """
         Serve requests related with users
     """
-    def attach_to(self, app):
-
+    @staticmethod
+    def attach_to(app):
+        r = BottleRoutes()
         storage_path = app.server_store.store
         service = FileUploadDownloadService(app.updown_auth_manager, storage_path)
 
-        @app.route(self.route + '/<filepath:path>', method=["GET"])
-        def get(filepath):
+        @app.route(r.v1_updown_file, method=["GET"])
+        def get(the_path):
             token = request.query.get("signature", None)
-            file_path = service.get_file_path(filepath, token)
+            file_path = service.get_file_path(the_path, token)
             # https://github.com/kennethreitz/requests/issues/1586
             return static_file(os.path.basename(file_path),
                                root=os.path.dirname(file_path),
                                mimetype=get_mime_type(file_path))
 
-        @app.route(self.route + '/<filepath:path>', method=["PUT"])
-        def put(filepath):
+        @app.route(r.v1_updown_file, method=["PUT"])
+        def put(the_path):
             token = request.query.get("signature", None)
             file_saver = ConanFileUpload(request.body, None,
-                                         filename=os.path.basename(filepath),
+                                         filename=os.path.basename(the_path),
                                          headers=request.headers)
-            abs_path = os.path.abspath(os.path.join(storage_path, os.path.normpath(filepath)))
+            abs_path = os.path.abspath(os.path.join(storage_path, os.path.normpath(the_path)))
             # Body is a stringIO (generator)
             service.put_file(file_saver, abs_path, token, request.content_length)
 

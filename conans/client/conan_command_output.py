@@ -107,7 +107,7 @@ class CommandOutputer(object):
         """ Convert 'deps_graph' into consumible information for json and cli """
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -133,9 +133,9 @@ class CommandOutputer(object):
                 item_data["export_folder"] = self.cache.export(ref)
                 item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
                 if isinstance(self.cache, SimplePaths):
-                    # @todo: check if this is correct or if it must always be package_id()
-                    bid = build_id(conanfile) or package_id
-                    pref = PackageReference(ref, bid)
+                    # @todo: check if this is correct or if it must always be package_id
+                    package_id = build_id(conanfile) or package_id
+                    pref = PackageReference(ref, package_id)
                     item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
 
                     pref = PackageReference(ref, package_id)
@@ -236,14 +236,9 @@ class CommandOutputer(object):
     def print_revisions(self, reference, revisions, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
         self.user_io.out.info("Revisions for '%s'%s:" % (reference, remote_test))
-
-        def iso_str(dt):
-            if not dt:
-                return "No time"
-            else:
-                return iso8601_to_str(dt)
-
-        lines = ["%s (%s)" % (r["revision"], iso_str(r["time"])) for r in revisions]
+        lines = ["%s (%s)" % (r["revision"],
+                              iso8601_to_str(r["time"]) if r["time"] else "No time")
+                 for r in revisions]
         self.user_io.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):

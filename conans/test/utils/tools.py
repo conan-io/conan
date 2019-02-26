@@ -3,22 +3,23 @@ import json
 import os
 import random
 import shlex
-import shutil
 import stat
 import subprocess
 import sys
 import tempfile
-import threading
 import unittest
-import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
 from io import StringIO
 
 import bottle
+import nose
 import requests
+import shutil
 import six
+import threading
 import time
+import uuid
 from mock import Mock
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
@@ -40,11 +41,12 @@ from conans.client.tools.files import replace_in_file
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
+from conans.server.revision_list import _RevisionEntry
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
@@ -56,6 +58,9 @@ from conans.util.files import mkdir, save, save_files
 from conans.util.log import logger
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+ARTIFACTORY_DEFAULT_USER = "admin"
+ARTIFACTORY_DEFAULT_PASSWORD = "password"
+ARTIFACTORY_DEFAULT_URL = "http://localhost:8090/artifactory"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
@@ -224,6 +229,140 @@ class TestRequester(object):
             kwargs["headers"].update(mock_request.headers)
 
 
+class ArtifactoryServerStore(object):
+
+    def __init__(self, repo_url, user, password):
+        self._user = user or ARTIFACTORY_DEFAULT_USER
+        self._password = password or ARTIFACTORY_DEFAULT_PASSWORD
+        self._repo_url = repo_url
+
+    @property
+    def _auth(self):
+        return self._user, self._password
+
+    @staticmethod
+    def _root_recipe(ref):
+        return "{}/{}/{}/{}".format(ref.user, ref.name, ref.version, ref.channel)
+
+    @staticmethod
+    def _ref_index(ref):
+        return "{}/index.json".format(ArtifactoryServerStore._root_recipe(ref))
+
+    @staticmethod
+    def _pref_index(pref):
+        tmp = ArtifactoryServerStore._root_recipe(pref.ref)
+        return "{}/{}/package/{}/index.json".format(tmp, pref.ref.revision, pref.id)
+
+    def get_recipe_revisions(self, ref):
+        time.sleep(0.1)  # Index appears to not being updated immediately after a remove
+        url = "{}/{}".format(self._repo_url, self._ref_index(ref))
+        response = requests.get(url, auth=self._auth)
+        response.raise_for_status()
+        the_json = response.json()
+        if not the_json["revisions"]:
+            raise RecipeNotFoundException(ref)
+        tmp = [_RevisionEntry(i["revision"], i["time"]) for i in the_json["revisions"]]
+        return tmp
+
+    def get_package_revisions(self, pref):
+        time.sleep(0.1)  # Index appears to not being updated immediately
+        url = "{}/{}".format(self._repo_url, self._pref_index(pref))
+        response = requests.get(url, auth=self._auth)
+        response.raise_for_status()
+        the_json = response.json()
+        if not the_json["revisions"]:
+            raise PackageNotFoundException(pref)
+        tmp = [_RevisionEntry(i["revision"], i["time"]) for i in the_json["revisions"]]
+        return tmp
+
+    def get_last_revision(self, ref):
+        revisions = self.get_recipe_revisions(ref)
+        return revisions[0]
+
+    def get_last_package_revision(self, ref):
+        revisions = self.get_package_revisions(ref)
+        return revisions[0]
+
+    def package_exists(self, pref):
+        try:
+            if pref.revision:
+                path = self.server_store.package(pref)
+            else:
+                path = self.test_server.server_store.package_revisions_root(pref)
+            return self.test_server.server_store.path_exists(path)
+        except NotFoundException:  # When resolves the latest and there is no package
+            return False
+
+
+class ArtifactoryServer(object):
+
+    def __init__(self, url=None, user=None, password=None, server_capabilities=None):
+        self._user = user or ARTIFACTORY_DEFAULT_USER
+        self._password = password or ARTIFACTORY_DEFAULT_PASSWORD
+        self._url = url or ARTIFACTORY_DEFAULT_URL
+        self._repo_name = "conan_{}".format(str(uuid.uuid4()).replace("-", ""))
+        self.create_repository()
+        self.server_store = ArtifactoryServerStore(self.repo_url, self._user, self._password)
+        if server_capabilities is not None:
+            raise nose.SkipTest("The Artifactory Server can't adjust capabilities")
+
+    @property
+    def _auth(self):
+        return self._user, self._password
+
+    @property
+    def repo_url(self):
+        return "{}/{}".format(self._url, self._repo_name)
+
+    @property
+    def repo_api_url(self):
+        return "{}/api/conan/{}".format(self._url, self._repo_name)
+
+    def recipe_revision_time(self, ref):
+        revs = self.server_store.get_recipe_revisions(ref)
+        for r in revs:
+            if r.revision == ref.revision:
+                return r.time
+        return None
+
+    def package_revision_time(self, pref):
+        revs = self.server_store.get_package_revisions(pref)
+        for r in revs:
+            if r.revision == pref.revision:
+                return r.time
+        return None
+
+    def create_repository(self):
+        url = "{}/api/repositories/{}".format(self._url, self._repo_name)
+        config = {"key": self._repo_name, "rclass": "local", "packageType": "conan"}
+        ret = requests.put(url, auth=self._auth, json=config)
+        ret.raise_for_status()
+
+    def package_exists(self, pref):
+        try:
+            revisions = self.server_store.get_package_revisions(pref)
+            if pref.revision:
+                for r in revisions:
+                    if pref.revision == r.revision:
+                        return True
+                return False
+            return True
+        except Exception:  # When resolves the latest and there is no package
+            return False
+
+    def recipe_exists(self, ref):
+        try:
+            revisions = self.server_store.get_recipe_revisions(ref)
+            if ref.revision:
+                for r in revisions:
+                    if ref.revision == r.revision:
+                        return True
+                return False
+            return True
+        except Exception:  # When resolves the latest and there is no package
+            return False
+
+
 class TestServer(object):
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
@@ -266,14 +405,20 @@ class TestServer(object):
 
     def recipe_exists(self, ref):
         try:
-            path = self.test_server.server_store.conan(ref)
+            if not ref.revision:
+                path = self.test_server.server_store.conan_revisions_root(ref)
+            else:
+                path = self.test_server.server_store.conan(ref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
 
     def package_exists(self, pref):
         try:
-            path = self.test_server.server_store.package(pref)
+            if pref.revision:
+                path = self.test_server.server_store.package(pref)
+            else:
+                path = self.test_server.server_store.package_revisions_root(pref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
@@ -290,7 +435,7 @@ class TestServer(object):
     def latest_package(self, pref):
         if not pref.ref.revision:
             raise Exception("Pass a pref with .rev.revision (Testing framework)")
-        prev, _ = self.test_server.server_store.get_last_package_revision(pref)
+        prev = self.test_server.server_store.get_last_package_revision(pref)
         return pref.copy_with_revs(pref.ref.revision, prev)
 
     def package_revision_time(self, pref):
@@ -298,6 +443,10 @@ class TestServer(object):
             raise Exception("Pass a pref with revision (Testing framework)")
         tmp = self.test_server.server_store.get_package_revision_time(pref)
         return tmp
+
+
+if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
+    TestServer = ArtifactoryServer
 
 
 class TestBufferConanOutput(ConanOutput):
@@ -576,7 +725,11 @@ servers["r2"] = TestServer()
         registry = self.cache.registry
 
         def add_server_to_registry(name, server):
-            if isinstance(server, TestServer):
+            if isinstance(server, ArtifactoryServer):
+                registry.remotes.add(name, server.repo_api_url)
+                self.users.update({name: [(ARTIFACTORY_DEFAULT_USER,
+                                           ARTIFACTORY_DEFAULT_PASSWORD)]})
+            elif isinstance(server, TestServer):
                 registry.remotes.add(name, server.fake_url)
             else:
                 registry.remotes.add(name, server)
@@ -620,8 +773,9 @@ servers["r2"] = TestServer()
         # Check if servers are real
         real_servers = False
         for server in self.servers.values():
-            if isinstance(server, str):  # Just URI
+            if isinstance(server, str) or isinstance(server, ArtifactoryServer):  # Just URI
                 real_servers = True
+                break
 
         with tools.environment_append(self.cache.config.env_vars):
             if real_servers:
@@ -728,7 +882,7 @@ class TurboTestClient(TestClient):
         self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_repr(), args or ""),
                  assert_error=assert_error)
-        rrev, _ = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
     def create(self, ref, conanfile=None, args=None, assert_error=False):
@@ -737,21 +891,21 @@ class TurboTestClient(TestClient):
         self.run("create . {} {} --json {}".format(ref.full_repr(),
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev, _ = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.package_layout(ref).recipe_revision()
         json_path = os.path.join(self.current_folder, self.tmp_json_name)
         data = json.loads(load(json_path))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev, _ = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
         self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
                  assert_error=assert_error)
-        remote_rrev = self.servers[remote].server_store.get_last_revision(ref).revision
+        remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
         return ref.copy_with_rev(remote_rrev)
 
     def remove_all(self):

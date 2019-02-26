@@ -10,33 +10,23 @@ from conans.client.tools.oss import detected_os, OSInfo
 class DetectedOSTest(unittest.TestCase):
     def test_windows(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
-            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
-                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
-                    self.assertEqual(detected_os(), "Windows")
+            self.assertEqual(detected_os(), "Windows")
 
     def test_cygwin(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='CYGWIN_NT-10.0')):
-            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
-                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
-                    self.assertEqual(detected_os(), "Windows")
+            self.assertEqual(detected_os(), "Windows")
 
     def test_msys(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='MSYS_NT-10.0')):
-            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
-                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
-                    self.assertEqual(detected_os(), "Windows")
+            self.assertEqual(detected_os(), "Windows")
 
     def test_mingw32(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='MINGW32_NT-10.0')):
-            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
-                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
-                    self.assertEqual(detected_os(), "Windows")
+            self.assertEqual(detected_os(), "Windows")
 
     def test_mingw64(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='MINGW64_NT-10.0')):
-            with mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"):
-                with mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
-                    self.assertEqual(detected_os(), "Windows")
+            self.assertEqual(detected_os(), "Windows")
 
     def test_darwin(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='Darwin')):
