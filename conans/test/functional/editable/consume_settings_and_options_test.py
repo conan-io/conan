@@ -89,9 +89,9 @@ class SettingsAndOptionsTest(unittest.TestCase):
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   base_folder=base_folder)
         if use_repo_file:
-            client_editable.run("link . MyLib/0.1@user/editable -l=mylayout")
+            client_editable.run("editable add . MyLib/0.1@user/editable -l=mylayout")
         else:
-            client_editable.run("link . MyLib/0.1@user/editable")
+            client_editable.run("editable add . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)

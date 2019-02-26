@@ -21,16 +21,16 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t = TestClient()
         self.t.save(files={'conanfile.py': self.conanfile,
                            "mylayout": "", })
-        self.t.run('link . {} -l=mylayout'.format(self.ref))
+        self.t.run('editable add . {} -l=mylayout'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def test_unlink(self):
-        self.t.run('link {} --remove'.format(self.ref))
-        self.assertIn("Removed linkage for reference '{}'".format(self.ref), self.t.out)
+        self.t.run('editable remove {}'.format(self.ref))
+        self.assertIn("Removed editable mode for reference '{}'".format(self.ref), self.t.out)
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
     def test_unlink_not_linked(self):
         reference = 'otherlib/version@user/name'
         self.t.run('search {}'.format(reference), assert_error=True)
-        self.t.run('link {} --remove'.format(reference))
+        self.t.run('editable remove {}'.format(reference))
         self.assertIn("Reference '{}' was not installed as editable".format(reference), self.t.out)
