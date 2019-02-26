@@ -1,8 +1,8 @@
 # coding=utf-8
 import os
 from collections import OrderedDict
-from io import StringIO
 
+from six import StringIO
 from six.moves import configparser
 
 from conans.errors import ConanException
