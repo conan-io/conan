@@ -1348,7 +1348,7 @@ class Test(ConanFile):
     def test_exception_client_without_revs(self):
         client = TestClient()
         client.run("search whatever --revisions", assert_error=True)
-        self.assertIn("ERROR: This client doesn't support revisions", client.out)
+        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 
 class SearchRemoteAllTestCase(unittest.TestCase):
