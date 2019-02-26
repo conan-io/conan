@@ -23,13 +23,13 @@ def _get_profile_keys(key):
 def cmd_profile_list(cache_profiles_path, output):
     profiles = []
     if os.path.exists(cache_profiles_path):
-        for current_directory, dirs, files in os.walk(cache_profiles_path, followlinks=True):
+        for current_directory, _, files in os.walk(cache_profiles_path, followlinks=True):
             for filename in files:
-                relative_to_profile_dir = os.path.relpath(current_directory, cache_profiles_path)
-                rel_path = os.path.relpath(os.path.join(current_directory, filename), cache_profiles_path)
+                rel_path = os.path.relpath(os.path.join(current_directory, filename),
+                                           cache_profiles_path)
                 profiles.append(rel_path)
 
-    if len(profiles) == 0:
+    if not profiles:
         output.info("No profiles defined")
     profiles.sort()
     return profiles
