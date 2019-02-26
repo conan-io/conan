@@ -8,7 +8,10 @@ from textwrap import dedent
 
 from conans.client import tools
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.util.files import load, save
+from conans.test.utils.test_files import temp_folder
+from conans.model.workspace import Workspace
+from conans.errors import ConanException
 
 
 conanfile_build = """from conans import ConanFile, CMake
@@ -89,6 +92,67 @@ target_link_libraries(hello{name} {dep})
 
 
 class WorkspaceTest(unittest.TestCase):
+
+    def parse_test(self):
+        folder = temp_folder()
+        path = os.path.join(folder, "conanws.yml")
+        project = "root: Hellob/0.1@lasote/stable"
+        save(path, project)
+        with self.assertRaisesRegexp(ConanException,
+                                     "Root Hellob/0.1@lasote/stable is not defined as editable"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                    random: something
+            root: HelloB/0.1@lasote/stable
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace unrecognized fields: {'random': 'something'}"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+            root: HelloB/0.1@lasote/stable
+            random: something
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace unrecognized fields: {'random': 'something'}"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+            root: HelloB/0.1@lasote/stable
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace editable HelloB/0.1@lasote/stable "
+                                     "does not define path"):
+            Workspace(path, None)
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    layout: layout
+            root: HelloB/0.1@lasote/stable
+            """)
+        save(path, project)
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "Workspace editable HelloB/0.1@lasote/stable "
+                                     "does not define path"):
+            Workspace(path, None)
+
     def simple_test(self):
         client = TestClient()
 
@@ -626,3 +690,45 @@ class Pkg(ConanFile):
                                                     "conanbuildinfo.cmake")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "conanworkspace.cmake")))
+
+    def gen_subdirectories_test(self):
+        client = TestClient()
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
+
+        project = dedent("""
+            editables:
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
+            layout: layout
+            workspace_generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """)
+        layout = dedent("""
+            [build_folder]
+
+            [source_folder]
+
+            """)
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
+
+        conanws_cmake = load(os.path.join(client.current_folder, "conanworkspace.cmake"))
+        self.assertIn("macro(conan_workspace_subdirectories)", conanws_cmake)
+        for p in ("HelloC", "HelloB", "HelloA"):
+            self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
+                          conanws_cmake)

@@ -1,6 +1,7 @@
 import itertools
 import os
 import unittest
+from collections import OrderedDict
 
 from mock import mock
 
@@ -540,3 +541,25 @@ class Pkg(ConanFile):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
         self.assertIn("Uploading conan_export.tgz", client.out)
+
+    def upload_key_error_test(self):
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                     users={"lasote": "mypass"})
+        server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                     users={"lasote": "mypass"})
+        servers = OrderedDict()
+        servers["server1"] = server1
+        servers["server2"] = server2
+        client = TestClient(servers=servers)
+        client.save(files)
+        client.run("config set general.revisions_enabled=True")
+        client.run("create . user/testing")
+        client.run("user lasote -p mypass")
+        client.run("user lasote -p mypass -r server2")
+        client.run("upload Hello0/1.2.1@user/testing --all -r server1")
+        client.run("remove * --force")
+        client.run("install Hello0/1.2.1@user/testing -r server1")
+        client.run("remote remove server1")
+        client.run("upload Hello0/1.2.1@user/testing --all -r server2")
+        self.assertNotIn("ERROR: 'server1'", client.out)

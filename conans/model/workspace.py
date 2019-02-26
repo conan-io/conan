@@ -4,30 +4,34 @@ from collections import OrderedDict
 
 import yaml
 
+from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
+from conans.model.editable_cpp_info import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
-from conans.model.editable_cpp_info import get_editable_abs_path
-from conans.client.graph.graph import RECIPE_EDITABLE
 
 
 class LocalPackage(object):
-    def __init__(self, base_folder, data, cache, ws_layout, ws_generators):
+    def __init__(self, base_folder, data, cache, ws_layout, ws_generators, ref):
+        if not data or not data.get("path"):
+            raise ConanException("Workspace editable %s does not define path" % str(ref))
         self._base_folder = base_folder
-        self._conanfile_folder = data.get("path")  # The folder with the conanfile
-        layout = data.get("layout")
+        self._conanfile_folder = data.pop("path", None)  # The folder with the conanfile
+        layout = data.pop("layout", None)
         if layout:
-            self.layout = get_editable_abs_path(data.get("layout"), self._base_folder,
-                                                cache.conan_folder)
+            self.layout = get_editable_abs_path(layout, self._base_folder, cache.conan_folder)
         else:
             self.layout = ws_layout
 
-        generators = data.get("generators")
+        generators = data.pop("generators", None)
         if isinstance(generators, str):
             generators = [generators]
         if generators is None:
             generators = ws_generators
         self.generators = generators
+
+        if data:
+            raise ConanException("Workspace unrecognized fields: %s" % data)
 
     @property
     def root_folder(self):
@@ -36,9 +40,7 @@ class LocalPackage(object):
 
 class Workspace(object):
 
-    def generate(self, cwd, graph):
-        editables = {node.ref: node.conanfile for node in graph.nodes
-                     if node.recipe == RECIPE_EDITABLE}
+    def generate(self, cwd, graph, output):
         if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
@@ -49,19 +51,29 @@ class Workspace(object):
                 ws_pkg = self._workspace_packages[ref]
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
-                conanfile = editables[ref]
-                build = editable.folder(ref, "build_folder", conanfile.settings, conanfile.options)
-                src = editable.folder(ref, "source_folder", conanfile.settings, conanfile.options)
-                if src:
+
+                conanfile = node.conanfile
+                build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
+                                        conanfile.options)
+                src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
+                                      conanfile.options)
+                if src is not None:
                     src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)
-                if build:
+                else:
+                    output.warn("CMake workspace: source_folder is not defined for %s" % str(ref))
+                if build is not None:
                     build = os.path.join(ws_pkg.root_folder, build).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_BUILD "%s")\n' % (ref.name, build)
+                else:
+                    output.warn("CMake workspace: build_folder is not defined for %s" % str(ref))
 
                 if src and build:
                     add_subdirs += ('    add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})\n'
                                     % (ref.name, ref.name))
+                else:
+                    output.warn("CMake workspace: cannot 'add_subdirectory()'")
+
             if add_subdirs:
                 cmake += "macro(conan_workspace_subdirectories)\n"
                 cmake += add_subdirs
@@ -110,12 +122,15 @@ class Workspace(object):
         if not self._root:
             raise ConanException("Conan workspace needs at least 1 root conanfile")
 
-        editables = yml.pop("editables", None)
-        for package_name, data in editables.items():
+        editables = yml.pop("editables", {})
+        for ref, data in editables.items():
             workspace_package = LocalPackage(self._base_folder, data,
-                                             self._cache, ws_layout, generators)
-            package_name = ConanFileReference.loads(package_name)
+                                             self._cache, ws_layout, generators, ref)
+            package_name = ConanFileReference.loads(ref)
             self._workspace_packages[package_name] = workspace_package
         for package_name in self._root:
             if package_name not in self._workspace_packages:
-                raise ConanException("Root %s is not a local package" % package_name)
+                raise ConanException("Root %s is not defined as editable" % str(package_name))
+
+        if yml:
+            raise ConanException("Workspace unrecognized fields: %s" % yml)

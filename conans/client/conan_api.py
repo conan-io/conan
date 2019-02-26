@@ -489,12 +489,14 @@ class ConanAPIV1(object):
             if node.recipe == RECIPE_EDITABLE:
                 generators = workspace[node.ref].generators
                 if generators is not None:
-                    node.conanfile.generators = generators
+                    tmp = list(node.conanfile.generators)
+                    tmp.extend([g for g in generators if g not in tmp])
+                    node.conanfile.generators = tmp
 
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=recorder, hook_manager=self._hook_manager)
         installer.install(deps_graph, keep_build=False, graph_info=graph_info)
-        workspace.generate(cwd, deps_graph)
+        workspace.generate(cwd, deps_graph, self._user_io.out)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -1071,7 +1073,7 @@ class ConanAPIV1(object):
         layout_abs_path = get_editable_abs_path(layout, cwd, self._cache.conan_folder)
         if layout_abs_path:
             self._user_io.out.success("Using layout file: %s" % layout_abs_path)
-        self._cache.editable_packages.link(ref, os.path.dirname(target_path), layout_abs_path)
+        self._cache.editable_packages.add(ref, os.path.dirname(target_path), layout_abs_path)
 
     @api_method
     def editable_remove(self, reference):
@@ -1080,7 +1082,7 @@ class ConanAPIV1(object):
 
     @api_method
     def editable_list(self):
-        return {str(k): v for k, v in self._cache.editable_packages.refs().items()}
+        return {str(k): v for k, v in self._cache.editable_packages.edited_refs.items()}
 
 
 Conan = ConanAPIV1
