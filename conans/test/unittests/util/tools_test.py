@@ -691,6 +691,8 @@ class HelloConan(ConanFile):
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
                                            arch="x86", output=self.output)
+            for it in w:
+                print(str(it.message))
             self.assertEqual(len(w), 1)
             self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
