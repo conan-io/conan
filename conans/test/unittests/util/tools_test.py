@@ -687,9 +687,10 @@ class HelloConan(ConanFile):
         settings.compiler.version = "14"
 
         # test build_type and arch override, for multi-config packages
-        with warnings.catch_warnings(record=True, module="conans.*") as w:
+        with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
+                                           arch="x86", output=self.output)
             self.assertEqual(len(w), 1)
             self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
@@ -697,24 +698,24 @@ class HelloConan(ConanFile):
 
         # tests errors if args not defined
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True, module="conans.*") as w:
+            with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                tools.msvc_build_command(settings, "project.sln")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
                 self.assertEqual(len(w), 1)
                 self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True, module="conans.*") as w:
+            with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                tools.msvc_build_command(settings, "project.sln")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
                 self.assertEqual(len(w), 1)
                 self.assertEqual(issubclass(w[0].category, DeprecationWarning))
 
         # successful definition via settings
         settings.build_type = "Debug"
-        with warnings.catch_warnings(record=True, module="conans.*") as w:
+        with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            cmd = tools.msvc_build_command(settings, "project.sln")
+            cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
             self.assertEqual(len(w), 1)
             self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
