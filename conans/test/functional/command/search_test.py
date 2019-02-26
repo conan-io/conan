@@ -1107,6 +1107,11 @@ class Test(ConanFile):
             self.assertIn("os: Windows", client.user_io.out)
             self.assertNotIn("os: Linux", client.user_io.out)
 
+    def test_exception_client_without_revs(self):
+        client = TestClient()
+        client.run("search whatever --revisions", assert_error=True)
+        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
+
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),
                      "set TESTING_REVISIONS_ENABLED=1")
@@ -1344,11 +1349,6 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions -r fake",
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
-
-    def test_exception_client_without_revs(self):
-        client = TestClient()
-        client.run("search whatever --revisions", assert_error=True)
-        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 
 class SearchRemoteAllTestCase(unittest.TestCase):
