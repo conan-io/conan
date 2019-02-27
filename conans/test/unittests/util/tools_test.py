@@ -691,9 +691,7 @@ class HelloConan(ConanFile):
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
                                            arch="x86", output=self.output)
-            for it in w:
-                print(str(it.message))
-            self.assertEqual(len(w), 1)
+            self.assertEqual(len(w), 2)
             self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
@@ -703,14 +701,14 @@ class HelloConan(ConanFile):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln", output=self.output)
-                self.assertEqual(len(w), 1)
+                self.assertEqual(len(w), 2)
                 self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln", output=self.output)
-                self.assertEqual(len(w), 1)
+                self.assertEqual(len(w), 2)
                 self.assertEqual(issubclass(w[0].category, DeprecationWarning))
 
         # successful definition via settings
@@ -718,7 +716,7 @@ class HelloConan(ConanFile):
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
-            self.assertEqual(len(w), 1)
+            self.assertEqual(len(w), 2)
             self.assertEqual(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
