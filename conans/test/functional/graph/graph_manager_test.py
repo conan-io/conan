@@ -42,12 +42,12 @@ class GraphManagerTest(unittest.TestCase):
                                     self.resolver)
         hook_manager = Mock()
         recorder = Mock()
-        workspace = None
         self.binary_installer = BinaryInstaller(cache, self.output, remote_manager, recorder,
-                                                workspace, hook_manager)
+                                                hook_manager)
 
     def _cache_recipe(self, reference, test_conanfile, revision=None):
-        test_conanfile.info = True
+        if isinstance(test_conanfile, TestConanFile):
+            test_conanfile.info = True
         ref = ConanFileReference.loads(reference)
         save(self.cache.conanfile(ref), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
@@ -66,7 +66,6 @@ class GraphManagerTest(unittest.TestCase):
             profile.build_requires = profile_build_requires
         profile.process_settings(self.cache)
         update = check_updates = False
-        workspace = None
         recorder = ActionRecorder()
         remote_name = None
         build_mode = []
@@ -75,7 +74,7 @@ class GraphManagerTest(unittest.TestCase):
         graph_info = GraphInfo(profile, options, root_ref=ref)
         deps_graph, _ = self.manager.load_graph(path, None, graph_info,
                                                 build_mode, check_updates, update,
-                                                remote_name, recorder, workspace)
+                                                remote_name, recorder)
         self.binary_installer.install(deps_graph, False, graph_info)
         return deps_graph
 
@@ -336,6 +335,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         graph = self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
+        self.assertEqual(5, len(graph.nodes))
         app = graph.root
         lib = app.dependencies[0].dst
         zlib = lib.dependencies[0].dst
@@ -349,6 +349,59 @@ class TransitiveGraphTest(GraphManagerTest):
 
         self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[zlib2],
                          dependents=[lib], closure=[zlib2], public_deps=[gtest, lib, zlib])
+
+    def test_diamond_no_option_conflict_build_requires(self):
+        # Same as above, but gtest->(build_require)->zlib2
+        zlib_ref = "zlib/0.1@user/testing"
+        self._cache_recipe(zlib_ref, TestConanFile("zlib", "0.1",
+                                                   options='{"shared": [True, False]}',
+                                                   default_options='shared=False'))
+
+        self._cache_recipe("gtest/0.1@user/testing",
+                           TestConanFile("gtest", "0.1", requires=[zlib_ref],
+                                         default_options='zlib:shared=True'))
+        self._cache_recipe("lib/0.1@user/testing",
+                           TestConanFile("lib", "0.1", requires=[zlib_ref],
+                                         build_requires=["gtest/0.1@user/testing"]))
+
+        graph = self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
+
+        self.assertEqual(4, len(graph.nodes))
+        app = graph.root
+        lib = app.dependencies[0].dst
+        zlib = lib.dependencies[0].dst
+        self.assertFalse(bool(zlib.conanfile.options.shared))
+        gtest = lib.dependencies[1].dst
+        zlib2 = gtest.dependencies[0].dst
+        self.assertIs(zlib, zlib2)
+        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
+                         closure=[lib, zlib], public_deps=[app, lib, zlib])
+
+        self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], build_deps=[gtest],
+                         dependents=[app], closure=[gtest, zlib], public_deps=[app, lib, zlib])
+
+        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[zlib2], build_deps=[],
+                         dependents=[lib], closure=[zlib2], public_deps=[gtest, lib, zlib])
+
+    def test_diamond_option_conflict_build_requires(self):
+        # Same as above, but gtest->(build_require)->zlib2
+        zlib_ref = "zlib/0.1@user/testing"
+        self._cache_recipe(zlib_ref, TestConanFile("zlib", "0.1",
+                                                   options='{"shared": [True, False]}',
+                                                   default_options='shared=False'))
+        configure = """
+    def configure(self):
+        self.options["zlib"].shared=True
+        """
+        gtest = str(TestConanFile("gtest", "0.1", requires=[zlib_ref])) + configure
+        self._cache_recipe("gtest/0.1@user/testing", gtest)
+        self._cache_recipe("lib/0.1@user/testing",
+                           TestConanFile("lib", "0.1", requires=[zlib_ref],
+                                         build_requires=["gtest/0.1@user/testing"]))
+
+        with self.assertRaisesRegexp(ConanException,
+                                     "tried to change zlib/0.1@user/testing option shared to True"):
+            self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
     def test_conflict_private(self):
         liba_ref = "liba/0.1@user/testing"

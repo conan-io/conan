@@ -1079,20 +1079,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
-    def test_usage_of_list_revisions(self):
-        client = TestClient()
-        conanfile = dedent("""
-                    from conans import ConanFile
-                    class Test(ConanFile):
-                        pass
-                    """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . lib/1.0@conan/stable")
-        client.run("search lib/1.0@conan/stable --revisions")
-        self.assertIn("Revisions for 'lib/1.0@conan/stable':", client.out)
-        # FIXME: Should be "0" when no revisions are enabled?
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
-
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
 class SearchOutdatedTest(unittest.TestCase):
@@ -1120,6 +1106,11 @@ class Test(ConanFile):
             client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
             self.assertIn("os: Windows", client.user_io.out)
             self.assertNotIn("os: Linux", client.user_io.out)
+
+    def test_exception_client_without_revs(self):
+        client = TestClient()
+        client.run("search whatever --revisions", assert_error=True)
+        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False),
@@ -1358,6 +1349,7 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions -r fake",
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
+
 
 class SearchRemoteAllTestCase(unittest.TestCase):
     def setUp(self):

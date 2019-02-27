@@ -4,8 +4,8 @@ from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, BINARY_WORKSPACE, Node,\
-    RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.client.graph.graph import BINARY_BUILD, Node,\
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
@@ -90,7 +90,8 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remote_name, recorder, workspace):
+                   remote_name, recorder):
+
         def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
             before running the install
@@ -142,7 +143,7 @@ class GraphManager(object):
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
-                                      recorder=recorder, workspace=workspace,
+                                      recorder=recorder,
                                       processed_profile=processed_profile)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
@@ -171,7 +172,7 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
                                 build_mode, remote_name,
-                                profile_build_requires, recorder, workspace, processed_profile):
+                                profile_build_requires, recorder, processed_profile):
 
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
 
@@ -180,8 +181,8 @@ class GraphManager(object):
             # FIXME: To be improved and build a explicit model for this
             if node.recipe == RECIPE_VIRTUAL:
                 continue
-            if (node.binary not in (BINARY_BUILD, BINARY_WORKSPACE) and
-                    node.recipe != RECIPE_CONSUMER):
+            if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE)
+                    and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.ref)
@@ -208,7 +209,7 @@ class GraphManager(object):
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remote_name, profile_build_requires, recorder,
-                                             workspace, processed_profile)
+                                             processed_profile)
                 graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
@@ -218,21 +219,22 @@ class GraphManager(object):
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remote_name, {}, recorder,
-                                             workspace, processed_profile)
+                                             processed_profile)
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
-                    profile_build_requires, recorder, workspace, processed_profile):
+                    profile_build_requires, recorder, processed_profile):
+
         assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   workspace, recorder)
+                                   recorder)
         graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
-                                                  self._remote_manager, workspace)
+                                                  self._remote_manager)
 
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remote_name,
-                                     profile_build_requires, recorder, workspace, processed_profile)
+                                     profile_build_requires, recorder, processed_profile)
 
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
@@ -243,6 +245,7 @@ class GraphManager(object):
             # List sort is stable, will keep the original order of the closure, but prioritize levels
             node_order.sort(key=lambda n: inverse_levels[n])
             node.public_closure = node_order
+
         return graph
 
 

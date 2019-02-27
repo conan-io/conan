@@ -7,7 +7,6 @@ RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
-RECIPE_WORKSPACE = "Workspace"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
@@ -18,7 +17,6 @@ BINARY_UPDATE = "Update"
 BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
-BINARY_WORKSPACE = "Workspace"
 BINARY_EDITABLE = "Editable"
 
 
