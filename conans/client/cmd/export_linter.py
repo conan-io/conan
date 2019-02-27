@@ -4,6 +4,8 @@ import platform
 import sys
 from subprocess import PIPE, Popen
 
+from six.moves.html_parser import HTMLParser
+
 from conans import __path__ as root_path
 from conans.client.output import Color
 from conans.errors import ConanException
@@ -72,15 +74,17 @@ def _normal_linter(conanfile_path, hook):
 
         return True
 
+    h = HTMLParser()
     result = []
     py3msgs = []
     for msg in output_json:
         if msg.get("type") in ("warning", "error"):
             message_id = msg.get("symbol")
+            message = h.unescape(msg.get('message'))
             if message_id in ("print-statement", "dict-iter-method"):
                 py3msgs.append("Py3 incompatibility. Line %s: %s"
-                               % (msg.get("line"), msg.get("message")))
+                               % (msg.get("line"), message))
             elif _accept_message(msg):
-                result.append("Linter. Line %s: %s" % (msg.get("line"), msg.get("message")))
+                result.append("Linter. Line %s: %s" % (msg.get("line"), message))
 
     return result, py3msgs
