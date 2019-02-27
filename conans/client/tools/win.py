@@ -191,7 +191,7 @@ def vs_installation_path(version, preference=None):
 
     # Try with vswhere()
     try:
-        legacy_products = vswhere(legacy=True, prerelease=True)
+        legacy_products = vswhere(legacy=True)
         all_products = vswhere(products=["*"])
         products = legacy_products + all_products
     except ConanException:
