@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+import mock
 import unittest
-from mock import mock
 
 from conans.client.tools import OSInfo, environment_append, CYGWIN, MSYS2, MSYS, WSL, \
     remove_from_path

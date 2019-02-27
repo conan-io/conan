@@ -2,14 +2,10 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
-
+import mock
 import unittest
 
-from mock import mock
-
 from conans.client.tools.oss import detected_architecture
-from conans.client.tools.oss import OSInfo
-
 
 class DetectedArchitectureTest(unittest.TestCase):
 
