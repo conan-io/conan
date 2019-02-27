@@ -28,7 +28,10 @@ class RequirementInfo(object):
 
         # sha values
         if package_id_mode:
-            getattr(self, package_id_mode)()
+            try:
+                getattr(self, package_id_mode)()
+            except AttributeError:
+                raise ConanException("'%s' is not a known package_id_mode" % package_id_mode)
         else:
             if indirect:
                 self.unrelated_mode()
