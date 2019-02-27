@@ -48,19 +48,6 @@ class CreateEditablePackageTest(unittest.TestCase):
         t.run("search")
         self.assertIn("lib/version@user/name", t.out)
 
-    def test_editable_list_search(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
-        t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile})
-        t.run('editable add . {}'.format(ref))
-        t.run("editable list")
-        self.assertIn("lib/version@user/name", t.out)
-        self.assertIn("    Layout: None", t.out)
-        self.assertIn("    Path:", t.out)
-
-        t.run("search")
-        self.assertIn("lib/version@user/name", t.out)
-
     def test_install_wrong_reference(self):
         ref = ConanFileReference.loads('lib/version@user/name')
 
