@@ -336,7 +336,7 @@ class OSInfo(object):
                 # https://github.com/Microsoft/WSL/issues/423#issuecomment-221627364
                 with open("/proc/sys/kernel/osrelease") as f:
                     return WSL if f.read().endswith("Microsoft") else None
-            except FileNotFoundError:
+            except IOError:
                 return None
         try:
             output = OSInfo.uname()
