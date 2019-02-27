@@ -20,6 +20,8 @@ class OSInfoTest(unittest.TestCase):
             return self._uname.encode()
         elif cmd.endswith('"uname -r"'):
             return self._version.encode()
+        elif cmd.endswith('oslevel'):
+            return self._version.encode()
         raise ValueError("don't know how to respond to %s" % cmd)
 
     def test_windows(self):
@@ -195,9 +197,10 @@ class OSInfoTest(unittest.TestCase):
                     self.assertEqual(OSInfo.detect_windows_subsystem(), WSL)
 
     def test_aix(self):
+        self._version = '7.1.0.0'
+
         with mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
-                mock.patch("platform.version", mock.MagicMock(return_value='7')),\
-                mock.patch("platform.release", mock.MagicMock(return_value='1')):
+                mock.patch('subprocess.check_output', new=self.subprocess_check_output_mock):
             self.assertFalse(OSInfo().is_windows)
             self.assertFalse(OSInfo().is_cygwin)
             self.assertFalse(OSInfo().is_msys)
@@ -207,7 +210,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
             self.assertTrue(OSInfo().is_aix)
 
-            self.assertEqual(OSInfo().os_version_name, 'AIX 7.1')
+            self.assertEqual(OSInfo().os_version_name, 'AIX 7.1.0.0')
 
             with self.assertRaises(ConanException):
                 OSInfo.uname()

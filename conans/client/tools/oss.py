@@ -71,10 +71,8 @@ def detected_architecture():
     elif "arm" in machine:
         return "armv6"
 
-    # processor reports powerpc on AIX
     processor = platform.processor()
     if "powerpc" in processor and OSInfo().is_aix:
-        # query bitness by using getconf
         kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
         if kernel_bitness:
             return "ppc%s" % kernel_bitness
@@ -288,7 +286,11 @@ class OSInfo(object):
 
     @staticmethod
     def get_aix_version():
-        return Version("%s.%s" % (platform.version(), platform.release()))
+        try:
+            ret = subprocess.check_output("oslevel", shell=True).decode().strip()
+            return Version(ret)
+        except Exception:
+            return Version("%s.%s" % (platform.version(), platform.release()))
 
     @staticmethod
     def bash_path():
@@ -311,6 +313,18 @@ class OSInfo(object):
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
                 ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
                 return ret
+        except Exception:
+            return None
+
+    @staticmethod
+    def getconf(options=None):
+        options = " %s" % options if options else ""
+        if not OSInfo().is_aix:
+            raise ConanException("Command only for AIX operating system")
+
+        try:
+            ret = subprocess.check_output("getconf%s" % options, shell=True).decode().strip()
+            return ret
         except Exception:
             return None
 
