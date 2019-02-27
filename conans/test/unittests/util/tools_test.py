@@ -1150,7 +1150,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEquals(triplet, expected_triplet, "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
     def get_gnu_triplet_on_windows_without_compiler_test(self):
-        self.assertRaises(ConanException, tools.get_gnu_triplet("Windows", "x86"))
+        with self.assertRaises(ConanException):
+            tools.get_gnu_triplet("Windows", "x86")
 
     def detect_windows_subsystem_test(self):
         # Dont raise test
