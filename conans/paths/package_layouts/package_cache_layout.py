@@ -4,8 +4,10 @@ import os
 import platform
 from contextlib import contextmanager
 
+from conans.errors import NotFoundException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
+from conans.model.manifest import discarded_file
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
@@ -41,51 +43,51 @@ class PackageCacheLayout(object):
         return self._base_folder
 
     def export(self):
-        return os.path.join(self.conan(), EXPORT_FOLDER)
-
-    @short_path
-    def export_sources(self):
-        return os.path.join(self.conan(), EXPORT_SRC_FOLDER)
-
-    @short_path
-    def source(self):
-        return os.path.join(self.conan(), SRC_FOLDER)
+        return os.path.join(self._base_folder, EXPORT_FOLDER)
 
     def conanfile(self):
         export = self.export()
         return os.path.join(export, CONANFILE)
 
+    @short_path
+    def export_sources(self):
+        return os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
+
+    @short_path
+    def source(self):
+        return os.path.join(self._base_folder, SRC_FOLDER)
+
     def builds(self):
-        return os.path.join(self.conan(), BUILD_FOLDER)
+        return os.path.join(self._base_folder, BUILD_FOLDER)
 
     @short_path
     def build(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), BUILD_FOLDER, pref.id)
+        return os.path.join(self._base_folder, BUILD_FOLDER, pref.id)
 
     def system_reqs(self):
-        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, SYSTEM_REQS)
+        return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, SYSTEM_REQS)
 
     def system_reqs_package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
+        return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
 
     def packages(self):
-        return os.path.join(self.conan(), PACKAGES_FOLDER)
+        return os.path.join(self._base_folder, PACKAGES_FOLDER)
 
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self.conan(), PACKAGES_FOLDER, pref.id)
+        return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
-        return os.path.join(self.conan(), SCM_FOLDER)
+        return os.path.join(self._base_folder, SCM_FOLDER)
 
     def package_metadata(self):
-        return os.path.join(self.conan(), PACKAGE_METADATA)
+        return os.path.join(self._base_folder, PACKAGE_METADATA)
 
     def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
@@ -144,3 +146,28 @@ class PackageCacheLayout(object):
         except IOError:
             raise PackageNotFoundException(pref)
         return read_manifest.summary_hash
+
+    # Raw access to file
+    def get_path(self, path, package_id=None):
+        """ Return the contents for the given `path` inside current layout, it can
+            be a single file or the list of files in a directory
+
+            :param package_id: will retrieve the contents from the package directory
+            :param path: path relative to the cache reference or package folder
+        """
+
+        assert not os.path.isabs(path)
+
+        if package_id is None:  # Get the file in the exported files
+            folder = self.export()
+        else:
+            pref = PackageReference(self._ref, package_id)
+            folder = self.package(pref)
+
+        abs_path = os.path.join(folder, path)
+        if not os.path.exists(abs_path):
+            raise NotFoundException("The specified path doesn't exist")
+        if os.path.isdir(abs_path):
+            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
+        else:
+            return load(abs_path)

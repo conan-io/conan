@@ -6,7 +6,7 @@ from conans.model import Generator
 
 class VirtualEnvGenerator(Generator):
 
-    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL"]
+    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
 
     def __init__(self, conanfile):
         self.conanfile = conanfile

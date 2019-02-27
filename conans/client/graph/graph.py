@@ -1,7 +1,5 @@
 from collections import OrderedDict
 
-from conans.errors import conanfile_exception_formatter
-from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -11,7 +9,6 @@ RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
-RECIPE_WORKSPACE = "Workspace"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
@@ -22,23 +19,27 @@ BINARY_UPDATE = "Update"
 BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
-BINARY_WORKSPACE = "Workspace"
 BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
+        self.package_id = None
+        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
-        self.pref = None
         self.binary = None
         self.recipe = recipe
         self.remote = None
         self.binary_remote = None
         self.build_require = False
         self.revision_pinned = False  # The revision has been specified by the user
+
+    @property
+    def pref(self):
+        return PackageReference(self.ref, self.package_id, self.prev)
 
     def partial_copy(self):
         result = Node(self.ref, self.conanfile)
@@ -169,40 +170,11 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def compute_package_ids(self):
+    def ordered_iterate(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                conanfile = node.conanfile
-                neighbors = node.neighbors()
-                direct_reqs = []  # of PackageReference
-                indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for neighbor in neighbors:
-                    ref, nconan = neighbor.ref, neighbor.conanfile
-                    package_id = nconan.info.package_id()
-                    pref = PackageReference(ref, package_id)
-                    direct_reqs.append(pref)
-                    indirect_reqs.update(nconan.info.requires.refs())
-                    conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-                    # Might be never used, but update original requirement, just in case
-                    conanfile.requires[ref.name].ref = ref
-
-                # Make sure not duplicated
-                indirect_reqs.difference_update(direct_reqs)
-                # There might be options that are not upstream, backup them, might be
-                # for build-requires
-                conanfile.build_requires_options = conanfile.options.values
-                conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
-
-                conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                                  conanfile.options.values,
-                                                  direct_reqs,
-                                                  indirect_reqs)
-
-                # Once we are done, call package_id() to narrow and change possible values
-                with conanfile_exception_formatter(str(conanfile), "package_id"):
-                    conanfile.package_id()
-        return ordered
+                yield node
 
     def full_closure(self, node, private=False):
         # Needed to propagate correctly the cpp_info even with privates
@@ -262,7 +234,7 @@ class DepsGraph(object):
         for node in self.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            pref = PackageReference(node.ref, node.conanfile.info.package_id())
+            pref = PackageReference(node.ref, node.package_id)
             if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)
@@ -299,11 +271,10 @@ class DepsGraph(object):
 
     def nodes_to_build(self):
         ret = []
-        for level in self.by_levels():
-            for node in level:
-                if node.binary == BINARY_BUILD:
-                    if node.ref.copy_clear_rev() not in ret:
-                        ret.append(node.ref.copy_clear_rev())
+        for node in self.ordered_iterate():
+            if node.binary == BINARY_BUILD:
+                if node.ref.copy_clear_rev() not in ret:
+                    ret.append(node.ref.copy_clear_rev())
         return ret
 
     def by_levels(self):

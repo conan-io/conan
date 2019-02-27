@@ -196,6 +196,8 @@ class OSInfo(object):
 
         os_version = _OSVERSIONINFOEXW()
         os_version.dwOSVersionInfoSize = ctypes.sizeof(os_version)
+        if not hasattr(ctypes, "windll"):
+            return None
         retcode = ctypes.windll.Ntdll.RtlGetVersion(ctypes.byref(os_version))
         if retcode != 0:
             return None
@@ -328,6 +330,13 @@ class OSInfo(object):
     @staticmethod
     def detect_windows_subsystem():
         from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
+        if OSInfo().is_linux:
+            try:
+                # https://github.com/Microsoft/WSL/issues/423#issuecomment-221627364
+                with open("/proc/sys/kernel/osrelease") as f:
+                    return WSL if f.read().endswith("Microsoft") else None
+            except FileNotFoundError:
+                return None
         try:
             output = OSInfo.uname()
         except ConanException:
@@ -437,7 +446,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
         if "arm" in arch and "armv8" not in arch:
             op_system += "eabi"
 
-        if arch == "armv7hf" and os_ == "Linux":
+        if (arch == "armv5hf" or arch == "armv7hf") and os_ == "Linux":
             op_system += "hf"
 
         if arch == "armv8_32" and os_ == "Linux":

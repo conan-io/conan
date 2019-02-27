@@ -6,7 +6,7 @@ import shutil
 import unittest
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.editable_cpp_info import EditableLayout
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -26,14 +26,14 @@ class ParseTest(unittest.TestCase):
                             """)
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
-            _ = EditableCppInfo.load(self.layout_filepath)
+            _ = EditableLayout.load(self.layout_filepath)
         content = textwrap.dedent("""
                             [*:includedrs]
                             something
                             """)
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
-            _ = EditableCppInfo.load(self.layout_filepath)
+            _ = EditableLayout.load(self.layout_filepath)
 
         content = textwrap.dedent("""
                             [*:includedirs]
@@ -41,7 +41,7 @@ class ParseTest(unittest.TestCase):
                             """)
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong package reference '\*' in layout file"):
-            _ = EditableCppInfo.load(self.layout_filepath)
+            _ = EditableLayout.load(self.layout_filepath)
 
         content = textwrap.dedent("""
                             [pkg/version@user/channel:revision:includedirs]
@@ -50,4 +50,4 @@ class ParseTest(unittest.TestCase):
         save(self.layout_filepath, content)
         with self.assertRaisesRegexp(ConanException, "Wrong package reference "
                                      "'pkg/version@user/channel:revision' in layout file"):
-            _ = EditableCppInfo.load(self.layout_filepath)
+            _ = EditableLayout.load(self.layout_filepath)

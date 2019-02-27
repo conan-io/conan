@@ -1,10 +1,12 @@
 import os
 import platform
 import unittest
+from textwrap import dedent
 
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
+from conans import load
 from conans.client.build.cmake import CMake
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient
@@ -431,3 +433,39 @@ conan_basic_setup()
         client.save({"CMakeLists.txt": tmp, "conanfile.py": conanfile}, clean_first=True)
         client.run("create . user/channel -o MyLib:fPIC=True")
         self.assertNotIn("Conan: Adjusting fPIC flag", client.out)
+
+    def header_only_generator_test(self):
+        """ Test cmake.install() is possible although Generetaor could not be deduced from
+        settings
+        """
+        conanfile = dedent("""
+        from conans import ConanFile, CMake
+
+        class TestConan(ConanFile):
+            name = "kk"
+            version = "1.0"
+            exports = "*"
+
+            def package(self):
+                cmake = CMake(self)
+                self.output.info("Configure command: %s" % cmake.command_line)
+                cmake.configure()
+                cmake.install()
+        """)
+        cmakelists = dedent("""
+        cmake_minimum_required(VERSION 3.3)
+        project(test)
+
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists, "include/file.h": ""})
+        client.run("create . danimtb/testing")
+        if platform.system() == "Windows":
+            self.assertIn("WARN: CMake generator could not be deduced from settings", client.out)
+            self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="ON" '
+                          '-DCMAKE_INSTALL_PREFIX=', client.out)
+        else:
+            self.assertIn('Configure command: -G "Unix Makefiles" -DCONAN_EXPORTED="1" '
+                          '-DCONAN_IN_LOCAL_CACHE="ON" -DCMAKE_INSTALL_PREFIX=', client.out)

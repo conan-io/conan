@@ -10,10 +10,9 @@ class LocalStoreTest(unittest.TestCase):
     def localdb_test(self):
         tmp_dir = temp_folder()
         db_file = os.path.join(tmp_dir, "dbfile")
-        localdb = LocalDB(db_file)
+        localdb = LocalDB.create(db_file)
 
         # Test write and read login
-        localdb.init()
         user, token = localdb.get_login("myurl1")
         self.assertIsNone(user)
         self.assertIsNone(token)
