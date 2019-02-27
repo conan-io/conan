@@ -409,7 +409,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
         elif "ppc64le" in arch:
             machine = "powerpc64le"
         elif "ppc64" in arch:
-            machine = "powerpc64"
+            machine = "powerpc64" if os_ != "AIX" else "powerpc"
         elif "ppc32" in arch:
             machine = "powerpc"
         elif "mips64" in arch:
@@ -441,7 +441,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "Macos": "apple-darwin",
                  "iOS": "apple-darwin",
                  "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin"}.get(os_, os_.lower())
+                 "tvOS": "apple-darwin",
+                 "AIX": "ibm-aix"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:
