@@ -8,6 +8,7 @@ import unittest
 from mock import mock
 
 from conans.client.tools.oss import detected_architecture
+from conans.client.tools.oss import OSInfo
 
 
 class DetectedArchitectureTest(unittest.TestCase):
@@ -63,3 +64,15 @@ class DetectedArchitectureTest(unittest.TestCase):
 
         with mock.patch("platform.machine", mock.MagicMock(return_value='sparc64')):
             self.assertEqual('sparcv9', detected_architecture())
+
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
+                mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value='64')):
+            self.assertEqual('ppc64', detected_architecture())
+
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
+                mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value='32')):
+            self.assertEqual('ppc', detected_architecture())

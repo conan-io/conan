@@ -71,6 +71,14 @@ def detected_architecture():
     elif "arm" in machine:
         return "armv6"
 
+    # processor reports powerpc on AIX
+    processor = platform.processor()
+    if "powerpc" in processor and OSInfo().is_aix:
+        # query bitness by using getconf
+        kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
+        if kernel_bitness:
+            return "ppc64" if kernel_bitness == "64" else "ppc"
+
     return None
 
 # DETECT OS, VERSION AND DISTRIBUTIONS
@@ -107,6 +115,7 @@ class OSInfo(object):
         self.is_macos = system == "Darwin"
         self.is_freebsd = system == "FreeBSD"
         self.is_solaris = system == "SunOS"
+        self.is_aix = system == "AIX"
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
@@ -123,6 +132,9 @@ class OSInfo(object):
         elif self.is_solaris:
             self.os_version = Version(platform.release())
             self.os_version_name = self.get_solaris_version_name(self.os_version)
+        elif self.is_aix:
+            self.os_version = self.get_aix_version()
+            self.os_version_name = "AIX %s" % self.os_version
 
     def _get_linux_distro_info(self):
         import distro
@@ -273,6 +285,11 @@ class OSInfo(object):
             return "Solaris 11"
 
     @staticmethod
+    def get_aix_version():
+        platform.release()
+        return Version("%s.%s" % (platform.version(), platform.release()))
+
+    @staticmethod
     def bash_path():
         if os.getenv("CONAN_BASH_PATH"):
             return os.getenv("CONAN_BASH_PATH")
@@ -293,6 +310,18 @@ class OSInfo(object):
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
                 ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
                 return ret
+        except Exception:
+            return None
+
+    @staticmethod
+    def getconf(options=None):
+        options = " %s" % options if options else ""
+        if not OSInfo().is_aix:
+            raise ConanException("Command only for AIX operating system")
+
+        try:
+            ret = subprocess.check_output("getconf%s" % options, shell=True).decode().strip().lower()
+            return ret
         except Exception:
             return None
 
