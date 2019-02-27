@@ -77,7 +77,7 @@ def detected_architecture():
         # query bitness by using getconf
         kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
         if kernel_bitness:
-            return "ppc64" if kernel_bitness == "64" else "ppc"
+            return "ppc%s" % kernel_bitness
 
     return None
 
@@ -288,7 +288,6 @@ class OSInfo(object):
 
     @staticmethod
     def get_aix_version():
-        platform.release()
         return Version("%s.%s" % (platform.version(), platform.release()))
 
     @staticmethod
@@ -312,18 +311,6 @@ class OSInfo(object):
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
                 ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
                 return ret
-        except Exception:
-            return None
-
-    @staticmethod
-    def getconf(options=None):
-        options = " %s" % options if options else ""
-        if not OSInfo().is_aix:
-            raise ConanException("Command only for AIX operating system")
-
-        try:
-            ret = subprocess.check_output("getconf%s" % options, shell=True).decode().strip().lower()
-            return ret
         except Exception:
             return None
 
