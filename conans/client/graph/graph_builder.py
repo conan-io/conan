@@ -1,5 +1,5 @@
 import time
-
+from collections import OrderedDict
 
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -8,7 +8,6 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
-from collections import OrderedDict
 
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
@@ -42,7 +41,7 @@ class DepsGraphBuilder(object):
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
-    def extend_build_requires(self, dep_graph, node, build_requires_refs, check_updates, update,
+    def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
                               remote_name, processed_profile):
 
         # The options that will be defined in the node will be the real options values that have
@@ -56,51 +55,46 @@ class DepsGraphBuilder(object):
         conanfile = node.conanfile
         scope = conanfile.display_name
         requires = [Requirement(ref) for ref in build_requires_refs]
-        for require in requires:
-            self._resolver.resolve(require, scope, update, remote_name)
+        self._resolve_ranges(graph, requires, scope, update, remote_name)
 
-        # After resolving ranges,
-        for require in requires:
-            alias = dep_graph.aliased.get(require.ref)
-            if alias:
-                require.ref = alias
-
-        previous_closure = node.public_closure.copy()
         for require in requires:
             name = require.ref.name
-            require.private = True  # FIXME: abused model
-
-            self._handle_require(name, node, require, dep_graph, check_updates, update,
+            require.build_require = True
+            self._handle_require(name, node, require, graph, check_updates, update,
                                  remote_name, processed_profile, new_reqs, new_options)
 
+        new_nodes = set([n for n in graph.nodes if n.package_id is None])
         # This is to make sure that build_requires have precedence over the normal requires
-        node.public_closure = OrderedDict([(k, v) for k, v in node.public_closure.items()
-                                           if k not in previous_closure])
-        node.public_closure.update(previous_closure)
+        ordered_closure = list(node.public_closure.items())
+        ordered_closure.sort(key=lambda x: x[1] not in new_nodes)
+        node.public_closure = OrderedDict(ordered_closure)
 
         subgraph = DepsGraph()
-        subgraph.aliased = dep_graph.aliased
-        subgraph.evaluated = dep_graph.evaluated
-        subgraph.nodes = set([n for n in dep_graph.nodes if n.package_id is None])
+        subgraph.aliased = graph.aliased
+        subgraph.evaluated = graph.evaluated
+        subgraph.nodes = new_nodes
         for n in subgraph.nodes:
             n.build_require = True
 
         return subgraph
 
-    def _resolve_deps(self, dep_graph, node, update, remote_name):
+    def _resolve_ranges(self, graph, requires, scope, update, remote_name):
+        for require in requires:
+            self._resolver.resolve(require, scope, update, remote_name)
+
+        # After resolving ranges,
+        for require in requires:
+            alias = graph.aliased.get(require.ref)
+            if alias:
+                require.ref = alias
+
+    def _resolve_deps(self, graph, node, update, remote_name):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RangeResolver are also done in new_reqs, and then propagated!
         conanfile = node.conanfile
         scope = conanfile.display_name
-        for _, require in conanfile.requires.items():
-            self._resolver.resolve(require, scope, update, remote_name)
-
-        # After resolving ranges,
-        for require in conanfile.requires.values():
-            alias = dep_graph.aliased.get(require.ref)
-            if alias:
-                require.ref = alias
+        self._resolve_ranges(graph, conanfile.requires.values(), scope, update, remote_name)
 
         if not hasattr(conanfile, "_conan_evaluated_requires"):
             conanfile._conan_evaluated_requires = conanfile.requires.copy()
@@ -140,14 +134,15 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         previous = node.public_deps.get(name)
-        if require.private or not previous:  # new node, must be added and expanded
+        if require.private or require.build_require or not previous:
+            # new node, must be added and expanded
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remote_name,
                                              processed_profile)
 
             new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
             node.public_closure[name] = new_node
-            if require.private:
+            if require.private or require.build_require:
                 new_node.public_deps = node.public_closure
             else:
                 new_node.public_deps = node.public_deps
@@ -184,7 +179,7 @@ class DepsGraphBuilder(object):
 
             previous.ancestors.add(node.name)
             node.public_closure[name] = previous
-            dep_graph.add_edge(node, previous)
+            dep_graph.add_edge(node, previous, require.private, require.build_require)
             # RECURSION!
             if self._recurse(previous.public_closure, new_reqs, new_options):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
@@ -317,5 +312,5 @@ class DepsGraphBuilder(object):
         new_node.ancestors = current_node.ancestors.copy()
         new_node.ancestors.add(current_node.name)
         dep_graph.add_node(new_node)
-        dep_graph.add_edge(current_node, new_node, requirement.private)
+        dep_graph.add_edge(current_node, new_node, requirement.private, requirement.build_require)
         return new_node

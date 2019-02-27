@@ -33,7 +33,6 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
-        self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
         # all the public deps to which this node belongs
         self.public_deps = None  # {ref.name: Node}
@@ -71,12 +70,8 @@ class Node(object):
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
 
-    def public_neighbors(self):
-        return [edge.dst for edge in self.dependencies
-                if not edge.private and not edge.build_require]
-
     def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private or edge.build_require]
+        return [edge.dst for edge in self.dependencies if edge.private]
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
