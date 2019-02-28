@@ -100,6 +100,7 @@ def cmake_global_vars(deps, build_type=""):
 set(CONAN_CMD_CXX_FLAGS ${CONAN_CXX_FLAGS})
 
 set(CONAN_CMD_SHARED_LINKER_FLAGS ${CONAN_SHARED_LINKER_FLAGS})
+set(CONAN_CMD_STATIC_LINKER_FLAGS ${CONAN_STATIC_LINKER_FLAGS})
 set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 # Defining accumulated conan variables for all deps
 """
@@ -467,6 +468,7 @@ macro(conan_set_flags build_type)
     set(CMAKE_CXX_FLAGS${build_type} "${CMAKE_CXX_FLAGS${build_type}} ${CONAN_CXX_FLAGS${build_type}}")
     set(CMAKE_C_FLAGS${build_type} "${CMAKE_C_FLAGS${build_type}} ${CONAN_C_FLAGS${build_type}}")
     set(CMAKE_SHARED_LINKER_FLAGS${build_type} "${CMAKE_SHARED_LINKER_FLAGS${build_type}} ${CONAN_SHARED_LINKER_FLAGS${build_type}}")
+    set(CMAKE_STATIC_LINKER_FLAGS${build_type} "${CMAKE_STATIC_LINKER_FLAGS${build_type}} ${CONAN_STATIC_LINKER_FLAGS${build_type}}")
     set(CMAKE_EXE_LINKER_FLAGS${build_type} "${CMAKE_EXE_LINKER_FLAGS${build_type}} ${CONAN_EXE_LINKER_FLAGS${build_type}}")
 endmacro()
 
