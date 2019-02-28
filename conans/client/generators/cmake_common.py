@@ -517,6 +517,17 @@ macro(conan_target_link_libraries target)
         endforeach()
     endif()
 endmacro()
+
+macro(conan_set_ar_flags)
+    if(CONAN_AR_FLAGS)
+        set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> <LINK_FLAGS> ${CONAN_AR_FLAGS} qc <TARGET> <OBJECTS>")
+        set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> <LINK_FLAGS> ${CONAN_AR_FLAGS} q <TARGET> <OBJECTS>")
+        set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> ${CONAN_AR_FLAGS} <TARGET>")
+        set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> <LINK_FLAGS> ${CONAN_AR_FLAGS} qc <TARGET> <OBJECTS>")
+        set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> <LINK_FLAGS> ${CONAN_AR_FLAGS} q <TARGET> <OBJECTS>")
+        set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> ${CONAN_AR_FLAGS} <TARGET>")
+    endif()
+endmacro()
 """
 
 cmake_macros = """
@@ -560,6 +571,7 @@ macro(conan_basic_setup)
     conan_set_vs_runtime()
     conan_set_libcxx()
     conan_set_find_paths()
+    conan_set_ar_flags()
 endmacro()
 
 macro(conan_set_find_paths)
