@@ -206,6 +206,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     conan_set_vs_runtime()
     conan_set_libcxx()
     conan_set_find_paths()
+    conan_set_ar_flags()
 endmacro()""", macro)
 
         # extract the conan_set_find_paths macro
