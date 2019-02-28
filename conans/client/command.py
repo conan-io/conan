@@ -1050,7 +1050,7 @@ class Command(object):
             if args.revisions:
                 try:
                     pref = PackageReference.loads(args.pattern_or_reference)
-                except (TypeError, ConanException):
+                except (TypeError, ConanException, AttributeError):
                     pass
                 else:
                     info = self._conan.get_package_revisions(pref.full_repr(),
