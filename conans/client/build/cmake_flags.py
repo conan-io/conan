@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 
 from conans.client import tools
-from conans.client.build.compiler_flags import architecture_flag, archive_flag, parallel_compiler_cl_flag
+from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
@@ -261,7 +261,6 @@ class CMakeDefinitionsBuilder(object):
                 ret['CONAN_C_FLAGS'] = flag
         else:  # arch_flag is only set for non Visual Studio
             arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
-
             if arch_flag:
                 ret['CONAN_CXX_FLAGS'] = arch_flag
                 ret['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
@@ -270,12 +269,6 @@ class CMakeDefinitionsBuilder(object):
                     ret['CMAKE_CXX_FLAGS'] = arch_flag
                     ret['CMAKE_SHARED_LINKER_FLAGS'] = arch_flag
                     ret['CMAKE_C_FLAGS'] = arch_flag
-
-            ar_flag = archive_flag(compiler=compiler, os=os_, arch=arch)
-            if ar_flag:
-                ret['CONAN_STATIC_LINKER_FLAGS'] = ar_flag
-                if self._set_cmake_flags:
-                    ret['CMAKE_STATIC_LINKER_FLAGS'] = ar_flag
 
         if libcxx:
             ret["CONAN_LIBCXX"] = libcxx
