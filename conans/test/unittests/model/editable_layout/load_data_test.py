@@ -6,7 +6,7 @@ import textwrap
 import unittest
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableLayout
+from conans.model.editable_layout import EditableLayout
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 

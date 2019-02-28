@@ -1,10 +1,8 @@
 import json
 import os
-import subprocess
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
-from conans.tools import chdir
 
 
 def get_scm_data(conanfile):
@@ -52,29 +50,9 @@ class SCMData(object):
         return json.dumps(d, sort_keys=True)
 
 
-def detect_repo_type(folder):
-    if not folder:
-        return None
-
-    def _run_command_ignore_output(cmd):
-        with chdir(folder):
-            try:
-                ret = subprocess.call(cmd, shell=True,
-                                      stdout=open(os.devnull, 'w'), stderr=subprocess.STDOUT)
-                if ret != 0:
-                    return False
-            except Exception:
-                return False
-        return True
-
-    if _run_command_ignore_output("git status"):
-        return "git"
-    elif _run_command_ignore_output("svn info"):
-        return "svn"
-    return None
-
-
 class SCM(object):
+    availables = {'git': Git, 'svn': SVN}
+
     def __init__(self, data, repo_folder, output):
         self._data = data
         self._output = output
@@ -82,8 +60,18 @@ class SCM(object):
         # Finally instance a repo
         self.repo = self._get_repo()
 
+    @classmethod
+    def detect_scm(cls, folder):
+        for name, candidate in cls.availables.items():
+            try:
+                candidate(folder).check_repo()
+                return name
+            except ConanException:
+                pass
+        return None
+
     def _get_repo(self):
-        repo_class = {"git": Git, "svn": SVN}.get(self._data.type)
+        repo_class = self.availables.get(self._data.type)
         if not repo_class:
             raise ConanException("SCM not supported: %s" % self._data.type)
 
