@@ -210,7 +210,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
             self.assertTrue(OSInfo().is_aix)
 
-            self.assertEqual(OSInfo().os_version_name, 'AIX 7.1.0.0')
+            self.assertEqual(OSInfo().os_version_name, 'AIX 7.1')
 
             with self.assertRaises(ConanException):
                 OSInfo.uname()

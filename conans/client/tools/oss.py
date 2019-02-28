@@ -132,7 +132,7 @@ class OSInfo(object):
             self.os_version_name = self.get_solaris_version_name(self.os_version)
         elif self.is_aix:
             self.os_version = self.get_aix_version()
-            self.os_version_name = "AIX %s" % self.os_version
+            self.os_version_name = "AIX %s" % self.os_version.minor(fill=False)
 
     def _get_linux_distro_info(self):
         import distro
