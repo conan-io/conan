@@ -23,7 +23,7 @@ BINARY_EDITABLE = "Editable"
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
-        self.package_id = None
+        self._package_id = None
         self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
@@ -39,6 +39,15 @@ class Node(object):
         # all the public deps only in the closure of this node
         self.public_closure = None  # {ref.name: Node}
         self.ancestors = None  # set{ref.name}
+
+    @property
+    def package_id(self):
+        return self._package_id
+
+    @package_id.setter
+    def package_id(self, pkg_id):
+        assert self._package_id is None, "Trying to override an existing package_id"
+        self._package_id = pkg_id
 
     @property
     def name(self):

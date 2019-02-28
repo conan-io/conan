@@ -28,6 +28,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
+from conans.model.info import PREV_MISSING
 
 
 def build_id(conan_file):
@@ -371,6 +372,9 @@ class BinaryInstaller(object):
 
     def _build_package(self, node, pref, output, keep_build):
         ref, conan_file = node.ref, node.conanfile
+
+        assert pref.id, "Package-ID without value"
+        assert pref.id != PREV_MISSING, "Package-ID cannot be 'PREV_MISSING'"
 
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
