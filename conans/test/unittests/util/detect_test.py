@@ -1,8 +1,7 @@
+import mock
 import platform
 import subprocess
 import unittest
-
-from mock import mock
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
@@ -60,3 +59,16 @@ class DetectTest(unittest.TestCase):
         result = dict(result)
         self.assertTrue("arch" not in result)
         self.assertTrue("arch_build" not in result)
+
+    def test_detect_aix(self):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')), \
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')), \
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
+                mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value='64')), \
+                mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
+            result = detect_defaults_settings(output=TestBufferConanOutput())
+            result = dict(result)
+            self.assertEqual("AIX", result['os'])
+            self.assertEqual("AIX", result['os_build'])
+            self.assertEqual("ppc64", result['arch'])
+            self.assertEqual("ppc64", result['arch_build'])

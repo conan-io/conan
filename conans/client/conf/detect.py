@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
 from conans.client.tools.win import latest_visual_studio_version_installed
-from conans.client.tools import detected_os
+from conans.client.tools import detected_os, detected_architecture
 from conans.model.version import Version
 
 
@@ -38,11 +38,19 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         if ret != 0:
             return None
         compiler = "gcc"
+
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
         if installed_version:
+            if not "." in installed_version and int(installed_version) >= 7:
+                ret, out = _execute('%s -dumpfullversion' % compiler_exe)
+                if ret != 0:
+                    return None
+
+            installed_version = re.search("([0-9](\.[0-9])?)", out).group()
+
             output.success("Found %s %s" % (compiler, installed_version))
             major = installed_version.split(".")[0]
             if int(major) >= 5:
@@ -169,18 +177,11 @@ adjusting 'compiler.libcxx=libstdc++11'
 
 
 def _detect_os_arch(result, output):
-    architectures = {'i386': 'x86',
-                     'i686': 'x86',
-                     'i86pc': 'x86',
-                     'amd64': 'x86_64',
-                     'aarch64': 'armv8',
-                     'sun4v': 'sparc'}
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
-    platform_machine = platform.machine().lower()
-    if platform_machine:
-        arch = architectures.get(platform_machine, platform_machine)
+    arch = detected_architecture()
+    if arch:
         if arch.startswith('arm'):
             for a in ("armv6", "armv7hf", "armv7", "armv8"):
                 if arch.startswith(a):
