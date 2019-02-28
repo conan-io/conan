@@ -23,7 +23,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 from conans.errors import ConanException
-from conans.model.info import PREV_MISSING
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -468,21 +467,3 @@ class PackageIDGraphTests(GraphManagerTest):
 
         self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(libb.package_id, "01add11f2981e9d427ef145d7ad9bcf1aed3dfb2")
-
-    def test_full_package_revision_mode(self):
-        self.cache.config.set_item("general.package_id_mode", "full_package_revision_mode")
-        liba_ref1 = "liba/0.1.1@user/testing"
-        liba_ref2 = "liba/0.1.2@user/testing"
-        libb_ref = "libb/0.1@user/testing"
-        self._cache_recipe(liba_ref1, TestConanFile("liba", "0.1.1"))
-        self._cache_recipe(liba_ref2, TestConanFile("liba", "0.1.2"))
-        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref1]))
-        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(libb.package_id, PREV_MISSING)

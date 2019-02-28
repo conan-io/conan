@@ -12,8 +12,6 @@ from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
 
-PREV_MISSING = "prevmissing"
-
 
 class RequirementInfo(object):
     def __init__(self, pref, indirect=False, package_id_mode=None):
@@ -22,9 +20,7 @@ class RequirementInfo(object):
         self.full_version = pref.ref.version
         self.full_user = pref.ref.user
         self.full_channel = pref.ref.channel
-        self.full_revision = pref.ref.revision
         self.full_package_id = pref.id
-        self.full_package_revision = pref.revision
 
         # sha values
         if package_id_mode:
@@ -41,8 +37,7 @@ class RequirementInfo(object):
     def copy(self):
         # Useful for build_id()
         result = RequirementInfo(self.package)
-        for f in ("name", "version", "user", "channel", "revision", "package_id",
-                  "package_revision"):
+        for f in ("name", "version", "user", "channel", "package_id"):
             setattr(result, f, getattr(self, f))
             f = "full_%s" % f
             setattr(result, f, getattr(self, f))
@@ -62,24 +57,15 @@ class RequirementInfo(object):
     def sha(self):
         vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
         # This is done later to NOT affect existing package-IDs (before revisions)
-        if self.revision:
-            vals.append(self.revision)
-        if self.package_revision == PREV_MISSING:
-            return PREV_MISSING
-        if self.package_revision:
-            # A package revision is required = True, but didn't get a real value
-            vals.append(self.package_revision)
         return "/".join(vals)
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     def semver_mode(self):
         self.name = self.full_name
         self.version = self.full_version.stable()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     semver = semver_mode  # Remove Conan 2.0
 
@@ -87,31 +73,26 @@ class RequirementInfo(object):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     def patch_mode(self):
         self.name = self.full_name
         self.version = self.full_version.patch()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     def base_mode(self):
         self.name = self.full_name
         self.version = self.full_version.base
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     def minor_mode(self):
         self.name = self.full_name
         self.version = self.full_version.minor()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     def major_mode(self):
         self.name = self.full_name
         self.version = self.full_version.major()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
 
     def full_recipe_mode(self):
         self.name = self.full_name
@@ -119,7 +100,6 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = None
-        self.revision = self.package_revision = None
 
     def full_package_mode(self):
         self.name = self.full_name
@@ -127,26 +107,6 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = self.full_package_id
-        self.revision = self.package_revision = None
-
-    def full_revision_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        self.revision = self.full_revision
-        self.package_id = None
-        self.package_revision = None
-
-    def full_package_revision_mode(self):
-        self.name = self.full_name
-        self.version = self.full_version
-        self.user = self.full_user
-        self.channel = self.full_channel
-        self.package_id = self.full_package_id
-        self.revision = self.full_revision
-        # It is requested to use, but not defined (binary not build yet)
-        self.package_revision = self.full_package_revision or PREV_MISSING
 
 
 class RequirementsInfo(object):
@@ -203,8 +163,6 @@ class RequirementsInfo(object):
         data = {k: v for k, v in self._data.items() if v.name}
         for key in sorted(data):
             s = data[key].sha
-            if s is PREV_MISSING:
-                return PREV_MISSING
             result.append(s)
         return sha1('\n'.join(result).encode())
 
@@ -377,8 +335,6 @@ class ConanInfo(object):
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
         requires_sha = self.requires.sha
-        if requires_sha == PREV_MISSING:
-            return PREV_MISSING
         result.append(requires_sha)
 
         package_id = sha1('\n'.join(result).encode())
