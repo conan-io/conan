@@ -1575,7 +1575,7 @@ class GitToolsTests(unittest.TestCase):
         Try to get tag out of a git repo
         """
         git = Git(folder=temp_folder())
-        with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
+        with self.assertRaisesRegexp(ConanException, "Not a valid 'git' repository"):
             git.get_tag()
 
     def test_excluded_files(self):
@@ -1589,6 +1589,19 @@ class GitToolsTests(unittest.TestCase):
 @attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
+
+    def test_check_svn_repo(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        with self.assertRaisesRegexp(ConanException, "Not a valid 'svn' repository"):
+            svn.check_repo()
+        svn.checkout(url=project_url)
+        try:
+            svn.check_repo()
+        except Exception:
+            self.fail("After checking out, it should be a valid SVN repository")
+
     def test_clone(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
@@ -1811,6 +1824,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp())
         with self.assertRaisesRegexp(ConanException, "Unable to get svn tag"):
             svn.get_tag()
+
 
 
 @attr("slow")

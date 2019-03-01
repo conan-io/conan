@@ -6,7 +6,7 @@ import yaml
 
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import get_editable_abs_path, EditableLayout
+from conans.model.editable_layout import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
