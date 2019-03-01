@@ -1,10 +1,16 @@
 import unittest
 from collections import namedtuple, Counter
 
+from mock import Mock
+
 from conans import DEFAULT_REVISION_V1
+from conans.client.cache.cache import ClientCache
 from conans.client.conf import default_settings_yml
+from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.range_resolver import RangeResolver
 from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
@@ -14,17 +20,9 @@ from conans.model.requires import Requirements
 from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
-    test_processed_profile
-import os
-
-from mock import Mock
-
-from conans.client.cache.cache import ClientCache
-from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.graph.range_resolver import RangeResolver
 from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
+                                     test_processed_profile)
 
 
 say_content = TestConanFile("Say", "0.1")
@@ -88,6 +86,7 @@ class GraphTest(unittest.TestCase):
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         self.resolver, None)
         cache = Mock()
+        cache.config.package_id_mode = None
         remote_manager = None
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, remote_manager)
 
@@ -1100,8 +1099,8 @@ class HelloConan(ConanFile):
     Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
-            _ = self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
-                                                                        "Hello/1.2@user/testing"]))
+            self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
+                                                                    "Hello/1.2@user/testing"]))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)

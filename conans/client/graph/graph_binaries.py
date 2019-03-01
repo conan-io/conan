@@ -151,15 +151,14 @@ class GraphBinariesAnalyzer(object):
         node.binary_remote = remote
 
     @staticmethod
-    def _compute_package_id(node):
+    def _compute_package_id(node, package_id_mode):
         conanfile = node.conanfile
         neighbors = node.neighbors()
         direct_reqs = []  # of PackageReference
         indirect_reqs = set()   # of PackageReference, avoid duplicates
         for neighbor in neighbors:
             ref, nconan = neighbor.ref, neighbor.conanfile
-            pref = PackageReference(ref, neighbor.package_id)
-            direct_reqs.append(pref)
+            direct_reqs.append(neighbor.pref)
             indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
             # Might be never used, but update original requirement, just in case
@@ -175,13 +174,14 @@ class GraphBinariesAnalyzer(object):
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
                                           direct_reqs,
-                                          indirect_reqs)
+                                          indirect_reqs,
+                                          package_id_mode=package_id_mode)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             conanfile.package_id()
 
-        info = node.conanfile.info
+        info = conanfile.info
         node.package_id = info.package_id()
 
     def _handle_private(self, node, deps_graph):
@@ -196,8 +196,9 @@ class GraphBinariesAnalyzer(object):
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         evaluated_nodes = {}
+        package_id_mode = self._cache.config.package_id_mode
         for node in deps_graph.ordered_iterate():
-            self._compute_package_id(node)
+            self._compute_package_id(node, package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
