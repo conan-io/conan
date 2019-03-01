@@ -8,11 +8,9 @@ from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.client.tools import Git, SVN
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.model.scm import detect_repo_type
 from conans.paths import CONANFILE
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
@@ -228,11 +226,14 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
 
 def _detect_scm_revision(path):
-    repo_type = detect_repo_type(path)
+    if not path:
+        return None, None
+
+    repo_type = SCM.detect_scm(path)
     if not repo_type:
         return None, None
 
-    repo_obj = {"git": Git, "svn": SVN}.get(repo_type)(path)
+    repo_obj = SCM.availables.get(repo_type)(path)
     return repo_obj.get_revision(), repo_type
 
 

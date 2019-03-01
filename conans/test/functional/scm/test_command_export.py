@@ -33,7 +33,8 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                                                                 rev_value=rev_value)
                           })
         self.client.run("export . lib/version@user/channel", assert_error=True)
-        self.assertIn("ERROR: Not a valid {} repository".format(repo_type), self.client.out)
+        self.assertIn("ERROR: Not a valid '{}' repository".format(repo_type.lower()),
+                      self.client.out)
 
 
 class ExportCommandTestCase(unittest.TestCase):
