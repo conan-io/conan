@@ -154,7 +154,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         text = text.strip()
         tmp = text.split(":")
         try:
-            ref = ConanFileReference.loads(tmp[0].strip())
+            ref = ConanFileReference.loads(tmp[0].strip(), validate=validate)
             package_id = tmp[1].strip()
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)

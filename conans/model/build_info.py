@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 
+import deprecation
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -25,7 +26,7 @@ class _CppInfo(object):
         self.libs = []  # The libs to link against
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
-        self.cppflags = []  # C++ compilation flags
+        self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
@@ -85,6 +86,17 @@ class _CppInfo(object):
             self._res_paths = self._filter_paths(self.resdirs)
         return self._res_paths
 
+    # Compatibility for 'cppflags' (old style property to allow decoration)
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
+    def get_cppflags(self):
+        return self.cxxflags
+
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
+    def set_cppflags(self, value):
+        self.cxxflags = value
+
+    cppflags = property(get_cppflags, set_cppflags)
+
 
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
@@ -140,7 +152,7 @@ class _BaseDepsCppInfo(_CppInfo):
 
         # Note these are in reverse order
         self.defines = merge_lists(dep_cpp_info.defines, self.defines)
-        self.cppflags = merge_lists(dep_cpp_info.cppflags, self.cppflags)
+        self.cxxflags = merge_lists(dep_cpp_info.cxxflags, self.cxxflags)
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)

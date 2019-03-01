@@ -2,12 +2,9 @@ import json
 import os
 from collections import OrderedDict, namedtuple
 
-import fasteners
-
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
-from conans.util.log import logger
 from conans.model.ref import PackageReference
 
 default_remotes = OrderedDict({"conan-center": ("https://conan.bintray.com", True)})
@@ -78,79 +75,31 @@ def migrate_registry_file(path, new_path):
         os.unlink(path)
 
 
-class _RemotesRegistry(object):
+class Remotes(OrderedDict):
+    @staticmethod
+    def loads(text):
+        data = json.loads(text)
+        for r in data.get("remotes", []):
+            self[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
 
-    def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        if force:
-            return self._upsert(remote_name, url, verify_ssl, insert)
+    @property
+    def default(self):
+        try:
+            return next(iter(self))
+        except StopIteration:
+            raise NoRemoteAvailable("No default remote defined")
 
-        def exists_function(remotes):
-            if remote_name in remotes:
-                raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
-                                     % remote_name)
-        self._add_update(remote_name, url, verify_ssl, exists_function, insert)
+    def __getitem__(self, remote_name):
+        try:
+            return self[remote_name]
+        except KeyError:
+            raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
 
-    def update(self, remote_name, url, verify_ssl=True, insert=None):
-        def exists_function(remotes):
-            if remote_name not in remotes:
-                raise ConanException("Remote '%s' not found in remotes" % remote_name)
-        self._add_update(remote_name, url, verify_ssl, exists_function, insert)
-
-    def define(self, remotes):
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            _, refs, prefs = self._load()
-            refs = {k: v for k, v in refs.items() if v in remotes}
-            self._save(remotes, refs, prefs)
-
-    def _add_update(self, remote_name, url, verify_ssl, exists_function, insert=None):
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, refs, prefs = self._load()
-            exists_function(remotes)
-            urls = {r[0]: name for name, r in remotes.items() if name != remote_name}
-            if url in urls:
-                raise ConanException("Remote '%s' already exists with same URL" % urls[url])
-            if insert is not None:
-                try:
-                    insert_index = int(insert)
-                except ValueError:
-                    raise ConanException("insert argument must be an integer")
-                remotes.pop(remote_name, None)  # Remove if exists (update)
-                remotes_list = list(remotes.items())
-                remotes_list.insert(insert_index, (remote_name, (url, verify_ssl)))
-                remotes = OrderedDict(remotes_list)
-            else:
-                remotes[remote_name] = (url, verify_ssl)
-            self._save(remotes, refs, prefs)
-
-    def _upsert(self, remote_name, url, verify_ssl, insert):
-        with fasteners.InterProcessLock(self._lockfile, logger=logger):
-            remotes, refs, prefs = self._load()
-            # Remove duplicates
-            remotes.pop(remote_name, None)
-            remotes_list = []
-            renamed = None
-            for name, r in remotes.items():
-                if r[0] != url:
-                    remotes_list.append((name, r))
-                else:
-                    renamed = name
-
-            if insert is not None:
-                try:
-                    insert_index = int(insert)
-                except ValueError:
-                    raise ConanException("insert argument must be an integer")
-                remotes_list.insert(insert_index, (remote_name, (url, verify_ssl)))
-                remotes = OrderedDict(remotes_list)
-            else:
-                remotes = OrderedDict(remotes_list)
-                remotes[remote_name] = (url, verify_ssl)
-
-            if renamed:
-                for k, v in refs.items():
-                    if v == renamed:
-                        refs[k] = remote_name
-            self._save(remotes, refs, prefs)
+    def __delitem__(self, remote_name):
+        try:
+            del self[remote_name]
+        except KeyError:
+            raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
 
 
 class RemoteRegistry(object):
@@ -164,33 +113,13 @@ class RemoteRegistry(object):
     @property
     def remotes(self):
         if self._remotes is None:
-            data = json.loads(load(self._filename))
-            self._remotes = OrderedDict()
-            for r in data.get("remotes", []):
-                self._remotes[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
+            content = load(self._filename)
+            self._remotes = Remotes.loads(content)
         return self._remotes
 
-    @property
-    def remotes_list(self):
-        return self.remotes.values()
-
-    @property
-    def default(self):
-        try:
-            return next(iter(self.remotes))
-        except StopIteration:
-            raise NoRemoteAvailable("No default remote defined in %s" % self._filename)
-
-    def get(self, remote_name):
-        try:
-            return self.remotes[remote_name]
-        except KeyError:
-            raise NoRemoteAvailable("No remote '%s' defined in remotes in file %s"
-                                    % (remote_name, self._filename))
-
     def remove(self, remote_name):
-        self.get(remote_name)
-        del self._remotes[remote_name]
+        del self.remotes[remote_name]
+
         for ref in self._cache.all_refs():
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 if metadata.recipe.remote == remote_name:

@@ -30,6 +30,8 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("There are no packages", client.user_io.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+        rev, _ = servers["default"].server_store.get_last_revision(ref)
+        ref = ref.copy_with_rev(rev)
         path = test_server.server_store.export(ref)
         sources_tgz = os.path.join(path, "conan_sources.tgz")
         self.assertTrue(os.path.exists(sources_tgz))

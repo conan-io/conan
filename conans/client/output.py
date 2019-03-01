@@ -86,10 +86,10 @@ class ConanOutput(object):
         self.writeln(data, Color.BRIGHT_GREEN)
 
     def warn(self, data):
-        self.writeln("WARN: " + data, Color.BRIGHT_YELLOW)
+        self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW)
 
     def error(self, data):
-        self.writeln("ERROR: " + data, Color.BRIGHT_RED)
+        self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED)
 
     def input_text(self, data):
         self.write(data, Color.GREEN)

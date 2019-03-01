@@ -16,12 +16,12 @@ def report_copied_files(copied, output, message_suffix="Copied"):
         return False
 
     for ext, files in ext_files.items():
-        files_str = (", ".join(files)) if len(files) < 5 else ""
+        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
         file_or_files = "file" if len(files) == 1 else "files"
         if not ext:
-            output.info("%s %d %s: %s" % (message_suffix, len(files), file_or_files, files_str))
+            output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
         else:
-            output.info("%s %d '%s' %s: %s" % (message_suffix, len(files), ext, file_or_files, files_str))
+            output.info("%s %d '%s' %s%s" % (message_suffix, len(files), ext, file_or_files, files_str))
     return True
 
 
