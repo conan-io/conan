@@ -14,7 +14,10 @@ from conans.util.sha import sha1
 
 
 class RequirementInfo(object):
-    def __init__(self, pref, indirect=False, package_id_mode=None):
+    def __init__(self, value_str, indirect=False):
+        """ parse the input into fields name, version...
+        """
+        pref = PackageReference.loads(value_str)
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
@@ -23,25 +26,10 @@ class RequirementInfo(object):
         self.full_package_id = pref.id
 
         # sha values
-        if package_id_mode:
-            try:
-                getattr(self, package_id_mode)()
-            except AttributeError:
-                raise ConanException("'%s' is not a known package_id_mode" % package_id_mode)
+        if indirect:
+            self.unrelated_mode()
         else:
-            if indirect:
-                self.unrelated_mode()
-            else:
-                self.semver_mode()
-
-    def copy(self):
-        # Useful for build_id()
-        result = RequirementInfo(self.package)
-        for f in ("name", "version", "user", "channel", "package_id"):
-            setattr(result, f, getattr(self, f))
-            f = "full_%s" % f
-            setattr(result, f, getattr(self, f))
-        return result
+            self.semver()
 
     def dumps(self):
         if not self.name:
@@ -55,9 +43,8 @@ class RequirementInfo(object):
 
     @property
     def sha(self):
-        vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
-        # This is done later to NOT affect existing package-IDs (before revisions)
-        return "/".join(vals)
+        return "/".join([str(n) for n in [self.name, self.version, self.user, self.channel,
+                                          self.package_id]])
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
@@ -67,7 +54,7 @@ class RequirementInfo(object):
         self.version = self.full_version.stable()
         self.user = self.channel = self.package_id = None
 
-    semver = semver_mode  # Remove Conan 2.0
+    semver = semver_mode
 
     def full_version_mode(self):
         self.name = self.full_name
@@ -110,15 +97,12 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(object):
-    def __init__(self, prefs, package_id_mode):
+    def __init__(self, requires):
         # {PackageReference: RequirementInfo}
-        self._data = {pref: RequirementInfo(pref, package_id_mode=package_id_mode) for pref in prefs}
+        self._data = {r: RequirementInfo(str(r)) for r in requires}
 
     def copy(self):
-        # For build_id() implementation
-        result = RequirementsInfo([], None)
-        result._data = {pref: req_info.copy() for pref, req_info in self._data.items()}
-        return result
+        return RequirementsInfo(self._data.keys())
 
     def clear(self):
         self._data = {}
@@ -127,12 +111,12 @@ class RequirementsInfo(object):
         for name in args:
             del self._data[self._get_key(name)]
 
-    def add(self, prefs_indirect, package_id_mode):
+    def add(self, indirect_reqs):
         """ necessary to propagate from upstream the real
         package requirements
         """
-        for r in prefs_indirect:
-            self._data[r] = RequirementInfo(r, indirect=True, package_id_mode=package_id_mode)
+        for r in indirect_reqs:
+            self._data[r] = RequirementInfo(str(r), indirect=True)
 
     def refs(self):
         """ used for updating downstream requirements with this
@@ -162,8 +146,7 @@ class RequirementsInfo(object):
         # Remove requirements without a name, i.e. indirect transitive requirements
         data = {k: v for k, v in self._data.items() if v.name}
         for key in sorted(data):
-            s = data[key].sha
-            result.append(s)
+            result.append(data[key].sha)
         return sha1('\n'.join(result).encode())
 
     def dumps(self):
@@ -235,17 +218,17 @@ class ConanInfo(object):
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, package_id_mode):
+    def create(settings, options, requires, indirect_requires):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
         result.options = options.copy()
         result.options.clear_indirect()
-        result.full_requires = _PackageReferenceList(prefs_direct)
-        result.requires = RequirementsInfo(prefs_direct, package_id_mode)
-        result.requires.add(prefs_indirect, package_id_mode)
-        result.full_requires.extend(prefs_indirect)
+        result.full_requires = _PackageReferenceList(requires)
+        result.requires = RequirementsInfo(requires)
+        result.requires.add(indirect_requires)
+        result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
@@ -256,9 +239,6 @@ class ConanInfo(object):
 
     @staticmethod
     def loads(text):
-        # This is used for search functionality, search prints info from this file
-        # Other use is from the BinariesAnalyzer, to get the recipe_hash and know
-        # if package is outdated
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
                                      "requires", "full_requires", "scope", "recipe_hash", "env"],
                               raise_unexpected_field=False)
@@ -268,8 +248,7 @@ class ConanInfo(object):
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
-        # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        result.requires = RequirementsInfo(result.full_requires, None)
+        result.requires = RequirementsInfo(result.full_requires)
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now
@@ -329,15 +308,18 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
+        package_id = getattr(self, "_package_id", None)
+        if package_id:
+            return package_id
+
         result = []
         result.append(self.settings.sha)
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
-        requires_sha = self.requires.sha
-        result.append(requires_sha)
-
+        result.append(self.requires.sha)
         package_id = sha1('\n'.join(result).encode())
+        self._package_id = package_id
         return package_id
 
     def serialize_min(self):
@@ -353,7 +335,7 @@ class ConanInfo(object):
     def header_only(self):
         self.settings.clear()
         self.options.clear()
-        self.requires.clear()
+        self.requires.unrelated_mode()
 
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
