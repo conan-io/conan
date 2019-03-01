@@ -3,7 +3,7 @@
 import os
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableLayout
+from conans.model.editable_layout import EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
