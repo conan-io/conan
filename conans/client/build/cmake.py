@@ -14,7 +14,6 @@ from conans.model.version import Version
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
-from conans.util.env_reader import get_env
 
 
 class CMake(object):
@@ -31,8 +30,9 @@ class CMake(object):
         :param build_type: Overrides default build type coming from settings
         :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
                 applies only to certain generators (e.g. Visual Studio)
-        :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS, CMAKE_C_FLAGS, etc.
-               it's vital to set for certain projects (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
+        :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS,
+                CMAKE_C_FLAGS, etc. it's vital to set for certain projects
+                (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
         :param msbuild_verbosity: verbosity level for MSBuild (in case of Visual Studio generator)
         :param cmake_program: Path to the custom cmake executable
         """

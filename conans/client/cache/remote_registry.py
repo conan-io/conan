@@ -221,6 +221,7 @@ class _RemotesRegistry(_Registry):
                 raise ConanException("Remote '%s' not found in remotes" % remote_name)
             del remotes[remote_name]
             refs = {k: v for k, v in refs.items() if v != remote_name}
+            prefs = {k: v for k, v in prefs.items() if v != remote_name}
             self._save(remotes, refs, prefs)
 
     def clean(self):
