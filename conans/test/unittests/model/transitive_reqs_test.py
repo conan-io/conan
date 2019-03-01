@@ -88,7 +88,6 @@ class GraphTest(unittest.TestCase):
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         self.resolver, None)
         cache = Mock()
-        cache.config.package_id_mode = None
         remote_manager = None
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, remote_manager)
 
@@ -1101,8 +1100,8 @@ class HelloConan(ConanFile):
     Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
-            self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
-                                                                    "Hello/1.2@user/testing"]))
+            _ = self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
+                                                                        "Hello/1.2@user/testing"]))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)
