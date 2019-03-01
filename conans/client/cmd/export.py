@@ -13,17 +13,17 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
-def export_alias(package_layout, target_reference, output, revisions_enabled):
+def export_alias(package_layout, target_ref, output, revisions_enabled):
     conanfile = """
 from conans import ConanFile
 
 class AliasConanfile(ConanFile):
     alias = "%s"
-""" % target_reference
+""" % target_ref.full_repr()
 
     save(package_layout.conanfile(), conanfile)
     digest = FileTreeManifest.create(package_layout.export())
