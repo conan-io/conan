@@ -43,16 +43,17 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     recipe_hash = cache.package_layout(ref).recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
-    if package_folder:
-        packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
-                            hook_manager, conan_file_path, ref)
-    else:
-        packager.create_package(conanfile, package_id, source_folder, build_folder,
-                                dest_package_folder, install_folder, hook_manager, conan_file_path,
-                                ref, local=True)
-        with cache.package_layout(ref).update_metadata() as metadata:
-            readed_manifest = FileTreeManifest.load(dest_package_folder)
-            metadata.packages[package_id].revision = readed_manifest.summary_hash
-            metadata.packages[package_id].recipe_revision = metadata.recipe.revision
+    with cache.conanfile_write_lock(ref):
+        if package_folder:
+            packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
+                                hook_manager, conan_file_path, ref)
+        else:
+            packager.create_package(conanfile, package_id, source_folder, build_folder,
+                                    dest_package_folder, install_folder, hook_manager, conan_file_path,
+                                    ref, local=True)
+            with cache.package_layout(ref).update_metadata() as metadata:
+                readed_manifest = FileTreeManifest.load(dest_package_folder)
+                metadata.packages[package_id].revision = readed_manifest.summary_hash
+                metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 
     recorder.package_exported(pref)
