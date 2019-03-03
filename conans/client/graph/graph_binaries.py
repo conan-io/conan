@@ -18,7 +18,7 @@ class GraphBinariesAnalyzer(object):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = cache.registry
+        self._remotes = cache.registry.load_remotes()
 
     def _check_update(self, upstream_manifest, package_folder, output, node):
         read_manifest = FileTreeManifest.load(package_folder)
@@ -30,7 +30,7 @@ class GraphBinariesAnalyzer(object):
             else:
                 output.warn("Current package is newer than remote upstream one")
 
-    def _evaluate_node(self, node, build_mode, update, evaluated_nodes, user_remote):
+    def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
 
@@ -73,13 +73,13 @@ class GraphBinariesAnalyzer(object):
                                 "to the installed recipe revision, removing folder".format(pref))
                     rmdir(package_folder)
 
-        if not user_remote:
+        if not remote:
             # If the remote_name is not given, follow the binary remote, or
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
             metadata = self._cache.package_layout(pref.ref).load_metadata()
-            remote = metadata.recipe.remote or metadata.packages[pref.id].remote
-        remotes = self._registry.remotes_list
+            remote_name = metadata.recipe.remote or metadata.packages[pref.id].remote
+            remote = self._remotes.get(remote_name)
 
         if os.path.exists(package_folder):
             if update:
@@ -98,7 +98,7 @@ class GraphBinariesAnalyzer(object):
                             if build_mode.outdated:
                                 info, pref = self._remote_manager.get_package_info(pref, remote)
                                 package_hash = info.recipe_hash()
-                elif remotes:
+                elif self._remotes:
                     pass
                 else:
                     output.warn("Can't update, no remote defined")
@@ -117,9 +117,8 @@ class GraphBinariesAnalyzer(object):
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
 
-            if not remote or (not remote_info and self._cache.config.revisions_enabled
-                              and not user_remote):
-                for r in remotes:
+            if not remote or (not remote_info and self._cache.config.revisions_enabled):
+                for r in self._remotes.values():
                     try:
                         remote_info, pref = self._remote_manager.get_package_info(pref, r)
                     except NotFoundException:
@@ -194,11 +193,11 @@ class GraphBinariesAnalyzer(object):
                     for n in closure:
                         n.binary = BINARY_SKIP
 
-    def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
+    def evaluate_graph(self, deps_graph, build_mode, update, remote):
         evaluated_nodes = {}
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
+            self._evaluate_node(node, build_mode, update, evaluated_nodes, remote)
             self._handle_private(node, deps_graph)

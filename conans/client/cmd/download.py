@@ -8,14 +8,14 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
 
     assert(isinstance(ref, ConanFileReference))
     output = ScopedOutput(str(ref), out)
-    registry = cache.registry
-    remote = registry.remotes.get(remote_name) if remote_name else registry.remotes.default
+    remotes = cache.registry.load_remotes()
+    remote = remotes[remote_name] if remote_name else remotes.default
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
     ref = remote_manager.get_recipe(ref, remote)
     with cache.package_layout(ref).update_metadata() as metadata:
-        metadata.recipe.remote = remote_name
+        metadata.recipe.remote = remote.name
 
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)

@@ -68,7 +68,7 @@ class CmdUpload(object):
         self._cache = cache
         self._user_io = user_io
         self._remote_manager = remote_manager
-        self._registry = cache.registry
+        self._remotes = cache.registry.load_remotes()
         self._loader = loader
         self._hook_manager = hook_manager
 
@@ -113,17 +113,16 @@ class CmdUpload(object):
         """
         # Group recipes by remote
         refs_by_remote = defaultdict(list)
-        default_remote = self._registry.get(remote_name) if remote_name else self._registry.default
+        default_remote = self._remotes[remote_name] if remote_name else self._remotes.default
 
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
             ref = ref.copy_with_rev(metadata.recipe.revision)
             if not remote_name:
                 ref_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
-                remote = self._registry.get(ref_remote) if remote_name else default_remote
+                remote = self._remotes[ref_remote] if remote_name else default_remote
             else:
-                remote = self._registry.get(remote_name)
-            print remote
+                remote = self._remotes[remote_name]
 
             upload = True
             if not confirm:

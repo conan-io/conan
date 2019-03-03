@@ -35,9 +35,9 @@ class ConanPythonRequire(object):
             ref = ConanFileReference.loads(require)
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
-                                         remote_name=None)
+                                         remote=None)
             ref = requirement.ref
-            result = self._proxy.get_recipe(ref, False, False, remote_name=None,
+            result = self._proxy.get_recipe(ref, False, False, remote=None,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)

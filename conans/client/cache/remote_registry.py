@@ -14,7 +14,7 @@ Remote = namedtuple("Remote", "name url verify_ssl")
 
 def load_registry_txt(contents):
     """Remove in Conan 2.0"""
-    remotes = OrderedDict()
+    remotes = Remotes()
     refs = {}
     end_remotes = False
     # Parse the file
@@ -37,7 +37,7 @@ def load_registry_txt(contents):
                 raise ConanException("Bad file format, wrong item numbers in line '%s'" % line)
 
             verify_ssl = get_bool_from_text_value(verify_ssl)
-            remotes[remote_name] = (url, verify_ssl)
+            remotes.add(remote_name, url, verify_ssl)
         else:
             ref, remote_name = chunks
             refs[ref] = remote_name
@@ -75,68 +75,78 @@ def migrate_registry_file(path, new_path):
         os.unlink(path)
 
 
-class Remotes(OrderedDict):
+class Remotes(object):
+    def __init__(self):
+        self._remotes = OrderedDict()
+
+    def clear(self):
+        self._remotes.clear()
+
+    def items(self):
+        return self._remotes.items()
+
+    def values(self):
+        return self._remotes.values()
+
     @staticmethod
     def loads(text):
+        result = Remotes()
         data = json.loads(text)
         for r in data.get("remotes", []):
-            self[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
+            result._remotes[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
+        return result
+
+    def save(self, filename):
+        ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v}
+                           for r, (_, u, v) in self._remotes.items()]}
+        save(filename, json.dumps(ret, indent=True))
+
+    def _get_by_url(self, url):
+        for name, remote in self._remotes.items():
+            if remote.url == url:
+                return name
+
+    def rename(self, remote_name, new_remote_name):
+        if new_remote_name in self._remotes:
+            raise ConanException("Remote '%s' already exists" % new_remote_name)
+
+        remote = self._remotes[remote_name]
+        new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
+        self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
+                                     else (k, v) for k, v in self._remotes.items()])
 
     @property
     def default(self):
         try:
-            return next(iter(self))
+            return self._remotes[next(iter(self._remotes))]
         except StopIteration:
             raise NoRemoteAvailable("No default remote defined")
 
+    def __contains__(self, remote_name):
+        return remote_name in self._remotes
+
+    def get(self, remote_name):
+        return self._remotes.get(remote_name)
+
     def __getitem__(self, remote_name):
         try:
-            return self[remote_name]
+            return self._remotes[remote_name]
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
 
     def __delitem__(self, remote_name):
         try:
-            del self[remote_name]
+            del self._remotes[remote_name]
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
-
-
-class RemoteRegistry(object):
-
-    def __init__(self, cache, output):
-        self._cache = cache
-        self._filename = cache.registry_path
-        self._output = output
-        self._remotes = None
-
-    @property
-    def remotes(self):
-        if self._remotes is None:
-            content = load(self._filename)
-            self._remotes = Remotes.loads(content)
-        return self._remotes
-
-    def remove(self, remote_name):
-        del self.remotes[remote_name]
-
-        for ref in self._cache.all_refs():
-            with self._cache.package_layout(ref).update_metadata() as metadata:
-                if metadata.recipe.remote == remote_name:
-                    metadata.recipe.remote = None
-                for pkg_metadata in metadata.packages.values():
-                    if pkg_metadata.remote == remote_name:
-                        pkg_metadata.remote = None
-        self._save()
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
         # Remove duplicates
         updated_remote = Remote(remote_name, url, verify_ssl)
-        remotes = self.remotes
-        remotes.pop(remote_name, None)
+        self._remotes.pop(remote_name, None)
         remotes_list = []
         renamed = None
-        for name, r in remotes.items():
+        for name, r in self._remotes.items():
             if r[0] != url:
                 remotes_list.append((name, r))
             else:
@@ -148,10 +158,10 @@ class RemoteRegistry(object):
             except ValueError:
                 raise ConanException("insert argument must be an integer")
             remotes_list.insert(insert_index, updated_remote)
-            remotes = OrderedDict(remotes_list)
+            self._remotes = OrderedDict(remotes_list)
         else:
-            remotes = OrderedDict(remotes_list)
-            remotes[remote_name] = updated_remote
+            self._remotes = OrderedDict(remotes_list)
+            self._remotes[remote_name] = updated_remote
 
         if renamed:
             for k, v in refs.items():
@@ -163,53 +173,81 @@ class RemoteRegistry(object):
         if force:
             return self._upsert(remote_name, url, verify_ssl, insert)
 
-        if remote_name in self.remotes:
+        if remote_name in self._remotes:
             raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
                                  % remote_name)
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
-        if remote_name not in self.remotes:
+        if remote_name not in self._remotes:
             raise ConanException("Remote '%s' not found in remotes" % remote_name)
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
-        remotes = self.remotes
-        urls = {r.url: name for name, r in remotes.items() if name != remote_name}
-        if url in urls:
-            raise ConanException("Remote '%s' already exists with same URL" % urls[url])
+        prev_remote_name = self._get_by_url(url)
+        if prev_remote_name:
+            raise ConanException("Remote '%s' already exists with same URL" % prev_remote_name)
         updated_remote = Remote(remote_name, url, verify_ssl)
         if insert is not None:
             try:
                 insert_index = int(insert)
             except ValueError:
                 raise ConanException("insert argument must be an integer")
-            remotes.pop(remote_name, None)  # Remove if exists (update)
-            remotes_list = list(remotes.items())
+            self._remotes.pop(remote_name, None)  # Remove if exists (update)
+            remotes_list = list(self._remotes.items())
             remotes_list.insert(insert_index, (remote_name, updated_remote))
             self._remotes = OrderedDict(remotes_list)
         else:
-            remotes[remote_name] = updated_remote
-        self._save()
+            self._remotes[remote_name] = updated_remote
 
-    def _save(self):
-        ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v}
-                           for r, (_, u, v) in self._remotes.items()]}
-        save(self._filename, json.dumps(ret, indent=True))
 
-    def clean(self):
-        self._remotes = {}
+class RemoteRegistry(object):
+
+    def __init__(self, cache):
+        self._cache = cache
+        self._filename = cache.registry_path
+
+    def load_remotes(self):
+        content = load(self._filename)
+        return Remotes.loads(content)
+
+    def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
+        remotes = self.load_remotes()
+        remotes.add(remote_name, url, verify_ssl, insert, force)
+        remotes.save(self._filename)
+        # FIXME: Missing something to do with REFS
+
+    def update(self, remote_name, url, verify_ssl=True, insert=None):
+        remotes = self.load_remotes()
+        remotes.update(remote_name, url, verify_ssl, insert)
+        remotes.save(self._filename)
+
+    def clear(self):
+        remotes = self.load_remotes()
+        remotes.clear()
         for ref in self._cache.all_refs():
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 metadata.recipe.remote = None
                 for pkg_metadata in metadata.packages.values():
                     pkg_metadata.remote = None
-        self._save()
+        remotes.save(self._filename)
+
+    def remove(self, remote_name):
+        remotes = self.load_remotes()
+        del remotes[remote_name]
+
+        for ref in self._cache.all_refs():
+            with self._cache.package_layout(ref).update_metadata() as metadata:
+                if metadata.recipe.remote == remote_name:
+                    metadata.recipe.remote = None
+                for pkg_metadata in metadata.packages.values():
+                    if pkg_metadata.remote == remote_name:
+                        pkg_metadata.remote = None
+
+        remotes.save(self._filename)
 
     def define(self, remotes):
-        remotes = OrderedDict([(name, Remote(name, url, ssl))
-                               for name, (url, ssl) in remotes.items()])
-        self._remotes = remotes
+        # For definition from conan config install
         for ref in self._cache.all_refs():
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 if metadata.recipe.remote not in remotes:
@@ -217,17 +255,12 @@ class RemoteRegistry(object):
                 for pkg_metadata in metadata.packages.values():
                     if pkg_metadata.remote not in remotes:
                         pkg_metadata.remote = None
-        self._save()
+
+        remotes.save(self._filename)
 
     def rename(self, remote_name, new_remote_name):
-        remotes = self.remotes
-        if new_remote_name in remotes:
-            raise ConanException("Remote '%s' already exists" % new_remote_name)
-
-        remote = self.get(remote_name)
-        new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
-        self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
-                                     else (k, v) for k, v in remotes.items()])
+        remotes = self.load_remotes()
+        remotes.rename(remote_name, new_remote_name)
 
         for ref in self._cache.all_refs():
             with self._cache.package_layout(ref).update_metadata() as metadata:
@@ -236,7 +269,8 @@ class RemoteRegistry(object):
                 for pkg_metadata in metadata.packages.values():
                     if pkg_metadata.remote == remote_name:
                         pkg_metadata.remote = new_remote_name
-        self._save()
+
+        remotes.save(self._filename)
 
     @property
     def refs_list(self):

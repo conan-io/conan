@@ -356,7 +356,8 @@ class BinaryInstaller(object):
                         self._remote_manager.get_package(pref, package_folder,
                                                          node.binary_remote, output,
                                                          self._recorder)
-                        self._registry.prefs.set(pref, node.binary_remote.name)
+                        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+                            metadata.packages[pref.id].remote = node.binary_remote.name
                         clean_dirty(package_folder)
                     else:
                         output.success('Download skipped. Probable concurrent download')

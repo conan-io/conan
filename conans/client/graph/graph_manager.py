@@ -90,7 +90,7 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remote_name, recorder):
+                   remote, recorder):
 
         def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
@@ -141,7 +141,7 @@ class GraphManager(object):
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
-                                      build_mode=build_mode, remote_name=remote_name,
+                                      build_mode=build_mode, remote=remote,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder,
                                       processed_profile=processed_profile)
@@ -225,18 +225,18 @@ class GraphManager(object):
                                                                 processed_profile)
                 graph.add_graph(node, build_requires_profile_graph, build_require=True)
 
-    def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
+    def _load_graph(self, root_node, check_updates, update, build_mode, remote,
                     profile_build_requires, recorder, processed_profile):
 
         assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    recorder)
-        graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
+        graph = builder.load_graph(root_node, check_updates, update, remote, processed_profile)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager)
-        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
+        binaries_analyzer.evaluate_graph(graph, build_mode, update, remote)
 
-        self._recurse_build_requires(graph, check_updates, update, build_mode, remote_name,
+        self._recurse_build_requires(graph, check_updates, update, build_mode, remote,
                                      profile_build_requires, recorder, processed_profile)
         return graph
 

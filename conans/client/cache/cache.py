@@ -78,7 +78,7 @@ class ClientCache(SimplePaths):
     @property
     def registry(self):
         if not self._registry:
-            self._registry = RemoteRegistry(self, self._output)
+            self._registry = RemoteRegistry(self)
         return self._registry
 
     @property
@@ -284,7 +284,8 @@ class ClientCache(SimplePaths):
         try:
             rmdir(system_reqs_folder)
         except Exception as e:
-            raise ConanException("Unable to remove system requirements at %s: %s" % (system_reqs_folder, str(e)))
+            raise ConanException("Unable to remove system requirements at %s: %s"
+                                 % (system_reqs_folder, str(e)))
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)

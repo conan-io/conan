@@ -40,7 +40,7 @@ other/1.0@lasote/testing conan.io
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
         save(f, dump_registry(default_remotes, {}, {}))
-        registry = RemoteRegistry(f, TestBufferConanOutput())
+        registry = RemoteRegistry(f)
 
         # Add
         registry.remotes.add("local", "http://localhost:9300")
@@ -113,4 +113,4 @@ other/1.0@lasote/testing conan.io
                                           "conan.io2 https://server2.conan.io True\n")
         reg = dump_registry(remotes, refs, {})
         save(f, reg)
-        return RemoteRegistry(f, TestBufferConanOutput())
+        return RemoteRegistry(f)

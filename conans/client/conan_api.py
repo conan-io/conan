@@ -290,7 +290,8 @@ class ConanAPIV1(object):
             conanfile_class = self._loader.load_class(conanfile_path)
         else:
             update = True if remote_name else False
-            result = self._proxy.get_recipe(ref, update, update, remote_name, ActionRecorder())
+            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
+            result = self._proxy.get_recipe(ref, update, update, remote, ActionRecorder())
             conanfile_path, _, _, ref = result
             conanfile_class = self._loader.load_class(conanfile_path)
             conanfile_class.name = ref.name
@@ -478,9 +479,11 @@ class ConanAPIV1(object):
 
         self._cache.editable_packages.override(workspace.get_editable_dict())
 
+        remotes = self._cache.registry.load_remotes()
+        remote = remotes[remote_name] if remote_name else None
         recorder = ActionRecorder()
         deps_graph, _ = self._graph_manager.load_graph(workspace.root, None, graph_info, build,
-                                                       False, update, remote_name, recorder)
+                                                       False, update, remote, recorder)
 
         print_graph(deps_graph, self._user_io.out)
 
@@ -876,7 +879,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_add_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
-        remote = self._cache.registry.get(remote_name)
+        remote = self._cache.registry.load_remotes()[remote_name]
         with self._cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.remote = remote.name
 
@@ -889,7 +892,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_update_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
-        remote = self._cache.registry.get(remote_name)
+        remote = self._cache.registry.load_remotes()[remote_name]
         with self._cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.remote = remote.name
 
@@ -906,7 +909,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
-        remote = self._cache.registry.get(remote_name)
+        remote = self._cache.registry.load_remotes()[remote_name]
         with self._cache.package_layout(pref.ref).update_metadata() as metadata:
             m = metadata.packages.get(pref.id)
             if m and m.remote:
@@ -916,7 +919,10 @@ class ConanAPIV1(object):
     @api_method
     def remote_remove_pref(self, package_reference):
         pref = PackageReference.loads(package_reference, validate=True)
-        return self._cache.registry.prefs.remove(pref)
+        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            m = metadata.packages.get(pref.id)
+            if m:
+                m.remote = None
 
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
@@ -924,10 +930,11 @@ class ConanAPIV1(object):
         remote = self._cache.registry.get(remote_name)
         with self._cache.package_layout(pref.ref).update_metadata() as metadata:
             m = metadata.packages.get(pref.id)
-            m.remote = remote.name
+            if m:
+                m.remote = remote.name
 
     def remote_clean(self):
-        return self._cache.registry.clean()
+        return self._cache.registry.clear()
 
     @api_method
     def profile_list(self):
@@ -998,7 +1005,7 @@ class ConanAPIV1(object):
 
     @api_method
     def get_remote_by_name(self, remote_name):
-        return self._cache.registry.remotes.get(remote_name)
+        return self._cache.registry.load_remotes()[remote_name]
 
     @api_method
     def get_recipe_revisions(self, reference, remote_name=None):
