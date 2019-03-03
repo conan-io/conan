@@ -153,7 +153,7 @@ def _get_refs(cache):
 def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
-    return [PackageReference(layout._ref, s) for s in folders]
+    return [PackageReference(layout.ref, s) for s in folders]
 
 
 def _migrate_create_metadata(cache, out):
