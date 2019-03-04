@@ -23,6 +23,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 from conans.errors import ConanException
+from parameterized import parameterized
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -107,6 +108,7 @@ class GraphManagerTest(unittest.TestCase):
 
 class TransitiveGraphTest(GraphManagerTest):
     def test_basic(self):
+        # say/0.1
         deps_graph = self.build_graph(TestConanFile("Say", "0.1"))
         self.assertEqual(1, len(deps_graph.nodes))
         node = deps_graph.root
@@ -115,6 +117,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(len(node.dependants), 0)
 
     def test_transitive(self):
+        # app -> libb0.1
         libb_ref = "libb/0.1@user/testing"
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1"))
         deps_graph = self.build_graph(TestConanFile("app", "0.1",
@@ -140,6 +143,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(libb.public_deps, app.public_deps)
 
     def test_transitive_two_levels(self):
+        # app -> libb0.1 -> liba0.1
         liba_ref = "liba/0.1@user/testing"
         libb_ref = "libb/0.1@user/testing"
         self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
@@ -160,6 +164,8 @@ class TransitiveGraphTest(GraphManagerTest):
                          dependents=[libb], closure=[], public_deps=[app, libb, liba])
 
     def test_diamond(self):
+        # app -> libb0.1 -> liba0.1
+        #    \-> libc0.1 ->/
         liba_ref = "liba/0.1@user/testing"
         libb_ref = "libb/0.1@user/testing"
         libc_ref = "libc/0.1@user/testing"
@@ -185,6 +191,8 @@ class TransitiveGraphTest(GraphManagerTest):
                          dependents=[libb, libc], closure=[], public_deps=[app, libb, libc, liba])
 
     def test_diamond_conflict(self):
+        # app -> libb0.1 -> liba0.1
+        #    \-> libc0.1 -> liba0.2
         liba_ref = "liba/0.1@user/testing"
         liba_ref2 = "liba/0.2@user/testing"
         libb_ref = "libb/0.1@user/testing"
@@ -197,6 +205,8 @@ class TransitiveGraphTest(GraphManagerTest):
             self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref, libc_ref]))
 
     def test_loop(self):
+        # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
+        #             \<-------------------------|
         liba_ref = "liba/0.1@user/testing"
         libb_ref = "libb/0.1@user/testing"
         libc_ref = "libc/0.1@user/testing"
@@ -207,26 +217,17 @@ class TransitiveGraphTest(GraphManagerTest):
                                      "requires 'libc/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
 
-    def test_basic_build_require_recipe(self):
+    @parameterized.expand([("recipe", ), ("profile", )])
+    def test_basic_build_require(self, build_require):
+        # app -(br)-> tool0.1
         self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1"))
-        deps_graph = self.build_graph(TestConanFile("app", "0.1",
-                                                    build_requires=["tool/0.1@user/testing"]))
-
-        # Build requires always apply to the consumer
-        self.assertEqual(2, len(deps_graph.nodes))
-        app = deps_graph.root
-        tool = app.dependencies[0].dst
-
-        self._check_node(app, "app/0.1@None/None", deps=[], build_deps=[tool], dependents=[],
-                         closure=[tool], public_deps=[app])
-        self._check_node(tool, "tool/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[app], closure=[], public_deps=[tool, app])
-
-    def test_basic_build_require_profile(self):
-        self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1"))
-        profile_build_requires = {"*": [ConanFileReference.loads("tool/0.1@user/testing")]}
-        deps_graph = self.build_graph(TestConanFile("app", "0.1"),
-                                      profile_build_requires=profile_build_requires)
+        if build_require == "recipe":
+            deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                        build_requires=["tool/0.1@user/testing"]))
+        else:
+            profile_build_requires = {"*": [ConanFileReference.loads("tool/0.1@user/testing")]}
+            deps_graph = self.build_graph(TestConanFile("app", "0.1"),
+                                          profile_build_requires=profile_build_requires)
 
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))
@@ -239,6 +240,7 @@ class TransitiveGraphTest(GraphManagerTest):
                          dependents=[app], closure=[], public_deps=[tool, app])
 
     def test_transitive_build_require_recipe(self):
+        # app -> lib -(br)-> tool
         self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1"))
         self._cache_recipe("lib/0.1@user/testing",
                            TestConanFile("lib", "0.1",
@@ -261,6 +263,8 @@ class TransitiveGraphTest(GraphManagerTest):
                          dependents=[lib], closure=[], public_deps=[tool, lib])
 
     def test_loop_build_require(self):
+        # app -> lib -(br)-> tool ->|
+        #          \<---------------|
         lib_ref = "lib/0.1@user/testing"
         self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1", requires=[lib_ref]))
         self._cache_recipe(lib_ref,
@@ -271,6 +275,9 @@ class TransitiveGraphTest(GraphManagerTest):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
     def test_transitive_build_require_recipe_profile(self):
+        # app -> lib -(br)-> gtest -(br)-> mingw
+        # profile \---(br)-> mingw
+        # app -(br)-> mingw
         self._cache_recipe("mingw/0.1@user/testing", TestConanFile("mingw", "0.1"))
         self._cache_recipe("gtest/0.1@user/testing", TestConanFile("gtest", "0.1"))
         self._cache_recipe("lib/0.1@user/testing",
@@ -413,3 +420,46 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
         with self.assertRaisesRegexp(ConanException, "Requirement liba/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", private_requires=[libb_ref, libc_ref]))
+
+    def test_loop_private(self):
+        # app -> lib -(private)-> tool ->|
+        #          \<-----(private)------|
+        lib_ref = "lib/0.1@user/testing"
+        self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1",
+                                                                  private_requires=[lib_ref]))
+        self._cache_recipe(lib_ref,
+                           TestConanFile("lib", "0.1",
+                                         private_requires=["tool/0.1@user/testing"]))
+        with self.assertRaisesRegexp(ConanException, "Loop detected: 'tool/0.1@user/testing' "
+                                     "requires 'lib/0.1@user/testing'"):
+            self.build_graph(TestConanFile("app", "0.1", requires=[lib_ref]))
+
+    def test_build_require_private(self):
+        # app -> lib -(br)-> tool -(private)-> zlib
+        zlib_ref = "zlib/0.1@user/testing"
+        self._cache_recipe(zlib_ref, TestConanFile("zlib", "0.1"))
+        self._cache_recipe("tool/0.1@user/testing", TestConanFile("tool", "0.1",
+                                                                  private_requires=[zlib_ref]))
+        self._cache_recipe("lib/0.1@user/testing",
+                           TestConanFile("lib", "0.1",
+                                         build_requires=["tool/0.1@user/testing"]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=["lib/0.1@user/testing"]))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        tool = lib.dependencies[0].dst
+        zlib = tool.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
+                         closure=[lib], public_deps=[app, lib])
+
+        self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[tool],
+                         dependents=[app], closure=[tool], public_deps=[app, lib])
+
+        self._check_node(tool, "tool/0.1@user/testing#123", deps=[zlib], build_deps=[],
+                         dependents=[lib], closure=[zlib], public_deps=[tool, lib])
+
+        self._check_node(zlib, "zlib/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[tool], closure=[], public_deps=[zlib])

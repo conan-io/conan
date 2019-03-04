@@ -83,8 +83,8 @@ class {name}Conan(ConanFile):
         if self.requires:
             base += "    requires = %s\n" % (", ".join('"%s"' % r for r in self.requires))
         if self.private_requires:
-            base += "    requires = %s\n" % (", ".join("('%s', 'private')" % r
-                                                       for r in self.private_requires))
+            base += "    requires = %s,\n" % (", ".join("('%s', 'private')" % r
+                                                        for r in self.private_requires))
         if self.build_requires:
             base += "    build_requires = %s\n" % (", ".join('"%s"' % r
                                                              for r in self.build_requires))
