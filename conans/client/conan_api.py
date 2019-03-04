@@ -557,9 +557,10 @@ class ConanAPIV1(object):
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
             manager = self._init_manager(recorder)
+            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
             manager.install(ref_or_path=conanfile_path,
                             install_folder=install_folder,
-                            remote_name=remote_name,
+                            remote=remote,
                             graph_info=graph_info,
                             build_modes=build,
                             update=update,
@@ -856,7 +857,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return self._cache.registry.remotes_list
+        return list(self._cache.registry.load_remotes().values())
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
@@ -1003,7 +1004,7 @@ class ConanAPIV1(object):
 
     @api_method
     def get_default_remote(self):
-        return self._cache.registry.default
+        return self._cache.registry.load_remotes().default
 
     @api_method
     def get_remote_by_name(self, remote_name):
@@ -1024,7 +1025,8 @@ class ConanAPIV1(object):
                 raise e
 
             # Check the time in the associated remote if any
-            remote = self._cache.registry.refs.get(ref)
+            remote_name = layout.load_metadata().recipe.remote
+            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
             if remote:
                 try:
@@ -1059,7 +1061,8 @@ class ConanAPIV1(object):
                 raise e
 
             # Check the time in the associated remote if any
-            remote = self._cache.registry.refs.get(pref.ref)
+            remote_name = layout.load_metadata().recipe.remote
+            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
             if remote:
                 try:

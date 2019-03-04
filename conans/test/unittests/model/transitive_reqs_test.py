@@ -16,7 +16,6 @@ from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
     test_processed_profile
-import os
 
 from mock import Mock
 
@@ -104,7 +103,7 @@ class GraphTest(unittest.TestCase):
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                              update=False, remote_name=None)
+                                              update=False, remote=None)
         return deps_graph
 
 
@@ -1853,7 +1852,7 @@ class ChatConan(ConanFile):
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                              update=False, remote_name=None)
+                                              update=False, remote=None)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]

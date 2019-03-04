@@ -8,6 +8,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
+from conans.client.cache.cache import ClientCache
 
 
 class RegistryTest(unittest.TestCase):
@@ -18,7 +19,8 @@ class RegistryTest(unittest.TestCase):
 """)  # Without SSL parameter
         new_path = os.path.join(temp_folder(), "aux_file.json")
         migrate_registry_file(f, new_path)
-        registry = RemoteRegistry(new_path, TestBufferConanOutput())
+        cache = ClientCache(os.path.dirname(new_path), None, TestBufferConanOutput())
+        registry = RemoteRegistry(cache)
         self.assertEqual(registry.remotes.list, [("conan.io", "https://server.conan.io", True)])
 
     def to_json_migration_test(self):
@@ -40,31 +42,32 @@ other/1.0@lasote/testing conan.io
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
         save(f, dump_registry(default_remotes, {}, {}))
-        registry = RemoteRegistry(f)
+        cache = ClientCache(os.path.dirname(f), None, TestBufferConanOutput())
+        registry = RemoteRegistry(cache)
 
         # Add
-        registry.remotes.add("local", "http://localhost:9300")
+        registry.add("local", "http://localhost:9300")
         self.assertEqual(registry.remotes.list,
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True)])
         # Add
-        registry.remotes.add("new", "new_url", False)
+        registry.add("new", "new_url", False)
         self.assertEqual(registry.remotes.list,
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True),
                           ("new", "new_url", False)])
         with self.assertRaises(ConanException):
-            registry.remotes.add("new", "new_url")
+            registry.add("new", "new_url")
         # Update
-        registry.remotes.update("new", "other_url")
+        registry.update("new", "other_url")
         self.assertEqual(registry.remotes.list,
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True),
                           ("new", "other_url", True)])
         with self.assertRaises(ConanException):
-            registry.remotes.update("new2", "new_url")
+            registry.update("new2", "new_url")
 
-        registry.remotes.update("new", "other_url", False)
+        registry.update("new", "other_url", False)
         self.assertEqual(registry.remotes.list,
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True),
@@ -92,7 +95,8 @@ other/1.0@lasote/testing conan.io
  "references": {}
 }
 """)
-        registry = RemoteRegistry(f, TestBufferConanOutput())
+        cache = ClientCache(os.path.dirname(f), None, TestBufferConanOutput())
+        registry = RemoteRegistry(cache)
         registry.remotes.add("repo1", "url1", True, insert=0)
         self.assertEqual(registry.remotes.list, [("repo1", "url1", True),
                          ("conan.io", "https://server.conan.io", True)])

@@ -49,14 +49,14 @@ class ExistingCacheTestMixin(object):
         self.assertTrue(os.path.exists(self.t.cache.conan(self.ref)))
         self.assertListEqual(sorted(os.listdir(self.t.cache.conan(self.ref))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
-                              'package', 'source'])
+                              'metadata.json.lock', 'package', 'source'])
 
     def tearDown(self):
         self.t.run('editable remove {}'.format(self.ref))
         self.assertTrue(os.path.exists(self.t.cache.conan(self.ref)))
         self.assertListEqual(sorted(os.listdir(self.t.cache.conan(self.ref))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
-                              'package', 'source'])
+                              'metadata.json.lock', 'package', 'source'])
 
 
 class RelatedToGraphBehavior(object):

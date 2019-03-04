@@ -12,6 +12,7 @@ from conans.util.log import logger
 class DiskRemover(object):
     def __init__(self, cache):
         self._cache = cache
+        self._remotes = cache.registry.load_remotes()
 
     def _remove(self, path, ref, msg=""):
         try:
@@ -157,7 +158,7 @@ class ConanRemover(object):
                                          "revision")
 
         if remote_name:
-            remote = self._registry.remotes.get(remote_name)
+            remote = self._registry.load_remotes()[remote_name]
             if input_ref:
                 if not self._cache.config.revisions_enabled and input_ref.revision:
                     raise ConanException("Revisions not enabled in the client, cannot remove "

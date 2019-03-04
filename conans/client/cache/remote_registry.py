@@ -176,6 +176,9 @@ class Remotes(object):
         if remote_name in self._remotes:
             raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
                                  % remote_name)
+        prev_remote_name = self._get_by_url(url)
+        if prev_remote_name:
+            raise ConanException("Remote '%s' already exists with same URL" % prev_remote_name)
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
@@ -184,9 +187,6 @@ class Remotes(object):
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
-        prev_remote_name = self._get_by_url(url)
-        if prev_remote_name:
-            raise ConanException("Remote '%s' already exists with same URL" % prev_remote_name)
         updated_remote = Remote(remote_name, url, verify_ssl)
         if insert is not None:
             try:

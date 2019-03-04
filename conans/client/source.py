@@ -29,7 +29,8 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref):
     # should be there
     current_remote = cache.package_layout(ref).load_metadata().recipe.remote
     # TODO: Optimize this, pass directly remote?
-    current_remote = cache.registry.load_remotes()[current_remote]
+    if current_remote:
+        current_remote = cache.registry.load_remotes()[current_remote]
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(ref))

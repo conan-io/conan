@@ -110,12 +110,12 @@ class ConanProxy(object):
 
     def _download_recipe(self, ref, output, remote, recorder):
 
-        def _retrieve_from_remote(_ref, the_remote):
+        def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
-            _ref = self._remote_manager.get_recipe(_ref, the_remote)
+            _ref = self._remote_manager.get_recipe(ref, the_remote)
             with self._cache.package_layout(ref).update_metadata() as metadata:
-                metadata.remote = the_remote.name
+                metadata.recipe.remote = the_remote.name
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref
 
@@ -124,7 +124,8 @@ class ConanProxy(object):
         else:
             try:
                 remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
-                remote = self._remotes[remote_name]
+                if remote_name:
+                    remote = self._remotes[remote_name]
             except (IOError, RecipeNotFoundException):
                 pass
             else:
@@ -133,7 +134,7 @@ class ConanProxy(object):
 
         if remote:
             try:
-                new_ref = _retrieve_from_remote(ref, remote)
+                new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
@@ -151,7 +152,7 @@ class ConanProxy(object):
             raise ConanException("No remote defined")
         for remote in remotes:
             try:
-                new_ref = _retrieve_from_remote(ref, remote)
+                new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
             # If not found continue with the next, else raise
             except NotFoundException:
