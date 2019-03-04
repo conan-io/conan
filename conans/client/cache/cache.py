@@ -3,13 +3,14 @@ import shutil
 from collections import OrderedDict
 from os.path import join, normpath
 
+from conans.client.cache.editable import EditablePackages
+from conans.client.cache.remote_registry import default_remotes, dump_registry, \
+    migrate_registry_file, \
+    RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
-from conans.client.cache.editable import EditablePackages
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
-from conans.client.cache.remote_registry import default_remotes, dump_registry, migrate_registry_file, \
-    RemoteRegistry
 from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -17,11 +18,11 @@ from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.paths.simple_paths import SimplePaths, check_ref_case
+from conans.paths.simple_paths import SimplePaths
+from conans.paths.simple_paths import check_ref_case
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
-from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
-
+from conans.util.locks import Lock
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -62,7 +63,7 @@ class ClientCache(SimplePaths):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
         return [ConanFileReference(*folder.split("/")) for folder in subdirs]
 
-    def package_layout(self, ref, short_paths=False):
+    def package_layout(self, ref, short_paths=None, *args, **kwargs):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
@@ -72,8 +73,8 @@ class ClientCache(SimplePaths):
         else:
             check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
-            return PackageCacheLayout(base_folder=base_folder,
-                                      ref=ref, short_paths=short_paths)
+            return PackageCacheLayout(base_folder=base_folder, ref=ref,
+                                      short_paths=short_paths, no_lock=self._no_locks())
 
     @property
     def registry(self):
@@ -91,25 +92,20 @@ class ClientCache(SimplePaths):
         return self._no_lock
 
     def conanfile_read_lock(self, ref):
-        if self._no_locks():
-            return NoLock()
-        return ReadLock(self.conan(ref), ref, self._output)
+        layout = self.package_layout(ref)
+        return layout.conanfile_read_lock(self._output)
 
     def conanfile_write_lock(self, ref):
-        if self._no_locks():
-            return NoLock()
-        return WriteLock(self.conan(ref), ref, self._output)
+        layout = self.package_layout(ref)
+        return layout.conanfile_write_lock(self._output)
 
     def conanfile_lock_files(self, ref):
-        # Used in ConanRemover
-        if self._no_locks():
-            return ()
-        return WriteLock(self.conan(ref), ref, self._output).files
+        layout = self.package_layout(ref)
+        return layout.conanfile_lock_files(self._output)
 
     def package_lock(self, pref):
-        if self._no_locks():
-            return NoLock()
-        return SimpleLock(join(self.conan(pref.ref), "locks", pref.id))
+        layout = self.package_layout(pref.ref)
+        return layout.package_lock(pref)
 
     @property
     def put_headers_path(self):
@@ -242,25 +238,13 @@ class ClientCache(SimplePaths):
 
     def conan_packages(self, ref):
         """ Returns a list of package_id from a local cache package folder """
-        assert isinstance(ref, ConanFileReference)
-        packages_dir = self.packages(ref)
-        try:
-            packages = [dirname for dirname in os.listdir(packages_dir)
-                        if os.path.isdir(join(packages_dir, dirname))]
-        except OSError:  # if there isn't any package folder
-            packages = []
-        return packages
+        layout = self.package_layout(ref)
+        return layout.conan_packages()
 
     def conan_builds(self, ref):
         """ Returns a list of package ids from a local cache build folder """
-        assert isinstance(ref, ConanFileReference)
-        builds_dir = self.builds(ref)
-        try:
-            builds = [dirname for dirname in os.listdir(builds_dir)
-                      if os.path.isdir(join(builds_dir, dirname))]
-        except OSError:  # if there isn't any package folder
-            builds = []
-        return builds
+        layout = self.package_layout(ref)
+        return layout.conan_builds()
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
@@ -294,10 +278,9 @@ class ClientCache(SimplePaths):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
-    def remove_package_locks(self, reference):
-        conan_folder = self.conan(reference)
-        Lock.clean(conan_folder)
-        shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
+    def remove_package_locks(self, ref):
+        package_layout = self.package_layout(ref=ref)
+        package_layout.remove_package_locks()
 
     def invalidate(self):
         self._config = None

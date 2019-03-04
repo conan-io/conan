@@ -153,7 +153,7 @@ def _get_refs(cache):
 def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
-    return [PackageReference(layout._ref, s) for s in folders]
+    return [PackageReference(layout.ref, s) for s in folders]
 
 
 def _migrate_create_metadata(cache, out):
@@ -165,7 +165,8 @@ def _migrate_create_metadata(cache, out):
             base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
             # Force using a package cache layout for everything, we want to alter the cache,
             # not the editables
-            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False,
+                                        no_lock=True)
             folder = layout.export()
             try:
                 manifest = FileTreeManifest.load(folder)

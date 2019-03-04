@@ -91,7 +91,7 @@ class ConanProxy(object):
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
                 if update:
-                    DiskRemover(self._cache).remove_recipe(ref)
+                    DiskRemover().remove_recipe(self._cache.package_layout(ref), output=output)
                     output.info("Retrieving from remote '%s'..." % update_remote.name)
                     self._download_recipe(ref, output, update_remote, recorder)
                     with self._cache.package_layout(ref).update_metadata() as metadata:

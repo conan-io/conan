@@ -59,11 +59,12 @@ class Search(object):
         return self._search_packages_in(remote_name, ref, query, outdated)
 
     def _search_packages_in_local(self, ref=None, query=None, outdated=False):
-        packages_props = search_packages(self._cache, ref, query)
+        package_layout = self._cache.package_layout(ref, short_paths=None)
+        packages_props = search_packages(package_layout, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
 
         try:
-            recipe_hash = self._cache.package_layout(ref).recipe_manifest().summary_hash
+            recipe_hash = package_layout.recipe_manifest().summary_hash
         except IOError:  # It could not exist in local
             recipe_hash = None
 
@@ -72,7 +73,7 @@ class Search(object):
         elif self._cache.config.revisions_enabled:
             # With revisions, by default filter the packages not belonging to the recipe
             # unless outdated is specified.
-            metadata = self._cache.package_layout(ref).load_metadata()
+            metadata = package_layout.load_metadata()
             ordered_packages = filter_by_revision(metadata, ordered_packages)
 
         references = OrderedDict()
