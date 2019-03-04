@@ -9,7 +9,7 @@ def download(ref, package_ids, remote_name, recipe, remote_manager,
     assert(isinstance(ref, ConanFileReference))
     output = ScopedOutput(str(ref), out)
     remotes = cache.registry.load_remotes()
-    remote = remotes[remote_name] if remote_name else remotes.default
+    remote = remotes.get_remote(remote_name)
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 

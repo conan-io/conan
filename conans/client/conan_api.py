@@ -634,8 +634,9 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
-                                                       check_updates, False, remote_name,
+                                                       check_updates, False, remote,
                                                        recorder)
         return deps_graph.build_order(build_order)
 
@@ -646,9 +647,10 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
                                                                build_modes, check_updates,
-                                                               False, remote_name, recorder)
+                                                               False, remote, recorder)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, conanfile
 
@@ -658,8 +660,9 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
-                                                               update, False, remote_name,
+                                                               update, False, remote,
                                                                recorder)
         return deps_graph, conanfile
 

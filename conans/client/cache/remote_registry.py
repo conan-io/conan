@@ -79,6 +79,12 @@ class Remotes(object):
     def __init__(self):
         self._remotes = OrderedDict()
 
+    def __bool__(self):
+        return bool(self._remotes)
+
+    def __nonzero__(self):
+        return self.__bool__()
+
     def clear(self):
         self._remotes.clear()
 
@@ -114,6 +120,10 @@ class Remotes(object):
         new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
         self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
                                      else (k, v) for k, v in self._remotes.items()])
+
+    def get_remote(self, remote_name):
+        # Returns the remote defined by the name, or the default if is None
+        return self[remote_name] if remote_name is not None else self.default
 
     @property
     def default(self):
@@ -167,7 +177,6 @@ class Remotes(object):
             for k, v in refs.items():
                 if v == renamed:
                     refs[k] = remote_name
-        self._save()
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
         if force:

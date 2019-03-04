@@ -78,7 +78,7 @@ class GraphBinariesAnalyzer(object):
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
             metadata = self._cache.package_layout(pref.ref).load_metadata()
-            remote_name = metadata.recipe.remote or metadata.packages[pref.id].remote
+            remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
             remote = self._remotes.get(remote_name)
 
         if os.path.exists(package_folder):

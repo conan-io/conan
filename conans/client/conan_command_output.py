@@ -143,7 +143,7 @@ class CommandOutputer(object):
 
             try:
                 reg_remote = self.cache.package_layout(ref).load_metadata().recipe.remote
-                reg_remote = self.cache.registry.get(reg_remote)
+                reg_remote = self.cache.registry.load_remotes().get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
             except:

@@ -10,9 +10,6 @@ from conans.util.log import logger
 
 
 class DiskRemover(object):
-    def __init__(self, cache):
-        self._cache = cache
-        self._remotes = cache.registry.load_remotes()
 
     def _remove(self, path, ref, msg=""):
         try:
@@ -54,7 +51,8 @@ class DiskRemover(object):
         if not ids:
             path = package_layout.builds()
             for build in package_layout.conan_builds():
-                self._remove(os.path.join(path, build), package_layout.ref, "build folder:%s" % build)
+                self._remove(os.path.join(path, build), package_layout.ref,
+                             "build folder:%s" % build)
             self._remove(path, package_layout.ref, "builds")
         else:
             for id_ in ids:
@@ -130,8 +128,6 @@ class ConanRemover(object):
 
         if not src and build_ids is None and package_ids is None:
             remover.remove(package_layout, output=self._user_io.out)
-            self._registry.refs.remove(ref, quiet=True)
-            self._registry.prefs.remove_all(ref)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None, outdated=False):

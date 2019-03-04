@@ -77,7 +77,8 @@ class CmdUpload(object):
                remote_name=None, query=None):
         t1 = time.time()
         refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
-        refs_by_remote = self._collect_packages_to_upload(refs, confirm, remote_name, all_packages,
+        remote = self._remotes.get_remote(remote_name)
+        refs_by_remote = self._collect_packages_to_upload(refs, confirm, remote, all_packages,
                                                           query, package_id)
         # Do the job
         for remote, refs in refs_by_remote.items():
@@ -107,26 +108,24 @@ class CmdUpload(object):
                                          reference_or_pattern))
         return refs, confirm
 
-    def _collect_packages_to_upload(self, refs, confirm, remote_name, all_packages, query,
-                                    package_id):
+    def _collect_packages_to_upload(self, refs, confirm, remote, all_packages, query, package_id):
         """ compute the references with revisions and the package_ids to be uploaded
         """
         # Group recipes by remote
         refs_by_remote = defaultdict(list)
-        default_remote = self._remotes[remote_name] if remote_name else self._remotes.default
 
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
             ref = ref.copy_with_rev(metadata.recipe.revision)
-            if not remote_name:
-                ref_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
-                remote = self._remotes[ref_remote] if remote_name else default_remote
+            if remote:
+                ref_remote = remote
             else:
-                remote = self._remotes[remote_name]
+                ref_remote = metadata.recipe.remote
+                ref_remote = self._remotes[ref_remote] if ref_remote else self._remotes.default
 
             upload = True
             if not confirm:
-                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), remote.name)
+                msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), ref_remote.name)
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
@@ -166,7 +165,7 @@ class CmdUpload(object):
                 for package_id in packages_ids:
                     package_revision = metadata.packages[package_id].revision
                     prefs.append(PackageReference(ref, package_id, package_revision))
-                refs_by_remote[remote].append((ref, conanfile, prefs))
+                refs_by_remote[ref_remote].append((ref, conanfile, prefs))
 
         return refs_by_remote
 
