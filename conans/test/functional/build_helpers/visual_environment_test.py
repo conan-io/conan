@@ -37,6 +37,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mycppflag',
                    '-mycppflag2'],
             "LIB": ["/one/lib/path", "/two/lib/path"],
+            'UseEnv': True,
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = True
@@ -52,6 +53,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mycppflag2',
                    '/MP%s' % tools.cpu_count(output=conanfile.output)],
             "LIB": ["/one/lib/path", "/two/lib/path"],
+            'UseEnv': True,
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = False
@@ -73,6 +75,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-mycppflag',
                    '-mycppflag2'],
             "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path"],
+            'UseEnv': True,
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
 
@@ -91,7 +94,9 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                        '-mycppflag',
                        '-mycppflag2',
                        "-I/four/include/path -I/five/include/path"],
-                "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path", "/four/lib/path;/five/lib/path"],
+                "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path",
+                        "/four/lib/path;/five/lib/path"],
+                'UseEnv': True,
                 "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
             })
 
@@ -101,6 +106,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                       '-mycppflag -mycppflag2 '
                       '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",
+                'UseEnv': True,
                 "_LINK_": "-myexelinkflag -mysharedlinkflag gdi32.lib user32.lib"
             })
 
