@@ -166,7 +166,7 @@ def _migrate_create_metadata(cache, out):
             # Force using a package cache layout for everything, we want to alter the cache,
             # not the editables
             layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False,
-                                        no_lock=False)
+                                        no_lock=True)
             folder = layout.export()
             try:
                 manifest = FileTreeManifest.load(folder)
