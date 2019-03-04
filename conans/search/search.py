@@ -87,7 +87,6 @@ def evaluate(prop_name, prop_value, conan_vars_info):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)
-    return False
 
 
 def search_recipes(cache, pattern=None, ignorecase=True):
@@ -122,40 +121,41 @@ def _partial_match(pattern, ref):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(cache, ref, query):
+def search_packages(package_layout, query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
                            version: "2.14",
                            settings: {os: Windows}}}
-    param ref: ConanFileReference object
+    param package_layout: Layout for the given reference
     """
-    if not os.path.exists(cache.conan(ref)) or (
-           ref.revision and cache.package_layout(ref).recipe_revision() != ref.revision):
-        raise RecipeNotFoundException(ref, print_rev=True)
-    infos = _get_local_infos_min(cache, ref)
+    if not os.path.exists(package_layout.conan()) or (
+            package_layout.ref.revision and
+            package_layout.recipe_revision() != package_layout.ref.revision):
+        raise RecipeNotFoundException(package_layout.ref, print_rev=True)
+    infos = _get_local_infos_min(package_layout)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(cache, ref):
+def _get_local_infos_min(package_layout):
     result = OrderedDict()
 
-    packages_path = cache.packages(ref)
+    packages_path = package_layout.packages()
     subdirs = list_folder_subdirs(packages_path, level=1)
     for package_id in subdirs:
         # Read conaninfo
-        pref = PackageReference(ref, package_id)
-        info_path = os.path.join(cache.package(pref, short_paths=None), CONANINFO)
+        pref = PackageReference(package_layout.ref, package_id)
+        info_path = os.path.join(package_layout.package(pref), CONANINFO)
         if not os.path.exists(info_path):
             logger.error("There is no ConanInfo: %s" % str(info_path))
             continue
         conan_info_content = load(info_path)
 
         info = ConanInfo.loads(conan_info_content)
-        if ref.revision:
-            metadata = cache.package_layout(pref.ref).load_metadata()
+        if package_layout.ref.revision:
+            metadata = package_layout.load_metadata()
             recipe_revision = metadata.packages[package_id].recipe_revision
-            if recipe_revision and recipe_revision != ref.revision:
+            if recipe_revision and recipe_revision != package_layout.ref.revision:
                 continue
         conan_vars_info = info.serialize_min()
         result[package_id] = conan_vars_info
