@@ -328,7 +328,8 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
         pt = PackageTester(manager, self._user_io)
-        pt.install_build_and_test(conanfile_path, ref, graph_info, remote_name,
+        remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
+        pt.install_build_and_test(conanfile_path, ref, graph_info, remote,
                                   update, build_modes=build_modes,
                                   test_build_folder=test_build_folder)
 
@@ -378,8 +379,8 @@ class ConanAPIV1(object):
 
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(ref)
-
-            create(ref, manager, self._user_io, graph_info, remote_name, update, build_modes,
+            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
+            create(ref, manager, self._user_io, graph_info, remote, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
 
@@ -523,8 +524,9 @@ class ConanAPIV1(object):
 
             mkdir(install_folder)
             manager = self._init_manager(recorder)
+            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
             manager.install(ref_or_path=reference, install_folder=install_folder,
-                            remote_name=remote_name, graph_info=graph_info, build_modes=build,
+                            remote=remote, graph_info=graph_info, build_modes=build,
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,

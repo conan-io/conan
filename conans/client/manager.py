@@ -29,7 +29,7 @@ class ConanManager(object):
         self._graph_manager = graph_manager
         self._hook_manager = hook_manager
 
-    def install(self, ref_or_path, install_folder, graph_info, remote_name=None, build_modes=None,
+    def install(self, ref_or_path, install_folder, graph_info, remote=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
                 keep_build=False):
@@ -56,7 +56,7 @@ class ConanManager(object):
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(graph_info.profile.dumps())
         result = self._graph_manager.load_graph(ref_or_path, create_reference, graph_info,
-                                                build_modes, False, update, remote_name,
+                                                build_modes, False, update, remote,
                                                 self._recorder)
         deps_graph, conanfile = result
 
