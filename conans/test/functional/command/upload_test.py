@@ -1,6 +1,4 @@
 import itertools
-import textwrap
-
 import os
 import unittest
 from collections import OrderedDict

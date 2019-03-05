@@ -360,7 +360,7 @@ class CmdUpload(object):
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
         if remote_snapshot:
-            if CONAN_MANIFEST in remote_snapshot.keys():
+            if CONAN_MANIFEST in remote_snapshot:
                 remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
                 local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 

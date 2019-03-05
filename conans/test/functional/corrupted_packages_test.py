@@ -58,6 +58,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
+        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing")  # FIXME: missing conanmanifest.txt does NOT fail?
@@ -95,8 +96,8 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("search Pkg/0.1@user/testing -r default")
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install Pkg/0.1@user/testing")  # FIXME: missing conan_package.tgz does NOT fail?
-        print(self.client.out)
+        self.client.run("install Pkg/0.1@user/testing")
+        print(self.client.out)  # FIXME: missing conan_package.tgz does NOT fail?
         self.assertIn(NO_SETTINGS_PACKAGE_ID, self.client.out)
         self.client.run("upload * --all --confirm")
         print(self.client.out)  # FIXME: Package up to date but actually the tgz is missing in the server
