@@ -24,9 +24,9 @@ class HelloConan(ConanFile):
                      "header.h": ""})
         client.run("create . Hello/0.1@lasote/testing")
         client.run("install Hello/0.1@lasote/testing -g json")
-        conan_json = os.path.join(client.current_folder, "conanbuildinfo.json")
-        with open(conan_json) as f:
-            data = json.load(f)
+        conan_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
+        data = json.loads(conan_json)
+
         self.assertEquals(data["deps_env_info"]["MY_ENV_VAR"], "foo")
         self.assertEquals(data["deps_user_info"]["Hello"]["my_var"], "my_value")
         hello_data = data["dependencies"][0]
@@ -53,10 +53,11 @@ class HelloConan(ConanFile):
         settings = "-sos=Linux -sarch=x86_64"
         client.run("create . Hello/0.1@lasote/testing " + settings)
         client.run("install Hello/0.1@lasote/testing -g json " + settings)
-        conan_json = os.path.join(client.current_folder, "conanbuildinfo.json")
-        with open(conan_json) as f:
-            data = json.load(f)
+
+        conan_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
+        data = json.loads(conan_json)
         settings_data = data["settings"]
+
         self.assertEqual(settings_data["os"], "Linux")
         self.assertEqual(settings_data["arch"], "x86_64")
 
