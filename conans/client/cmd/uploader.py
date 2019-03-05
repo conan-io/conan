@@ -143,7 +143,7 @@ class CmdUpload(object):
                         query = None
                     # better to do a search, that will retrieve real packages with ConanInfo
                     # Not only "package_id" folders that could be empty
-                    package_layout = self._cache.package_layout(ref)
+                    package_layout = self._cache.package_layout(ref.copy_clear_rev())
                     packages = search_packages(package_layout, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
