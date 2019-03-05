@@ -45,6 +45,8 @@ class JsonGenerator(Generator):
         for depname, cpp_info in self.deps_build_info.dependencies:
             serialized_info = serialize_cpp_info(cpp_info)
             serialized_info["name"] = depname
+            for cfg, cfg_cpp_info in cpp_info.configs.items():
+                serialized_info.setdefault("configs", {})[cfg] = serialize_cpp_info(cfg_cpp_info)
             res.append(serialized_info)
         return res
 
