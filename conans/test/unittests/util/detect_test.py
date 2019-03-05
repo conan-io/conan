@@ -3,6 +3,8 @@ import platform
 import subprocess
 import unittest
 
+from parameterized import parameterized
+
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestBufferConanOutput
@@ -60,15 +62,20 @@ class DetectTest(unittest.TestCase):
         self.assertTrue("arch" not in result)
         self.assertTrue("arch_build" not in result)
 
-    def test_detect_aix(self):
-        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')), \
-                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')), \
+    @parameterized.expand([
+        ['powerpc', '64', '7.1.0.0', 'powerpc'],
+        ['powerpc', '32', '7.1.0.0', 'rs6000'],
+        ['rs6000', None, '4.2.1.0', 'rs6000']
+    ])
+    def test_detect_aix(self, processor, bitness, version, expected_arch):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='XXXXXXXXXXXX')), \
+                mock.patch("platform.processor", mock.MagicMock(return_value=processor)), \
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
-                mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value='64')), \
-                mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
+                mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value=bitness)), \
+                mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
             result = detect_defaults_settings(output=TestBufferConanOutput())
             result = dict(result)
             self.assertEqual("AIX", result['os'])
             self.assertEqual("AIX", result['os_build'])
-            self.assertEqual("ppc64", result['arch'])
-            self.assertEqual("ppc64", result['arch_build'])
+            self.assertEqual(expected_arch, result['arch'])
+            self.assertEqual(expected_arch, result['arch_build'])
