@@ -3,6 +3,7 @@ import textwrap
 
 import os
 import unittest
+from collections import OrderedDict
 
 from mock import mock
 
@@ -13,6 +14,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import gzopen_without_timestamps, is_dirty, save
+from conans.test.utils.conanfile import TestConanFile
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -37,6 +39,14 @@ class MyPkg(ConanFile):
 
 
 class UploadTest(unittest.TestCase):
+
+    def test_upload_not_existing(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.run("export . Hello/0.1@lasote/testing")
+        client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
+        self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)
 
     def not_existing_error_test(self):
         """ Trying to upload with pattern not matched must raise an Error
@@ -542,6 +552,28 @@ class Pkg(ConanFile):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
         self.assertIn("Uploading conan_export.tgz", client.out)
+
+    def upload_key_error_test(self):
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                     users={"lasote": "mypass"})
+        server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                     users={"lasote": "mypass"})
+        servers = OrderedDict()
+        servers["server1"] = server1
+        servers["server2"] = server2
+        client = TestClient(servers=servers)
+        client.save(files)
+        client.run("config set general.revisions_enabled=True")
+        client.run("create . user/testing")
+        client.run("user lasote -p mypass")
+        client.run("user lasote -p mypass -r server2")
+        client.run("upload Hello0/1.2.1@user/testing --all -r server1")
+        client.run("remove * --force")
+        client.run("install Hello0/1.2.1@user/testing -r server1")
+        client.run("remote remove server1")
+        client.run("upload Hello0/1.2.1@user/testing --all -r server2")
+        self.assertNotIn("ERROR: 'server1'", client.out)
 
     def upload_with_corrupted_package_test(self):
         """

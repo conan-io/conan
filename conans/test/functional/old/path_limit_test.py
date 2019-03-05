@@ -121,6 +121,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertIn("lib/0.1@lasote/channel", client.user_io.out)
         self.assertIn("lib/0.1@memsharded/stable", client.user_io.out)
         client.run("search lib/0.1@lasote/channel")
+
         self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.user_io.out)
         client.run("search lib/0.1@memsharded/stable")
         self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.user_io.out)
