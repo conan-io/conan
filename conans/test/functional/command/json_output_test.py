@@ -1,8 +1,9 @@
 import json
 import os
-import unittest
 import textwrap
+import unittest
 
+from conans.model.build_info import DEFAULT_LIB
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
@@ -179,6 +180,9 @@ AA*: CC/1.0@private_user/channel
                 def package_info(self):
                     self.cpp_info.release.libs = ["hello"]
                     self.cpp_info.debug.libs = ["hello_d"]
+                    
+                    self.cpp_info.debug.libdirs = ["lib-debug"]
+                    
             """)
         self.client.save({'conanfile.py': conanfile})
         self.client.run("create . name/version@user/channel --json=myfile.json")
@@ -194,13 +198,15 @@ AA*: CC/1.0@private_user/channel
         self.assertFalse("libs" in cpp_info)
         self.assertEqual(cpp_info_debug["libs"], ["hello_d"])
         self.assertEqual(cpp_info_release["libs"], ["hello"])
+        self.assertEqual(cpp_info_debug["libdirs"], ["lib-debug"])
+        self.assertEqual(cpp_info_release["libdirs"], [DEFAULT_LIB])
 
         # FIXME: There are _empty_ nodes
         self.assertEqual(cpp_info_debug["builddirs"], [""])
         self.assertEqual(cpp_info_release["builddirs"], [""])
 
-        # FIXME: Some information is duplicated
-        dupe_nodes = ["rootpath", "includedirs", "libdirs", "resdirs",
+        # FIXME: Default information is duplicated in all the nodes
+        dupe_nodes = ["rootpath", "includedirs", "resdirs",
                       "bindirs", "builddirs", "filter_empty"]
         for dupe in dupe_nodes:
             self.assertEqual(cpp_info[dupe], cpp_info_debug[dupe])
