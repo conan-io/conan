@@ -386,11 +386,11 @@ class ConanAPIV1(object):
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
 
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
 
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -442,10 +442,10 @@ class ConanAPIV1(object):
                        ref, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
                        graph_info=graph_info, force=force)
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -533,10 +533,10 @@ class ConanAPIV1(object):
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
                             generators=generators)
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -570,10 +570,10 @@ class ConanAPIV1(object):
                             manifest_interactive=manifest_interactive,
                             generators=generators,
                             no_imports=no_imports)
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
