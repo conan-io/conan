@@ -1,4 +1,6 @@
 import itertools
+import textwrap
+
 import os
 import unittest
 
@@ -540,3 +542,30 @@ class Pkg(ConanFile):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
         self.assertIn("Uploading conan_export.tgz", client.out)
+
+    def upload_with_corrupted_package_test(self):
+        """
+        Simulate a connection failure or file corruption in the server with missing files for a
+        package and make sure the upload is possible even if the package in the server is not
+        accessible
+        """
+        client = self._client()
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Pkg(ConanFile):
+            pass
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@user/testing")
+        client.run("upload * --all --confirm")
+        server = self._servers["default"]
+        path = server.server_store.get_package_file_path(
+                PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing#0"),
+                                 NO_SETTINGS_PACKAGE_ID, "0"), "conanmanifest.txt")
+        os.unlink(path)  # Simulate conanmanifest.txt is not there
+        client.run("upload * --all --confirm --force")
+        self.assertNotIn("ERROR: Binary package not found", client.out)
+        self.assertIn("Uploading conanmanifest.txt", client.out)
+        self.assertIn("Uploading conaninfo.txt", client.out)
+        self.assertIn("Uploading conan_package.tgz", client.out)
