@@ -88,8 +88,8 @@ class HookManager(object):
         filename = os.path.splitext(os.path.basename(hook_path))[0]
         current_dir = os.path.dirname(hook_path)
 
+        sys.path.insert(0, current_dir)
         try:
-            sys.path.append(current_dir)
             old_modules = list(sys.modules.keys())
             with chdir(current_dir):
                 sys.dont_write_bytecode = True
@@ -114,5 +114,5 @@ class HookManager(object):
                                                                     '\n'.join(trace[3:])))
         finally:
             sys.dont_write_bytecode = False
-            sys.path.pop()
+            sys.path.pop(0)
         return loaded
