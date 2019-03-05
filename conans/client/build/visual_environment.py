@@ -96,7 +96,7 @@ class VisualStudioBuildEnvironment(object):
         return {"CL": cl_args,
                 "LIB": lib_paths,
                 "_LINK_": link_args,
-                "UseEnv": True}
+                "UseEnv": "True"}
 
     @property
     def vars_dict(self):
@@ -119,7 +119,7 @@ class VisualStudioBuildEnvironment(object):
         ret = {"CL": cl,
                "LIB": lib,
                "_LINK_": link,
-               "UseEnv": True}
+               "UseEnv": "True"}
         return ret
 
     def _std_cpp(self):
