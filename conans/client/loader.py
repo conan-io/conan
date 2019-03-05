@@ -258,16 +258,8 @@ def _parse_conanfile(conan_file_path):
         # collide, but no error, and overwrite other packages imports!!
         added_modules = set(sys.modules).difference(old_modules)
         for added in added_modules:
-            module = sys.modules[added]
-            if module:
-                try:
-                    folder = os.path.dirname(module.__file__)
-                except (AttributeError, TypeError):  # some module doesn't have __file__
-                    pass
-                else:
-                    if folder.startswith(current_dir):
-                        module = sys.modules.pop(added)
-                        sys.modules["%s.%s" % (module_id, added)] = module
+            module = sys.modules.pop(added)
+            sys.modules["%s.%s" % (module_id, added)] = module
     except Exception:
         import traceback
         trace = traceback.format_exc().split('\n')
