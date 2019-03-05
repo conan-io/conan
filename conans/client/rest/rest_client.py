@@ -1,8 +1,9 @@
 from collections import defaultdict
 
-from conans import CHECKSUM_DEPLOY, REVISIONS
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
+from conans.errors import OnlyV2Available
 
 
 class RestApiClient(object):
@@ -32,6 +33,8 @@ class RestApiClient(object):
                                 self.requester, self.verify_ssl, self._put_headers)
             _, _, cap = tmp.server_info()
             self._cached_capabilities[self.remote_url] = cap
+            if not self._revisions_enabled and ONLY_V2 in cap:
+                raise OnlyV2Available(self.remote_url)
 
         if self._revisions_enabled and REVISIONS in self._cached_capabilities[self.remote_url]:
             checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
