@@ -3,24 +3,24 @@ import json
 import os
 import random
 import shlex
+import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
+import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
-from io import StringIO
 
 import bottle
 import nose
 import requests
-import shutil
 import six
-import threading
-import time
-import uuid
 from mock import Mock
+from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 

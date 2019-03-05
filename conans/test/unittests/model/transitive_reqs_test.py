@@ -16,12 +16,16 @@ from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,\
     test_processed_profile
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+import os
+
 from mock import Mock
+
+from conans.client.cache.cache import ClientCache
 from conans.client.graph.build_mode import BuildMode
-from conans.test.utils.conanfile import TestConanFile
-from conans.paths.simple_paths import SimplePaths
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.range_resolver import RangeResolver
+from conans.test.utils.conanfile import TestConanFile
+
 
 say_content = TestConanFile("Say", "0.1")
 say_content2 = TestConanFile("Say", "0.2")
@@ -77,15 +81,15 @@ class GraphTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
-        paths = SimplePaths(self.retriever.folder)
+        paths = ClientCache(self.retriever.folder, self.retriever.folder,
+                            self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        self.resolver, None, None)
+                                        self.resolver, None)
         cache = Mock()
         remote_manager = None
-        self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output,
-                                                       remote_manager, workspace=None)
+        self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, remote_manager)
 
     def build_graph(self, content, options="", settings=""):
         self.loader.cached_conanfiles = {}
@@ -1457,7 +1461,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        Mock(), None, None)
+                                        Mock(), None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1838,6 +1842,7 @@ class ChatConan(ConanFile):
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
+
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
 

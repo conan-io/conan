@@ -5,7 +5,8 @@ import os
 import unittest
 from mock import mock
 
-from conans.client.tools import OSInfo, environment_append, CYGWIN, MSYS2, MSYS, remove_from_path
+from conans.client.tools import OSInfo, environment_append, CYGWIN, MSYS2, MSYS, WSL, \
+    remove_from_path
 from conans.errors import ConanException
 
 
@@ -165,3 +166,22 @@ class OSInfoTest(unittest.TestCase):
             with self.assertRaises(ConanException):
                 OSInfo.uname()
             self.assertIsNone(OSInfo.detect_windows_subsystem())
+
+    def test_wsl(self):
+        from six.moves import builtins
+
+        with mock.patch("platform.system", mock.MagicMock(return_value='Linux')):
+            with mock.patch.object(OSInfo, '_get_linux_distro_info'):
+                self.assertFalse(OSInfo().is_windows)
+                self.assertFalse(OSInfo().is_cygwin)
+                self.assertFalse(OSInfo().is_msys)
+                self.assertTrue(OSInfo().is_linux)
+                self.assertFalse(OSInfo().is_freebsd)
+                self.assertFalse(OSInfo().is_macos)
+                self.assertFalse(OSInfo().is_solaris)
+
+                with self.assertRaises(ConanException):
+                    OSInfo.uname()
+                with mock.patch.object(builtins, "open",
+                                       mock.mock_open(read_data="4.4.0-43-Microsoft")):
+                    self.assertEqual(OSInfo.detect_windows_subsystem(), WSL)

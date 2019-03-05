@@ -136,10 +136,11 @@ class CmdUpload(object):
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
 
+                package_layout = self._cache.package_layout(ref)
                 if all_packages:
-                    packages_ids = self._cache.conan_packages(ref)
+                    packages_ids = package_layout.conan_packages()
                 elif query:
-                    packages = search_packages(self._cache, ref, query)
+                    packages = search_packages(package_layout, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
