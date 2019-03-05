@@ -119,7 +119,7 @@ class VisualStudioBuildEnvironment(object):
         ret = {"CL": cl,
                "LIB": lib,
                "_LINK_": link,
-               "UseEnv": "True"}
+               "UseEnv": ["True"]}
         return ret
 
     def _std_cpp(self):
