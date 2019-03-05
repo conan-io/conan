@@ -1,8 +1,11 @@
 import platform
 import unittest
+from textwrap import dedent
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+
 
 mylibh = '''
 double mean(double a, double b);
@@ -59,9 +62,8 @@ int main(){
 
 class BuildEnvironmenTest(unittest.TestCase):
 
+    @unittest.skipUnless(platform.system() == "Linux", "Requires Linux")
     def use_build_virtualenv_test(self):
-        if platform.system() != "Linux":
-            return
         client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
         client.run("export . lasote/stable")
@@ -108,3 +110,37 @@ class ConanReuseLib(ConanFile):
         client.run("install . --build missing")
         client.run("build .")
         self.assertIn("15", client.user_io.out)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
+    def use_build_virtualenv_windows_test(self):
+        files = cpp_hello_conan_files("hello", "0.1",  use_cmake=False, with_exe=False)
+        client = TestClient(path_with_spaces=False)
+        client.save(files)
+        client.run("create . user/testing")
+        files = cpp_hello_conan_files("hello2", "0.1", deps=["hello/0.1@user/testing"],
+                                      use_cmake=False, with_exe=False)
+        client.save(files, clean_first=True)
+        client.run("create . user/testing")
+
+        reuse_conanfile = dedent('''
+            from conans import ConanFile
+
+            class ConanReuseLib(ConanFile):
+                requires = "hello2/0.1@user/testing"
+                generators = "virtualbuildenv"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def build(self):
+                    self.run('activate_build.bat && cl /c /EHsc hello.cpp')
+                    self.run('activate_build.bat && lib hello.obj -OUT:helloapp.lib')
+                    self.run('activate_build.bat && cl /EHsc main.cpp helloapp.lib')
+            ''')
+
+        reuse = cpp_hello_conan_files("app", "0.1", deps=["hello2/0.1@user/testing"],
+                                      use_cmake=False)
+        reuse["conanfile.py"] = reuse_conanfile
+        client.save(reuse, clean_first=True)
+        client.run("install .")
+        client.run("build .")
+        client.runner("main.exe", cwd=client.current_folder)
+        self.assertIn("Hello app;Hello hello2;Hello hello", ";".join(str(client.out).splitlines()))
