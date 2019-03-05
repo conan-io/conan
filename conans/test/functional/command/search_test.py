@@ -1,15 +1,11 @@
 import json
 import os
-
 import shutil
 import textwrap
-
+import time
 import unittest
 from collections import OrderedDict
-from textwrap import dedent
 
-import shutil
-import time
 from mock import patch
 
 from conans import COMPLEX_SEARCH_CAPABILITY, DEFAULT_REVISION_V1
@@ -1349,6 +1345,12 @@ class Test(ConanFile):
         client.run("search missing/1.0@conan/stable#revision:pid#revision --revisions -r fake",
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
+
+    def test_invalid_command_call(self):
+        client = TestClient()
+        client.run("search --revisions", assert_error=True)
+        self.assertIn("With --revision, specify a reference", client.out)
+        self.assertIn("or a package reference with recipe revision", client.out)
 
 
 class SearchRemoteAllTestCase(unittest.TestCase):

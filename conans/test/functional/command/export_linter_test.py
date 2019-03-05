@@ -87,6 +87,7 @@ class TestConan(ConanFile):
         self.output.info(self.source_folder)
         self.output.info(self.package_folder)
         self.output.info(self.build_folder)
+        self.output.info(self.install_folder)
 
     def package(self):
         self.copy("*")
