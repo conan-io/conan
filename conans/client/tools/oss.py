@@ -71,11 +71,14 @@ def detected_architecture():
     elif "arm" in machine:
         return "armv6"
 
-    processor = platform.processor()
-    if "powerpc" in processor and OSInfo().is_aix:
-        kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
-        if kernel_bitness:
-            return "ppc%s" % kernel_bitness
+    if OSInfo().is_aix:
+        processor = platform.processor()
+        if "powerpc" in processor:
+            kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
+            if kernel_bitness:
+                return "powerpc" if kernel_bitness == "64" else "rs6000"
+        elif "rs6000" in processor:
+            return "rs6000"
 
     return None
 
@@ -402,14 +405,21 @@ def get_gnu_triplet(os_, arch, compiler=None):
                "armv8.3": "aarch64"
                }.get(arch, None)
 
+
+
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
-        if "arm" in arch:
+        if os_ == "AIX":
+            if arch in ['ppc32', 'rs6000']:
+                machine = 'rs6000'
+            elif arch in ['ppc64', 'powerpc']:
+                machine = 'powerpc'
+        elif "arm" in arch:
             machine = "arm"
         elif "ppc64le" in arch:
             machine = "powerpc64le"
         elif "ppc64" in arch:
-            machine = "powerpc64" if os_ != "AIX" else "powerpc"
+            machine = "powerpc64"
         elif "ppc32" in arch:
             machine = "powerpc"
         elif "mips64" in arch:
