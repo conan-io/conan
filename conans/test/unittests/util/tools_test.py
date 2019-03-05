@@ -1147,7 +1147,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["AIX", "rs6000", None, "rs6000-ibm-aix"],
         ["AIX", "powerpc", None, "powerpc-ibm-aix"]
     ])
-    def test_get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
+    def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
         self.assertEquals(triplet, expected_triplet, "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
