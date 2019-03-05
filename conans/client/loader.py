@@ -262,7 +262,7 @@ def _parse_conanfile(conan_file_path):
             if module:
                 try:
                     folder = os.path.dirname(module.__file__)
-                except AttributeError:  # some module doesn't have __file__
+                except (AttributeError, TypeError):  # some module doesn't have __file__
                     pass
                 else:
                     if folder.startswith(current_dir):
