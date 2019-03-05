@@ -14,7 +14,7 @@ from conans.util.sha import sha1
 
 
 class RequirementInfo(object):
-    def __init__(self, pref, indirect=False, package_id_mode=None):
+    def __init__(self, pref, indirect=False, default_package_id_mode=None):
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
@@ -23,11 +23,11 @@ class RequirementInfo(object):
         self.full_package_id = pref.id
 
         # sha values
-        if package_id_mode:
+        if default_package_id_mode:
             try:
-                getattr(self, package_id_mode)()
+                getattr(self, default_package_id_mode)()
             except AttributeError:
-                raise ConanException("'%s' is not a known package_id_mode" % package_id_mode)
+                raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
         else:
             if indirect:
                 self.unrelated_mode()
@@ -110,9 +110,10 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(object):
-    def __init__(self, prefs, package_id_mode):
+    def __init__(self, prefs, default_package_id_mode):
         # {PackageReference: RequirementInfo}
-        self._data = {pref: RequirementInfo(pref, package_id_mode=package_id_mode) for pref in prefs}
+        self._data = {pref: RequirementInfo(pref, default_package_id_mode=default_package_id_mode)
+                      for pref in prefs}
 
     def copy(self):
         # For build_id() implementation
@@ -127,12 +128,13 @@ class RequirementsInfo(object):
         for name in args:
             del self._data[self._get_key(name)]
 
-    def add(self, prefs_indirect, package_id_mode):
+    def add(self, prefs_indirect, default_package_id_mode):
         """ necessary to propagate from upstream the real
         package requirements
         """
         for r in prefs_indirect:
-            self._data[r] = RequirementInfo(r, indirect=True, package_id_mode=package_id_mode)
+            self._data[r] = RequirementInfo(r, indirect=True,
+                                            default_package_id_mode=default_package_id_mode)
 
     def refs(self):
         """ used for updating downstream requirements with this
@@ -235,7 +237,7 @@ class ConanInfo(object):
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, package_id_mode):
+    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -243,8 +245,8 @@ class ConanInfo(object):
         result.options = options.copy()
         result.options.clear_indirect()
         result.full_requires = _PackageReferenceList(prefs_direct)
-        result.requires = RequirementsInfo(prefs_direct, package_id_mode)
-        result.requires.add(prefs_indirect, package_id_mode)
+        result.requires = RequirementsInfo(prefs_direct, default_package_id_mode)
+        result.requires.add(prefs_indirect, default_package_id_mode)
         result.full_requires.extend(prefs_indirect)
         result.recipe_hash = None
         result.env_values = EnvValues()

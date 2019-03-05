@@ -20,7 +20,7 @@ class PackageIDGraphTests(GraphManagerTest):
         configs.append((mode, "liba/1.1.1@user/stable", "b41d6c026473cffed4abded4b0eaa453497be1d2"))
 
         for package_id_mode, ref, package_id in configs:
-            self.cache.config.set_item("general.package_id_mode", package_id_mode)
+            self.cache.config.set_item("general.default_package_id_mode", package_id_mode)
             libb_ref = "libb/0.1@user/testing"
             self._cache_recipe(ref, TestConanFile("liba", "0.1.1"))
             self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[ref]))

@@ -352,9 +352,9 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
-    def package_id_mode(self):
+    def default_package_id_mode(self):
         try:
-            return self.get_item("general.package_id_mode")
+            return self.get_item("general.default_package_id_mode")
         except ConanException:
             return None
 
