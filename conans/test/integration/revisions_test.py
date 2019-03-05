@@ -1524,11 +1524,15 @@ class ServerRevisionsIndexes(unittest.TestCase):
         conanfile = GenConanfile()
         self.c_v1.create(self.ref, conanfile=conanfile)
         self.c_v1.upload_all(self.ref)
+
         pref = self.c_v2.create(self.ref, conanfile=conanfile.with_build_msg("Rev2"))
         self.c_v2.upload_all(self.ref)
 
         latest = self.server.server_store.get_last_revision(self.ref)
         self.assertEquals(latest.revision, pref.ref.revision)
+
+        if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
+            time.sleep(62)
 
         self.c_v1.create(self.ref, conanfile=conanfile.with_build_msg("Rev3"))
         self.c_v1.upload_all(self.ref)

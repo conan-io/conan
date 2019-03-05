@@ -136,10 +136,14 @@ class CmdUpload(object):
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
 
-                package_layout = self._cache.package_layout(ref)
-                if all_packages:
-                    packages_ids = package_layout.conan_packages()
-                elif query:
+                # TODO: This search of binary packages has to be improved, more robust
+                # So only real packages are retrieved
+                if all_packages or query:
+                    if all_packages:
+                        query = None
+                    # better to do a search, that will retrieve real packages with ConanInfo
+                    # Not only "package_id" folders that could be empty
+                    package_layout = self._cache.package_layout(ref.copy_clear_rev())
                     packages = search_packages(package_layout, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
@@ -164,7 +168,11 @@ class CmdUpload(object):
                 prefs = []
                 # Gather all the complete PREFS with PREV
                 for package_id in packages_ids:
+                    if package_id not in metadata.packages:
+                        raise ConanException("Binary package %s:%s not found"
+                                             % (str(ref), package_id))
                     package_revision = metadata.packages[package_id].revision
+                    assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
                 refs_by_remote[remote].append((ref, conanfile, prefs))
 
