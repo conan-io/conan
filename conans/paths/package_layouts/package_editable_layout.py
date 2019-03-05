@@ -3,7 +3,7 @@
 import os
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableLayout
+from conans.model.editable_layout import EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
@@ -16,6 +16,10 @@ class PackageEditableLayout(object):
         self._ref = ref
         self._base_folder = base_folder
         self._layout_file = layout_file
+
+    @property
+    def ref(self):
+        return self._ref
 
     def conan(self):
         """ Returns the base folder for this package reference """
