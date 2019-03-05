@@ -351,15 +351,16 @@ class CmdUpload(object):
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
         if remote_snapshot:
-            remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
-            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
+            if CONAN_MANIFEST in remote_snapshot.keys():
+                remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
+                local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
-            if remote_manifest == local_manifest:
-                return None, None
+                if remote_manifest == local_manifest:
+                    return None, None
 
-            if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite.")
+                if policy == UPLOAD_POLICY_NO_OVERWRITE:
+                    raise ConanException("Local package is different from the remote package. "
+                                         "Forbidden overwrite.")
         files_to_upload = the_files
         deleted = set(remote_snapshot).difference(the_files)
 
