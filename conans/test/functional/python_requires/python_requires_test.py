@@ -6,6 +6,7 @@ from conans.test.utils.tools import TestClient, TestServer,\
     NO_SETTINGS_PACKAGE_ID, create_local_git_repo
 from conans.paths import CONANFILE
 from parameterized import parameterized
+import time
 
 
 class PythonExtendTest(unittest.TestCase):
@@ -469,6 +470,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 42", client2.out)
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
+        time.sleep(1)  # guarantee time offset
         client.run("export . MyConanfileBase/1.1@lasote/testing")
         client.run("upload * --confirm")
 
