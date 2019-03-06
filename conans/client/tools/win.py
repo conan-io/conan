@@ -133,15 +133,16 @@ def latest_visual_studio_version_installed(output):
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
+                       output=None):
     """ Do both: set the environment variables and call the .sln build
     """
     import warnings
     warnings.warn("deprecated", DeprecationWarning)
 
-    vcvars = vcvars_command(settings, force=force_vcvars)
+    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms)
+                              parallel, toolset=toolset, platforms=platforms, output=output)
     command = "%s && %s" % (vcvars, build)
     return command
 
