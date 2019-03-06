@@ -86,7 +86,7 @@ class GraphTest(unittest.TestCase):
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         self.resolver, None)
         cache = Mock()
-        cache.config.default_package_id_mode = None
+        cache.config.default_package_id_mode = "semver_direct_mode"
         remote_manager = None
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, remote_manager)
 
