@@ -59,13 +59,13 @@ def _visual_compiler(output, version):
     if platform.system().startswith("CYGWIN"):
         return _visual_compiler_cygwin(output, version)
 
-    if version == "15":
-        vs_path = os.getenv('vs150comntools')
-        path = vs_path or vs_installation_path("15")
+    if Version(version) >= "15":
+        vs_path = os.getenv('vs%s0comntools' % version)
+        path = vs_path or vs_installation_path(version)
         if path:
             compiler = "Visual Studio"
-            output.success("Found %s %s" % (compiler, "15"))
-            return compiler, "15"
+            output.success("Found %s %s" % (compiler, version))
+            return compiler, version
         return None
 
     version = "%s.0" % version
@@ -93,7 +93,8 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
-MSVS_DEFAULT_TOOLSETS = {"15": "v141",
+MSVS_DEFAULT_TOOLSETS = {"16": "v142",
+                         "15": "v141",
                          "14": "v140",
                          "12": "v120",
                          "11": "v110",
@@ -102,7 +103,8 @@ MSVS_DEFAULT_TOOLSETS = {"15": "v141",
                          "8": "v80"}
 
 # inverse version of the above MSVS_DEFAULT_TOOLSETS (keys and values are swapped)
-MSVS_DEFAULT_TOOLSETS_INVERSE = {"v141": "15",
+MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
+                                 "v141": "15",
                                  "v140": "14",
                                  "v120": "12",
                                  "v110": "11",
