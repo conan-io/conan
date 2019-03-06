@@ -575,7 +575,8 @@ def unix_path(path, path_flavor=None):
     return None
 
 
-def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
+def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None,
+                        with_login=True):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
@@ -637,7 +638,8 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
-        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
+        login = "--login" if with_login else ""
+        wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
 
         # If is there any other env var that we know it contains paths, convert it to unix_path
