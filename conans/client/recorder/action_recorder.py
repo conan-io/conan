@@ -22,6 +22,23 @@ INSTALL_ERROR_MISSING_BUILD_FOLDER = "missing_build_folder"
 INSTALL_ERROR_BUILDING = "building"
 
 
+def _cpp_info_to_dict(cpp_info):
+    doc = {}
+    for it, value in vars(cpp_info).items():
+        if it.startswith("_") or not value:
+            continue
+
+        if it == "configs":
+            configs_data = {}
+            for cfg_name, cfg_cpp_info in value.items():
+                configs_data[cfg_name] = _cpp_info_to_dict(cfg_cpp_info)
+            doc["configs"] = configs_data
+            continue
+
+        doc[it] = value
+    return doc
+
+
 class Action(namedtuple("Action", "type, full_ref, doc, time")):
 
     def __new__(cls, the_type, full_ref, doc=None):
@@ -95,12 +112,7 @@ class ActionRecorder(object):
     def package_cpp_info(self, pref, cpp_info):
         assert isinstance(pref, PackageReference)
         # assert isinstance(cpp_info, CppInfo)
-        doc = {}
-        for it, value in vars(cpp_info).items():
-            if it.startswith("_") or not value:
-                continue
-            doc[it] = value
-        self._inst_packages_info[pref.copy_clear_revs()]['cpp_info'] = doc
+        self._inst_packages_info[pref.copy_clear_revs()]['cpp_info'] = _cpp_info_to_dict(cpp_info)
 
     @property
     def install_errored(self):

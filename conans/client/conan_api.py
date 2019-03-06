@@ -5,7 +5,6 @@ from collections import OrderedDict
 import requests
 
 import conans
-
 from conans import __version__ as client_version
 from conans.client import packager, tools
 from conans.client.cache.cache import ClientCache
@@ -22,6 +21,7 @@ from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.client.conf import ConanClientConfigParser
+from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
@@ -62,8 +62,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.client.graph.graph import RECIPE_EDITABLE
-
 
 default_manifest_folder = '.conan_manifests'
 

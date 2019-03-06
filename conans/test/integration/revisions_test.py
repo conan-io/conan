@@ -6,7 +6,7 @@ import time
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans import DEFAULT_REVISION_V1, load
+from conans import DEFAULT_REVISION_V1, load, ONLY_V2
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
@@ -1366,6 +1366,16 @@ class CapabilitiesRevisionsTest(unittest.TestCase):
         c_v2.remove_all()
         c_v2.run("install {}".format(ref))
         self.assertEquals(c_v2.recipe_revision(ref), DEFAULT_REVISION_V1)
+
+    def test_server_with_only_v2_capability(self):
+        server = TestServer(server_capabilities=[ONLY_V2])
+        c_v2 = TurboTestClient(revisions_enabled=False, servers={"default": server})
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        c_v2.create(ref)
+        c_v2.upload_all(ref, remote="default", assert_error=True)
+        self.assertIn("The remote at '{}' only works with revisions enabled. "
+                      "Set CONAN_REVISIONS_ENABLED=1 or set 'general.revisions_enabled = 1' "
+                      "at the 'conan.conf'. [Remote: default]".format(server.fake_url), c_v2.out)
 
 
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")

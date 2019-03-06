@@ -1,7 +1,9 @@
 import json
 import os
+import textwrap
 import unittest
 
+from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
@@ -176,3 +178,43 @@ AA*: CC/1.0@private_user/channel
         self.assertFalse(my_json["installed"][2]["recipe"]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][0]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][1]["downloaded"])
+
+    def test_json_create_multiconfig(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class Lib(ConanFile):
+                def package_info(self):
+                    self.cpp_info.release.libs = ["hello"]
+                    self.cpp_info.debug.libs = ["hello_d"]
+                    
+                    self.cpp_info.debug.libdirs = ["lib-debug"]
+                    
+            """)
+        self.client.save({'conanfile.py': conanfile})
+        self.client.run("create . name/version@user/channel --json=myfile.json")
+        my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
+        my_json = json.loads(my_json)
+
+        # Nodes with cpp_info
+        cpp_info = my_json["installed"][0]["packages"][0]["cpp_info"]
+        cpp_info_debug = cpp_info["configs"]["debug"]
+        cpp_info_release = cpp_info["configs"]["release"]
+
+        # Each node should have its own information
+        self.assertFalse("libs" in cpp_info)
+        self.assertEqual(cpp_info_debug["libs"], ["hello_d"])
+        self.assertEqual(cpp_info_release["libs"], ["hello"])
+        self.assertEqual(cpp_info_debug["libdirs"], ["lib-debug"])
+        self.assertEqual(cpp_info_release["libdirs"], [DEFAULT_LIB])
+
+        # FIXME: There are _empty_ nodes
+        self.assertEqual(cpp_info_debug["builddirs"], [""])
+        self.assertEqual(cpp_info_release["builddirs"], [""])
+
+        # FIXME: Default information is duplicated in all the nodes
+        dupe_nodes = ["rootpath", "includedirs", "resdirs",
+                      "bindirs", "builddirs", "filter_empty"]
+        for dupe in dupe_nodes:
+            self.assertEqual(cpp_info[dupe], cpp_info_debug[dupe])
+            self.assertEqual(cpp_info[dupe], cpp_info_release[dupe])
