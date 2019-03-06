@@ -20,7 +20,7 @@ class ActionRecorderTest(unittest.TestCase):
         tracer = ActionRecorder()
         tracer.recipe_install_error(self.ref1, INSTALL_ERROR_NETWORK, "SSL wtf", "http://drl.com")
         tracer.add_recipe_being_developed(self.ref1)
-        install_info = tracer.get_info()
+        install_info = tracer.get_info(False)
         self.assertTrue(install_info["error"])
         self.assertEquals(install_info["installed"][0]["packages"], [])
         self.assertEquals(install_info["installed"][0]["recipe"]["dependency"], False)
@@ -32,7 +32,7 @@ class ActionRecorderTest(unittest.TestCase):
         tracer.package_downloaded(self.pref1, "http://drl.com")
         tracer.package_fetched_from_cache(self.pref1)
 
-        install_info = tracer.get_info()
+        install_info = tracer.get_info(False)
         self.assertFalse(install_info["error"])
 
         first_installed = install_info["installed"][0]
@@ -59,7 +59,7 @@ class ActionRecorderTest(unittest.TestCase):
         tracer.package_built(self.pref3)
         tracer.add_recipe_being_developed(self.ref1)
 
-        install_info = tracer.get_info()
+        install_info = tracer.get_info(False)
         self.assertTrue(install_info["error"])
 
         first_installed = install_info["installed"][0]

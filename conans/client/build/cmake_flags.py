@@ -47,7 +47,8 @@ def get_generator(settings):
                     '11': '11 2012',
                     '12': '12 2013',
                     '14': '14 2015',
-                    '15': '15 2017'}
+                    '15': '15 2017',
+                    '16': '16 2019'}
         base = "Visual Studio %s" % _visuals.get(compiler_version,
                                                  "UnknownVersion %s" % compiler_version)
         if arch == "x86_64":
