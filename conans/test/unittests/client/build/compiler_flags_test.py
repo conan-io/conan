@@ -38,10 +38,10 @@ class CompilerFlagsTest(unittest.TestCase):
         arch_flag = architecture_flag(arch='x86_64', compiler='Visual Studio')
         self.assertEquals(arch_flag, '')
 
-        arch_flag = architecture_flag(os='AIX', arch='ppc32', compiler='gcc')
+        arch_flag = architecture_flag(os='AIX', arch='rs6000', compiler='gcc')
         self.assertEquals(arch_flag, '-maix32')
 
-        arch_flag = architecture_flag(os='AIX', arch='ppc64', compiler='gcc')
+        arch_flag = architecture_flag(os='AIX', arch='powerpc', compiler='gcc')
         self.assertEquals(arch_flag, '-maix64')
 
     def test_libcxx_flags(self):
