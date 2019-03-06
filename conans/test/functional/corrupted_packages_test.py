@@ -107,3 +107,38 @@ class CorruptedPackagesTest(unittest.TestCase):
         # FIXME: tgz is not in the server and not uploaded
         self.assertIn("Package is up to date, upload skipped", self.client.user_io.out)
         #self._assert_all_package_files_in_server()
+
+    def tgz_manifest_missing_test(self):
+        os.unlink(self.tgz_path)
+        os.unlink(self.manifest_path)
+        # Try search
+        self.client.run("search Pkg/0.1@user/testing -r default")
+        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        # Try fresh install
+        self.client.run("remove * -f")
+        self.client.run("install Pkg/0.1@user/testing")  # FIXME: missing conan_package.tgz and conanmanifest.txt does NOT fail?
+        # Try upload of installed package
+        self.client.run("upload * --all --confirm", assert_error=True)
+        self.assertIn("ERROR: Cannot upload corrupted package", self.client.out)
+        # Try upload of fresh package
+        self.client.run("create . Pkg/0.1@user/testing")
+        self.client.run("upload * --all --confirm")
+        self._assert_all_package_files_in_server()
+
+    def tgz_manifest_info_missing_test(self):
+        os.unlink(self.tgz_path)
+        os.unlink(self.manifest_path)
+        os.unlink(self.info_path)
+        # Try search
+        self.client.run("search Pkg/0.1@user/testing -r default")
+        self.assertIn("There are no packages for reference 'Pkg/0.1@user/testing', "
+                      "but package recipe found", self.client.out)
+        # Try fresh install
+        self.client.run("remove * -f")
+        self.client.run("install Pkg/0.1@user/testing", assert_error=True)
+        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
+                      self.client.out)
+        # Try upload of fresh package
+        self.client.run("create . Pkg/0.1@user/testing")
+        self.client.run("upload * --all --confirm")
+        self._assert_all_package_files_in_server()
