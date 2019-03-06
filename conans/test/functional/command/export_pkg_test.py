@@ -498,8 +498,10 @@ class MyConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            self.assertEqual(output["installed"][0]["recipe"]["id"],
-                             "pkg2/1.0@danimtb/testing")
+            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            if self.client.cache.config.revisions_enabled:
+                self.assertIsNotNone(tmp.revision)
+            self.assertEqual(str(tmp), "pkg2/1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
             self.assertTrue(output["installed"][0]["recipe"]["exported"])
             if with_error:
@@ -508,8 +510,10 @@ class MyConan(ConanFile):
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
                                  "5825778de2dc9312952d865df314547576f129b3")
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
-                self.assertEqual(output["installed"][1]["recipe"]["id"],
-                                 "pkg1/1.0@danimtb/testing")
+                tmp = ConanFileReference.loads(output["installed"][1]["recipe"]["id"])
+                if self.client.cache.config.revisions_enabled:
+                    self.assertIsNotNone(tmp.revision)
+                self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
                 self.assertTrue(output["installed"][1]["recipe"]["dependency"])
 
         conanfile = """from conans import ConanFile

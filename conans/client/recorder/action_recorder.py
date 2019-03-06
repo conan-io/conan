@@ -42,7 +42,7 @@ class ActionRecorder(object):
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, ref):
         assert(isinstance(ref, ConanFileReference))
-        self._inst_recipes_develop.add(ref)
+        self._inst_recipes_develop.add(ref.copy_clear_rev())
 
     def _add_recipe_action(self, ref, action):
         assert(isinstance(ref, ConanFileReference))
@@ -140,7 +140,7 @@ class ActionRecorder(object):
             action_types = [action.type for action in the_actions]
             time = the_actions[0].time
             if revisions_enabled and isinstance(the_ref, ConanFileReference):
-                the_id = the_actions[0].full_ref
+                the_id = the_actions[0].full_ref.full_repr()
             else:
                 the_id = str(the_ref)
 

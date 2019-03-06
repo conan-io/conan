@@ -93,11 +93,11 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
         digest.save(package_layout.export())
 
     # Compute the revision for the recipe
-    _update_revision_in_metadata(package_layout=package_layout,
-                                 revisions_enabled=revisions_enabled,
-                                 output=output,
-                                 path=os.path.dirname(conanfile_path),
-                                 digest=digest)
+    revision = _update_revision_in_metadata(package_layout=package_layout,
+                                            revisions_enabled=revisions_enabled,
+                                            output=output,
+                                            path=os.path.dirname(conanfile_path),
+                                            digest=digest)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source_folder = package_layout.source()
@@ -127,6 +127,8 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
             output.info("Removing the local binary packages from different recipe revisions")
             remover = DiskRemover()
             remover.remove_packages(package_layout, ids_filter=to_remove)
+
+    return package_layout.ref.copy_with_rev(revision)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
@@ -250,6 +252,8 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
                         " revision: {} ".format(revision))
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
+
+    return revision
 
 
 def _recreate_folders(destination_folder, destination_src_folder):

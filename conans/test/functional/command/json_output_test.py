@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
@@ -165,7 +166,10 @@ AA*: CC/1.0@private_user/channel
 
         # Installed the build require CC with two options
         self.assertEquals(len(my_json["installed"][2]["packages"]), 2)
-        self.assertEquals(my_json["installed"][2]["recipe"]["id"], "CC/1.0@private_user/channel")
+        tmp = ConanFileReference.loads(my_json["installed"][2]["recipe"]["id"])
+        if self.client.cache.config.revisions_enabled:
+            self.assertIsNotNone(tmp.revision)
+        self.assertEquals(str(tmp), "CC/1.0@private_user/channel")
         self.assertFalse(my_json["installed"][2]["recipe"]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][0]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][1]["downloaded"])
