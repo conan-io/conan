@@ -179,6 +179,10 @@ class RequirementsInfo(object):
     def unrelated_mode(self):
         self.clear()
 
+    def semver_direct_mode(self):
+        for r in self._data.values():
+            r.semver_direct_mode()
+
     def semver_mode(self):
         for r in self._data.values():
             r.semver_mode()
@@ -271,7 +275,7 @@ class ConanInfo(object):
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        result.requires = RequirementsInfo(result.full_requires, None)
+        result.requires = RequirementsInfo(result.full_requires, "semver_direct_mode")
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now

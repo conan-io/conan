@@ -19,6 +19,7 @@ class Requirement(object):
         self.range_ref = ref
         self.override = override
         self.private = private
+        self.build_require = False
 
     @property
     def version_range(self):
