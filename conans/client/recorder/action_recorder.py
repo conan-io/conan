@@ -39,12 +39,12 @@ def _cpp_info_to_dict(cpp_info):
     return doc
 
 
-class Action(namedtuple("Action", "type, doc, time")):
+class Action(namedtuple("Action", "type, full_ref, doc, time")):
 
-    def __new__(cls, the_type, doc=None):
+    def __new__(cls, the_type, full_ref, doc=None):
         doc = doc or {}
         the_time = datetime.utcnow()
-        return super(cls, Action).__new__(cls, the_type, doc, the_time)
+        return super(cls, Action).__new__(cls, the_type, full_ref, doc, the_time)
 
 
 class ActionRecorder(object):
@@ -59,7 +59,7 @@ class ActionRecorder(object):
     # ###### INSTALL METHODS ############
     def add_recipe_being_developed(self, ref):
         assert(isinstance(ref, ConanFileReference))
-        self._inst_recipes_develop.add(ref)
+        self._inst_recipes_develop.add(ref.copy_clear_rev())
 
     def _add_recipe_action(self, ref, action):
         assert(isinstance(ref, ConanFileReference))
@@ -70,51 +70,49 @@ class ActionRecorder(object):
 
     def _add_package_action(self, pref, action):
         assert(isinstance(pref, PackageReference))
-        pref = pref.copy_clear_rev()
+        pref = pref.copy_clear_revs()
         if pref not in self._inst_packages_actions:
             self._inst_packages_actions[pref] = []
         self._inst_packages_actions[pref].append(action)
 
     # RECIPE METHODS
     def recipe_exported(self, ref):
-        self._add_recipe_action(ref, Action(INSTALL_EXPORTED))
+        self._add_recipe_action(ref, Action(INSTALL_EXPORTED, ref))
 
     def recipe_fetched_from_cache(self, ref):
-        self._add_recipe_action(ref, Action(INSTALL_CACHE))
+        self._add_recipe_action(ref, Action(INSTALL_CACHE, ref))
 
     def recipe_downloaded(self, ref, remote_name):
-        self._add_recipe_action(ref, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
+        self._add_recipe_action(ref, Action(INSTALL_DOWNLOADED, ref, {"remote": remote_name}))
 
     def recipe_install_error(self, ref, error_type, description, remote_name):
         doc = {"type": error_type, "description": description, "remote": remote_name}
-        self._add_recipe_action(ref, Action(INSTALL_ERROR, doc))
+        self._add_recipe_action(ref, Action(INSTALL_ERROR, ref, doc))
 
     # PACKAGE METHODS
     def package_exported(self, pref):
-        self._add_package_action(pref, Action(INSTALL_EXPORTED))
+        self._add_package_action(pref, Action(INSTALL_EXPORTED, pref))
 
     def package_built(self, pref):
-        self._add_package_action(pref, Action(INSTALL_BUILT))
+        self._add_package_action(pref, Action(INSTALL_BUILT, pref))
 
     def package_fetched_from_cache(self, pref):
-        self._add_package_action(pref, Action(INSTALL_CACHE))
+        self._add_package_action(pref, Action(INSTALL_CACHE, pref))
 
     def package_downloaded(self, pref, remote_name):
-        self._add_package_action(pref, Action(INSTALL_DOWNLOADED, {"remote": remote_name}))
+        self._add_package_action(pref, Action(INSTALL_DOWNLOADED, pref, {"remote": remote_name}))
 
     def package_install_error(self, pref, error_type, description, remote_name=None):
         assert(isinstance(pref, PackageReference))
-        pref = pref.copy_clear_rev()
         if pref not in self._inst_packages_actions:
-            self._inst_packages_actions[pref] = []
+            self._inst_packages_actions[pref.copy_clear_revs()] = []
         doc = {"type": error_type, "description": description, "remote": remote_name}
-        self._inst_packages_actions[pref].append(Action(INSTALL_ERROR, doc))
+        self._inst_packages_actions[pref.copy_clear_revs()].append(Action(INSTALL_ERROR, pref, doc))
 
     def package_cpp_info(self, pref, cpp_info):
         assert isinstance(pref, PackageReference)
-        pref = pref.copy_clear_rev()
         # assert isinstance(cpp_info, CppInfo)
-        self._inst_packages_info[pref]['cpp_info'] = _cpp_info_to_dict(cpp_info)
+        self._inst_packages_info[pref.copy_clear_revs()]['cpp_info'] = _cpp_info_to_dict(cpp_info)
 
     @property
     def install_errored(self):
@@ -138,10 +136,10 @@ class ActionRecorder(object):
     def in_development_recipe(self, ref):
         return ref in self._inst_recipes_develop
 
-    def get_info(self):
-        return self.get_install_info()
+    def get_info(self, revisions_enabled):
+        return self.get_install_info(revisions_enabled)
 
-    def get_install_info(self):
+    def get_install_info(self, revisions_enabled):
         ret = {"error": self.install_errored or self.error,
                "installed": []}
 
@@ -153,8 +151,12 @@ class ActionRecorder(object):
             remote = None if not remotes else remotes[0]
             action_types = [action.type for action in the_actions]
             time = the_actions[0].time
+            if revisions_enabled and isinstance(the_ref, ConanFileReference):
+                the_id = the_actions[0].full_ref.full_repr()
+            else:
+                the_id = str(the_ref)
 
-            doc = {"id": str(the_ref),
+            doc = {"id": the_id,
                    "downloaded": INSTALL_DOWNLOADED in action_types,
                    "exported": INSTALL_EXPORTED in action_types,
                    "error": error,

@@ -4,6 +4,7 @@ import textwrap
 import unittest
 
 from conans.model.build_info import DEFAULT_LIB
+from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
@@ -22,7 +23,10 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("create . private_user/channel --json=myfile.json")
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
         self.assertFalse(my_json["error"])
-        self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
+        tmp = ConanFileReference.loads(my_json["installed"][0]["recipe"]["id"])
+        self.assertEquals(str(tmp), "CC/1.0@private_user/channel")
+        if self.client.cache.config.revisions_enabled:
+            self.assertIsNotNone(tmp.revision)
         self.assertFalse(my_json["installed"][0]["recipe"]["dependency"])
         self.assertTrue(my_json["installed"][0]["recipe"]["exported"])
         self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])
@@ -167,7 +171,10 @@ AA*: CC/1.0@private_user/channel
 
         # Installed the build require CC with two options
         self.assertEquals(len(my_json["installed"][2]["packages"]), 2)
-        self.assertEquals(my_json["installed"][2]["recipe"]["id"], "CC/1.0@private_user/channel")
+        tmp = ConanFileReference.loads(my_json["installed"][2]["recipe"]["id"])
+        if self.client.cache.config.revisions_enabled:
+            self.assertIsNotNone(tmp.revision)
+        self.assertEquals(str(tmp), "CC/1.0@private_user/channel")
         self.assertFalse(my_json["installed"][2]["recipe"]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][0]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][1]["downloaded"])
