@@ -21,7 +21,10 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("create . private_user/channel --json=myfile.json")
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
         self.assertFalse(my_json["error"])
-        self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
+        tmp = ConanFileReference.loads(my_json["installed"][0]["recipe"]["id"])
+        self.assertEquals(str(tmp), "CC/1.0@private_user/channel")
+        if self.client.cache.config.revisions_enabled:
+            self.assertIsNotNone(tmp.revision)
         self.assertFalse(my_json["installed"][0]["recipe"]["dependency"])
         self.assertTrue(my_json["installed"][0]["recipe"]["exported"])
         self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])

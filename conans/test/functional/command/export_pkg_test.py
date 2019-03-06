@@ -450,8 +450,10 @@ class TestConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            self.assertEqual(output["installed"][0]["recipe"]["id"],
-                             "mypackage/0.1.0@danimtb/testing")
+            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            if self.client.cache.config.revisions_enabled:
+                self.assertIsNotNone(tmp.revision)
+            self.assertEqual(str(tmp), "mypackage/0.1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
             self.assertTrue(output["installed"][0]["recipe"]["exported"])
             if with_error:
