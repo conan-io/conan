@@ -1,21 +1,27 @@
 import os
+import textwrap
 import unittest
 from collections import OrderedDict
 
+import six
 from mock import Mock
 from mock.mock import call
+from parameterized import parameterized
 
 from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.loader import ConanFileLoader, ConanFileTextLoader
+from conans.client.loader import ConanFileLoader, ConanFileTextLoader,\
+    _parse_conanfile
+from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
 from conans.test.utils.tools import test_processed_profile,\
     TestBufferConanOutput
+from conans.util.files import save, load
+import sys
 
 
 class ConanLoaderTest(unittest.TestCase):
@@ -225,3 +231,110 @@ class MyTest(ConanFile):
         recipe = loader.load_consumer(conanfile_path,
                                       test_processed_profile(profile))
         self.assertIsNone(recipe.settings.os.value)
+
+
+class ImportModuleLoaderTest(unittest.TestCase):
+
+    @staticmethod
+    def _create_and_load(myfunc, value, subdir_name, add_subdir_init):
+        subdir_content = textwrap.dedent("""
+            def get_value():
+                return {value}
+            def {myfunc}():
+                return "{myfunc}"
+        """)
+
+        side_content = textwrap.dedent("""
+            def get_side_value():
+                return {value}
+            def side_{myfunc}():
+                return "{myfunc}"
+        """)
+
+        conanfile = textwrap.dedent("""
+            import pickle
+            from {subdir}.api import get_value, {myfunc}
+            from file import get_side_value, side_{myfunc}
+            from fractions import Fraction
+            def conanfile_func():
+                return get_value(), {myfunc}(), get_side_value(), side_{myfunc}(), str(Fraction(1,1))
+        """)
+        expected_return = (value, myfunc, value, myfunc, "1")
+
+        tmp = temp_folder()
+        with chdir(tmp):
+            save("conanfile.py", conanfile.format(value=value, myfunc=myfunc, subdir=subdir_name))
+            save("file.py", side_content.format(value=value, myfunc=myfunc))
+            save("{}/api.py".format(subdir_name), subdir_content.format(value=value, myfunc=myfunc))
+            if add_subdir_init:
+                save("{}/__init__.py".format(subdir_name), "")
+
+        loaded, module_id = _parse_conanfile(os.path.join(tmp, "conanfile.py"))
+        return loaded, module_id, expected_return
+
+    @unittest.skipIf(six.PY2, "Python 2 requires __init__.py file in modules")
+    def test_py3_recipe_colliding_filenames(self):
+        myfunc1, value1 = "recipe1", 42
+        myfunc2, value2 = "recipe2", 23
+        loaded1, module_id1, exp_ret1 = self._create_and_load(myfunc1, value1, "subdir", False)
+        loaded2, module_id2, exp_ret2 = self._create_and_load(myfunc2, value2, "subdir", False)
+
+        self.assertNotEqual(module_id1, module_id2)
+        self.assertEqual(loaded1.conanfile_func(), exp_ret1)
+        self.assertEqual(loaded2.conanfile_func(), exp_ret2)
+
+    def test_recipe_colliding_filenames(self):
+        myfunc1, value1 = "recipe1", 42
+        myfunc2, value2 = "recipe2", 23
+        loaded1, module_id1, exp_ret1 = self._create_and_load(myfunc1, value1, "subdir", True)
+        loaded2, module_id2, exp_ret2 = self._create_and_load(myfunc2, value2, "subdir", True)
+
+        self.assertNotEqual(module_id1, module_id2)
+        self.assertEqual(loaded1.conanfile_func(), exp_ret1)
+        self.assertEqual(loaded2.conanfile_func(), exp_ret2)
+
+    @parameterized.expand([(True, ), (False, )])
+    def test_wrong_imports(self, add_subdir_init):
+        myfunc1, value1 = "recipe1", 42
+
+        # Item imported does not exist, but file exists
+        with self.assertRaisesRegexp(ConanException, "Unable to load conanfile in"):
+            self._create_and_load(myfunc1, value1, "requests", add_subdir_init)
+
+        # File does not exists in already existing module
+        with self.assertRaisesRegexp(ConanException, "Unable to load conanfile in"):
+            self._create_and_load(myfunc1, value1, "conans", add_subdir_init)
+
+    def test_helpers_python_library(self):
+        mylogger = """import os
+f = open(os.path.join("%s", "mylogfile.txt"), "w")
+def save(data):
+    f.write(data)
+"""
+        temp = temp_folder()
+        save(os.path.join(temp, "mylogger.py"), mylogger % temp.replace("\\", "/"))
+        save(os.path.join(temp, "__init__.py"), "")
+
+        conanfile = '''
+import mylogger
+def log():
+    mylogger.save("mylogger %s!!!")
+'''
+        temp1 = temp_folder()
+        save(os.path.join(temp1, "conanfile.py"), conanfile % "first")
+        temp2 = temp_folder()
+        save(os.path.join(temp2, "conanfile.py"), conanfile % "second")
+
+        try:
+            sys.path.append(temp)
+            loaded1, _ = _parse_conanfile(os.path.join(temp1, "conanfile.py"))
+            loaded2, _ = _parse_conanfile(os.path.join(temp2, "conanfile.py"))
+            loaded1.log()
+            loaded2.log()
+            logfile = os.path.join(temp, "mylogfile.txt")
+            loaded1.mylogger.f.close()
+            logged = load(logfile)
+            self.assertIn("mylogger first!!!", logged)
+            self.assertIn("mylogger second!!!", logged)
+        finally:
+            sys.path.remove(temp)

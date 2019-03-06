@@ -261,7 +261,10 @@ def _parse_conanfile(conan_file_path):
             module = sys.modules[added]
             if module:
                 try:
-                    folder = os.path.dirname(module.__file__)
+                    try:
+                        folder = os.path.dirname(module.__file__)
+                    except TypeError:  # Namespace packages py3 module.__file__ is None
+                        folder = module.__path__._path[0]
                 except AttributeError:  # some module doesn't have __file__
                     pass
                 else:
