@@ -38,22 +38,27 @@ class GraphBinariesAnalyzer(object):
         pref = PackageReference(ref, node.package_id)
 
         # Check that this same reference hasn't already been checked
-        previous_node = evaluated_nodes.get(pref)
-        if previous_node:
+        previous_nodes = evaluated_nodes.get(pref)
+        if previous_nodes:
+            previous_nodes.append(node)
+            previous_node = previous_nodes[0]
             node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
+            node.prev = previous_node.prev
             return
-        evaluated_nodes[pref] = node
+        evaluated_nodes[pref] = [node]
 
         output = conanfile.output
 
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE
+            # TODO: PREV?
             return
 
         if build_mode.forced(conanfile, ref):
             output.warn('Forced build from source')
             node.binary = BINARY_BUILD
+            node.prev = None
             return
 
         package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
@@ -105,6 +110,8 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = BINARY_CACHE
+                metadata = self._cache.package_layout(pref.ref).load_metadata()
+                node.prev = metadata.packages[pref.id].revision
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
 
         else:  # Binary does NOT exist locally
@@ -138,6 +145,7 @@ class GraphBinariesAnalyzer(object):
                     node.binary = BINARY_BUILD
                 else:
                     node.binary = BINARY_MISSING
+                node.prev = None
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
@@ -145,6 +153,7 @@ class GraphBinariesAnalyzer(object):
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD
+                    node.prev = None
                 else:
                     output.info("Package is up to date")
 
@@ -158,8 +167,7 @@ class GraphBinariesAnalyzer(object):
         indirect_reqs = set()   # of PackageReference, avoid duplicates
         for neighbor in neighbors:
             ref, nconan = neighbor.ref, neighbor.conanfile
-            pref = PackageReference(ref, neighbor.package_id)
-            direct_reqs.append(pref)
+            direct_reqs.append(neighbor.pref)
             indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
             # Might be never used, but update original requirement, just in case
@@ -171,6 +179,7 @@ class GraphBinariesAnalyzer(object):
         # for build-requires
         conanfile.build_requires_options = conanfile.options.values
         conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
+        conanfile.options.freeze()
 
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
@@ -181,24 +190,23 @@ class GraphBinariesAnalyzer(object):
         with conanfile_exception_formatter(str(conanfile), "package_id"):
             conanfile.package_id()
 
-        info = node.conanfile.info
+        info = conanfile.info
         node.package_id = info.package_id()
 
-    def _handle_private(self, node, deps_graph):
-        private_neighbours = node.private_neighbors()
-        if private_neighbours:
-            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                for neigh in private_neighbours:
-                    neigh.binary = BINARY_SKIP
-                    closure = deps_graph.full_closure(neigh, private=True)
-                    for n in closure:
-                        n.binary = BINARY_SKIP
+    def _handle_private(self, node):
+        if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
+            private_neighbours = node.private_neighbors()
+            for neigh in private_neighbours:
+                # Current closure contains own node to be skipped
+                for n in neigh.public_closure.values():
+                    n.binary = BINARY_SKIP
+                    self._handle_private(n)
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
-        evaluated_nodes = {}
+        evaluated = deps_graph.evaluated
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated_nodes, remote_name)
-            self._handle_private(node, deps_graph)
+            self._evaluate_node(node, build_mode, update, evaluated, remote_name)
+            self._handle_private(node)
