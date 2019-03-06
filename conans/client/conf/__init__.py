@@ -356,7 +356,7 @@ class ConanClientConfigParser(ConfigParser, object):
         try:
             return self.get_item("general.default_package_id_mode")
         except ConanException:
-            return None
+            return "semver_direct_mode"
 
     @property
     def storage_path(self):

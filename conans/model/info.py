@@ -14,29 +14,23 @@ from conans.util.sha import sha1
 
 
 class RequirementInfo(object):
-    def __init__(self, pref, indirect=False, default_package_id_mode=None):
+    def __init__(self, pref, default_package_id_mode, indirect=False):
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
         self.full_user = pref.ref.user
         self.full_channel = pref.ref.channel
         self.full_package_id = pref.id
+        self._indirect = indirect
 
-        # sha values
-        if default_package_id_mode:
-            try:
-                getattr(self, default_package_id_mode)()
-            except AttributeError:
-                raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
-        else:
-            if indirect:
-                self.unrelated_mode()
-            else:
-                self.semver_mode()
+        try:
+            getattr(self, default_package_id_mode)()
+        except AttributeError:
+            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
 
     def copy(self):
         # Useful for build_id()
-        result = RequirementInfo(self.package)
+        result = RequirementInfo(self.package, "unrelated_mode")
         for f in ("name", "version", "user", "channel", "package_id"):
             setattr(result, f, getattr(self, f))
             f = "full_%s" % f
@@ -61,6 +55,12 @@ class RequirementInfo(object):
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
+
+    def semver_direct_mode(self):
+        if self._indirect:
+            self.unrelated_mode()
+        else:
+            self.semver_mode()
 
     def semver_mode(self):
         self.name = self.full_name
