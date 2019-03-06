@@ -410,10 +410,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
         if os_ == "AIX":
-            if arch in ['ppc32', 'rs6000']:
-                machine = 'rs6000'
-            elif arch in ['ppc64', 'powerpc']:
-                machine = 'powerpc'
+            if "rs6000" in arch:
+                machine = "rs6000"
+            elif "powerpc" in arch:
+                machine = "powerpc"
         elif "arm" in arch:
             machine = "arm"
         elif "ppc64le" in arch:

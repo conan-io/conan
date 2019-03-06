@@ -36,9 +36,9 @@ def architecture_flag(compiler, arch, os=None):
         elif str(arch) in ['x86', 'sparc']:
             return '-m32'
         elif os == 'AIX':
-            if str(arch) in ['ppc32', 'rs6000']:
+            if str(arch) in ['rs6000']:
                 return '-maix32'
-            elif str(arch) in ['ppc64', 'powerpc']:
+            elif str(arch) in ['powerpc']:
                 return '-maix64'
     return ""
 
@@ -50,9 +50,9 @@ def archive_flag(compiler, arch, os=None):
         return None
 
     if str(os) == 'AIX' and str(compiler) in ['gcc']:
-        if str(arch) in ['ppc32', 'rs6000']:
+        if str(arch) in ['rs6000']:
             return '-X32'
-        elif str(arch) in ['ppc64', 'powerpc']:
+        elif str(arch) in ['powerpc']:
             return '-X64'
 
     return None
