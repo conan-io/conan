@@ -132,7 +132,8 @@ class MSBuildTest(unittest.TestCase):
         self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
-    @parameterized.expand([("15", "v141"),
+    @parameterized.expand([("16", "v142"),
+                           ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
                            ("11", "v110"),
@@ -149,7 +150,8 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
-    @parameterized.expand([("v141",),
+    @parameterized.expand([("v142",),
+                           ("v141",),
                            ("v140",),
                            ("v120",),
                            ("v110",),

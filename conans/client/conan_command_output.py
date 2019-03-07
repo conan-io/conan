@@ -10,6 +10,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths.simple_paths import SimplePaths
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
+from conans.util.dates import iso8601_to_str
 from conans.util.env_reader import get_env
 from conans.util.files import save
 
@@ -68,7 +69,10 @@ class CommandOutputer(object):
             json_output = os.path.join(cwd, json_output)
 
         def date_handler(obj):
-            return obj.isoformat() if hasattr(obj, 'isoformat') else obj
+            if hasattr(obj, 'isoformat'):
+                return obj.isoformat()
+            else:
+                raise TypeError("Unserializable object {} of type {}".format(obj, type(obj)))
 
         save(json_output, json.dumps(info, default=date_handler))
         self.user_io.out.writeln("")
@@ -79,7 +83,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self.cache.package_layout(ref).load_manifest()
+                manifest = self.cache.package_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
@@ -106,7 +110,7 @@ class CommandOutputer(object):
         """ Convert 'deps_graph' into consumible information for json and cli """
         compact_nodes = OrderedDict()
         for node in sorted(deps_graph.nodes):
-            compact_nodes.setdefault((node.ref, node.conanfile.info.package_id()), []).append(node)
+            compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
@@ -118,6 +122,8 @@ class CommandOutputer(object):
             conanfile = node.conanfile
             if node.recipe == RECIPE_CONSUMER:
                 ref = str(conanfile)
+            else:
+                item_data["revision"] = str(ref.revision)
 
             item_data["reference"] = str(ref)
             item_data["is_ref"] = isinstance(ref, ConanFileReference)
@@ -130,9 +136,9 @@ class CommandOutputer(object):
                 item_data["export_folder"] = self.cache.export(ref)
                 item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
                 if isinstance(self.cache, SimplePaths):
-                    # @todo: check if this is correct or if it must always be package_id()
-                    bid = build_id(conanfile) or package_id
-                    pref = PackageReference(ref, bid)
+                    # @todo: check if this is correct or if it must always be package_id
+                    package_id = build_id(conanfile) or package_id
+                    pref = PackageReference(ref, package_id)
                     item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
 
                     pref = PackageReference(ref, package_id)
@@ -197,7 +203,8 @@ class CommandOutputer(object):
     def info(self, deps_graph, only, package_filter, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self.user_io.out).print_info(data, only,  package_filter=package_filter,
-                                             show_paths=show_paths)
+                                             show_paths=show_paths,
+                                             show_revisions=self.cache.config.revisions_enabled)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
@@ -228,6 +235,14 @@ class CommandOutputer(object):
             printer = Printer(self.user_io.out)
             printer.print_search_packages(search_info, reference, packages_query,
                                           outdated=outdated)
+
+    def print_revisions(self, reference, revisions, remote_name=None):
+        remote_test = " at remote '%s'" % remote_name if remote_name else ""
+        self.user_io.out.info("Revisions for '%s'%s:" % (reference, remote_test))
+        lines = ["%s (%s)" % (r["revision"],
+                              iso8601_to_str(r["time"]) if r["time"] else "No time")
+                 for r in revisions]
+        self.user_io.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:

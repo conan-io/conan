@@ -39,7 +39,7 @@ class InfoCommandTest(unittest.TestCase):
                                body='requires = "{}"'.format(self.ref_parent)),
                            "mylayout": self.conan_package_layout, },
                     path=lib_folder)
-        self.t.run('link "{}" {}'.format(lib_folder, self.ref))
+        self.t.run('editable add "{}" {}'.format(lib_folder, self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
         # Create child
@@ -48,7 +48,7 @@ class InfoCommandTest(unittest.TestCase):
         self.t.run('export . {}'.format(self.ref_child))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.ref))
+        self.t.run('editable remove {}'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
     @parameterized.expand([(True, ), (False, )])
@@ -57,17 +57,18 @@ class InfoCommandTest(unittest.TestCase):
         project_name = "conanfile.py" if use_local_path else self.ref_child
 
         self.t.run('info {}'.format(args))
+        revision = "    Revision: None\n" if self.t.cache.config.revisions_enabled else ""
         self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
                       "    Remote: None\n"
-                      "    Recipe: Editable\n"
+                      "    Recipe: Editable\n{}"
                       "    Binary: Editable\n"
                       "    Binary remote: None\n"
                       "    Required by:\n"
                       "        {}\n"
                       "    Requires:\n"
-                      "        parent/version@user/name\n".format(project_name),
+                      "        parent/version@user/name\n".format(revision, project_name),
                       self.t.out)
 
     @parameterized.expand([(True,), (False,)])

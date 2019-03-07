@@ -1,7 +1,5 @@
-import unittest
 import os
-
-from nose.plugins.attrib import attr
+import unittest
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -39,6 +37,7 @@ PROFILE = """
 os={os_build}
 os_build={os_build}
 """
+
 
 class CMakeGeneratorTest(unittest.TestCase):
 

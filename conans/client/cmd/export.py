@@ -7,72 +7,140 @@ import six
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import ScopedOutput
+from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.search.search import search_recipes
-from conans.util.files import is_dirty, load, mkdir, rmdir, save, set_dirty, remove
+from conans.paths import CONANFILE
+from conans.search.search import search_recipes, search_packages
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
 
 
-def export_alias(reference, target_reference, cache):
-    if reference.name != target_reference.name:
-        raise ConanException("An alias can only be defined to a package with the same name")
+def export_alias(package_layout, target_ref, output, revisions_enabled):
     conanfile = """
 from conans import ConanFile
 
 class AliasConanfile(ConanFile):
     alias = "%s"
-""" % str(target_reference)
+""" % target_ref.full_repr()
 
-    export_path = cache.export(reference)
-    mkdir(export_path)
-    save(os.path.join(export_path, CONANFILE), conanfile)
-    mkdir(cache.export_sources(reference))
-    digest = FileTreeManifest.create(export_path)
-    digest.save(export_path)
+    save(package_layout.conanfile(), conanfile)
+    digest = FileTreeManifest.create(package_layout.export())
+    digest.save(folder=package_layout.export())
+
+    # Create the metadata for the alias
+    _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
+                                 output=output, path=None, digest=digest)
 
 
-def cmd_export(conanfile_path, conanfile, ref, keep_source, output, cache, hook_manager):
+def check_casing_conflict(cache, ref):
+    # Check for casing conflict
+    # Maybe a platform check could be added, but depends on disk partition
+    refs = search_recipes(cache, ref, ignorecase=True)
+    if refs and ref not in [r.copy_clear_rev() for r in refs]:
+        raise ConanException("Cannot export package with same name but different case\n"
+                             "You exported '%s' but already existing '%s'"
+                             % (str(ref), " ".join(str(s) for s in refs)))
+
+
+def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions_enabled,
+               output, hook_manager):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=ref)
+                         reference=package_layout.ref)
     logger.debug("EXPORT: %s" % conanfile_path)
+
     output.highlight("Exporting package recipe")
-
     conan_linter(conanfile_path, output)
-    # Maybe a platform check could be added, but depends on disk partition
-    reference = str(ref)
-    refs = search_recipes(cache, reference, ignorecase=True)
-    if refs and ref not in refs:
-        raise ConanException("Cannot export package with same name but different case\n"
-                             "You exported '%s' but already existing '%s'"
-                             % (reference, " ".join(str(s) for s in refs)))
+    output = conanfile.output
 
-    with cache.conanfile_write_lock(ref):
-        _export_conanfile(conanfile_path, conanfile.output, cache, conanfile, ref, keep_source)
-    conanfile_cache_path = cache.conanfile(ref)
-    hook_manager.execute("post_export", conanfile=conanfile, conanfile_path=conanfile_cache_path,
-                         reference=ref)
+    # Get previous digest
+    try:
+        previous_digest = FileTreeManifest.load(package_layout.export())
+    except IOError:
+        previous_digest = None
+    finally:
+        _recreate_folders(package_layout.export(), package_layout.export_sources())
+
+    # Copy sources to target folders
+    with package_layout.conanfile_write_lock(output=output):
+        origin_folder = os.path.dirname(conanfile_path)
+        export_recipe(conanfile, origin_folder, package_layout.export())
+        export_source(conanfile, origin_folder, package_layout.export_sources())
+        shutil.copy2(conanfile_path, package_layout.conanfile())
+
+        _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path),
+                                 package_layout.export(), output,
+                                 scm_src_file=package_layout.scm_folder())
+
+        # Execute post-export hook before computing the digest
+        hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
+                             conanfile_path=package_layout.conanfile())
+
+        # Compute the new digest
+        digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        modified_recipe = not previous_digest or previous_digest != digest
+        if modified_recipe:
+            output.success('A new %s version was exported' % CONANFILE)
+            output.info('Folder: %s' % package_layout.export())
+        else:
+            output.info("The stored package has not changed")
+            digest = previous_digest  # Use the old one, keep old timestamp
+        digest.save(package_layout.export())
+
+    # Compute the revision for the recipe
+    revision = _update_revision_in_metadata(package_layout=package_layout,
+                                            revisions_enabled=revisions_enabled,
+                                            output=output,
+                                            path=os.path.dirname(conanfile_path),
+                                            digest=digest)
+
+    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
+    source_folder = package_layout.source()
+    if os.path.exists(source_folder):
+        try:
+            if is_dirty(source_folder):
+                output.info("Source folder is corrupted, forcing removal")
+                rmdir(source_folder)
+            elif modified_recipe and not keep_source:
+                output.info("Package recipe modified in export, forcing source folder removal")
+                output.info("Use the --keep-source, -k option to skip it")
+                rmdir(source_folder)
+        except BaseException as e:
+            output.error("Unable to delete source folder. Will be marked as corrupted for deletion")
+            output.warn(str(e))
+            set_dirty(source_folder)
+
+    # When revisions enabled, remove the packages not matching the revision
+    if revisions_enabled:
+        packages = search_packages(package_layout, query=None)
+        metadata = package_layout.load_metadata()
+        recipe_revision = metadata.recipe.revision
+        to_remove = [pid for pid in packages if
+                     metadata.packages.get(pid) and
+                     metadata.packages.get(pid).recipe_revision != recipe_revision]
+        if to_remove:
+            output.info("Removing the local binary packages from different recipe revisions")
+            remover = DiskRemover()
+            remover.remove_packages(package_layout, ids_filter=to_remove)
+
+    return package_layout.ref.copy_with_rev(revision)
 
 
-def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, paths, ref):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
 
-    scm_src_file = paths.scm_folder(ref)
     if os.path.exists(scm_src_file):
         os.unlink(scm_src_file)
 
     scm_data = get_scm_data(conanfile)
     if not scm_data:
-        return None, False
+        return
 
     # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
-    captured_revision = scm_data.capture_revision
-
     scm = SCM(scm_data, conanfile_dir, output)
     captured = scm_data.capture_origin or scm_data.capture_revision
 
@@ -99,7 +167,7 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
         if src_path:
             save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
 
-    return scm_data, captured_revision
+    return scm_data
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
@@ -121,6 +189,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     lines = content.splitlines(True)
     tree = ast.parse(content)
     to_replace = []
+    comments = []
     for i_body, item in enumerate(tree.body):
         if isinstance(item, ast.ClassDef):
             statements = item.body
@@ -135,16 +204,22 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                     next_line = tree.body[i_body+1].lineno - 1
                             else:
                                 next_line = statements[i+1].lineno - 1
+                                next_line_content = lines[next_line].strip()
+                                if next_line_content.endswith('"""') or next_line_content.endswith("'''"):
+                                    next_line += 1
                         except IndexError:
                             next_line = stmt.lineno
-                        replace = [line for line in lines[(stmt.lineno-1):next_line]
-                                   if line.strip()]
+                        replace = [line for line in lines[(stmt.lineno-1):next_line]]
                         to_replace.append("".join(replace).lstrip())
+                        comments = [line.strip('\n') for line in replace
+                                    if line.strip().startswith("#") or not line.strip()]
                         break
     if len(to_replace) != 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
+    if comments:
+        new_text += '\n'.join(comments) + "\n"
     content = content.replace(to_replace[0], new_text)
     content = content if not headers else ''.join(headers) + content
 
@@ -152,80 +227,50 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     save(conanfile_path, content)
 
 
-def _export_conanfile(conanfile_path, output, cache, conanfile, ref, keep_source):
+def _detect_scm_revision(path):
+    if not path:
+        return None, None
 
-    exports_folder = cache.export(ref)
-    exports_source_folder = cache.export_sources(ref, conanfile.short_paths)
+    repo_type = SCM.detect_scm(path)
+    if not repo_type:
+        return None, None
 
-    previous_digest = _init_export_folder(exports_folder, exports_source_folder)
-    origin_folder = os.path.dirname(conanfile_path)
-    export_recipe(conanfile, origin_folder, exports_folder)
-    export_source(conanfile, origin_folder, exports_source_folder)
-    shutil.copy2(conanfile_path, os.path.join(exports_folder, CONANFILE))
+    repo_obj = SCM.availables.get(repo_type)(path)
+    return repo_obj.get_revision(), repo_type
 
-    scm_data, captured_revision = _capture_export_scm_data(conanfile,
-                                                           os.path.dirname(conanfile_path),
-                                                           exports_folder,
-                                                           output, cache, ref)
 
-    digest = FileTreeManifest.create(exports_folder, exports_source_folder)
+def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
 
-    if previous_digest and previous_digest == digest:
-        output.info("The stored package has not changed")
-        modified_recipe = False
-        digest = previous_digest  # Use the old one, keep old timestamp
-    else:
-        output.success('A new %s version was exported' % CONANFILE)
-        output.info('Folder: %s' % exports_folder)
-        modified_recipe = True
-
-    digest.save(exports_folder)
-
-    revision = scm_data.revision if scm_data and captured_revision else digest.summary_hash
-    with cache.package_layout(ref).update_metadata() as metadata:
-        # Note that there is no time set, the time will come from the remote
+    scm_revision_detected, repo_type = _detect_scm_revision(path)
+    revision = scm_revision_detected or digest.summary_hash
+    if revisions_enabled:
+        if scm_revision_detected:
+            output.info("Using {} commit as the recipe"
+                        " revision: {} ".format(repo_type, revision))
+        else:
+            output.info("Using the exported files summary hash as the recipe"
+                        " revision: {} ".format(revision))
+    with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
 
-    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
-    source = cache.source(ref, conanfile.short_paths)
-    remove = False
-    if is_dirty(source):
-        output.info("Source folder is corrupted, forcing removal")
-        remove = True
-    elif modified_recipe and not keep_source and os.path.exists(source):
-        output.info("Package recipe modified in export, forcing source folder removal")
-        output.info("Use the --keep-source, -k option to skip it")
-        remove = True
-    if remove:
-        output.info("Removing 'source' folder, this can take a while for big packages")
-        try:
-            # remove only the internal
-            rmdir(source)
-        except BaseException as e:
-            output.error("Unable to delete source folder. "
-                         "Will be marked as corrupted for deletion")
-            output.warn(str(e))
-            set_dirty(source)
+    return revision
 
 
-def _init_export_folder(destination_folder, destination_src_folder):
-    previous_digest = None
+def _recreate_folders(destination_folder, destination_src_folder):
     try:
         if os.path.exists(destination_folder):
-            if os.path.exists(os.path.join(destination_folder, CONAN_MANIFEST)):
-                previous_digest = FileTreeManifest.load(destination_folder)
             # Maybe here we want to invalidate cache
             rmdir(destination_folder)
         os.makedirs(destination_folder)
     except Exception as e:
         raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))
+
     try:
         if os.path.exists(destination_src_folder):
             rmdir(destination_src_folder)
         os.makedirs(destination_src_folder)
     except Exception as e:
         raise ConanException("Unable to create folder %s\n%s" % (destination_src_folder, str(e)))
-    return previous_digest
 
 
 def _classify_patterns(patterns):

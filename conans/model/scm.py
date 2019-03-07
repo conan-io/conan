@@ -51,6 +51,8 @@ class SCMData(object):
 
 
 class SCM(object):
+    availables = {'git': Git, 'svn': SVN}
+
     def __init__(self, data, repo_folder, output):
         self._data = data
         self._output = output
@@ -58,8 +60,18 @@ class SCM(object):
         # Finally instance a repo
         self.repo = self._get_repo()
 
+    @classmethod
+    def detect_scm(cls, folder):
+        for name, candidate in cls.availables.items():
+            try:
+                candidate(folder).check_repo()
+                return name
+            except ConanException:
+                pass
+        return None
+
     def _get_repo(self):
-        repo_class = {"git": Git, "svn": SVN}.get(self._data.type)
+        repo_class = self.availables.get(self._data.type)
         if not repo_class:
             raise ConanException("SCM not supported: %s" % self._data.type)
 
@@ -75,7 +87,8 @@ class SCM(object):
         output = ""
         if self._data.type == "git":
             output += self.repo.clone(url=self._data.url)
-            output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
+            output += self.repo.checkout(element=self._data.revision,
+                                         submodule=self._data.submodule)
         else:
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output

@@ -1017,8 +1017,9 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertIn('path\\to\\mybash.exe --login -c', conanfile._conan_runner.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
-            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile._conan_runner.command)
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
+                                      with_login=False)
+            self.assertIn('"path with spaces\\to\\mybash.exe"  -c', conanfile._conan_runner.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
@@ -1167,7 +1168,15 @@ ProgramFiles(x86)=C:\Program Files (x86)
         build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "aarch64-linux-gnu_ilp32")
-
+        
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabi")
+        
+        build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "arm-linux-gnueabihf")
+       
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "i686-linux-android")
@@ -1688,7 +1697,7 @@ class GitToolsTests(unittest.TestCase):
         Try to get tag out of a git repo
         """
         git = Git(folder=temp_folder())
-        with self.assertRaisesRegexp(ConanException, "Not a valid git repository"):
+        with self.assertRaisesRegexp(ConanException, "Not a valid 'git' repository"):
             git.get_tag()
 
     def test_excluded_files(self):
@@ -1702,6 +1711,19 @@ class GitToolsTests(unittest.TestCase):
 @attr("slow")
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
+
+    def test_check_svn_repo(self):
+        project_url, _ = self.create_project(files={'myfile': "contents"})
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        with self.assertRaisesRegexp(ConanException, "Not a valid 'svn' repository"):
+            svn.check_repo()
+        svn.checkout(url=project_url)
+        try:
+            svn.check_repo()
+        except Exception:
+            self.fail("After checking out, it should be a valid SVN repository")
+
     def test_clone(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
@@ -1924,6 +1946,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn = SVN(folder=self.gimme_tmp())
         with self.assertRaisesRegexp(ConanException, "Unable to get svn tag"):
             svn.get_tag()
+
 
 
 @attr("slow")

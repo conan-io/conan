@@ -21,11 +21,18 @@ class ForbiddenRemoveTest(unittest.TestCase):
         t.save(files={'conanfile.py': conanfile,
                       "mylayout": "", })
         t.run("export . lib/version@user/name")
-        t.run('link . {}'.format(ref))
+        t.run('editable add . {}'.format(ref))
         self.assertTrue(t.cache.installed_as_editable(ref))
         t.run('remove {} --force'.format(ref), assert_error=True)
         self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
                       "using command 'conan link lib/version@user/name --remove'", t.out)
+
+        # Also with a pattern, but only a warning
+        t.run('remove lib* --force')
+        self.assertIn("WARN: Package 'lib/version@user/name' is installed as editable, "
+                      "unlink it first using command 'conan link lib/version@user/name --remove'",
+                      t.out)
+        self.assertTrue(t.cache.installed_as_editable(ref))
 
 
 class ForbiddenCommandsTest(unittest.TestCase):
@@ -44,7 +51,7 @@ class ForbiddenCommandsTest(unittest.TestCase):
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         self.t.save(files={'conanfile.py': self.conanfile,
                            "mylayout": "", })
-        self.t.run('link . {}'.format(self.ref))
+        self.t.run('editable add . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     def test_export(self):

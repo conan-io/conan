@@ -108,7 +108,7 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("remove '*' -f")
         self.clients["H3"].run("info conanfile.py --build missing")
 
-        if not self.clients["H3"].revisions:
+        if not self.clients["H3"].cache.config.revisions_enabled:
             self.assert_last_line(self.clients["H3"], "H2a/0.1@lu/st, H2c/0.1@lu/st")
         else:  # When revisions are enabled we just created a new one for H1a
             # when modifing the recipe so we need to rebuild it and its private H0
@@ -130,8 +130,7 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("info . --build missing --json=\"{}\"".format(json_file))
         self.assertEqual(load(json_file), json_output)
 
-        json_file = os.path.join(temp_folder(), "output.json")
-        self.clients["H3"].run("info . --build missing --json".format(json_file))
+        self.clients["H3"].run("info . --build missing --json")
         self.assert_last_line(self.clients["H3"], json_output)
 
 

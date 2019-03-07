@@ -2,7 +2,7 @@ import os
 from os.path import join, normpath, relpath
 
 from conans import DEFAULT_REVISION_V1
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.paths.simple_paths import SimplePaths
@@ -17,30 +17,40 @@ class ServerStore(SimplePaths):
         super(ServerStore, self).__init__(storage_adapter.base_storage_folder())
         self._storage_adapter = storage_adapter
 
-    def conan(self, ref, resolve_latest=True):
-        ref = self.ref_with_rev(ref) if resolve_latest else ref
+    def conan(self, ref):
+        assert ref.revision is not None, "BUG: server store needs RREV to get recipe reference"
         tmp = normpath(join(self.store, ref.dir_repr()))
-        return join(tmp, ref.revision) if ref.revision else tmp
+        return join(tmp, ref.revision)
+
+    def conan_revisions_root(self, ref):
+        """Parent folder of the conan package, for all the revisions"""
+        assert not ref.revision, "BUG: server store doesn't need RREV to conan_revisions_root"
+        return normpath(join(self.store, ref.dir_repr()))
 
     def packages(self, ref):
-        ref = self.ref_with_rev(ref)
         return join(self.conan(ref), PACKAGES_FOLDER)
 
-    def package(self, pref, short_paths=None):
-        pref = self.p_ref_with_rev(pref)
+    def package_revisions_root(self, pref):
+        assert pref.revision is None, "BUG: server store doesn't need PREV to " \
+                                      "package_revisions_root"
+        assert pref.ref.revision is not None, "BUG: server store needs RREV to " \
+                                              "package_revisions_root"
         tmp = join(self.packages(pref.ref), pref.id)
-        return join(tmp, pref.revision) if pref.revision else tmp
+        return tmp
+
+    def package(self, pref):
+        assert pref.revision is not None, "BUG: server store needs PREV for package"
+        tmp = join(self.packages(pref.ref), pref.id)
+        return join(tmp, pref.revision)
 
     def export(self, ref):
         return join(self.conan(ref), EXPORT_FOLDER)
 
     def get_conanfile_file_path(self, ref, filename):
-        ref = self.ref_with_rev(ref)
         abspath = join(self.export(ref), filename)
         return abspath
 
     def get_package_file_path(self, pref, filename):
-        pref = self.p_ref_with_rev(pref)
         p_path = self.package(pref)
         abspath = join(p_path, filename)
         return abspath
@@ -57,7 +67,6 @@ class ServerStore(SimplePaths):
     def get_package_snapshot(self, pref):
         """Returns a {filepath: md5} """
         assert isinstance(pref, PackageReference)
-        pref = self.p_ref_with_rev(pref)
         path = self.package(pref)
         return self._get_snapshot_of_files(path)
 
@@ -85,11 +94,12 @@ class ServerStore(SimplePaths):
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, ref):
         assert isinstance(ref, ConanFileReference)
-        result = self._storage_adapter.delete_folder(self.conan(ref, resolve_latest=False))
-        if ref.revision:
+        if not ref.revision:
+            self._storage_adapter.delete_folder(self.conan_revisions_root(ref))
+        else:
+            self._storage_adapter.delete_folder(self.conan(ref))
             self._remove_revision_from_index(ref)
         self._storage_adapter.delete_empty_dirs([ref])
-        return result
 
     def remove_packages(self, ref, package_ids_filter):
         assert isinstance(ref, ConanFileReference)
@@ -101,20 +111,21 @@ class ServerStore(SimplePaths):
         else:
             for package_id in package_ids_filter:
                 pref = PackageReference(ref, package_id)
-                package_folder = self.package(pref)
+                # Remove all package revisions
+                package_folder = self.package_revisions_root(pref)
                 self._storage_adapter.delete_folder(package_folder)
         self._storage_adapter.delete_empty_dirs([ref])
 
     def remove_package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.revision is not None
-        assert pref.ref.revision is not None
+        assert pref.revision is not None, "BUG: server store needs PREV remove_package"
+        assert pref.ref.revision is not None, "BUG: server store needs RREV remove_package"
         package_folder = self.package(pref)
         self._storage_adapter.delete_folder(package_folder)
         self._remove_package_revision_from_index(pref)
 
     def remove_all_packages(self, ref):
-        assert ref.revision is not None
+        assert ref.revision is not None, "BUG: server store needs RREV remove_all_packages"
         assert isinstance(ref, ConanFileReference)
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
@@ -196,29 +207,16 @@ class ServerStore(SimplePaths):
         return self._get_latest_revision(rev_file_path)
 
     def get_recipe_revisions(self, ref):
+        """Returns a RevisionList"""
+        if ref.revision:
+            tmp = RevisionList()
+            tmp.add_revision(ref.revision)
+            return tmp.as_list()
         rev_file_path = self._recipe_revisions_file(ref)
-        return [ref.copy_with_rev(rev.revision)
-                for rev in self._get_revisions(rev_file_path).items()]
-
-    def get_latest_package_reference(self, pref):
-        assert(isinstance(pref, PackageReference))
-        rev_file_path = self._recipe_revisions_file(pref.ref)
-        revs = self._get_revisions(rev_file_path)
+        revs = self._get_revisions_list(rev_file_path).as_list()
         if not revs:
-            raise NotFoundException("Recipe not found: '%s'" % str(pref.ref))
-
-        for rev in revs.items():
-            pref = PackageReference(pref.ref.copy_with_rev(rev.revision), pref.id)
-            tmp = self.get_last_package_revision(pref)
-            if tmp:
-                pref = pref.copy_with_revs(rev.revision, tmp.revision)
-            try:
-                folder = self.package(pref)
-                if self._storage_adapter.path_exists(folder):
-                    return pref
-            except NotFoundException:
-                pass
-        raise NotFoundException("Package not found: '%s'" % str(pref))
+            raise RecipeNotFoundException(ref, print_rev=True)
+        return revs
 
     def get_last_package_revision(self, pref):
         assert(isinstance(pref, PackageReference))
@@ -249,22 +247,30 @@ class ServerStore(SimplePaths):
                                          lock_file=rev_file_path + ".lock")
 
     def get_package_revisions(self, pref):
-        assert pref.ref.revision is not None
-        tmp = self._package_revisions_file(pref)
-        ret = self._get_revisions(tmp)
-        return ret.items()
+        """Returns a RevisionList"""
+        assert pref.ref.revision is not None, "BUG: server store needs PREV get_package_revisions"
+        if pref.revision:
+            tmp = RevisionList()
+            tmp.add_revision(pref.revision)
+            return tmp.as_list()
 
-    def _get_revisions(self, rev_file_path):
+        tmp = self._package_revisions_file(pref)
+        ret = self._get_revisions_list(tmp).as_list()
+        if not ret:
+            raise PackageNotFoundException(pref, print_rev=True)
+        return ret
+
+    def _get_revisions_list(self, rev_file_path):
         if self._storage_adapter.path_exists(rev_file_path):
             rev_file = self._storage_adapter.read_file(rev_file_path,
                                                        lock_file=rev_file_path + ".lock")
             rev_list = RevisionList.loads(rev_file)
             return rev_list
         else:
-            return None
+            return RevisionList()
 
     def _get_latest_revision(self, rev_file_path):
-        rev_list = self._get_revisions(rev_file_path)
+        rev_list = self._get_revisions_list(rev_file_path)
         if not rev_list:
             # FIXING BREAK MIGRATION NOT CREATING INDEXES
             # BOTH FOR RREV AND PREV THE FILE SHOULD BE CREATED WITH "0" REVISION
@@ -288,16 +294,6 @@ class ServerStore(SimplePaths):
         p_folder = join(tmp, revision, PACKAGES_FOLDER, pref.id)
         return join(p_folder, REVISIONS_FILE)
 
-    def ref_with_rev(self, ref):
-        if ref.revision:
-            return ref
-
-        latest = self.get_last_revision(ref)
-        if not latest:
-            raise NotFoundException("Recipe not found: '%s'" % ref.full_repr())
-
-        return ref.copy_with_rev(latest.revision)
-
     def get_revision_time(self, ref):
         try:
             rev_list = self._load_revision_list(ref)
@@ -312,24 +308,6 @@ class ServerStore(SimplePaths):
             return None
 
         return rev_list.get_time(pref.revision)
-
-    def p_ref_with_rev(self, pref):
-        if pref.revision and pref.ref.revision:
-            return pref
-
-        if not pref.ref.revision:
-            # Search the latest recipe revision with the requested package
-            pref = self.get_latest_package_reference(pref)
-            return pref
-
-        ref = self.ref_with_rev(pref.ref)
-        ret = PackageReference(ref, pref.id)
-
-        latest_p = self.get_last_package_revision(ret)
-        if not latest_p:
-            raise NotFoundException("Package not found: '%s'" % str(pref))
-
-        return ret.copy_with_revs(ref.revision, latest_p.revision)
 
     def _remove_revision_from_index(self, ref):
         rev_list = self._load_revision_list(ref)
