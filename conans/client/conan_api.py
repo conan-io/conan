@@ -595,11 +595,12 @@ class ConanAPIV1(object):
         self._cache.invalidate()
 
     @api_method
-    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None):
-
+    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None,
+                       source_folder=None, target_folder=None):
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(path_or_url, self._cache, self._user_io.out, verify_ssl,
-                                     requester=self._requester, config_type=config_type, args=args)
+                                     requester=self._requester, config_type=config_type, args=args,
+                                     source_folder=source_folder, target_folder=target_folder)
 
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env):
         cwd = get_cwd()

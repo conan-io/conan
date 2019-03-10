@@ -1,6 +1,8 @@
+import json
 import os
 import shutil
 
+from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
 
 from conans import load
@@ -9,7 +11,20 @@ from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, walk
+from conans.util.files import mkdir, rmdir, walk, save
+
+
+def migrate_config_install(cache):
+    try:
+        item = cache.config.get_item("general.config_install")
+        config_type, uri, verify_ssl, args = [r.strip() for r in item.split(",")]
+        verify_ssl = "true" in verify_ssl.lower()
+        args = None if "none" in args.lower() else args
+        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args, None, None)
+        _save_configs(cache.config_install_file, [config])
+        cache.config.rm_item("general.config_install")
+    except ConanException:
+        pass
 
 
 def _hide_password(resource):
@@ -30,37 +45,37 @@ def _handle_remotes(cache, remote_file):
     registry.remotes.define(remotes)
 
 
-def _handle_profiles(source_folder, target_folder, output):
-    mkdir(target_folder)
-    for root, _, files in walk(source_folder):
-        relative_path = os.path.relpath(root, source_folder)
-        if relative_path == ".":
-            relative_path = ""
-        for f in files:
-            profile = os.path.join(relative_path, f)
-            output.info("  - %s" % profile)
-            shutil.copy(os.path.join(root, f), os.path.join(target_folder, profile))
+@contextmanager
+def tmp_config_install_folder(cache):
+    tmp_folder = os.path.join(cache.conan_folder, "tmp_config_install")
+    # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
+    tmp_folder = os.path.realpath(tmp_folder)
+    mkdir(tmp_folder)
+    try:
+        yield tmp_folder
+    finally:
+        rmdir(tmp_folder)
 
 
-def _process_git_repo(repo_url, cache, output, tmp_folder, verify_ssl, args=None):
-    output.info("Trying to clone repo: %s" % repo_url)
+def _process_git_repo(config, cache, output):
+    output.info("Trying to clone repo: %s" % config.uri)
+    with tmp_config_install_folder(cache) as tmp_folder:
+        with tools.chdir(tmp_folder):
+            try:
+                args = config.args or ""
+                git = Git(verify_ssl=config.verify_ssl, output=output)
+                git.clone(config.uri, args=args)
+                output.info("Repo cloned!")
+            except Exception as e:
+                raise ConanException("Can't clone repo: %s" % str(e))
+        _process_folder(config, tmp_folder, cache, output)
 
-    with tools.chdir(tmp_folder):
-        try:
-            args = args or ""
-            git = Git(verify_ssl=verify_ssl, output=output)
-            git.clone(repo_url, args=args)
-            output.info("Repo cloned!")
-        except Exception as e:
-            raise ConanException("Can't clone repo: %s" % str(e))
-    _process_folder(tmp_folder, cache, output)
 
-
-def _process_zip_file(zippath, cache, output, tmp_folder, remove=False):
+def _process_zip_file(config, zippath, cache, output, tmp_folder, remove=False):
     unzip(zippath, tmp_folder, output=output)
     if remove:
         os.unlink(zippath)
-    _process_folder(tmp_folder, cache, output)
+    _process_folder(config, tmp_folder, cache, output)
 
 
 def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
@@ -69,8 +84,13 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
         current_conan_conf.write(f)
 
 
-def _process_folder(folder, cache, output):
+def _process_folder(config, folder, cache, output):
+    if config.source_folder:
+        folder = os.path.join(folder, config.source_folder)
     for root, dirs, files in walk(folder):
+        dirs[:] = [d for d in dirs if d != ".git"]
+        if ".git" in root:
+            continue
         for f in files:
             if f == "settings.yml":
                 output.info("Installing settings.yml")
@@ -82,132 +102,140 @@ def _process_folder(folder, cache, output):
             elif f == "remotes.txt":
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
-            elif f == "README.md":
-                output.info("Skip README.md")
-            elif f == "LICENSE.txt":
-                output.info("Skip LICENSE.txt")
             else:
+                # This is ugly, should be removed in Conan 2.0
+                if root == folder and f in ("README.md", "LICENSE.txt"):
+                    output.info("Skip %s" % f)
+                    continue
                 relpath = os.path.relpath(root, folder)
-                target_folder = os.path.join(cache.conan_folder, relpath)
+                if config.target_folder:
+                    target_folder = os.path.join(cache.conan_folder, config.target_folder,
+                                                 relpath)
+                else:
+                    target_folder = os.path.join(cache.conan_folder, relpath)
                 mkdir(target_folder)
                 output.info("Copying file %s to %s" % (f, target_folder))
                 shutil.copy(os.path.join(root, f), target_folder)
-        for d in dirs:
-            if d == "profiles":
-                output.info("Installing profiles:")
-                profiles_path = cache.profiles_path
-                _handle_profiles(os.path.join(root, d), profiles_path, output)
-            elif d == "hooks" and ".git" not in root:  # Avoid git hooks
-                output.info("Installing hooks:")
-                src_hooks_path = os.path.join(root, d)
-                dst_hooks_path = cache.hooks_path
-                _handle_hooks(src_hooks_path, dst_hooks_path, output)
-        dirs[:] = [d for d in dirs if d not in ("profiles", ".git", "hooks")]
 
 
-def _process_download(item, cache, output, tmp_folder, verify_ssl, requester):
-    output.info("Trying to download  %s" % _hide_password(item))
-    zippath = os.path.join(tmp_folder, "config.zip")
-    try:
-        tools.download(item, zippath, out=output, verify=verify_ssl, requester=requester)
-        _process_zip_file(zippath, cache, output, tmp_folder, remove=True)
-    except Exception as e:
-        raise ConanException("Error while installing config from %s\n%s" % (item, str(e)))
-
-
-def configuration_install(path_or_url, cache, output, verify_ssl, requester, config_type=None,
-                          args=None):
-    if path_or_url is None:
+def _process_download(config, cache, output, requester):
+    with tmp_config_install_folder(cache) as tmp_folder:
+        output.info("Trying to download  %s" % _hide_password(config.uri))
+        zippath = os.path.join(tmp_folder, "config.zip")
         try:
-            item = cache.config.get_item("general.config_install")
-            _config_type, path_or_url, _verify_ssl, _args = _process_config_install_item(item)
-        except ConanException:
-            raise ConanException("Called config install without arguments and "
-                                 "'general.config_install' not defined in conan.conf")
-    else:
-        _config_type, path_or_url, _verify_ssl, _args = _process_config_install_item(path_or_url)
+            tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
+                           requester=requester)
+            _process_zip_file(config, zippath, cache, output, tmp_folder, remove=True)
+        except Exception as e:
+            raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
-    config_type = config_type or _config_type
-    verify_ssl = verify_ssl or _verify_ssl
-    args = args or _args
 
-    if os.path.exists(path_or_url):
-        path_or_url = os.path.abspath(path_or_url)
+class _ConfigOrigin(object):
+    def __init__(self, data):
+        self.type = data.get("type")
+        self.uri = data.get("uri")
+        self.verify_ssl = data.get("verify_ssl")
+        self.args = data.get("args")
+        self.source_folder = data.get("source_folder")
+        self.target_folder = data.get("target_folder")
 
-    tmp_folder = os.path.join(cache.conan_folder, "tmp_config_install")
-    # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
-    tmp_folder = os.path.realpath(tmp_folder)
-    mkdir(tmp_folder)
-    try:
+    def __eq__(self, other):
+        return (self.type == other.type and self.uri == other.uri and
+                self.args == other.args and self.source_folder == other.source_folder
+                and self.target_folder == other.target_folder)
 
-        if config_type == "git":
-            _process_git_repo(path_or_url, cache, output, tmp_folder, verify_ssl, args)
-        elif config_type == "dir":
-            args = None
-            _process_folder(path_or_url, cache, output)
-        elif config_type == "file":
-            args = None
-            _process_zip_file(path_or_url, cache, output, tmp_folder)
-        elif config_type == "url":
-            args = None
-            _process_download(path_or_url, cache, output, tmp_folder, verify_ssl,
-                              requester=requester)
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def json(self):
+        return {"type": self.type,
+                "uri": self.uri,
+                "verify_ssl": self.verify_ssl,
+                "args": self.args,
+                "source_folder": self.source_folder,
+                "target_folder": self.target_folder}
+
+    @staticmethod
+    def from_item(uri, config_type, verify_ssl, args, source_folder, target_folder):
+        config = _ConfigOrigin({})
+        if config_type:
+            config.type = config_type
         else:
-            raise ConanException("Unable to process config install: %s" % path_or_url)
-    finally:
-        if config_type is not None and path_or_url is not None:
-            value = "%s, %s, %s, %s" % (config_type, path_or_url, verify_ssl, args)
-            cache.config.set_item("general.config_install", value)
-        rmdir(tmp_folder)
+            if uri.endswith(".git"):
+                config.type = "git"
+            elif os.path.isdir(uri):
+                config.type = "dir"
+            elif os.path.isfile(uri):
+                config.type = "file"
+            elif uri.startswith("http"):
+                config.type = "url"
+            else:
+                raise ConanException("Unable to deduce type config install: %s" % uri)
+        config.source_folder = source_folder
+        config.target_folder = target_folder
+        config.args = args
+        config.verify_ssl = verify_ssl
+        if os.path.exists(uri):
+            uri = os.path.abspath(uri)
+        config.uri = uri
+        return config
 
 
-def _process_config_install_item(item):
-    """
-    Processes a config_install item and outputs a tuple with the configuration type, the path/url
-    and additional args
-
-    :param item: config_install item value from conan.conf with a simple path/url or a string
-    following this pattern: "<config_type>:[<path_or_url>, <args>]"
-    :return: configuration source type (git, url, dir or file), path to file/dir or git/http url and
-    additional arguments
-    """
-    config_type, path_or_url, verify_ssl, args = None, None, None, None
-    if not item.startswith(("git,", "dir,", "url,", "file,")):
-        path_or_url = item
-        if path_or_url.endswith(".git"):
-            config_type = "git"
-        elif os.path.isdir(path_or_url):
-            config_type = "dir"
-        elif os.path.isfile(path_or_url):
-            config_type = "file"
-        elif path_or_url.startswith("http"):
-            config_type = "url"
-        else:
-            raise ConanException("Unable to process config install: %s" % path_or_url)
+def _process_config(config, cache, output, requester):
+    if config.type == "git":
+        _process_git_repo(config, cache, output)
+    elif config.type == "dir":
+        _process_folder(config, config.uri, cache, output)
+    elif config.type == "file":
+        with tmp_config_install_folder(cache) as tmp_folder:
+            _process_zip_file(config, config.uri, cache, output, tmp_folder)
+    elif config.type == "url":
+        _process_download(config, cache, output, requester=requester)
     else:
-        config_type, path_or_url, verify_ssl, args = [r.strip() for r in item.split(",")]
-        verify_ssl = "true" in verify_ssl.lower()
-        args = None if "none" in args.lower() else args
-    return config_type, path_or_url, verify_ssl, args
+        raise ConanException("Unable to process config install: %s" % config.uri)
 
 
-def _handle_hooks(src_hooks_path, dst_hooks_path, output):
-    """
-    Copies files to the hooks folder overwriting the files that are in the same path
-    (shutil.copytree fails on doing this), skips git related files (.git, .gitmodule...) and outputs
-    the copied files
+def _save_configs(configs_file, configs):
+    save(configs_file, json.dumps([config.json() for config in configs],
+                                  indent=True))
 
-    :param src_hooks_path: Folder where the hooks come from
-    :param dst_hooks_path:  Folder where the hooks should finally go
-    :param output: Output to indicate the files copied
-    """
-    for root, dirs, files in walk(src_hooks_path):
-        if ".git" in root:
-            continue
-        relpath = os.path.relpath(root, src_hooks_path)
-        for f in files:
-            if ".git" not in f:
-                dst = os.path.join(dst_hooks_path, relpath)
-                mkdir(dst)
-                shutil.copy(os.path.join(root, f), dst)
-                output.info(" - %s" % relpath)
+
+def configuration_install(uri, cache, output, verify_ssl, requester, config_type=None,
+                          args=None, source_folder=None, target_folder=None):
+    configs = []
+    configs_file = cache.config_install_file
+    if os.path.isfile(configs_file):
+        try:
+            configs = json.loads(load(configs_file))
+        except Exception as e:
+            raise ConanException("Error loading configs-install file: %s\n%"
+                                 % (configs_file, str(e)))
+        configs = [_ConfigOrigin(config) for config in configs]
+    if uri is None:
+        if config_type or args or not verify_ssl:  # Not the defaults
+            if not configs:
+                raise ConanException("Called config install without arguments")
+            # Modify the last one
+            config = configs[-1]
+            config.config_type = config_type or config.type
+            config.args = args or config.args
+            config.verify_ssl = verify_ssl or config.verify_ssl
+            _process_config(config, cache, output, requester)
+            _save_configs(configs_file, configs)
+        else:
+            if not configs:
+                raise ConanException("Called config install without arguments")
+            # Execute the previously stored ones
+            for config in configs:
+                output.info("Config install:  %s" % _hide_password(config.uri))
+                _process_config(config, cache, output, requester)
+    else:
+        # Execute and store the new one
+        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
+                                         source_folder, target_folder)
+        _process_config(config, cache, output, requester)
+        if config not in configs:
+            configs.append(config)
+        else:
+            configs = [(c if c != config else config) for c in configs]
+        _save_configs(configs_file, configs)

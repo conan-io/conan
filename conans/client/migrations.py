@@ -14,6 +14,7 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
+from conans.client.conf.config_installer import migrate_config_install
 
 
 class ClientMigrator(Migrator):
@@ -49,6 +50,10 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
+
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
+
         if old_version < Version("1.13.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan

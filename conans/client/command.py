@@ -427,7 +427,8 @@ class Command(object):
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
         install_subparser.add_argument("item", nargs="?",
-                                       help="Configuration file or directory to use")
+                                       help="git repository, local folder or zip file (local or "
+                                       "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
@@ -435,6 +436,10 @@ class Command(object):
                                        help='Type of remote config')
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
+        install_subparser.add_argument("-sf", "--source-folder",
+                                       help='Install files from that path')
+        install_subparser.add_argument("-tf", "--target-folder",
+                                       help='Install to that path in the conan cache')
 
         args = parser.parse_args(*args)
 
@@ -453,7 +458,9 @@ class Command(object):
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan.config_install(args.item, verify_ssl, args.type, args.args)
+            return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
+                                              source_folder=args.source_folder,
+                                              target_folder=args.target_folder)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe.

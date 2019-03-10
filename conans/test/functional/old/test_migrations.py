@@ -3,14 +3,28 @@ import unittest
 
 from six import StringIO
 
+from conans import __version__
 from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile
 from conans.client.output import ConanOutput
+from conans.migrations import CONAN_VERSION
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 
 class TestMigrations(unittest.TestCase):
+
+    def test_migrate_config_install(self):
+        client = TestClient()
+        client.run('config set general.config_install="url, http:/fake.url, None, None"')
+        version_file = os.path.join(client.cache.conan_folder, CONAN_VERSION)
+        save(version_file, "1.12.0")
+        client.run("search")
+        self.assertEqual(load(version_file), __version__)
+        conf = load(client.cache.conan_conf_path)
+        self.assertNotIn("http:/fake.url", conf)
+        self.assertNotIn("config_install", conf)
+        self.assertIn("http:/fake.url", load(client.cache.config_install_file))
 
     def migration_to_default_profile_test(self):
         tmp = temp_folder()
@@ -88,7 +102,7 @@ the old general
                 old_attribute_checker_plugin, cache
 
         output = ConanOutput(StringIO())
-        old_uh, old_cf, old_cp, old_acp, cache = _create_old_layout()
+        _, old_cf, old_cp, old_acp, cache = _create_old_layout()
         migrate_plugins_to_hooks(cache, output=output)
         self.assertFalse(os.path.exists(old_acp))
         self.assertTrue(os.path.join(old_cf, "hooks"))
@@ -97,7 +111,7 @@ the old general
         self.assertIn("[hooks]", conf_content)
 
         # Test with a hook folder: Maybe there was already a hooks folder and a plugins folder
-        old_uh, old_cf, old_cp, old_acp, cache = _create_old_layout()
+        _, old_cf, old_cp, old_acp, cache = _create_old_layout()
         existent_hook = os.path.join(old_cf, "hooks", "hook.py")
         save(existent_hook, "")
         migrate_plugins_to_hooks(cache, output=output)
