@@ -78,6 +78,10 @@ def migrate_registry_file(path, new_path):
 class Remotes(object):
     def __init__(self):
         self._remotes = OrderedDict()
+        self.selected = None
+
+    def select(self, remote_name):
+        self.selected = self[remote_name] if remote_name is not None else None
 
     def __bool__(self):
         return bool(self._remotes)
@@ -156,9 +160,10 @@ class Remotes(object):
         self._remotes.pop(remote_name, None)
         remotes_list = []
         renamed = None
-        for name, r in self._remotes.items():
-            if r[0] != url:
-                remotes_list.append((name, r))
+
+        for name, remote in self._remotes.items():
+            if remote.url != url:
+                remotes_list.append((name, remote))
             else:
                 renamed = name
 
@@ -167,16 +172,11 @@ class Remotes(object):
                 insert_index = int(insert)
             except ValueError:
                 raise ConanException("insert argument must be an integer")
-            remotes_list.insert(insert_index, updated_remote)
-            self._remotes = OrderedDict(remotes_list)
+            remotes_list.insert(insert_index, (remote_name, updated_remote))
         else:
-            self._remotes = OrderedDict(remotes_list)
-            self._remotes[remote_name] = updated_remote
-
-        if renamed:
-            for k, v in refs.items():
-                if v == renamed:
-                    refs[k] = remote_name
+            remotes_list.append((remote_name, updated_remote))
+        self._remotes = OrderedDict(remotes_list)
+        return renamed
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
         if force:
@@ -222,9 +222,16 @@ class RemoteRegistry(object):
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
         remotes = self.load_remotes()
-        remotes.add(remote_name, url, verify_ssl, insert, force)
+        renamed = remotes.add(remote_name, url, verify_ssl, insert, force)
         remotes.save(self._filename)
-        # FIXME: Missing something to do with REFS
+        if renamed:
+            for ref in self._cache.all_refs():
+                with self._cache.package_layout(ref).update_metadata() as metadata:
+                    if metadata.recipe.remote == renamed:
+                        metadata.recipe.remote = remote_name
+                    for pkg_metadata in metadata.packages.values():
+                        if pkg_metadata.remote == renamed:
+                            pkg_metadata.remote = remote_name
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         remotes = self.load_remotes()

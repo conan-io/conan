@@ -20,9 +20,8 @@ class ConanProxy(object):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
-        self._remotes = cache.registry.load_remotes()
 
-    def get_recipe(self, ref, check_updates, update, remote, recorder):
+    def get_recipe(self, ref, check_updates, update, remotes, recorder):
         if self._cache.installed_as_editable(ref):
             conanfile_path = self._cache.conanfile(ref)
             status = RECIPE_EDITABLE
@@ -31,7 +30,7 @@ class ConanProxy(object):
             return conanfile_path, status, None, ref
 
         with self._cache.conanfile_write_lock(ref):
-            result = self._get_recipe(ref, check_updates, update, remote, recorder)
+            result = self._get_recipe(ref, check_updates, update, remotes, recorder)
             conanfile_path, status, remote, new_ref = result
 
             if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
@@ -40,22 +39,22 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
-    def _get_recipe(self, ref, check_updates, update, remote, recorder):
+    def _get_recipe(self, ref, check_updates, update, remotes, recorder):
         output = ScopedOutput(str(ref), self._out)
         # check if it is in disk
         conanfile_path = self._cache.conanfile(ref)
 
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
-            remote, new_ref = self._download_recipe(ref, output, remote, recorder)
+            remote, new_ref = self._download_recipe(ref, output, remotes, recorder)
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
         metadata = self._cache.package_layout(ref).load_metadata()
         cur_revision = metadata.recipe.revision
         cur_remote = metadata.recipe.remote
-        cur_remote = self._remotes[cur_remote] if cur_remote else None
-        update_remote = remote or cur_remote
+        cur_remote = remotes[cur_remote] if cur_remote else None
+        update_remote = remotes.selected or cur_remote
 
         check_updates = check_updates or update
         # Recipe exists in disk, but no need to check updates
@@ -108,7 +107,7 @@ class ConanProxy(object):
         ref = ref.copy_with_rev(cur_revision)
         return conanfile_path, status, update_remote, ref
 
-    def _download_recipe(self, ref, output, remote, recorder):
+    def _download_recipe(self, ref, output, remotes, recorder):
 
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
@@ -119,13 +118,14 @@ class ConanProxy(object):
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref
 
+        remote = remotes.selected
         if remote:
             output.info("Retrieving from server '%s' " % remote.name)
         else:
             try:
                 remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
                 if remote_name:
-                    remote = self._remotes[remote_name]
+                    remote = remotes[remote_name]
             except (IOError, RecipeNotFoundException):
                 pass
             else:
@@ -147,7 +147,7 @@ class ConanProxy(object):
                 raise exc
 
         output.info("Not found in local cache, looking in remotes...")
-        remotes = self._remotes.values()
+        remotes = remotes.values()
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
@@ -163,12 +163,13 @@ class ConanProxy(object):
                                           msg, None)
             raise NotFoundException(msg)
 
-    def search_remotes(self, pattern, remote):
+    def search_remotes(self, pattern, remotes):
+        remote = remotes.selected
         if remote:
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             return search_result
 
-        for remote in self._remotes.values():
+        for remote in remotes.values():
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             if search_result:
                 return search_result

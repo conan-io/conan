@@ -69,7 +69,10 @@ class CommandOutputer(object):
             json_output = os.path.join(cwd, json_output)
 
         def date_handler(obj):
-            return obj.isoformat() if hasattr(obj, 'isoformat') else obj
+            if hasattr(obj, 'isoformat'):
+                return obj.isoformat()
+            else:
+                raise TypeError("Unserializable object {} of type {}".format(obj, type(obj)))
 
         save(json_output, json.dumps(info, default=date_handler))
         self.user_io.out.writeln("")

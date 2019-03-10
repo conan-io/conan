@@ -3,13 +3,11 @@ from conans.client.source import complete_recipe_sources
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-def download(ref, package_ids, remote_name, recipe, remote_manager,
+def download(ref, package_ids, remote, recipe, remote_manager,
              cache, out, recorder, loader, hook_manager):
 
     assert(isinstance(ref, ConanFileReference))
     output = ScopedOutput(str(ref), out)
-    remotes = cache.registry.load_remotes()
-    remote = remotes.get_remote(remote_name)
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
