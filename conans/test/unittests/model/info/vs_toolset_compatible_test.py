@@ -11,7 +11,8 @@ from conans.model.settings import Settings
 
 
 class VSToolsetCompatibleTest(unittest.TestCase):
-    @parameterized.expand([("14", "v141", "15"),
+    @parameterized.expand([("15", "v142", "16"),
+                           ("14", "v141", "15"),
                            ("15", "v140", "14"),
                            ("11", "v120", "12"),
                            ("12", "v110", "11"),
@@ -29,7 +30,8 @@ class VSToolsetCompatibleTest(unittest.TestCase):
         self.assertEqual(info.settings.compiler.version, expected_version)
         self.assertIsNone(info.settings.get_safe("compiler.toolset"))
 
-    @parameterized.expand([("14", "v141_xp"),
+    @parameterized.expand([("16", "v141_xp"),
+                           ("14", "v141_xp"),
                            ("15", "v140_xp"),
                            ("11", "v120_xp"),
                            ("12", "v110_xp"),
