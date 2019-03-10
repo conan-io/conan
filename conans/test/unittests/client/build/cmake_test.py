@@ -188,6 +188,32 @@ class CMakeTest(unittest.TestCase):
             cmake = CMake(conan_file)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
 
+    def cmake_generator_platform_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator",
+                                       "CONAN_CMAKE_GENERATOR_PLATFORM": "My CMake Platform"}):
+            cmake = CMake(conan_file)
+            self.assertIn('-G "My CMake Generator" -A "My CMake Platform', cmake.command_line)
+
+    @parameterized.expand([('x86', 'Win32'),
+                           ('x86_64', 'x64'),
+                           ('armv7', 'ARM'),
+                           ('armv8', 'ARM64')])
+    def cmake_vs2019_test(self, arch, platform):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "16"
+        settings.arch = arch
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file)
+        self.assertIn('-G "Visual Studio 16 2019" -A "%s' % platform, cmake.command_line)
+
     def cmake_fpic_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
