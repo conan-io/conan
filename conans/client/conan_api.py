@@ -318,7 +318,7 @@ class ConanAPIV1(object):
         options = options or []
         env = env or []
 
-        self.python_requires.update = update
+        self.python_requires.enable_remotes(update=update, remote_name=remote_name)
 
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
@@ -356,7 +356,7 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
-            self.python_requires.update = update
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
 
             conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
             ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
@@ -480,7 +480,7 @@ class ConanAPIV1(object):
         cwd = cwd or get_cwd()
         abs_path = os.path.normpath(os.path.join(cwd, path))
 
-        self.python_requires.update = update
+        self.python_requires.enable_remotes(update=update, remote_name=remote_name)
 
         workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
@@ -532,7 +532,7 @@ class ConanAPIV1(object):
                 generators = False
 
             mkdir(install_folder)
-            self.python_requires.update = update
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
             manager = self._init_manager(recorder)
             manager.install(ref_or_path=reference, install_folder=install_folder,
                             remote_name=remote_name, graph_info=graph_info, build_modes=build,
@@ -565,7 +565,7 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
-            self.python_requires.update = update
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
             manager = self._init_manager(recorder)
             manager.install(ref_or_path=conanfile_path,
                             install_folder=install_folder,
@@ -636,7 +636,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        self.python_requires.check_updates = check_updates
+        self.python_requires.enable_remotes(check_updates=check_updates, remote_name=remote_name)
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                        check_updates, False, remote_name,
                                                        recorder)
@@ -649,7 +649,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        self.python_requires.check_updates = check_updates
+        self.python_requires.enable_remotes(check_updates=check_updates, remote_name=remote_name)
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
                                                                build_modes, check_updates,
                                                                False, remote_name, recorder)
@@ -662,8 +662,8 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        self.python_requires.check_updates = update
         # FIXME: Using update as check_update?
+        self.python_requires.enable_remotes(check_updates=update, remote_name=remote_name)
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                update, False, remote_name,
                                                                recorder)

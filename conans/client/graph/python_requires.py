@@ -17,8 +17,14 @@ class ConanPythonRequire(object):
         self._range_resolver = range_resolver
         self._requires = None
         self.valid = True
-        self.check_updates = False
-        self.update = False
+        self._check_updates = False
+        self._update = False
+        self._remote_name = None
+
+    def enable_remotes(self, check_updates=False, update=False, remote_name=None):
+        self._check_updates = check_updates
+        self._update = update
+        self._remote_name = remote_name
 
     def invalidate_caches(self):
         self._cached_requires = {}
@@ -41,7 +47,8 @@ class ConanPythonRequire(object):
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote_name=None)
             ref = requirement.ref
-            result = self._proxy.get_recipe(ref, self.check_updates, self.update, remote_name=None,
+            result = self._proxy.get_recipe(ref, self._check_updates, self._update,
+                                            remote_name=self._remote_name,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
