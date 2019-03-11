@@ -50,6 +50,8 @@ foreach(_LIBRARY_NAME ${{{name}_LIBRARY_LIST{build_type_suffix}}})
     endif()
 endforeach()
 set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
+# To make the select_library_configurations work https://cmake.org/cmake/help/v3.0/module/SelectLibraryConfigurations.htm
+set({name}_LIBRARY{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
 """
 
 generic_common_set_vars = """

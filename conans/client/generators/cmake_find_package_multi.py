@@ -26,6 +26,10 @@ endforeach()
 include(SelectLibraryConfigurations)
 select_library_configurations({name})
 
+# CMake doesn't have a mechanism to select also the right include directories, assume we can use any of them or use
+# the variable _DEBUG or _RELEASE
+set({name}_INCLUDE_DIRS ${{{name}_INCLUDE_DIRS_RELEASE}} ${{{name}_INCLUDE_DIRS_DEBUG}})
+
 if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
     {target_props_block}
     {find_dependencies_block}
