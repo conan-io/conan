@@ -460,15 +460,14 @@ class ConanAPIV1(object):
             raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         ref = ConanFileReference.loads(reference)
-
-        remotes = self._cache.registry.load_remotes()
-        remote = remotes.get_remote(remote_name)
         if check_valid_ref(ref, allow_pattern=False):
             if package and ref.revision is None:
                 for package_id in package:
                     if "#" in package_id:
                         raise ConanException("It is needed to specify the recipe revision if you "
                                              "specify a package revision")
+            remotes = self._cache.registry.load_remotes()
+            remote = remotes.get_remote(remote_name)
             recorder = ActionRecorder()
             download(ref, package, remote, recipe, self._remote_manager,
                      self._cache, self._user_io.out, recorder, self._loader,

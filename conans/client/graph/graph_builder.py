@@ -300,7 +300,7 @@ class DepsGraphBuilder(object):
             dep_graph.aliased[alias_ref] = requirement.ref
             return self._create_new_node(current_node, dep_graph, requirement,
                                          name_req, check_updates, update,
-                                         remote, processed_profile,
+                                         remotes, processed_profile,
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))

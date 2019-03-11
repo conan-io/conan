@@ -15,6 +15,7 @@ class ConanPythonRequire(object):
         self._cached_requires = {}  # {reference: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
+        self._remotes = range_resolver._cache.registry.load_remotes()
         self._requires = None
         self.valid = True
 
@@ -37,7 +38,7 @@ class ConanPythonRequire(object):
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote=None)
             ref = requirement.ref
-            result = self._proxy.get_recipe(ref, False, False, remote=None,
+            result = self._proxy.get_recipe(ref, False, False, remotes=self._remotes,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)

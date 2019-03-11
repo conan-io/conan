@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.client.cache.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
-    load_registry_txt, migrate_registry_file
+    load_registry_txt, migrate_registry_file, Remote
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
@@ -98,17 +98,17 @@ other/1.0@lasote/testing conan.io
         cache = ClientCache(os.path.dirname(f), None, TestBufferConanOutput())
         registry = RemoteRegistry(cache)
         registry.add("repo1", "url1", True, insert=0)
-        self.assertEqual(list(registry.load_remotes().values()), [("repo1", "url1", True),
-                         ("conan.io", "https://server.conan.io", True)])
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
+                         Remote("conan.io", "https://server.conan.io", True)])
         registry.add("repo2", "url2", True, insert=1)
-        self.assertEqual(list(registry.load_remotes().values()), [("repo1", "url1", True),
-                         ("repo2", "url2", True),
-                         ("conan.io", "https://server.conan.io", True)])
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
+                         Remote("repo2", "url2", True),
+                         Remote("conan.io", "https://server.conan.io", True)])
         registry.add("repo3", "url3", True, insert=5)
-        self.assertEqual(list(registry.load_remotes().values()), [("repo1", "url1", True),
-                         ("repo2", "url2", True),
-                         ("conan.io", "https://server.conan.io", True),
-                         ("repo3", "url3", True)])
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
+                         Remote("repo2", "url2", True),
+                         Remote("conan.io", "https://server.conan.io", True),
+                         Remote("repo3", "url3", True)])
 
     @staticmethod
     def _get_registry():
