@@ -332,7 +332,10 @@ class CMake(object):
         allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
         for root, _, files in allwalk:
             for f in files:
-                if f.endswith(".cmake"):
+                if f.endswith(".cmake") and not f.startswith("conan"):
+                    # ES RARO QUE SAQUE LOS WARNINGS DE QUE TRATA DE REEMPLAZAR EN TODAS PUTAS
+                    # PARTES. A MI DE HECHO EL INSTALL NO ME GENERA PATHS
+                    # TRATA INCLUSO DE REEMPLAZAR EN conanbuildinfo.cmake etc
                     path = os.path.join(root, f)
                     tools.replace_path_in_file(path, pf, replstr, strict=False,
                                                output=self._conanfile.output)

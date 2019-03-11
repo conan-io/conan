@@ -301,8 +301,9 @@ class CMakeDefinitionsBuilder(object):
                 shared = self._conanfile.options.get_safe("shared")
                 ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
 
-        # Adjust automatically the module path in case the conanfile is using the cmake_find_package
-        if "cmake_find_package" in self._conanfile.generators:
+        # Adjust automatically the module path in case the conanfile is using the
+        # cmake_find_package and cmake_find_package_multi
+        if any([x in self._conanfile.generators for x in "cmake_find_package", "cmake_find_package_multi"]):
             ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
         ret.update(self._get_make_program_definition())
