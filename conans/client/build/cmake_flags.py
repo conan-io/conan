@@ -303,7 +303,8 @@ class CMakeDefinitionsBuilder(object):
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package and cmake_find_package_multi
-        if any([x in self._conanfile.generators for x in "cmake_find_package", "cmake_find_package_multi"]):
+        if any([x in self._conanfile.generators for x in ("cmake_find_package",
+                                                          "cmake_find_package_multi")]):
             ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
         ret.update(self._get_make_program_definition())
