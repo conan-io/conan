@@ -3,15 +3,17 @@ import platform
 import subprocess
 from itertools import chain
 
+from six import StringIO  # Python 2 and 3 compatible
+
 from conans.client import defs_to_string, join_arguments, tools
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name
+from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
-from conans.client.tools.oss import cpu_count, args_to_string
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 
@@ -330,15 +332,18 @@ class CMake(object):
         pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
         allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
+
+        # We don't want warnings printed because there is no replacement of the abs path.
+        # there could be MANY cmake files in the package and the normal thing is to not find
+        # the abs paths
+        _null_out = StringIO()
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake") and not f.startswith("conan"):
-                    # ES RARO QUE SAQUE LOS WARNINGS DE QUE TRATA DE REEMPLAZAR EN TODAS PUTAS
-                    # PARTES. A MI DE HECHO EL INSTALL NO ME GENERA PATHS
-                    # TRATA INCLUSO DE REEMPLAZAR EN conanbuildinfo.cmake etc
                     path = os.path.join(root, f)
+
                     tools.replace_path_in_file(path, pf, replstr, strict=False,
-                                               output=self._conanfile.output)
+                                               output=_null_out)
 
                     # patch paths of dependent packages that are found in any cmake files of the
                     # current package
@@ -346,7 +351,7 @@ class CMake(object):
                         from_str = self._conanfile.deps_cpp_info[dep].rootpath
                         dep_str = "${CONAN_%s_ROOT}" % dep.upper()
                         ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False,
-                                                         output=self._conanfile.output)
+                                                         output=_null_out)
                         if ret:
                             self._conanfile.output.info("Patched paths for %s: %s to %s"
                                                         % (dep, from_str, dep_str))
