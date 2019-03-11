@@ -27,8 +27,8 @@ include(SelectLibraryConfigurations)
 select_library_configurations({name})
 
 if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
-    {find_dependencies_block}
     {target_props_block}
+    {find_dependencies_block}
 endif()
 
 """
