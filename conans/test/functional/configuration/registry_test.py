@@ -21,7 +21,8 @@ class RegistryTest(unittest.TestCase):
         migrate_registry_file(f, new_path)
         cache = ClientCache(os.path.dirname(new_path), None, TestBufferConanOutput())
         registry = RemoteRegistry(cache)
-        self.assertEqual(list(registry.load_remotes().values()), [("conan.io", "https://server.conan.io", True)])
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan.io", "https://server.conan.io", True)])
 
     def to_json_migration_test(self):
         tmp = temp_folder()
@@ -34,7 +35,8 @@ other/1.0@lasote/testing conan.io
 """)
         client = TestClient(base_folder=tmp, servers=False)
         registry = client.cache.registry
-        self.assertEqual(list(registry.load_remotes().values()), [("conan.io", "https://server.conan.io", True)])
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan.io", "https://server.conan.io", True)])
         expected = {'lib/1.0@conan/stable': 'conan.io',
                     'other/1.0@lasote/testing': 'conan.io'}
         self.assertEqual(registry.refs_list, expected)
@@ -82,20 +84,21 @@ other/1.0@lasote/testing conan.io
             registry.remove("new2")
 
     def insert_test(self):
-        f = os.path.join(temp_folder(), "aux_file")
+        tmp_folder = temp_folder()
+        f = os.path.join(tmp_folder, ".conan", "registry.json")
         save(f, """
 {
  "remotes": [
   {
-   "url": "https://server.conan.io", 
-   "verify_ssl": true, 
+   "url": "https://server.conan.io",
+   "verify_ssl": true,
    "name": "conan.io"
   }
- ], 
+ ],
  "references": {}
 }
 """)
-        cache = ClientCache(os.path.dirname(f), None, TestBufferConanOutput())
+        cache = ClientCache(tmp_folder, None, TestBufferConanOutput())
         registry = RemoteRegistry(cache)
         registry.add("repo1", "url1", True, insert=0)
         self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),

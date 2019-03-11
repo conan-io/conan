@@ -68,17 +68,15 @@ class CmdUpload(object):
         self._cache = cache
         self._user_io = user_io
         self._remote_manager = remote_manager
-        self._remotes = cache.registry.load_remotes()
         self._loader = loader
         self._hook_manager = hook_manager
 
     def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
                confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
-               remote_name=None, query=None):
+               remotes=None, query=None):
         t1 = time.time()
         refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
-        remote = self._remotes.get_remote(remote_name)
-        refs_by_remote = self._collect_packages_to_upload(refs, confirm, remote, all_packages,
+        refs_by_remote = self._collect_packages_to_upload(refs, confirm, remotes, all_packages,
                                                           query, package_id)
         # Do the job
         for remote, refs in refs_by_remote.items():
@@ -108,7 +106,7 @@ class CmdUpload(object):
                                          reference_or_pattern))
         return refs, confirm
 
-    def _collect_packages_to_upload(self, refs, confirm, remote, all_packages, query, package_id):
+    def _collect_packages_to_upload(self, refs, confirm, remotes, all_packages, query, package_id):
         """ compute the references with revisions and the package_ids to be uploaded
         """
         # Group recipes by remote
@@ -117,11 +115,12 @@ class CmdUpload(object):
         for ref in refs:
             metadata = self._cache.package_layout(ref).load_metadata()
             ref = ref.copy_with_rev(metadata.recipe.revision)
+            remote = remotes.selected
             if remote:
                 ref_remote = remote
             else:
                 ref_remote = metadata.recipe.remote
-                ref_remote = self._remotes[ref_remote] if ref_remote else self._remotes.default
+                ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
             if not confirm:

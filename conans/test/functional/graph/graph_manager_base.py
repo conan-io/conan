@@ -16,7 +16,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.unittests.model.transitive_reqs_test import MockSearchRemote
+from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
@@ -31,16 +31,15 @@ class GraphManagerTest(unittest.TestCase):
         cache_folder = temp_folder()
         cache = ClientCache(cache_folder, os.path.join(cache_folder, ".conan"), self.output)
         self.cache = cache
-        self.remote_search = MockSearchRemote()
-        remote_manager = None
-        self.resolver = RangeResolver(cache, self.remote_search)
-        proxy = ConanProxy(cache, self.output, remote_manager)
+        self.remote_manager = MockRemoteManager()
+        self.resolver = RangeResolver(cache, self.remote_manager)
+        proxy = ConanProxy(cache, self.output, self.remote_manager)
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
-        self.manager = GraphManager(self.output, cache, remote_manager, self.loader, proxy,
+        self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver)
         hook_manager = Mock()
         recorder = Mock()
-        self.binary_installer = BinaryInstaller(cache, self.output, remote_manager, recorder,
+        self.binary_installer = BinaryInstaller(cache, self.output, self.remote_manager, recorder,
                                                 hook_manager)
 
     def _cache_recipe(self, reference, test_conanfile, revision=None):

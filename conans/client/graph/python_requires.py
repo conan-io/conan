@@ -15,12 +15,21 @@ class ConanPythonRequire(object):
         self._cached_requires = {}  # {reference: PythonRequire}
         self._proxy = proxy
         self._range_resolver = range_resolver
-        self._remotes = range_resolver._cache.registry.load_remotes()
         self._requires = None
         self.valid = True
+        self._check_updates = False
+        self._update = False
+        self._remote_name = None
+
+    def enable_remotes(self, check_updates=False, update=False, remotes=None):
+        self._check_updates = check_updates
+        self._update = update
+        self._remotes = remotes
 
     def invalidate_caches(self):
         self._cached_requires = {}
+        self.check_updates = False
+        self.update = False
 
     @contextmanager
     def capture_requires(self):
@@ -36,9 +45,11 @@ class ConanPythonRequire(object):
             ref = ConanFileReference.loads(require)
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
-                                         remote=None)
+                                         remotes=self._remotes)
             ref = requirement.ref
-            result = self._proxy.get_recipe(ref, False, False, remotes=self._remotes,
+
+            result = self._proxy.get_recipe(ref, self._check_updates, self._update,
+                                            remotes=self._remotes,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
