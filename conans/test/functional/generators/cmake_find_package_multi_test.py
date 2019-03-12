@@ -1,9 +1,8 @@
 import unittest
+from nose.plugins.attrib import attr
 
-from nose.plugins import attrib
 
-
-@attrib('slow')
+@attr('slow')
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
     def test_native_export_multi(self):
