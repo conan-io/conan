@@ -184,9 +184,8 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
             self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
 
+    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"])
     def cmake_multi_test(self):
-        if platform.system() not in ["Windows", "Darwin"]:
-            return
         client = TestClient()
 
         client.save(multi_config_files("Hello0", test=False), clean_first=True)
