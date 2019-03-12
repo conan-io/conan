@@ -1,6 +1,7 @@
 import unittest
 from collections import namedtuple, Counter
 
+import six
 from mock import Mock
 
 from conans import DEFAULT_REVISION_V1
@@ -23,7 +24,6 @@ from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
                                      test_processed_profile)
-
 
 say_content = TestConanFile("Say", "0.1")
 say_content2 = TestConanFile("Say", "0.2")

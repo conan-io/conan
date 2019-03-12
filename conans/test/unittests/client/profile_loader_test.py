@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import six
+
 from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues

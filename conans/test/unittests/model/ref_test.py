@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, PackageReference, \
     check_valid_ref

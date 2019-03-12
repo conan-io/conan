@@ -1,6 +1,7 @@
 import os
 import unittest
-import tempfile
+
+import six
 
 from conans.client.conf.config_installer import _process_config_install_item, _handle_hooks
 from conans.errors import ConanException

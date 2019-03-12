@@ -4,6 +4,8 @@ import os
 import stat
 import unittest
 
+import six
+
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import remove, save
 

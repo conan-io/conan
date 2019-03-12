@@ -4,6 +4,7 @@ import os
 import textwrap
 import unittest
 
+import six
 from mock import patch
 
 from conans.client.hook_manager import HookManager

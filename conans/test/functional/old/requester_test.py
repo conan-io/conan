@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import save

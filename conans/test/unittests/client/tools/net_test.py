@@ -5,6 +5,8 @@ import shutil
 import tempfile
 import unittest
 
+import six
+
 from conans.client.tools import chdir
 from conans.client.tools import net
 from conans.errors import ConanException

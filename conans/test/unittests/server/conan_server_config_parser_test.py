@@ -2,6 +2,8 @@
 import os
 import unittest
 
+import six
+
 from conans.errors import ConanException
 from conans.server.conf import ConanServerConfigParser
 from conans.test.utils.test_files import temp_folder

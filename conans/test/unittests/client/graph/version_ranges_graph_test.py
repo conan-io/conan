@@ -1,7 +1,8 @@
 
-from parameterized import parameterized
-
 from collections import namedtuple
+
+import six
+from parameterized import parameterized
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference

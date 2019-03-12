@@ -2,6 +2,8 @@ import os
 import shutil
 import unittest
 
+import six
+
 from conans.client import defs_to_string
 from conans.client.build.meson import Meson
 from conans.client.conf import default_settings_yml

@@ -2,9 +2,10 @@ import os
 import stat
 import unittest
 
-from conans.paths import SYSTEM_REQS_FOLDER
+import six
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import SYSTEM_REQS_FOLDER
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 

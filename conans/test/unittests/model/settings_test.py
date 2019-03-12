@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
 

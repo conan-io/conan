@@ -6,6 +6,7 @@ import sys
 import unittest
 
 import mock
+import six
 from parameterized.parameterized import parameterized
 
 from conans.client import tools

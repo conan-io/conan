@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import six
+
 from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder

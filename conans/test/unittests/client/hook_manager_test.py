@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import six
+
 from conans import load
 from conans.client.hook_manager import HookManager
 from conans.errors import ConanException

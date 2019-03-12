@@ -126,7 +126,7 @@ class SynchronizeTest(unittest.TestCase):
         # With revisions makes no sense because there is a new revision always that sources change
         if not client.cache.config.revisions_enabled:
             self.assertFalse(os.path.exists(remote_file_path))
-            self.assertNotEquals(remote_file_path, new_file_source_path)
+            self.assertNotEqual(remote_file_path, new_file_source_path)
 
     def _create_manifest(self, client, package_reference):
         # Create the manifest to be able to upload the package

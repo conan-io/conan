@@ -1,7 +1,9 @@
 import os
 import unittest
 
+import six
 from mock import Mock
+from parameterized import parameterized
 
 from conans.client.cache.cache import ClientCache
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
@@ -12,6 +14,7 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.recorder.action_recorder import ActionRecorder
+from conans.errors import ConanException
 from conans.model.graph_info import GraphInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import OptionsValues
@@ -22,8 +25,6 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
-from conans.errors import ConanException
-from parameterized import parameterized
 
 
 class GraphManagerTest(unittest.TestCase):

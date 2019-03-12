@@ -1,18 +1,17 @@
 import os
 import platform
-import time
 import unittest
-
 from textwrap import dedent
 
+import six
+import time
 
 from conans.client import tools
+from conans.errors import ConanException
+from conans.model.workspace import Workspace
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
-from conans.test.utils.test_files import temp_folder
-from conans.model.workspace import Workspace
-from conans.errors import ConanException
-
 
 conanfile_build = """from conans import ConanFile, CMake
 class Pkg(ConanFile):

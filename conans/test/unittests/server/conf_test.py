@@ -2,6 +2,8 @@ import os
 import unittest
 from datetime import timedelta
 
+import six
+
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf import ConanServerConfigParser

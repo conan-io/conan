@@ -4,6 +4,7 @@ import sys
 import unittest
 from collections import OrderedDict
 
+import six
 from nose.plugins.attrib import attr
 
 from conans.build_info.conan_build_info import get_build_info

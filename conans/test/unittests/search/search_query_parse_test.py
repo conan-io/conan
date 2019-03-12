@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 
 
