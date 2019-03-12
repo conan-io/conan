@@ -1,6 +1,7 @@
 import os
 import platform
 import textwrap
+import time
 import unittest
 
 from nose.plugins.attrib import attr
@@ -74,3 +75,4 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                         c.run_command('./example')
                         self.assertIn("Hello World {}!".format(bt), c.out)
                         self.assertIn("bye World {}!".format(bt), c.out)
+                        os.remove(os.path.join(c.current_folder, "example"))
