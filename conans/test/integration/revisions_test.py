@@ -1129,19 +1129,19 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
                              remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual( expected, [i["recipe"]["id"] for i in items])
 
         data = client.search("*{}".format(pref2_lib.ref.full_repr()).replace("1.0", "*"),
                              remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual( expected, [i["recipe"]["id"] for i in items])
 
         data = client.search("*{}#fakerev".format(pref2_lib.ref),
                              remote="default")
         items = data["results"]
         expected = []
-        self.assertEquals(expected, items)
+        self.assertEqual( expected, items)
 
     def search_revisions_locally_with_v1_server_test(self):
         """If I upload a recipe to a v1 server and then I check the revisions locally, it
@@ -1549,7 +1549,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         latest = self.server.server_store.get_last_revision(self.ref)
-        self.assertEquals(latest.revision, pref.ref.revision)
+        self.assertEqual( latest.revision, pref.ref.revision)
 
         if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
             time.sleep(62)
@@ -1558,4 +1558,4 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v1.upload_all(self.ref)
 
         latest = self.server.server_store.get_last_revision(self.ref)
-        self.assertEquals(latest.revision, DEFAULT_REVISION_V1)
+        self.assertEqual( latest.revision, DEFAULT_REVISION_V1)

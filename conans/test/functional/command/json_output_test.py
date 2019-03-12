@@ -24,7 +24,7 @@ class JsonOutputTest(unittest.TestCase):
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
         self.assertFalse(my_json["error"])
         tmp = ConanFileReference.loads(my_json["installed"][0]["recipe"]["id"])
-        self.assertEquals(str(tmp), "CC/1.0@private_user/channel")
+        self.assertEqual( str(tmp), "CC/1.0@private_user/channel")
         if self.client.cache.config.revisions_enabled:
             self.assertIsNotNone(tmp.revision)
         self.assertFalse(my_json["installed"][0]["recipe"]["dependency"])
@@ -170,11 +170,11 @@ AA*: CC/1.0@private_user/channel
         self.assertTrue(my_json["installed"][2]["recipe"]["dependency"])
 
         # Installed the build require CC with two options
-        self.assertEquals(len(my_json["installed"][2]["packages"]), 2)
+        self.assertEqual(len(my_json["installed"][2]["packages"]), 2)
         tmp = ConanFileReference.loads(my_json["installed"][2]["recipe"]["id"])
         if self.client.cache.config.revisions_enabled:
             self.assertIsNotNone(tmp.revision)
-        self.assertEquals(str(tmp), "CC/1.0@private_user/channel")
+        self.assertEqual(str(tmp), "CC/1.0@private_user/channel")
         self.assertFalse(my_json["installed"][2]["recipe"]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][0]["downloaded"])
         self.assertFalse(my_json["installed"][2]["packages"][1]["downloaded"])
