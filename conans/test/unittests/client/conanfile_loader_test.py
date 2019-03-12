@@ -69,19 +69,19 @@ class MyTest(ConanFile):
         file_content = '''[requires}
 OpenCV/2.4.10@phil/stable # My requirement for CV
 '''
-        with self.assertRaisesRegexp(ConanException, "Bad syntax"):
+        with six.assertRaisesRegex(self, ConanException, "Bad syntax"):
             ConanFileTextLoader(file_content)
 
         file_content = '{hello}'
-        with self.assertRaisesRegexp(ConanException, "Unexpected line"):
+        with six.assertRaisesRegex(self, ConanException, "Unexpected line"):
             ConanFileTextLoader(file_content)
 
         file_content = '[imports]\nhello'
-        with self.assertRaisesRegexp(ConanException, "Invalid imports line: hello"):
+        with six.assertRaisesRegex(self, ConanException, "Invalid imports line: hello"):
             ConanFileTextLoader(file_content).imports_method(None)
 
         file_content = '[imports]\nbin, * -> bin @ kk=3 '
-        with self.assertRaisesRegexp(ConanException, "Unknown argument kk"):
+        with six.assertRaisesRegex(self, ConanException, "Unknown argument kk"):
             ConanFileTextLoader(file_content).imports_method(None)
 
     def plain_text_parser_test(self):
@@ -157,7 +157,7 @@ OpenCV/2.4.104phil/stable
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        with self.assertRaisesRegexp(ConanException, "Wrong package recipe reference(.*)"):
+        with six.assertRaisesRegex(self, ConanException, "Wrong package recipe reference(.*)"):
             loader.load_conanfile_txt(file_path, test_processed_profile())
 
         file_content = '''[requires]
@@ -169,7 +169,7 @@ OpenCV/bin/* - ./bin
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
+        with six.assertRaisesRegex(self, ConanException, "is too long. Valid names must contain"):
             loader.load_conanfile_txt(file_path, test_processed_profile())
 
     def load_imports_arguments_test(self):
@@ -299,11 +299,11 @@ class ImportModuleLoaderTest(unittest.TestCase):
         myfunc1, value1 = "recipe1", 42
 
         # Item imported does not exist, but file exists
-        with self.assertRaisesRegexp(ConanException, "Unable to load conanfile in"):
+        with six.assertRaisesRegex(self, ConanException, "Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "requests", add_subdir_init)
 
         # File does not exists in already existing module
-        with self.assertRaisesRegexp(ConanException, "Unable to load conanfile in"):
+        with six.assertRaisesRegex(self, ConanException, "Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "conans", add_subdir_init)
 
     def test_helpers_python_library(self):

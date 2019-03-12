@@ -80,7 +80,7 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.is_windows = False
         os_info.linux_distro = "fedora"  # Will instantiate YumTool
 
-        with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+        with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
             spt = SystemPackageTool(os_info=os_info, output=ConanOutput(new_out))
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
@@ -440,7 +440,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         msg = platform_update_error_msg.get(platform.system(), None)
         if msg is not None:
-            with self.assertRaisesRegexp(ConanException, msg):
+            with six.assertRaisesRegex(self, ConanException, msg):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
@@ -550,7 +550,7 @@ class ToolsTest(unittest.TestCase):
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEqual(tools.cpu_count(output=output), 34)
         with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
-            with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
+            with six.assertRaisesRegex(self, ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
     def get_env_unit_test(self):
@@ -697,14 +697,14 @@ class HelloConan(ConanFile):
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
-        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
+        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln", output=self.output)
                 self.assertEqual(len(w), 2)
                 self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
-        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
+        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln", output=self.output)
@@ -881,7 +881,7 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
-        with self.assertRaisesRegexp(ConanException, "VS non-existing installation: Visual Studio 5"):
+        with six.assertRaisesRegex(self, ConanException, "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
             tools.vcvars_command(settings, output=output)
 
@@ -898,7 +898,7 @@ compiler:
         settings = Settings.loads(text)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings, output=output)
 
@@ -908,7 +908,7 @@ compiler:
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
-                with self.assertRaisesRegexp(ConanException,
+                with six.assertRaisesRegex(self, ConanException,
                                              "Error, Visual environment already set to 12"):
                     tools.vcvars_command(settings, output=output)
 
@@ -1081,7 +1081,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
 
         # Connection error
-        with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
+        with six.assertRaisesRegex(self, ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
@@ -1089,7 +1089,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
-        with self.assertRaisesRegexp(NotFoundException, "Not found: "):
+        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
@@ -1339,7 +1339,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Cannot deduce file name form url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
@@ -1360,7 +1360,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
-        with self.assertRaisesRegexp(ConanException, "Error"):
+        with six.assertRaisesRegex(self, ConanException, "Error"):
             tools.get("http://localhost:%s/error_url" % thread.port,
                       filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
                       retry=3, retry_wait=0)
@@ -1501,7 +1501,7 @@ class GitToolTest(unittest.TestCase):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
-        with self.assertRaisesRegexp(ConanException, "specify a branch to checkout"):
+        with six.assertRaisesRegex(self, ConanException, "specify a branch to checkout"):
             git.clone("https://github.com/conan-community/conan-zlib.git")
 
     def test_credentials(self):
@@ -1558,7 +1558,7 @@ class GitToolTest(unittest.TestCase):
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
         git.clone(path)
-        with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
+        with six.assertRaisesRegex(self, ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
             git.checkout(commit, submodule="invalid")
 
         # Check shallow
@@ -1719,7 +1719,7 @@ class GitToolsTests(unittest.TestCase):
         Try to get tag out of a git repo
         """
         git = Git(folder=temp_folder())
-        with self.assertRaisesRegexp(ConanException, "Not a valid 'git' repository"):
+        with six.assertRaisesRegex(self, ConanException, "Not a valid 'git' repository"):
             git.get_tag()
 
     def test_excluded_files(self):
@@ -1738,7 +1738,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        with self.assertRaisesRegexp(ConanException, "Not a valid 'svn' repository"):
+        with six.assertRaisesRegex(self, ConanException, "Not a valid 'svn' repository"):
             svn.check_repo()
         svn.checkout(url=project_url)
         try:
@@ -1940,7 +1940,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         self.assertIsNone(svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        with self.assertRaisesRegexp(ConanException, "Unable to get svn branch"):
+        with six.assertRaisesRegex(self, ConanException, "Unable to get svn branch"):
             svn.get_branch()
 
     def test_tag(self):
@@ -1966,7 +1966,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         self.assertEqual("v12.3.4", svn.get_tag())
 
         svn = SVN(folder=self.gimme_tmp())
-        with self.assertRaisesRegexp(ConanException, "Unable to get svn tag"):
+        with six.assertRaisesRegex(self, ConanException, "Unable to get svn tag"):
             svn.get_tag()
 
 

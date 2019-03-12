@@ -232,7 +232,7 @@ VARIABLE WITH SPACES=12
 [env]
 MYVAR=$VARIABLE WITH SPACES
                         '''
-        with self.assertRaisesRegexp(ConanException, "The names of the variables cannot contain spaces"):
+        with six.assertRaisesRegex(self, ConanException, "The names of the variables cannot contain spaces"):
             self._get_profile(tmp, txt)
 
     def test_profiles_includes(self):

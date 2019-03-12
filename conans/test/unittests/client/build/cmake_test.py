@@ -381,7 +381,7 @@ class CMakeTest(unittest.TestCase):
                                               base_cmd=base_cmd.format(flags=flags_in_local_cache)))
 
             # Raise mixing
-            with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+            with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
                 cmake = CMake(conan_file)
                 cmake.configure(source_folder="source", build_dir="build")
 

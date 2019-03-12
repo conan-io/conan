@@ -173,7 +173,7 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@myuser/testing", %s
 """
         if valid is False:
-            with self.assertRaisesRegexp(ConanException, "not valid"):
+            with six.assertRaisesRegex(self, ConanException, "not valid"):
                 self.build_graph(chat_content % version_range)
             return
 

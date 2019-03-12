@@ -394,12 +394,12 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def try_remove_using_query_and_packages_or_builds_test(self):
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+    def test_try_remove_using_query_and_packages_or_builds_test(self):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -p=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-p' parameters can't be used at the same time", self.client.out)
 
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 

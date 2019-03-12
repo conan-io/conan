@@ -26,7 +26,7 @@ class BuildModeTest(unittest.TestCase):
         self.assertTrue(build_mode.never)
 
     def test_invalid_configuration(self):
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "--build=never not compatible with other options"):
             BuildMode(["outdated", "missing", "never"], self.output)
 

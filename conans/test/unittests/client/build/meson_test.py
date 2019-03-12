@@ -134,7 +134,7 @@ class MesonTest(unittest.TestCase):
         self._check_commands(cmd_expected, conan_file.command)
 
         # Raise mixing
-        with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+        with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
             meson.configure(source_folder="source", build_dir="build")
 
         meson.test()

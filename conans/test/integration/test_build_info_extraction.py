@@ -91,7 +91,7 @@ class MyBuildInfo(unittest.TestCase):
     def test_invalid_tracer(self):
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         save(trace_file, "invalid contents")
-        with self.assertRaisesRegexp(Exception, "INVALID TRACE FILE!"):
+        with six.assertRaisesRegex(self, Exception, "INVALID TRACE FILE!"):
             get_build_info(trace_file).serialize()
 
     def test_cross_remotes(self):
