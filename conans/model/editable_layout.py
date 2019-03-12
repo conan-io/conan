@@ -2,7 +2,7 @@
 import os
 from collections import OrderedDict
 
-from six import StringIO
+import six
 from six.moves import configparser
 
 from conans.errors import ConanException
@@ -59,7 +59,10 @@ class EditableLayout(object):
 
             parser = configparser.ConfigParser(allow_no_value=True)
             parser.optionxform = str
-            parser.readfp(StringIO(content))
+            if six.PY3:
+                parser.read_string(content)
+            else:
+                parser.readfp(six.StringIO(content))
         except (configparser.Error, ConanException) as e:
             raise ConanException("Error parsing layout file '%s' (for reference '%s')\n%s" %
                                  (self._filepath, str(ref), str(e)))
