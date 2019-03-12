@@ -61,7 +61,7 @@ find_package(Hello0 REQUIRED)
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = client.cache.package_layout(ref).package(pref)
         # Check that the CONAN_HELLO0_ROOT has been replaced with the real abs path
-        self.assertIn("ROOT PATH: %s" % package_folder, client.out)
+        self.assertIn("ROOT PATH: %s" % package_folder.replace("\\", "/"), client.out)
 
         # Now try without toolchain but including the file
         files = {"CMakeLists.txt": """
