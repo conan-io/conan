@@ -574,8 +574,7 @@ endmacro()
 """.replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
 
 
-cmake_macros = _conan_basic_setup_common(["conan_set_find_library_paths()"]) + _cmake_common_macros \
-               + """
+cmake_macros = _conan_basic_setup_common(["conan_set_find_library_paths()"]) + """
 macro(conan_set_find_paths)
     # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
     # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
@@ -622,9 +621,9 @@ macro(conan_set_vs_runtime)
         endforeach()
     endif()
 endmacro()
-"""
+""" + _cmake_common_macros
 
-cmake_macros_multi = _conan_basic_setup_common([]) + _cmake_common_macros + """
+cmake_macros_multi = """
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
     include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
 else()
@@ -669,4 +668,4 @@ macro(conan_set_find_paths)
         endif()
     endif()
 endmacro()
-"""
+""" + _conan_basic_setup_common([]) + _cmake_common_macros

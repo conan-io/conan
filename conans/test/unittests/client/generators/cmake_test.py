@@ -179,6 +179,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     endif()
 
     if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(STATUS "Conan: Adjusting output directories")
         conan_output_dirs_setup()
     endif()
 
