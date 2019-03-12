@@ -6,7 +6,7 @@ import yaml
 
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import get_editable_abs_path, EditableLayout
+from conans.model.editable_layout import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
@@ -19,8 +19,7 @@ class LocalPackage(object):
         self._conanfile_folder = data.pop("path", None)  # The folder with the conanfile
         layout = data.pop("layout", None)
         if layout:
-            self.layout = get_editable_abs_path(layout, self._base_folder,
-                                                cache.conan_folder)
+            self.layout = get_editable_abs_path(layout, self._base_folder, cache.conan_folder)
         else:
             self.layout = ws_layout
 
@@ -52,6 +51,7 @@ class Workspace(object):
                 ws_pkg = self._workspace_packages[ref]
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
+
                 conanfile = node.conanfile
                 build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
                                         conanfile.options)
@@ -73,6 +73,7 @@ class Workspace(object):
                                     % (ref.name, ref.name))
                 else:
                     output.warn("CMake workspace: cannot 'add_subdirectory()'")
+
             if add_subdirs:
                 cmake += "macro(conan_workspace_subdirectories)\n"
                 cmake += add_subdirs

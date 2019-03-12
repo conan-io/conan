@@ -4,12 +4,13 @@ import itertools
 import os
 import tempfile
 import unittest
+
 from parameterized import parameterized
 
+from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.model.editable_cpp_info import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -48,7 +49,7 @@ class Pkg(ConanFile):
     """
 
     conan_package_layout = """
-[{namespace}includedirs]
+[%sincludedirs]
 src/include/{{settings.build_type}}/{{options.shared}}
 """
 
@@ -67,11 +68,11 @@ src/include/{{settings.build_type}}/{{options.shared}}
                  }
 
         if use_repo_file:
-            files["mylayout"] = self.conan_package_layout.format(namespace="")
+            files["mylayout"] = self.conan_package_layout % ""
         else:
             file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
             save(file_path,
-                 self.conan_package_layout.format(namespace="MyLib/0.1@user/editable:"))
+                 self.conan_package_layout % "MyLib/0.1@user/editable:")
 
         self.save(files)
 

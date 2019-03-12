@@ -3,24 +3,24 @@ import json
 import os
 import random
 import shlex
+import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
+import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
-from io import StringIO
 
 import bottle
 import nose
 import requests
-import shutil
 import six
-import threading
-import time
-import uuid
 from mock import Mock
+from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
@@ -905,8 +905,10 @@ class TurboTestClient(TestClient):
         remote = remote or list(self.servers.keys())[0]
         self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
                  assert_error=assert_error)
-        remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
-        return ref.copy_with_rev(remote_rrev)
+        if not assert_error:
+            remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
+            return ref.copy_with_rev(remote_rrev)
+        return
 
     def remove_all(self):
         self.run("remove '*' -f")

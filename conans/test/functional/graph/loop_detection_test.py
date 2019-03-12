@@ -23,6 +23,6 @@ class Package{number}Conan(ConanFile):
             client.run("export . lasote/stable")
 
         client.run("install Package3/0.1@lasote/stable --build", assert_error=True)
-        self.assertIn("ERROR: Loop detected: Package3/0.1@lasote/stable->"
-                      "Package1/0.1@lasote/stable->Package2/0.1@lasote/stable",
-                      client.user_io.out)
+        self.assertIn("ERROR: Loop detected: 'Package2/0.1@lasote/stable' requires "
+                      "'Package3/0.1@lasote/stable' which is an ancestor too",
+                      client.out)

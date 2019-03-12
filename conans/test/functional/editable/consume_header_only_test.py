@@ -2,16 +2,15 @@
 
 import os
 import tempfile
-import unittest
 import textwrap
+import unittest
 
 from parameterized import parameterized
 
-
+from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.model.editable_cpp_info import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 
 
 class HeaderOnlyLibTestClient(TestClient):
