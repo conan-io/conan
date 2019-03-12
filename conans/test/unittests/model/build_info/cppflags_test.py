@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import unittest
+
 from conans.model.build_info import _CppInfo
 
 
