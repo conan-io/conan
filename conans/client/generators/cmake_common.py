@@ -534,25 +534,16 @@ macro(conan_basic_setup)
         conan_message(STATUS "Conan: called inside local cache")
     endif()
 
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_output_dirs_setup()
+    endif()
+
     if(NOT ARGUMENTS_TARGETS)
         conan_message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
         conan_message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
-    endif()
-
-    if(NOT ARGUMENTS_SKIP_STD)
-        conan_message(STATUS "Conan: Adjusting language standard")
-        conan_set_std()
-    endif()
-
-    if(NOT ARGUMENTS_SKIP_FPIC)
-        conan_set_fpic()
-    endif()
-
-    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
-        conan_output_dirs_setup()
     endif()
 
     if(ARGUMENTS_SKIP_RPATH)
@@ -566,11 +557,19 @@ macro(conan_basic_setup)
         conan_set_rpath()
     endif()
 
+    if(NOT ARGUMENTS_SKIP_STD)
+        conan_message(STATUS "Conan: Adjusting language standard")
+        conan_set_std()
+    endif()
+
+    if(NOT ARGUMENTS_SKIP_FPIC)
+        conan_set_fpic()
+    endif()
+
     conan_check_compiler()
     conan_set_libcxx()
     conan_set_vs_runtime()
     conan_set_find_paths()
-
     %%INVOKE_MACROS%%
 endmacro()
 """.replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
