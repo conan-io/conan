@@ -855,6 +855,8 @@ servers["r2"] = TestServer()
         return error
 
     def run_command(self, command):
+        self.all_output += str(self.out)
+        self.init_dynamic_vars() # Resets the output
         return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
