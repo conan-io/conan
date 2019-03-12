@@ -11,7 +11,7 @@ OTHER_LDFLAGS = $(inherited) {linker_flags} {libs}
 
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) {definitions}
 OTHER_CFLAGS = $(inherited) {c_compiler_flags}
-OTHER_CPLUSPLUSFLAGS = $(inherited) {cpp_compiler_flags}
+OTHER_CPLUSPLUSFLAGS = $(inherited) {cxx_compiler_flags}
 FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths}
 '''
 
@@ -25,7 +25,7 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths}
         self.libs = " ".join(['-l%s' % lib for lib in deps_cpp_info.libs])
         self.definitions = " ".join('"%s"' % d for d in deps_cpp_info.defines)
         self.c_compiler_flags = " ".join(deps_cpp_info.cflags)
-        self.cpp_compiler_flags = " ".join(deps_cpp_info.cppflags)
+        self.cxx_compiler_flags = " ".join(deps_cpp_info.cxxflags)
         self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
         self.rootpaths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.rootpaths)
 
