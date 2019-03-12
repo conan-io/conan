@@ -623,7 +623,7 @@ macro(conan_set_vs_runtime)
         endforeach()
     endif()
 endmacro()
-"""
+""" + _cmake_common_macros
 
 cmake_macros_multi = _conan_basic_setup_common([]) + """
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
@@ -670,4 +670,4 @@ macro(conan_set_find_paths)
         endif()
     endif()
 endmacro()
-"""
+""" + _cmake_common_macros
