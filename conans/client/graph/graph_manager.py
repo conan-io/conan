@@ -109,7 +109,7 @@ class GraphManager(object):
         processed_profile = ProcessedProfile(profile, create_reference)
         ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, processed_profile)
+            conanfile = self._loader.load_virtual(reference, processed_profile, scope_options=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             if not self._cache.config.revisions_enabled and reference.revision is not None:
