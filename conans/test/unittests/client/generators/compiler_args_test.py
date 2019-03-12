@@ -48,7 +48,7 @@ class CompilerArgsTest(unittest.TestCase):
         cpp_info.libs.append("mylib")
         cpp_info.bindirs = "path/to/bin1"
         cpp_info.cflags.append("c_flag1")
-        cpp_info.cppflags.append("cxx_flag1")
+        cpp_info.cxxflags.append("cxx_flag1")
         cpp_info.defines.append("mydefine1")
 
         conan_file.deps_cpp_info.update(cpp_info, "zlib")

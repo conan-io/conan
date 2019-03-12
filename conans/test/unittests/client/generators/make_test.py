@@ -35,7 +35,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin1']
         cpp_info.version = "0.1"
         cpp_info.cflags = ['-fgimple']
-        cpp_info.cppflags = ['-fdollars-in-identifiers']
+        cpp_info.cxxflags = ['-fdollars-in-identifiers']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -48,7 +48,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin2']
         cpp_info.version = "3.2.3"
         cpp_info.cflags = ['-fno-asm']
-        cpp_info.cppflags = ['-pthread']
+        cpp_info.cxxflags = ['-pthread']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)

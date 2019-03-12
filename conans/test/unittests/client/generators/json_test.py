@@ -29,7 +29,7 @@ class JsonTest(unittest.TestCase):
         cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
-        cpp_info.cppflags = ["-cppflag"]
+        cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = JsonGenerator(conanfile)

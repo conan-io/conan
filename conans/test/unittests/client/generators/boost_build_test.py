@@ -32,7 +32,7 @@ class BoostJamGeneratorTest(unittest.TestCase):
         cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
-        cpp_info.cppflags = ["-cppflag"]
+        cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg"]
         cpp_info.lib_paths.extend(["Path\\with\\slashes", "regular/path/to/dir"])
         cpp_info.include_paths.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
@@ -58,7 +58,7 @@ lib MyLib2 :
 	<define>MYDEFINE2
 	<include>other/Path/with/slashes
 	<include>other/regular/path/to/dir
-	<cxxflags>-cppflag
+	<cxxflags>-cxxflag
 	<ldflags>-sharedlinkflag
 	;
 

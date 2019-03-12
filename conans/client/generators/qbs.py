@@ -11,8 +11,8 @@ class DepsCppQbs(object):
                                         for p in cpp_info.lib_paths)
         self.libs = delimiter.join('"%s"' % l for l in cpp_info.libs)
         self.defines = delimiter.join('"%s"' % d for d in cpp_info.defines)
-        self.cppflags = delimiter.join('"%s"' % d
-                                       for d in cpp_info.cppflags)
+        self.cxxflags = delimiter.join('"%s"' % d
+                                       for d in cpp_info.cxxflags)
         self.cflags = delimiter.join('"%s"' % d for d in cpp_info.cflags)
         linker_flags = cpp_info.sharedlinkflags
         linker_flags.extend(cpp_info.exelinkflags)
@@ -40,7 +40,7 @@ class QbsGenerator(Generator):
                     '            cpp.systemIncludePaths: [{deps.bin_paths}]\n'
                     '            cpp.dynamicLibraries: [{deps.libs}]\n'
                     '            cpp.defines: [{deps.defines}]\n'
-                    '            cpp.cppFlags: [{deps.cppflags}]\n'
+                    '            cpp.cppFlags: [{deps.cxxflags}]\n'  # TODO: cppFlags -> cxxFlags?
                     '            cpp.cFlags: [{deps.cflags}]\n'
                     '            cpp.linkerFlags: [{deps.linkerFlags}]\n'
                     '        }}\n'
