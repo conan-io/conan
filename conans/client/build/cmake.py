@@ -10,6 +10,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name
+from conans.client.output import ConanOutput
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
@@ -336,7 +337,7 @@ class CMake(object):
         # We don't want warnings printed because there is no replacement of the abs path.
         # there could be MANY cmake files in the package and the normal thing is to not find
         # the abs paths
-        _null_out = StringIO()
+        _null_out = ConanOutput(StringIO())
         for root, _, files in allwalk:
             for f in files:
                 if f.endswith(".cmake") and not f.startswith("conan"):
