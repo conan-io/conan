@@ -22,7 +22,7 @@ class DepsCppTXT(object):
                                      for p in cpp_info.build_paths)
         self.libs = "\n".join(cpp_info.libs)
         self.defines = "\n".join(cpp_info.defines)
-        self.cppflags = "\n".join(cpp_info.cppflags)
+        self.cxxflags = "\n".join(cpp_info.cxxflags)
         self.cflags = "\n".join(cpp_info.cflags)
         self.sharedlinkflags = "\n".join(cpp_info.sharedlinkflags)
         self.exelinkflags = "\n".join(cpp_info.exelinkflags)
@@ -113,6 +113,10 @@ class TXTGenerator(Generator):
                     if field == "sysroot":
                         lines = lines[0]
                     item_to_apply = result
+
+                if field == "cppflags":
+                    field = "cxxflags"
+
                 if config:
                     config_deps = getattr(item_to_apply, config)
                     setattr(config_deps, field, lines)
@@ -133,7 +137,7 @@ class TXTGenerator(Generator):
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
-                    '[cppflags{dep}{config}]\n{deps.cppflags}\n\n'
+                    '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # TODO: should be cppflags -> cxxflags
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'

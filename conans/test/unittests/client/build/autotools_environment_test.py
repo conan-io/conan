@@ -46,7 +46,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.defines.append("onedefinition")
         conanfile.deps_cpp_info.defines.append("twodefinition")
         conanfile.deps_cpp_info.cflags.append("a_c_flag")
-        conanfile.deps_cpp_info.cppflags.append("a_cpp_flag")
+        conanfile.deps_cpp_info.cxxflags.append("a_cxx_flag")
         conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
@@ -54,7 +54,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
     def partial_build_test(self):
         conan_file = ConanFileMock()
         deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
-                                           "cppflags, sharedlinkflags, exelinkflags, sysroot")
+                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot")
         conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
         conan_file.settings = Settings()
         be = AutoToolsBuildEnvironment(conan_file)
@@ -69,7 +69,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
     def warn_when_no_triplet_test(self):
         conan_file = ConanFileMock()
         deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
-                                           "cppflags, sharedlinkflags, exelinkflags, sysroot")
+                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot")
         conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
         conan_file.settings = MockSettings({"arch": "UNKNOWN_ARCH", "os": "Linux"})
         AutoToolsBuildEnvironment(conan_file)
@@ -191,7 +191,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be = AutoToolsBuildEnvironment(conanfile)
         expected = {'CFLAGS': 'a_c_flag -O2 -Ob2',
                     'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -O2 -Ob2 a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -O2 -Ob2 a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib.lib twolib.lib'}
 
@@ -208,7 +208,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag -m32 -O3 -s --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': 'a_c_flag -m32 -O3 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m32 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m32 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
 
@@ -225,7 +225,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -242,7 +242,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -DNDEBUG -D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cpp_flag -stdlib=libstdc++',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cxx_flag -stdlib=libstdc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -258,7 +258,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cpp_flag -stdlib=libc++',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cxx_flag -stdlib=libc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -275,7 +275,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
-                    'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -291,7 +291,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=Cstd',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cxx_flag -library=Cstd',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -306,7 +306,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=stdcxx4',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cxx_flag -library=stdcxx4',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -321,7 +321,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=stlport4',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cxx_flag -library=stlport4',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -336,7 +336,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cpp_flag -library=stdcpp',
+                    'CXXFLAGS': 'a_c_flag -m64 -xO3 --sysroot=/path/to/folder a_cxx_flag -library=stdcpp',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
@@ -354,7 +354,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
-                    'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder '
                                '-Wl,-rpath="one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -379,7 +379,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = {'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -'
                                     'Dtwodefinition -D_GLIBCXX_USE_CXX11_ABI=0 -additionalcppflag',
-                        'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cpp_flag -additionalcxxflag',
+                        'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cxx_flag -additionalcxxflag',
                         'LIBS': '-lonelib -ltwolib -additionallibs',
                         'LDFLAGS': 'shared_link_flag exe_link_flag -m64 '
                                    '--sysroot=/path/to/folder -Lone/lib/path -additionalldflag',
@@ -406,7 +406,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder cucucu -fPIC',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -D_GLIBCXX_USE_CXX11_ABI=0 -DOtherDefinition=23',
-                    'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder cucucu -fPIC a_cpp_flag -onlycxx',
+                    'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder cucucu -fPIC a_cxx_flag -onlycxx',
                     'LDFLAGS': '-inventedflag -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         self.assertEquals(be.vars, expected)

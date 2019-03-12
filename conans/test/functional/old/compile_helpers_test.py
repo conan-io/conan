@@ -95,8 +95,8 @@ class BuildInfoMock(object):
         return ["cflag1"]
 
     @property
-    def cppflags(self):
-        return ["cppflag1"]
+    def cxxflags(self):
+        return ["cxxflag1"]
 
 
 class MockConanfile(object):
