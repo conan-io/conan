@@ -106,6 +106,12 @@ class Remotes(object):
             result._remotes[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
         return result
 
+    def dumps(self):
+        result = []
+        for remote in self._remotes.values():
+            result.append("%s: %s [Verify SSL: %s]" % (remote.name, remote.url, remote.verify_ssl))
+        return "\n".join(result)
+
     def save(self, filename):
         ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v}
                            for r, (_, u, v) in self._remotes.items()]}
