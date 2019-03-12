@@ -137,7 +137,8 @@ class TXTGenerator(Generator):
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
-                    '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # TODO: should be cppflags -> cxxflags
+                    '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # Backwards compatibility
+                    '[cxxflags{dep}{config}]\n{deps.cxxflags}\n\n'
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
