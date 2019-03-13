@@ -13,7 +13,7 @@ from conans.client.cache.cache import ClientCache
 
 class RegistryTest(unittest.TestCase):
 
-    def retro_compatibility_test(self):
+    '''def retro_compatibility_test(self):
         f = os.path.join(temp_folder(), "aux_file")
         save(f, """conan.io https://server.conan.io
 """)  # Without SSL parameter
@@ -39,7 +39,7 @@ other/1.0@lasote/testing conan.io
                          [("conan.io", "https://server.conan.io", True)])
         expected = {'lib/1.0@conan/stable': 'conan.io',
                     'other/1.0@lasote/testing': 'conan.io'}
-        self.assertEqual(registry.refs_list, expected)
+        self.assertEqual(registry.refs_list, expected)'''
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")

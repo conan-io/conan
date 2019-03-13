@@ -49,7 +49,7 @@ class VersionRangesTest(GraphTest):
         self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(str(content), processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, update, update, Remotes(),
+        deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
                                              processed_profile)
         self.output.write("\n".join(self.resolver.output))
         return deps_graph
@@ -117,6 +117,7 @@ class VersionRangesTest(GraphTest):
     def test_remote_optimized(self):
         self.resolver._local_search = None
         remote_packages = []
+        self.remotes.add("myremote", "myurl")
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             remote_packages.append(say_ref)

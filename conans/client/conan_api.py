@@ -920,7 +920,8 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list_ref(self):
-        return {str(r): remote_name for r, remote_name in self._cache.registry.refs_list.items()}
+        return {str(r): remote_name for r, remote_name in self._cache.registry.refs_list.items()
+                if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
@@ -948,7 +949,7 @@ class ConanAPIV1(object):
         ret = {}
         tmp = self._cache.registry.prefs_list
         for pref, remote in tmp.items():
-            if pref.ref == ref:
+            if pref.ref == ref and remote:
                 ret[pref.full_repr()] = remote
         return ret
 
@@ -973,11 +974,11 @@ class ConanAPIV1(object):
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
-        remote = self._cache.registry.get(remote_name)
+        self._cache.registry.load_remotes()[remote_name]
         with self._cache.package_layout(pref.ref).update_metadata() as metadata:
             m = metadata.packages.get(pref.id)
             if m:
-                m.remote = remote.name
+                m.remote = remote_name
 
     def remote_clean(self):
         return self._cache.registry.clear()
