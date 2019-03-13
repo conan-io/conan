@@ -45,3 +45,4 @@ class CppFlagsTest(unittest.TestCase):
 
             self.assertEqual(len(w), 4)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+
