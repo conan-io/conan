@@ -126,9 +126,9 @@ class Remotes(object):
         save(filename, json.dumps(ret, indent=True))
 
     def _get_by_url(self, url):
-        for name, remote in self._remotes.items():
+        for remote in self._remotes.values():
             if remote.url == url:
-                return name
+                return remote
 
     def rename(self, remote_name, new_remote_name):
         if new_remote_name in self._remotes:
@@ -207,9 +207,9 @@ class Remotes(object):
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
-        prev_remote_name = self._get_by_url(url)
-        if prev_remote_name:
-            raise ConanException("Remote '%s' already exists with same URL" % prev_remote_name)
+        prev_remote = self._get_by_url(url)
+        if prev_remote and verify_ssl == prev_remote.verify_ssl:
+            raise ConanException("Remote '%s' already exists with same URL" % prev_remote.name)
         updated_remote = Remote(remote_name, url, verify_ssl)
         if insert is not None:
             try:
