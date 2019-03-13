@@ -184,7 +184,7 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
             self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
 
-    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"])
+    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
     def cmake_multi_test(self):
         client = TestClient()
 
