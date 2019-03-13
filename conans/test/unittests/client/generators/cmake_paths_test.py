@@ -27,13 +27,13 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         generator = CMakePathsGenerator(conanfile)
         cmake_lines = [s.replace("\t\t\t", "").replace('\\', '/')
                        for s in generator.content.splitlines()]
-        self.assertEquals('set(CMAKE_MODULE_PATH '
+        self.assertEqual('set(CMAKE_MODULE_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[0])
-        self.assertEquals('"%s" ${CMAKE_MODULE_PATH} '
+        self.assertEqual('"%s" ${CMAKE_MODULE_PATH} '
                           '${CMAKE_CURRENT_LIST_DIR})' % custom_dir.replace('\\', '/'),
                           cmake_lines[1])
-        self.assertEquals('set(CMAKE_PREFIX_PATH '
+        self.assertEqual('set(CMAKE_PREFIX_PATH '
                           '"%s/"' % tmp.replace('\\', '/'), cmake_lines[2])
-        self.assertEquals('"%s" ${CMAKE_PREFIX_PATH} '
+        self.assertEqual('"%s" ${CMAKE_PREFIX_PATH} '
                           '${CMAKE_CURRENT_LIST_DIR})' % custom_dir.replace('\\', '/'),
                           cmake_lines[3])

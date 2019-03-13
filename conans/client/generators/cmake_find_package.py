@@ -63,7 +63,7 @@ if(NOT ${{CMAKE_VERSION}} VERSION_LESS "3.0")
         endif()
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "{deps.sharedlinkflags_list}" "{deps.exelinkflags_list}")
         set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS {deps.compile_definitions})
-        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "{deps.cppflags_list}" "{deps.cflags_list}")
+        set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "{deps.cxxflags_list}" "{deps.cflags_list}")
     endif()
     {find_dependencies}
 endif()
