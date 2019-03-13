@@ -1,12 +1,14 @@
-import mock
 import os
 import platform
 import re
 import unittest
+
+import mock
+import six
 from parameterized import parameterized
 
-from conans.client.build.msbuild import MSBuild
 from conans.client import tools
+from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.test.utils.conanfile import MockConanfile, MockSettings
@@ -129,7 +131,7 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
         version = MSBuild.get_version(settings)
-        self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
+        six.assertRegex(self, version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
     @parameterized.expand([("16", "v142"),
