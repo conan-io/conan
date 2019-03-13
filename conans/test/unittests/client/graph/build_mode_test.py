@@ -1,11 +1,12 @@
 import unittest
 
-from conans.client.graph.build_mode import BuildMode
-from conans.model.ref import ConanFileReference
-from conans.errors import ConanException
+import six
 
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.client.graph.build_mode import BuildMode
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.test.utils.conanfile import MockConanfile
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class BuildModeTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class BuildModeTest(unittest.TestCase):
         self.assertTrue(build_mode.never)
 
     def test_invalid_configuration(self):
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "--build=never not compatible with other options"):
             BuildMode(["outdated", "missing", "never"], self.output)
 

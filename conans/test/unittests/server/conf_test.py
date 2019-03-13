@@ -2,6 +2,8 @@ import os
 import unittest
 from datetime import timedelta
 
+import six
+
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf import ConanServerConfigParser
@@ -60,7 +62,7 @@ var=walker
         self.assertEqual(conf.two, "other=var")
         self.assertEqual(conf.three, "var")
         self.assertEqual(conf.moon, "var=walker")
-        with self.assertRaisesRegexp(ConanException, "Unrecognized field 'NOEXIST'"):
+        with six.assertRaisesRegex(self, ConanException, "Unrecognized field 'NOEXIST'"):
             conf.NOEXIST
 
         # IF an old config file is readed but the section is in the list, just return it empty

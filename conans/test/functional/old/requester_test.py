@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -40,7 +42,7 @@ request_timeout=2
 request_timeout=any_string
 """
         save(client.cache.conan_conf_path, conf)
-        with self.assertRaisesRegexp(Exception, "Specify a numeric parameter for 'request_timeout'"):
+        with six.assertRaisesRegex(self, Exception, "Specify a numeric parameter for 'request_timeout'"):
             client.run("install Lib/1.0@conan/stable")
 
     def no_request_timeout_test(self):
