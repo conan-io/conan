@@ -68,7 +68,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, None)
+            self.assertEqual(runner.command_called, None)
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           self.out)
 
@@ -147,50 +147,50 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "knoppix"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "neon"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A yum update -y")
+            self.assertEqual(runner.command_called, "sudo -A yum update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A zypper --non-interactive ref")
+            self.assertEqual(runner.command_called, "sudo -A zypper --non-interactive ref")
 
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "rpm -q a_package")
+            self.assertEqual(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo -A yum install -y a_package")
+            self.assertEqual(runner.command_called, "sudo -A yum install -y a_package")
 
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
-                self.assertEquals(runner.command_called, "sudo -A apt-get install -y --no-install-recommends a_package")
+                self.assertEqual(runner.command_called, "sudo -A apt-get install -y --no-install-recommends a_package")
 
             runner.return_ok = True
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
+            self.assertEqual(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -198,20 +198,20 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "brew update")
+            self.assertEqual(runner.command_called, "brew update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "brew install a_package")
+            self.assertEqual(runner.command_called, "brew install a_package")
 
             os_info.is_freebsd = True
             os_info.is_macos = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A pkg update")
+            self.assertEqual(runner.command_called, "sudo -A pkg update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo -A pkg install -y a_package")
+            self.assertEqual(runner.command_called, "sudo -A pkg install -y a_package")
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "pkg info a_package")
+            self.assertEqual(runner.command_called, "pkg info a_package")
 
             # Chocolatey is an optional package manager on Windows
             if platform.system() == "Windows" and which("choco.exe"):
@@ -220,11 +220,11 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
                 spt.update()
-                self.assertEquals(runner.command_called, "choco outdated")
+                self.assertEqual(runner.command_called, "choco outdated")
                 spt.install("a_package", force=True)
-                self.assertEquals(runner.command_called, "choco install --yes a_package")
+                self.assertEqual(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called,
+                self.assertEqual(runner.command_called,
                                   'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
@@ -234,17 +234,17 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "yum install -y a_package")
+            self.assertEqual(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEquals(runner.command_called, "yum update -y")
+            self.assertEqual(runner.command_called, "yum update -y")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "apt-get install -y --no-install-recommends a_package")
+            self.assertEqual(runner.command_called, "apt-get install -y --no-install-recommends a_package")
 
             spt.update()
-            self.assertEquals(runner.command_called, "apt-get update")
+            self.assertEqual(runner.command_called, "apt-get update")
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -252,9 +252,9 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
 
             spt.update()
-            self.assertEquals(runner.command_called, "brew update")
+            self.assertEqual(runner.command_called, "brew update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "brew install a_package")
+            self.assertEqual(runner.command_called, "brew install a_package")
 
             os_info.is_freebsd = True
             os_info.is_macos = False
@@ -262,11 +262,11 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "pkg update")
+            self.assertEqual(runner.command_called, "pkg update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "pkg install -y a_package")
+            self.assertEqual(runner.command_called, "pkg install -y a_package")
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "pkg info a_package")
+            self.assertEqual(runner.command_called, "pkg info a_package")
 
             os_info.is_solaris = True
             os_info.is_freebsd = False
@@ -274,9 +274,9 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "pkgutil --catalog")
+            self.assertEqual(runner.command_called, "pkgutil --catalog")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
+            self.assertEqual(runner.command_called, "pkgutil --install --yes a_package")
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
 
@@ -288,11 +288,11 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
                 spt.update()
-                self.assertEquals(runner.command_called, "choco outdated")
+                self.assertEqual(runner.command_called, "choco outdated")
                 spt.install("a_package", force=True)
-                self.assertEquals(runner.command_called, "choco install --yes a_package")
+                self.assertEqual(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called,
+                self.assertEqual(runner.command_called,
                                   'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
@@ -310,18 +310,18 @@ class SystemPackageToolTest(unittest.TestCase):
             runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
-            self.assertEquals(2, runner.calls)
+            self.assertEqual(2, runner.calls)
             runner = RunnerMultipleMock(["sudo -A apt-get update",
                                          "sudo -A apt-get install -y --no-install-recommends yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
-            self.assertEquals(7, runner.calls)
+            self.assertEqual(7, runner.calls)
 
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException):
                 spt.install(packages)
-            self.assertEquals(7, runner.calls)
+            self.assertEqual(7, runner.calls)
 
     def system_package_tool_mode_test(self):
         """
@@ -350,7 +350,7 @@ class SystemPackageToolTest(unittest.TestCase):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
-            self.assertEquals(0, runner.calls)
+            self.assertEqual(0, runner.calls)
 
         # Check verify mode, a package report should be displayed in output and ConanException raised.
         # No system packages are installed
@@ -365,7 +365,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
             self.assertIn('\n'.join(packages), self.out)
-            self.assertEquals(3, runner.calls)
+            self.assertEqual(3, runner.calls)
 
         # Check disabled mode, a package report should be displayed in output.
         # No system packages are installed
@@ -378,7 +378,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertIn('\n'.join(packages), self.out)
-            self.assertEquals(0, runner.calls)
+            self.assertEqual(0, runner.calls)
 
         # Check enabled, default mode, system packages must be installed.
         with tools.environment_append({
@@ -390,7 +390,7 @@ class SystemPackageToolTest(unittest.TestCase):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
-            self.assertEquals(7, runner.calls)
+            self.assertEqual(7, runner.calls)
 
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
@@ -497,26 +497,26 @@ class ToolsTest(unittest.TestCase):
         save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), expected)
+        self.assertEqual(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), expected)
+        self.assertEqual(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        self.assertEqual(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         self.assertFalse(ret)
 
         # Multiple matches
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+        self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
         self.assertTrue(ret)
 
         # Automatic windows_paths
@@ -524,7 +524,7 @@ class ToolsTest(unittest.TestCase):
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          output=out)
         if platform.system() == "Windows":
-            self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+            self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
             self.assertTrue(ret)
         else:
             self.assertFalse(ret)
@@ -546,7 +546,7 @@ class ToolsTest(unittest.TestCase):
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
-            self.assertEquals(tools.cpu_count(output=output), 34)
+            self.assertEqual(tools.cpu_count(output=output), 34)
         with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
             with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
@@ -658,24 +658,24 @@ class HelloConan(ConanFile):
             conan_api, _, _ = ConanAPIV1.factory()
         conan_api.remote_list()
         global_output, global_requester = get_global_instances()
-        self.assertEquals(global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertEqual(global_requester.proxies, {"http": "http://myproxy.com"})
         self.assertIsNotNone(global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
             with tools.environment_append({"A": "1", "B": "2"}):
                 with tools.environment_append({"A": "2", "B": "2"}):
-                    self.assertEquals(os.getenv("A"), "2")
-                    self.assertEquals(os.getenv("B"), "2")
-                    self.assertEquals(os.getenv("Z"), "40")
-                self.assertEquals(os.getenv("A", None), "1")
-                self.assertEquals(os.getenv("B", None), "2")
-            self.assertEquals(os.getenv("A", None), "1")
-            self.assertEquals(os.getenv("Z", None), "40")
+                    self.assertEqual(os.getenv("A"), "2")
+                    self.assertEqual(os.getenv("B"), "2")
+                    self.assertEqual(os.getenv("Z"), "40")
+                self.assertEqual(os.getenv("A", None), "1")
+                self.assertEqual(os.getenv("B", None), "2")
+            self.assertEqual(os.getenv("A", None), "1")
+            self.assertEqual(os.getenv("Z", None), "40")
 
-        self.assertEquals(os.getenv("A", None), None)
-        self.assertEquals(os.getenv("B", None), None)
-        self.assertEquals(os.getenv("Z", None), None)
+        self.assertEqual(os.getenv("A", None), None)
+        self.assertEqual(os.getenv("B", None), None)
+        self.assertEqual(os.getenv("Z", None), None)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
@@ -946,11 +946,11 @@ compiler:
 
             # Now only a diff, it should return the values as a list, but without the old values
             ret = vcvars_dict(settings, only_diff=True)
-            self.assertEquals(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
+            self.assertEqual(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
 
             # But if we apply both environments, they are composed correctly
             with tools.environment_append(ret):
-                self.assertEquals(os.environ["LIBPATH"], str_var_value)
+                self.assertEqual(os.environ["LIBPATH"], str_var_value)
 
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
@@ -1066,7 +1066,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                            retry=3, retry_wait=0)
 
         # Not found error
-        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
         with self.assertRaisesRegexp(NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
@@ -1114,144 +1114,144 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return build, host
 
         build, host = get_values("Linux", "armv6", "Linux", "armv6")
-        self.assertEquals(build, "arm-linux-gnueabi")
-        self.assertEquals(host, "arm-linux-gnueabi")
+        self.assertEqual(build, "arm-linux-gnueabi")
+        self.assertEqual(host, "arm-linux-gnueabi")
 
         build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
-        self.assertEquals(build, "sparc-linux-gnu")
-        self.assertEquals(host, "sparc64-linux-gnu")
+        self.assertEqual(build, "sparc-linux-gnu")
+        self.assertEqual(host, "sparc64-linux-gnu")
 
         build, host = get_values("Linux", "mips", "Linux", "mips64")
-        self.assertEquals(build, "mips-linux-gnu")
-        self.assertEquals(host, "mips64-linux-gnu")
+        self.assertEqual(build, "mips-linux-gnu")
+        self.assertEqual(host, "mips64-linux-gnu")
 
         build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
-        self.assertEquals(build, "powerpc64le-linux-gnu")
-        self.assertEquals(host, "powerpc64-linux-gnu")
+        self.assertEqual(build, "powerpc64le-linux-gnu")
+        self.assertEqual(host, "powerpc64-linux-gnu")
 
         build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
-        self.assertEquals(build, "arm-linux-gnueabi")
-        self.assertEquals(host, "arm-linux-gnueabi")
+        self.assertEqual(build, "arm-linux-gnueabi")
+        self.assertEqual(host, "arm-linux-gnueabi")
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabihf")
 
         build, host = get_values("Linux", "x86", "Linux", "armv7hf")
-        self.assertEquals(build, "x86-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
+        self.assertEqual(build, "x86-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabihf")
 
         build, host = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86-linux-gnu")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "x86-linux-gnu")
 
         build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-w64-mingw32")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "i686-w64-mingw32")
 
         build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-windows-msvc")  # Not very common but exists sometimes
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "i686-windows-msvc")  # Not very common but exists sometimes
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabihf")
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv7")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabi")
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabi")
 
         build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "aarch64-linux-gnu_ilp32")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "aarch64-linux-gnu_ilp32")
         
         build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabi")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabi")
         
         build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-gnueabihf")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-gnueabihf")
        
         build, host = get_values("Linux", "x86_64", "Android", "x86")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-linux-android")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "i686-linux-android")
 
         build, host = get_values("Linux", "x86_64", "Android", "x86_64")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86_64-linux-android")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "x86_64-linux-android")
 
         build, host = get_values("Linux", "x86_64", "Android", "armv7")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-androideabi")
 
         build, host = get_values("Linux", "x86_64", "Android", "armv7hf")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-androideabi")
 
         build, host = get_values("Linux", "x86_64", "Android", "armv8")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "aarch64-linux-android")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "aarch64-linux-android")
 
         build, host = get_values("Linux", "x86_64", "Android", "armv6")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "arm-linux-androideabi")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "arm-linux-androideabi")
 
         build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-w64-mingw32")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "i686-w64-mingw32")
 
         build, host = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86_64-w64-mingw32")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "x86_64-w64-mingw32")
 
         build, host = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(host, "i686-w64-mingw32")
+        self.assertEqual(build, "x86_64-w64-mingw32")
+        self.assertEqual(host, "i686-w64-mingw32")
 
         build, host = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
-        self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(host, "arm-linux-gnueabihf")
+        self.assertEqual(build, "x86_64-w64-mingw32")
+        self.assertEqual(host, "arm-linux-gnueabihf")
 
         build, host = get_values("Darwin", "x86_64", "Android", "armv7hf")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-linux-androideabi")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "arm-linux-androideabi")
 
         build, host = get_values("Darwin", "x86_64", "Macos", "x86")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "i686-apple-darwin")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "i686-apple-darwin")
 
         build, host = get_values("Darwin", "x86_64", "iOS", "armv7")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "arm-apple-darwin")
 
         build, host = get_values("Darwin", "x86_64", "watchOS", "armv7k")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "arm-apple-darwin")
 
         build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "aarch64-apple-darwin")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "aarch64-apple-darwin")
 
         build, host = get_values("Darwin", "x86_64", "tvOS", "armv8.3")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "aarch64-apple-darwin")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "aarch64-apple-darwin")
 
         build, host = get_values("Darwin", "x86_64", "watchOS", "armv8_32")
-        self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "aarch64-apple-darwin")
+        self.assertEqual(build, "x86_64-apple-darwin")
+        self.assertEqual(host, "aarch64-apple-darwin")
 
         build, host = get_values("Linux", "x86_64", "Linux", "ppc32")
-        self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "powerpc-linux-gnu")
+        self.assertEqual(build, "x86_64-linux-gnu")
+        self.assertEqual(host, "powerpc-linux-gnu")
 
         build, host = get_values("Linux", "x86", "Linux", "ppc64")
-        self.assertEquals(build, "x86-linux-gnu")
-        self.assertEquals(host, "powerpc64-linux-gnu")
+        self.assertEqual(build, "x86-linux-gnu")
+        self.assertEqual(host, "powerpc64-linux-gnu")
 
         for _os in ["Windows", "Linux"]:
             for arch in ["x86_64", "x86"]:
@@ -1304,7 +1304,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         @thread.server.get("/")
         def get_file2():
-            self.assertEquals(request.query["file"], "1")
+            self.assertEqual(request.query["file"], "1")
             return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
 
         @thread.server.get("/error_url")
@@ -1344,7 +1344,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       retry=3, retry_wait=0)
 
         # Not found error
-        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     def unix_to_dos_unit_test(self):
 
@@ -1372,7 +1372,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             fc = tools.load(fp)
             self.assertIn("\r\n", fc)
 
-        self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
+        self.assertEqual("a line\r\notherline\r\n", str(tools.load(fp)))
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
@@ -1392,7 +1392,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             fc = tools.load(fp)
             self.assertNotIn("\r\n", fc)
 
-        self.assertEquals("a line\notherline\n", str(tools.load(fp)))
+        self.assertEqual("a line\notherline\n", str(tools.load(fp)))
 
     def unix_to_dos_conanfile_test(self):
         client = TestClient()
@@ -1473,7 +1473,7 @@ class GitToolTest(unittest.TestCase):
 
         # Checkout a commit
         git.checkout(commit)
-        self.assertEquals(git.get_revision(), commit)
+        self.assertEqual(git.get_revision(), commit)
 
     def test_clone_existing_folder_without_branch(self):
         tmp = temp_folder()
@@ -1486,7 +1486,7 @@ class GitToolTest(unittest.TestCase):
         tmp = temp_folder()
         git = Git(tmp, username="peter", password="otool")
         url_credentials = git.get_url_with_credentials("https://some.url.com")
-        self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
+        self.assertEqual(url_credentials, "https://peter:otool@some.url.com")
 
     def test_verify_ssl(self):
         class MyRunner(object):
@@ -1811,7 +1811,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
     def test_credentials(self):
         svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
         url_credentials = svn.get_url_with_credentials("https://some.url.com")
-        self.assertEquals(url_credentials, "https://ada:lovelace@some.url.com")
+        self.assertEqual(url_credentials, "https://ada:lovelace@some.url.com")
 
     def test_verify_ssl(self):
         class MyRunner(object):

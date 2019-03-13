@@ -34,7 +34,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         self.profile._env_values = env_values
         save(self.conanfile_txt_path, "")
         conanfile = self.loader.load_conanfile_txt(self.conanfile_txt_path, self.profile)
-        self.assertEquals(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
+        self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
 
 
 class LoadConanfileTest(unittest.TestCase):
@@ -66,4 +66,4 @@ class LoadConanfileTest(unittest.TestCase):
              """))
         ref = ConanFileReference("hello", "1.0", "user", "channel")
         conanfile = self.loader.load_conanfile(self.conanfile_path, self.profile, ref)
-        self.assertEquals(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
+        self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})

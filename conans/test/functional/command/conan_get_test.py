@@ -33,24 +33,24 @@ class ConanGetTest(unittest.TestCase):
     def test_get_local_reference(self):
         # Local search, dir list
         self.client.run('get {} .'.format(self.reference))
-        self.assertEquals("""Listing directory '.':
+        self.assertEqual("""Listing directory '.':
  conanfile.py
  conanmanifest.txt
  other
 """, self.client.out)
 
         self.client.run('get {} other --raw'.format(self.reference))
-        self.assertEquals("path\n", self.client.out)
+        self.assertEqual("path\n", self.client.out)
 
         self.client.run('get {} other/path --raw'.format(self.reference))
-        self.assertEquals("to\n", self.client.out)
+        self.assertEqual("to\n", self.client.out)
 
         self.client.run('get {} other/path/to'.format(self.reference))
-        self.assertEquals("Listing directory 'other/path/to':\n exported\n",
+        self.assertEqual("Listing directory 'other/path/to':\n exported\n",
                           self.client.out)
 
         self.client.run('get {} other/path/to/exported'.format(self.reference))
-        self.assertEquals("2\n", self.client.out)
+        self.assertEqual("2\n", self.client.out)
 
         # Local search, conanfile print
         self.client.run('get {} --raw'.format(self.reference))

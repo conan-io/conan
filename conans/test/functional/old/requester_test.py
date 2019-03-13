@@ -26,12 +26,12 @@ request_timeout=2
         save(client.cache.conan_conf_path, conf)
         client.init_dynamic_vars()
 
-        self.assertEquals(client.requester.get("MyUrl"), 2.0)
+        self.assertEqual(client.requester.get("MyUrl"), 2.0)
 
         with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
             client = TestClient(requester_class=MyRequester)
             client.init_dynamic_vars()
-            self.assertEquals(client.requester.get("MyUrl"), 4.3)
+            self.assertEqual(client.requester.get("MyUrl"), 4.3)
 
     def requester_timeout_errors_test(self):
         client = TestClient(requester_class=MyRequester)
@@ -51,7 +51,7 @@ request_timeout=any_string
 """
         save(client.cache.conan_conf_path, conf)
         client.init_dynamic_vars()
-        self.assertEquals(client.requester.get("MyUrl"), "NOT SPECIFIED")
+        self.assertEqual(client.requester.get("MyUrl"), "NOT SPECIFIED")
 
 
 

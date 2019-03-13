@@ -37,7 +37,7 @@ class FilesTest(unittest.TestCase):
 
         md5_b = md5sum(file_path)
 
-        self.assertEquals(md5_a, md5_b)
+        self.assertEqual(md5_a, md5_b)
 
     def test_path_exists(self):
         """

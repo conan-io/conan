@@ -26,7 +26,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         conanfile.deps_cpp_info.libs.extend(['gdi32', 'user32.lib'])
 
         tool = VisualStudioBuildEnvironment(conanfile)
-        self.assertEquals(tool.vars_dict, {
+        self.assertEqual(tool.vars_dict, {
             "CL": ["-I/one/include/path", "-I/two/include/path",
                    '-MDd',
                    '-mycflag',
@@ -40,7 +40,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = True
-        self.assertEquals(tool.vars_dict, {
+        self.assertEqual(tool.vars_dict, {
             "CL": ["-I/one/include/path", "-I/two/include/path",
                    '-MDd',
                    '-mycflag',
@@ -60,7 +60,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         tool.include_paths.append("/three/include/path")
         tool.lib_paths.append("/three/lib/path")
 
-        self.assertEquals(tool.vars_dict, {
+        self.assertEqual(tool.vars_dict, {
             "CL": ["-I/one/include/path",
                    "-I/two/include/path",
                    "-I/three/include/path",
@@ -79,7 +79,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         # Now try appending to environment
         with tools.environment_append({"CL": "-I/four/include/path -I/five/include/path",
                                        "LIB": "/four/lib/path;/five/lib/path"}):
-            self.assertEquals(tool.vars_dict, {
+            self.assertEqual(tool.vars_dict, {
                 "CL": ["-I/one/include/path", "-I/two/include/path",
                        "-I/three/include/path",
                        '-MDd',
@@ -95,7 +95,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                 "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
             })
 
-            self.assertEquals(tool.vars, {
+            self.assertEqual(tool.vars, {
                 "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" -MDd '
                       '-mycflag -mycflag2 -Zi -Ob0 -Od '
                       '-mycxxflag -mycxxflag2 '
