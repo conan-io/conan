@@ -42,7 +42,7 @@ class CompleteFlowTest(unittest.TestCase):
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
         package_ids = other_conan.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 2)
+        self.assertEqual(len(package_ids), 2)
 
     def reuse_test(self):
         test_server = TestServer()
@@ -57,7 +57,7 @@ class CompleteFlowTest(unittest.TestCase):
                       self.client.out)
         # Check compilation ok
         package_ids = self.client.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 1)
+        self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_library_exists(pref, self.client.cache)
 
@@ -105,7 +105,7 @@ class CompleteFlowTest(unittest.TestCase):
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
         package_ids = other_conan.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 2)
+        self.assertEqual(len(package_ids), 2)
         for package_id in package_ids:
             pref = PackageReference(ref, package_id)
             self._assert_library_exists(pref, other_conan.cache)
@@ -136,7 +136,7 @@ class CompleteFlowTest(unittest.TestCase):
 
     def _assert_library_files(self, path):
         libraries = os.listdir(os.path.join(path, "lib"))
-        self.assertEquals(len(libraries), 1)
+        self.assertEqual(len(libraries), 1)
 
     def _assert_library_exists_in_server(self, pref, paths):
         folder = uncompress_packaged_files(paths, pref)

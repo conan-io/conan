@@ -32,16 +32,16 @@ OTHERVAR=thing
 os=2
 """
         a = ProfileParser(txt)
-        self.assertEquals(a.vars, {"VAR": "2", "OTHERVAR": "thing"})
-        self.assertEquals(a.includes, ["a/path/to\profile.txt", "other/path/to/file.txt"])
-        self.assertEquals(a.profile_text, """[settings]
+        self.assertEqual(a.vars, {"VAR": "2", "OTHERVAR": "thing"})
+        self.assertEqual(a.includes, ["a/path/to\profile.txt", "other/path/to/file.txt"])
+        self.assertEqual(a.profile_text, """[settings]
 os=2""")
 
         txt = ""
         a = ProfileParser(txt)
-        self.assertEquals(a.vars, {})
-        self.assertEquals(a.includes, [])
-        self.assertEquals(a.profile_text, "")
+        self.assertEqual(a.vars, {})
+        self.assertEqual(a.includes, [])
+        self.assertEqual(a.profile_text, "")
 
         txt = """
 include(a/path/to\profile.txt)
@@ -54,9 +54,9 @@ os=$OTHERVAR
 """
         a = ProfileParser(txt)
         a.apply_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
-        self.assertEquals(a.vars, {"VAR": "22", "OTHERVAR": "thing"})
-        self.assertEquals(a.includes, ["a/path/to\profile.txt", "other/path/to/MyFile"])
-        self.assertEquals(a.profile_text, """[settings]
+        self.assertEqual(a.vars, {"VAR": "22", "OTHERVAR": "thing"})
+        self.assertEqual(a.includes, ["a/path/to\profile.txt", "other/path/to/MyFile"])
+        self.assertEqual(a.profile_text, """[settings]
 os=thing""")
 
 
@@ -89,7 +89,7 @@ class ProfileTest(unittest.TestCase):
     [settings]
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
     CXX_FLAGS="-DAAA=0"
@@ -99,12 +99,12 @@ class ProfileTest(unittest.TestCase):
     [settings]
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
-        self.assertEquals(new_profile.env_values.env_dicts("MyPackage"), ({"OTHER": "2",
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEqual(new_profile.env_values.env_dicts("MyPackage"), ({"OTHER": "2",
                                                                            "VAR": "1",
                                                                            'CXX_FLAGS': '-DAAA=0'}, {}))
 
-        self.assertEquals(new_profile.env_values.env_dicts("OtherPackage"), ({'CXX_FLAGS': '-DAAA=0',
+        self.assertEqual(new_profile.env_values.env_dicts("OtherPackage"), ({'CXX_FLAGS': '-DAAA=0',
                                                                               'ONE': 'ONE'}, {}))
 
         prof = '''[env]
@@ -112,21 +112,21 @@ class ProfileTest(unittest.TestCase):
     [settings]
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
     CXX_FLAGS=-DAAA=0
     [settings]
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
     CXX_FLAGS="-DAAA=0
     [settings]
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '"-DAAA=0'}, {}))
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '"-DAAA=0'}, {}))
 
         prof = '''
     [settings]
@@ -134,8 +134,8 @@ class ProfileTest(unittest.TestCase):
     compiler=Visual Studio
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEquals(new_profile.package_settings["zlib"], {"compiler": "gcc"})
-        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
+        self.assertEqual(new_profile.package_settings["zlib"], {"compiler": "gcc"})
+        self.assertEqual(new_profile.settings["compiler"], "Visual Studio")
 
     def test_empty_env(self):
         tmp = temp_folder()
@@ -167,7 +167,7 @@ class ProfileTest(unittest.TestCase):
         profile = Profile()
         dumps = profile.dumps()
         new_profile, _ = self._get_profile(tmp, dumps)
-        self.assertEquals(new_profile.settings, profile.settings)
+        self.assertEqual(new_profile.settings, profile.settings)
 
         # Settings
         profile = Profile()
@@ -184,18 +184,18 @@ class ProfileTest(unittest.TestCase):
 
         dump = profile.dumps()
         new_profile, _ = self._get_profile(tmp, dump)
-        self.assertEquals(new_profile.settings, profile.settings)
-        self.assertEquals(new_profile.settings["arch"], "x86_64")
-        self.assertEquals(new_profile.settings["compiler.version"], "12")
-        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
+        self.assertEqual(new_profile.settings, profile.settings)
+        self.assertEqual(new_profile.settings["arch"], "x86_64")
+        self.assertEqual(new_profile.settings["compiler.version"], "12")
+        self.assertEqual(new_profile.settings["compiler"], "Visual Studio")
 
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++',
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++',
                                                                   'CC': 'path/to/my/compiler/gcc'}, {}))
 
-        self.assertEquals(new_profile.build_requires["zlib/*"],
+        self.assertEqual(new_profile.build_requires["zlib/*"],
                           [ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
                            ConanFileReference.loads("autotools/1.0.3@lasote/stable")])
-        self.assertEquals(new_profile.build_requires["*"],
+        self.assertEqual(new_profile.build_requires["*"],
                           [ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing")])
 
     def _get_profile(self, folder, txt):
@@ -213,7 +213,7 @@ class ProfileTest(unittest.TestCase):
         MYVAR=$MY_MAGIC_VAR what they seem.
         '''
         profile, _ = self._get_profile(tmp, txt)
-        self.assertEquals("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
+        self.assertEqual("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
 
         # Order in replacement, variable names (simplification of preprocessor)
         txt = '''
@@ -224,7 +224,7 @@ class ProfileTest(unittest.TestCase):
                 MYVAR=$P2
                 '''
         profile, _ = self._get_profile(tmp, txt)
-        self.assertEquals("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
+        self.assertEqual("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
 
         # Variables without spaces
         txt = '''
@@ -305,13 +305,13 @@ one/1.5@lasote/stable
 
         profile, variables = read_profile("./profile4.txt", tmp, None)
 
-        self.assertEquals(variables, {"MYVAR": "1", "OTHERVAR": "34", "PROFILE_DIR":
+        self.assertEqual(variables, {"MYVAR": "1", "OTHERVAR": "34", "PROFILE_DIR":
                                       tmp, "ROOTVAR": "0"})
-        self.assertEquals("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
-        self.assertEquals("1", profile.env_values.data["package1"]["ENVY"])
-        self.assertEquals(profile.settings, {"os": "1"})
-        self.assertEquals(profile.options.as_list(), [('zlib:aoption', '1'), ('zlib:otheroption', '12')])
-        self.assertEquals(profile.build_requires, {"*": [ConanFileReference.loads("one/1.0@lasote/stable"),
+        self.assertEqual("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
+        self.assertEqual("1", profile.env_values.data["package1"]["ENVY"])
+        self.assertEqual(profile.settings, {"os": "1"})
+        self.assertEqual(profile.options.as_list(), [('zlib:aoption', '1'), ('zlib:otheroption', '12')])
+        self.assertEqual(profile.build_requires, {"*": [ConanFileReference.loads("one/1.0@lasote/stable"),
                                                          ConanFileReference.loads("two/1.2@lasote/stable"),
                                                          ConanFileReference.loads("one/1.5@lasote/stable")]})
 
@@ -324,7 +324,7 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
 
         def assert_path(profile):
             pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
-            self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+            self.assertEqual(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
 
         abs_profile_path = os.path.join(tmp, "Myprofile.txt")
         save(abs_profile_path, txt)

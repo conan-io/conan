@@ -36,10 +36,10 @@ class MyBuildInfo(unittest.TestCase):
             self.client.run("install Hello/1.0@lasote/stable --build")
 
         data = get_build_info(trace_file).serialize()
-        self.assertEquals(len(data["modules"]), 1)
-        self.assertEquals(data["modules"][0]["id"], "DownloadOnly")
-        self.assertEquals(len(data["modules"][0]["artifacts"]), 0)
-        self.assertEquals(len(data["modules"][0]["dependencies"]), 3)
+        self.assertEqual(len(data["modules"]), 1)
+        self.assertEqual(data["modules"][0]["id"], "DownloadOnly")
+        self.assertEqual(len(data["modules"][0]["artifacts"]), 0)
+        self.assertEqual(len(data["modules"][0]["dependencies"]), 3)
 
     def test_json(self):
 
@@ -70,21 +70,21 @@ class MyBuildInfo(unittest.TestCase):
             data = get_build_info(trace_file).serialize()
             # Only uploaded 2 modules, the Hello0 recipe and the Hello0 package
             # without dependencies
-            self.assertEquals(len(data["modules"]), 2)
-            self.assertEquals(len(data["modules"][0]["dependencies"]), 0)
-            self.assertEquals(len(data["modules"][0]["dependencies"]), 0)
-            self.assertEquals(len(data["modules"][0]["artifacts"]), 3)
+            self.assertEqual(len(data["modules"]), 2)
+            self.assertEqual(len(data["modules"][0]["dependencies"]), 0)
+            self.assertEqual(len(data["modules"][0]["dependencies"]), 0)
+            self.assertEqual(len(data["modules"][0]["artifacts"]), 3)
 
             # Now upload the rest of them
             self.client.run("install Hello1/1.0@lasote/stable --build missing")
             self.client.run("install Hello2/1.0@lasote/stable --build missing")
             self.client.run("upload '*' -c --all")
             data = get_build_info(trace_file).serialize()
-            self.assertEquals(len(data["modules"]), 6)
+            self.assertEqual(len(data["modules"]), 6)
             for mod_name in ["Hello1/1.0@lasote/stable", "Hello2/1.0@lasote/stable"]:
                 module = _get_module(data, mod_name)
-                self.assertEquals(3, len(module["dependencies"]))
-                self.assertEquals(3, len(module["artifacts"]))
+                self.assertEqual(3, len(module["dependencies"]))
+                self.assertEqual(3, len(module["artifacts"]))
                 for dep in module["dependencies"]:
                     self.assertTrue(dep["id"].startswith("Hello0/1.0@lasote/stable"))
 
@@ -120,9 +120,9 @@ class MyBuildInfo(unittest.TestCase):
             self.client.run("upload 'Hello1*' -c --all -r default")
 
             data = get_build_info(trace_file).serialize()
-            self.assertEquals(len(data["modules"]), 2)
+            self.assertEqual(len(data["modules"]), 2)
             module = _get_module(data, "Hello1/1.0@lasote/stable")
-            self.assertEquals(0, len(module["dependencies"]))
+            self.assertEqual(0, len(module["dependencies"]))
 
     @attr('ide_fail')
     def trace_command_test(self):

@@ -193,7 +193,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
-        self.assertEquals(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
+        self.assertEqual(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")

@@ -23,8 +23,8 @@ class MesonTest(unittest.TestCase):
     def _check_commands(self, cmd_ref, cmd_test):
         cmd_ref_splitted = cmd_ref.split(' ')
         cmd_test_splitted = cmd_test.split(' ')
-        self.assertEquals(cmd_ref_splitted[:3], cmd_test_splitted[:3])
-        self.assertEquals(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
+        self.assertEqual(cmd_ref_splitted[:3], cmd_test_splitted[:3])
+        self.assertEqual(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
 
     def partial_build_test(self):
         conan_file = ConanFileMock()
@@ -138,10 +138,10 @@ class MesonTest(unittest.TestCase):
             meson.configure(source_folder="source", build_dir="build")
 
         meson.test()
-        self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
 
         meson.install()
-        self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
 
     def prefix_test(self):
         conan_file = ConanFileMock()
