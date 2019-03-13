@@ -96,6 +96,7 @@ cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_FIND_ROOT_PATH "/some/path")
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+cmake_multi.cmake)
 conan_basic_setup()
 
 add_executable(say_hello main.cpp)
@@ -234,3 +235,20 @@ class HelloConan(ConanFile):
                 self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
             else:
                 self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
+
+
+class CMakeMultiSyntaxTest(unittest.TestCase):
+
+    def conan_basic_setup_inteface_test(self):
+        """
+        Check conan_basic_setup() interface is the same one for cmake and cmake_multi generators
+        """
+        client = TestClient()
+        client.save({"conanfile.txt": "[generators]\ncmake_multi\ncmake"})
+        client.run("install .")
+        conanbuildinfo = tools.load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo_multi = tools.load(os.path.join(client.current_folder,
+                                                       "conanbuildinfo_multi.cmake"))
+        expected = "set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)"
+        self.assertIn(expected, conanbuildinfo)
+        self.assertIn(expected, conanbuildinfo_multi)
