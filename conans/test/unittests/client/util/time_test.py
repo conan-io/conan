@@ -19,7 +19,7 @@ class TimeTest(unittest.TestCase):
         dt = from_iso8601_to_datetime(artifactory_ret)
         expected = datetime.datetime(year=2019, month=2, day=20, hour=13, minute=54, second=47,
                                      microsecond=543000)
-        self.assertEqual( dt, expected)
+        self.assertEqual(dt, expected)
 
     def validation_test(self):
         self.assertFalse(valid_iso8601("1547138099"))
