@@ -177,9 +177,20 @@ class DepsGraphBuilder(object):
                                      "    To change it, override it in your base requirements"
                                      % (node.ref, require.ref, previous.ref))
 
+            # Add ancestors
+            for it in node.ancestors:
+                previous.ancestors.add(it)
             previous.ancestors.add(node.name)
             node.public_closure[name] = previous
             dep_graph.add_edge(node, previous, require.private, require.build_require)
+
+            # Update the closure of each dependent
+            for dep_node_name, dep_node in node.public_deps.items():
+                if dep_node is node:
+                    continue
+                if dep_node_name in previous.ancestors:
+                    dep_node.public_closure[previous.name] = previous
+
             # RECURSION!
             if self._recurse(previous.public_closure, new_reqs, new_options):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
