@@ -47,7 +47,6 @@ class ConanPythonRequire(object):
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remotes=self._remotes)
             ref = requirement.ref
-
             result = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                             remotes=self._remotes,
                                             recorder=ActionRecorder())

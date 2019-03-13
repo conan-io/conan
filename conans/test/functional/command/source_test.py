@@ -189,7 +189,7 @@ class ConanLib(ConanFile):
     version = "0.1"
 
     def package_info(self):
-        self.cpp_info.cppflags.append("FLAG")
+        self.cpp_info.cxxflags.append("FLAG")
         self.env_info.MYVAR = "foo"
         self.user_info.OTHERVAR = "bar"
 '''
@@ -208,7 +208,7 @@ class ConanLib(ConanFile):
 
     def source(self):
         assert(os.getcwd() == self.source_folder)
-        self.output.info("FLAG=%s" % self.deps_cpp_info["Hello"].cppflags[0])
+        self.output.info("FLAG=%s" % self.deps_cpp_info["Hello"].cxxflags[0])
         self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
         self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)
         self.output.info("CURDIR=%s" % os.getcwd())

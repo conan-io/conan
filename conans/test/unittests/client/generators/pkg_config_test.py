@@ -28,7 +28,7 @@ class PkgGeneratorTest(unittest.TestCase):
         cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
-        cpp_info.cppflags = ["-cppflag"]
+        cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = PkgConfigGenerator(conanfile)
@@ -42,7 +42,7 @@ Name: MyPkg2
 Description: Conan package: MyPkg2
 Version: 2.3
 Libs: -L${libdir} -sharedlinkflag -exelinkflag
-Cflags: -I${includedir} -cppflag -DMYDEFINE2
+Cflags: -I${includedir} -cxxflag -DMYDEFINE2
 Requires: MyPkg
 """)
 

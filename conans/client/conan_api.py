@@ -578,6 +578,7 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
+
             remotes = self._cache.registry.load_remotes()
             remotes.select(remote_name)
             self.python_requires.enable_remotes(update=update, remotes=remotes)
@@ -666,7 +667,6 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
-
         remotes = self._cache.registry.load_remotes()
         remotes.select(remote_name)
         self.python_requires.enable_remotes(check_updates=check_updates, remotes=remotes)

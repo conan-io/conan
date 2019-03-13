@@ -41,7 +41,7 @@ class B2GeneratorTest(unittest.TestCase):
         cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
-        cpp_info.cppflags = ["-cppflag"]
+        cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg"]
         cpp_info.lib_paths.extend(["Path\\with\\slashes", "regular/path/to/dir"])
         cpp_info.include_paths.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
@@ -182,7 +182,7 @@ constant-if defines(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if cppflags(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "-cppflag"
+    "-cxxflag"
     ;
 
 constant-if cflags(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -266,7 +266,7 @@ constant-if defines(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if cppflags(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "-cppflag"
+    "-cxxflag"
     ;
 
 constant-if sharedlinkflags(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
