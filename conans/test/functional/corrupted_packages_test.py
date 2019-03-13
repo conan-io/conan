@@ -33,8 +33,11 @@ class CorruptedPackagesTest(unittest.TestCase):
         order2 = str(self.client.out).find("Uploading conaninfo.txt", order1)
         order3 = str(self.client.out).find("Uploading conanmanifest.txt", order2)
         self.assertTrue(order1 < order2 < order3)
-        self.pref = pref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing#0"),
-                                NO_SETTINGS_PACKAGE_ID, "0")
+        rrev = "210a4a16419aae28fea1f268a8e4f3d4" if revisions_enabled else "0"
+        pref_str = "Pkg/0.1@user/testing#%s" % rrev
+        prev = "11de80325e8db78617b05384825c6409" if revisions_enabled else "0"
+        self.pref = pref = PackageReference(ConanFileReference.loads(pref_str),
+                                NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,
                                                                             "conanmanifest.txt")
         self.info_path = self.server.server_store.get_package_file_path(pref, "conaninfo.txt")
