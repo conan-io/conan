@@ -11,7 +11,8 @@ from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_DIR_OLD, \
-    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
+    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir, CONANINFO, \
+    CONAN_MANIFEST
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
@@ -129,6 +130,9 @@ class RemoteManager(object):
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
+            snapshot = self._call_remote(remote, "get_package_snapshot", pref)
+            if [CONANINFO, CONAN_MANIFEST, PACKAGE_TGZ_NAME] != snapshot:
+                raise NotFoundException
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:

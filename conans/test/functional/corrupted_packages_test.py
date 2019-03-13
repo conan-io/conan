@@ -76,11 +76,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install Pkg/0.1@user/testing")  # FIXME: missing conanmanifest.txt does NOT fail?
+        self.client.run("install Pkg/0.1@user/testing", assert_error=True)
+        self.assertIn("ERROR: Binary package not found", self.client.out)
         self.assertIn(NO_SETTINGS_PACKAGE_ID, self.client.out)
-        # Try upload of installed package
-        self.client.run("upload * --all --confirm", assert_error=True)
-        self.assertIn("ERROR: Cannot upload corrupted package", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
@@ -115,11 +113,8 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("search Pkg/0.1@user/testing -r default")
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install Pkg/0.1@user/testing")
-        print(self.client.out)  # FIXME: missing conan_package.tgz does NOT fail?
-        self.assertIn(NO_SETTINGS_PACKAGE_ID, self.client.out)
-        self.client.run("upload * --all --confirm")
-        print(self.client.out)  # FIXME: Package up to date but actually the tgz is missing in the server
+        self.client.run("install Pkg/0.1@user/testing", assert_error=True)
+        self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
@@ -137,10 +132,8 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
-        self.client.run("install Pkg/0.1@user/testing")  # FIXME: missing conan_package.tgz and conanmanifest.txt does NOT fail?
-        # Try upload of installed package
-        self.client.run("upload * --all --confirm", assert_error=True)
-        self.assertIn("ERROR: Cannot upload corrupted package", self.client.out)
+        self.client.run("install Pkg/0.1@user/testing", assert_error=True)
+        self.assertIn("ERROR: Binary package not found", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
