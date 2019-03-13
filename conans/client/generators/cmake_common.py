@@ -518,8 +518,14 @@ endmacro()
 """
 
 
-def _conan_basic_setup_common(addtional_macros):
-    return """
+def _conan_basic_setup_common(addtional_macros, cmake_multi=False):
+    output_dirs_section = """
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(STATUS "Conan: Adjusting output directories")
+        conan_output_dirs_setup()
+    endif()"""
+
+    main_section = """
 macro(conan_basic_setup)
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
@@ -531,11 +537,7 @@ macro(conan_basic_setup)
     if(CONAN_IN_LOCAL_CACHE)
         conan_message(STATUS "Conan: called inside local cache")
     endif()
-
-    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
-        conan_message(STATUS "Conan: Adjusting output directories")
-        conan_output_dirs_setup()
-    endif()
+%%OUTPUT_DIRS_SECTION%%
 
     if(NOT ARGUMENTS_TARGETS)
         conan_message(STATUS "Conan: Using cmake global configuration")
@@ -571,7 +573,11 @@ macro(conan_basic_setup)
     conan_set_find_paths()
     %%INVOKE_MACROS%%
 endmacro()
-""".replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
+"""
+    result = main_section.replace("%%OUTPUT_DIRS_SECTION%%",
+                                  "" if cmake_multi else output_dirs_section)
+    result = result.replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
+    return result
 
 
 cmake_macros = _conan_basic_setup_common(["conan_set_find_library_paths()"]) + """

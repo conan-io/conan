@@ -76,7 +76,7 @@ cmake_multi = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(Hello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 include(${{CMAKE_CURRENT_BINARY_DIR}}/conanbuildinfo_multi.cmake)
-conan_basic_setup(NO_OUTPUT_DIRS)
+conan_basic_setup()
 add_library(hello{name} hello.cpp)
 conan_target_link_libraries(hello{name})
 """
@@ -458,7 +458,6 @@ class WorkspaceTest(unittest.TestCase):
 
         client.runner('cmake --build . --config Release', cwd=build)
         client.runner(cmd_release, cwd=client.current_folder)
-        print(client.out)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
