@@ -98,7 +98,7 @@ class WorkspaceTest(unittest.TestCase):
         project = "root: Hellob/0.1@lasote/stable"
         save(path, project)
         with six.assertRaisesRegex(self, ConanException,
-                                     "Root Hellob/0.1@lasote/stable is not defined as editable"):
+                                   "Root Hellob/0.1@lasote/stable is not defined as editable"):
             Workspace(path, None)
 
         project = dedent("""
@@ -111,7 +111,7 @@ class WorkspaceTest(unittest.TestCase):
         save(path, project)
 
         with six.assertRaisesRegex(self, ConanException,
-                                     "Workspace unrecognized fields: {'random': 'something'}"):
+                                   "Workspace unrecognized fields: {'random': 'something'}"):
             Workspace(path, None)
 
         project = dedent("""
@@ -124,7 +124,7 @@ class WorkspaceTest(unittest.TestCase):
         save(path, project)
 
         with six.assertRaisesRegex(self, ConanException,
-                                     "Workspace unrecognized fields: {'random': 'something'}"):
+                                   "Workspace unrecognized fields: {'random': 'something'}"):
             Workspace(path, None)
 
         project = dedent("""
@@ -135,8 +135,8 @@ class WorkspaceTest(unittest.TestCase):
         save(path, project)
 
         with six.assertRaisesRegex(self, ConanException,
-                                     "Workspace editable HelloB/0.1@lasote/stable "
-                                     "does not define path"):
+                                   "Workspace editable HelloB/0.1@lasote/stable "
+                                   "does not define path"):
             Workspace(path, None)
 
         project = dedent("""
@@ -148,8 +148,8 @@ class WorkspaceTest(unittest.TestCase):
         save(path, project)
 
         with six.assertRaisesRegex(self, ConanException,
-                                     "Workspace editable HelloB/0.1@lasote/stable "
-                                     "does not define path"):
+                                   "Workspace editable HelloB/0.1@lasote/stable "
+                                   "does not define path"):
             Workspace(path, None)
 
     def simple_test(self):
@@ -230,6 +230,53 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", a_cmake)
         b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
+
+    def transitivity_test(self):
+        # https://github.com/conan-io/conan/issues/4720
+        client = TestClient()
+
+        def files(name, depend=None):
+            if isinstance(depend, list):
+                deps = ", ".join(["'Hello%s/0.1@lasote/stable'" % d for d in depend])
+            else:
+                deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("D"), path=os.path.join(client.current_folder, "D"))
+        client.save(files("C", "D"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
+
+        client.save(files("A", ["D", "C", "B"]), path=os.path.join(client.current_folder, "A"))
+
+        project = dedent("""
+            editables:
+                HelloD/0.1@lasote/stable:
+                    path: D
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
+            layout: layout
+            root: HelloA/0.1@lasote/stable
+            """)
+        layout = dedent("""
+            [build_folder]
+
+            """)
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
+
+        a_cmake = load(os.path.join(client.current_folder, "A", "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS helloB helloC helloD ${CONAN_LIBS})", a_cmake)
+        b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", b_cmake)
 
     def simple_build_test(self):
         client = TestClient()

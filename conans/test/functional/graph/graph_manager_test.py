@@ -1,110 +1,12 @@
-import os
-import unittest
-
 import six
-from mock import Mock
+
 from parameterized import parameterized
 
-from conans.client.cache.cache import ClientCache
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
-from conans.client.graph.graph_manager import GraphManager
-from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.graph.range_resolver import RangeResolver
-from conans.client.installer import BinaryInstaller
-from conans.client.loader import ConanFileLoader
-from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException
-from conans.model.graph_info import GraphInfo
-from conans.model.manifest import FileTreeManifest
-from conans.model.options import OptionsValues
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.unittests.model.transitive_reqs_test import MockSearchRemote
 from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
-from conans.util.files import save
-
-
-class GraphManagerTest(unittest.TestCase):
-
-    def setUp(self):
-        self.output = TestBufferConanOutput()
-        cache_folder = temp_folder()
-        cache = ClientCache(cache_folder, os.path.join(cache_folder, ".conan"), self.output)
-        self.cache = cache
-        self.remote_search = MockSearchRemote()
-        remote_manager = None
-        self.resolver = RangeResolver(cache, self.remote_search)
-        proxy = ConanProxy(cache, self.output, remote_manager)
-        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
-        self.manager = GraphManager(self.output, cache, remote_manager, self.loader, proxy,
-                                    self.resolver)
-        hook_manager = Mock()
-        recorder = Mock()
-        self.binary_installer = BinaryInstaller(cache, self.output, remote_manager, recorder,
-                                                hook_manager)
-
-    def _cache_recipe(self, reference, test_conanfile, revision=None):
-        if isinstance(test_conanfile, TestConanFile):
-            test_conanfile.info = True
-        ref = ConanFileReference.loads(reference)
-        save(self.cache.conanfile(ref), str(test_conanfile))
-        with self.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.cache.export(ref))
-        manifest.save(self.cache.export(ref))
-
-    def build_graph(self, content, profile_build_requires=None, ref=None):
-        path = temp_folder()
-        path = os.path.join(path, "conanfile.py")
-        save(path, str(content))
-        self.loader.cached_conanfiles = {}
-
-        profile = Profile()
-        if profile_build_requires:
-            profile.build_requires = profile_build_requires
-        profile.process_settings(self.cache)
-        update = check_updates = False
-        recorder = ActionRecorder()
-        remote_name = None
-        build_mode = []
-        ref = ref or ConanFileReference(None, None, None, None, validate=False)
-        options = OptionsValues()
-        graph_info = GraphInfo(profile, options, root_ref=ref)
-        deps_graph, _ = self.manager.load_graph(path, None, graph_info,
-                                                build_mode, check_updates, update,
-                                                remote_name, recorder)
-        self.binary_installer.install(deps_graph, False, graph_info)
-        return deps_graph
-
-    def _check_node(self, node, ref, deps, build_deps, dependents, closure, public_deps):
-        conanfile = node.conanfile
-        ref = ConanFileReference.loads(str(ref))
-        self.assertEqual(node.ref.full_repr(), ref.full_repr())
-        self.assertEqual(conanfile.name, ref.name)
-        self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
-        self.assertEqual(len(node.dependants), len(dependents))
-
-        public_deps = {n.name: n for n in public_deps}
-        self.assertEqual(node.public_deps, public_deps)
-
-        # The recipe requires is resolved to the reference WITH revision!
-        self.assertEqual(len(deps), len(conanfile.requires))
-        for dep in deps:
-            self.assertEqual(conanfile.requires[dep.name].ref,
-                             dep.ref)
-
-        self.assertEqual(closure, node.public_closure)
-        libs = []
-        envs = []
-        for n in closure:
-            libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
-            envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertEqual(conanfile.deps_cpp_info.libs, libs)
-        env = {"MYENV": envs} if envs else {}
-        self.assertEqual(conanfile.deps_env_info.vars, env)
+from conans.test.functional.graph.graph_manager_base import GraphManagerTest
 
 
 class TransitiveGraphTest(GraphManagerTest):
@@ -190,6 +92,35 @@ class TransitiveGraphTest(GraphManagerTest):
                          dependents=[app], closure=[liba], public_deps=[app, libb, libc, liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[libb, libc], closure=[], public_deps=[app, libb, libc, liba])
+
+    def test_multiple_transitive(self):
+        # https://github.com/conan-io/conan/issues/4720
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1"))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[libd_ref]))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[libc_ref]))
+        deps_graph = self.build_graph(TestConanFile("liba", "0.1",
+                                                    requires=[libd_ref, libc_ref, libb_ref]))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        liba = deps_graph.root
+        libd = liba.dependencies[0].dst
+        libc = liba.dependencies[1].dst
+        libb = liba.dependencies[2].dst
+
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc], closure=[], public_deps=[liba, libb, libc, libd])
+        self._check_node(liba, "liba/0.1@None/None", deps=[libd, libc, libb], build_deps=[],
+                         dependents=[],
+                         closure=[libb, libc, libd], public_deps=[liba, libb, libc, libd])
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[libc], build_deps=[],
+                         dependents=[liba], closure=[libc, libd],
+                         public_deps=[liba, libb, libc, libd])
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[liba, libb], closure=[libd],
+                         public_deps=[liba, libb, libc, libd])
 
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
