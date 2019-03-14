@@ -178,8 +178,16 @@ class DepsGraphBuilder(object):
                                      % (node.ref, require.ref, previous.ref))
 
             previous.ancestors.add(node.name)
+            previous.ancestors.update(node.ancestors)
             node.public_closure[name] = previous
             dep_graph.add_edge(node, previous, require.private, require.build_require)
+            # Update the closure of each dependent
+            for dep_node_name, dep_node in previous.public_deps.items():
+                if dep_node is previous:
+                    continue
+                if dep_node_name in previous.ancestors:
+                    dep_node.public_closure.update(previous.public_closure)
+
             # RECURSION!
             if self._recurse(previous.public_closure, new_reqs, new_options):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
