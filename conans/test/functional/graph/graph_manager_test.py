@@ -90,8 +90,124 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[libb, libc], closure=[], public_deps=[app, libb, libc, liba])
 
+    def test_consecutive_diamonds(self):
+        # app -> libe0.1 -> libd0.1 -> libb0.1 -> liba0.1
+        #    \-> libf0.1 ->/    \-> libc0.1 ->/
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        libe_ref = "libe/0.1@user/testing"
+        libf_ref = "libf/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[libb_ref, libc_ref]))
+        self._cache_recipe(libe_ref, TestConanFile("libe", "0.1", requires=[libd_ref]))
+        self._cache_recipe(libf_ref, TestConanFile("libf", "0.1", requires=[libd_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libe_ref, libf_ref]))
+
+        self.assertEqual(7, len(deps_graph.nodes))
+        app = deps_graph.root
+        libe = app.dependencies[0].dst
+        libf = app.dependencies[1].dst
+        libd = libe.dependencies[0].dst
+        libb = libd.dependencies[0].dst
+        libc = libd.dependencies[1].dst
+        liba = libc.dependencies[0].dst
+
+        public_deps = [app, libb, libc, liba, libd, libe, libf]
+        self._check_node(app, "app/0.1@None/None", deps=[libe, libf], build_deps=[], dependents=[],
+                         closure=[libe, libf, libd, libb, libc, liba], public_deps=public_deps)
+        self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[app], closure=[libd, libb, libc, liba],
+                         public_deps=public_deps)
+        self._check_node(libf, "libf/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[app], closure=[libd, libb, libc, liba],
+                         public_deps=public_deps)
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb, libc], build_deps=[],
+                         dependents=[libe, libf], closure=[libb, libc, liba],
+                         public_deps=public_deps)
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc], closure=[], public_deps=public_deps)
+
+    def test_parallel_diamond(self):
+        # app -> libb0.1 -> liba0.1
+        #    \-> libc0.1 ->/
+        #    \-> libd0.1 ->/
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[liba_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=[libb_ref, libc_ref, libd_ref]))
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        libd = app.dependencies[2].dst
+        liba = libb.dependencies[0].dst
+
+        public_deps = [app, libb, libc, liba, libd]
+        self._check_node(app, "app/0.1@None/None", deps=[libb, libc, libd], build_deps=[],
+                         dependents=[], closure=[libb, libc, libd, liba], public_deps=public_deps)
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc, libd], closure=[], public_deps=public_deps)
+
+    def test_nested_diamond(self):
+        # app --------> libb0.1 -> liba0.1
+        #    \--------> libc0.1 ->/
+        #     \-> libd0.1 ->/
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[libc_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=[libb_ref, libc_ref, libd_ref]))
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        libd = app.dependencies[2].dst
+        liba = libb.dependencies[0].dst
+
+        public_deps = [app, libb, libc, liba, libd]
+        self._check_node(app, "app/0.1@None/None", deps=[libb, libc, libd], build_deps=[],
+                         dependents=[], closure=[libb, libd, libc, liba], public_deps=public_deps)
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app, libd], closure=[liba], public_deps=public_deps)
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[libc], build_deps=[],
+                         dependents=[app], closure=[libc, liba], public_deps=public_deps)
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc], closure=[], public_deps=public_deps)
+
     def test_multiple_transitive(self):
         # https://github.com/conanio/conan/issues/4720
+        # app -> libb0.1  -> libc0.1 -> libd0.1
+        #    \--------------->/          /
+        #     \------------------------>/
         libb_ref = "libb/0.1@user/testing"
         libc_ref = "libc/0.1@user/testing"
         libd_ref = "libd/0.1@user/testing"
