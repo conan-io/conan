@@ -303,8 +303,8 @@ class Pkg(ConanFile):
 
         info = install_and_get_info(None)  # Default
 
-        self.assertEquals(str(info.settings.os_build), "None")
-        self.assertEquals(str(info.settings.arch_build), "None")
+        self.assertEqual(str(info.settings.os_build), "None")
+        self.assertEqual(str(info.settings.arch_build), "None")
 
         # Package has to be present with only os and arch settings
         self.client.run('install Hello/1.2.0@user/testing '
@@ -320,8 +320,8 @@ class Pkg(ConanFile):
 
         # take into account build
         info = install_and_get_info("self.info.include_build_settings()")
-        self.assertEquals(str(info.settings.os_build), "Linux")
-        self.assertEquals(str(info.settings.arch_build), "x86")
+        self.assertEqual(str(info.settings.os_build), "Linux")
+        self.assertEqual(str(info.settings.arch_build), "x86")
 
         # Now the build settings matter
         err = self.client.run('install Hello/1.2.0@user/testing '
@@ -352,8 +352,8 @@ class Pkg(ConanFile):
         pref = PackageReference(ref, pkg[0])
         pkg_folder = self.client.cache.package(pref)
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
-        self.assertEquals(str(info.settings.os_build), "Linux")
-        self.assertEquals(str(info.settings.arch_build), "x86")
+        self.assertEqual(str(info.settings.os_build), "Linux")
+        self.assertEqual(str(info.settings.arch_build), "x86")
 
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def test_standard_version_default_matching(self):

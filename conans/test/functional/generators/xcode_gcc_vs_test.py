@@ -85,8 +85,8 @@ xcode
         expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
-        self.assertEquals("hello.lib;%(AdditionalDependencies)", libs)
-        self.assertEquals("%(PreprocessorDefinitions)", definitions)
+        self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
+        self.assertEqual("%(PreprocessorDefinitions)", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR

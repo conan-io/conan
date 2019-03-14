@@ -151,10 +151,11 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
         registry = load(self.client.cache.registry_path)
         registry = json.loads(registry)
+
         metadata = self.client.cache.package_layout(ref).load_metadata()
-        self.assertEquals(metadata.recipe.remote, "remote0")
-        self.assertEquals(metadata.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"].remote,
-                          "remote2")
+        self.assertEqual(metadata.recipe.remote, "remote0")
+        self.assertEqual(metadata.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"].remote,
+                         "remote2")
 
         client2 = TestClient(servers=self.servers, users=self.users)
         time.sleep(1)  # Make sure timestamps increase

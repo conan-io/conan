@@ -1,7 +1,8 @@
 
-from parameterized import parameterized
-
 from collections import namedtuple
+
+import six
+from parameterized import parameterized
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -177,7 +178,7 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@myuser/testing", %s
 """
         if valid is False:
-            with self.assertRaisesRegexp(ConanException, "not valid"):
+            with six.assertRaisesRegex(self, ConanException, "not valid"):
                 self.build_graph(chat_content % version_range)
             return
 

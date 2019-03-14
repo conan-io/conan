@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import six
+
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
@@ -244,9 +246,9 @@ class ConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("source ./conanfile.py --source-folder sf")
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             client.run("source . --source-folder sf --source-folder sf")
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             client.run("source conanfile.py --source-folder sf --install-folder if "
                        "--install-folder rr")
 

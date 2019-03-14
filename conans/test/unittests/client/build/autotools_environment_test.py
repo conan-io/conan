@@ -165,17 +165,17 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.make(make_program="othermake")
-        self.assertEquals(runner.command_called, "othermake -j%s" %
+        self.assertEqual(runner.command_called, "othermake -j%s" %
                           cpu_count(output=conanfile.output))
 
         with tools.environment_append({"CONAN_MAKE_PROGRAM": "mymake"}):
             ab.make(make_program="othermake")
-            self.assertEquals(runner.command_called, "mymake -j%s" %
+            self.assertEqual(runner.command_called, "mymake -j%s" %
                               cpu_count(output=conanfile.output))
 
         ab.make(args=["things"])
         things = "'things'" if platform.system() != "Windows" else "things"
-        self.assertEquals(runner.command_called, "make %s -j%s" %
+        self.assertEqual(runner.command_called, "make %s -j%s" %
                           (things, cpu_count(output=conanfile.output)))
 
     def test_variables(self):
@@ -195,7 +195,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib.lib twolib.lib'}
 
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
         # GCC 32
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86",
@@ -212,7 +212,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m32 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
 
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         # GCC 64
         settings = MockSettings({"build_type": "Debug",
@@ -229,7 +229,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         # With clang, we define _GLIBCXX_USE_CXX11_ABI
         settings = MockSettings({"build_type": "Release",
@@ -246,7 +246,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         # Change libcxx
         settings = MockSettings({"build_type": "Release",
@@ -262,7 +262,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         # gcc libcxx
         settings = MockSettings({"build_type": "Release",
@@ -279,7 +279,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         # Sun CC libCstd
         settings = MockSettings({"build_type": "Release",
@@ -295,7 +295,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86_64",
@@ -310,7 +310,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86_64",
@@ -325,7 +325,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86_64",
@@ -340,7 +340,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
     def rpath_optin_test(self):
         settings = MockSettings({"os_build": "Linux",
@@ -359,7 +359,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                '-Wl,-rpath="one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
     def environment_append_test(self):
         settings = MockSettings({"build_type": "Debug",
@@ -384,7 +384,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                         'LDFLAGS': 'shared_link_flag exe_link_flag -m64 '
                                    '--sysroot=/path/to/folder -Lone/lib/path -additionalldflag',
                         'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder -additionalcflag'}
-            self.assertEquals(be.vars, expected)
+            self.assertEqual(be.vars, expected)
 
     def modify_values_test(self):
         settings = MockSettings({"build_type": "Debug",
@@ -409,7 +409,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder cucucu -fPIC a_cxx_flag -onlycxx',
                     'LDFLAGS': '-inventedflag -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
-        self.assertEquals(be.vars, expected)
+        self.assertEqual(be.vars, expected)
 
     def test_previous_env(self):
         settings = MockSettings({"arch": "x86",
@@ -419,7 +419,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         with tools.environment_append({"CPPFLAGS": "MyCppFlag"}):
             be = AutoToolsBuildEnvironment(conanfile)
-            self.assertEquals(be.vars["CPPFLAGS"], "MyCppFlag")
+            self.assertEqual(be.vars["CPPFLAGS"], "MyCppFlag")
 
     def cross_build_command_test(self):
         runner = RunnerMock()
@@ -430,16 +430,16 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(ab.target)
 
         ab.configure()
-        self.assertEquals(runner.command_called, "./configure  ")
+        self.assertEqual(runner.command_called, "./configure  ")
 
         ab.configure(host="x86_64-apple-darwin")
-        self.assertEquals(runner.command_called, "./configure  --host=x86_64-apple-darwin")
+        self.assertEqual(runner.command_called, "./configure  --host=x86_64-apple-darwin")
 
         ab.configure(build="arm-apple-darwin")
-        self.assertEquals(runner.command_called, "./configure  --build=arm-apple-darwin")
+        self.assertEqual(runner.command_called, "./configure  --build=arm-apple-darwin")
 
         ab.configure(target="i686-apple-darwin")
-        self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
+        self.assertEqual(runner.command_called, "./configure  --target=i686-apple-darwin")
 
         conanfile = MockConanfile(MockSettings({"build_type": "Debug",
                                                 "arch": "x86_64",
@@ -485,10 +485,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         ab.configure()
 
         ab.make(target="install")
-        self.assertEquals(runner.command_called, "make install -j%s" %
+        self.assertEqual(runner.command_called, "make install -j%s" %
                           cpu_count(output=conanfile.output))
         ab.install()
-        self.assertEquals(runner.command_called, "make install -j%s" %
+        self.assertEqual(runner.command_called, "make install -j%s" %
                           cpu_count(output=conanfile.output))
 
     def autotools_install_dir_custom_configure_test(self):

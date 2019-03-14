@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 
 
@@ -7,21 +9,21 @@ class QueryParseTest(unittest.TestCase):
 
     def test_get_postfix(self):
         r = infix_to_postfix("")
-        self.assertEquals(r, [])
+        self.assertEqual(r, [])
 
         r = infix_to_postfix("a=2")
-        self.assertEquals(r, ["a=2"])
+        self.assertEqual(r, ["a=2"])
 
         r = infix_to_postfix("a=2 OR b=3")
-        self.assertEquals(r, ["a=2", "b=3", "|"])
+        self.assertEqual(r, ["a=2", "b=3", "|"])
 
         r = infix_to_postfix("a= OR b=")
-        self.assertEquals(r, ["a=", "b=", "|"])  # Equivalent to ""
+        self.assertEqual(r, ["a=", "b=", "|"])  # Equivalent to ""
 
         r = infix_to_postfix("(a=2 OR b=3) AND (j=34 AND j=45) OR (a=1)")
-        self.assertEquals(r, ["a=2", "b=3", "|", "j=34", "j=45", "&", "a=1", "&", "|"])
+        self.assertEqual(r, ["a=2", "b=3", "|", "j=34", "j=45", "&", "a=1", "&", "|"])
 
-        with self.assertRaisesRegexp(Exception, "Invalid expression: 2"):
+        with six.assertRaisesRegex(self, Exception, "Invalid expression: 2"):
             r = infix_to_postfix("a= 2 OR b=3")
 
     def test_evaluate_postfix(self):

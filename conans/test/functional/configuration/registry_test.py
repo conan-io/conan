@@ -2,11 +2,10 @@ import os
 import unittest
 
 from conans.client.cache.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
-    load_registry_txt, migrate_registry_file, Remote
+    load_registry_txt, Remote
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
 from conans.client.cache.cache import ClientCache
 

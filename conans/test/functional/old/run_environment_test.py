@@ -35,6 +35,6 @@ class RunEnvironmentTest(unittest.TestCase):
         conanfile.deps_cpp_info["two"].lib_paths.append("path/libs")
         be = RunEnvironment(conanfile)
 
-        self.assertEquals(be.vars,  {'PATH': ['path/bin'],
+        self.assertEqual(be.vars,  {'PATH': ['path/bin'],
                                      'LD_LIBRARY_PATH': ['path/libs'],
                                      'DYLD_LIBRARY_PATH': ['path/libs']})
