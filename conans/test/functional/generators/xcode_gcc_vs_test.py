@@ -23,7 +23,7 @@ class Pkg(ConanFile):
         os.makedirs(os.path.join(self.package_folder, "include"))
     def package_info(self):
         self.cpp_info.libs = ["hello"]
-        self.cpp_info.cppflags = ["-some_cpp_compiler_flag"]
+        self.cpp_info.cxxflags = ["-some_cxx_compiler_flag"]
         self.cpp_info.cflags = ["-some_c_compiler_flag"]
 """})
         client.run("export . Hello/0.1@lasote/stable")
@@ -85,15 +85,15 @@ xcode
         expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
-        self.assertEquals("hello.lib;%(AdditionalDependencies)", libs)
-        self.assertEquals("%(PreprocessorDefinitions)", definitions)
+        self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
+        self.assertEqual("%(PreprocessorDefinitions)", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR
         xcode = load(os.path.join(client.current_folder, BUILD_INFO_XCODE))
 
         expected_c_flags = '-some_c_compiler_flag'
-        expected_cpp_flags = '-some_cpp_compiler_flag'
+        expected_cpp_flags = '-some_cxx_compiler_flag'
         expected_lib_dirs = os.path.join(package_path, "lib").replace("\\", "/")
         expected_include_dirs = os.path.join(package_path, "include").replace("\\", "/")
 

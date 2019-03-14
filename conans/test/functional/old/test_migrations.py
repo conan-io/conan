@@ -33,7 +33,7 @@ with other values
         migrate_to_default_profile(conf_path, default_profile_path)
 
         new_content = load(conf_path)
-        self.assertEquals(new_content, """
+        self.assertEqual(new_content, """
 [general]
 the old general
 
@@ -44,7 +44,7 @@ with other values
 """)
 
         default_profile = load(default_profile_path)
-        self.assertEquals(default_profile, """[settings]
+        self.assertEqual(default_profile, """[settings]
 some settings""")
 
         old_conf = """
@@ -61,11 +61,11 @@ some settings
 
         migrate_to_default_profile(conf_path, default_profile_path)
         default_profile = load(default_profile_path)
-        self.assertEquals(default_profile, """[settings]
+        self.assertEqual(default_profile, """[settings]
 some settings""")
 
         new_content = load(conf_path)
-        self.assertEquals(new_content, """
+        self.assertEqual(new_content, """
 [general]
 the old general
 

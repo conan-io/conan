@@ -3,18 +3,17 @@ import platform
 import tempfile
 import time
 import unittest
-
 from textwrap import dedent
 
+import six
 
 from conans.client import tools
+from conans.errors import ConanException
+from conans.model.workspace import Workspace
 from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
-from conans.test.utils.test_files import temp_folder
-from conans.model.workspace import Workspace
-from conans.errors import ConanException
-
 
 conanfile_build = """from conans import ConanFile, CMake
 class Pkg(ConanFile):
@@ -100,7 +99,7 @@ class WorkspaceTest(unittest.TestCase):
         path = os.path.join(folder, "conanws.yml")
         project = "root: Hellob/0.1@lasote/stable"
         save(path, project)
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Root Hellob/0.1@lasote/stable is not defined as editable"):
             Workspace(path, None)
 
@@ -113,7 +112,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Workspace unrecognized fields: {'random': 'something'}"):
             Workspace(path, None)
 
@@ -126,7 +125,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Workspace unrecognized fields: {'random': 'something'}"):
             Workspace(path, None)
 
@@ -137,7 +136,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Workspace editable HelloB/0.1@lasote/stable "
                                      "does not define path"):
             Workspace(path, None)
@@ -150,7 +149,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Workspace editable HelloB/0.1@lasote/stable "
                                      "does not define path"):
             Workspace(path, None)

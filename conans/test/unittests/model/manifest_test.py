@@ -27,12 +27,12 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(readed_manifest.time, manifest.time)
         self.assertEqual(readed_manifest, manifest)
         # Not included the pycs or pyo
-        self.assertEquals(set(manifest.file_sums.keys()),
+        self.assertEqual(set(manifest.file_sums.keys()),
                           set(["one.ext", "path/to/two.txt", "two.txt"]))
 
         for filepath, md5readed in manifest.file_sums.items():
             content = files[filepath]
-            self.assertEquals(md5(content), md5readed)
+            self.assertEqual(md5(content), md5readed)
 
     def already_pyc_in_manifest_test(self):
         tmp_dir = temp_folder()
@@ -43,5 +43,5 @@ class ManifestTest(unittest.TestCase):
 
         read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
         # Not included the pycs or pyo
-        self.assertEquals(set(read_manifest.file_sums.keys()),
+        self.assertEqual(set(read_manifest.file_sums.keys()),
                           set(["conanfile.py"]))
