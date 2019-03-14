@@ -1,5 +1,6 @@
 import os
 import platform
+import tempfile
 import time
 import unittest
 
@@ -7,6 +8,7 @@ from textwrap import dedent
 
 
 from conans.client import tools
+from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 from conans.test.utils.test_files import temp_folder
@@ -154,7 +156,8 @@ class WorkspaceTest(unittest.TestCase):
             Workspace(path, None)
 
     def simple_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
@@ -190,7 +193,8 @@ class WorkspaceTest(unittest.TestCase):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
     def simple_build_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             includes = ('#include "hello%s.h"' % depend) if depend else ""
@@ -262,7 +266,8 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World A Debug!", client.out)
 
     def complete_single_conf_build_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             includes = ('#include "hello%s.h"' % depend) if depend else ""
@@ -382,7 +387,8 @@ class WorkspaceTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() == "Windows", "only windows")
     def complete_multi_conf_build_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             includes = ('#include "hello%s.h"' % depend) if depend else ""
@@ -496,7 +502,8 @@ class WorkspaceTest(unittest.TestCase):
 
     def build_requires_test(self):
         # https://github.com/conan-io/conan/issues/3075
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
         tool = """from conans import ConanFile
 class Tool(ConanFile):
     def package_info(self):
@@ -552,7 +559,8 @@ class Pkg(ConanFile):
             self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
     def use_build_requires_editable_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
         toolconanfile = """from conans import ConanFile
 class Tool(ConanFile):
     def package_info(self):
@@ -600,7 +608,8 @@ class Pkg(ConanFile):
         self.assertIn("set(CONAN_LIBS_TOOL MyToolLib)", conanbuildinfo)
 
     def per_package_layout_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
@@ -644,7 +653,8 @@ class Pkg(ConanFile):
         self.assertIn("myincludeB", cmake)
 
     def generators_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
@@ -692,7 +702,8 @@ class Pkg(ConanFile):
                                                     "conanworkspace.cmake")))
 
     def gen_subdirectories_test(self):
-        client = TestClient()
+        test_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        client = TestClient(current_folder=test_folder)
 
         def files(name, depend=None):
             deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
