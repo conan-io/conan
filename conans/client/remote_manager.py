@@ -131,8 +131,8 @@ class RemoteManager(object):
         try:
             pref = self._resolve_latest_pref(pref, remote)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
-            if any([keyword in key for keyword in ["conaninfo", "conanmanifest", "conan_package"]
-                   for key in snapshot]):
+            if not any([keyword in key for keyword in ["conaninfo", "conanmanifest", "conan_package"]
+                        for key in snapshot]):
                 raise NotFoundException
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
