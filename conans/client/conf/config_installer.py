@@ -14,19 +14,6 @@ from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, walk, save
 
 
-def migrate_config_install(cache):
-    try:
-        item = cache.config.get_item("general.config_install")
-        config_type, uri, verify_ssl, args = [r.strip() for r in item.split(",")]
-        verify_ssl = "true" in verify_ssl.lower()
-        args = None if "none" in args.lower() else args
-        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args, None, None)
-        _save_configs(cache.config_install_file, [config])
-        cache.config.rm_item("general.config_install")
-    except ConanException:
-        pass
-
-
 def _hide_password(resource):
     """
     Hide password from url/file path

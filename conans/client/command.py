@@ -437,7 +437,8 @@ class Command(object):
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
         install_subparser.add_argument("-sf", "--source-folder",
-                                       help='Install files from that path')
+                                       help='Install files only from a source subfolder from the '
+                                       'specified origin')
         install_subparser.add_argument("-tf", "--target-folder",
                                        help='Install to that path in the conan cache')
 
