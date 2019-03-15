@@ -2,7 +2,8 @@ import os
 import shutil
 import unittest
 
-from conans.test.utils.tools import TestClient
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
@@ -24,6 +25,7 @@ class TestConan(ConanFile):
                  "FindHello0.cmake": """
 SET(Hello0_FOUND 1)
 MESSAGE("HELLO FROM THE Hello0 FIND PACKAGE!")
+MESSAGE("ROOT PATH: ${CONAN_HELLO0_ROOT}")
 """}
         client.save(files)
         client.run("create . user/channel")
@@ -55,6 +57,11 @@ find_package(Hello0 REQUIRED)
                             cwd=build_dir)
         self.assertEqual(ret, 0)
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
+        ref = ConanFileReference.loads("Hello0/0.1@user/channel")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package_layout(ref).package(pref)
+        # Check that the CONAN_HELLO0_ROOT has been replaced with the real abs path
+        self.assertIn("ROOT PATH: %s" % package_folder.replace("\\", "/"), client.out)
 
         # Now try without toolchain but including the file
         files = {"CMakeLists.txt": """
