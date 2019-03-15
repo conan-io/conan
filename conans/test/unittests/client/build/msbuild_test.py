@@ -1,12 +1,14 @@
-import mock
 import os
 import platform
 import re
 import unittest
+
+import mock
+import six
 from parameterized import parameterized
 
-from conans.client.build.msbuild import MSBuild
 from conans.client import tools
+from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.test.utils.conanfile import MockConanfile, MockSettings
@@ -21,7 +23,7 @@ class MSBuildTest(unittest.TestCase):
                                  "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        self.assertEquals(msbuild.build_env.flags, [])
+        self.assertEqual(msbuild.build_env.flags, [])
         template = msbuild._get_props_file_contents()
 
         self.assertNotIn("-Ob0", template)
@@ -129,7 +131,7 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
         version = MSBuild.get_version(settings)
-        self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
+        six.assertRegex(self, version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
     @parameterized.expand([("16", "v142"),
@@ -253,4 +255,4 @@ class MSBuildTest(unittest.TestCase):
 
         props_file_path = match.group(1)
         self.assertTrue(os.path.isabs(props_file_path))
-        self.assertEquals(os.path.basename(props_file_path), "conan_build.props")
+        self.assertEqual(os.path.basename(props_file_path), "conan_build.props")

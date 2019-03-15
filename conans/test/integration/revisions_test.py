@@ -54,7 +54,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(self.ref, remote="remote2")
         self.c_v2.remove_all()
 
-        self.assertEquals(pref.ref.revision, pref2.ref.revision)
+        self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
         self.c_v2.run("install {}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
@@ -111,7 +111,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # This is not updating the remote in the registry with a --update
         # Is this a bug?
-        self.assertEquals("default", self.c_v2.cache.registry.refs.get(self.ref).name)
+        self.assertEqual("default", self.c_v2.cache.registry.refs.get(self.ref).name)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
@@ -171,7 +171,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotIn("doesn't belong to the installed recipe revision", self.c_v2.out)
 
         # Read current revision
-        self.assertEquals(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
+        self.assertEqual(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
 
     @parameterized.expand([(True,), (False,)])
     def test_install_rev0(self, v1):
@@ -189,7 +189,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertNotEquals(pref.ref.revision, DEFAULT_REVISION_V1)
 
         remote_ref = self.c_v1.upload_all(self.ref)
-        self.assertEquals(remote_ref.revision, DEFAULT_REVISION_V1)
+        self.assertEqual(remote_ref.revision, DEFAULT_REVISION_V1)
 
         # Check remote revision and time
         remote_rev_time = self.server.recipe_revision_time(remote_ref)
@@ -199,7 +199,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         self.assertNotEquals(local_rev, DEFAULT_REVISION_V1)
 
-        self.assertEquals(local_rev, pref.ref.revision)
+        self.assertEqual(local_rev, pref.ref.revision)
 
         # Remove all from c_v1
         self.c_v1.remove_all()
@@ -208,8 +208,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run("install {}".format(self.ref))
         local_rev = client.recipe_revision(self.ref)
         local_prev = client.package_revision(pref)
-        self.assertEquals(local_rev, DEFAULT_REVISION_V1)
-        self.assertEquals(local_prev, DEFAULT_REVISION_V1)
+        self.assertEqual(local_rev, DEFAULT_REVISION_V1)
+        self.assertEqual(local_prev, DEFAULT_REVISION_V1)
 
     def test_revision_metadata_update_on_install(self):
         """If a clean v2 client installs a RREV/PREV from a server, it get
@@ -225,8 +225,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
         local_prev = self.c_v2.package_revision(pref)
-        self.assertEquals(local_rev, pref.ref.revision)
-        self.assertEquals(local_prev, pref.revision)
+        self.assertEqual(local_rev, pref.ref.revision)
+        self.assertEqual(local_prev, pref.revision)
 
     def test_revision_metadata_update_on_update(self):
         """
@@ -302,7 +302,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         pref = client.create(self.ref)
         ref2 = client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
         # Now we have two RREVs and a PREV corresponding to the first one
-        self.assertEquals(pref.ref.copy_clear_rev(), ref2.copy_clear_rev())
+        self.assertEqual(pref.ref.copy_clear_rev(), ref2.copy_clear_rev())
         self.assertNotEqual(pref.ref.revision, ref2.revision)
 
         # Now we try to install the self.ref, the binary is missing when using revisions
@@ -392,12 +392,12 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         pref = client.create(self.ref)
         # Check recipe revision
         rev = client.recipe_revision(self.ref)
-        self.assertEquals(pref.ref.revision, rev)
+        self.assertEqual(pref.ref.revision, rev)
         self.assertIsNotNone(rev)
 
         # Check package revision
         prev = client.package_revision(pref)
-        self.assertEquals(pref.revision, prev)
+        self.assertEqual(pref.revision, prev)
         self.assertIsNotNone(prev)
 
         # Create new revision, check that it changes
@@ -436,7 +436,7 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         ref = client.export(self.ref)
         # Check recipe revision
         rev = client.recipe_revision(self.ref)
-        self.assertEquals(ref.revision, rev)
+        self.assertEqual(ref.revision, rev)
         self.assertIsNotNone(rev)
 
         # Export new revision, check that it changes
@@ -522,12 +522,12 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
         # Verify in the server there is only one revision "0"
         revs = self.server.server_store.get_recipe_revisions(self.ref)
-        self.assertEquals([r.revision for r in revs], [DEFAULT_REVISION_V1])
+        self.assertEqual([r.revision for r in revs], [DEFAULT_REVISION_V1])
 
         # Verify using v1 we can search for the outdated
         data = self.c_v1.search(self.ref, remote="default", args="--outdated")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals(set(["Windows"]), set(oss))
+        self.assertEqual(set(["Windows"]), set(oss))
         self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
 
         # Verify we can remove it both using v1 or v2
@@ -537,12 +537,12 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         # The Windows package is not there anymore
         data = self.c_v1.search(self.ref, remote="default", args="--outdated")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals([], oss)
+        self.assertEqual([], oss)
 
         # But the Linux package is there, not outdated
         data = self.c_v1.search(self.ref, remote="default")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals(set(["Linux"]), set(oss))
+        self.assertEqual(set(["Linux"]), set(oss))
 
     @parameterized.expand([(True,), (False,)])
     def test_remove_local_recipe(self, v1):
@@ -788,7 +788,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
                             with_build_msg("I'm your father, rev2"))
 
         data = client.search(ref.full_repr(), args="--outdated")
-        self.assertEquals([], data["results"][0]["items"][0]["packages"])
+        self.assertEqual([], data["results"][0]["items"][0]["packages"])
 
         client.search("{}#fakerev".format(ref), args="--outdated", assert_error=True)
         self.assertIn("Recipe not found: 'lib/1.0@conan/testing#fakerev'", client.out)
@@ -813,30 +813,30 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         # Verify in the server there is only one revision "0"
         revs = self.server.server_store.get_recipe_revisions(self.ref)
-        self.assertEquals([r.revision for r in revs], [DEFAULT_REVISION_V1])
+        self.assertEqual([r.revision for r in revs], [DEFAULT_REVISION_V1])
 
         # Verify if we can reach both packages with v1 (The Windows is outdated)
         data = self.c_v1.search(self.ref, remote="default")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals(set(["Windows", "Linux"]), set(oss))
+        self.assertEqual(set(["Windows", "Linux"]), set(oss))
 
         # Verify using v1 we can search for the outdated
         data = self.c_v1.search(self.ref, remote="default", args="--outdated")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals(set(["Windows"]), set(oss))
+        self.assertEqual(set(["Windows"]), set(oss))
         self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
 
         # Verify using v2 if we can get the outdated
         data = self.c_v2.search(self.ref, remote="default", args="--outdated")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals(set(["Windows"]), set(oss))
+        self.assertEqual(set(["Windows"]), set(oss))
         self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
 
         # Verify using v2 and specifying RREV we can get the outdated
         data = self.c_v2.search(self.ref.copy_with_rev(DEFAULT_REVISION_V1),
                                 remote="default", args="--outdated")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEquals(set(["Windows"]), set(oss))
+        self.assertEqual(set(["Windows"]), set(oss))
         self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
 
     @parameterized.expand([(True,), (False,)])
@@ -863,7 +863,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         # Ensure that the first revision in the first remote is the same than in the second one
         revision_ref = refs[0][0].ref
-        self.assertEquals(revision_ref.revision, refs2[0][0].ref.revision)
+        self.assertEqual(revision_ref.revision, refs2[0][0].ref.revision)
         self.assertNotEquals(refs[1][0].ref.revision, refs2[0][0].ref.revision)
 
         # Check that in the remotes there are the packages we expect
@@ -880,8 +880,8 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
             data = client.search(revision_ref.full_repr(), remote="all")
             oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
             oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
-            self.assertEquals(["Windows"], oss_r1)
-            self.assertEquals(["Linux"], oss_r2)
+            self.assertEqual(["Windows"], oss_r1)
+            self.assertEqual(["Linux"], oss_r2)
 
     @parameterized.expand([(True,), (False,)])
     def search_all_remotes_without_rrev_test(self, v1):
@@ -911,11 +911,11 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
         oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
         if v1:
-            self.assertEquals(set(["Windows", "Macos", "SunOS", "FreeBSD"]), set(oss_r1))
-            self.assertEquals(set(["Linux"]), set(oss_r2))
+            self.assertEqual(set(["Windows", "Macos", "SunOS", "FreeBSD"]), set(oss_r1))
+            self.assertEqual(set(["Linux"]), set(oss_r2))
         else:
-            self.assertEquals(set(["SunOS", "FreeBSD"]), set(oss_r1))
-            self.assertEquals(set(["Linux"]), set(oss_r2))
+            self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss_r1))
+            self.assertEqual(set(["Linux"]), set(oss_r2))
 
     @parameterized.expand([(True,), (False,)])
     def search_a_remote_package_without_rrev_test(self, v1):
@@ -943,9 +943,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search(str(self.ref), remote="default")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
         if v1:
-            self.assertEquals(set(["Linux", "Windows", "Macos", "SunOS", "FreeBSD"]), set(oss))
+            self.assertEqual(set(["Linux", "Windows", "Macos", "SunOS", "FreeBSD"]), set(oss))
         else:
-            self.assertEquals(set(["SunOS", "FreeBSD"]), set(oss))
+            self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss))
 
     @parameterized.expand([(True,), (False,)])
     def search_a_local_package_without_rrev_test(self, v1):
@@ -971,9 +971,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
 
         if v1:
-            self.assertEquals(set(["Linux", "Windows", "Macos"]), set(oss))
+            self.assertEqual(set(["Linux", "Windows", "Macos"]), set(oss))
         else:
-            self.assertEquals(set(["Macos"]), set(oss))
+            self.assertEqual(set(["Macos"]), set(oss))
 
     @parameterized.expand([(True,), (False,)])
     def search_a_remote_package_with_rrev_test(self, v1):
@@ -1002,9 +1002,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         else:
             data = client.search(pref.ref.full_repr(), remote="default")
             items = data["results"][0]["items"][0]["packages"]
-            self.assertEquals(1, len(items))
+            self.assertEqual(1, len(items))
             oss = items[0]["settings"]["os"]
-            self.assertEquals(oss, "Linux")
+            self.assertEqual(oss, "Linux")
 
     @parameterized.expand([(True,), (False,)])
     def search_a_local_package_with_rrev_test(self, v1):
@@ -1042,9 +1042,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         # Search for the recipes
         data = client.search("lib*")
         items = data["results"][0]["items"]
-        self.assertEquals(2, len(items))
+        self.assertEqual(2, len(items))
         expected = [str(self.ref), str(ref2)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
     def search_recipes_in_local_by_revision_pattern_test(self, v1):
@@ -1061,9 +1061,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         # Search for the recipes
         data = client.search("{}*".format(self.ref.full_repr()))
         items = data["results"][0]["items"]
-        self.assertEquals(1, len(items))
+        self.assertEqual(1, len(items))
         expected = [str(self.ref)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
     def search_recipes_in_remote_by_pattern_test(self, v1):
@@ -1091,10 +1091,10 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         client.remove_all()
         data = client.search("lib*", remote="default")
         items = data["results"][0]["items"]
-        self.assertEquals(2, len(items))
+        self.assertEqual(2, len(items))
         expected = [str(pref1b.ref), str(pref2b.ref)]
 
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
     def search_in_remote_by_revision_pattern_test(self, v1):
@@ -1123,25 +1123,25 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search("{}*".format(pref2_lib.ref.full_repr()), remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
         data = client.search("{}".format(pref2_lib.ref.full_repr()).replace("1.0", "*"),
                              remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
         data = client.search("*{}".format(pref2_lib.ref.full_repr()).replace("1.0", "*"),
                              remote="default")
         items = data["results"][0]["items"]
         expected = [str(self.ref)]
-        self.assertEquals(expected, [i["recipe"]["id"] for i in items])
+        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
         data = client.search("*{}#fakerev".format(pref2_lib.ref),
                              remote="default")
         items = data["results"]
         expected = []
-        self.assertEquals(expected, items)
+        self.assertEqual(expected, items)
 
     def search_revisions_locally_with_v1_server_test(self):
         """If I upload a recipe to a v1 server and then I check the revisions locally, it
@@ -1216,9 +1216,9 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
 
         if v1:
-            self.assertEquals(revs, [DEFAULT_REVISION_V1])
+            self.assertEqual(revs, [DEFAULT_REVISION_V1])
         else:
-            self.assertEquals(revs, [pref.ref.revision])
+            self.assertEqual(revs, [pref.ref.revision])
 
     @parameterized.expand([(True,), (False,)])
     def upload_discarding_outdated_packages_test(self, v1):
@@ -1251,9 +1251,9 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
         if v1:
-            self.assertEquals(revs, [DEFAULT_REVISION_V1])
+            self.assertEqual(revs, [DEFAULT_REVISION_V1])
         else:
-            self.assertEquals(set(revs), set([pref.ref.revision, pref2.ref.revision]))
+            self.assertEqual(set(revs), set([pref.ref.revision, pref2.ref.revision]))
 
     @parameterized.expand([(True,), (False,)])
     def upload_no_overwrite_recipes_test(self, v1):
@@ -1275,10 +1275,10 @@ class UploadPackagesWithRevisions(unittest.TestCase):
             self.assertIn("Local recipe is different from the remote recipe. "
                           "Forbidden overwrite.", client.out)
         else:
-            self.assertEquals(self.server.server_store.get_last_revision(self.ref)[0],
+            self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0],
                               pref.ref.revision)
             client.upload_all(self.ref, args="--no-overwrite")
-            self.assertEquals(self.server.server_store.get_last_revision(self.ref)[0],
+            self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0],
                               pref2.ref.revision)
 
     @parameterized.expand([(True,), (False,)])
@@ -1304,10 +1304,10 @@ class UploadPackagesWithRevisions(unittest.TestCase):
             self.assertIn("Local package is different from the remote package. "
                           "Forbidden overwrite.", client.out)
         else:
-            self.assertEquals(self.server.server_store.get_last_package_revision(pref2).revision,
+            self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                               pref.revision)
             client.upload_all(self.ref, args="--no-overwrite")
-            self.assertEquals(self.server.server_store.get_last_package_revision(pref2).revision,
+            self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                               pref2.revision)
 
 
@@ -1323,12 +1323,12 @@ class SCMRevisions(unittest.TestCase):
         conanfile = GenConanfile()
         commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref), commit)
+        self.assertEqual(client.recipe_revision(ref), commit)
 
         # Change the conanfile and make another create, the revision should be the same
         client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref), commit)
+        self.assertEqual(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
     @attr("svn")
@@ -1343,12 +1343,12 @@ class SCMRevisions(unittest.TestCase):
                                       files={"file.txt": "hey", "conanfile.py": str(conanfile)})
         client.current_folder = os.path.join(client.current_folder, "project")
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref), commit)
+        self.assertEqual(client.recipe_revision(ref), commit)
 
         # Change the conanfile and make another create, the revision should be the same
         client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
         client.create(ref, conanfile=conanfile)
-        self.assertEquals(client.recipe_revision(ref), commit)
+        self.assertEqual(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
 
@@ -1365,7 +1365,7 @@ class CapabilitiesRevisionsTest(unittest.TestCase):
         c_v2.upload_all(ref)
         c_v2.remove_all()
         c_v2.run("install {}".format(ref))
-        self.assertEquals(c_v2.recipe_revision(ref), DEFAULT_REVISION_V1)
+        self.assertEqual(c_v2.recipe_revision(ref), DEFAULT_REVISION_V1)
 
     def test_server_with_only_v2_capability(self):
         server = TestServer(server_capabilities=[ONLY_V2])
@@ -1417,27 +1417,27 @@ class ServerRevisionsIndexes(unittest.TestCase):
         """
         ref1 = self.c_v2.export(self.ref, conanfile=GenConanfile())
         self.c_v2.upload_all(ref1)
-        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                           ref1.revision)
         ref2 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev2"))
         self.c_v2.upload_all(ref2)
-        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                           ref2.revision)
         ref3 = self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("I'm rev3"))
         self.c_v2.upload_all(ref3)
-        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                           ref3.revision)
 
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
-        self.assertEquals(revs, [ref3.revision, ref2.revision, ref1.revision])
-        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+        self.assertEqual(revs, [ref3.revision, ref2.revision, ref1.revision])
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                           ref3.revision)
 
         # Delete the latest from the server
         self.c_v2.run("remove {} -r default -f".format(ref3.full_repr()))
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
-        self.assertEquals(revs, [ref2.revision, ref1.revision])
-        self.assertEquals(self.server.server_store.get_last_revision(self.ref).revision,
+        self.assertEqual(revs, [ref2.revision, ref1.revision])
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref).revision,
                           ref2.revision)
 
     def rotation_deleting_package_revisions_test(self):
@@ -1451,28 +1451,28 @@ class ServerRevisionsIndexes(unittest.TestCase):
         with environment_append({"MY_VAR": "1"}):
             pref1 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                           pref1.revision)
         with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                           pref2.revision)
         with environment_append({"MY_VAR": "3"}):
             pref3 = self.c_v2.create(self.ref, conanfile=conanfile)
         server_pref3 = self.c_v2.upload_all(self.ref)
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref1).revision,
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref1).revision,
                           pref3.revision)
 
-        self.assertEquals(pref1.ref.revision, pref2.ref.revision)
-        self.assertEquals(pref2.ref.revision, pref3.ref.revision)
-        self.assertEquals(pref3.ref.revision, server_pref3.revision)
+        self.assertEqual(pref1.ref.revision, pref2.ref.revision)
+        self.assertEqual(pref2.ref.revision, pref3.ref.revision)
+        self.assertEqual(pref3.ref.revision, server_pref3.revision)
 
         pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
-        self.assertEquals(revs, [pref3.revision, pref2.revision, pref1.revision])
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref).revision,
+        self.assertEqual(revs, [pref3.revision, pref2.revision, pref1.revision])
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref).revision,
                           pref3.revision)
 
         # Delete the latest from the server
@@ -1480,8 +1480,8 @@ class ServerRevisionsIndexes(unittest.TestCase):
                                                                 pref3.id, pref3.revision))
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
-        self.assertEquals(revs, [pref2.revision, pref1.revision])
-        self.assertEquals(self.server.server_store.get_last_package_revision(pref).revision,
+        self.assertEqual(revs, [pref2.revision, pref1.revision])
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref).revision,
                           pref2.revision)
 
     def deleting_all_rrevs_test(self):
@@ -1507,7 +1507,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.upload_all(ref4)
 
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
-        self.assertEquals(revs, [ref4.revision])
+        self.assertEqual(revs, [ref4.revision])
 
     def deleting_all_prevs_test(self):
         """
@@ -1538,7 +1538,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
-        self.assertEquals(revs, [pref4.revision])
+        self.assertEqual(revs, [pref4.revision])
 
     def v1_get_always_latest_test(self):
         conanfile = GenConanfile()
@@ -1549,7 +1549,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         latest = self.server.server_store.get_last_revision(self.ref)
-        self.assertEquals(latest.revision, pref.ref.revision)
+        self.assertEqual(latest.revision, pref.ref.revision)
 
         if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
             time.sleep(62)
@@ -1558,4 +1558,4 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.c_v1.upload_all(self.ref)
 
         latest = self.server.server_store.get_last_revision(self.ref)
-        self.assertEquals(latest.revision, DEFAULT_REVISION_V1)
+        self.assertEqual(latest.revision, DEFAULT_REVISION_V1)

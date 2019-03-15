@@ -63,10 +63,10 @@ class ConanInfoTest(unittest.TestCase):
                     'settings': {'arch': 'x86_64', 'compiler.libcxx': 'libstdc++11',
                                  'compiler.version': '5.2', 'os': 'Linux',
                                  'build_type': 'Debug', 'compiler': 'gcc'}}
-        self.assertEquals(min_serial, expected)
+        self.assertEqual(min_serial, expected)
 
         dump = info.dumps()
-        self.assertEquals(dump, info_text)
+        self.assertEqual(dump, info_text)
 
     def test_modes(self):
         info_text = '''[settings]

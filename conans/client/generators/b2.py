@@ -96,12 +96,13 @@ class B2Generator(Generator):
 
         # Define the info specific variables. Note that the 'usage-requirements' one
         # needs to be last as it references the others.
+        # TODO: Should be cppflags -> cxxflags
         result = \
             self.b2_constant(name, 'rootpath', [info.rootpath], True) + \
             self.b2_constant(name, 'includedirs', info.include_paths, True) + \
             self.b2_constant(name, 'libdirs', info.lib_paths, True) + \
             self.b2_constant(name, 'defines', info.defines) + \
-            self.b2_constant(name, 'cppflags', info.cppflags) + \
+            self.b2_constant(name, 'cppflags', info.cxxflags) + \
             self.b2_constant(name, 'cflags', info.cflags) + \
             self.b2_constant(name, 'sharedlinkflags', info.sharedlinkflags) + \
             self.b2_constant(name, 'exelinkflags', info.exelinkflags) + \
