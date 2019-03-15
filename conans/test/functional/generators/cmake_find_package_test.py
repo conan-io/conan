@@ -18,7 +18,7 @@ class Test(ConanFile):
     def package_info(self):
         self.cpp_info.libs.append("fake_lib")
         self.cpp_info.cflags.append("a_flag")
-        self.cpp_info.cppflags.append("a_cxx_flag")
+        self.cpp_info.cxxflags.append("a_cxx_flag")
         self.cpp_info.sharedlinkflags.append("shared_link_flag")
     """
         client = TestClient()

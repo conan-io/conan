@@ -94,6 +94,6 @@ class Pkg(ConanFile):
 
     @unittest.skipUnless(six.PY2, "only Py2")
     def test_error_python2(self):
-        with self.assertRaisesRegexp(ConanException, "XZ format not supported in Python 2"):
+        with six.assertRaisesRegex(self, ConanException, "XZ format not supported in Python 2"):
             dest_folder = temp_folder()
             unzip("somefile.tar.xz", dest_folder)

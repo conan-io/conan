@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import six
+
 from conans import load
 from conans.client.hook_manager import HookManager
 from conans.errors import ConanException
@@ -104,7 +106,7 @@ def pre_build(output, **kwargs):
     raise Exception("My custom exception")
 """
         save(hook_path, my_hook)
-        with self.assertRaisesRegexp(ConanException, "My custom exception"):
+        with six.assertRaisesRegex(self, ConanException, "My custom exception"):
             hook_manager.execute("pre_build")
         # Check traceback output
         try:
