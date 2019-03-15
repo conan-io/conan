@@ -1,7 +1,6 @@
 import os
 import shutil
 
-from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -10,6 +9,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.util.files import mkdir, rmdir, save
 from conans.util.log import logger
+from conans.client.tools.files import chdir
 
 
 def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
@@ -61,15 +61,10 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
         package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
 
-        if source_folder != build_folder:
-            conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
-            with conanfile_exception_formatter(str(conanfile), "package"):
-                with tools.chdir(source_folder):
-                    conanfile.package()
-
-        conanfile.copy = FileCopier(build_folder, package_folder)
-        with tools.chdir(build_folder):
-            with conanfile_exception_formatter(str(conanfile), "package"):
+        folders = [source_folder, build_folder] if source_folder != build_folder else [build_folder]
+        conanfile.copy = FileCopier(folders, package_folder)
+        with conanfile_exception_formatter(str(conanfile), "package"):
+            with chdir(build_folder):
                 conanfile.package()
     except Exception as e:
         if not local:
