@@ -94,9 +94,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
-        # FIXME: tgz and info are not in the server and not uploaded
-        self.assertIn("Package is up to date, upload skipped", self.client.user_io.out)
-        # self._assert_all_package_files_in_server()
+        self.assertIn("Uploading conan_package.tgz", self.client.out)
+        self.assertIn("Uploading conaninfo.txt", self.client.out)
+        self._assert_all_package_files_in_server()
 
     def tgz_missing_test(self):
         os.unlink(self.tgz_path)
@@ -109,9 +109,8 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
-        # FIXME: tgz is not in the server and not uploaded
-        self.assertIn("Package is up to date, upload skipped", self.client.user_io.out)
-        #self._assert_all_package_files_in_server()
+        self.assertIn("Uploading conan_package.tgz", self.client.out)
+        self._assert_all_package_files_in_server()
 
     def tgz_manifest_missing_test(self):
         os.unlink(self.tgz_path)

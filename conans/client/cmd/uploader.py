@@ -360,7 +360,7 @@ class CmdUpload(object):
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
         if remote_snapshot:
-            if CONAN_MANIFEST in remote_snapshot:
+            if self._remote_manager.package_snapshot_complete(remote_snapshot):
                 remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
                 local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
@@ -372,7 +372,6 @@ class CmdUpload(object):
                                          "Forbidden overwrite.")
         files_to_upload = the_files
         deleted = set(remote_snapshot).difference(the_files)
-
         return files_to_upload, deleted
 
     def _upload_recipe_end_msg(self, ref, remote):
