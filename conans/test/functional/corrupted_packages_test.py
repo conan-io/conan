@@ -2,9 +2,8 @@ import os
 import textwrap
 import unittest
 
-from parameterized import parameterized
-
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.util.env_reader import get_env
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
@@ -15,10 +14,10 @@ class CorruptedPackagesTest(unittest.TestCase):
     even if the package in the server is not accessible
     """
 
-    def _setUp(self, revisions_enabled):
+    def setUp(self):
+        revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
-        self.client = TestClient(servers={"default": self.server},
-                                 revisions_enabled=revisions_enabled)
+        self.client = TestClient(servers={"default": self.server})
         conanfile = textwrap.dedent("""
         from conans import ConanFile
 
@@ -48,9 +47,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.info_path))
         self.assertTrue(os.path.exists(self.tgz_path))
 
-    @parameterized.expand([(True,), (False,)])
-    def info_manifest_missing_test(self, revisions_enabled):
-        self._setUp(revisions_enabled)
+    def info_manifest_missing_test(self):
         os.unlink(self.info_path)
         os.unlink(self.manifest_path)
         # Try search
@@ -67,9 +64,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()
 
-    @parameterized.expand([(True,), (False,)])
-    def manifest_missing_test(self, revisions_enabled):
-        self._setUp(revisions_enabled)
+    def manifest_missing_test(self):
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
@@ -84,9 +79,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
-    @parameterized.expand([(True,), (False,)])
-    def tgz_info_missing_test(self, revisions_enabled):
-        self._setUp(revisions_enabled)
+    def tgz_info_missing_test(self):
         os.unlink(self.tgz_path)
         os.unlink(self.info_path)
         # Try search
@@ -105,9 +98,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Package is up to date, upload skipped", self.client.user_io.out)
         # self._assert_all_package_files_in_server()
 
-    @parameterized.expand([(True,), (False,)])
-    def tgz_missing_test(self, revisions_enabled):
-        self._setUp(revisions_enabled)
+    def tgz_missing_test(self):
         os.unlink(self.tgz_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
@@ -122,9 +113,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Package is up to date, upload skipped", self.client.user_io.out)
         #self._assert_all_package_files_in_server()
 
-    @parameterized.expand([(True,), (False,)])
-    def tgz_manifest_missing_test(self, revisions_enabled):
-        self._setUp(revisions_enabled)
+    def tgz_manifest_missing_test(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
         # Try search
@@ -139,9 +128,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
-    @parameterized.expand([(True,), (False,)])
-    def tgz_manifest_info_missing_test(self, revisions_enabled):
-        self._setUp(revisions_enabled)
+    def tgz_manifest_info_missing_test(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
         os.unlink(self.info_path)
