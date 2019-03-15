@@ -168,4 +168,4 @@ class ToolsFilesPatchTest(unittest.TestCase):
             os.chdir(curdir)
 
         content = load(text_file)
-        self.assertEquals(content, msg)
+        self.assertEqual(content, msg)

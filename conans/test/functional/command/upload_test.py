@@ -12,6 +12,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import gzopen_without_timestamps, is_dirty, save
+from conans.test.utils.conanfile import TestConanFile
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -36,6 +37,14 @@ class MyPkg(ConanFile):
 
 
 class UploadTest(unittest.TestCase):
+
+    def test_upload_not_existing(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.run("export . Hello/0.1@lasote/testing")
+        client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
+        self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)
 
     def not_existing_error_test(self):
         """ Trying to upload with pattern not matched must raise an Error

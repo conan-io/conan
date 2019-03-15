@@ -160,7 +160,7 @@ class GraphBinariesAnalyzer(object):
         node.binary_remote = remote
 
     @staticmethod
-    def _compute_package_id(node, package_id_mode):
+    def _compute_package_id(node, default_package_id_mode):
         conanfile = node.conanfile
         neighbors = node.neighbors()
         direct_reqs = []  # of PackageReference
@@ -185,7 +185,7 @@ class GraphBinariesAnalyzer(object):
                                           conanfile.options.values,
                                           direct_reqs,
                                           indirect_reqs,
-                                          package_id_mode=package_id_mode)
+                                          default_package_id_mode=default_package_id_mode)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
@@ -204,10 +204,10 @@ class GraphBinariesAnalyzer(object):
                     self._handle_private(n)
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
+        default_package_id_mode = self._cache.config.default_package_id_mode
         evaluated = deps_graph.evaluated
-        package_id_mode = self._cache.config.package_id_mode
         for node in deps_graph.ordered_iterate():
-            self._compute_package_id(node, package_id_mode)
+            self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated, remote_name)

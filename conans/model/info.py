@@ -16,7 +16,8 @@ PREV_MISSING = "prevmissing"
 
 
 class RequirementInfo(object):
-    def __init__(self, pref, indirect=False, package_id_mode=None):
+
+    def __init__(self, pref, default_package_id_mode, indirect=False):
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
@@ -25,24 +26,19 @@ class RequirementInfo(object):
         self.full_revision = pref.ref.revision
         self.full_package_id = pref.id
         self.full_package_revision = pref.revision
+        self._indirect = indirect
 
-        # sha values
-        if package_id_mode:
-            try:
-                getattr(self, package_id_mode)()
-            except AttributeError:
-                raise ConanException("'%s' is not a known package_id_mode" % package_id_mode)
-        else:
-            if indirect:
-                self.unrelated_mode()
-            else:
-                self.semver_mode()
+        try:
+            getattr(self, default_package_id_mode)()
+        except AttributeError:
+            raise ConanException("'%s' is not a known package_id_mode" % default_package_id_mode)
 
     def copy(self):
         # Useful for build_id()
-        result = RequirementInfo(self.package)
+        result = RequirementInfo(self.package, "unrelated_mode")
         for f in ("name", "version", "user", "channel", "revision", "package_id",
                   "package_revision"):
+
             setattr(result, f, getattr(self, f))
             f = "full_%s" % f
             setattr(result, f, getattr(self, f))
@@ -74,6 +70,12 @@ class RequirementInfo(object):
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
         self.revision = self.package_revision = None
+
+    def semver_direct_mode(self):
+        if self._indirect:
+            self.unrelated_mode()
+        else:
+            self.semver_mode()
 
     def semver_mode(self):
         self.name = self.full_name
@@ -150,9 +152,11 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(object):
-    def __init__(self, prefs, package_id_mode):
+
+    def __init__(self, prefs, default_package_id_mode):
         # {PackageReference: RequirementInfo}
-        self._data = {pref: RequirementInfo(pref, package_id_mode=package_id_mode) for pref in prefs}
+        self._data = {pref: RequirementInfo(pref, default_package_id_mode=default_package_id_mode)
+                      for pref in prefs}
 
     def copy(self):
         # For build_id() implementation
@@ -167,12 +171,13 @@ class RequirementsInfo(object):
         for name in args:
             del self._data[self._get_key(name)]
 
-    def add(self, prefs_indirect, package_id_mode):
+    def add(self, prefs_indirect, default_package_id_mode):
         """ necessary to propagate from upstream the real
         package requirements
         """
         for r in prefs_indirect:
-            self._data[r] = RequirementInfo(r, indirect=True, package_id_mode=package_id_mode)
+            self._data[r] = RequirementInfo(r, indirect=True,
+                                            default_package_id_mode=default_package_id_mode)
 
     def refs(self):
         """ used for updating downstream requirements with this
@@ -218,6 +223,10 @@ class RequirementsInfo(object):
 
     def unrelated_mode(self):
         self.clear()
+
+    def semver_direct_mode(self):
+        for r in self._data.values():
+            r.semver_direct_mode()
 
     def semver_mode(self):
         for r in self._data.values():
@@ -277,7 +286,7 @@ class ConanInfo(object):
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, package_id_mode):
+    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -285,8 +294,8 @@ class ConanInfo(object):
         result.options = options.copy()
         result.options.clear_indirect()
         result.full_requires = _PackageReferenceList(prefs_direct)
-        result.requires = RequirementsInfo(prefs_direct, package_id_mode)
-        result.requires.add(prefs_indirect, package_id_mode)
+        result.requires = RequirementsInfo(prefs_direct, default_package_id_mode)
+        result.requires.add(prefs_indirect, default_package_id_mode)
         result.full_requires.extend(prefs_indirect)
         result.recipe_hash = None
         result.env_values = EnvValues()
@@ -311,7 +320,7 @@ class ConanInfo(object):
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        result.requires = RequirementsInfo(result.full_requires, None)
+        result.requires = RequirementsInfo(result.full_requires, "semver_direct_mode")
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now

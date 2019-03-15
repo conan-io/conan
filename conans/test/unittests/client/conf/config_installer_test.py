@@ -1,6 +1,7 @@
 import os
 import unittest
-import tempfile
+
+import six
 
 from conans.client.conf.config_installer import _process_config_install_item, _handle_hooks
 from conans.errors import ConanException
@@ -62,7 +63,7 @@ class ConfigInstallerTests(unittest.TestCase):
 
         # Test wrong input
         for item in ["git@github.com:conan-io/conan.git, None", "file/not/exists.zip"]:
-            with self.assertRaisesRegexp(ConanException, "Unable to process config install"):
+            with six.assertRaisesRegex(self, ConanException, "Unable to process config install"):
                 _, _, _, _ = _process_config_install_item(item)
 
     def handle_hooks_test(self):

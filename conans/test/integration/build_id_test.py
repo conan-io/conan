@@ -9,22 +9,18 @@ from conans.util.files import load
 
 conanfile = """from conans import ConanFile
 from conans.util.files import save
-
 class MyTest(ConanFile):
     name = "Pkg"
     version = "0.1"
     settings = "os", "build_type"
     build_policy = "missing"
-
     def build_id(self):
         if self.settings.os == "Windows":
             self.info_build.settings.build_type = "Any"
-
     def build(self):
         self.output.info("Building my code!")
         save("debug/file1.txt", "Debug file1")
         save("release/file1.txt", "Release file1")
-
     def package(self):
         self.output.info("Packaging %s!" % self.settings.build_type)
         if self.settings.build_type == "Debug":
@@ -40,18 +36,14 @@ Pkg/0.1@user/channel
 """
 
 consumer_py = """from conans import ConanFile
-
-
 class MyTest(ConanFile):
     name = "MyTest"
     version = "0.1"
     settings = "os", "build_type"
     requires = "Pkg/0.1@user/channel"
-
     def build_id(self):
         self.info_build.settings.build_type = "Any"
         self.info_build.requires.clear()
-
     def imports(self):
         self.copy("*")
 """

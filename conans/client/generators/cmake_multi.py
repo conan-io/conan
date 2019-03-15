@@ -23,7 +23,7 @@ def extend(cpp_info, config):
         result.libs = cpp_info.libs + config_info.libs
         result.defines = cpp_info.defines + config_info.defines
         result.cflags = cpp_info.cflags + config_info.cflags
-        result.cppflags = cpp_info.cppflags + config_info.cppflags
+        result.cxxflags = cpp_info.cxxflags + config_info.cxxflags
         result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
         return result

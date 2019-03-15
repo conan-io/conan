@@ -5,14 +5,14 @@ from collections import OrderedDict
 import requests
 
 import conans
-
 from conans import __version__ as client_version
 from conans.client import packager, tools
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
+from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source, \
+    check_casing_conflict
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
@@ -21,6 +21,7 @@ from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.client.conf import ConanClientConfigParser
+from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
@@ -61,8 +62,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.client.graph.graph import RECIPE_EDITABLE
-
 
 default_manifest_folder = '.conan_manifests'
 
@@ -237,8 +236,8 @@ class ConanAPIV1(object):
 
         self._proxy = ConanProxy(cache, self._user_io.out, remote_manager)
         resolver = RangeResolver(cache, self._proxy)
-        python_requires = ConanPythonRequire(self._proxy, resolver)
-        self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
+        self.python_requires = ConanPythonRequire(self._proxy, resolver)
+        self._loader = ConanFileLoader(self._runner, self._user_io.out, self.python_requires)
 
         self._graph_manager = GraphManager(self._user_io.out, self._cache,
                                            self._remote_manager, self._loader, self._proxy,
@@ -319,6 +318,8 @@ class ConanAPIV1(object):
         options = options or []
         env = env or []
 
+        self.python_requires.enable_remotes(update=update, remote_name=remote_name)
+
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
@@ -355,6 +356,8 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
+
             conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
             ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
                                      conanfile.channel)
@@ -362,10 +365,13 @@ class ConanAPIV1(object):
             keep_source = keep_source or keep_build
             # Forcing an export!
             if not not_export:
-                cmd_export(conanfile_path, conanfile, ref, keep_source, self._user_io.out,
-                           self._cache, self._hook_manager)
-
-                recorder.recipe_exported(ref)
+                check_casing_conflict(cache=self._cache, ref=ref)
+                package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
+                new_ref = cmd_export(package_layout, conanfile_path, conanfile, keep_source,
+                                     self._cache.config.revisions_enabled, self._user_io.out,
+                                     self._hook_manager)
+                # The new_ref contains the revision
+                recorder.recipe_exported(new_ref)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [conanfile.name]
@@ -382,11 +388,11 @@ class ConanAPIV1(object):
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
 
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
 
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -426,19 +432,24 @@ class ConanAPIV1(object):
             conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
             ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
 
-            recorder.recipe_exported(ref)
+            check_casing_conflict(cache=self._cache, ref=ref)
+            package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
+            new_ref = cmd_export(package_layout, conanfile_path, conanfile, False,
+                                 self._cache.config.revisions_enabled, self._user_io.out,
+                                 self._hook_manager)
+            # new_ref has revision
+            recorder.recipe_exported(new_ref)
             recorder.add_recipe_being_developed(ref)
-            cmd_export(conanfile_path, conanfile, ref, False, self._user_io.out,
-                       self._cache, self._hook_manager)
+
             export_pkg(self._cache, self._graph_manager, self._hook_manager, recorder,
                        self._user_io.out,
                        ref, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
                        graph_info=graph_info, force=force)
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -468,6 +479,8 @@ class ConanAPIV1(object):
                           update=False, cwd=None):
         cwd = cwd or get_cwd()
         abs_path = os.path.normpath(os.path.join(cwd, path))
+
+        self.python_requires.enable_remotes(update=update, remote_name=remote_name)
 
         workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
@@ -519,6 +532,7 @@ class ConanAPIV1(object):
                 generators = False
 
             mkdir(install_folder)
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
             manager = self._init_manager(recorder)
             manager.install(ref_or_path=reference, install_folder=install_folder,
                             remote_name=remote_name, graph_info=graph_info, build_modes=build,
@@ -526,10 +540,10 @@ class ConanAPIV1(object):
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
                             generators=generators)
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -551,6 +565,7 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
             manager = self._init_manager(recorder)
             manager.install(ref_or_path=conanfile_path,
                             install_folder=install_folder,
@@ -563,10 +578,10 @@ class ConanAPIV1(object):
                             manifest_interactive=manifest_interactive,
                             generators=generators,
                             no_imports=no_imports)
-            return recorder.get_info()
+            return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info()
+            exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise
 
     @api_method
@@ -621,6 +636,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        self.python_requires.enable_remotes(check_updates=check_updates, remote_name=remote_name)
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                        check_updates, False, remote_name,
                                                        recorder)
@@ -633,6 +649,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        self.python_requires.enable_remotes(check_updates=check_updates, remote_name=remote_name)
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
                                                                build_modes, check_updates,
                                                                False, remote_name, recorder)
@@ -645,6 +662,8 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        # FIXME: Using update as check_update?
+        self.python_requires.enable_remotes(check_updates=update, remote_name=remote_name)
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                update, False, remote_name,
                                                                recorder)
@@ -740,8 +759,11 @@ class ConanAPIV1(object):
         conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
         ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
                                  conanfile.channel)
-        cmd_export(conanfile_path, conanfile, ref, keep_source, self._user_io.out,
-                   self._cache, self._hook_manager)
+        check_casing_conflict(cache=self._cache, ref=ref)
+        package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
+        cmd_export(package_layout, conanfile_path, conanfile, keep_source,
+                   self._cache.config.revisions_enabled, self._user_io.out,
+                   self._hook_manager)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
@@ -969,6 +991,9 @@ class ConanAPIV1(object):
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
 
+        if ref.name != target_ref.name:
+            raise ConanException("An alias can only be defined to a package with the same name")
+
         # Do not allow to override an existing package
         alias_conanfile_path = self._cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
@@ -978,7 +1003,10 @@ class ConanAPIV1(object):
                 raise ConanException("Reference '{}' is already a package, remove it before creating"
                                      " and alias with the same name".format(ref))
 
-        return export_alias(ref, target_ref, self._cache, self._user_io.out)
+        package_layout = self._cache.package_layout(ref)
+        return export_alias(package_layout, target_ref,
+                            revisions_enabled=self._cache.config.revisions_enabled,
+                            output=self._user_io.out)
 
     @api_method
     def get_default_remote(self):
