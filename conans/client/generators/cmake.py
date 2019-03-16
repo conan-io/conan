@@ -35,7 +35,7 @@ class DepsCppCmake(object):
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 
-        self.cppflags = join_flags(" ", cpp_info.cppflags)
+        self.cxxflags = join_flags(" ", cpp_info.cxxflags)
         self.cflags = join_flags(" ", cpp_info.cflags)
         self.sharedlinkflags = join_flags(" ", cpp_info.sharedlinkflags)
         self.exelinkflags = join_flags(" ", cpp_info.exelinkflags)
@@ -43,7 +43,7 @@ class DepsCppCmake(object):
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
         # Issue: #1251
-        self.cppflags_list = join_flags(";", cpp_info.cppflags)
+        self.cxxflags_list = join_flags(";", cpp_info.cxxflags)
         self.cflags_list = join_flags(";", cpp_info.cflags)
         self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)

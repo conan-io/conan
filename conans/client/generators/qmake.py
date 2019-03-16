@@ -17,7 +17,7 @@ class DepsCppQmake(object):
 
         self.libs = " ".join('-l%s' % l for l in cpp_info.libs)
         self.defines = " \\\n    ".join('"%s"' % d for d in cpp_info.defines)
-        self.cppflags = " ".join(cpp_info.cppflags)
+        self.cxxflags = " ".join(cpp_info.cxxflags)
         self.cflags = " ".join(cpp_info.cflags)
         self.sharedlinkflags = " ".join(cpp_info.sharedlinkflags)
         self.exelinkflags = " ".join(cpp_info.exelinkflags)
@@ -41,7 +41,7 @@ class QmakeGenerator(Generator):
                     'CONAN_RESDIRS{dep_name}{build_type} += {deps.res_paths}\n'
                     'CONAN_BUILDDIRS{dep_name}{build_type} += {deps.build_paths}\n'
                     'CONAN_DEFINES{dep_name}{build_type} += {deps.defines}\n'
-                    'CONAN_QMAKE_CXXFLAGS{dep_name}{build_type} += {deps.cppflags}\n'
+                    'CONAN_QMAKE_CXXFLAGS{dep_name}{build_type} += {deps.cxxflags}\n'
                     'CONAN_QMAKE_CFLAGS{dep_name}{build_type} += {deps.cflags}\n'
                     'CONAN_QMAKE_LFLAGS{dep_name}{build_type} += {deps.sharedlinkflags}\n'
                     'CONAN_QMAKE_LFLAGS{dep_name}{build_type} += {deps.exelinkflags}\n')

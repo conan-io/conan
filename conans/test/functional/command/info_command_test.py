@@ -61,7 +61,7 @@ class InfoTest(unittest.TestCase):
 
     def assert_last_line(self, client, line):
         lastline = str(client.user_io.out).splitlines()[-1]
-        self.assertEquals(lastline, line)
+        self.assertEqual(lastline, line)
 
     def info_build_test(self):
         """ Test that the output of 'conan info --build' is correct """

@@ -27,7 +27,7 @@ class JwtTest(unittest.TestCase):
 
         # Decrypt the profile
         decrypted_profile = manager.get_profile(token)
-        self.assertEquals(profile, decrypted_profile)
+        self.assertEqual(profile, decrypted_profile)
 
         # Now wait 2 seconds and check if its valid now
         time.sleep(2)
@@ -36,5 +36,5 @@ class JwtTest(unittest.TestCase):
     def jwt_credentials_manager_test(self):
         manager = JWTCredentialsManager(self.secret, self.expire_time)
         token = manager.get_token_for("lasote")
-        self.assertEquals(manager.get_user(token), "lasote")
+        self.assertEqual(manager.get_user(token), "lasote")
         self.assertRaises(DecodeError, manager.get_user, "invalid_user")

@@ -4,6 +4,7 @@ import platform
 import unittest
 import zipfile
 
+import six
 from six import StringIO
 
 from conans.client import tools
@@ -69,7 +70,7 @@ class PkgConan(ConanFile):
         tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()
-        self.assertRegexpMatches(output, "Unzipping [\d]+B")
+        six.assertRegex(self, output, "Unzipping [\d]+B")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 

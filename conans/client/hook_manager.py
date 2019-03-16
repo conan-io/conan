@@ -101,8 +101,14 @@ class HookManager(object):
                 module = sys.modules[added]
                 if module:
                     try:
-                        folder = os.path.dirname(module.__file__)
-                    except AttributeError:  # some module doesn't have __file__
+                        try:
+                            # Most modules will have __file__ != None
+                            folder = os.path.dirname(module.__file__)
+                        except (AttributeError, TypeError):
+                            # But __file__ might not exist or equal None
+                            # Like some builtins and Namespace packages py3
+                            folder = module.__path__._path[0]
+                    except AttributeError:  # In case the module.__path__ doesn't exist
                         pass
                     else:
                         if folder.startswith(current_dir):

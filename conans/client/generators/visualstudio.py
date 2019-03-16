@@ -75,7 +75,7 @@ class VisualStudioGenerator(Generator):
             'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
                              else '%s;' % lib for lib in build_info.libs]),
             'definitions': "".join("%s;" % d for d in build_info.defines),
-            'compiler_flags': " ".join(build_info.cppflags + build_info.cflags),
+            'compiler_flags': " ".join(build_info.cxxflags + build_info.cflags),
             'linker_flags': " ".join(build_info.sharedlinkflags),
             'exe_flags': " ".join(build_info.exelinkflags)
         }

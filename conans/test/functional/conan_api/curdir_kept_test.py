@@ -21,6 +21,6 @@ class Pkg(ConanFile):
             with tools.environment_append({"CONAN_USER_HOME": tmp_folder}):
                 api, _, _ = ConanAPIV1.factory()
                 api.create(".", name="lib", version="1.0", user="user", channel="channel")
-                self.assertEquals(tmp_folder, os.getcwd())
+                self.assertEqual(tmp_folder, os.getcwd())
                 api.create(".", name="lib", version="1.0", user="user", channel="channel2")
-                self.assertEquals(tmp_folder, os.getcwd())
+                self.assertEqual(tmp_folder, os.getcwd())
