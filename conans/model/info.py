@@ -158,6 +158,12 @@ class RequirementsInfo(object):
         self._data = {pref: RequirementInfo(pref, default_package_id_mode=default_package_id_mode)
                       for pref in prefs}
 
+    def update_prev(self, pref):
+        for req_info in self._data.values():
+            # CHECK: Checking only the REF, not the PREF, package_id?
+            if req_info.package.ref == pref.ref and req_info.package_revision == PREV_MISSING:
+                req_info.package_revision = pref.revision
+
     def copy(self):
         # For build_id() implementation
         result = RequirementsInfo([], None)

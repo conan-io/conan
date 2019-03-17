@@ -347,8 +347,14 @@ class BinaryInstaller(object):
                 if node.binary == BINARY_BUILD:
                     set_dirty(package_folder)
                     self._build_package(node, pref, output, keep_build)
+                    node.prev = self._cache.package_layout(pref.ref).load_metadata().packages[pref.id].revision
+                    for dependant in node.inverse_neighbors():
+                        assert node.pref.revision
+                        dependant.conanfile.info.requires.update_prev(node.pref)
+                        dependant._package_id = dependant.conanfile.info.package_id()
                     clean_dirty(package_folder)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    # not really concurrently, but a different node with same pref
                     if not self._node_concurrently_installed(node, package_folder):
                         set_dirty(package_folder)
                         assert pref.revision is not None, "Installer should receive #PREV always"
@@ -374,7 +380,7 @@ class BinaryInstaller(object):
         ref, conan_file = node.ref, node.conanfile
 
         assert pref.id, "Package-ID without value"
-        assert pref.id != PREV_MISSING, "Package-ID cannot be 'PREV_MISSING'"
+        assert pref.id != PREV_MISSING, "Package-ID %s cannot be 'PREV_MISSING'" % str(node.ref)
 
         t1 = time.time()
         # It is necessary to complete the sources of python requires, which might be used
