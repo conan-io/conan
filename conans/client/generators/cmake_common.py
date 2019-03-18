@@ -674,4 +674,4 @@ macro(conan_set_find_paths)
         endif()
     endif()
 endmacro()
-""" + _conan_basic_setup_common([]) + _cmake_common_macros
+""" + _conan_basic_setup_common([], cmake_multi=True) + _cmake_common_macros
