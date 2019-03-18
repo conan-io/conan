@@ -322,6 +322,7 @@ def collect_libs(conanfile, folder=None):
                                           "times with a different file extension" % name)
                 else:
                     result.append(name)
+    result.sort()
     return result
 
 
@@ -369,5 +370,3 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
-
-
