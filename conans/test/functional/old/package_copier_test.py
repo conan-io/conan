@@ -66,10 +66,10 @@ class PackageCopierTest(unittest.TestCase):
         package_copy(ref, "lasote/stable", ["0101001", "2222222"], paths,
                      user_io=userio, force=False)
         conanfile_content = load(os.path.join(paths.export(new_ref), "conanfile.py"))
-        self.assertEquals(conanfile_content, "new content")
+        self.assertEqual(conanfile_content, "new content")
         package_content = load(os.path.join(paths.package(PackageReference(new_ref, "0101001")),
                                             "package.lib"))
-        self.assertEquals(package_content, "new lib content")
+        self.assertEqual(package_content, "new lib content")
 
         # Now we are going to answer always NO to override
         output._stream.truncate(0)  # Reset output
@@ -81,10 +81,10 @@ class PackageCopierTest(unittest.TestCase):
         package_copy(ref, "lasote/stable", ["0101001", "2222222"], paths,
                      user_io=userio, force=False)
         conanfile_content = load(os.path.join(paths.export(new_ref), "conanfile.py"))
-        self.assertEquals(conanfile_content, "new content")  # Not content22
+        self.assertEqual(conanfile_content, "new content")  # Not content22
         pref = PackageReference(new_ref, "0101001")
         package_content = load(os.path.join(paths.package(pref), "package.lib"))
-        self.assertEquals(package_content, "new lib content")  # Not newlib22
+        self.assertEqual(package_content, "new lib content")  # Not newlib22
         # If conanfile is not override it exist
         self.assertNotIn("Package '2222222' already exist. Override?", output)
         self.assertNotIn("Package '0101001' already exist. Override?", output)

@@ -14,7 +14,7 @@ class parentLib(ConanFile):
     version = "1.0"
     
     def package_info(self):
-        self.cpp_info.cppflags.append("-myflag")
+        self.cpp_info.cxxflags.append("-myflag")
         self.user_info.MyVar = "MyVarValue"
         self.env_info.MyEnvVar = "MyEnvVarValue"
 
@@ -61,7 +61,7 @@ class AConan(ConanFile):
 
     def assert_deps_infos(self):
         assert(self.deps_user_info["parent"].MyVar == "MyVarValue")
-        assert(self.deps_cpp_info["parent"].cppflags[0] == "-myflag")
+        assert(self.deps_cpp_info["parent"].cxxflags[0] == "-myflag")
         assert(self.deps_env_info["parent"].MyEnvVar == "MyEnvVarValue")
 
     def build(self):
