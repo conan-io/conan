@@ -15,7 +15,7 @@ class CorruptedPackagesTest(unittest.TestCase):
     """
 
     def setUp(self):
-        revisions_enabled = get_env("TESTING_REVISIONS_ENABLED")
+        revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
         conanfile = textwrap.dedent("""
@@ -36,7 +36,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         pref_str = "Pkg/0.1@user/testing#%s" % rrev
         prev = "11de80325e8db78617b05384825c6409" if revisions_enabled else "0"
         self.pref = pref = PackageReference(ConanFileReference.loads(pref_str),
-                                NO_SETTINGS_PACKAGE_ID, prev)
+                                            NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,
                                                                             "conanmanifest.txt")
         self.info_path = self.server.server_store.get_package_file_path(pref, "conaninfo.txt")
