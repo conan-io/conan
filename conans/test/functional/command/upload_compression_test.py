@@ -106,4 +106,4 @@ class UploadCompressionTest(unittest.TestCase):
 
     def _assert_library_files(self, path):
         libraries = os.listdir(os.path.join(path, "lib"))
-        self.assertEquals(len(libraries), 1)
+        self.assertEqual(len(libraries), 1)

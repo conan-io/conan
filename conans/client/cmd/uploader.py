@@ -154,23 +154,19 @@ class CmdUpload(object):
                     if conanfile.build_policy == "always":
                         raise ConanException("Conanfile '%s' has build_policy='always', "
                                              "no packages can be uploaded" % str(ref))
-                # Filter packages that don't match the recipe revision
-                if self._cache.config.revisions_enabled and ref.revision:
-                    recipe_package_ids = []
-                    for package_id in packages_ids:
-                        rec_rev = metadata.packages[package_id].recipe_revision
-                        if ref.revision != rec_rev:
-                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to "
-                                                   "the current recipe revision" % package_id)
-                        else:
-                            recipe_package_ids.append(package_id)
-                    packages_ids = recipe_package_ids
                 prefs = []
                 # Gather all the complete PREFS with PREV
                 for package_id in packages_ids:
                     if package_id not in metadata.packages:
                         raise ConanException("Binary package %s:%s not found"
                                              % (str(ref), package_id))
+                    # Filter packages that don't match the recipe revision
+                    if self._cache.config.revisions_enabled and ref.revision:
+                        rec_rev = metadata.packages[package_id].recipe_revision
+                        if ref.revision != rec_rev:
+                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the "
+                                                   "current recipe revision" % package_id)
+                            continue
                     package_revision = metadata.packages[package_id].revision
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))

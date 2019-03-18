@@ -13,7 +13,7 @@ class PremakeDeps(object):
                                     for p in deps_cpp_info.bin_paths)
         self.libs = ", ".join('"%s"' % p for p in deps_cpp_info.libs)
         self.defines = ", ".join('"%s"' % p for p in deps_cpp_info.defines)
-        self.cppflags = ", ".join('"%s"' % p for p in deps_cpp_info.cppflags)
+        self.cxxflags = ", ".join('"%s"' % p for p in deps_cpp_info.cxxflags)
         self.cflags = ", ".join('"%s"' % p for p in deps_cpp_info.cflags)
         self.sharedlinkflags = ", ".join('"%s"' % p for p in deps_cpp_info.sharedlinkflags)
         self.exelinkflags = ", ".join('"%s"' % p for p in deps_cpp_info.exelinkflags)
@@ -35,7 +35,7 @@ class PremakeGenerator(Generator):
                     'conan_bindirs{dep} = {{{deps.bin_paths}}}\n'
                     'conan_libs{dep} = {{{deps.libs}}}\n'
                     'conan_defines{dep} = {{{deps.defines}}}\n'
-                    'conan_cxxflags{dep} = {{{deps.cppflags}}}\n'
+                    'conan_cxxflags{dep} = {{{deps.cxxflags}}}\n'
                     'conan_cflags{dep} = {{{deps.cflags}}}\n'
                     'conan_sharedlinkflags{dep} = {{{deps.sharedlinkflags}}}\n'
                     'conan_exelinkflags{dep} = {{{deps.exelinkflags}}}\n')
