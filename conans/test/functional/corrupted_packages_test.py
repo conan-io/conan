@@ -15,7 +15,7 @@ class CorruptedPackagesTest(unittest.TestCase):
     """
 
     def setUp(self):
-        revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
+        revisions_enabled = get_env("TESTING_REVISIONS_ENABLED")
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
         conanfile = textwrap.dedent("""
