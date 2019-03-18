@@ -13,7 +13,6 @@ from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
-from conans.util.log import logger
 
 
 def _run_muted(cmd, folder=None):
@@ -344,9 +343,9 @@ class SVN(SCMBase):
                         return False
                 return True
         else:
-            logger.warning("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
-                           " returning not-pristine always because it cannot compare with"
-                           " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
+            self._output.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
+                              " returning not-pristine always because it cannot compare with"
+                              " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
             return False
 
     def get_revision(self):
