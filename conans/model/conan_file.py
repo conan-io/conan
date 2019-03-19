@@ -97,6 +97,7 @@ class ConanFile(object):
     exports = None
     exports_sources = None
     generators = ["txt"]
+    revision_mode = "auto"
 
     # Vars to control the build steps (build(), package())
     should_configure = True

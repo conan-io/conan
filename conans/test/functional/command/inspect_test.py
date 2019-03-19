@@ -147,6 +147,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: auto
 settings: None
 options: None
 default_options: None
@@ -169,6 +170,7 @@ class Pkg(ConanFile):
     options = {"foo": [True, False], "bar": [True, False]}
     default_options = {"foo": True, "bar": False}
     _private = "Nothing"
+    revision_mode = "hash"
     def build(self):
         pass
 """
@@ -188,6 +190,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]
@@ -229,6 +232,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: auto
 settings: ('os', 'compiler', 'arch', 'build_type')
 options:
     386: [True, False]
@@ -276,6 +280,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: auto
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]
@@ -302,6 +307,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: auto
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]
