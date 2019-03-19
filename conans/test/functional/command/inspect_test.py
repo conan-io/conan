@@ -83,6 +83,8 @@ class Pkg(ConanFile):
         self.assertIn("version: None", client.out)
         client.run("inspect . -a=settings")
         self.assertIn("settings: ('os', 'compiler', 'arch')", client.out)
+        client.run("inspect . -a=revision_mode")
+        self.assertIn("revision_mode: auto", client.out)
 
         client.run("inspect . -a=unexisting_attr", assert_error=True)
         self.assertIn("ERROR: 'Pkg' object has no attribute 'unexisting_attr'", client.out)
