@@ -93,7 +93,7 @@ class _ConanPackageBuilder(object):
                 shutil.copytree(self.source_folder, self.build_folder, symlinks=True)
             except Exception as e:
                 msg = str(e)
-                if "[Error 206]" in msg:  # System error shutil.Error
+                if "206" in msg:  # System error shutil.Error 206: Filename or extension too long
                     msg += "\nUse short_paths=True if paths too long"
                 raise ConanException("%s\nError copying sources to build folder" % msg)
             logger.debug("BUILD: Copied to %s", self.build_folder)

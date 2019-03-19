@@ -52,7 +52,7 @@ class PathLengthLimitTest(unittest.TestCase):
                 def source(self):
                     cwd = os.getcwd()
                     size = len(os.getcwd())
-                    sub = "a/"*((240-size)/2)
+                    sub = "a/"*(int((240-size)/2))
                     path = os.path.join(cwd, sub, "file.txt")
                     path = os.path.normpath(path)
                     save(path, "contents")
