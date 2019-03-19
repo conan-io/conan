@@ -4,6 +4,7 @@ import six
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
+from conans.util.env_reader import get_env
 
 
 class Requirement(object):
@@ -112,6 +113,8 @@ class Requirements(OrderedDict):
         assert isinstance(own_ref, ConanFileReference) if own_ref else True
         assert isinstance(down_ref, ConanFileReference) if down_ref else True
 
+        raise_on_override = get_env("CONAN_RAISE_ON_OVERRIDE", False)
+
         new_reqs = down_reqs.copy()
         if own_ref:
             new_reqs.pop(own_ref.name, None)
@@ -123,9 +126,14 @@ class Requirements(OrderedDict):
                 # update dependency
                 other_ref = other_req.ref
                 if other_ref and other_ref != req.ref:
-                    output.info("%s requirement %s overridden by %s to %s "
-                                % (own_ref, req.ref, down_ref or "your conanfile",
-                                   other_ref))
+                    msg = "requirement %s overridden by %s to %s " \
+                          % (req.ref, down_ref or "your conanfile", other_ref)
+
+                    if raise_on_override and not other_req.override:
+                        raise ConanException(msg)
+
+                    msg = "%s %s" % (own_ref, msg)
+                    output.info(msg)
                     req.ref = other_ref
 
             new_reqs[name] = req
