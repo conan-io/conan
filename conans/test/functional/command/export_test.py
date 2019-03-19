@@ -455,18 +455,20 @@ class ExportMetadataTest(unittest.TestCase):
         self.assertEqual(meta.recipe.revision, rev)
 
     def test_revision_mode_auto(self):
-        t = TestClient()
-        t.save({'conanfile.py': self.conanfile.format(revision_mode="auto")})
-        ref = ConanFileReference.loads("name/version@user/channel")
+        conanfile = self.conanfile.format(revision_mode="auto")
 
         # Without repo, uses hash
+        t = TestClient()
+        t.save({'conanfile.py': conanfile})
+        ref = ConanFileReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
         self.assertEqual(meta.recipe.revision, self.summary_hash["auto"])
 
         # With repo, revision will be different
-        t.runner("git init .", cwd=t.current_folder)
-        t.runner('git add -A && git commit -m "initial"', cwd=t.current_folder)
+        path, rev = create_local_git_repo(files={'conanfile.py': conanfile})
+        t = TestClient(current_folder=path)
+        ref = ConanFileReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
         self.assertNotEqual(meta.recipe.revision, self.summary_hash["auto"])
