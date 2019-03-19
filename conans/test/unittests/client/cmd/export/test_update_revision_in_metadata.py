@@ -2,6 +2,7 @@
 
 
 import unittest
+from collections import namedtuple
 
 from mock import mock
 
@@ -14,14 +15,66 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 class UpdateRevisionInMetadataTests(unittest.TestCase):
 
-    def test_warn_not_pristine(self):
-        output = TestBufferConanOutput()
+    def setUp(self):
+        ref = ConanFileReference.loads("lib/version@user/channel")
+        self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
+                                                 short_paths=False, no_lock=True)
+        self.output = TestBufferConanOutput()
 
+    def test_warn_not_pristine(self):
         with mock.patch("conans.client.cmd.export._detect_scm_revision",
                         return_value=("revision", "git", False)):
-            path = digest = None
-            ref = ConanFileReference.loads("lib/version@user/channel")
-            package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
-                                                short_paths=False, no_lock=True)
-            _update_revision_in_metadata(package_layout, True, output, path, digest)
-            self.assertIn("WARN: Repo status is not pristine: there might be modified files", output)
+            path = None
+            digest = namedtuple("Digest", "summary_hash")
+            _update_revision_in_metadata(self.package_layout, True, self.output,
+                                         path, digest, "auto")
+            self.assertIn("WARN: Repo status is not pristine: there might be modified files",
+                          self.output)
+
+    def test_hash_behavior(self):
+        revision_mode = "hash"
+
+        digest = namedtuple("Digest", "summary_hash")
+        digest.summary_hash = "1234"
+        path = None
+        rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+                                           path, digest, revision_mode)
+        self.assertEqual(rev, "1234")
+        self.assertIn("Using the exported files summary hash as the recipe revision", self.output)
+
+    def test_scm_behavior(self):
+        revision_mode = "scm"
+
+        digest = None
+        path = None
+        with mock.patch("conans.client.cmd.export._detect_scm_revision",
+                        return_value=("1234", "git", True)):
+            rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+                                               path, digest, revision_mode)
+        self.assertEqual(rev, "1234")
+        self.assertIn("Using git commit as the recipe revision", self.output)
+
+    def test_auto_with_scm(self):
+        revision_mode = "auto"
+
+        digest = None
+        path = None
+        with mock.patch("conans.client.cmd.export._detect_scm_revision",
+                        return_value=("1234", "git", True)):
+            rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+                                               path, digest, revision_mode)
+        self.assertEqual(rev, "1234")
+        self.assertIn("Using git commit as the recipe revision", self.output)
+
+    def test_auto_without_scm(self):
+        revision_mode = "auto"
+
+        digest = namedtuple("Digest", "summary_hash")
+        digest.summary_hash = "1234"
+        path = None
+        with mock.patch("conans.client.cmd.export._detect_scm_revision",
+                        return_value=(None, None, None)):
+            rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+                                               path, digest, revision_mode)
+        self.assertEqual(rev, "1234")
+        self.assertIn("Using the exported files summary hash as the recipe revision", self.output)

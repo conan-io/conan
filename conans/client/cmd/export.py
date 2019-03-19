@@ -248,25 +248,29 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
     if revision_mode not in ["auto", "scm", "hash"]:
         raise ConanException("Revision mode should be one of 'auto' (default), 'scm' or 'hash'")
 
-    # Handle revision mode
-    revision = digest.summary_hash
-    if revision_mode in ["auto", "scm"]:
-        scm_revision_detected, repo_type, is_pristine = _detect_scm_revision(path)
-        if revision_mode == "scm" and not scm_revision_detected:
+    def use_hash():
+        if revisions_enabled:
+            output.info("Using the exported files summary hash as the recipe"
+                        " revision: {} ".format(digest.summary_hash))
+        return digest.summary_hash
+
+    def use_scm():
+        rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
+        if revision_mode == "scm" and not rev_detected:
             raise ConanException("Cannot detect revision using '{}' mode"
                                  " from repository at '{}'".format(revision_mode, path))
-        revision = scm_revision_detected or revision
 
-    # Print information about revisions
-    if revisions_enabled:
-        if scm_revision_detected:
-            output.info("Using {} commit as the recipe"
-                        " revision: {} ".format(repo_type, revision))
+        if rev_detected and revisions_enabled:
+            output.info("Using %s commit as the recipe revision: %s" % (repo_type, rev_detected))
             if not is_pristine:
                 output.warn("Repo status is not pristine: there might be modified files")
-        else:
-            output.info("Using the exported files summary hash as the recipe"
-                        " revision: {} ".format(revision))
+        return rev_detected
+
+    # Use the proper approach depending on 'revision_mode'
+    if revision_mode == "hash":
+        revision = use_hash()
+    else:
+        revision = use_scm() or use_hash()
 
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
