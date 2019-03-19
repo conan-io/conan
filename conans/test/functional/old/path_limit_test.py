@@ -60,7 +60,7 @@ class PathLengthLimitTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/1.0@user/testing", assert_error=True)
-        self.assertIn("Consider using short_paths=True if paths too long", client.out)
+        self.assertIn("Use short_paths=True if paths too long", client.out)
         self.assertIn("Error copying sources to build folder", client.out)
 
     def remove_test(self):
