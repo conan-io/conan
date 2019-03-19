@@ -89,23 +89,6 @@ def path_shortener(path, short_paths):
     return redirect
 
 
-def ignore_long_path_files(src_folder, build_folder, output):
-    def _filter(src, files):
-        filtered_files = []
-        for the_file in files:
-            source_path = os.path.join(src, the_file)
-            # Without storage path, just relative
-            rel_path = os.path.relpath(source_path, src_folder)
-            dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-            # it is NOT that "/" is counted as "\\" so it counts double
-            # seems a bug in python, overflows paths near the limit of 260,
-            if len(dest_path) >= 249:
-                filtered_files.append(the_file)
-                output.warn("Filename too long, file excluded: %s" % dest_path)
-        return filtered_files
-    return _filter
-
-
 def rm_conandir(path):
     """removal of a directory that might contain a link to a short path"""
     link = os.path.join(path, CONAN_LINK)
