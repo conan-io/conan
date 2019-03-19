@@ -236,17 +236,19 @@ def _detect_scm_revision(path):
         return None, None
 
     repo_obj = SCM.availables.get(repo_type)(path)
-    return repo_obj.get_revision(), repo_type
+    return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
 def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
 
-    scm_revision_detected, repo_type = _detect_scm_revision(path)
+    scm_revision_detected, repo_type, is_pristine = _detect_scm_revision(path)
     revision = scm_revision_detected or digest.summary_hash
     if revisions_enabled:
         if scm_revision_detected:
             output.info("Using {} commit as the recipe"
                         " revision: {} ".format(repo_type, revision))
+            if not is_pristine:
+                output.warn("Repo status is not pristine: there might be modified files")
         else:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
