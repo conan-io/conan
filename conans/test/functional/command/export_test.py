@@ -3,13 +3,14 @@ import stat
 import unittest
 
 from parameterized import parameterized
-
+import textwrap
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
+from conans.test.utils.tools import create_local_git_repo
 
 
 class ExportSettingsTest(unittest.TestCase):
@@ -419,3 +420,54 @@ class OpenSSLConan(ConanFile):
                 save(file_path, content)
                 file_list.append(file_path)
         return file_list
+
+
+class ExportMetadataTest(unittest.TestCase):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        
+        class Lib(ConanFile):
+            revision_mode = "{revision_mode}"
+    """)
+
+    summary_hash = {"hash": "bfe8b4a6a2a74966c0c4e0b34705004a",
+                    "auto": "9a5aa68b863d3f6d774b13af32abc6c1"}
+
+    def test_revision_mode_hash(self):
+        t = TestClient()
+        t.save({'conanfile.py': self.conanfile.format(revision_mode="hash")})
+
+        ref = ConanFileReference.loads("name/version@user/channel")
+        t.run("export . {}".format(ref))
+
+        meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
+        self.assertEqual(meta.recipe.revision, self.summary_hash["hash"])
+
+    def test_revision_mode_scm(self):
+        path, rev = create_local_git_repo(
+            files={'conanfile.py': self.conanfile.format(revision_mode="scm")})
+        t = TestClient(current_folder=path)
+
+        ref = ConanFileReference.loads("name/version@user/channel")
+        t.run("export . {}".format(ref))
+
+        meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
+        self.assertEqual(meta.recipe.revision, rev)
+
+    def test_revision_mode_auto(self):
+        t = TestClient()
+        t.save({'conanfile.py': self.conanfile.format(revision_mode="auto")})
+        ref = ConanFileReference.loads("name/version@user/channel")
+
+        # Without repo, uses hash
+        t.run("export . {}".format(ref))
+        meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
+        self.assertEqual(meta.recipe.revision, self.summary_hash["auto"])
+
+        # With repo, revision will be different
+        t.runner("git init .", cwd=t.current_folder)
+        t.runner('git add -A && git commit -m "initial"', cwd=t.current_folder)
+        t.run("export . {}".format(ref))
+        meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
+        self.assertNotEqual(meta.recipe.revision, self.summary_hash["auto"])
+
