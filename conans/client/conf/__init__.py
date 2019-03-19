@@ -108,6 +108,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # conan_cmake_program = cmake         # environment CONAN_CMAKE_PROGRAM (overrides the make program used in CMake.cmake_program)
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
+# cmake generator platform            # environment CONAN_CMAKE_GENERATOR_PLATFORM
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
 # cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
 # cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
@@ -185,6 +186,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
+               "CONAN_CMAKE_GENERATOR_PLATFORM": self._env_c("general.cmake_generator_platform", "CONAN_CMAKE_GENERATOR_PLATFORM", None),
                "CONAN_CMAKE_TOOLCHAIN_FILE": self._env_c("general.cmake_toolchain_file", "CONAN_CMAKE_TOOLCHAIN_FILE", None),
                "CONAN_CMAKE_SYSTEM_NAME": self._env_c("general.cmake_system_name", "CONAN_CMAKE_SYSTEM_NAME", None),
                "CONAN_CMAKE_SYSTEM_VERSION": self._env_c("general.cmake_system_version", "CONAN_CMAKE_SYSTEM_VERSION", None),
