@@ -8,6 +8,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
+from textwrap import dedent
 
 base = '''
 from conans import ConanFile
@@ -39,6 +40,28 @@ class ConanLib(ConanFile):
 
 
 class PathLengthLimitTest(unittest.TestCase):
+    @unittest.skipUnless(platform.system() == "Windows", "requires Win")
+    def failure_copy_test(self):
+        client = TestClient()
+        conanfile = dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import os
+
+            class ConanLib(ConanFile):
+                def source(self):
+                    cwd = os.getcwd()
+                    size = len(os.getcwd())
+                    sub = "a/"*(int((240-size)/2))
+                    path = os.path.join(cwd, sub, "file.txt")
+                    path = os.path.normpath(path)
+                    save(path, "contents")
+
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/1.0@user/testing", assert_error=True)
+        self.assertIn("Use short_paths=True if paths too long", client.out)
+        self.assertIn("Error copying sources to build folder", client.out)
 
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
