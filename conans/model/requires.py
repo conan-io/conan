@@ -113,7 +113,7 @@ class Requirements(OrderedDict):
         assert isinstance(own_ref, ConanFileReference) if own_ref else True
         assert isinstance(down_ref, ConanFileReference) if down_ref else True
 
-        raise_on_override = get_env("CONAN_RAISE_ON_OVERRIDE", False)
+        error_on_override = get_env("CONAN_ERROR_ON_OVERRIDE", False)
 
         new_reqs = down_reqs.copy()
         if own_ref:
@@ -129,7 +129,7 @@ class Requirements(OrderedDict):
                     msg = "requirement %s overridden by %s to %s " \
                           % (req.ref, down_ref or "your conanfile", other_ref)
 
-                    if raise_on_override and not other_req.override:
+                    if error_on_override and not other_req.override:
                         raise ConanException(msg)
 
                     msg = "%s %s" % (own_ref, msg)

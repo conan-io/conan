@@ -53,12 +53,12 @@ class ConflictDiamondTest(unittest.TestCase):
                       " by Hello3/0.1@None/None to Hello0/0.1@lasote/stable",
                       self.client.user_io.out)
 
-    def test_raise_on_override(self):
+    def test_error_on_override(self):
         """ Given a conflict in dependencies that is overridden by the consumer project, instead
             of silently output a message, the user can force an error using
-            the env variable 'CONAN_RAISE_ON_OVERRIDE'
+            the env variable 'CONAN_ERROR_ON_OVERRIDE'
         """
-        with environment_append({'CONAN_RAISE_ON_OVERRIDE': "True"}):
+        with environment_append({'CONAN_ERROR_ON_OVERRIDE': "True"}):
             self._export("Hello3", "0.1",
                          ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable",
                           "Hello0/0.1@lasote/stable"], export=False)
@@ -70,9 +70,9 @@ class ConflictDiamondTest(unittest.TestCase):
     def test_override_explicit(self):
         """ Given a conflict in dependencies that is overridden by the consumer project (with
             the explicit keyword 'override'), it won't raise because it is explicit, even if the
-            user has set env variable 'CONAN_RAISE_ON_OVERRIDE' to True
+            user has set env variable 'CONAN_ERROR_ON_OVERRIDE' to True
         """
-        with environment_append({'CONAN_RAISE_ON_OVERRIDE': "True"}):
+        with environment_append({'CONAN_ERROR_ON_OVERRIDE': "True"}):
             conanfile = self.conanfile % ("Hello3", "0.1",
                                           '(("Hello1/0.1@lasote/stable"), '
                                           '("Hello2/0.1@lasote/stable"), '
