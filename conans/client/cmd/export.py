@@ -229,11 +229,11 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
 def _detect_scm_revision(path):
     if not path:
-        return None, None
+        return None, None, None
 
     repo_type = SCM.detect_scm(path)
     if not repo_type:
-        return None, None
+        return None, None, None
 
     repo_obj = SCM.availables.get(repo_type)(path)
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
