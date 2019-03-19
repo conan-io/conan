@@ -632,7 +632,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
- 
+
         conanfile = """
 from conans import ConanFile, tools
 
@@ -960,17 +960,17 @@ compiler:
 PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
 
 
- PROCESSOR_LEVEL=6 
+ PROCESSOR_LEVEL=6
 
-PROCESSOR_REVISION=9e09    
+PROCESSOR_REVISION=9e09
 
-                         
+
 set nl=^
 env_var=
 without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
-       
+
 """.encode("utf-8")
 
         def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
@@ -1168,15 +1168,15 @@ ProgramFiles(x86)=C:\Program Files (x86)
         build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "aarch64-linux-gnu_ilp32")
-        
+
         build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "arm-linux-gnueabi")
-        
+
         build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "arm-linux-gnueabihf")
-       
+
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "i686-linux-android")
@@ -2268,7 +2268,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
@@ -2334,7 +2334,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = conanfile.collect_libs()
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
