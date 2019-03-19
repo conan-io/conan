@@ -23,6 +23,23 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.values.dumps())
 
+    def test_ANY(self):
+        yml = "os: ANY"
+        settings = Settings.loads(yml)
+        # Same sha as if settings were empty
+        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        settings.validate()
+        self.assertTrue(settings.os == None)
+        self.assertEqual("", settings.values.dumps())
+        settings.os = "None"
+        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
+        settings.validate()
+        self.assertTrue(settings.os == "None")
+        self.assertEqual("os=None", settings.values.dumps())
+        settings.os = "Windows"
+        self.assertTrue(settings.os == "Windows")
+        self.assertEqual("os=Windows", settings.values.dumps())
+        
     def getattr_none_test(self):
         yml = "os: [None, Windows]"
         settings = Settings.loads(yml)

@@ -178,7 +178,7 @@ class SettingsItem(object):
         return result
 
     def validate(self):
-        if self._value is None and "None" not in self._definition:
+        if self._value is None and "None" not in self._definition and self._definition != "ANY":
             raise undefined_value(self._name)
 
         if isinstance(self._definition, dict):
