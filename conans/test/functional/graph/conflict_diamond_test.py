@@ -66,19 +66,3 @@ class ConflictDiamondTest(unittest.TestCase):
             self.assertIn("ERROR: Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable"
                           " overridden by Hello3/0.1@None/None to Hello0/0.1@lasote/stable",
                           self.client.user_io.out)
-
-    def test_override_explicit(self):
-        """ Given a conflict in dependencies that is overridden by the consumer project (with
-            the explicit keyword 'override'), it won't raise because it is explicit, even if the
-            user has set env variable 'CONAN_ERROR_ON_OVERRIDE' to True
-        """
-        with environment_append({'CONAN_ERROR_ON_OVERRIDE': "True"}):
-            conanfile = self.conanfile % ("Hello3", "0.1",
-                                          '(("Hello1/0.1@lasote/stable"), '
-                                          '("Hello2/0.1@lasote/stable"), '
-                                          '("Hello0/0.1@lasote/stable", "override"))')
-            self.client.save({CONANFILE: conanfile})
-            self.client.run("install . --build missing")
-            self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
-                          " by Hello3/0.1@None/None to Hello0/0.1@lasote/stable",
-                          self.client.user_io.out)
