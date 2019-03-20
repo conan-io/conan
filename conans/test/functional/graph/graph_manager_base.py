@@ -81,7 +81,11 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(node.ref.full_repr(), ref.full_repr())
         self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
-        self.assertEqual(len(node.dependants), len(dependents))
+
+        dependants = node.inverse_neighbors()
+        self.assertEqual(len(dependants), len(dependents))
+        for d in dependents:
+            self.assertIn(d, dependants)
 
         public_deps = {n.name: n for n in public_deps}
         self.assertEqual(node.public_deps, public_deps)

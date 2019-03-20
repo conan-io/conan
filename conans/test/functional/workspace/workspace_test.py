@@ -279,6 +279,36 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", b_cmake)
 
+    def missing_layout_cmake_test(self):
+        # Specifying cmake generator without layout file raised exception
+        # https://github.com/conan-io/conan/issues/4752
+        client = TestClient()
+
+        def files(name, depend=None):
+            if isinstance(depend, list):
+                deps = ", ".join(["'Hello%s/0.1@lasote/stable'" % d for d in depend])
+            else:
+                deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("D"), path=os.path.join(client.current_folder, "D"))
+        client.save(files("C", "D"), path=os.path.join(client.current_folder, "C"))
+
+        project = dedent("""
+            editables:
+                HelloD/0.1@lasote/stable:
+                    path: D
+                HelloC/0.1@lasote/stable:
+                    path: C
+            workspace_generator: cmake
+            root: HelloC/0.1@lasote/stable
+            """)
+
+        client.save({"conanws.yml": project})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
+
     def simple_build_test(self):
         client = TestClient()
 
