@@ -56,6 +56,14 @@ class SystemPackageToolTest(unittest.TestCase):
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
 
+    def test_system_without_sudo(self):
+        with mock.patch("os.path.isfile", return_value=False):
+            self.assertFalse(SystemPackageTool._is_sudo_enabled())
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
+            with mock.patch("sys.stdout.isatty", return_value=True):
+                self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
     def verify_update_test(self):
         # https://github.com/conan-io/conan/issues/3142
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
