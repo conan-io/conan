@@ -53,7 +53,10 @@ class BuildMode(object):
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if fnmatch.fnmatch(ref.name, pattern) or repr(ref) == pattern:
+            isMatchingPattern = fnmatch.fnmatch(repr(ref), pattern)
+            isExactMatch = repr(ref) == pattern
+            isSameComponent = repr(ref).startswith(pattern)
+            if isMatchingPattern or isExactMatch or isSameComponent:
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
