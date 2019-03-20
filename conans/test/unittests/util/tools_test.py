@@ -6,6 +6,7 @@ import subprocess
 import sys
 import unittest
 import uuid
+import warnings
 from collections import namedtuple
 
 import mock
@@ -54,6 +55,14 @@ class SystemPackageToolTest(unittest.TestCase):
 
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
+
+    def test_system_without_sudo(self):
+        with mock.patch("os.path.isfile", return_value=False):
+            self.assertFalse(SystemPackageTool._is_sudo_enabled())
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
+            with mock.patch("sys.stdout.isatty", return_value=True):
+                self.assertEqual(SystemPackageTool._get_sudo_str(), "")
 
     def verify_update_test(self):
         # https://github.com/conan-io/conan/issues/3142
@@ -397,7 +406,7 @@ class SystemPackageToolTest(unittest.TestCase):
             return
         if platform.system() == "Windows" and not which("choco.exe"):
             return
-        spt = SystemPackageTool()
+        spt = SystemPackageTool(output=self.out)
         expected_package = "git"
         if platform.system() == "Windows" and which("choco.exe"):
             spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
@@ -486,6 +495,7 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+    output = TestBufferConanOutput()
 
     def replace_paths_test(self):
         folder = temp_folder()
@@ -632,7 +642,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
- 
+
         conanfile = """
 from conans import ConanFile, tools
 
@@ -683,21 +693,39 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
+
         # test build_type and arch override, for multi-config packages
-        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
+                                           arch="x86", output=self.output)
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
         with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
+                self.assertEqual(len(w), 2)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
         with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
+                self.assertEqual(len(w), 2)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         # successful definition via settings
         settings.build_type = "Debug"
-        cmd = tools.msvc_build_command(settings, "project.sln")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
@@ -773,7 +801,7 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         output = TestBufferConanOutput()
         runner = TestRunner(output)
         runner(cmd + " && set vs140comntools")
@@ -782,7 +810,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
             runner = TestRunner(output)
-            cmd = tools.vcvars_command(settings)
+            cmd = tools.vcvars_command(settings, output=self.output)
             runner(cmd + " && set vs140comntools")
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
@@ -800,12 +828,12 @@ class HelloConan(ConanFile):
         settings.arch_build = "x86_64"
 
         # Set the env with a PATH containing the vcvars paths
-        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = tools.vcvars_dict(settings, only_diff=False, output=self.output)
         tmp = {key.lower(): value for key, value in tmp.items()}
         with tools.environment_append({"path": tmp["path"]}):
             previous_path = os.environ["PATH"].split(";")
             # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
-            with tools.vcvars(settings):
+            with tools.vcvars(settings, output=self.output):
                 path = os.environ["PATH"].split(";")
                 values_count = {value: path.count(value) for value in path}
                 for value, counter in values_count.items():
@@ -822,11 +850,13 @@ class HelloConan(ConanFile):
         settings.arch = "x86"
         settings.arch_build = "x86_64"
         with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=True, output=self.output)
             with tools.environment_append(tmp):
                 self.assertNotIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake",  os.environ["PATH"])
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=False, output=self.output)
             with tools.environment_append(tmp):
                 self.assertIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake", os.environ["PATH"])
@@ -840,12 +870,12 @@ class HelloConan(ConanFile):
         settings.compiler.version = "15"
         settings.arch = "x86"
         settings.arch_build = "x86_64"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
         settings.arch_build = "x86"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
 
     def vcvars_raises_when_not_found_test(self):
@@ -930,22 +960,22 @@ compiler:
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         with tools.environment_append({"MYVAR": "1"}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             self.assertIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
-            ret = vcvars_dict(settings)
+            ret = vcvars_dict(settings, output=self.output)
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
         my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
         with tools.environment_append({"LIBPATH": my_lib_paths}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             str_var_value = os.pathsep.join(ret["LIBPATH"])
             self.assertTrue(str_var_value.endswith(my_lib_paths))
 
             # Now only a diff, it should return the values as a list, but without the old values
-            ret = vcvars_dict(settings, only_diff=True)
+            ret = vcvars_dict(settings, only_diff=True, output=self.output)
             self.assertEqual(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
 
             # But if we apply both environments, they are composed correctly
@@ -960,17 +990,17 @@ compiler:
 PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
 
 
- PROCESSOR_LEVEL=6 
+ PROCESSOR_LEVEL=6
 
-PROCESSOR_REVISION=9e09    
+PROCESSOR_REVISION=9e09
 
-                         
+
 set nl=^
 env_var=
 without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
-       
+
 """.encode("utf-8")
 
         def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
@@ -983,7 +1013,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vcvars = tools.vcvars_dict(None, only_diff=False)
+                vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
@@ -1168,15 +1198,15 @@ ProgramFiles(x86)=C:\Program Files (x86)
         build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "aarch64-linux-gnu_ilp32")
-        
+
         build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "arm-linux-gnueabi")
-        
+
         build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "arm-linux-gnueabihf")
-       
+
         build, host = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEqual(build, "x86_64-linux-gnu")
         self.assertEqual(host, "i686-linux-android")
@@ -2268,7 +2298,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
@@ -2334,7 +2364,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = conanfile.collect_libs()
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
