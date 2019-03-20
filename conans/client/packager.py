@@ -3,13 +3,13 @@ import shutil
 
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
+from conans.client.tools.files import chdir
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
 from conans.util.files import mkdir, rmdir, save
 from conans.util.log import logger
-from conans.client.tools.files import chdir
 
 
 def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
