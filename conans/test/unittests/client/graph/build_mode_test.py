@@ -106,6 +106,14 @@ class BuildModeTest(unittest.TestCase):
         reference = ConanFileReference.loads("foo/1.0.0@NewUser/stable")
         self.assertFalse(build_mode.forced(self.conanfile, reference))
 
+        build_mode = BuildMode(["*Tool"], self.output)
+        reference = ConanFileReference.loads("Tool/0.1@lasote/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("PythonTool/0.1@lasote/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("SomeTool/1.2@user/channel")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+
         build_mode.report_matches()
         self.assertEqual("", self.output)
 
