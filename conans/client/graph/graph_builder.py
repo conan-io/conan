@@ -129,7 +129,7 @@ class DepsGraphBuilder(object):
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
                         remote_name, processed_profile, new_reqs, new_options):
-        if name in node.ancestors:
+        if name in node.ancestors or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 

@@ -262,6 +262,14 @@ class TransitiveGraphTest(GraphManagerTest):
                                      "requires 'libc/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
 
+    def test_self_loop(self):
+        ref1 = "base/1.0@user/testing"
+        self._cache_recipe(ref1, TestConanFile("base", "0.1"))
+        ref = ConanFileReference.loads("base/aaa@user/testing")
+        with self.assertRaisesRegexp(ConanException, "Loop detected: 'base/aaa@user/testing' "
+                                     "requires 'base/aaa@user/testing'"):
+            self.build_graph(TestConanFile("base", "aaa", requires=[ref1]), ref=ref, create_ref=ref)
+
     @parameterized.expand([("recipe", ), ("profile", )])
     def test_basic_build_require(self, build_require):
         # app -(br)-> tool0.1

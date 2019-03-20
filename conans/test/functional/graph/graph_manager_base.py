@@ -52,7 +52,7 @@ class GraphManagerTest(unittest.TestCase):
         manifest = FileTreeManifest.create(self.cache.export(ref))
         manifest.save(self.cache.export(ref))
 
-    def build_graph(self, content, profile_build_requires=None, ref=None):
+    def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
@@ -69,7 +69,7 @@ class GraphManagerTest(unittest.TestCase):
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
-        deps_graph, _ = self.manager.load_graph(path, None, graph_info,
+        deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
                                                 build_mode, check_updates, update,
                                                 remote_name, recorder)
         self.binary_installer.install(deps_graph, False, graph_info)
