@@ -25,5 +25,5 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("install .")
         error_code = client.run("build .", assert_error=True)
-        self.assertEquals(error_code, 34)
+        self.assertEqual(error_code, 34)
         self.assertIn("Exiting with code: 34", client.user_io.out)

@@ -11,11 +11,12 @@ def serialize_cpp_info(cpp_info):
         "sysroot",
         "include_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
         "libs",
-        "defines", "cflags", "cppflags", "sharedlinkflags", "exelinkflags",
+        "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags",
     ]
     res = {}
     for key in keys:
         res[key] = getattr(cpp_info, key)
+    res["cppflags"] = cpp_info.cxxflags  # Backwards compatibility
     return res
 
 

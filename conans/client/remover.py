@@ -51,7 +51,8 @@ class DiskRemover(object):
         if not ids:
             path = package_layout.builds()
             for build in package_layout.conan_builds():
-                self._remove(os.path.join(path, build), package_layout.ref, "build folder:%s" % build)
+                self._remove(os.path.join(path, build), package_layout.ref,
+                             "build folder:%s" % build)
             self._remove(path, package_layout.ref, "builds")
         else:
             for id_ in ids:

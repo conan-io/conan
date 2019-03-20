@@ -27,8 +27,9 @@ class HelloConan(ConanFile):
         conan_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
         data = json.loads(conan_json)
 
-        self.assertEquals(data["deps_env_info"]["MY_ENV_VAR"], "foo")
-        self.assertEquals(data["deps_user_info"]["Hello"]["my_var"], "my_value")
+        self.assertEqual(data["deps_env_info"]["MY_ENV_VAR"], "foo")
+        self.assertEqual(data["deps_user_info"]["Hello"]["my_var"], "my_value")
+
         hello_data = data["dependencies"][0]
         self.assertTrue(os.path.exists(hello_data["rootpath"]))
         include_path = hello_data["include_paths"][0]

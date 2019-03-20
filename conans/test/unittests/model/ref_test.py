@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, PackageReference, \
     check_valid_ref
@@ -101,11 +103,11 @@ class RefTest(unittest.TestCase):
 class ConanNameTestCase(unittest.TestCase):
 
     def _check_invalid_format(self, value, *args):
-        with self.assertRaisesRegexp(InvalidNameException, "Valid names"):
+        with six.assertRaisesRegex(self, InvalidNameException, "Valid names"):
             ConanName.validate_name(value, *args)
 
     def _check_invalid_type(self, value):
-        with self.assertRaisesRegexp(InvalidNameException, "is not a string"):
+        with six.assertRaisesRegex(self, InvalidNameException, "is not a string"):
             ConanName.validate_name(value)
 
     def validate_name_test(self):

@@ -181,9 +181,9 @@ def FlagsForFile( filename, **kwargs ):
             return [prefix + x for x in values]
 
         conan_flags = {
-            "includes" : prefixed("-isystem", self.deps_build_info.include_paths),
-            "defines" : prefixed("-D", self.deps_build_info.defines),
-            "flags" : self.deps_build_info.cppflags
+            "includes": prefixed("-isystem", self.deps_build_info.include_paths),
+            "defines": prefixed("-D", self.deps_build_info.defines),
+            "flags": self.deps_build_info.cxxflags
         }
 
         cxx_version = ''

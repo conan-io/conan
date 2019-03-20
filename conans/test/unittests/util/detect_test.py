@@ -23,7 +23,7 @@ class DetectTest(unittest.TestCase):
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
         if platform_compiler is not None:
-            self.assertEquals(result.get("compiler", None), platform_compiler)
+            self.assertEqual(result.get("compiler", None), platform_compiler)
 
     def detect_default_in_mac_os_using_gcc_as_default_test(self):
         """

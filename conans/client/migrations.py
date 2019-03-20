@@ -2,18 +2,16 @@ import os
 import shutil
 
 from conans import DEFAULT_REVISION_V1
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
-
-from conans.model.ref import ConanFileReference, PackageReference
-
-from conans.paths import PACKAGE_METADATA
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
+from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
 
@@ -139,7 +137,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
                               % (CONAN_CONF, DEFAULT_PROFILE_NAME))
                 conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
 
-                migrate_to_default_profile(conf_path, default_profile_path, output=self.out)
+                migrate_to_default_profile(conf_path, default_profile_path)
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.cache, self.out)
@@ -165,7 +163,8 @@ def _migrate_create_metadata(cache, out):
             base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
             # Force using a package cache layout for everything, we want to alter the cache,
             # not the editables
-            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False,
+                                        no_lock=True)
             folder = layout.export()
             try:
                 manifest = FileTreeManifest.load(folder)

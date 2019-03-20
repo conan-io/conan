@@ -93,11 +93,11 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
         digest.save(package_layout.export())
 
     # Compute the revision for the recipe
-    _update_revision_in_metadata(package_layout=package_layout,
-                                 revisions_enabled=revisions_enabled,
-                                 output=output,
-                                 path=os.path.dirname(conanfile_path),
-                                 digest=digest)
+    revision = _update_revision_in_metadata(package_layout=package_layout,
+                                            revisions_enabled=revisions_enabled,
+                                            output=output,
+                                            path=os.path.dirname(conanfile_path),
+                                            digest=digest)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source_folder = package_layout.source()
@@ -127,6 +127,8 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
             output.info("Removing the local binary packages from different recipe revisions")
             remover = DiskRemover()
             remover.remove_packages(package_layout, ids_filter=to_remove)
+
+    return package_layout.ref.copy_with_rev(revision)
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
@@ -227,29 +229,33 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
 def _detect_scm_revision(path):
     if not path:
-        return None, None
+        return None, None, None
 
     repo_type = SCM.detect_scm(path)
     if not repo_type:
-        return None, None
+        return None, None, None
 
     repo_obj = SCM.availables.get(repo_type)(path)
-    return repo_obj.get_revision(), repo_type
+    return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
 def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
 
-    scm_revision_detected, repo_type = _detect_scm_revision(path)
+    scm_revision_detected, repo_type, is_pristine = _detect_scm_revision(path)
     revision = scm_revision_detected or digest.summary_hash
     if revisions_enabled:
         if scm_revision_detected:
             output.info("Using {} commit as the recipe"
                         " revision: {} ".format(repo_type, revision))
+            if not is_pristine:
+                output.warn("Repo status is not pristine: there might be modified files")
         else:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
+
+    return revision
 
 
 def _recreate_folders(destination_folder, destination_src_folder):

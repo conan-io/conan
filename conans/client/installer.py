@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 import time
 
@@ -90,13 +89,13 @@ class _ConanPackageBuilder(object):
             mkdir(self.build_folder)
             self._conan_file.source_folder = self.source_folder
         else:
-            if platform.system() == "Windows" and os.getenv("CONAN_USER_HOME_SHORT") != "None":
-                from conans.util.windows import ignore_long_path_files
-                ignore = ignore_long_path_files(self.source_folder, self.build_folder, self._out)
-            else:
-                ignore = None
-
-            shutil.copytree(self.source_folder, self.build_folder, symlinks=True, ignore=ignore)
+            try:
+                shutil.copytree(self.source_folder, self.build_folder, symlinks=True)
+            except Exception as e:
+                msg = str(e)
+                if "206" in msg:  # System error shutil.Error 206: Filename or extension too long
+                    msg += "\nUse short_paths=True if paths too long"
+                raise ConanException("%s\nError copying sources to build folder" % msg)
             logger.debug("BUILD: Copied to %s", self.build_folder)
             logger.debug("BUILD: Files copied %s", ",".join(os.listdir(self.build_folder)))
             self._conan_file.source_folder = self.build_folder
@@ -270,8 +269,6 @@ class BinaryInstaller(object):
         self._build(nodes_by_level, deps_graph, keep_build, root_node, graph_info)
 
     def _build(self, nodes_by_level, deps_graph, keep_build, root_node, graph_info):
-        inverse_levels = {n: i for i, level in enumerate(deps_graph.inverse_levels()) for n in level}
-
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
@@ -283,7 +280,7 @@ class BinaryInstaller(object):
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
-                self._propagate_info(node, inverse_levels, deps_graph)
+                self._propagate_info(node)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                 else:
@@ -293,7 +290,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, keep_build, processed_package_refs)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node, inverse_levels, deps_graph)
+        self._propagate_info(root_node)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
@@ -429,13 +426,10 @@ class BinaryInstaller(object):
         self._recorder.package_built(pref)
 
     @staticmethod
-    def _propagate_info(node, inverse_levels, deps_graph):
+    def _propagate_info(node):
         # Get deps_cpp_info from upstream nodes
-        closure = deps_graph.full_closure(node)
-        node_order = [n for n in closure.values() if n.binary != BINARY_SKIP]
+        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
-        node_order.sort(key=lambda n: inverse_levels[n])
-
         conan_file = node.conanfile
         for n in node_order:
             if n.build_require:
