@@ -29,6 +29,7 @@ class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
     - "ANY", as string to accept any value
+    - List ["None", "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name):
@@ -91,7 +92,7 @@ class SettingsItem(object):
         if other is None:
             return self._value is None
         other = str(other)
-        if self._definition != "ANY" and other not in self.values_range:
+        if (other not in self.values_range) and (self._definition != "ANY") and ("ANY" not in self._definition):
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
 
@@ -117,8 +118,7 @@ class SettingsItem(object):
             elif self._definition != "ANY":
                 if v in self._definition:
                     self._definition.remove(v)
-        if self._value is not None and self._value not in self._definition:
-            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
+        self.validate()
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
@@ -154,7 +154,7 @@ class SettingsItem(object):
     @value.setter
     def value(self, v):
         v = str(v)
-        if self._definition != "ANY" and v not in self._definition:
+        if (v not in self._definition) and (self._definition != "ANY") and ("ANY" not in self._definition):
             raise ConanException(bad_value_msg(self._name, v, self.values_range))
         self._value = v
 
@@ -178,9 +178,11 @@ class SettingsItem(object):
         return result
 
     def validate(self):
-        if self._value is None and "None" not in self._definition and self._definition != "ANY":
+        if self._value is None and "None" not in self._definition:
             raise undefined_value(self._name)
-
+        if (self._value is not None) and (self._value not in self._definition) and \
+           (self._definition != "ANY") and ("ANY" not in self._definition):
+                raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
         if isinstance(self._definition, dict):
             key = "None" if self._value is None else self._value
             self._definition[key].validate()

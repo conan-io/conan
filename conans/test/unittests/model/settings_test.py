@@ -26,19 +26,47 @@ class SettingsLoadsTest(unittest.TestCase):
     def test_ANY(self):
         yml = "os: ANY"
         settings = Settings.loads(yml)
-        # Same sha as if settings were empty
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
-        settings.validate()
-        self.assertTrue(settings.os == None)
-        self.assertEqual("", settings.values.dumps())
+        self.assertRaises(ConanException, settings.validate) # Raise exception if unset
         settings.os = "None"
-        self.assertEqual(settings.values.sha, Settings.loads("").values.sha)
         settings.validate()
         self.assertTrue(settings.os == "None")
         self.assertEqual("os=None", settings.values.dumps())
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.values.dumps())
+        
+    def test_None_ANY(self):
+        yml = "os: [None, ANY]"
+        settings = Settings.loads(yml)
+        settings.validate()
+        settings.os = "None"
+        settings.validate()
+        self.assertTrue(settings.os == "None")
+        self.assertEqual("os=None", settings.values.dumps())
+        settings.os = "Windows"
+        self.assertTrue(settings.os == "Windows")
+        self.assertEqual("os=Windows", settings.values.dumps())
+    
+    
+    def test_None_ANY_remove(self):    
+        yml = "os: [None, ANY]"
+        settings = Settings.loads(yml)
+        settings.os = "Windows"
+        settings.os.remove("invalid") # "Windows" is still valid
+        self.assertRaises(ConanException, settings.os.remove, "ANY") #  "Windows" is not valid anymore
+        
+        settings = Settings.loads(yml)
+        settings.os = "None"
+        settings.os.remove("ANY") # "None" is still valid
+        self.assertRaises(ConanException, settings.os.remove, "None") #  "None" is not valid anymore
+        
+    def test_ANY_remove(self):
+        yml = "os: ANY"
+        settings = Settings.loads(yml)
+        settings.os = "Windows"
+        settings.os.remove("invalid") # remove an definition which is not contained, "Windows" still valid
+        settings.os.remove("ANY") # cannot be removed, "Windows" still valid
+        
         
     def getattr_none_test(self):
         yml = "os: [None, Windows]"
