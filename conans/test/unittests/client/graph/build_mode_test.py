@@ -116,16 +116,3 @@ class BuildModeTest(unittest.TestCase):
 
         build_mode.report_matches()
         self.assertEqual("", self.output)
-
-    def test_partly_build_force(self):
-        build_mode = BuildMode(["H"], self.output)
-
-        reference = ConanFileReference.loads("Hey/0.1@user/testing")
-        self.assertTrue(build_mode.forced(self.conanfile, reference))
-        reference = ConanFileReference.loads("Ho/0.1@user/testing")
-        self.assertTrue(build_mode.forced(self.conanfile, reference))
-        reference = ConanFileReference.loads("LetsGo/0.1@user/testing")
-        self.assertFalse(build_mode.forced(self.conanfile, reference))
-
-        build_mode.report_matches()
-        self.assertEqual("", self.output)

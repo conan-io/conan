@@ -56,8 +56,7 @@ class BuildMode(object):
             is_matching_name = fnmatch.fnmatch(ref.name, pattern)
             is_matching_ref = fnmatch.fnmatch(repr(ref), pattern)
             is_exact_match = (repr(ref) == pattern)
-            is_same_component = repr(ref).startswith(pattern)
-            if is_matching_name or is_matching_ref or is_exact_match or is_same_component:
+            if is_matching_name or is_matching_ref or is_exact_match:
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
