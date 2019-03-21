@@ -1,6 +1,6 @@
 def causes = currentBuild.rawBuild.getCauses()
 //if(BranchIndexingCause
-def classes = causes.collect{it.getClass()}
+List<String> classes = causes.collect{it.getClass().toString()}
 echo "CAUSES: ${classes}"
 
 // ########## CONFIGURATION ##################
