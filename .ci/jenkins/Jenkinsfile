@@ -1,9 +1,13 @@
 def causes = currentBuild.rawBuild.getCauses()
+boolean badCause = false
 for(int i=0; i<causes.size(); i++){
     String causeClass = causes[i].getClass().getName()
     if(causeClass == "jenkins.branch.BranchIndexingCause"){
-        error("Branch indexing builds are blocked")
+        badCause = true
     }
+}
+if(badCause){
+  error("Branch indexing builds are blocked")
 }
 
 // ########## CONFIGURATION ##################
