@@ -1,9 +1,7 @@
-def causes = currentBuild.rawBuild.getCauses()
-if(causes.size() > 0){
-    String causeClass = causes[0].getClass().getName()
-    if(causeClass == "jenkins.branch.BranchIndexingCause"){
-        echo("Branch indexing builds are blocked")
-    }
+
+String causeClass = currentBuild.rawBuild.getCauses()[0].getClass().getName()
+if(causeClass == "jenkins.branch.BranchIndexingCause"){
+    echo("Branch indexing builds are blocked")
 }
 
 
