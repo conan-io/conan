@@ -1,6 +1,6 @@
 def causes = currentBuild.rawBuild.getCauses()
 //if(BranchIndexingCause
-echo causes
+echo causes.collect{it.getClassName()}
 
 // ########## CONFIGURATION ##################
 def full_py_vers = false
