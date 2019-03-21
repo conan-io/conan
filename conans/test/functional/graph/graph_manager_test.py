@@ -128,10 +128,10 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb, libc], build_deps=[],
                          dependents=[libe, libf], closure=[libb, libc, liba],
                          public_deps=public_deps)
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libd], closure=[liba], public_deps=public_deps)
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
-        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
+                         dependents=[libd], closure=[liba], public_deps=public_deps)
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[libb, libc], closure=[], public_deps=public_deps)
 
@@ -224,7 +224,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libb = liba.dependencies[2].dst
 
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc], closure=[], public_deps=[liba, libb, libc, libd])
+                         dependents=[liba, libc], closure=[], public_deps=[liba, libb, libc, libd])
         self._check_node(liba, "liba/0.1@None/None", deps=[libd, libc, libb], build_deps=[],
                          dependents=[],
                          closure=[libb, libc, libd], public_deps=[liba, libb, libc, libd])
@@ -261,6 +261,14 @@ class TransitiveGraphTest(GraphManagerTest):
         with self.assertRaisesRegexp(ConanException, "Loop detected: 'liba/0.1@user/testing' "
                                      "requires 'libc/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
+
+    def test_self_loop(self):
+        ref1 = "base/1.0@user/testing"
+        self._cache_recipe(ref1, TestConanFile("base", "0.1"))
+        ref = ConanFileReference.loads("base/aaa@user/testing")
+        with self.assertRaisesRegexp(ConanException, "Loop detected: 'base/aaa@user/testing' "
+                                     "requires 'base/aaa@user/testing'"):
+            self.build_graph(TestConanFile("base", "aaa", requires=[ref1]), ref=ref, create_ref=ref)
 
     @parameterized.expand([("recipe", ), ("profile", )])
     def test_basic_build_require(self, build_require):
@@ -345,7 +353,7 @@ class TransitiveGraphTest(GraphManagerTest):
                          closure=[mingw_app, lib], public_deps=[app, lib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[mingw_lib, gtest],
-                         dependents=[lib], closure=[mingw_lib, gtest], public_deps=[app, lib])
+                         dependents=[app], closure=[mingw_lib, gtest], public_deps=[app, lib])
         self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[mingw_gtest],
                          dependents=[lib], closure=[mingw_gtest], public_deps=[gtest, lib])
         # MinGW leaf nodes
@@ -453,6 +461,149 @@ class TransitiveGraphTest(GraphManagerTest):
         with self.assertRaisesRegexp(ConanException,
                                      "tried to change zlib/0.1@user/testing option shared to True"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
+
+    def test_consecutive_diamonds_build_requires(self):
+        # app -> libe0.1 -------------> libd0.1 -> libb0.1 -------------> liba0.1
+        #    \-(build-require)-> libf0.1 ->/    \-(build-require)->libc0.1 ->/
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        libe_ref = "libe/0.1@user/testing"
+        libf_ref = "libf/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[libb_ref],
+                                                   build_requires=[libc_ref]))
+        self._cache_recipe(libe_ref, TestConanFile("libe", "0.1", requires=[libd_ref]))
+        self._cache_recipe(libf_ref, TestConanFile("libf", "0.1", requires=[libd_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libe_ref],
+                                                    build_requires=[libf_ref]))
+
+        self.assertEqual(7, len(deps_graph.nodes))
+        app = deps_graph.root
+        libe = app.dependencies[0].dst
+        libf = app.dependencies[1].dst
+        libd = libe.dependencies[0].dst
+        libb = libd.dependencies[0].dst
+        libc = libd.dependencies[1].dst
+        liba = libc.dependencies[0].dst
+
+        public_deps = [app, libb, liba, libd, libe]
+        self._check_node(app, "app/0.1@None/None", deps=[libe], build_deps=[libf], dependents=[],
+                         closure=[libf, libe, libd, libb, liba], public_deps=public_deps)
+        self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[app], closure=[libd, libb, liba],
+                         public_deps=public_deps)
+
+        public_deps = [app, libb, liba, libd, libe, libf]
+        self._check_node(libf, "libf/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[app], closure=[libd, libb, liba],
+                         public_deps=public_deps)
+
+        public_deps = [app, libb, liba, libd, libe]
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb], build_deps=[libc],
+                         dependents=[libe, libf], closure=[libc, libb, liba],
+                         public_deps=public_deps)
+        public_deps = [libd, libb, libc, liba]
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libd], closure=[liba], public_deps=public_deps)
+        public_deps = [app, libb, liba, libd, libe]
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libd], closure=[liba], public_deps=public_deps)
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc], closure=[], public_deps=public_deps)
+
+    def test_consecutive_diamonds_private(self):
+        # app -> libe0.1 -------------> libd0.1 -> libb0.1 -------------> liba0.1
+        #    \-(private-req)-> libf0.1 ->/    \-(private-req)->libc0.1 ->/
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        libe_ref = "libe/0.1@user/testing"
+        libf_ref = "libf/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[libb_ref],
+                                                   private_requires=[libc_ref]))
+        self._cache_recipe(libe_ref, TestConanFile("libe", "0.1", requires=[libd_ref]))
+        self._cache_recipe(libf_ref, TestConanFile("libf", "0.1", requires=[libd_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libe_ref],
+                                                    private_requires=[libf_ref]))
+
+        self.assertEqual(7, len(deps_graph.nodes))
+        app = deps_graph.root
+        libe = app.dependencies[0].dst
+        libf = app.dependencies[1].dst
+        libd = libe.dependencies[0].dst
+        libb = libd.dependencies[0].dst
+        libc = libd.dependencies[1].dst
+        liba = libc.dependencies[0].dst
+
+        main_public_deps = [app, libb, liba, libd, libe]
+        self._check_node(app, "app/0.1@None/None", deps=[libe, libf], build_deps=[], dependents=[],
+                         closure=[libe, libf, libd, libb, liba], public_deps=main_public_deps)
+        self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[app], closure=[libd, libb, liba],
+                         public_deps=main_public_deps)
+
+        libf_public_deps = [libb, liba, libd, libe, libf]
+        self._check_node(libf, "libf/0.1@user/testing#123", deps=[libd], build_deps=[],
+                         dependents=[app], closure=[libd, libb, liba],
+                         public_deps=libf_public_deps)
+
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb, libc], build_deps=[],
+                         dependents=[libe, libf], closure=[libb, libc, liba],
+                         public_deps=main_public_deps)
+
+        libc_public_deps = [libb, libc, liba]
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libd], closure=[liba], public_deps=libc_public_deps)
+
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libd], closure=[liba], public_deps=main_public_deps)
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc], closure=[], public_deps=main_public_deps)
+
+    def test_parallel_diamond_build_requires(self):
+        # app --------> libb0.1 ---------> liba0.1
+        #    \--------> libc0.1 ----------->/
+        #    \-(build_require)-> libd0.1 ->/
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+        libd_ref = "libd/0.1@user/testing"
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
+        self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[liba_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1",
+                                                    requires=[libb_ref, libc_ref],
+                                                    build_requires=[libd_ref]))
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        libd = app.dependencies[2].dst
+        liba = libb.dependencies[0].dst
+
+        public_deps = [app, libb, libc, liba]
+        self._check_node(app, "app/0.1@None/None", deps=[libb, libc], build_deps=[libd],
+                         dependents=[], closure=[libd, libb, libc, liba], public_deps=public_deps)
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        public_deps = [app, libd, libb, libc, liba]
+        self._check_node(libd, "libd/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[app], closure=[liba], public_deps=public_deps)
+        public_deps = [app, libb, libc, liba]
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb, libc, libd], closure=[], public_deps=public_deps)
 
     def test_conflict_private(self):
         liba_ref = "liba/0.1@user/testing"
