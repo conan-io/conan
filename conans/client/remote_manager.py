@@ -131,8 +131,8 @@ class RemoteManager(object):
         try:
             pref = self._resolve_latest_pref(pref, remote)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
-            if not self.package_snapshot_complete(snapshot):
-                raise NotFoundException
+            if not is_package_snapshot_complete(snapshot):
+                raise NotFoundException("")
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
@@ -244,14 +244,14 @@ class RemoteManager(object):
             logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
 
-    @staticmethod
-    def package_snapshot_complete(snapshot):
-        integrity = True
-        for keyword in ["conaninfo", "conanmanifest", "conan_package"]:
-            if not any(keyword in key for key in snapshot):
-                integrity = False
-                break
-        return integrity
+
+def is_package_snapshot_complete(snapshot):
+    integrity = True
+    for keyword in ["conaninfo", "conanmanifest", "conan_package"]:
+        if not any(keyword in key for key in snapshot):
+            integrity = False
+            break
+    return integrity
 
 
 def check_compressed_files(tgz_name, files):
