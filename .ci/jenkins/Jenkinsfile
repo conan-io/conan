@@ -1,3 +1,7 @@
+def causes = currentBuild.rawBuild.getCauses()
+//if(BranchIndexingCause
+echo causes
+
 // ########## CONFIGURATION ##################
 def full_py_vers = false
 def test_revisions = false
