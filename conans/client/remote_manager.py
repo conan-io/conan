@@ -132,7 +132,7 @@ class RemoteManager(object):
             pref = self._resolve_latest_pref(pref, remote)
             snapshot = self._call_remote(remote, "get_package_snapshot", pref)
             if not is_package_snapshot_complete(snapshot):
-                raise NotFoundException("")
+                raise PackageNotFoundException(pref)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
