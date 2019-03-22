@@ -431,8 +431,7 @@ class ExportMetadataTest(unittest.TestCase):
             revision_mode = "{revision_mode}"
     """)
 
-    summary_hash = {"hash": "bfe8b4a6a2a74966c0c4e0b34705004a",
-                    "auto": "9a5aa68b863d3f6d774b13af32abc6c1"}
+    summary_hash = "bfe8b4a6a2a74966c0c4e0b34705004a"
 
     def test_revision_mode_hash(self):
         t = TestClient()
@@ -442,7 +441,7 @@ class ExportMetadataTest(unittest.TestCase):
         t.run("export . {}".format(ref))
 
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
-        self.assertEqual(meta.recipe.revision, self.summary_hash["hash"])
+        self.assertEqual(meta.recipe.revision, self.summary_hash)
 
     def test_revision_mode_scm(self):
         path, rev = create_local_git_repo(
