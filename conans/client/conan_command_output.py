@@ -7,7 +7,6 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths.simple_paths import SimplePaths
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
@@ -135,14 +134,13 @@ class CommandOutputer(object):
             if isinstance(ref, ConanFileReference) and grab_paths:
                 item_data["export_folder"] = self.cache.export(ref)
                 item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
-                if isinstance(self.cache, SimplePaths):
-                    # @todo: check if this is correct or if it must always be package_id
-                    package_id = build_id(conanfile) or package_id
-                    pref = PackageReference(ref, package_id)
-                    item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
+                # @todo: check if this is correct or if it must always be package_id
+                package_id = build_id(conanfile) or package_id
+                pref = PackageReference(ref, package_id)
+                item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
 
-                    pref = PackageReference(ref, package_id)
-                    item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
+                pref = PackageReference(ref, package_id)
+                item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
 
             try:
                 reg_remote = self.cache.registry.refs.get(ref)

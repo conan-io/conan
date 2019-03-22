@@ -198,6 +198,7 @@ class ExportsSourcesTest(unittest.TestCase):
                          sorted(expected_src_exports))
 
     def _check_manifest(self, mode):
+        print self.client.current_folder
         manifest = load(os.path.join(self.client.current_folder,
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))

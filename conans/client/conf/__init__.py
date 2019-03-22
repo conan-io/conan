@@ -131,7 +131,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # This is the default path, but you can write your own. It must be an absolute path or a
 # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
 # with "~/", will be relative to the conan user home, not to the system user home)
-path = ~/.conan/data
+path = ./data
 
 [proxies]
 # Empty section will try to use system proxies.
@@ -364,10 +364,10 @@ class ConanClientConfigParser(ConfigParser, object):
     def storage_path(self):
         # Try with CONAN_STORAGE_PATH
         result = get_env('CONAN_STORAGE_PATH', None)
-
-        # Try with conan.conf "path"
         if not result:
+            # Try with conan.conf "path"
             try:
+                # TODO: Fix this mess for Conan 2.0
                 env_conan_user_home = os.getenv("CONAN_USER_HOME")
                 # if env var is declared, any specified path will be relative to CONAN_USER_HOME
                 # even with the ~/
@@ -378,10 +378,12 @@ class ConanClientConfigParser(ConfigParser, object):
                     result = os.path.join(env_conan_user_home, storage)
                 else:
                     result = self.storage["path"]
+                    if result.startswith("."):
+                        result = os.path.join(os.path.dirname(self.filename), result)
+                        result = os.path.abspath(result)
             except KeyError:
                 pass
 
-        # expand the result and check if absolute
         if result:
             result = conan_expand_user(result)
             if not os.path.isabs(result):

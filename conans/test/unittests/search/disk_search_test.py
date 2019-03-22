@@ -16,7 +16,7 @@ class SearchTest(unittest.TestCase):
 
     def setUp(self):
         folder = temp_folder()
-        self.cache = ClientCache(folder, store_folder=folder, output=TestBufferConanOutput())
+        self.cache = ClientCache(folder, output=TestBufferConanOutput())
 
     def basic_test2(self):
         with chdir(self.cache.store):

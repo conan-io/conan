@@ -636,7 +636,6 @@ class TestClient(object):
                  requester_class=None, runner=None, path_with_spaces=True,
                  revisions_enabled=None, cpu_count=1):
         """
-        storage_folder: Local storage path
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
@@ -649,11 +648,8 @@ class TestClient(object):
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
-
-        # Define storage_folder, if not, it will be read from conf file & pointed to real user home
-        self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.cache = ClientCache(self.base_folder, self.storage_folder,
-                                 TestBufferConanOutput())
+        self.cache = ClientCache(self.base_folder, TestBufferConanOutput())
+        self.storage_folder = self.cache.store
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -675,8 +671,6 @@ servers["r2"] = TestServer()
             self.update_servers()
 
         self.init_dynamic_vars()
-
-        logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def _set_revisions(self, value):
@@ -767,7 +761,7 @@ servers["r2"] = TestServer()
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, self.storage_folder, output)
+        self.cache = ClientCache(self.base_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
@@ -799,8 +793,7 @@ servers["r2"] = TestServer()
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
-        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput(),
-                                           storage_folder=self.storage_folder)
+        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput())
 
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)

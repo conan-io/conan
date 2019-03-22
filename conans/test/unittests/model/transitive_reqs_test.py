@@ -79,8 +79,7 @@ class GraphTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
-        paths = ClientCache(self.retriever.folder, self.retriever.folder,
-                            self.output)
+        paths = ClientCache(self.retriever.folder, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,

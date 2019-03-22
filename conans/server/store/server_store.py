@@ -5,17 +5,20 @@ from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
-from conans.paths.simple_paths import SimplePaths
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"
 
 
-class ServerStore(SimplePaths):
+class ServerStore(object):
 
     def __init__(self, storage_adapter):
-        super(ServerStore, self).__init__(storage_adapter.base_storage_folder())
         self._storage_adapter = storage_adapter
+        self._store_folder = storage_adapter._store_folder
+
+    @property
+    def store(self):
+        return self._store_folder
 
     def conan(self, ref):
         assert ref.revision is not None, "BUG: server store needs RREV to get recipe reference"
@@ -91,6 +94,21 @@ class ServerStore(SimplePaths):
         file_list = [relpath(old_key, relative_path) for old_key in file_list]
         return file_list
 
+    def _delete_empty_dirs(self, ref):
+        lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
+
+        ref_path = self.conan(ref)
+        for _ in range(4 if not ref.revision else 5):
+            if os.path.exists(ref_path):
+                if set(os.listdir(ref_path)) == lock_files:
+                    for lock_file in lock_files:
+                        os.unlink(os.path.join(ref_path, lock_file))
+                try:  # Take advantage that os.rmdir does not delete non-empty dirs
+                    os.rmdir(ref_path)
+                except OSError:
+                    break  # not empty
+            ref_path = os.path.dirname(ref_path)
+
     # ######### DELETE (APIv1 and APIv2)
     def remove_conanfile(self, ref):
         assert isinstance(ref, ConanFileReference)
@@ -99,7 +117,7 @@ class ServerStore(SimplePaths):
         else:
             self._storage_adapter.delete_folder(self.conan(ref))
             self._remove_revision_from_index(ref)
-        self._storage_adapter.delete_empty_dirs([ref])
+        self._delete_empty_dirs(ref)
 
     def remove_packages(self, ref, package_ids_filter):
         assert isinstance(ref, ConanFileReference)
@@ -114,7 +132,7 @@ class ServerStore(SimplePaths):
                 # Remove all package revisions
                 package_folder = self.package_revisions_root(pref)
                 self._storage_adapter.delete_folder(package_folder)
-        self._storage_adapter.delete_empty_dirs([ref])
+        self._delete_empty_dirs(ref)
 
     def remove_package(self, pref):
         assert isinstance(pref, PackageReference)
