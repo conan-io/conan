@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 import deprecation
 
+from conans.client.tools import which
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
@@ -250,15 +251,17 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         raise ConanException("The 'legacy' parameter cannot be specified with either the "
                              "'products' or 'requires' parameter")
 
-    program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+    program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
 
     if program_files:
         vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                     "vswhere.exe")
-        if not os.path.isfile(vswhere_path):
-            raise ConanException("Cannot locate 'vswhere'")
     else:
-        raise ConanException("Cannot locate 'Program Files'/'Program Files (x86)' directory")
+        vswhere_path = which("vswhere")
+
+    if not vswhere_path:
+        raise ConanException("Cannot locate vswhere in 'Program Files'/'Program Files (x86)' "
+                             "directory nor in PATH")
 
     arguments = list()
     arguments.append(vswhere_path)
