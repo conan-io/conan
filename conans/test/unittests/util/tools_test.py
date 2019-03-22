@@ -798,17 +798,18 @@ class HelloConan(ConanFile):
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def vswhere_path_test(self):
         # vswhere not found
-        with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None,
-                                       "PATH": ""}):
+        with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
             with self.assertRaisesRegex(ConanException, "Cannot locate vswhere"):
                 vswhere()
 
         program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
         vswhere_path = None
         if program_files:
-            vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
-                                        "vswhere.exe")
-        # vswhere in ProramFiles
+            expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                         "vswhere.exe")
+            if os.path.isfile(expected_path):
+                vswhere_path = expected_path
+        # vswhere in ProgramFiles
         if vswhere_path:
             with tools.environment_append({"PATH": ""}):
                 self.assertTrue(vswhere())
