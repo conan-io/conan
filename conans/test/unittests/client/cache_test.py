@@ -20,7 +20,7 @@ class CacheTest(unittest.TestCase):
         tmp_dir = temp_folder()
         stream = StringIO()
         output = ConanOutput(stream)
-        self.cache = ClientCache(tmp_dir, tmp_dir, output)
+        self.cache = ClientCache(tmp_dir, output)
         self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
 
     def test_recipe_exists(self):

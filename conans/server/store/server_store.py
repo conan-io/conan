@@ -97,7 +97,9 @@ class ServerStore(object):
     def _delete_empty_dirs(self, ref):
         lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
 
-        ref_path = self.conan(ref)
+        ref_path = normpath(join(self.store, ref.dir_repr()))
+        if ref.revision:
+            ref_path = join(ref_path, ref.revision)
         for _ in range(4 if not ref.revision else 5):
             if os.path.exists(ref_path):
                 if set(os.listdir(ref_path)) == lock_files:

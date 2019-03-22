@@ -32,19 +32,18 @@ class PathsTest(unittest.TestCase):
     def basic_test(self):
         folder = temp_folder()
         paths = ClientCache(folder, TestBufferConanOutput())
-        self.assertEqual(paths.store, folder)
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
         pref = PackageReference(ref, "456fa678eae68")
-        expected_base = os.path.join(folder, os.path.sep.join(["opencv", "2.4.10",
-                                                               "lasote", "testing"]))
-        self.assertEqual(paths.conan(ref),
-                         os.path.join(paths.store, expected_base))
+        expected_base = os.path.join(folder, ".conan", "data",
+                                     os.path.sep.join(["opencv", "2.4.10",
+                                                       "lasote", "testing"]))
+        self.assertEqual(paths.conan(ref), expected_base)
         self.assertEqual(paths.export(ref),
-                         os.path.join(paths.store, expected_base, EXPORT_FOLDER))
+                         os.path.join(expected_base, EXPORT_FOLDER))
         self.assertEqual(paths.build(pref),
-                         os.path.join(paths.store, expected_base, BUILD_FOLDER,  "456fa678eae68"))
+                         os.path.join(expected_base, BUILD_FOLDER,  "456fa678eae68"))
         self.assertEqual(paths.package(pref),
-                         os.path.join(paths.store, expected_base, PACKAGES_FOLDER,
+                         os.path.join(expected_base, PACKAGES_FOLDER,
                                       "456fa678eae68"))
 
 

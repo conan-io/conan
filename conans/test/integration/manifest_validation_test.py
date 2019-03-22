@@ -12,12 +12,16 @@ from conans.util.files import load, md5, save
 
 
 def export_folder(base, ref):
+    try:
+        ref = ConanFileReference.loads(str(ref))
+    except Exception:
+        pass
     path = ref.dir_repr() if isinstance(ref, ConanFileReference) else ref
     return os.path.abspath(os.path.join(base, path, "export"))
 
 
 def package_folder(base, pref):
-    return os.path.join(base, pref.ref.dir_repr(), "packages", pref.id)
+    return os.path.join(base, pref.ref.dir_repr(), "package", pref.id)
 
 
 class ManifestValidationTest(unittest.TestCase):
@@ -78,7 +82,7 @@ class ConsumerFileTest(ConanFile):
         self.assertIn("Installed manifest for 'Hello/0.1@lasote/stable' from local cache",
                       self.client.user_io.out)
 
-        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self._ref),
+        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self.ref),
                                                     CONAN_MANIFEST)))
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertTrue(os.path.exists(os.path.join(package_folder(output_folder, pref),
@@ -98,7 +102,7 @@ class ConsumerFileTest(ConanFile):
 
         real_folder = folder or ".conan_manifests"
         output_folder = os.path.join(self.client.current_folder, real_folder)
-        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, reference),
+        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self.ref),
                                                     CONAN_MANIFEST)))
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertTrue(os.path.exists(os.path.join(package_folder(output_folder, pref),
@@ -156,7 +160,7 @@ class ConanFileTest(ConanFile):
                       % (NO_SETTINGS_PACKAGE_ID, remote), self.client.user_io.out)
 
         output_folder = os.path.join(self.client.current_folder, folder)
-        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self._ref),
+        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self.ref),
                                                     CONAN_MANIFEST)))
         self.assertTrue(os.path.exists(os.path.join(package_folder(output_folder, pref),
                                                     CONAN_MANIFEST)))
@@ -176,7 +180,7 @@ class ConanFileTest(ConanFile):
                       "%s' from %s" % (NO_SETTINGS_PACKAGE_ID, remote), self.client.user_io.out)
 
         output_folder = os.path.join(self.client.current_folder, ".conan_manifests")
-        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, reference),
+        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self.ref),
                                                     CONAN_MANIFEST)))
 
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
@@ -223,7 +227,7 @@ class ConanFileTest(ConanFile):
                       self.client.user_io.out)
 
         output_folder = os.path.join(self.client.current_folder, ".conan_manifests")
-        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, reference),
+        self.assertTrue(os.path.exists(os.path.join(export_folder(output_folder, self.ref),
                                                     CONAN_MANIFEST)))
 
         pref = PackageReference.loads("Hello/0.1@lasote/stable: %s" % NO_SETTINGS_PACKAGE_ID)
@@ -239,10 +243,10 @@ class ConanFileTest(ConanFile):
         info_content = load(info)
         info_content += "# Dummy string"
         save(info, info_content)
-        package_folder = client.cache.package(pref)
-        manifest = FileTreeManifest.load(package_folder)
+        package_folder_path = client.cache.package(pref)
+        manifest = FileTreeManifest.load(package_folder_path)
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
-        manifest.save(package_folder)
+        manifest.save(package_folder_path)
 
         client.run("upload %s --all" % str(self.ref))
 
