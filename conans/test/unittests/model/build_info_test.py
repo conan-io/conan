@@ -76,7 +76,7 @@ VAR2=23
         deps_cpp_info.libs.extend(["math", "winsock", "boost"])
         child = DepsCppInfo()
         child.includedirs.append("F:/ChildrenPath")
-        child.cppflags.append("cxxmyflag")
+        child.cxxflags.append("cxxmyflag")
         deps_cpp_info._dependencies["Boost"] = child
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {}, defaultdict(dict))).content
@@ -90,9 +90,9 @@ VAR2=23
                          len(deps_cpp_info2._dependencies))
         self.assertEqual(deps_cpp_info["Boost"].includedirs,
                          deps_cpp_info2["Boost"].includedirs)
-        self.assertEqual(deps_cpp_info["Boost"].cppflags,
-                         deps_cpp_info2["Boost"].cppflags)
-        self.assertEqual(deps_cpp_info["Boost"].cppflags, ["cxxmyflag"])
+        self.assertEqual(deps_cpp_info["Boost"].cxxflags,
+                         deps_cpp_info2["Boost"].cxxflags)
+        self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
 
     def configs_test(self):
         deps_cpp_info = DepsCppInfo()
@@ -104,8 +104,8 @@ VAR2=23
         child = DepsCppInfo()
         child.includedirs.append("F:/ChildrenPath")
         child.debug.includedirs.append("F:/ChildrenDebugPath")
-        child.cppflags.append("cxxmyflag")
-        child.debug.cppflags.append("cxxmydebugflag")
+        child.cxxflags.append("cxxmyflag")
+        child.debug.cxxflags.append("cxxmydebugflag")
         deps_cpp_info._dependencies["Boost"] = child
 
         deps_env_info = DepsEnvInfo()
@@ -129,9 +129,9 @@ VAR2=23
                          len(deps_cpp_info2._dependencies))
         self.assertEqual(deps_cpp_info["Boost"].includedirs,
                          deps_cpp_info2["Boost"].includedirs)
-        self.assertEqual(deps_cpp_info["Boost"].cppflags,
-                         deps_cpp_info2["Boost"].cppflags)
-        self.assertEqual(deps_cpp_info["Boost"].cppflags, ["cxxmyflag"])
+        self.assertEqual(deps_cpp_info["Boost"].cxxflags,
+                         deps_cpp_info2["Boost"].cxxflags)
+        self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
 
         self.assertEqual(deps_cpp_info.debug.includedirs, deps_cpp_info2.debug.includedirs)
         self.assertEqual(deps_cpp_info.debug.includedirs, ["C:/whenever"])
@@ -143,9 +143,9 @@ VAR2=23
                          deps_cpp_info2["Boost"].debug.includedirs)
         self.assertEqual(deps_cpp_info["Boost"].debug.includedirs,
                          ["F:/ChildrenDebugPath"])
-        self.assertEqual(deps_cpp_info["Boost"].debug.cppflags,
-                         deps_cpp_info2["Boost"].debug.cppflags)
-        self.assertEqual(deps_cpp_info["Boost"].debug.cppflags, ["cxxmydebugflag"])
+        self.assertEqual(deps_cpp_info["Boost"].debug.cxxflags,
+                         deps_cpp_info2["Boost"].debug.cxxflags)
+        self.assertEqual(deps_cpp_info["Boost"].debug.cxxflags, ["cxxmydebugflag"])
 
         self.assertEqual(deps_env_info["LIB1"].var, "32")
         self.assertEqual(deps_env_info["LIB1"].othervar, ["somevalue"])

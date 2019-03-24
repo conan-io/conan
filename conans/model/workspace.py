@@ -44,19 +44,24 @@ class Workspace(object):
         if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
+            # To avoid multiple additions (can happen for build_requires repeated nodes)
+            unique_refs = OrderedDict()
             for node in graph.ordered_iterate():
                 if node.recipe != RECIPE_EDITABLE:
                     continue
-                ref = node.ref
+                unique_refs[node.ref] = node
+            for ref, node in unique_refs.items():
                 ws_pkg = self._workspace_packages[ref]
                 layout = self._cache.package_layout(ref)
                 editable = layout.editable_cpp_info()
 
                 conanfile = node.conanfile
-                build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
-                                        conanfile.options)
-                src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
-                                      conanfile.options)
+                src = build = None
+                if editable:
+                    build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
+                                            conanfile.options)
+                    src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
+                                          conanfile.options)
                 if src is not None:
                     src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
                     cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)

@@ -236,8 +236,8 @@ class ConanAPIV1(object):
 
         self._proxy = ConanProxy(cache, self._user_io.out, remote_manager)
         resolver = RangeResolver(cache, self._proxy)
-        python_requires = ConanPythonRequire(self._proxy, resolver)
-        self._loader = ConanFileLoader(self._runner, self._user_io.out, python_requires)
+        self.python_requires = ConanPythonRequire(self._proxy, resolver)
+        self._loader = ConanFileLoader(self._runner, self._user_io.out, self.python_requires)
 
         self._graph_manager = GraphManager(self._user_io.out, self._cache,
                                            self._remote_manager, self._loader, self._proxy,
@@ -318,6 +318,8 @@ class ConanAPIV1(object):
         options = options or []
         env = env or []
 
+        self.python_requires.enable_remotes(update=update, remote_name=remote_name)
+
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or get_cwd()
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
@@ -353,6 +355,8 @@ class ConanAPIV1(object):
             cwd = cwd or os.getcwd()
             recorder = ActionRecorder()
             conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
 
             conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
             ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
@@ -476,6 +480,8 @@ class ConanAPIV1(object):
         cwd = cwd or get_cwd()
         abs_path = os.path.normpath(os.path.join(cwd, path))
 
+        self.python_requires.enable_remotes(update=update, remote_name=remote_name)
+
         workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
@@ -526,6 +532,7 @@ class ConanAPIV1(object):
                 generators = False
 
             mkdir(install_folder)
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
             manager = self._init_manager(recorder)
             manager.install(ref_or_path=reference, install_folder=install_folder,
                             remote_name=remote_name, graph_info=graph_info, build_modes=build,
@@ -558,6 +565,7 @@ class ConanAPIV1(object):
 
             install_folder = _make_abs_path(install_folder, cwd)
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
+            self.python_requires.enable_remotes(update=update, remote_name=remote_name)
             manager = self._init_manager(recorder)
             manager.install(ref_or_path=conanfile_path,
                             install_folder=install_folder,
@@ -595,11 +603,12 @@ class ConanAPIV1(object):
         self._cache.invalidate()
 
     @api_method
-    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None):
-
+    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None,
+                       source_folder=None, target_folder=None):
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(path_or_url, self._cache, self._user_io.out, verify_ssl,
-                                     requester=self._requester, config_type=config_type, args=args)
+                                     requester=self._requester, config_type=config_type, args=args,
+                                     source_folder=source_folder, target_folder=target_folder)
 
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env):
         cwd = get_cwd()
@@ -628,6 +637,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        self.python_requires.enable_remotes(check_updates=check_updates, remote_name=remote_name)
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                        check_updates, False, remote_name,
                                                        recorder)
@@ -640,6 +650,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        self.python_requires.enable_remotes(check_updates=check_updates, remote_name=remote_name)
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info,
                                                                build_modes, check_updates,
                                                                False, remote_name, recorder)
@@ -652,6 +663,8 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
+        # FIXME: Using update as check_update?
+        self.python_requires.enable_remotes(check_updates=update, remote_name=remote_name)
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                update, False, remote_name,
                                                                recorder)

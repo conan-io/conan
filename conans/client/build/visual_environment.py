@@ -35,7 +35,7 @@ class VisualStudioBuildEnvironment(object):
         self.lib_paths = conanfile.deps_cpp_info.lib_paths
         self.defines = copy.copy(conanfile.deps_cpp_info.defines)
         self.flags = self._configure_flags()
-        self.cxx_flags = copy.copy(self._deps_cpp_info.cppflags)
+        self.cxx_flags = copy.copy(self._deps_cpp_info.cxxflags)
         self.link_flags = self._configure_link_flags()
         self.libs = conanfile.deps_cpp_info.libs
         self.std = self._std_cpp()

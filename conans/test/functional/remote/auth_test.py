@@ -48,7 +48,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
         # Check that login failed two times before ok
-        self.assertEquals(self.conan.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.user_io.login_index["default"], 3)
 
     def auth_with_env_test(self):
 
@@ -99,7 +99,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIsNone(rev)
 
         # Check that login failed all times
-        self.assertEquals(self.conan.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.user_io.login_index["default"], 3)
 
     def no_client_username_checks_test(self):
         """Checks whether client username checks are disabled."""
@@ -119,4 +119,4 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
         # Check that login failed once before ok
-        self.assertEquals(self.conan.user_io.login_index["default"], 2)
+        self.assertEqual(self.conan.user_io.login_index["default"], 2)

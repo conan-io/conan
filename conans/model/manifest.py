@@ -9,8 +9,13 @@ from conans.util.files import load, md5, md5sum, save, walk
 
 
 def discarded_file(filename):
+    """
+    # The __conan pattern is to be prepared for the future, in case we want to manage our
+    own files that shouldn't be uploaded
+    """
     return filename == ".DS_Store" or filename.endswith(".pyc") or \
-           filename.endswith(".pyo") or filename == "__pycache__"
+           filename.endswith(".pyo") or filename == "__pycache__" or \
+           filename.startswith("__conan")
 
 
 def gather_files(folder):
