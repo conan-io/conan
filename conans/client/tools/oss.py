@@ -70,6 +70,10 @@ def detected_architecture():
         return "armv7"
     elif "arm" in machine:
         return "armv6"
+    elif "s390x" in machine:
+        return "s390x"
+    elif "s390" in machine:
+        return "s390"
 
     return None
 
