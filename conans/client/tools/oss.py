@@ -394,6 +394,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "sparc64"
         elif "sparc" in arch:
             machine = "sparc"
+        elif "s390x" in arch:
+            machine = "s390x-ibm"
+        elif "s390" in arch:
+            machine = "s390-ibm"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
