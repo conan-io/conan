@@ -133,7 +133,7 @@ class Requirements(OrderedDict):
                         raise ConanException(msg)
 
                     msg = "%s %s" % (own_ref, msg)
-                    output.info(msg)
+                    output.warn(msg)
                     req.ref = other_ref
 
             new_reqs[name] = req
