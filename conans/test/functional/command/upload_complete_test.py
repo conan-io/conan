@@ -176,7 +176,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --retry 1 --retry-wait=1", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
-                      "conanmanifest.txt. [Remote: default]", client.user_io.out)
+                      "conan_export.tgz. [Remote: default]", client.user_io.out)
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
@@ -330,13 +330,13 @@ class TestConan(ConanFile):
                  if line.startswith("Uploading")]
         self.assertEqual(lines, ["Uploading to remote 'default':",
                                  "Uploading Hello/1.2.1@frodo/stable to remote 'default'",
-                                 "Uploading conanmanifest.txt",
-                                 "Uploading conanfile.py",
                                  "Uploading conan_export.tgz",
-                                 "Uploading package 1/1: myfakeid to 'default'",
+                                 "Uploading conanfile.py",
                                  "Uploading conanmanifest.txt",
-                                 "Uploading conaninfo.txt",
+                                 "Uploading package 1/1: myfakeid to 'default'",
                                  "Uploading conan_package.tgz",
+                                 "Uploading conaninfo.txt",
+                                 "Uploading conanmanifest.txt",
                                  ])
         if self.client.cache.config.revisions_enabled:
             layout = self.client.cache.package_layout(self.ref)
