@@ -6,6 +6,7 @@ import subprocess
 import sys
 import unittest
 import uuid
+import warnings
 from collections import namedtuple
 
 import mock
@@ -37,6 +38,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle, \
     TestBufferConanOutput, TestClient, create_local_git_repo, try_remove_readonly
 from conans.tools import get_global_instances
+from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
 
 
@@ -56,6 +58,14 @@ class SystemPackageToolTest(unittest.TestCase):
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
 
+    def test_system_without_sudo(self):
+        with mock.patch("os.path.isfile", return_value=False):
+            self.assertFalse(SystemPackageTool._is_sudo_enabled())
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
+            with mock.patch("sys.stdout.isatty", return_value=True):
+                self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
     def verify_update_test(self):
         # https://github.com/conan-io/conan/issues/3142
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
@@ -69,7 +79,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, None)
+            self.assertEqual(runner.command_called, None)
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           self.out)
 
@@ -80,7 +90,7 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.is_windows = False
         os_info.linux_distro = "fedora"  # Will instantiate YumTool
 
-        with self.assertRaisesRegexp(ConanException, "add_repository not implemented"):
+        with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
             spt = SystemPackageTool(os_info=os_info, output=ConanOutput(new_out))
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
@@ -148,50 +158,50 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "knoppix"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "neon"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A apt-get update")
+            self.assertEqual(runner.command_called, "sudo -A apt-get update")
 
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A yum update -y")
+            self.assertEqual(runner.command_called, "sudo -A yum update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A zypper --non-interactive ref")
+            self.assertEqual(runner.command_called, "sudo -A zypper --non-interactive ref")
 
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "rpm -q a_package")
+            self.assertEqual(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo -A yum install -y a_package")
+            self.assertEqual(runner.command_called, "sudo -A yum install -y a_package")
 
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
-                self.assertEquals(runner.command_called, "sudo -A apt-get install -y --no-install-recommends a_package")
+                self.assertEqual(runner.command_called, "sudo -A apt-get install -y --no-install-recommends a_package")
 
             runner.return_ok = True
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
+            self.assertEqual(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -199,20 +209,20 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "brew update")
+            self.assertEqual(runner.command_called, "brew update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "brew install a_package")
+            self.assertEqual(runner.command_called, "brew install a_package")
 
             os_info.is_freebsd = True
             os_info.is_macos = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo -A pkg update")
+            self.assertEqual(runner.command_called, "sudo -A pkg update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "sudo -A pkg install -y a_package")
+            self.assertEqual(runner.command_called, "sudo -A pkg install -y a_package")
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "pkg info a_package")
+            self.assertEqual(runner.command_called, "pkg info a_package")
 
             # Chocolatey is an optional package manager on Windows
             if platform.system() == "Windows" and which("choco.exe"):
@@ -221,11 +231,11 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
                 spt.update()
-                self.assertEquals(runner.command_called, "choco outdated")
+                self.assertEqual(runner.command_called, "choco outdated")
                 spt.install("a_package", force=True)
-                self.assertEquals(runner.command_called, "choco install --yes a_package")
+                self.assertEqual(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called,
+                self.assertEqual(runner.command_called,
                                   'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
@@ -235,17 +245,17 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "yum install -y a_package")
+            self.assertEqual(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEquals(runner.command_called, "yum update -y")
+            self.assertEqual(runner.command_called, "yum update -y")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "apt-get install -y --no-install-recommends a_package")
+            self.assertEqual(runner.command_called, "apt-get install -y --no-install-recommends a_package")
 
             spt.update()
-            self.assertEquals(runner.command_called, "apt-get update")
+            self.assertEqual(runner.command_called, "apt-get update")
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -253,9 +263,9 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
 
             spt.update()
-            self.assertEquals(runner.command_called, "brew update")
+            self.assertEqual(runner.command_called, "brew update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "brew install a_package")
+            self.assertEqual(runner.command_called, "brew install a_package")
 
             os_info.is_freebsd = True
             os_info.is_macos = False
@@ -263,11 +273,11 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "pkg update")
+            self.assertEqual(runner.command_called, "pkg update")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "pkg install -y a_package")
+            self.assertEqual(runner.command_called, "pkg install -y a_package")
             spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, "pkg info a_package")
+            self.assertEqual(runner.command_called, "pkg info a_package")
 
             os_info.is_solaris = True
             os_info.is_freebsd = False
@@ -275,9 +285,9 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEquals(runner.command_called, "pkgutil --catalog")
+            self.assertEqual(runner.command_called, "pkgutil --catalog")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
+            self.assertEqual(runner.command_called, "pkgutil --install --yes a_package")
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
 
@@ -289,11 +299,11 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
                 spt.update()
-                self.assertEquals(runner.command_called, "choco outdated")
+                self.assertEqual(runner.command_called, "choco outdated")
                 spt.install("a_package", force=True)
-                self.assertEquals(runner.command_called, "choco install --yes a_package")
+                self.assertEqual(runner.command_called, "choco install --yes a_package")
                 spt.install("a_package", force=False)
-                self.assertEquals(runner.command_called,
+                self.assertEqual(runner.command_called,
                                   'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
@@ -311,18 +321,18 @@ class SystemPackageToolTest(unittest.TestCase):
             runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
-            self.assertEquals(2, runner.calls)
+            self.assertEqual(2, runner.calls)
             runner = RunnerMultipleMock(["sudo -A apt-get update",
                                          "sudo -A apt-get install -y --no-install-recommends yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
-            self.assertEquals(7, runner.calls)
+            self.assertEqual(7, runner.calls)
 
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             with self.assertRaises(ConanException):
                 spt.install(packages)
-            self.assertEquals(7, runner.calls)
+            self.assertEqual(7, runner.calls)
 
     def system_package_tool_mode_test(self):
         """
@@ -351,7 +361,7 @@ class SystemPackageToolTest(unittest.TestCase):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
-            self.assertEquals(0, runner.calls)
+            self.assertEqual(0, runner.calls)
 
         # Check verify mode, a package report should be displayed in output and ConanException raised.
         # No system packages are installed
@@ -366,7 +376,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
             self.assertIn('\n'.join(packages), self.out)
-            self.assertEquals(3, runner.calls)
+            self.assertEqual(3, runner.calls)
 
         # Check disabled mode, a package report should be displayed in output.
         # No system packages are installed
@@ -379,7 +389,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertIn('\n'.join(packages), self.out)
-            self.assertEquals(0, runner.calls)
+            self.assertEqual(0, runner.calls)
 
         # Check enabled, default mode, system packages must be installed.
         with tools.environment_append({
@@ -391,14 +401,14 @@ class SystemPackageToolTest(unittest.TestCase):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
-            self.assertEquals(7, runner.calls)
+            self.assertEqual(7, runner.calls)
 
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
             return
         if platform.system() == "Windows" and not which("choco.exe"):
             return
-        spt = SystemPackageTool()
+        spt = SystemPackageTool(output=self.out)
         expected_package = "git"
         if platform.system() == "Windows" and which("choco.exe"):
             spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
@@ -440,7 +450,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         msg = platform_update_error_msg.get(platform.system(), None)
         if msg is not None:
-            with self.assertRaisesRegexp(ConanException, msg):
+            with six.assertRaisesRegex(self, ConanException, msg):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
@@ -487,6 +497,7 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+    output = TestBufferConanOutput()
 
     def replace_paths_test(self):
         folder = temp_folder()
@@ -498,26 +509,26 @@ class ToolsTest(unittest.TestCase):
         save(path, 'Some other contentsc:\\Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/Path/to/file.txt", replace_with,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), expected)
+        self.assertEqual(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsC:/Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), expected)
+        self.assertEqual(load(path), expected)
         self.assertTrue(ret)
 
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         ret = tools.replace_path_in_file(path, "C:/PATH/to/FILE.txt", replace_with, strict=False,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
+        self.assertEqual(load(path), 'Some other contentsD:/Path\\TO\\file.txt"finally all text')
         self.assertFalse(ret)
 
         # Multiple matches
         save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          windows_paths=True, output=out)
-        self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+        self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
         self.assertTrue(ret)
 
         # Automatic windows_paths
@@ -525,7 +536,7 @@ class ToolsTest(unittest.TestCase):
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          output=out)
         if platform.system() == "Windows":
-            self.assertEquals(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
+            self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
             self.assertTrue(ret)
         else:
             self.assertFalse(ret)
@@ -547,9 +558,9 @@ class ToolsTest(unittest.TestCase):
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
-            self.assertEquals(tools.cpu_count(output=output), 34)
+            self.assertEqual(tools.cpu_count(output=output), 34)
         with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
-            with self.assertRaisesRegexp(ConanException, "Invalid CONAN_CPU_COUNT value"):
+            with six.assertRaisesRegex(self, ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
     def get_env_unit_test(self):
@@ -633,7 +644,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
- 
+
         conanfile = """
 from conans import ConanFile, tools
 
@@ -659,24 +670,24 @@ class HelloConan(ConanFile):
             conan_api, _, _ = ConanAPIV1.factory()
         conan_api.remote_list()
         global_output, global_requester = get_global_instances()
-        self.assertEquals(global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertEqual(global_requester.proxies, {"http": "http://myproxy.com"})
         self.assertIsNotNone(global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
             with tools.environment_append({"A": "1", "B": "2"}):
                 with tools.environment_append({"A": "2", "B": "2"}):
-                    self.assertEquals(os.getenv("A"), "2")
-                    self.assertEquals(os.getenv("B"), "2")
-                    self.assertEquals(os.getenv("Z"), "40")
-                self.assertEquals(os.getenv("A", None), "1")
-                self.assertEquals(os.getenv("B", None), "2")
-            self.assertEquals(os.getenv("A", None), "1")
-            self.assertEquals(os.getenv("Z", None), "40")
+                    self.assertEqual(os.getenv("A"), "2")
+                    self.assertEqual(os.getenv("B"), "2")
+                    self.assertEqual(os.getenv("Z"), "40")
+                self.assertEqual(os.getenv("A", None), "1")
+                self.assertEqual(os.getenv("B", None), "2")
+            self.assertEqual(os.getenv("A", None), "1")
+            self.assertEqual(os.getenv("Z", None), "40")
 
-        self.assertEquals(os.getenv("A", None), None)
-        self.assertEquals(os.getenv("B", None), None)
-        self.assertEquals(os.getenv("Z", None), None)
+        self.assertEqual(os.getenv("A", None), None)
+        self.assertEqual(os.getenv("B", None), None)
+        self.assertEqual(os.getenv("Z", None), None)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def msvc_build_command_test(self):
@@ -684,21 +695,39 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
+
         # test build_type and arch override, for multi-config packages
-        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
+                                           arch="x86", output=self.output)
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
-        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
+                self.assertEqual(len(w), 2)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
-        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
+                self.assertEqual(len(w), 2)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         # successful definition via settings
         settings.build_type = "Debug"
-        cmd = tools.msvc_build_command(settings, "project.sln")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
@@ -767,6 +796,33 @@ class HelloConan(ConanFile):
             json = vswhere()
             self.assertNotIn("descripton", json)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    def vswhere_path_test(self):
+        """
+        Locate vswhere in PATH or in ProgramFiles
+        """
+        # vswhere not found
+        with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
+            with six.assertRaisesRegex(self, ConanException, "Cannot locate vswhere"):
+                vswhere()
+        # vswhere in ProgramFiles but not in PATH
+        program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
+        vswhere_path = None
+        if program_files:
+            expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                         "vswhere.exe")
+            if os.path.isfile(expected_path):
+                vswhere_path = expected_path
+                with tools.environment_append({"PATH": ""}):
+                    self.assertTrue(vswhere())
+        # vswhere in PATH but not in ProgramFiles
+        env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
+        if not which("vswhere") and vswhere_path:
+                vswhere_folder = os.path.join(program_files, "Microsoft Visual Studio", "Installer")
+                env.update({"PATH": [vswhere_folder]})
+        with tools.environment_append(env):
+            self.assertTrue(vswhere())
+
     def vcvars_echo_test(self):
         if platform.system() != "Windows":
             return
@@ -774,7 +830,7 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         output = TestBufferConanOutput()
         runner = TestRunner(output)
         runner(cmd + " && set vs140comntools")
@@ -783,7 +839,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
             runner = TestRunner(output)
-            cmd = tools.vcvars_command(settings)
+            cmd = tools.vcvars_command(settings, output=self.output)
             runner(cmd + " && set vs140comntools")
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
@@ -801,12 +857,12 @@ class HelloConan(ConanFile):
         settings.arch_build = "x86_64"
 
         # Set the env with a PATH containing the vcvars paths
-        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = tools.vcvars_dict(settings, only_diff=False, output=self.output)
         tmp = {key.lower(): value for key, value in tmp.items()}
         with tools.environment_append({"path": tmp["path"]}):
             previous_path = os.environ["PATH"].split(";")
             # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
-            with tools.vcvars(settings):
+            with tools.vcvars(settings, output=self.output):
                 path = os.environ["PATH"].split(";")
                 values_count = {value: path.count(value) for value in path}
                 for value, counter in values_count.items():
@@ -823,11 +879,13 @@ class HelloConan(ConanFile):
         settings.arch = "x86"
         settings.arch_build = "x86_64"
         with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=True, output=self.output)
             with tools.environment_append(tmp):
                 self.assertNotIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake",  os.environ["PATH"])
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=False, output=self.output)
             with tools.environment_append(tmp):
                 self.assertIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake", os.environ["PATH"])
@@ -841,12 +899,12 @@ class HelloConan(ConanFile):
         settings.compiler.version = "15"
         settings.arch = "x86"
         settings.arch_build = "x86_64"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
         settings.arch_build = "x86"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
 
     def vcvars_raises_when_not_found_test(self):
@@ -860,7 +918,7 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
-        with self.assertRaisesRegexp(ConanException, "VS non-existing installation: Visual Studio 5"):
+        with six.assertRaisesRegex(self, ConanException, "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
             tools.vcvars_command(settings, output=output)
 
@@ -877,7 +935,7 @@ compiler:
         settings = Settings.loads(text)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings, output=output)
 
@@ -887,7 +945,7 @@ compiler:
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
-                with self.assertRaisesRegexp(ConanException,
+                with six.assertRaisesRegex(self, ConanException,
                                              "Error, Visual environment already set to 12"):
                     tools.vcvars_command(settings, output=output)
 
@@ -931,27 +989,27 @@ compiler:
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         with tools.environment_append({"MYVAR": "1"}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             self.assertIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
-            ret = vcvars_dict(settings)
+            ret = vcvars_dict(settings, output=self.output)
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
         my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
         with tools.environment_append({"LIBPATH": my_lib_paths}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             str_var_value = os.pathsep.join(ret["LIBPATH"])
             self.assertTrue(str_var_value.endswith(my_lib_paths))
 
             # Now only a diff, it should return the values as a list, but without the old values
-            ret = vcvars_dict(settings, only_diff=True)
-            self.assertEquals(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
+            ret = vcvars_dict(settings, only_diff=True, output=self.output)
+            self.assertEqual(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
 
             # But if we apply both environments, they are composed correctly
             with tools.environment_append(ret):
-                self.assertEquals(os.environ["LIBPATH"], str_var_value)
+                self.assertEqual(os.environ["LIBPATH"], str_var_value)
 
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
@@ -961,17 +1019,17 @@ compiler:
 PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
 
 
- PROCESSOR_LEVEL=6 
+ PROCESSOR_LEVEL=6
 
-PROCESSOR_REVISION=9e09    
+PROCESSOR_REVISION=9e09
 
-                         
+
 set nl=^
 env_var=
 without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
-       
+
 """.encode("utf-8")
 
         def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
@@ -984,7 +1042,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vcvars = tools.vcvars_dict(None, only_diff=False)
+                vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
@@ -1060,15 +1118,15 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
 
         # Connection error
-        with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
+        with six.assertRaisesRegex(self, ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
                            retry=3, retry_wait=0)
 
         # Not found error
-        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
-        with self.assertRaisesRegexp(NotFoundException, "Not found: "):
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
+        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
@@ -1127,6 +1185,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["Linux", "armv8_32", None, "aarch64-linux-gnu_ilp32"],
         ["Linux", "armv5el", None, "arm-linux-gnueabi"],
         ["Linux", "armv5hf", None, "arm-linux-gnueabihf"],
+        ["Linux", "s390", None, "s390-ibm-linux-gnu"],
+        ["Linux", "s390x", None, "s390x-ibm-linux-gnu"],
         ["Android", "x86", None, "i686-linux-android"],
         ["Android", "x86_64", None, "x86_64-linux-android"],
         ["Android", "armv6", None, "arm-linux-androideabi"],
@@ -1148,7 +1208,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
-        self.assertEquals(triplet, expected_triplet, "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
+        self.assertEqual(triplet, expected_triplet,
+                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
     def get_gnu_triplet_on_windows_without_compiler_test(self):
         with self.assertRaises(ConanException):
@@ -1183,7 +1244,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         @thread.server.get("/")
         def get_file2():
-            self.assertEquals(request.query["file"], "1")
+            self.assertEqual(request.query["file"], "1")
             return static_file(os.path.basename(file_path), root=os.path.dirname(file_path))
 
         @thread.server.get("/error_url")
@@ -1196,7 +1257,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "Cannot deduce file name form url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
@@ -1217,13 +1278,13 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
-        with self.assertRaisesRegexp(ConanException, "Error"):
+        with six.assertRaisesRegex(self, ConanException, "Error"):
             tools.get("http://localhost:%s/error_url" % thread.port,
                       filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
                       retry=3, retry_wait=0)
 
         # Not found error
-        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     def unix_to_dos_unit_test(self):
 
@@ -1251,7 +1312,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             fc = tools.load(fp)
             self.assertIn("\r\n", fc)
 
-        self.assertEquals("a line\r\notherline\r\n", str(tools.load(fp)))
+        self.assertEqual("a line\r\notherline\r\n", str(tools.load(fp)))
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
@@ -1271,7 +1332,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             fc = tools.load(fp)
             self.assertNotIn("\r\n", fc)
 
-        self.assertEquals("a line\notherline\n", str(tools.load(fp)))
+        self.assertEqual("a line\notherline\n", str(tools.load(fp)))
 
     def unix_to_dos_conanfile_test(self):
         client = TestClient()
@@ -1352,20 +1413,20 @@ class GitToolTest(unittest.TestCase):
 
         # Checkout a commit
         git.checkout(commit)
-        self.assertEquals(git.get_revision(), commit)
+        self.assertEqual(git.get_revision(), commit)
 
     def test_clone_existing_folder_without_branch(self):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
-        with self.assertRaisesRegexp(ConanException, "specify a branch to checkout"):
+        with six.assertRaisesRegex(self, ConanException, "specify a branch to checkout"):
             git.clone("https://github.com/conan-community/conan-zlib.git")
 
     def test_credentials(self):
         tmp = temp_folder()
         git = Git(tmp, username="peter", password="otool")
         url_credentials = git.get_url_with_credentials("https://some.url.com")
-        self.assertEquals(url_credentials, "https://peter:otool@some.url.com")
+        self.assertEqual(url_credentials, "https://peter:otool@some.url.com")
 
     def test_verify_ssl(self):
         class MyRunner(object):
@@ -1415,7 +1476,7 @@ class GitToolTest(unittest.TestCase):
         tmp, submodule_path, subsubmodule_path = _create_paths()
         git = Git(tmp)
         git.clone(path)
-        with self.assertRaisesRegexp(ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
+        with six.assertRaisesRegex(self, ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
             git.checkout(commit, submodule="invalid")
 
         # Check shallow
@@ -1576,7 +1637,7 @@ class GitToolsTests(unittest.TestCase):
         Try to get tag out of a git repo
         """
         git = Git(folder=temp_folder())
-        with self.assertRaisesRegexp(ConanException, "Not a valid 'git' repository"):
+        with six.assertRaisesRegex(self, ConanException, "Not a valid 'git' repository"):
             git.get_tag()
 
     def test_excluded_files(self):
@@ -1595,7 +1656,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        with self.assertRaisesRegexp(ConanException, "Not a valid 'svn' repository"):
+        with six.assertRaisesRegex(self, ConanException, "Not a valid 'svn' repository"):
             svn.check_repo()
         svn.checkout(url=project_url)
         try:
@@ -1690,7 +1751,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
     def test_credentials(self):
         svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
         url_credentials = svn.get_url_with_credentials("https://some.url.com")
-        self.assertEquals(url_credentials, "https://ada:lovelace@some.url.com")
+        self.assertEqual(url_credentials, "https://ada:lovelace@some.url.com")
 
     def test_verify_ssl(self):
         class MyRunner(object):
@@ -1797,7 +1858,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         self.assertIsNone(svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        with self.assertRaisesRegexp(ConanException, "Unable to get svn branch"):
+        with six.assertRaisesRegex(self, ConanException, "Unable to get svn branch"):
             svn.get_branch()
 
     def test_tag(self):
@@ -1823,7 +1884,7 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         self.assertEqual("v12.3.4", svn.get_tag())
 
         svn = SVN(folder=self.gimme_tmp())
-        with self.assertRaisesRegexp(ConanException, "Unable to get svn tag"):
+        with six.assertRaisesRegex(self, ConanException, "Unable to get svn tag"):
             svn.get_tag()
 
 
@@ -2147,7 +2208,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
@@ -2213,7 +2274,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = conanfile.collect_libs()
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)

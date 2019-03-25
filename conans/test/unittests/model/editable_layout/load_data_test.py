@@ -5,6 +5,8 @@ import shutil
 import textwrap
 import unittest
 
+import six
+
 from conans.errors import ConanException
 from conans.model.editable_layout import EditableLayout
 from conans.test.utils.test_files import temp_folder
@@ -26,14 +28,14 @@ class ParseTest(unittest.TestCase):
                             something
                             """)
         save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
+        with six.assertRaisesRegex(self, ConanException, "Wrong cpp_info field 'includedrs' in layout"):
             _ = self.editable_cpp_info._load_data(ref=None, settings=None, options=None)
         content = textwrap.dedent("""
                             [*:includedrs]
                             something
                             """)
         save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong cpp_info field 'includedrs' in layout"):
+        with six.assertRaisesRegex(self, ConanException, "Wrong cpp_info field 'includedrs' in layout"):
             _ = self.editable_cpp_info._load_data(ref=None, settings=None, options=None)
 
         content = textwrap.dedent("""
@@ -41,7 +43,7 @@ class ParseTest(unittest.TestCase):
                             something
                             """)
         save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong package reference '\*' in layout file"):
+        with six.assertRaisesRegex(self, ConanException, "Wrong package reference '\*' in layout file"):
             _ = self.editable_cpp_info._load_data(ref=None, settings=None, options=None)
 
         content = textwrap.dedent("""
@@ -49,6 +51,6 @@ class ParseTest(unittest.TestCase):
                             something
                             """)
         save(self.layout_filepath, content)
-        with self.assertRaisesRegexp(ConanException, "Wrong package reference "
+        with six.assertRaisesRegex(self, ConanException, "Wrong package reference "
                                      "'pkg/version@user/channel:revision' in layout file"):
             _ = self.editable_cpp_info._load_data(ref=None, settings=None, options=None)

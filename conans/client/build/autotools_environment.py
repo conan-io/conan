@@ -257,7 +257,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_cxx_flags(self):
-        ret = copy.copy(self._deps_cpp_info.cppflags)
+        ret = copy.copy(self._deps_cpp_info.cxxflags)
         cxxf = libcxx_flag(compiler=self._compiler, libcxx=self._libcxx)
         if cxxf:
             ret.append(cxxf)

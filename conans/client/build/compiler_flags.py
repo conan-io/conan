@@ -31,10 +31,12 @@ def architecture_flag(compiler, arch, os=None):
         return ""
 
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(arch) in ['x86_64', 'sparcv9']:
+        if str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
             return '-m32'
+        elif str(arch) in ['s390']:
+            return '-m31'
         elif os == 'AIX':
             if str(arch) in ['rs6000']:
                 return '-maix32'

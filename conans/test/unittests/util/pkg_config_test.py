@@ -47,16 +47,16 @@ class PkgConfigTest(unittest.TestCase):
         with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
             pkg_config = PkgConfig("libastral")
 
-            self.assertEquals(frozenset(pkg_config.cflags), frozenset(['-D_USE_LIBASTRAL', '-I/usr/local/include/libastral']))
-            self.assertEquals(frozenset(pkg_config.cflags_only_I), frozenset(['-I/usr/local/include/libastral']))
-            self.assertEquals(frozenset(pkg_config.cflags_only_other), frozenset(['-D_USE_LIBASTRAL']))
+            self.assertEqual(frozenset(pkg_config.cflags), frozenset(['-D_USE_LIBASTRAL', '-I/usr/local/include/libastral']))
+            self.assertEqual(frozenset(pkg_config.cflags_only_I), frozenset(['-I/usr/local/include/libastral']))
+            self.assertEqual(frozenset(pkg_config.cflags_only_other), frozenset(['-D_USE_LIBASTRAL']))
 
-            self.assertEquals(frozenset(pkg_config.libs), frozenset(['-L/usr/local/lib/libastral', '-lastral', '-Wl,--whole-archive']))
-            self.assertEquals(frozenset(pkg_config.libs_only_L), frozenset(['-L/usr/local/lib/libastral']))
-            self.assertEquals(frozenset(pkg_config.libs_only_l), frozenset(['-lastral',]))
-            self.assertEquals(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
+            self.assertEqual(frozenset(pkg_config.libs), frozenset(['-L/usr/local/lib/libastral', '-lastral', '-Wl,--whole-archive']))
+            self.assertEqual(frozenset(pkg_config.libs_only_L), frozenset(['-L/usr/local/lib/libastral']))
+            self.assertEqual(frozenset(pkg_config.libs_only_l), frozenset(['-lastral',]))
+            self.assertEqual(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
-            self.assertEquals(pkg_config.variables['prefix'], '/usr/local')
+            self.assertEqual(pkg_config.variables['prefix'], '/usr/local')
         os.unlink(filename)
 
     def test_define_prefix(self):
@@ -69,18 +69,18 @@ class PkgConfigTest(unittest.TestCase):
         with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
             pkg_config = PkgConfig("libastral", variables={'prefix': '/home/conan'})
 
-            self.assertEquals(frozenset(pkg_config.cflags),
+            self.assertEqual(frozenset(pkg_config.cflags),
                               frozenset(['-D_USE_LIBASTRAL', '-I/home/conan/include/libastral']))
-            self.assertEquals(frozenset(pkg_config.cflags_only_I), frozenset(['-I/home/conan/include/libastral']))
-            self.assertEquals(frozenset(pkg_config.cflags_only_other), frozenset(['-D_USE_LIBASTRAL']))
+            self.assertEqual(frozenset(pkg_config.cflags_only_I), frozenset(['-I/home/conan/include/libastral']))
+            self.assertEqual(frozenset(pkg_config.cflags_only_other), frozenset(['-D_USE_LIBASTRAL']))
 
-            self.assertEquals(frozenset(pkg_config.libs),
+            self.assertEqual(frozenset(pkg_config.libs),
                               frozenset(['-L/home/conan/lib/libastral', '-lastral', '-Wl,--whole-archive']))
-            self.assertEquals(frozenset(pkg_config.libs_only_L), frozenset(['-L/home/conan/lib/libastral']))
-            self.assertEquals(frozenset(pkg_config.libs_only_l), frozenset(['-lastral', ]))
-            self.assertEquals(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
+            self.assertEqual(frozenset(pkg_config.libs_only_L), frozenset(['-L/home/conan/lib/libastral']))
+            self.assertEqual(frozenset(pkg_config.libs_only_l), frozenset(['-lastral', ]))
+            self.assertEqual(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
-            self.assertEquals(pkg_config.variables['prefix'], '/home/conan')
+            self.assertEqual(pkg_config.variables['prefix'], '/home/conan')
         os.unlink(filename)
 
     def rpaths_libs_test(self):

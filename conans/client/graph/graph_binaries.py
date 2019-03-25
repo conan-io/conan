@@ -103,7 +103,7 @@ class GraphBinariesAnalyzer(object):
                             node.prev = pref.revision  # With revision
                             if build_mode.outdated:
                                 info, pref = self._remote_manager.get_package_info(pref, remote)
-                                package_hash = info.recipe_hash()
+                                package_hash = info.recipe_hash
                 elif remotes:
                     pass
                 else:

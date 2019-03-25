@@ -33,12 +33,19 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
         # all the public deps to which this node belongs
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         self.public_closure = None  # {ref.name: Node}
         self.ancestors = None  # set{ref.name}
+
+    def update_ancestors(self, ancestors):
+        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
+        self.ancestors.update(ancestors)
+        for n in self.neighbors():
+            n.update_ancestors(ancestors)
 
     @property
     def package_id(self):

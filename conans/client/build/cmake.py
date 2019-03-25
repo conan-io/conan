@@ -7,7 +7,7 @@ from conans.client import defs_to_string, join_arguments, tools
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
-    cmake_in_local_cache_var_name, runtime_definition_var_name
+    cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -20,7 +20,8 @@ class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
-                 set_cmake_flags=False, msbuild_verbosity=None, cmake_program=None):
+                 set_cmake_flags=False, msbuild_verbosity=None, cmake_program=None,
+                 generator_platform=None):
         """
         :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
@@ -35,6 +36,7 @@ class CMake(object):
                 (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
         :param msbuild_verbosity: verbosity level for MSBuild (in case of Visual Studio generator)
         :param cmake_program: Path to the custom cmake executable
+        :param generator_platform: Generator platform name or none to autodetect (-A cmake option)
         """
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
@@ -45,6 +47,7 @@ class CMake(object):
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
         self.generator = generator or get_generator(conanfile.settings)
+        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings)
         if not self.generator:
             self._conanfile.output.warn("CMake generator could not be deduced from settings")
         self.parallel = parallel
@@ -109,6 +112,8 @@ class CMake(object):
     @property
     def command_line(self):
         args = ['-G "%s"' % self.generator] if self.generator else []
+        if self.generator_platform:
+            args.append('-A "%s"' % self.generator_platform)
         args.append(self.flags)
         args.append('-Wno-dev')
 

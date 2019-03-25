@@ -1,6 +1,7 @@
 import unittest
 from collections import namedtuple, Counter
 
+import six
 from mock import Mock
 
 from conans import DEFAULT_REVISION_V1
@@ -23,7 +24,6 @@ from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
                                      test_processed_profile)
-
 
 say_content = TestConanFile("Say", "0.1")
 say_content2 = TestConanFile("Say", "0.2")
@@ -400,7 +400,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref2, say_content2)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content2)
-        with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing"):
             self.build_graph(chat_content)
 
     def test_diamond_conflict(self):
@@ -417,7 +417,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content2)
 
-        with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing"):
             self.build_graph(chat_content)
 
     def test_diamond_conflict_solved(self):
@@ -852,7 +852,7 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
 
-        with self.assertRaisesRegexp(ConanException, "tried to change"):
+        with six.assertRaisesRegex(self, ConanException, "tried to change"):
             self.build_graph(chat_content)
 
     def test_diamond_conflict_options_solved(self):
@@ -1493,7 +1493,7 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.conan(libd_ref, libd_content)
 
-        with self.assertRaisesRegexp(ConanException, "Conflict in LibB/0.1@user/testing"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing"):
             self.build_graph(self.consumer_content)
         self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
@@ -1512,7 +1512,7 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.conan(libd_ref, libd_content)
 
-        with self.assertRaisesRegexp(ConanException, "Conflict in LibB/0.1@user/testing"):
+        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing"):
             self.build_graph(self.consumer_content)
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
@@ -1551,7 +1551,7 @@ class LibDConan(ConanFile):
                                                      requires=["LibB/0.1@user/testing"],
                                                      default_options="LibA:shared=False"))
 
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "LibD/0.1@user/testing tried to change LibB/0.1@user/testing "
                                      "option LibA:shared to True"):
             self.build_graph(self.consumer_content)
@@ -1612,10 +1612,10 @@ class SayConan(ConanFile):
         check(conanfile, "myoption=1", "os=Linux")
 
     def test_errors(self):
-        with self.assertRaisesRegexp(ConanException, "root.py: No subclass of ConanFile"):
+        with six.assertRaisesRegex(self, ConanException, "root.py: No subclass of ConanFile"):
             self.build_graph("")
 
-        with self.assertRaisesRegexp(ConanException, "root.py: More than 1 conanfile in the file"):
+        with six.assertRaisesRegex(self, ConanException, "root.py: More than 1 conanfile in the file"):
             self.build_graph("""from conans import ConanFile
 class HelloConan(ConanFile):pass
 class ByeConan(ConanFile):pass""")
