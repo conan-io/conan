@@ -73,6 +73,18 @@ class BuildModeTest(unittest.TestCase):
         build_mode = BuildMode([], self.output)
         self.assertFalse(build_mode.allowed(self.conanfile))
 
+    def test_casing(self):
+        build_mode = BuildMode(["Boost"], self.output)
+        reference = ConanFileReference.loads("Boost/1.69.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertEqual("", self.output)
+
+        build_mode = BuildMode(["boost"], self.output)
+        self.assertFalse(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertIn("ERROR: No package matching", self.output)
+
     def test_pattern_matching(self):
         build_mode = BuildMode(["Boost*"], self.output)
         reference = ConanFileReference.loads("Boost/1.69.0@user/stable")
