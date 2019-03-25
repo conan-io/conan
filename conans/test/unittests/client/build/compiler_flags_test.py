@@ -32,11 +32,20 @@ class CompilerFlagsTest(unittest.TestCase):
             arch_flag = architecture_flag(arch='armv7', compiler=compiler)
             self.assertEqual(arch_flag, '')
 
+        for compiler in ("gcc", "clang", "sun-cc"):
+            arch_flag = architecture_flag(arch='s390', compiler=compiler)
+            self.assertEqual(arch_flag, '-m31')
+
+        for compiler in ("gcc", "clang", "sun-cc"):
+            arch_flag = architecture_flag(arch='s390x', compiler=compiler)
+            self.assertEqual(arch_flag, '-m64')
+
         arch_flag = architecture_flag(arch='x86', compiler='Visual Studio')
         self.assertEqual(arch_flag, '')
 
         arch_flag = architecture_flag(arch='x86_64', compiler='Visual Studio')
         self.assertEqual(arch_flag, '')
+
 
     def test_libcxx_flags(self):
         arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++')

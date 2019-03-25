@@ -18,12 +18,14 @@ from conans.util.log import logger
 
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
+    revision_mode = "hash"
     conanfile = """
 from conans import ConanFile
 
 class AliasConanfile(ConanFile):
     alias = "%s"
-""" % target_ref.full_repr()
+    revision_mode = "%s"
+""" % (target_ref.full_repr(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
     digest = FileTreeManifest.create(package_layout.export())
@@ -31,7 +33,8 @@ class AliasConanfile(ConanFile):
 
     # Create the metadata for the alias
     _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
-                                 output=output, path=None, digest=digest)
+                                 output=output, path=None, digest=digest,
+                                 revision_mode=revision_mode)
 
 
 def check_casing_conflict(cache, ref):
@@ -97,7 +100,8 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
                                             revisions_enabled=revisions_enabled,
                                             output=output,
                                             path=os.path.dirname(conanfile_path),
-                                            digest=digest)
+                                            digest=digest,
+                                            revision_mode=conanfile.revision_mode)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source_folder = package_layout.source()
@@ -239,19 +243,30 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
-def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
+def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest,
+                                 revision_mode):
+    if revision_mode not in ["scm", "hash"]:
+        raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
-    scm_revision_detected, repo_type, is_pristine = _detect_scm_revision(path)
-    revision = scm_revision_detected or digest.summary_hash
-    if revisions_enabled:
-        if scm_revision_detected:
-            output.info("Using {} commit as the recipe"
-                        " revision: {} ".format(repo_type, revision))
-            if not is_pristine:
-                output.warn("Repo status is not pristine: there might be modified files")
-        else:
+    # Use the proper approach depending on 'revision_mode'
+    if revision_mode == "hash":
+        revision = digest.summary_hash
+        if revisions_enabled:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
+    else:
+        rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
+        if not rev_detected:
+            raise ConanException("Cannot detect revision using '{}' mode"
+                                 " from repository at '{}'".format(revision_mode, path))
+
+        revision = rev_detected
+
+        if revisions_enabled:
+            output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
+            if not is_pristine:
+                output.warn("Repo status is not pristine: there might be modified files")
+
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision
 
@@ -291,7 +306,7 @@ def export_source(conanfile, origin_folder, destination_source_folder):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
-    copier = FileCopier(origin_folder, destination_source_folder)
+    copier = FileCopier([origin_folder], destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)
     output = conanfile.output
@@ -310,7 +325,7 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     except OSError:
         pass
 
-    copier = FileCopier(origin_folder, destination_folder)
+    copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
     output = conanfile.output
