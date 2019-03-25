@@ -29,7 +29,7 @@ class ClientCertsTest(unittest.TestCase):
         tools.save(client.cache.client_cert_key_path, "Fake key")
         client.init_dynamic_vars()
         self.assertEqual(client.requester.get("url"), (client.cache.client_cert_path,
-                                                        client.cache.client_cert_key_path))
+                                                       client.cache.client_cert_key_path))
 
         # assert that the cacert file is created
         self.assertTrue(os.path.exists(client.cache.cacert_path))

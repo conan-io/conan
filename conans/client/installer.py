@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 import time
 
@@ -97,11 +96,13 @@ class _PackageBuilder(object):
 
         if not getattr(conanfile, 'no_copy_source', False):
             self._output.info('Copying sources to build folder')
-            ignore = None
-            if platform.system() == "Windows" and os.getenv("CONAN_USER_HOME_SHORT") != "None":
-                from conans.util.windows import ignore_long_path_files
-                ignore = ignore_long_path_files(source_folder, build_folder, self._output)
-            shutil.copytree(source_folder, build_folder, symlinks=True, ignore=ignore)
+            try:
+                shutil.copytree(source_folder, build_folder, symlinks=True)
+            except Exception as e:
+                msg = str(e)
+                if "206" in msg:  # System error shutil.Error 206: Filename or extension too long
+                    msg += "\nUse short_paths=True if paths too long"
+                raise ConanException("%s\nError copying sources to build folder" % msg)
             logger.debug("BUILD: Copied to %s", build_folder)
             logger.debug("BUILD: Files copied %s", ",".join(os.listdir(build_folder)))
 
