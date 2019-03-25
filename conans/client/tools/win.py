@@ -252,14 +252,13 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
                              "'products' or 'requires' parameter")
 
     installer_path = None
-    vswhere_in_path = which("vswhere")
     program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
     if program_files:
         expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
                                      "vswhere.exe")
         if os.path.isfile(expected_path):
             installer_path = expected_path
-    vswhere_path = installer_path or vswhere_in_path
+    vswhere_path = installer_path or which("vswhere")
 
     if not vswhere_path:
         raise ConanException("Cannot locate vswhere in 'Program Files'/'Program Files (x86)' "
