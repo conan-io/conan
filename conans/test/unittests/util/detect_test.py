@@ -24,8 +24,6 @@ class DetectTest(unittest.TestCase):
         platform_compiler = platform_default_compilers.get(platform.system(), None)
         if platform_compiler is not None:
             self.assertEqual(result.get("compiler", None), platform_compiler)
-            self.assertIn("edit the default profile at", output)
-            self.assertIn("profiles/default", output)
 
     def detect_default_in_mac_os_using_gcc_as_default_test(self):
         """
@@ -63,18 +61,18 @@ class DetectTest(unittest.TestCase):
         self.assertTrue("arch" not in result)
         self.assertTrue("arch_build" not in result)
 
-    def detect_custom_profile_test(self):
-        platform_default_compilers = {
-            "Linux": "gcc",
-            "Darwin": "apple-clang",
-            "Windows": "Visual Studio"
-        }
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_custom_profile_test(self, _):
         output = TestBufferConanOutput()
-        result = detect_defaults_settings(output, profile_name="mycustomprofile")
-        # result is a list of tuples (name, value) so converting it to dict
-        result = dict(result)
-        platform_compiler = platform_default_compilers.get(platform.system(), None)
-        if platform_compiler is not None:
-            self.assertEqual(result.get("compiler", None), platform_compiler)
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output, profile_name="mycustomprofile")
             self.assertIn("edit the mycustomprofile profile at", output)
             self.assertIn("profiles/mycustomprofile", output)
+
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_default_profile_test(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output)
+            self.assertIn("edit the default profile at", output)
+            self.assertIn("profiles/default", output)
