@@ -353,6 +353,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
     arch_setting = arch or settings.get_safe("arch")
+    os_setting = settings.get_safe("os")
 
     compiler = settings.get_safe("compiler")
     if compiler == 'Visual Studio':
@@ -365,7 +366,6 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         last_version = latest_vs_version_installed(output=output)
 
         compiler_version = compiler_version or last_version
-    os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
@@ -391,6 +391,9 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                        'x86_64': 'x86_amd64',
                        'armv7': 'x86_arm',
                        'armv8': 'x86_arm64'}.get(arch_setting)
+
+    if os_setting == 'WindowsCE':
+        vcvars_arch = "x86"
 
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)

@@ -70,9 +70,14 @@ def get_generator_platform(settings):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
+    os = settings.get_safe("os")
+    os_platform = settings.get_safe("os.platform")
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
+
+    if os == "WindowsCE":
+        return os_platform
 
     if compiler == "Visual Studio" and Version(compiler_version) >= "16":
         return {"x86": "Win32",
@@ -312,7 +317,7 @@ class CMakeDefinitionsBuilder(object):
             pass
 
         # fpic
-        if str(os_) not in ["Windows", "WindowsStore"]:
+        if not str(os_).startswith("Windows"):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")

@@ -28,6 +28,9 @@ os:
         subsystem: [None, cygwin, msys, msys2, wsl]
     WindowsStore:
         version: ["8.1", "10.0"]
+    WindowsCE:
+        version: ["5.0", "6.0", "7.0", "8.0"]
+        platform: ANY
     Linux:
     Macos:
         version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14"]
@@ -43,7 +46,7 @@ os:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
