@@ -63,6 +63,8 @@ class ConanHTMLGrapher(object):
                                ("author", conanfile.author),
                                ("topics", str(conanfile.topics))]:
                 if data:
+                    if isinstance(data, (tuple, list)):
+                        data = ', '.join(data)
                     data = data.replace("'", '"')
                     fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
 
