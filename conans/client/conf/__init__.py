@@ -380,7 +380,7 @@ class ConanClientConfigParser(ConfigParser, object):
                     result = self.storage["path"]
                     if result.startswith("."):
                         result = os.path.join(os.path.dirname(self.filename), result)
-                        result = os.path.abspath(result)
+                result = os.path.abspath(result)
             except (KeyError, ConanException):  # If storage not defined, to return None
                 pass
 
