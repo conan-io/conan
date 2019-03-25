@@ -24,6 +24,8 @@ class DetectTest(unittest.TestCase):
         platform_compiler = platform_default_compilers.get(platform.system(), None)
         if platform_compiler is not None:
             self.assertEqual(result.get("compiler", None), platform_compiler)
+            self.assertIn("edit the default profile at", output)
+            self.assertIn("profiles/default", output)
 
     def detect_default_in_mac_os_using_gcc_as_default_test(self):
         """
@@ -60,3 +62,19 @@ class DetectTest(unittest.TestCase):
         result = dict(result)
         self.assertTrue("arch" not in result)
         self.assertTrue("arch_build" not in result)
+
+    def detect_custom_profile_test(self):
+        platform_default_compilers = {
+            "Linux": "gcc",
+            "Darwin": "apple-clang",
+            "Windows": "Visual Studio"
+        }
+        output = TestBufferConanOutput()
+        result = detect_defaults_settings(output, profile_name="mycustomprofile")
+        # result is a list of tuples (name, value) so converting it to dict
+        result = dict(result)
+        platform_compiler = platform_default_compilers.get(platform.system(), None)
+        if platform_compiler is not None:
+            self.assertEqual(result.get("compiler", None), platform_compiler)
+            self.assertIn("edit the mycustomprofile profile at", output)
+            self.assertIn("profiles/mycustomprofile", output)

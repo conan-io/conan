@@ -125,7 +125,7 @@ def _get_default_compiler(output):
         return gcc or clang
 
 
-def _detect_compiler_version(result, output):
+def _detect_compiler_version(result, output, profile_name):
     try:
         compiler, version = _get_default_compiler(output)
     except:
@@ -146,12 +146,12 @@ Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting 
 'libstdc++' for backwards compatibility.
 Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
 
-If you want Conan to use the new ABI, edit the default profile at:
+If you want Conan to use the new ABI, edit the {profile} profile at:
 
-    ~/.conan/profiles/default
+    ~/.conan/profiles/{profile}
 
 adjusting 'compiler.libcxx=libstdc++11'
-"""
+""".format(profile=profile_name)
                 output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
                                "***********************\n %s\n************************************"
                                "************************************************\n\n\n" % msg,
@@ -193,12 +193,15 @@ def _detect_os_arch(result, output):
         result.append(("arch_build", arch))
 
 
-def detect_defaults_settings(output):
+def detect_defaults_settings(output, profile_name="default"):
     """ try to deduce current machine values without any constraints at all
+    :param output: Conan Output instance
+    :param profile_name: Conan profile name to be showed
+    :return: A list with default settings
     """
     result = []
     _detect_os_arch(result, output)
-    _detect_compiler_version(result, output)
+    _detect_compiler_version(result, output, profile_name)
     result.append(("build_type", "Release"))
 
     return result
