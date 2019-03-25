@@ -32,17 +32,17 @@ class FileCopier(object):
     imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
-    def __init__(self, root_source_folder, root_destination_folder):
+    def __init__(self, source_folders, root_destination_folder):
         """
         Takes the base folders to copy resources src -> dst. These folders names
         will not be used in the relative names while copying
-        param root_source_folder: The base folder to copy things from, typically the
+        param source_folders: folder or list of folders to copy things from, typically the
                                   store build folder
         param root_destination_folder: The base folder to copy things to, typicall the
                                        store package folder
         """
-        self._base_src = root_source_folder
-        self._base_dst = root_destination_folder
+        self._src_folders = source_folders if isinstance(source_folders, list) else [source_folders]
+        self._dst_folder = root_destination_folder
         self._copied = []
 
     def report(self, output):
@@ -66,17 +66,14 @@ class FileCopier(object):
         if symlinks is not None:
             links = symlinks
 
-        if isinstance(self._base_src, list):
-            files = []
-            for base_src in self._base_src:
-                excluded = [self._base_dst]
-                excluded.extend([d for d in self._base_src if d is not base_src])
-                fs = self._copy(base_src, pattern, src, dst, links, ignore_case, excludes,
-                                keep_path, excluded_folders=excluded)
-                files.extend(fs)
-        else:
-            files = self._copy(self._base_src, pattern, src, dst, links, ignore_case, excludes,
-                               keep_path, excluded_folders=[self._base_dst])
+        files = []
+        for src_folder in self._src_folders:
+            excluded = [self._dst_folder]
+            excluded.extend([d for d in self._src_folders if d is not src_folder])
+            fs = self._copy(src_folder, pattern, src, dst, links, ignore_case, excludes,
+                            keep_path, excluded_folders=excluded)
+            files.extend(fs)
+
         return files
 
     def _copy(self, base_src, pattern, src, dst, symlinks, ignore_case, excludes, keep_path,
@@ -88,7 +85,7 @@ class FileCopier(object):
             pattern = os.path.basename(rel_dir)
 
         src = os.path.join(base_src, src)
-        dst = os.path.join(self._base_dst, dst)
+        dst = os.path.join(self._dst_folder, dst)
 
         files_to_copy, link_folders = self._filter_files(src, pattern, symlinks, excludes,
                                                          ignore_case, excluded_folders)
