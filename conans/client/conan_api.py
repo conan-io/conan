@@ -300,8 +300,8 @@ class ConanAPIV1(object):
         if not attributes:
             attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
-                          'short_paths', 'apply_env', 'build_policy', 'settings', 'options',
-                          'default_options']
+                          'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
+                          'options', 'default_options']
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
