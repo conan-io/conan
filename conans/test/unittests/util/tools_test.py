@@ -797,9 +797,12 @@ class HelloConan(ConanFile):
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
     def vswhere_path_test(self):
+        """
+        Locate vswhere in PATH or in ProgramFiles
+        """
         # vswhere not found
         with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
-            with self.assertRaisesRegex(ConanException, "Cannot locate vswhere"):
+            with six.assertRaisesRegex(self, ConanException, "Cannot locate vswhere"):
                 vswhere()
         # vswhere in ProgramFiles but not in PATH
         program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
