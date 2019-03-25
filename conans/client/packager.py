@@ -22,7 +22,7 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    copier = FileCopier(src_package_folder, package_folder)
+    copier = FileCopier([src_package_folder], package_folder)
     copier("*", symlinks=True)
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())

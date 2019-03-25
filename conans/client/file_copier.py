@@ -36,12 +36,13 @@ class FileCopier(object):
         """
         Takes the base folders to copy resources src -> dst. These folders names
         will not be used in the relative names while copying
-        param source_folders: folder or list of folders to copy things from, typically the
+        param source_folders: list of folders to copy things from, typically the
                                   store build folder
         param root_destination_folder: The base folder to copy things to, typicall the
                                        store package folder
         """
-        self._src_folders = source_folders if isinstance(source_folders, list) else [source_folders]
+        assert isinstance(source_folders, list), "source folders must be a list"
+        self._src_folders = source_folders
         self._dst_folder = root_destination_folder
         self._copied = []
 

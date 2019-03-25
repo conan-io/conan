@@ -291,7 +291,7 @@ def export_source(conanfile, origin_folder, destination_source_folder):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
-    copier = FileCopier(origin_folder, destination_source_folder)
+    copier = FileCopier([origin_folder], destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)
     output = conanfile.output
@@ -310,7 +310,7 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     except OSError:
         pass
 
-    copier = FileCopier(origin_folder, destination_folder)
+    copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
     output = conanfile.output
