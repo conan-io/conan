@@ -33,7 +33,8 @@ def get_generator(settings):
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
-    os_build, _, _, _ = get_cross_building_settings(settings)
+    os_build, _, host_os, _ = get_cross_building_settings(settings)
+    print(get_cross_building_settings(settings))
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
@@ -55,7 +56,7 @@ def get_generator(settings):
         if Version(compiler_version) < "16":
             if arch == "x86_64":
                 base += " Win64"
-            elif "arm" in arch:
+            elif host_os != "WindowsCE" and "arm" in arch:
                 base += " ARM"
         return base
 
@@ -70,13 +71,13 @@ def get_generator_platform(settings):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
-    os = settings.get_safe("os")
+    os_build = settings.get_safe("os")
     os_platform = settings.get_safe("os.platform")
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
 
-    if os == "WindowsCE":
+    if os_build == "WindowsCE":
         return os_platform
 
     if compiler == "Visual Studio" and Version(compiler_version) >= "16":
