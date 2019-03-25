@@ -132,15 +132,16 @@ class CommandOutputer(object):
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
-                item_data["export_folder"] = self.cache.export(ref)
-                item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
+                package_layout = self.cache.package_layout(ref, conanfile.short_paths)
+                item_data["export_folder"] = package_layout.export()
+                item_data["source_folder"] = package_layout.source()
                 # @todo: check if this is correct or if it must always be package_id
                 package_id = build_id(conanfile) or package_id
                 pref = PackageReference(ref, package_id)
-                item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
+                item_data["build_folder"] = package_layout.build(pref)
 
                 pref = PackageReference(ref, package_id)
-                item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
+                item_data["package_folder"] = package_layout.package(pref)
 
             try:
                 reg_remote = self.cache.registry.refs.get(ref)

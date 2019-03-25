@@ -19,7 +19,7 @@ class Retriever(object):
         conanfile = self.loader.load_consumer(conan_path, processed_profile)
         return Node(None, conanfile, "rootpath")
 
-    def conan(self, ref, content):
+    def save_recipe(self, ref, content):
         content = str(content)
         if isinstance(ref, str):
             ref = ConanFileReference.loads(ref)

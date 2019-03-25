@@ -20,7 +20,7 @@ class ServerStore(object):
     def store(self):
         return self._store_folder
 
-    def conan(self, ref):
+    def base_folder(self, ref):
         assert ref.revision is not None, "BUG: server store needs RREV to get recipe reference"
         tmp = normpath(join(self.store, ref.dir_repr()))
         return join(tmp, ref.revision)
@@ -31,7 +31,7 @@ class ServerStore(object):
         return normpath(join(self.store, ref.dir_repr()))
 
     def packages(self, ref):
-        return join(self.conan(ref), PACKAGES_FOLDER)
+        return join(self.base_folder(ref), PACKAGES_FOLDER)
 
     def package_revisions_root(self, pref):
         assert pref.revision is None, "BUG: server store doesn't need PREV to " \
@@ -47,7 +47,7 @@ class ServerStore(object):
         return join(tmp, pref.revision)
 
     def export(self, ref):
-        return join(self.conan(ref), EXPORT_FOLDER)
+        return join(self.base_folder(ref), EXPORT_FOLDER)
 
     def get_conanfile_file_path(self, ref, filename):
         abspath = join(self.export(ref), filename)
@@ -117,7 +117,7 @@ class ServerStore(object):
         if not ref.revision:
             self._storage_adapter.delete_folder(self.conan_revisions_root(ref))
         else:
-            self._storage_adapter.delete_folder(self.conan(ref))
+            self._storage_adapter.delete_folder(self.base_folder(ref))
             self._remove_revision_from_index(ref)
         self._delete_empty_dirs(ref)
 

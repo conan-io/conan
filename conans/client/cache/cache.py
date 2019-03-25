@@ -89,10 +89,10 @@ class ClientCache(object):
     def store(self):
         return self._store_folder
 
-    def conan(self, ref):
+    def base_folder(self, ref):
         """ the base folder for this package reference, for each ConanFileReference
         """
-        return self.package_layout(ref).conan()
+        return self.package_layout(ref).base_folder()
 
     def export(self, ref):
         return self.package_layout(ref).export()
@@ -319,7 +319,7 @@ class ClientCache(object):
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
-            ref_path = self.conan(ref)
+            ref_path = self.base_folder(ref)
             for _ in range(4):
                 if os.path.exists(ref_path):
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
@@ -330,7 +330,7 @@ class ClientCache(object):
 
     def remove_package_system_reqs(self, reference):
         assert isinstance(reference, ConanFileReference)
-        conan_folder = self.conan(reference)
+        conan_folder = self.base_folder(reference)
         system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
         if not os.path.exists(conan_folder):
             raise ValueError("%s does not exist" % repr(reference))

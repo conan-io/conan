@@ -42,7 +42,7 @@ class DiskRemover(object):
         self.remove_recipe(package_layout, output=output)
         self.remove_builds(package_layout)
         self.remove_packages(package_layout)
-        self._remove(package_layout.conan(), package_layout.ref)
+        self._remove(package_layout.base_folder(), package_layout.ref)
 
     def remove_src(self, package_layout):
         self._remove(package_layout.source(), package_layout.ref, "src folder")

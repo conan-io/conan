@@ -408,7 +408,7 @@ class TestServer(object):
             if not ref.revision:
                 path = self.test_server.server_store.conan_revisions_root(ref)
             else:
-                path = self.test_server.server_store.conan(ref)
+                path = self.test_server.server_store.base_folder(ref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False

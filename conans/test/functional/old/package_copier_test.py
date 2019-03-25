@@ -123,7 +123,7 @@ class PackageCopierTest(unittest.TestCase):
         origin_reg = paths.export(ref)
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
-        save(os.path.join(paths.conan(ref), "metadata.json"), PackageMetadata().dumps())
+        save(os.path.join(paths.base_folder(ref), "metadata.json"), PackageMetadata().dumps())
         mkdir(paths.export_sources(ref))
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
