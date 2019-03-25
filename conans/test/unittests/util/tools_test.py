@@ -801,7 +801,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
             with self.assertRaisesRegex(ConanException, "Cannot locate vswhere"):
                 vswhere()
-        # vswhere in ProgramFiles
+        # vswhere in ProgramFiles but not in PATH
         program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
         vswhere_path = None
         if program_files:
@@ -811,7 +811,7 @@ class HelloConan(ConanFile):
                 vswhere_path = expected_path
                 with tools.environment_append({"PATH": ""}):
                     self.assertTrue(vswhere())
-        # vswhere in PATH
+        # vswhere in PATH but not in ProgramFiles
         env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
         if not which("vswhere") and vswhere_path:
                 vswhere_folder = os.path.join(program_files, "Microsoft Visual Studio", "Installer")
