@@ -3,7 +3,7 @@ import os
 import platform
 
 from conans.client import join_arguments
-from conans.client.build.compiler_flags import (architecture_flag, archive_flag, build_type_define,
+from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
                                                 build_type_flags, format_defines,
                                                 format_include_paths, format_libraries,
                                                 format_library_paths, libcxx_define, libcxx_flag,
@@ -54,8 +54,6 @@ class AutoToolsBuildEnvironment(object):
         self.flags = self._configure_flags()
         # Only c++ flags [-stdlib, -library], will go to CXXFLAGS
         self.cxx_flags = self._configure_cxx_flags()
-        # Will go to ARFLAGS
-        self.ar_flags = self._configure_ar_flags()
         # cpp standard
         self.cppstd_flag = cppstd_flag(self._compiler, self._compiler_version, self._cppstd)
         # Not -L flags, ["-m64" "-m32"]
@@ -305,22 +303,12 @@ class AutoToolsBuildEnvironment(object):
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags
 
-        ar_flags = copy.copy(self.ar_flags)
-
-        return ld_flags, cpp_flags, libs, cxx_flags, c_flags, ar_flags
-
-    def _configure_ar_flags(self):
-        ar_flags = []
-        ar_flag = archive_flag(compiler=self._compiler, arch=self._arch, os=self._os)
-        if ar_flag:
-            ar_flags.append(ar_flag)
-
-        return ar_flags
+        return ld_flags, cpp_flags, libs, cxx_flags, c_flags
 
     @property
     def vars_dict(self):
 
-        ld_flags, cpp_flags, libs, cxx_flags, c_flags, ar_flags = self._get_vars()
+        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
 
         if os.environ.get("CPPFLAGS", None):
             cpp_flags.append(os.environ.get("CPPFLAGS", None))
@@ -344,21 +332,11 @@ class AutoToolsBuildEnvironment(object):
                "LIBS": libs
                }
 
-        if ar_flags:
-            if os.environ.get("ARFLAGS", None):
-                # whoever has specified them must have set them complete
-                ar_flags.append(os.environ.get("ARFLAGS", None))
-            elif ar_flags == self._configure_ar_flags():
-                # only add if untouched
-                ar_flags.append("cru")
-
-            ret["ARFLAGS"] = ar_flags
-
         return ret
 
     @property
     def vars(self):
-        ld_flags, cpp_flags, libs, cxx_flags, c_flags, ar_flags = self._get_vars()
+        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
 
         cpp_flags = " ".join(cpp_flags) + _environ_value_prefix("CPPFLAGS")
         cxx_flags = " ".join(cxx_flags) + _environ_value_prefix("CXXFLAGS")
@@ -372,17 +350,6 @@ class AutoToolsBuildEnvironment(object):
                "LDFLAGS": ldflags.strip(),
                "LIBS": libs.strip()
                }
-
-        if ar_flags:
-            tmp_ar_flags = " ".join(ar_flags)
-            if _environ_value_prefix("ARFLAGS"):
-                # whoever has specified them must have set them complete
-                tmp_ar_flags += _environ_value_prefix("ARFLAGS")
-            elif ar_flags == self._configure_ar_flags():
-                # only add if untouched
-                tmp_ar_flags += " cru"
-
-            ret["ARFLAGS"] = tmp_ar_flags
 
         return ret
 

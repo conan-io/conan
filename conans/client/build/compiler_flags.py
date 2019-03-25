@@ -44,21 +44,6 @@ def architecture_flag(compiler, arch, os=None):
                 return '-maix64'
     return ""
 
-def archive_flag(compiler, arch, os=None):
-    """
-    return flags to create static library archives
-    """
-    if not compiler or not arch:
-        return None
-
-    if str(os) == 'AIX' and str(compiler) in ['gcc']:
-        if str(arch) in ['rs6000']:
-            return '-X32'
-        elif str(arch) in ['powerpc']:
-            return '-X64'
-
-    return None
-
 def libcxx_define(compiler, libcxx):
 
     if not compiler or not libcxx:

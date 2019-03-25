@@ -48,10 +48,10 @@ class CompilerFlagsTest(unittest.TestCase):
 
 
         arch_flag = architecture_flag(os='AIX', arch='rs6000', compiler='gcc')
-        self.assertEquals(arch_flag, '-maix32')
+        self.assertEqual(arch_flag, '-maix32')
 
         arch_flag = architecture_flag(os='AIX', arch='powerpc', compiler='gcc')
-        self.assertEquals(arch_flag, '-maix64')
+        self.assertEqual(arch_flag, '-maix64')
 
     def test_libcxx_flags(self):
         arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++')
