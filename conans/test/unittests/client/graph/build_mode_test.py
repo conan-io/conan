@@ -1,11 +1,12 @@
 import unittest
 
-from conans.client.graph.build_mode import BuildMode
-from conans.model.ref import ConanFileReference
-from conans.errors import ConanException
+import six
 
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.client.graph.build_mode import BuildMode
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.test.utils.conanfile import MockConanfile
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class BuildModeTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class BuildModeTest(unittest.TestCase):
         self.assertTrue(build_mode.never)
 
     def test_invalid_configuration(self):
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "--build=never not compatible with other options"):
             BuildMode(["outdated", "missing", "never"], self.output)
 
@@ -71,3 +72,47 @@ class BuildModeTest(unittest.TestCase):
 
         build_mode = BuildMode([], self.output)
         self.assertFalse(build_mode.allowed(self.conanfile))
+
+    def test_pattern_matching(self):
+        build_mode = BuildMode(["Boost*"], self.output)
+        reference = ConanFileReference.loads("Boost/1.69.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("Boost_Addons/1.0.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("MyBoost/1.0@user/stable")
+        self.assertFalse(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/Boost@user/stable")
+        self.assertFalse(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/1.0@Boost/stable")
+        self.assertFalse(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/1.0@user/Boost")
+        self.assertFalse(build_mode.forced(self.conanfile, reference))
+
+        build_mode = BuildMode(["foo/*@user/stable"], self.output)
+        reference = ConanFileReference.loads("foo/1.0.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/1.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/1.0.0-abcdefg@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+
+        build_mode = BuildMode(["*@user/stable"], self.output)
+        reference = ConanFileReference.loads("foo/1.0.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("bar/1.0@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/1.0.0-abcdefg@user/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("foo/1.0.0@NewUser/stable")
+        self.assertFalse(build_mode.forced(self.conanfile, reference))
+
+        build_mode = BuildMode(["*Tool"], self.output)
+        reference = ConanFileReference.loads("Tool/0.1@lasote/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("PythonTool/0.1@lasote/stable")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        reference = ConanFileReference.loads("SomeTool/1.2@user/channel")
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+
+        build_mode.report_matches()
+        self.assertEqual("", self.output)

@@ -343,10 +343,11 @@ class SVN(SCMBase):
                         return False
                 return True
         else:
-            import warnings
-            warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
-                          " returning not-pristine always because it cannot compare with"
-                          " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
+            if self._output:
+                self._output.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented,"
+                                  " it is returning not-pristine always because it cannot compare"
+                                  " with checked out version.".format(self.version,
+                                                                      SVN.API_CHANGE_VERSION))
             return False
 
     def get_revision(self):

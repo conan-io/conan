@@ -1,3 +1,11 @@
+
+String causeClass = currentBuild.rawBuild.getCauses()[0].getClass().getName()
+echo "Cause: ${causeClass}"
+if(causeClass == "jenkins.branch.BranchIndexingCause"){
+    exit("Branch indexing builds are blocked")
+}
+
+
 // ########## CONFIGURATION ##################
 def full_py_vers = false
 def test_revisions = false

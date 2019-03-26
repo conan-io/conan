@@ -4,12 +4,12 @@ from conans.client.generators.cmake_find_package_common import find_libraries, \
 from conans.model import Generator
 
 assign_target_properties = """
-    if({name}_INCLUDE_DIRS{build_type_suffix})
-      set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS{build_type_suffix}}}")
+    if({name}_INCLUDE_DIRS)
+      set_target_properties({name}::{name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${{{name}_INCLUDE_DIRS}}")
     endif()
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS{build_type_suffix}}} "${{{name}_LINKER_FLAGS{build_type_suffix}_LIST}}")
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS{build_type_suffix}}})
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS{build_type_suffix}_LIST}}")   
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "${{{name}_LINKER_FLAGS_LIST}}")
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")   
 """
 
 
@@ -43,7 +43,7 @@ endif()
         if cpp_info.public_deps:
             lines = find_dependency_lines(name, cpp_info)
         find_libraries_block = find_libraries.format(name=name, deps=deps, build_type_suffix="")
-        target_props = assign_target_properties.format(name=name, deps=deps, build_type_suffix="")
+        target_props = assign_target_properties.format(name=name, deps=deps)
         tmp = self.template.format(name=name, deps=deps,
                                    version=cpp_info.version,
                                    find_dependencies_block="\n".join(lines),

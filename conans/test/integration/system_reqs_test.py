@@ -2,9 +2,10 @@ import os
 import stat
 import unittest
 
-from conans.paths import SYSTEM_REQS_FOLDER
+import six
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import SYSTEM_REQS_FOLDER
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 
@@ -51,7 +52,7 @@ class SystemReqsTest(unittest.TestCase):
 
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "self.run('fake command!')")}
         client.save(files)
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             client.run("install .")
 
     def per_package_test(self):
@@ -179,17 +180,17 @@ class SystemReqsTest(unittest.TestCase):
     def invalid_remove_reqs_test(self):
         client = TestClient()
 
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(self,
                 Exception, "ERROR: Please specify a valid package reference to be cleaned"):
             client.run("remove --system-reqs")
 
         # wrong file reference should be treated as error
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(self,
                 Exception, "ERROR: Unable to remove system_reqs: foo/version@bar/testing does not exist"):
             client.run("remove --system-reqs foo/version@bar/testing")
 
         # package is not supported with system_reqs
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(self,
                 Exception, "ERROR: '-t' and '-p' parameters can't be used at the same time"):
             client.run("remove --system-reqs foo/bar@foo/bar -p f0ba3ca2c218df4a877080ba99b65834b9413798")
 
@@ -212,7 +213,7 @@ class SystemReqsTest(unittest.TestCase):
         os.chmod(system_reqs_path, current & ~stat.S_IWRITE)
 
         # friendly message for permission error
-        with self.assertRaisesRegexp(
+        with six.assertRaisesRegex(self,
                 Exception, "ERROR: Unable to remove system_reqs:"):
             client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertTrue(os.path.exists(system_reqs_path))

@@ -27,7 +27,7 @@ class MockDepsCppInfo(object):
         self.libs = []
         self.defines = []
         self.cflags = []
-        self.cppflags = []
+        self.cxxflags = []
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""
@@ -80,11 +80,11 @@ class {name}Conan(ConanFile):
 """.format(name=self.name, version=self.version)
         if self.settings:
             base += "    settings = %s\n" % self.settings
-        if self.requires:
-            base += "    requires = %s\n" % (", ".join('"%s"' % r for r in self.requires))
-        if self.private_requires:
-            base += "    requires = %s,\n" % (", ".join("('%s', 'private')" % r
-                                                        for r in self.private_requires))
+        if self.requires or self.private_requires:
+            reqs_list = ['"%s"' % r for r in self.requires or []]
+            reqs_list.extend(["('%s', 'private')" % r for r in self.private_requires or []])
+            reqs_list.append("")
+            base += "    requires = %s\n" % (", ".join(reqs_list))
         if self.build_requires:
             base += "    build_requires = %s\n" % (", ".join('"%s"' % r
                                                              for r in self.build_requires))

@@ -124,7 +124,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.includedirs.append("other_include_dir")
-        cpp_info.cppflags = ["-DGTEST_USE_OWN_TR1_TUPLE=1", "-DGTEST_LINKED_AS_SHARED_LIBRARY=1"]
+        cpp_info.cxxflags = ["-DGTEST_USE_OWN_TR1_TUPLE=1", "-DGTEST_LINKED_AS_SHARED_LIBRARY=1"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
@@ -146,7 +146,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.includedirs.append("other_include_dir")
-        cpp_info.cppflags = ["-load", r"C:\foo\bar.dll"]
+        cpp_info.cxxflags = ["-load", r"C:\foo\bar.dll"]
         cpp_info.cflags = ["-load", r"C:\foo\bar2.dll"]
         cpp_info.defines = ['MY_DEF=My string', 'MY_DEF2=My other string']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)

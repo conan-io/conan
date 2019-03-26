@@ -6,7 +6,7 @@ SET({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 SET({name}_DEFINITIONS{build_type_suffix} {deps.defines})
 SET({name}_LINKER_FLAGS{build_type_suffix}_LIST "{deps.sharedlinkflags_list}" "{deps.exelinkflags_list}")  
 SET({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
-SET({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cppflags_list}" "{deps.cflags_list}")
+SET({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
 SET({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 SET({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
 SET({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
