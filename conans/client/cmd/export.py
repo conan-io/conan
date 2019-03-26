@@ -227,7 +227,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     save(conanfile_path, content)
 
 
-def _detect_scm_revision(path):
+def _detect_scm_revision(path, revisions_enabled, output):
     if not path:
         return None, None
 
@@ -236,12 +236,18 @@ def _detect_scm_revision(path):
         return None, None
 
     repo_obj = SCM.availables.get(repo_type)(path)
-    return repo_obj.get_revision(), repo_type
+    try:
+        revision = repo_obj.get_revision()
+        return revision, repo_type
+    except Exception as exc:
+        if revisions_enabled:
+            output.info("Cannot detect revision from SCM: {}".format(exc))
+        return None, None
 
 
 def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
 
-    scm_revision_detected, repo_type = _detect_scm_revision(path)
+    scm_revision_detected, repo_type = _detect_scm_revision(path, revisions_enabled, output)
     revision = scm_revision_detected or digest.summary_hash
     if revisions_enabled:
         if scm_revision_detected:
