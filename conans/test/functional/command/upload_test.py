@@ -1,12 +1,10 @@
 import itertools
-import json
 import os
 import unittest
 from collections import OrderedDict
 
 from mock import mock
 
-from conans import load
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
@@ -592,4 +590,5 @@ class Pkg(ConanFile):
                          NO_SETTINGS_PACKAGE_ID, client.out)
         ref = ConanFileReference("hello", "1.0", "user", "testing")
         metadata = client.cache.package_layout(ref).load_metadata()
-        self.assertTrue(metadata.packages)
+        self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
+        self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)
