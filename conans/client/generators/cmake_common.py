@@ -525,6 +525,11 @@ def _conan_basic_setup_common(addtional_macros, cmake_multi=False):
         conan_output_dirs_setup()
     endif()"""
 
+    output_dirs_multi_section = """
+    if(ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(WARNING "Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator")
+    endif()"""
+
     main_section = """
 macro(conan_basic_setup)
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
@@ -575,7 +580,7 @@ macro(conan_basic_setup)
 endmacro()
 """
     result = main_section.replace("%%OUTPUT_DIRS_SECTION%%",
-                                  "" if cmake_multi else output_dirs_section)
+                                  output_dirs_multi_section if cmake_multi else output_dirs_section)
     result = result.replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
     return result
 
