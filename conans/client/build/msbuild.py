@@ -129,6 +129,9 @@ class MSBuild(object):
         except Exception:
             pass  # TODO: !!! what are we catching here? tools.load? .group(1)? .splitlines?
         else:
+            if self._settings.get_safe("os") == "WindowsCE":
+                msvc_arch = self._settings.get_safe("os.platform")
+                
             config = "%s|%s" % (build_type, msvc_arch)
             if config not in "".join(lines):
                 self._output.warn("***** The configuration %s does not exist in this solution *****"
