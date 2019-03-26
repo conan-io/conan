@@ -1,3 +1,4 @@
+import os
 import platform
 import subprocess
 import unittest
@@ -67,7 +68,7 @@ class DetectTest(unittest.TestCase):
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_name="mycustomprofile")
             self.assertIn("edit the mycustomprofile profile at", output)
-            self.assertIn("profiles/mycustomprofile", output)
+            self.assertIn(os.path.join("profiles", "mycustomprofile"), output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def detect_default_profile_test(self, _):
@@ -75,7 +76,7 @@ class DetectTest(unittest.TestCase):
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output)
             self.assertIn("edit the default profile at", output)
-            self.assertIn("profiles/default", output)
+            self.assertIn(os.path.join("profiles", "default"), output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def detect_file_profile_test(self, _):
@@ -83,4 +84,12 @@ class DetectTest(unittest.TestCase):
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_name="./MyProfile")
             self.assertIn("edit the MyProfile profile at", output)
-            self.assertIn("profiles/MyProfile", output)
+            self.assertIn(os.path.join(os.getcwd(), "MyProfile"), output)
+
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_abs_file_profile_test(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output, profile_name="/foo/bar/quz/custom-profile")
+            self.assertIn("edit the custom-profile profile at", output)
+            self.assertIn("/foo/bar/quz/custom-profile", output)
