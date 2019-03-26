@@ -28,7 +28,8 @@ class SettingsLoadsTest(unittest.TestCase):
     def test_ANY(self):
         yml = "os: ANY"
         settings = Settings.loads(yml)
-        self.assertRaises(ConanException, settings.validate) # Raise exception if unset
+        with six.assertRaisesRegex(self, ConanException, "'settings.os' value not defined"):
+            settings.validate() # Raise exception if unset
         settings.os = "None"
         settings.validate()
         self.assertTrue(settings.os == "None")
@@ -50,24 +51,35 @@ class SettingsLoadsTest(unittest.TestCase):
         self.assertEqual("os=Windows", settings.values.dumps())
     
     
+    def test_Windows_Linux_remove(self):    
+        yml = "os: [Windows, Linux]"
+        settings = Settings.loads(yml)
+        settings.os = "Windows"
+        # removing a definition which is not contained shall not raise an exception
+        settings.os.remove("invalid") 
+        settings.os.remove("ANY") 
+    
     def test_None_ANY_remove(self):    
         yml = "os: [None, ANY]"
         settings = Settings.loads(yml)
         settings.os = "Windows"
-        self.assertRaises(ConanException, settings.os.remove, "invalid") # remove an definition which is not contained
-        self.assertRaises(ConanException, settings.os.remove, "ANY") # cannot be removed
+        # removing a definition which is not contained shall not raise an exception
+        settings.os.remove("invalid")
+        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'Windows'"):
+            settings.os.remove("ANY")
         
         settings = Settings.loads(yml)
         settings.os = "None"
         settings.os.remove("ANY") # "None" is still valid
-        self.assertRaises(ConanException, settings.os.remove, "None") #  "None" is not valid anymore
+        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'None'"):
+            settings.os.remove("None") #  "None" is not valid anymore
         
     def test_ANY_remove(self):
         yml = "os: ANY"
         settings = Settings.loads(yml)
         settings.os = "Windows"
-        self.assertRaises(ConanException, settings.os.remove, "invalid") # remove an definition which is not contained
-        self.assertRaises(ConanException, settings.os.remove, "ANY") # cannot be removed
+        settings.os.remove("invalid") # removing definition which is not contained does not raise an exception
+        settings.os.remove("ANY")
         
         
     def getattr_none_test(self):

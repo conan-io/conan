@@ -115,11 +115,10 @@ class SettingsItem(object):
             v = str(v)
             if isinstance(self._definition, dict):
                 self._definition.pop(v, None)
-            elif self._definition != "ANY":
-                if v in self._definition:
-                    self._definition.remove(v)
-        if self._value is not None and self._value not in self._definition:
-            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
+            elif isinstance(self._definition, list) and (v in self._definition):
+                self._definition.remove(v)
+        if  self._value is not None:
+            self.check_value()
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
@@ -178,12 +177,16 @@ class SettingsItem(object):
             result.extend(sub_config_dict.values_list)
         return result
 
-    def validate(self):
+
+    def check_value(self):
         if self._value is None and "None" not in self._definition:
             raise undefined_value(self._name)
         if (self._value is not None) and (self._value not in self._definition) and \
            (self._definition != "ANY") and ("ANY" not in self._definition):
                 raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
+        
+    def validate(self):
+        self.check_value()
         if isinstance(self._definition, dict):
             key = "None" if self._value is None else self._value
             self._definition[key].validate()
