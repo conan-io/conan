@@ -243,10 +243,10 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         cmakelists = textwrap.dedent("""
-                    cmake_minimum_required(VERSION 3.12)
-                    include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
-                    conan_basic_setup(NO_OUTPUT_DIRS)
-                    """)
+            cmake_minimum_required(VERSION 3.12)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+            conan_basic_setup(NO_OUTPUT_DIRS)
+            """)
         self.client.save({"conanfile.txt": "[generators]\ncmake_multi\ncmake",
                           "CMakeLists.txt": cmakelists})
         self.client.run("install .")
@@ -264,6 +264,9 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.assertIn(expected, conanbuildinfo_multi)
 
     def conan_basic_setup_output_dirs_warning_test(self):
+        """
+        Check warning when suing NO_OUTPUT_DIRS
+        """
         with chdir(self.client.current_folder):
             self.client.runner("cmake .")
         self.assertTrue("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
