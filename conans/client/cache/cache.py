@@ -191,7 +191,7 @@ class ClientCache(SimplePaths):
                                  "default profile (%s)" % self.default_profile_path,
                                  Color.BRIGHT_YELLOW)
 
-            default_settings = detect_defaults_settings(self._output, "default", self.default_profile_path)
+            default_settings = detect_defaults_settings(self._output, os.path.join(self.default_profile_path, "default"))
             self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
             self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
                                  Color.BRIGHT_YELLOW)
