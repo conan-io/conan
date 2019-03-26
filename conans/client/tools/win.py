@@ -351,7 +351,6 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                    winsdk_version=None, output=None):
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
-    arch_setting = arch or settings.get_safe("arch")
     os_setting = settings.get_safe("os")
 
     compiler = settings.get_safe("compiler")
@@ -368,35 +367,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
-    # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
-    arch_setting = arch_setting or 'x86_64'
-    arch_build = settings.get_safe("arch_build") or detected_architecture()
-    if arch_build == 'x86_64':
-        # Only uses x64 tooling if arch_build explicitly defines it, otherwise
-        # Keep the VS default, which is x86 toolset
-        # This will probably be changed in conan 2.0
-        if ((settings.get_safe("arch_build") or
-                os.getenv("PreferredToolArchitecture") == "x64")
-                and int(compiler_version) >= 12):
-            x86_cross = "amd64_x86"
-        else:
-            x86_cross = "x86"
-        vcvars_arch = {'x86': x86_cross,
-                       'x86_64': 'amd64',
-                       'armv7': 'amd64_arm',
-                       'armv8': 'amd64_arm64'}.get(arch_setting)
-    elif arch_build == 'x86':
-        vcvars_arch = {'x86': 'x86',
-                       'x86_64': 'x86_amd64',
-                       'armv7': 'x86_arm',
-                       'armv8': 'x86_arm64'}.get(arch_setting)
-
-    if os_setting == 'WindowsCE':
-        vcvars_arch = "x86"
-
-    if not vcvars_arch:
-        raise ConanException('unsupported architecture %s' % arch_setting)
-
+    vcvars_arch = vcvars_arch_config(settings, compiler_version, arch)
     existing_version = os.environ.get("VisualStudioVersion")
 
     if existing_version:
@@ -442,6 +413,43 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         else:
             raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return " ".join(command)
+
+
+def vcvars_arch_config(settings, compiler_version, arch=None):
+    arch_setting = arch or settings.get_safe("arch")
+    os_setting = settings.get_safe("os")
+
+    # Set variables to x86 settings for Windows CE. There's no dedicated option for Windows CE in vcvarsall.bat
+    if os_setting == 'WindowsCE':
+        return "x86"
+
+    # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    arch_setting = arch_setting or 'x86_64'
+    arch_build = settings.get_safe("arch_build") or detected_architecture()
+    if arch_build == 'x86_64':
+        # Only uses x64 tooling if arch_build explicitly defines it, otherwise
+        # Keep the VS default, which is x86 toolset
+        # This will probably be changed in conan 2.0
+        if ((settings.get_safe("arch_build") or
+             os.getenv("PreferredToolArchitecture") == "x64")
+                and int(compiler_version) >= 12):
+            x86_cross = "amd64_x86"
+        else:
+            x86_cross = "x86"
+        arch = {'x86': x86_cross,
+                'x86_64': 'amd64',
+                'armv7': 'amd64_arm',
+                'armv8': 'amd64_arm64'}.get(arch_setting)
+    elif arch_build == 'x86':
+        arch = {'x86': 'x86',
+                'x86_64': 'x86_amd64',
+                'armv7': 'x86_arm',
+                'armv8': 'x86_arm64'}.get(arch_setting)
+
+    if not arch:
+        raise ConanException('unsupported architecture %s' % arch_setting)
+
+    return arch
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
