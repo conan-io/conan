@@ -55,9 +55,12 @@ class SettingsLoadsTest(unittest.TestCase):
         yml = "os: [Windows, Linux]"
         settings = Settings.loads(yml)
         settings.os = "Windows"
+        settings.os.remove("Linux")
         # removing a definition which is not contained shall not raise an exception
         settings.os.remove("invalid") 
         settings.os.remove("ANY") 
+        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'Windows'"):
+            settings.os.remove("Windows") 
     
     def test_None_ANY_remove(self):    
         yml = "os: [None, ANY]"
