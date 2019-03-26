@@ -1673,7 +1673,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
                        when missing binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.
                        Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
-                       of a package name.
+                       of a package reference.
 
     Default behavior: If you don't specify anything, it will be similar to '--build=never', but
     package recipes can override it with their 'build_policy' attribute in the conanfile.py.
