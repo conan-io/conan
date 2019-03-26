@@ -5,8 +5,7 @@ from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import default_remotes, dump_registry, \
-    migrate_registry_file, \
-    RemoteRegistry
+    migrate_registry_file, RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -36,9 +35,6 @@ HOOKS_FOLDER = "hooks"
 # Client certificates
 CLIENT_CERT = "client.crt"
 CLIENT_KEY = "client.key"
-
-# Server authorities file
-CACERT_FILE = "cacert.pem"
 
 
 class ClientCache(SimplePaths):
@@ -84,7 +80,7 @@ class ClientCache(SimplePaths):
 
     @property
     def cacert_path(self):
-        return normpath(join(self.conan_folder, CACERT_FILE))
+        return self.config.cacert_path
 
     def _no_locks(self):
         if self._no_lock is None:
