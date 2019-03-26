@@ -511,18 +511,3 @@ class Pkg(ConanFile):
 
         t.run("inspect {} -a description".format(reference2))
         self.assertIn("description: None", t.out)  # The alias conanfile doesn't have description
-
-    def alias_short_paths_test(self):
-        client = TestClient()
-
-        client.run("new alias_copy_repro/1.0.0@user/testing")
-        conanfile_path = os.path.join(client.current_folder, "conanfile.py")
-        new_content = load(conanfile_path).replace("version = \"1.0.0\"",
-                                                   "version = \"1.0.0\"\n    short_paths = True")
-        client.save({"conanfile.py": new_content})
-        client.run("profile new default --detect")
-        client.run("profile update settings.build_type=Release default")
-        client.run("create . user/testing -s build_type=Debug")
-        client.run("alias alias_copy_repro/ALIAS@user/testing alias_copy_repro/1.0.0@user/testing")
-        client.run("copy --all alias_copy_repro/1.0.0@user/testing test/testing")
-        print(client.all_output)
