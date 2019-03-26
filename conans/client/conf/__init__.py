@@ -94,6 +94,7 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
+# error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
@@ -184,6 +185,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
                "CONAN_USE_ALWAYS_SHORT_PATHS": self._env_c("general.use_always_short_paths", "CONAN_USE_ALWAYS_SHORT_PATHS", None),
                "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
+               "CONAN_ERROR_ON_OVERRIDE": self._env_c("general.error_on_override", "CONAN_ERROR_ON_OVERRIDE", "False"),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
                "CONAN_CMAKE_GENERATOR_PLATFORM": self._env_c("general.cmake_generator_platform", "CONAN_CMAKE_GENERATOR_PLATFORM", None),
