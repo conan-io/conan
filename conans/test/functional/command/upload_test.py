@@ -577,7 +577,7 @@ class Pkg(ConanFile):
 
     def upload_export_pkg_test(self):
         """
-        Package metadata is created when doing an export-pkg and then uploading the package
+        Package metadata created when doing an export-pkg and then uploading the package works
         """
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         servers = OrderedDict()
@@ -591,7 +591,5 @@ class Pkg(ConanFile):
         self.assertNotIn("Binary package hello/1.0@user/testing:5%s not found" %
                          NO_SETTINGS_PACKAGE_ID, client.out)
         ref = ConanFileReference("hello", "1.0", "user", "testing")
-        metadata_content = load(os.path.join(client.cache.conan(ref), "metadata.json"))
-        metadata = json.loads(metadata_content)
-        packages = metadata["packages"]
-        self.assertTrue(len(packages) == 1)
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertTrue(metadata.packages)
