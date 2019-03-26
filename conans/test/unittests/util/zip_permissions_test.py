@@ -34,6 +34,6 @@ class ZipPermissionsTest(TestCase):
 
                     dest_file = os.path.join(dest_dir, "a_file.txt")
                     if keep_permissions:
-                        self.assertEquals(stat.S_IMODE(os.stat(dest_file).st_mode), perm_set)
+                        self.assertEqual(stat.S_IMODE(os.stat(dest_file).st_mode), perm_set)
                     else:
-                        self.assertNotEquals(stat.S_IMODE(os.stat(dest_file).st_mode), perm_set)
+                        self.assertNotEqual(stat.S_IMODE(os.stat(dest_file).st_mode), perm_set)

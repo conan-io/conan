@@ -106,17 +106,17 @@ class DepsGraphBuilder(object):
                                  % (scope, list(conanfile._conan_evaluated_requires.values()),
                                     list(conanfile.requires.values())))
 
-    def _load_deps(self,  dep_graph, node, down_reqs, down_ref, down_options,
+    def _load_deps(self, dep_graph, node, down_reqs, down_ref, down_options,
                    check_updates, update, remote_name, processed_profile):
-        """ loads a Conan object from the given file
+        """ expands the dependencies of the node, recursively
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
                     values
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
-        # basic node configuration
+        # basic node configuration: calling configure() and requirements()
         new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref, down_options)
-
+        # if there are version-ranges, resolve them before expanding each of the requirements
         self._resolve_deps(dep_graph, node, update, remote_name)
 
         # Expand each one of the current requirements
@@ -129,22 +129,28 @@ class DepsGraphBuilder(object):
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
                         remote_name, processed_profile, new_reqs, new_options):
-        if name in node.ancestors:
+        if name in node.ancestors or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
         previous = node.public_deps.get(name)
         if require.private or require.build_require or not previous:
             # new node, must be added and expanded
+            # node -> new_node
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remote_name,
                                              processed_profile)
 
+            # The closure of a new node starts with just itself
             new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
             node.public_closure[name] = new_node
+            # New nodes will inherit the private property of its ancestor
+            new_node.private = require.private or node.private
             if require.private or require.build_require:
+                # If the requirement is private (or build_require), a new public scope is defined
                 new_node.public_deps = node.public_closure
             else:
+                # But if it is a normal require, the public_deps scope is the same as its parent
                 new_node.public_deps = node.public_deps
 
                 # add this new node to the public deps
@@ -154,6 +160,7 @@ class DepsGraphBuilder(object):
                 for dep_node_name, dep_node in node.public_deps.items():
                     if dep_node is node:
                         continue
+
                     if dep_node_name in new_node.ancestors:
                         dep_node.public_closure[new_node.name] = new_node
 
@@ -162,6 +169,7 @@ class DepsGraphBuilder(object):
                             new_options, check_updates, update,
                             remote_name, processed_profile)
         else:  # a public node already exist with this name
+            # This is closing a diamond, the node is existing in the public_deps scope
             alias_ref = dep_graph.aliased.get(require.ref)
             # Necessary to make sure that it is pointing to the correct aliased
             if alias_ref:
@@ -177,16 +185,20 @@ class DepsGraphBuilder(object):
                                      "    To change it, override it in your base requirements"
                                      % (node.ref, require.ref, previous.ref))
 
-            previous.ancestors.add(node.name)
-            previous.ancestors.update(node.ancestors)
+            # Add current ancestors to the previous node
+            previous.update_ancestors(node.ancestors.union([node.name]))
+
             node.public_closure[name] = previous
             dep_graph.add_edge(node, previous, require.private, require.build_require)
             # Update the closure of each dependent
-            for dep_node_name, dep_node in previous.public_deps.items():
-                if dep_node is previous:
+            for name, n in previous.public_closure.items():
+                if n.build_require or n.private:
                     continue
-                if dep_node_name in previous.ancestors:
-                    dep_node.public_closure.update(previous.public_closure)
+                node.public_closure[name] = n
+                for dep_node_name in node.ancestors:
+                    dep_node = node.public_deps.get(dep_node_name)
+                    if dep_node:
+                        dep_node.public_closure[name] = n
 
             # RECURSION!
             if self._recurse(previous.public_closure, new_reqs, new_options):

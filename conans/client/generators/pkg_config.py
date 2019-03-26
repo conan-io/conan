@@ -73,7 +73,7 @@ class PkgConfigGenerator(Generator):
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,
-             cpp_info.cppflags,
+             cpp_info.cxxflags,
              cpp_info.cflags,
              ["-D%s" % d for d in cpp_info.defines]]))
 

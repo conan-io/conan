@@ -99,7 +99,7 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("install %s --build missing" % str(ref))
         # Check compilation ok
         package_ids = self.client.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 1)
+        self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_package_exists(pref, self.client.cache, files_without_conanfile)
 

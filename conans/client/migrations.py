@@ -3,6 +3,7 @@ import shutil
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
@@ -49,6 +50,10 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
+
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
+
         if old_version < Version("1.13.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
@@ -215,6 +220,19 @@ def _migrate_lock_files(cache, out):
                                  "Please clean your local conan cache manually"
                                  % (pkg, str(e)))
     out.warn("Migration: Removing old lock files finished\n")
+
+
+def migrate_config_install(cache):
+    try:
+        item = cache.config.get_item("general.config_install")
+        config_type, uri, verify_ssl, args = [r.strip() for r in item.split(",")]
+        verify_ssl = "true" in verify_ssl.lower()
+        args = None if "none" in args.lower() else args
+        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args, None, None)
+        _save_configs(cache.config_install_file, [config])
+        cache.config.rm_item("general.config_install")
+    except ConanException:
+        pass
 
 
 def migrate_to_default_profile(conf_path, default_profile_path):

@@ -427,7 +427,8 @@ class Command(object):
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
         install_subparser.add_argument("item", nargs="?",
-                                       help="Configuration file or directory to use")
+                                       help="git repository, local folder or zip file (local or "
+                                       "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
@@ -435,6 +436,11 @@ class Command(object):
                                        help='Type of remote config')
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
+        install_subparser.add_argument("-sf", "--source-folder",
+                                       help='Install files only from a source subfolder from the '
+                                       'specified origin')
+        install_subparser.add_argument("-tf", "--target-folder",
+                                       help='Install to that path in the conan cache')
 
         args = parser.parse_args(*args)
 
@@ -453,7 +459,9 @@ class Command(object):
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan.config_install(args.item, verify_ssl, args.type, args.args)
+            return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
+                                              source_folder=args.source_folder,
+                                              target_folder=args.target_folder)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe.
@@ -1665,7 +1673,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
                        when missing binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.
                        Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
-                       of a package name.
+                       of a package reference.
 
     Default behavior: If you don't specify anything, it will be similar to '--build=never', but
     package recipes can override it with their 'build_policy' attribute in the conanfile.py.

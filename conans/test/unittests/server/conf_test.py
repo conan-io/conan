@@ -2,6 +2,8 @@ import os
 import unittest
 from datetime import timedelta
 
+import six
+
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
 from conans.server.conf import ConanServerConfigParser
@@ -56,11 +58,11 @@ var=walker
 
         self.assertRaises(ConanException, ConfigParser, text, ["one", "two", "three"])
         conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)
-        self.assertEquals(conf.one, "text=value")
-        self.assertEquals(conf.two, "other=var")
-        self.assertEquals(conf.three, "var")
-        self.assertEquals(conf.moon, "var=walker")
-        with self.assertRaisesRegexp(ConanException, "Unrecognized field 'NOEXIST'"):
+        self.assertEqual(conf.one, "text=value")
+        self.assertEqual(conf.two, "other=var")
+        self.assertEqual(conf.three, "var")
+        self.assertEqual(conf.moon, "var=walker")
+        with six.assertRaisesRegex(self, ConanException, "Unrecognized field 'NOEXIST'"):
             conf.NOEXIST
 
         # IF an old config file is readed but the section is in the list, just return it empty
@@ -69,22 +71,22 @@ var=walker
 text=value
         """
         conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)
-        self.assertEquals(conf.two, "")
+        self.assertEqual(conf.two, "")
 
     def test_values(self):
         config = ConanServerConfigParser(self.file_path, environment=self.environ)
-        self.assertEquals(config.jwt_secret, "mysecret")
-        self.assertEquals(config.jwt_expire_time, timedelta(minutes=121))
-        self.assertEquals(config.disk_storage_path, self.storage_path)
+        self.assertEqual(config.jwt_secret, "mysecret")
+        self.assertEqual(config.jwt_expire_time, timedelta(minutes=121))
+        self.assertEqual(config.disk_storage_path, self.storage_path)
         self.assertTrue(config.ssl_enabled)
-        self.assertEquals(config.port, 9220)
-        self.assertEquals(config.write_permissions, [("openssl/2.0.1@lasote/testing", "pepe")])
-        self.assertEquals(config.read_permissions, [("*/*@*/*", "*"),
+        self.assertEqual(config.port, 9220)
+        self.assertEqual(config.write_permissions, [("openssl/2.0.1@lasote/testing", "pepe")])
+        self.assertEqual(config.read_permissions, [("*/*@*/*", "*"),
                                                     ("openssl/2.0.1@lasote/testing", "pepe")])
-        self.assertEquals(config.users, {"lasote": "defaultpass", "pepe": "pepepass"})
-        self.assertEquals(config.host_name, "localhost")
-        self.assertEquals(config.public_port, 12345)
-        self.assertEquals(config.public_url, "https://localhost:12345/v1")
+        self.assertEqual(config.users, {"lasote": "defaultpass", "pepe": "pepepass"})
+        self.assertEqual(config.host_name, "localhost")
+        self.assertEqual(config.public_port, 12345)
+        self.assertEqual(config.public_url, "https://localhost:12345/v1")
 
         # Now check with environments
         tmp_storage = temp_folder()
@@ -98,15 +100,15 @@ text=value
         self.environ["CONAN_SERVER_PUBLIC_PORT"] = "33333"
 
         config = ConanServerConfigParser(self.file_path, environment=self.environ)
-        self.assertEquals(config.jwt_secret,  "newkey")
-        self.assertEquals(config.jwt_expire_time, timedelta(minutes=123))
-        self.assertEquals(config.disk_storage_path, conan_expand_user(tmp_storage))
+        self.assertEqual(config.jwt_secret,  "newkey")
+        self.assertEqual(config.jwt_expire_time, timedelta(minutes=123))
+        self.assertEqual(config.disk_storage_path, conan_expand_user(tmp_storage))
         self.assertFalse(config.ssl_enabled)
-        self.assertEquals(config.port, 1233)
-        self.assertEquals(config.write_permissions, [("openssl/2.0.1@lasote/testing", "pepe")])
-        self.assertEquals(config.read_permissions, [("*/*@*/*", "*"),
+        self.assertEqual(config.port, 1233)
+        self.assertEqual(config.write_permissions, [("openssl/2.0.1@lasote/testing", "pepe")])
+        self.assertEqual(config.read_permissions, [("*/*@*/*", "*"),
                                                     ("openssl/2.0.1@lasote/testing", "pepe")])
-        self.assertEquals(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
-        self.assertEquals(config.host_name, "remotehost")
-        self.assertEquals(config.public_port, 33333)
-        self.assertEquals(config.public_url, "http://remotehost:33333/v1")
+        self.assertEqual(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
+        self.assertEqual(config.host_name, "remotehost")
+        self.assertEqual(config.public_port, 33333)
+        self.assertEqual(config.public_url, "http://remotehost:33333/v1")
