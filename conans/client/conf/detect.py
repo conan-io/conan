@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import ntpath
 from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
@@ -140,7 +141,7 @@ def _detect_compiler_version(result, output, profile_name):
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
             if Version(version) >= Version("5.1"):
-
+                profile_name = ntpath.basename(profile_name)
                 msg = """
 Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
 'libstdc++' for backwards compatibility.

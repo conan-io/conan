@@ -75,8 +75,8 @@ class ProfileTest(unittest.TestCase):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
         if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
-            self.assertIn("edit the ./MyProfile profile at", client.out)
-            self.assertIn("profiles/./MyProfile", client.out)
+            self.assertIn("edit the MyProfile profile at", client.out)
+            self.assertIn("profiles/MyProfile", client.out)
 
         pr_path = os.path.join(client.current_folder, "MyProfile")
 
