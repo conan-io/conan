@@ -1331,6 +1331,17 @@ class SCMRevisions(unittest.TestCase):
         self.assertEquals(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
+    def auto_revision_without_commits_test(self):
+        """If we have a repo but without commits, it shouldn't fail"""
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client = TurboTestClient()
+        conanfile = GenConanfile()
+        client.runner('git init .', cwd=client.current_folder)
+        client.create(ref, conanfile=conanfile)
+        # It warns but succeed using hash
+        self.assertIn("Cannot detect revision from SCM: Unable to get git commit", client.out)
+        self.assertEquals(client.recipe_revision(ref), "f3367e0e7d170aa12abccb175fee5f97")
+
     @attr("svn")
     def auto_revision_even_without_scm_svn_test(self):
         """Even without using the scm feature, the revision is detected from repo.
