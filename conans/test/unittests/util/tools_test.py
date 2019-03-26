@@ -6,6 +6,7 @@ import subprocess
 import sys
 import unittest
 import uuid
+import warnings
 from collections import namedtuple
 
 import mock
@@ -14,6 +15,7 @@ import six
 from bottle import request, static_file
 from mock.mock import mock_open, patch
 from nose.plugins.attrib import attr
+from parameterized import parameterized
 from six import StringIO
 from six.moves.urllib.parse import quote
 
@@ -36,6 +38,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle, \
     TestBufferConanOutput, TestClient, create_local_git_repo, try_remove_readonly
 from conans.tools import get_global_instances
+from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
 
 
@@ -54,6 +57,14 @@ class SystemPackageToolTest(unittest.TestCase):
 
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
+
+    def test_system_without_sudo(self):
+        with mock.patch("os.path.isfile", return_value=False):
+            self.assertFalse(SystemPackageTool._is_sudo_enabled())
+            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
+
+            with mock.patch("sys.stdout.isatty", return_value=True):
+                self.assertEqual(SystemPackageTool._get_sudo_str(), "")
 
     def verify_update_test(self):
         # https://github.com/conan-io/conan/issues/3142
@@ -397,7 +408,7 @@ class SystemPackageToolTest(unittest.TestCase):
             return
         if platform.system() == "Windows" and not which("choco.exe"):
             return
-        spt = SystemPackageTool()
+        spt = SystemPackageTool(output=self.out)
         expected_package = "git"
         if platform.system() == "Windows" and which("choco.exe"):
             spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
@@ -486,6 +497,7 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+    output = TestBufferConanOutput()
 
     def replace_paths_test(self):
         folder = temp_folder()
@@ -632,7 +644,7 @@ class HelloConan(ConanFile):
 
     def test_global_tools_overrided(self):
         client = TestClient()
- 
+
         conanfile = """
 from conans import ConanFile, tools
 
@@ -683,21 +695,39 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
+
         # test build_type and arch override, for multi-config packages
-        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
+                                           arch="x86", output=self.output)
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
         with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
+                self.assertEqual(len(w), 2)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
         with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                tools.msvc_build_command(settings, "project.sln", output=self.output)
+                self.assertEqual(len(w), 2)
+                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         # successful definition via settings
         settings.build_type = "Debug"
-        cmd = tools.msvc_build_command(settings, "project.sln")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
+            self.assertEqual(len(w), 2)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
@@ -766,6 +796,33 @@ class HelloConan(ConanFile):
             json = vswhere()
             self.assertNotIn("descripton", json)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    def vswhere_path_test(self):
+        """
+        Locate vswhere in PATH or in ProgramFiles
+        """
+        # vswhere not found
+        with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
+            with six.assertRaisesRegex(self, ConanException, "Cannot locate vswhere"):
+                vswhere()
+        # vswhere in ProgramFiles but not in PATH
+        program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
+        vswhere_path = None
+        if program_files:
+            expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                         "vswhere.exe")
+            if os.path.isfile(expected_path):
+                vswhere_path = expected_path
+                with tools.environment_append({"PATH": ""}):
+                    self.assertTrue(vswhere())
+        # vswhere in PATH but not in ProgramFiles
+        env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
+        if not which("vswhere") and vswhere_path:
+                vswhere_folder = os.path.join(program_files, "Microsoft Visual Studio", "Installer")
+                env.update({"PATH": [vswhere_folder]})
+        with tools.environment_append(env):
+            self.assertTrue(vswhere())
+
     def vcvars_echo_test(self):
         if platform.system() != "Windows":
             return
@@ -773,7 +830,7 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         output = TestBufferConanOutput()
         runner = TestRunner(output)
         runner(cmd + " && set vs140comntools")
@@ -782,7 +839,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
             runner = TestRunner(output)
-            cmd = tools.vcvars_command(settings)
+            cmd = tools.vcvars_command(settings, output=self.output)
             runner(cmd + " && set vs140comntools")
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
@@ -800,12 +857,12 @@ class HelloConan(ConanFile):
         settings.arch_build = "x86_64"
 
         # Set the env with a PATH containing the vcvars paths
-        tmp = tools.vcvars_dict(settings, only_diff=False)
+        tmp = tools.vcvars_dict(settings, only_diff=False, output=self.output)
         tmp = {key.lower(): value for key, value in tmp.items()}
         with tools.environment_append({"path": tmp["path"]}):
             previous_path = os.environ["PATH"].split(";")
             # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
-            with tools.vcvars(settings):
+            with tools.vcvars(settings, output=self.output):
                 path = os.environ["PATH"].split(";")
                 values_count = {value: path.count(value) for value in path}
                 for value, counter in values_count.items():
@@ -822,11 +879,13 @@ class HelloConan(ConanFile):
         settings.arch = "x86"
         settings.arch_build = "x86_64"
         with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=True)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=True, output=self.output)
             with tools.environment_append(tmp):
                 self.assertNotIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake",  os.environ["PATH"])
-            tmp = tools.vcvars_dict(settings, only_diff=False, filter_known_paths=False)
+            tmp = tools.vcvars_dict(settings, only_diff=False,
+                                    filter_known_paths=False, output=self.output)
             with tools.environment_append(tmp):
                 self.assertIn("custom_path", os.environ["PATH"])
                 self.assertIn("WindowsFake", os.environ["PATH"])
@@ -840,12 +899,12 @@ class HelloConan(ConanFile):
         settings.compiler.version = "15"
         settings.arch = "x86"
         settings.arch_build = "x86_64"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
         settings.arch_build = "x86"
-        cmd = tools.vcvars_command(settings)
+        cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
 
     def vcvars_raises_when_not_found_test(self):
@@ -930,22 +989,22 @@ compiler:
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         with tools.environment_append({"MYVAR": "1"}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             self.assertIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
-            ret = vcvars_dict(settings)
+            ret = vcvars_dict(settings, output=self.output)
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
         my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
         with tools.environment_append({"LIBPATH": my_lib_paths}):
-            ret = vcvars_dict(settings, only_diff=False)
+            ret = vcvars_dict(settings, only_diff=False, output=self.output)
             str_var_value = os.pathsep.join(ret["LIBPATH"])
             self.assertTrue(str_var_value.endswith(my_lib_paths))
 
             # Now only a diff, it should return the values as a list, but without the old values
-            ret = vcvars_dict(settings, only_diff=True)
+            ret = vcvars_dict(settings, only_diff=True, output=self.output)
             self.assertEqual(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
 
             # But if we apply both environments, they are composed correctly
@@ -960,17 +1019,17 @@ compiler:
 PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
 
 
- PROCESSOR_LEVEL=6 
+ PROCESSOR_LEVEL=6
 
-PROCESSOR_REVISION=9e09    
+PROCESSOR_REVISION=9e09
 
-                         
+
 set nl=^
 env_var=
 without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
-       
+
 """.encode("utf-8")
 
         def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
@@ -983,7 +1042,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
-                vcvars = tools.vcvars_dict(None, only_diff=False)
+                vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
@@ -1107,171 +1166,50 @@ ProgramFiles(x86)=C:\Program Files (x86)
                        requester=requests, out=out)
         http_server.stop()
 
-    def get_gnu_triplet_test(self):
-        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
-            build = tools.get_gnu_triplet(this_os, this_arch, compiler)
-            host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
-            return build, host
+    @parameterized.expand([
+        ["Linux", "x86", None, "x86-linux-gnu"],
+        ["Linux", "x86_64", None, "x86_64-linux-gnu"],
+        ["Linux", "armv6", None, "arm-linux-gnueabi"],
+        ["Linux", "sparc", None, "sparc-linux-gnu"],
+        ["Linux", "sparcv9", None, "sparc64-linux-gnu"],
+        ["Linux", "mips", None, "mips-linux-gnu"],
+        ["Linux", "mips64", None, "mips64-linux-gnu"],
+        ["Linux", "ppc32", None, "powerpc-linux-gnu"],
+        ["Linux", "ppc64", None, "powerpc64-linux-gnu"],
+        ["Linux", "ppc64le", None, "powerpc64le-linux-gnu"],
+        ["Linux", "armv5te", None, "arm-linux-gnueabi"],
+        ["Linux", "arm_whatever", None, "arm-linux-gnueabi"],
+        ["Linux", "armv7hf", None, "arm-linux-gnueabihf"],
+        ["Linux", "armv6", None, "arm-linux-gnueabi"],
+        ["Linux", "armv7", None, "arm-linux-gnueabi"],
+        ["Linux", "armv8_32", None, "aarch64-linux-gnu_ilp32"],
+        ["Linux", "armv5el", None, "arm-linux-gnueabi"],
+        ["Linux", "armv5hf", None, "arm-linux-gnueabihf"],
+        ["Linux", "s390", None, "s390-ibm-linux-gnu"],
+        ["Linux", "s390x", None, "s390x-ibm-linux-gnu"],
+        ["Android", "x86", None, "i686-linux-android"],
+        ["Android", "x86_64", None, "x86_64-linux-android"],
+        ["Android", "armv6", None, "arm-linux-androideabi"],
+        ["Android", "armv7", None, "arm-linux-androideabi"],
+        ["Android", "armv7hf", None, "arm-linux-androideabi"],
+        ["Android", "armv8", None, "aarch64-linux-android"],
+        ["Windows", "x86", "Visual Studio", "i686-windows-msvc"],
+        ["Windows", "x86", "gcc", "i686-w64-mingw32"],
+        ["Windows", "x86_64", "gcc", "x86_64-w64-mingw32"],
+        ["Darwin", "x86_64", None, "x86_64-apple-darwin"],
+        ["Macos", "x86", None, "i686-apple-darwin"],
+        ["iOS", "armv7", None, "arm-apple-darwin"],
+        ["watchOS", "armv7k", None, "arm-apple-darwin"],
+        ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
+        ["tvOS", "armv8", None, "aarch64-apple-darwin"],
+        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"]
+    ])
+    def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
+        triplet = tools.get_gnu_triplet(os, arch, compiler)
+        self.assertEqual(triplet, expected_triplet,
+                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
-        build, host = get_values("Linux", "armv6", "Linux", "armv6")
-        self.assertEqual(build, "arm-linux-gnueabi")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
-        self.assertEqual(build, "sparc-linux-gnu")
-        self.assertEqual(host, "sparc64-linux-gnu")
-
-        build, host = get_values("Linux", "mips", "Linux", "mips64")
-        self.assertEqual(build, "mips-linux-gnu")
-        self.assertEqual(host, "mips64-linux-gnu")
-
-        build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
-        self.assertEqual(build, "powerpc64le-linux-gnu")
-        self.assertEqual(host, "powerpc64-linux-gnu")
-
-        build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
-        self.assertEqual(build, "arm-linux-gnueabi")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86", "Linux", "armv7hf")
-        self.assertEqual(build, "x86-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "x86-linux-gnu")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-w64-mingw32")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-windows-msvc")  # Not very common but exists sometimes
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv7")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv6")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "aarch64-linux-gnu_ilp32")
-        
-        build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabi")
-        
-        build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-       
-        build, host = get_values("Linux", "x86_64", "Android", "x86")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-linux-android")
-
-        build, host = get_values("Linux", "x86_64", "Android", "x86_64")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "x86_64-linux-android")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv7")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv7hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv8")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "aarch64-linux-android")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv6")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-w64-mingw32")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "x86_64-w64-mingw32")
-
-        build, host = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEqual(build, "x86_64-w64-mingw32")
-        self.assertEqual(host, "i686-w64-mingw32")
-
-        build, host = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
-        self.assertEqual(build, "x86_64-w64-mingw32")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Darwin", "x86_64", "Android", "armv7hf")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Darwin", "x86_64", "Macos", "x86")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "i686-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "iOS", "armv7")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "arm-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "watchOS", "armv7k")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "arm-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "aarch64-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8.3")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "aarch64-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "watchOS", "armv8_32")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "aarch64-apple-darwin")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "ppc32")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "powerpc-linux-gnu")
-
-        build, host = get_values("Linux", "x86", "Linux", "ppc64")
-        self.assertEqual(build, "x86-linux-gnu")
-        self.assertEqual(host, "powerpc64-linux-gnu")
-
-        for _os in ["Windows", "Linux"]:
-            for arch in ["x86_64", "x86"]:
-                triplet = tools.get_gnu_triplet(_os, arch, "gcc")
-
-                output = ""
-                if arch == "x86_64":
-                    output += "x86_64"
-                else:
-                    output += "i686" if _os != "Linux" else "x86"
-
-                output += "-"
-                if _os == "Windows":
-                    output += "w64-mingw32"
-                else:
-                    output += "linux-gnu"
-
-                self.assertIn(output, triplet)
-
-        # Compiler not specified for os="Windows"
+    def get_gnu_triplet_on_windows_without_compiler_test(self):
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
 
@@ -2268,7 +2206,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = tools.collect_libs(conanfile)
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
@@ -2334,7 +2272,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
         result = conanfile.collect_libs()
-        self.assertEqual(["mylib", "customlib"], result)
+        self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)

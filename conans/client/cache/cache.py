@@ -59,6 +59,10 @@ class ClientCache(SimplePaths):
         super(ClientCache, self).__init__(self._store_folder)
         self.editable_packages = EditablePackages(self.conan_folder)
 
+    @property
+    def config_install_file(self):
+        return os.path.join(self.conan_folder, "config_install.json")
+
     def package_layout(self, ref, short_paths=None, *args, **kwargs):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())

@@ -262,7 +262,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
     normalized_search = normalized_text(search)
     index = normalized_content.find(normalized_search)
     if index == -1:
-        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file", output=output)
+        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file",
+                                      output=output)
 
     while index != -1:
         content = content[:index] + replace + content[index + len(search):]
@@ -322,6 +323,7 @@ def collect_libs(conanfile, folder=None):
                                           "times with a different file extension" % name)
                 else:
                     result.append(name)
+    result.sort()
     return result
 
 
@@ -333,7 +335,8 @@ def which(filename):
         return None
 
     def _get_possible_filenames(filename):
-        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if "." not in filename else []
+        extensions_win = (os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+                          if "." not in filename else [])
         extensions = [".sh"] if platform.system() != "Windows" else extensions_win
         extensions.insert(1, "")  # No extension
         return ["%s%s" % (filename, entry.lower()) for entry in extensions]
@@ -369,5 +372,3 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
-
-

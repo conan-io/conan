@@ -189,6 +189,91 @@ class CMakeTest(unittest.TestCase):
             cmake = CMake(conan_file)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
 
+    def cmake_generator_platform_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator",
+                                       "CONAN_CMAKE_GENERATOR_PLATFORM": "My CMake Platform"}):
+            cmake = CMake(conan_file)
+            self.assertIn('-G "My CMake Generator" -A "My CMake Platform"', cmake.command_line)
+
+    def cmake_generator_platform_override_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR_PLATFORM": "Win64"}):
+            cmake = CMake(conan_file)
+            self.assertIn('-G "Visual Studio 15 2017" -A "Win64"', cmake.command_line)
+
+    def cmake_generator_platform_gcc_test(self):
+            settings = Settings.loads(default_settings_yml)
+            settings.os = "Linux"
+            settings.os_build = "Linux"
+            settings.compiler = "gcc"
+            settings.compiler.version = "8"
+            settings.compiler.libcxx = "libstdc++"
+            settings.arch = "x86"
+
+            conan_file = ConanFileMock()
+            conan_file.settings = settings
+
+            cmake = CMake(conan_file)
+            self.assertIn('-G "Unix Makefiles"', cmake.command_line)
+            self.assertNotIn('-A', cmake.command_line)
+
+    @parameterized.expand([('x86', 'Visual Studio 15 2017'),
+                           ('x86_64', 'Visual Studio 15 2017 Win64'),
+                           ('armv7', 'Visual Studio 15 2017 ARM')])
+    def cmake_generator_platform_vs2017_test(self, arch, generator):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = arch
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file)
+        self.assertIn('-G "%s"' % generator, cmake.command_line)
+        self.assertNotIn('-A', cmake.command_line)
+
+    @parameterized.expand([('x86', 'Win32'),
+                           ('x86_64', 'x64'),
+                           ('armv7', 'ARM'),
+                           ('armv8', 'ARM64')])
+    def cmake_generator_platform_vs2019_test(self, arch, platform):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "16"
+        settings.arch = arch
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file)
+        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % platform, cmake.command_line)
+
+    @parameterized.expand([('arm',),
+                           ('ppc',),
+                           ('86',)])
+    def cmake_generator_platform_other_test(self, platform):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "Green Hills MULTI",
+                                       "CONAN_CMAKE_GENERATOR_PLATFORM": platform}):
+            cmake = CMake(conan_file)
+            self.assertIn('-G "Green Hills MULTI" -A "%s"' % platform, cmake.command_line)
+
     def cmake_fpic_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"

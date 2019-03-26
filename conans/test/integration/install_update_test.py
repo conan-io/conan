@@ -234,7 +234,7 @@ class Pkg(ConanFile):
         self.client.run("install Hello0/1.0@lasote/stable --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
 
-        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
         client2.run("install Hello0/1.0@lasote/stable")
 
         self.assertEqual(str(client2.out).count("Downloading conaninfo.txt"), 1)
