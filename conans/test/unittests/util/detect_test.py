@@ -69,7 +69,7 @@ class DetectTest(unittest.TestCase):
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_path="~/.conan/profiles/mycustomprofile")
             self.assertIn("edit the mycustomprofile profile at", output)
-            self.assertIn(os.path.join("profiles", "mycustomprofile"), output)
+            self.assertIn("~/.conan/profiles/mycustomprofile", output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def detect_default_profile_test(self, _):
@@ -77,7 +77,7 @@ class DetectTest(unittest.TestCase):
         with tools.environment_append({"CC": "gcc"}):
             detect_defaults_settings(output, profile_path="~/.conan/profiles/default")
             self.assertIn("edit the default profile at", output)
-            self.assertIn(os.path.join("profiles", "default"), output)
+            self.assertIn("~/.conan/profiles/default", output)
 
     @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
     def detect_file_profile_test(self, _):
