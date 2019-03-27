@@ -1125,7 +1125,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
                            retry=3, retry_wait=0)
 
         # Not found error
-        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
         with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
