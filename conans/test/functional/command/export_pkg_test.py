@@ -11,6 +11,7 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
+from textwrap import dedent
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -150,6 +151,25 @@ class HelloPythonConan(ConanFile):
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertIn("optionOne: 123", client.out)
+
+    def test_profile_environment(self):
+        # https://github.com/conan-io/conan/issues/4832
+        conanfile = dedent("""
+            import os
+            from conans import ConanFile
+            class HelloPythonConan(ConanFile):
+                def package(self):
+                    self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
+            """)
+        profile = dedent("""
+            [env]
+            MYCUSTOMVAR=MYCUSTOMVALUE
+            """)
+        client = TestClient()
+        client.save({CONANFILE: conanfile,
+                     "myprofile": profile})
+        client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
+        self.assertIn("Hello/0.1@lasote/stable: ENV-VALUE: MYCUSTOMVALUE!!!", client.out)
 
     def test_options_install(self):
         # https://github.com/conan-io/conan/issues/2242

@@ -6,6 +6,7 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir
+from conans.model.conan_file import get_env_context_manager
 
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
@@ -47,9 +48,10 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
         packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
                             hook_manager, conan_file_path, ref)
     else:
-        packager.create_package(conanfile, package_id, source_folder, build_folder,
-                                dest_package_folder, install_folder, hook_manager, conan_file_path,
-                                ref, local=True)
+        with get_env_context_manager(conanfile):
+            packager.create_package(conanfile, package_id, source_folder, build_folder,
+                                    dest_package_folder, install_folder, hook_manager,
+                                    conan_file_path, ref, local=True)
     with cache.package_layout(ref).update_metadata() as metadata:
         readed_manifest = FileTreeManifest.load(dest_package_folder)
         metadata.packages[package_id].revision = readed_manifest.summary_hash
