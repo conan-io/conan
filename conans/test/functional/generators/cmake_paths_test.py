@@ -26,8 +26,8 @@ class CMakePathsGeneratorTest(unittest.TestCase):
                    '${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})\r\n' \
                    'set(CMAKE_PREFIX_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
                    '${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})'
-        if(platform.system() != "Windows"):
-            expected = expected.replace("\\r", "")
+        if platform.system() != "Windows":
+            expected = expected.replace("\r", "")
         self.assertEquals(expected.format(pfolder1=pfolder1, pfolder2=pfolder2), contents)
 
     def cmake_paths_integration_test(self):
