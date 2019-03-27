@@ -65,7 +65,6 @@ class VisualStudioGenerator(Generator):
         return BUILD_INFO_VISUAL_STUDIO
 
     def _format_properties(self, build_info, condition):
-
         fields = {
             'condition': condition,
             'bin_dirs': "".join("%s;" % p for p in build_info.bin_paths).replace("\\", "/"),
@@ -100,5 +99,6 @@ class VisualStudioGenerator(Generator):
         userprofile = os.getenv("USERPROFILE")
         if userprofile:
             userprofile = userprofile.replace("\\", "/")
-            formatted_template = re.sub(userprofile, "$(USERPROFILE)", formatted_template, flags=re.I)
+            formatted_template = re.sub(userprofile, "$(USERPROFILE)", formatted_template,
+                                        flags=re.I)
         return formatted_template
