@@ -1071,7 +1071,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
-                           retry=3, retry_wait=0)
+                           retry=3, retry_wait=1)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
