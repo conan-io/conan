@@ -51,11 +51,10 @@ class SCMBase(object):
     def run(self, command):
         command = "%s %s" % (self.cmd_command, command)
         with chdir(self.folder) if self.folder else no_op():
-            with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
-                if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True).strip())
-                else:
-                    return self._runner(command)
+            if not self._runner:
+                return decode_text(subprocess.check_output(command, shell=True).strip())
+            else:
+                return self._runner(command)
 
     def get_url_with_credentials(self, url):
         if not self._username or not self._password:
@@ -218,7 +217,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return decode_text(subprocess.check_output(command, shell=True, stderr=STDOUT))
+            return decode_text(subprocess.check_output(command, shell=True))
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
