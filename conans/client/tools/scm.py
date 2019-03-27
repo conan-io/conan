@@ -53,7 +53,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True).strip())
+                    return decode_text(subprocess.check_output(command, shell=True, stderr=STDOUT).strip())
                 else:
                     return self._runner(command)
 

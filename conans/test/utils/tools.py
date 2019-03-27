@@ -1000,6 +1000,11 @@ class GenConanfile(object):
         self._build_messages = []
         self._scm = {}
         self._requirements = []
+        self._revision_mode = None
+
+    def with_revision_mode(self, revision_mode):
+        self._revision_mode = revision_mode
+        return self
 
     def with_scm(self, scm):
         self._scm = scm
@@ -1049,6 +1054,13 @@ class GenConanfile(object):
         return "scm = {%s}" % line
 
     @property
+    def _revision_mode_line(self):
+        if not self._revision_mode:
+            return ""
+        line = "revision_mode=\"{}\"".format(self._revision_mode)
+        return line
+
+    @property
     def _settings_line(self):
         if not self._settings:
             return ""
@@ -1059,7 +1071,7 @@ class GenConanfile(object):
     def _options_line(self):
         if not self._options:
             return ""
-        line = ", ".join('"%s": %s' % (k, v) for k,v in self._options.items())
+        line = ", ".join('"%s": %s' % (k, v) for k, v in self._options.items())
         tmp = "options = {%s}" % line
         if self._default_options:
             line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
@@ -1112,6 +1124,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._requirements_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
+        if self._revision_mode_line:
+            ret.append("    {}".format(self._revision_mode_line))
         if self._settings_line:
             ret.append("    {}".format(self._settings_line))
         if self._options_line:

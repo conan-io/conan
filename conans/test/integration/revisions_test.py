@@ -1320,7 +1320,7 @@ class SCMRevisions(unittest.TestCase):
          can be found"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile()
+        conanfile = GenConanfile().with_revision_mode("scm")
         commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
         self.assertEqual(client.recipe_revision(ref), commit)
@@ -1331,6 +1331,19 @@ class SCMRevisions(unittest.TestCase):
         self.assertEqual(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
+    def auto_revision_without_commits_test(self):
+        """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client = TurboTestClient()
+        conanfile = GenConanfile().with_revision_mode("scm")
+        client.runner('git init .', cwd=client.current_folder)
+        client.save({"conanfile.py": str(conanfile)})
+        client.run("create . {}".format(ref), assert_error=True)
+        # It error, because the revision_mode is explicitly set to scm
+        self.assertIn("Cannot detect revision using 'scm' mode from repository at "
+                      "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
+                      client.out)
+
     @attr("svn")
     def auto_revision_even_without_scm_svn_test(self):
         """Even without using the scm feature, the revision is detected from repo.
@@ -1338,7 +1351,7 @@ class SCMRevisions(unittest.TestCase):
          can be found"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile()
+        conanfile = GenConanfile().with_revision_mode("scm")
         commit = client.init_svn_repo("project",
                                       files={"file.txt": "hey", "conanfile.py": str(conanfile)})
         client.current_folder = os.path.join(client.current_folder, "project")
