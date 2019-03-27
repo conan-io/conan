@@ -30,6 +30,6 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         cmake_lines = generator.content.replace('\\', '/').replace("\n\t\t\t", " ").splitlines()
         self.assertEqual('set(CONAN_MYLIB_ROOT "%s")' % path, cmake_lines[0])
         self.assertEqual('set(CMAKE_MODULE_PATH "%s/" "%s" ${CMAKE_MODULE_PATH} '
-                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[1])
+                         '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[1])
         self.assertEqual('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CMAKE_PREFIX_PATH} '
-                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])
+                         '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])
