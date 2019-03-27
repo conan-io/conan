@@ -241,7 +241,13 @@ def _detect_scm_revision(path):
 
 def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest):
 
-    scm_revision_detected, repo_type = _detect_scm_revision(path)
+    try:
+        scm_revision_detected, repo_type = _detect_scm_revision(path)
+    except Exception as exc:
+        if revisions_enabled:
+            output.info("Cannot detect revision from SCM: {}".format(exc))
+        scm_revision_detected, repo_type = None, None
+
     revision = scm_revision_detected or digest.summary_hash
     if revisions_enabled:
         if scm_revision_detected:
