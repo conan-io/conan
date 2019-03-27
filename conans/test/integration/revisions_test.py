@@ -185,8 +185,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Upload with v1
         pref = self.c_v1.create(self.ref)
-        self.assertNotEquals(pref.revision, DEFAULT_REVISION_V1)
-        self.assertNotEquals(pref.ref.revision, DEFAULT_REVISION_V1)
+        self.assertNotEqual(pref.revision, DEFAULT_REVISION_V1)
+        self.assertNotEqual(pref.ref.revision, DEFAULT_REVISION_V1)
 
         remote_ref = self.c_v1.upload_all(self.ref)
         self.assertEqual(remote_ref.revision, DEFAULT_REVISION_V1)
@@ -197,7 +197,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         local_rev = self.c_v1.recipe_revision(self.ref)
 
-        self.assertNotEquals(local_rev, DEFAULT_REVISION_V1)
+        self.assertNotEqual(local_rev, DEFAULT_REVISION_V1)
 
         self.assertEqual(local_rev, pref.ref.revision)
 
@@ -250,8 +250,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev2_time_remote = self.server.package_revision_time(pref2)
 
         # Check different revision times
-        self.assertNotEquals(rrev1_time_remote, rrev2_time_remote)
-        self.assertNotEquals(prev1_time_remote, prev2_time_remote)
+        self.assertNotEqual(rrev1_time_remote, rrev2_time_remote)
+        self.assertNotEqual(prev1_time_remote, prev2_time_remote)
 
         client.run("install {} --update".format(self.ref))
         self.assertIn("Package installed {}".format(pref2.id), client.out)
@@ -284,7 +284,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         prev1_time_remote = self.server.package_revision_time(pref)
         prev2_time_remote = self.server.package_revision_time(pref2)
-        self.assertNotEquals(prev1_time_remote, prev2_time_remote)  # Two package revisions
+        self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
         client.run("install {} --update".format(self.ref))
         self.assertIn("{} from 'default' - Cache".format(self.ref), client.out)
@@ -864,7 +864,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         # Ensure that the first revision in the first remote is the same than in the second one
         revision_ref = refs[0][0].ref
         self.assertEqual(revision_ref.revision, refs2[0][0].ref.revision)
-        self.assertNotEquals(refs[1][0].ref.revision, refs2[0][0].ref.revision)
+        self.assertNotEqual(refs[1][0].ref.revision, refs2[0][0].ref.revision)
 
         # Check that in the remotes there are the packages we expect
         self.assertTrue(self.server.package_exists(refs[0][0]))
@@ -964,7 +964,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         conanfile2 = GenConanfile().with_build_msg("Rev2").with_setting("os")
         pref2a = client.create(self.ref, conanfile=conanfile2, args="-s os=Macos")
 
-        self.assertNotEquals(pref1a.ref.revision, pref2a.ref.revision)
+        self.assertNotEqual(pref1a.ref.revision, pref2a.ref.revision)
 
         # Search without RREV
         data = client.search(self.ref)
@@ -991,7 +991,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         # Ensure we have uploaded two different revisions
-        self.assertNotEquals(pref.ref.revision, pref2.ref.revision)
+        self.assertNotEqual(pref.ref.revision, pref2.ref.revision)
 
         client = self.c_v1 if v1 else self.c_v2
         client.remove_all()
@@ -1297,7 +1297,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         with environment_append({"MY_VAR": "2"}):
             pref2 = client.create(self.ref, conanfile=conanfile)
 
-        self.assertNotEquals(pref.revision, pref2.revision)
+        self.assertNotEqual(pref.revision, pref2.revision)
 
         if v1:
             client.upload_all(self.ref, args="--no-overwrite", assert_error=True)
