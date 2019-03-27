@@ -1332,7 +1332,7 @@ class SCMRevisions(unittest.TestCase):
         self.assertIn("New changes!", client.out)
 
     def auto_revision_without_commits_test(self):
-        """If we have a repo but without commits, it shouldn't fail"""
+        """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
         conanfile = GenConanfile().with_revision_mode("scm")

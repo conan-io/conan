@@ -5,7 +5,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans.client.tools import chdir, load
+from conans.client.tools import chdir, load, remove_from_path
 from conans.test.utils.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
@@ -173,7 +173,7 @@ class HelloConan(ConanFile):
         client.run("install . --build=missing ")
         client.run("install . -s build_type=Debug --build=missing ")
 
-        with tools.remove_from_path("sh"):
+        with remove_from_path("sh"):
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator,
                           cwd=client.current_folder)
