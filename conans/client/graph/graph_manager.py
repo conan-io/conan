@@ -174,7 +174,7 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
                                 build_mode, remote_name, profile_build_requires, recorder,
-                                processed_profile, apply_build_requires):
+                                processed_profile, apply_build_requires=True):
 
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
         if not apply_build_requires:
@@ -238,7 +238,7 @@ class GraphManager(object):
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remote_name,
                                      profile_build_requires, recorder, processed_profile,
-                                     apply_build_requires)
+                                     apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
