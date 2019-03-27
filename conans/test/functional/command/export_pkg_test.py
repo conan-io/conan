@@ -8,7 +8,7 @@ from parameterized import parameterized
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
 from textwrap import dedent
@@ -18,30 +18,17 @@ class ExportPkgTest(unittest.TestCase):
 
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
-        class RequesterMock(object):
-            def __init__(self, *args, **kwargs):
-                pass
-
-        # https://github.com/conan-io/conan/issues/3432
-        client = TestClient(servers={"default": TestServer()},
-                            requester_class=RequesterMock,
+        client = TestClient(servers={"default": None},
+                            requester_class=None,
                             users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
 
     def test_dont_touch_server_build_require(self):
-        class RequesterMock(object):
-            def __init__(self, *args, **kwargs):
-                pass
-
-        # https://github.com/conan-io/conan/issues/3432
-        client = TestClient(servers={"default": TestServer()},
-                            requester_class=RequesterMock,
+        client = TestClient(servers={"default": None},
+                            requester_class=None,
                             users={"default": [("lasote", "mypass")]})
         profile = dedent("""
             [build_requires]
