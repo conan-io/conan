@@ -20,7 +20,6 @@ set(CONAN_C_FLAGS_{dep}{build_type}_LIST "{deps.cflags_list}")
 set(CONAN_CXX_FLAGS_{dep}{build_type}_LIST "{deps.cxxflags_list}")
 set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list}")
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
-
 """
 
 
@@ -141,7 +140,7 @@ _target_template = """
                                                                   $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
                                                                   $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>)
- """
+"""
 
 
 def generate_targets_section(dependencies):
@@ -168,7 +167,6 @@ def generate_targets_section(dependencies):
 
 
 _cmake_common_macros = """
-
 function(conan_message MESSAGE_OUTPUT)
     if(NOT CONAN_CMAKE_SILENT_OUTPUT)
         message(${ARGV${0}})
@@ -519,21 +517,33 @@ macro(conan_target_link_libraries target)
 endmacro()
 """
 
-cmake_macros = """
+
+def _conan_basic_setup_common(addtional_macros, cmake_multi=False):
+    output_dirs_section = """
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(STATUS "Conan: Adjusting output directories")
+        conan_output_dirs_setup()
+    endif()"""
+
+    output_dirs_multi_section = """
+    if(ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(WARNING "Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator")
+    endif()"""
+
+    main_section = """
 macro(conan_basic_setup)
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
     if(CONAN_EXPORTED)
         conan_message(STATUS "Conan: called by CMake conan helper")
     endif()
+
     if(CONAN_IN_LOCAL_CACHE)
         conan_message(STATUS "Conan: called inside local cache")
     endif()
-    conan_check_compiler()
-    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
-        conan_output_dirs_setup()
-    endif()
-    conan_set_find_library_paths()
+%%OUTPUT_DIRS_SECTION%%
+
     if(NOT ARGUMENTS_TARGETS)
         conan_message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
@@ -541,27 +551,41 @@ macro(conan_basic_setup)
         conan_message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
+
     if(ARGUMENTS_SKIP_RPATH)
         # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
         conan_message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
+
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
+
     if(NOT ARGUMENTS_SKIP_STD)
         conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
+
     if(NOT ARGUMENTS_SKIP_FPIC)
         conan_set_fpic()
     endif()
-    conan_set_vs_runtime()
-    conan_set_libcxx()
-    conan_set_find_paths()
-endmacro()
 
+    conan_check_compiler()
+    conan_set_libcxx()
+    conan_set_vs_runtime()
+    conan_set_find_paths()
+    %%INVOKE_MACROS%%
+endmacro()
+"""
+    result = main_section.replace("%%OUTPUT_DIRS_SECTION%%",
+                                  output_dirs_multi_section if cmake_multi else output_dirs_section)
+    result = result.replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
+    return result
+
+
+cmake_macros = _conan_basic_setup_common(["conan_set_find_library_paths()"]) + """
 macro(conan_set_find_paths)
     # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
     # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
@@ -617,9 +641,7 @@ macro(conan_flags_setup)
     conan_set_vs_runtime()
     conan_set_libcxx()
 endmacro()
-
 """ + _cmake_common_macros
-
 
 cmake_macros_multi = """
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
@@ -627,36 +649,12 @@ if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
 else()
     message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
 endif()
+
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
     include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
 else()
     message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
 endif()
-
-macro(conan_basic_setup)
-    set(options TARGETS)
-    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-    if(CONAN_EXPORTED)
-        conan_message(STATUS "Conan: called by CMake conan helper")
-    endif()
-    if(CONAN_IN_LOCAL_CACHE)
-        conan_message(STATUS "Conan: called inside local cache")
-    endif()
-    conan_check_compiler()
-    # conan_output_dirs_setup()
-    if(NOT ARGUMENTS_TARGETS)
-        conan_message(STATUS "Conan: Using cmake global configuration")
-        conan_global_flags()
-    else()
-        conan_message(STATUS "Conan: Using cmake targets configuration")
-        conan_define_targets()
-    endif()
-    conan_set_rpath()
-    conan_set_vs_runtime()
-    conan_set_libcxx()
-    conan_set_find_paths()
-    conan_set_fpic()
-endmacro()
 
 macro(conan_set_vs_runtime)
     # This conan_set_vs_runtime is MORE opinionated than the regular one. It will
@@ -690,4 +688,4 @@ macro(conan_set_find_paths)
         endif()
     endif()
 endmacro()
-""" + _cmake_common_macros
+""" + _conan_basic_setup_common([], cmake_multi=True) + _cmake_common_macros

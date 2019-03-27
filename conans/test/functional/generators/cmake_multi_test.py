@@ -1,10 +1,11 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from nose.plugins.attrib import attr
 
-from conans.client import tools
+from conans.client.tools import chdir, load
 from conans.test.utils.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
@@ -96,6 +97,7 @@ cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_FIND_ROOT_PATH "/some/path")
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+
 conan_basic_setup()
 
 add_executable(say_hello main.cpp)
@@ -184,9 +186,8 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
             self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
 
+    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
     def cmake_multi_test(self):
-        if platform.system() not in ["Windows", "Darwin"]:
-            return
         client = TestClient()
 
         client.save(multi_config_files("Hello0", test=False), clean_first=True)
@@ -235,3 +236,39 @@ class HelloConan(ConanFile):
                 self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
             else:
                 self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
+
+
+class CMakeMultiSyntaxTest(unittest.TestCase):
+
+    def setUp(self):
+        self.client = TestClient()
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.12)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
+            conan_basic_setup(NO_OUTPUT_DIRS)
+            """)
+        self.client.save({"conanfile.txt": "[generators]\ncmake_multi\ncmake",
+                          "CMakeLists.txt": cmakelists})
+        self.client.run("install .")
+        self.client.run("install . -s build_type=Debug")
+
+    def conan_basic_setup_interface_test(self):
+        """
+        Check conan_basic_setup() interface is the same one for cmake and cmake_multi generators
+        """
+        conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo_multi = load(os.path.join(self.client.current_folder,
+                                                 "conanbuildinfo_multi.cmake"))
+        expected = "set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)"
+        self.assertIn(expected, conanbuildinfo)
+        self.assertIn(expected, conanbuildinfo_multi)
+
+    def conan_basic_setup_output_dirs_warning_test(self):
+        """
+        Check warning when suing NO_OUTPUT_DIRS
+        """
+        with chdir(self.client.current_folder):
+            self.client.runner("cmake .")
+        self.assertTrue("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
+        self.assertTrue("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
+                        self.client.out)
