@@ -1,5 +1,5 @@
 from conans.client.generators.cmake import DepsCppCmake
-from conans.client.generators.cmake_find_package_common import find_libraries_template
+from conans.client.generators.cmake_find_package_common import target_template
 from conans.model import Generator
 
 find_package_header = """
@@ -57,8 +57,7 @@ endif()
         if cpp_info.public_deps:
             lines = find_dependency_lines(name, cpp_info)
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
-        find_libraries_block = find_libraries_template.format(name=name,
-                                                              deps=deps, build_type_suffix="")
+        find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
         target_props = assign_target_properties.format(name=name, deps=deps)
         tmp = self.template.format(name=name, deps=deps,
                                    version=cpp_info.version,

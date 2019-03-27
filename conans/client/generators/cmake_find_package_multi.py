@@ -1,6 +1,6 @@
 from conans.client.generators.cmake import DepsCppCmake
 from conans.client.generators.cmake_find_package import find_dependency_lines
-from conans.client.generators.cmake_find_package_common import find_libraries_template
+from conans.client.generators.cmake_find_package_common import target_template
 from conans.model import Generator
 
 
@@ -38,8 +38,8 @@ endforeach()
 set_property(TARGET {name}::{name} 
              PROPERTY INTERFACE_LINK_LIBRARIES 
                  $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
+                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
+                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
                  $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
 set_property(TARGET {name}::{name} 
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES 
@@ -74,8 +74,8 @@ set_property(TARGET {name}::{name}
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
 
-            find_lib = find_libraries_template.format(name=depname, deps=deps,
-                                                      build_type_suffix=build_type_suffix)
+            find_lib = target_template.format(name=depname, deps=deps,
+                                              build_type_suffix=build_type_suffix)
             ret["{}Targets.cmake".format(depname)] = self.targets_file.format(name=depname)
             ret["{}Target-{}.cmake".format(depname, build_type.lower())] = find_lib
         return ret
@@ -84,7 +84,6 @@ set_property(TARGET {name}::{name}
         return
 
     def _find_for_dep(self, name, cpp_info):
-        deps = DepsCppCmake(cpp_info)
         lines = []
         if cpp_info.public_deps:
             lines = find_dependency_lines(name, cpp_info)

@@ -1,4 +1,4 @@
-find_libraries_template = """
+target_template = """
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
 set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
