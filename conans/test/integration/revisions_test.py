@@ -1351,7 +1351,7 @@ class SCMRevisions(unittest.TestCase):
          can be found"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile()
+        conanfile = GenConanfile().with_revision_mode("scm")
         commit = client.init_svn_repo("project",
                                       files={"file.txt": "hey", "conanfile.py": str(conanfile)})
         client.current_folder = os.path.join(client.current_folder, "project")
