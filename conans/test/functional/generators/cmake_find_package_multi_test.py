@@ -1,11 +1,9 @@
 import os
 import platform
 import textwrap
-import time
 import unittest
 
 from nose.plugins.attrib import attr
-from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
@@ -14,14 +12,13 @@ from conans.util.files import mkdir
 @attr('slow')
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
-    @parameterized.expand([("targets",), ("global",)])
-    def test_native_export_multi(self, cmake_mode):
+    def test_native_export_multi(self):
         """
         bye depends on hello. Both use find_package in their CMakeLists.txt
         The consumer depends on bye, using the cmake_find_package_multi generator
         """
         c = TestClient()
-        project_folder_name = "project_{}".format(cmake_mode)
+        project_folder_name = "project_targets"
         assets_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    "assets/cmake_find_package_multi")
         c.copy_from_assets(assets_path, ["bye", "hello", project_folder_name])
