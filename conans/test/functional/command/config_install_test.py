@@ -163,7 +163,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
-        with six.assertRaisesRegexp(self, ConanException, "'config_install' doesn't exist"):
+        with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
         self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
