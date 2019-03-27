@@ -28,7 +28,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
                    '${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})'
         if platform.system() != "Windows":
             expected = expected.replace("\r", "")
-        self.assertEquals(expected.format(pfolder1=pfolder1, pfolder2=pfolder2), contents)
+        self.assertEqual(expected.format(pfolder1=pfolder1, pfolder2=pfolder2), contents)
 
     def cmake_paths_integration_test(self):
         """First package with own findHello0.cmake file"""
