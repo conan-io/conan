@@ -1,9 +1,9 @@
 #pragma once
 
 #ifdef WIN32
-  #define HELLO_EXPORT __declspec(dllexport)
+  #define BYE_EXPORT __declspec(dllexport)
 #else
-  #define HELLO_EXPORT
+  #define BYE_EXPORT
 #endif
 
-HELLO_EXPORT void bye();
+BYE_EXPORT void bye();
