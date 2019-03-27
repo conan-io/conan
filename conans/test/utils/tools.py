@@ -854,6 +854,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
+    def run_command(self, command):
+        self.all_output += str(self.out)
+        self.init_dynamic_vars() # Resets the output
+        return self.runner(command, cwd=self.current_folder)
+
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
         param files: dict{filename: filecontents}
@@ -864,6 +869,15 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+    def copy_from_assets(self, origin_folder, assets):
+        for asset in assets:
+            s = os.path.join(origin_folder, asset)
+            d = os.path.join(self.current_folder, asset)
+            if os.path.isdir(s):
+                shutil.copytree(s, d)
+            else:
+                shutil.copy2(s, d)
 
 
 class TurboTestClient(TestClient):
