@@ -4,7 +4,7 @@ import traceback
 
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException
+    NotFoundException, ForbiddenException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
