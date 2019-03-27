@@ -1,12 +1,34 @@
 import os
+import platform
 import shutil
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, TurboTestClient, GenConanfile
+from conans.util.files import load
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
+
+    def cmake_paths_contents_test(self):
+        ref1 = ConanFileReference.loads("lib1/1.0@conan/stable")
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+        client = TurboTestClient()
+        pref1 = client.create(ref1)
+        pref2 = client.create(ref2, conanfile=GenConanfile().with_requirement(ref1))
+        client.run("install {} -g cmake_paths".format(ref2))
+        pfolder1 = client.cache.package_layout(pref1.ref).package(pref1).replace("\\", "/")
+        pfolder2 = client.cache.package_layout(pref2.ref).package(pref2).replace("\\", "/")
+        contents = load(os.path.join(client.current_folder, "conan_paths.cmake"))
+        expected = 'set(CONAN_LIB2_ROOT "{pfolder2}")\r\n' \
+                   'set(CONAN_LIB1_ROOT "{pfolder1}")\r\n' \
+                   'set(CMAKE_MODULE_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
+                   '${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})\r\n' \
+                   'set(CMAKE_PREFIX_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
+                   '${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})'
+        if(platform.system() != "Windows"):
+            expected = expected.replace("\\r", "")
+        self.assertEquals(expected.format(pfolder1=pfolder1, pfolder2=pfolder2), contents)
 
     def cmake_paths_integration_test(self):
         """First package with own findHello0.cmake file"""
