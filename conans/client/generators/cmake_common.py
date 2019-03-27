@@ -632,6 +632,15 @@ macro(conan_set_vs_runtime)
         endforeach()
     endif()
 endmacro()
+
+macro(conan_flags_setup)
+    # Macro maintained for backwards compatibility
+    conan_set_find_library_paths()
+    conan_global_flags()
+    conan_set_rpath()
+    conan_set_vs_runtime()
+    conan_set_libcxx()
+endmacro()
 """ + _cmake_common_macros
 
 cmake_macros_multi = """
