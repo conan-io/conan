@@ -106,7 +106,7 @@ echo "EXCLUDED TAGS: ${excluded_tags}"
 
 
 // FIRST rest api tests, fail ASAP
-rest_builders = [:]
+/*rest_builders = [:]
 for (n in ["Windows", "Linux"]) {
     def the_node = n
     def pyver = "py36"
@@ -158,7 +158,7 @@ for (n in ["Windows", "Linux"]) {
     }
 }
 parallel rest_builders
-
+*/
 
 try{
     for (flavor in flavors){
