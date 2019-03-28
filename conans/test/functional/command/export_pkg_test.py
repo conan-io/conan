@@ -8,30 +8,35 @@ from parameterized import parameterized
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
+from textwrap import dedent
 
 
 class ExportPkgTest(unittest.TestCase):
 
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
-        class RequesterMock(object):
-            def __init__(self, *args, **kwargs):
-                pass
-
-        # https://github.com/conan-io/conan/issues/3432
-        client = TestClient(servers={"default": TestServer()},
-                            requester_class=RequesterMock,
+        client = TestClient(servers={"default": None},
+                            requester_class=None,
                             users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
+
+    def test_dont_touch_server_build_require(self):
+        client = TestClient(servers={"default": None},
+                            requester_class=None,
+                            users={"default": [("lasote", "mypass")]})
+        profile = dedent("""
+            [build_requires]
+            some/other@pkg/notexists
+            """)
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1")),
+                     "myprofile": profile})
+        client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
@@ -385,7 +390,8 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . conan/stable")
-        self.assertIn("Hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt", client.out)
+        self.assertIn("Hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt",
+                      client.out)
 
         # Specify different name or version is not working
         client.run("export-pkg . lib/1.0@conan/stable -f", assert_error=True)
