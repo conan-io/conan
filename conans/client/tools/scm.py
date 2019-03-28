@@ -1,4 +1,3 @@
-
 import os
 import platform
 import re
@@ -8,6 +7,7 @@ from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
+from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -53,7 +53,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True, stderr=STDOUT).strip())
+                    return check_output(command).strip()
                 else:
                     return self._runner(command)
 
@@ -343,10 +343,11 @@ class SVN(SCMBase):
                         return False
                 return True
         else:
-            import warnings
-            warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
-                          " returning not-pristine always because it cannot compare with"
-                          " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
+            if self._output:
+                self._output.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented,"
+                                  " it is returning not-pristine always because it cannot compare"
+                                  " with checked out version.".format(self.version,
+                                                                      SVN.API_CHANGE_VERSION))
             return False
 
     def get_revision(self):

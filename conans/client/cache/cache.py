@@ -5,8 +5,7 @@ from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import default_remotes, dump_registry, \
-    migrate_registry_file, \
-    RemoteRegistry
+    migrate_registry_file, RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -37,9 +36,6 @@ HOOKS_FOLDER = "hooks"
 CLIENT_CERT = "client.crt"
 CLIENT_KEY = "client.key"
 
-# Server authorities file
-CACERT_FILE = "cacert.pem"
-
 
 class ClientCache(SimplePaths):
     """ Class to represent/store/compute all the paths involved in the execution
@@ -58,6 +54,10 @@ class ClientCache(SimplePaths):
 
         super(ClientCache, self).__init__(self._store_folder)
         self.editable_packages = EditablePackages(self.conan_folder)
+
+    @property
+    def config_install_file(self):
+        return os.path.join(self.conan_folder, "config_install.json")
 
     def package_layout(self, ref, short_paths=None, *args, **kwargs):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
@@ -80,7 +80,7 @@ class ClientCache(SimplePaths):
 
     @property
     def cacert_path(self):
-        return normpath(join(self.conan_folder, CACERT_FILE))
+        return self.config.cacert_path
 
     def _no_locks(self):
         if self._no_lock is None:
@@ -187,7 +187,7 @@ class ClientCache(SimplePaths):
                                  "default profile (%s)" % self.default_profile_path,
                                  Color.BRIGHT_YELLOW)
 
-            default_settings = detect_defaults_settings(self._output)
+            default_settings = detect_defaults_settings(self._output, profile_path=self.default_profile_path)
             self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
             self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
                                  Color.BRIGHT_YELLOW)

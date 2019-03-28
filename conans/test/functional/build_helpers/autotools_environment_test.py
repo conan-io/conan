@@ -45,7 +45,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.defines.append("onedefinition")
         conanfile.deps_cpp_info.defines.append("twodefinition")
         conanfile.deps_cpp_info.cflags.append("a_c_flag")
-        conanfile.deps_cpp_info.cppflags.append("a_cpp_flag")
+        conanfile.deps_cpp_info.cxxflags.append("a_cxx_flag")
         conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"

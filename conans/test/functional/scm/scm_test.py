@@ -134,7 +134,7 @@ class ConanLib(ConanFile):
         # Create the package, will copy the sources from the local folder
         self.client.run("create . user/channel")
         sources_dir = self.client.cache.scm_folder(self.ref)
-        self.assertEquals(load(sources_dir), curdir)
+        self.assertEqual(load(sources_dir), curdir)
         self.assertIn("Repo origin deduced by 'auto': https://myrepo.com.git", self.client.out)
         self.assertIn("Revision deduced by 'auto'", self.client.out)
         self.assertIn("Getting sources from folder: %s" % curdir, self.client.out)
@@ -186,7 +186,7 @@ class ConanLib(ConanFile):
         # Create the package
         self.client.run("create conan/ user/channel")
         sources_dir = self.client.cache.scm_folder(self.ref)
-        self.assertEquals(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
+        self.assertEqual(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
 
     def test_deleted_source_folder(self):
         path, _ = create_local_git_repo({"myfile": "contents"}, branch="my_release")
@@ -485,7 +485,7 @@ class ConanLib(ConanFile):
         scm_data = SCMData(conanfile)
         the_json = str(scm_data)
         data2 = json.loads(the_json)
-        self.assertEquals(data, data2)
+        self.assertEqual(data, data2)
 
     def test_git_delegated_function(self):
         conanfile = """
@@ -629,7 +629,7 @@ class ConanLib(ConanFile):
         # Create the package, will copy the sources from the local folder
         self.client.run("create . user/channel")
         sources_dir = self.client.cache.scm_folder(self.ref)
-        self.assertEquals(load(sources_dir), curdir)
+        self.assertEqual(load(sources_dir), curdir)
         self.assertIn("Repo origin deduced by 'auto': {}".format(project_url).lower(),
                       str(self.client.out).lower())
         self.assertIn("Revision deduced by 'auto'", self.client.out)
@@ -680,7 +680,7 @@ class ConanLib(ConanFile):
         self.client.run("create conan/ user/channel")
 
         sources_dir = self.client.cache.scm_folder(self.ref)
-        self.assertEquals(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
+        self.assertEqual(load(sources_dir), curdir.replace('\\', '/'))  # Root of git is 'curdir'
 
     def test_deleted_source_folder(self):
         # SVN will always retrieve from 'remote'
@@ -867,7 +867,7 @@ class ConanLib(ConanFile):
         scm_data = SCMData(conanfile)
         the_json = str(scm_data)
         data2 = json.loads(the_json)
-        self.assertEquals(data, data2)
+        self.assertEqual(data, data2)
 
 
 @attr('svn')

@@ -12,6 +12,11 @@ class ProfileTest(unittest.TestCase):
     def reuse_output_test(self):
         client = TestClient()
         client.run("profile new myprofile --detect")
+
+        if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
+            self.assertIn("edit the myprofile profile at", client.out)
+            self.assertIn("profiles/myprofile", client.out)
+
         client.run("profile update options.Pkg:myoption=123 myprofile")
         client.run("profile update env.Pkg2:myenv=123 myprofile")
         client.run("profile show myprofile")
@@ -69,6 +74,10 @@ class ProfileTest(unittest.TestCase):
     def profile_update_and_get_test(self):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
+        if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
+            self.assertIn("edit the MyProfile profile at", client.out)
+            self.assertIn(os.path.join(client.current_folder, "MyProfile"), client.out)
+
         pr_path = os.path.join(client.current_folder, "MyProfile")
 
         client.run("profile update settings.os=FakeOS ./MyProfile")
@@ -76,37 +85,37 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("\nos=Linux", load(pr_path))
 
         client.run("profile get settings.os ./MyProfile")
-        self.assertEquals(client.out, "FakeOS\n")
+        self.assertEqual(client.out, "FakeOS\n")
 
         client.run("profile update settings.compiler.version=88 ./MyProfile")
         self.assertIn("compiler.version=88", load(pr_path))
 
         client.run("profile get settings.compiler.version ./MyProfile")
-        self.assertEquals(client.out, "88\n")
+        self.assertEqual(client.out, "88\n")
 
         client.run("profile update options.MyOption=23 ./MyProfile")
         self.assertIn("[options]\nMyOption=23", load(pr_path))
 
         client.run("profile get options.MyOption ./MyProfile")
-        self.assertEquals(client.out, "23\n")
+        self.assertEqual(client.out, "23\n")
 
         client.run("profile update options.Package:MyOption=23 ./MyProfile")
         self.assertIn("Package:MyOption=23", load(pr_path))
 
         client.run("profile get options.Package:MyOption ./MyProfile")
-        self.assertEquals(client.out, "23\n")
+        self.assertEqual(client.out, "23\n")
 
         client.run("profile update options.Package:OtherOption=23 ./MyProfile")
         self.assertIn("Package:OtherOption=23", load(pr_path))
 
         client.run("profile get options.Package:OtherOption ./MyProfile")
-        self.assertEquals(client.out, "23\n")
+        self.assertEqual(client.out, "23\n")
 
         client.run("profile update env.OneMyEnv=MYVALUe ./MyProfile")
         self.assertIn("[env]\nOneMyEnv=MYVALUe", load(pr_path))
 
         client.run("profile get env.OneMyEnv ./MyProfile")
-        self.assertEquals(client.out, "MYVALUe\n")
+        self.assertEqual(client.out, "MYVALUe\n")
 
         # Now try the remove
 
@@ -157,7 +166,7 @@ class ProfileTest(unittest.TestCase):
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
         self.assertTrue(os.path.exists(pr_path))
-        self.assertEquals(load(pr_path), """[settings]
+        self.assertEqual(load(pr_path), """[settings]
 [options]
 [build_requires]
 [env]

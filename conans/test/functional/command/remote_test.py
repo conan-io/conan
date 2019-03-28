@@ -81,7 +81,7 @@ class HelloConan(ConanFile):
         self.client.run('upload "*" -c -r remote1')
         self.client.run('remove "lib/1.0@lasote/channel" -f')
         self.client.run('remote list_pref lib/1.0@lasote/channel')
-        self.assertEquals("", self.client.out)
+        self.assertEqual("", self.client.out)
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
@@ -264,21 +264,21 @@ class HelloConan(ConanFile):
         client.run("remote add my-remote4 http://someurl4 No")
         registry = load(client.cache.registry_path)
         data = json.loads(registry)
-        self.assertEquals(data["remotes"][0]["name"], "my-remote")
-        self.assertEquals(data["remotes"][0]["url"], "http://someurl")
-        self.assertEquals(data["remotes"][0]["verify_ssl"], True)
+        self.assertEqual(data["remotes"][0]["name"], "my-remote")
+        self.assertEqual(data["remotes"][0]["url"], "http://someurl")
+        self.assertEqual(data["remotes"][0]["verify_ssl"], True)
 
-        self.assertEquals(data["remotes"][1]["name"], "my-remote2")
-        self.assertEquals(data["remotes"][1]["url"], "http://someurl2")
-        self.assertEquals(data["remotes"][1]["verify_ssl"], True)
+        self.assertEqual(data["remotes"][1]["name"], "my-remote2")
+        self.assertEqual(data["remotes"][1]["url"], "http://someurl2")
+        self.assertEqual(data["remotes"][1]["verify_ssl"], True)
 
-        self.assertEquals(data["remotes"][2]["name"], "my-remote3")
-        self.assertEquals(data["remotes"][2]["url"], "http://someurl3")
-        self.assertEquals(data["remotes"][2]["verify_ssl"], False)
+        self.assertEqual(data["remotes"][2]["name"], "my-remote3")
+        self.assertEqual(data["remotes"][2]["url"], "http://someurl3")
+        self.assertEqual(data["remotes"][2]["verify_ssl"], False)
 
-        self.assertEquals(data["remotes"][3]["name"], "my-remote4")
-        self.assertEquals(data["remotes"][3]["url"], "http://someurl4")
-        self.assertEquals(data["remotes"][3]["verify_ssl"], False)
+        self.assertEqual(data["remotes"][3]["name"], "my-remote4")
+        self.assertEqual(data["remotes"][3]["url"], "http://someurl4")
+        self.assertEqual(data["remotes"][3]["verify_ssl"], False)
 
     def verify_ssl_error_test(self):
         client = TestClient()

@@ -55,7 +55,7 @@ class MakeGenerator(Generator):
                      ("LIBS", self.assignment_append, cpp_info.libs),
                      ("DEFINES", self.assignment_append, cpp_info.defines),
                      ("CFLAGS", self.assignment_append, cpp_info.cflags),
-                     ("CXXFLAGS", self.assignment_append, cpp_info.cppflags),
+                     ("CXXFLAGS", self.assignment_append, cpp_info.cxxflags),
                      ("SHAREDLINKFLAGS", self.assignment_append, cpp_info.sharedlinkflags),
                      ("EXELINKFLAGS", self.assignment_append, cpp_info.exelinkflags)]
 

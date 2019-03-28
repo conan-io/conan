@@ -10,10 +10,13 @@ from conans.client import tools
 from conans.client.conf import default_settings_yml
 from conans.errors import ConanException
 from conans.model.settings import Settings
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('visual_studio')
 class VCVarsStoreTest(unittest.TestCase):
+    output = TestBufferConanOutput()
+
     def test_81(self):
         if platform.system() != "Windows":
             return
@@ -25,7 +28,7 @@ class VCVarsStoreTest(unittest.TestCase):
         settings.os = 'WindowsStore'
         settings.os.version = '8.1'
 
-        command = tools.vcvars_command(settings)
+        command = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('x86', command)
         self.assertIn('store', command)
@@ -45,7 +48,7 @@ class VCVarsStoreTest(unittest.TestCase):
         settings.os = 'WindowsStore'
         settings.os.version = '10.0'
 
-        command = tools.vcvars_command(settings)
+        command = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('x86', command)
         self.assertIn('store', command)
@@ -76,4 +79,4 @@ class VCVarsStoreTest(unittest.TestCase):
         settings.os.version = '666'
 
         with self.assertRaises(ConanException):
-            tools.vcvars_command(settings)
+            tools.vcvars_command(settings, output=self.output)

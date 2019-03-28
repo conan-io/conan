@@ -1,9 +1,11 @@
+import six
+from parameterized import parameterized
+
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.conanfile import TestConanFile
-from parameterized import parameterized
 
 
 class TransitiveGraphTest(GraphManagerTest):
@@ -246,7 +248,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(liba_ref2, TestConanFile("liba", "0.2"))
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
-        with self.assertRaisesRegexp(ConanException, "Requirement liba/0.2@user/testing conflicts"):
+        with six.assertRaisesRegex(self, ConanException, "Requirement liba/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref, libc_ref]))
 
     def test_loop(self):
@@ -258,7 +260,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(liba_ref, TestConanFile("liba", "0.1", requires=[libc_ref]))
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[libb_ref]))
-        with self.assertRaisesRegexp(ConanException, "Loop detected: 'liba/0.1@user/testing' "
+        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'liba/0.1@user/testing' "
                                      "requires 'libc/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
 
@@ -266,7 +268,7 @@ class TransitiveGraphTest(GraphManagerTest):
         ref1 = "base/1.0@user/testing"
         self._cache_recipe(ref1, TestConanFile("base", "0.1"))
         ref = ConanFileReference.loads("base/aaa@user/testing")
-        with self.assertRaisesRegexp(ConanException, "Loop detected: 'base/aaa@user/testing' "
+        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'base/aaa@user/testing' "
                                      "requires 'base/aaa@user/testing'"):
             self.build_graph(TestConanFile("base", "aaa", requires=[ref1]), ref=ref, create_ref=ref)
 
@@ -323,7 +325,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref,
                            TestConanFile("lib", "0.1",
                                          build_requires=["tool/0.1@user/testing"]))
-        with self.assertRaisesRegexp(ConanException, "Loop detected: 'tool/0.1@user/testing' "
+        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
                                      "requires 'lib/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
@@ -376,7 +378,7 @@ class TransitiveGraphTest(GraphManagerTest):
                            TestConanFile("lib", "0.1", requires=[zlib_ref],
                                          build_requires=["gtest/0.1@user/testing"]))
 
-        with self.assertRaisesRegexp(ConanException, "Requirement zlib/0.2@user/testing conflicts"):
+        with six.assertRaisesRegex(self, ConanException, "Requirement zlib/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
     def test_not_conflict_transitive_build_requires(self):
@@ -458,7 +460,7 @@ class TransitiveGraphTest(GraphManagerTest):
                            TestConanFile("lib", "0.1", requires=[zlib_ref],
                                          build_requires=["gtest/0.1@user/testing"]))
 
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "tried to change zlib/0.1@user/testing option shared to True"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
@@ -614,7 +616,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(liba_ref2, TestConanFile("liba", "0.2"))
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
-        with self.assertRaisesRegexp(ConanException, "Requirement liba/0.2@user/testing conflicts"):
+        with six.assertRaisesRegex(self, ConanException, "Requirement liba/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", private_requires=[libb_ref, libc_ref]))
 
     def test_loop_private(self):
@@ -626,7 +628,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref,
                            TestConanFile("lib", "0.1",
                                          private_requires=["tool/0.1@user/testing"]))
-        with self.assertRaisesRegexp(ConanException, "Loop detected: 'tool/0.1@user/testing' "
+        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
                                      "requires 'lib/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[lib_ref]))
 

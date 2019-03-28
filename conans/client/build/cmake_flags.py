@@ -8,6 +8,7 @@ from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.model.version import Version
 from conans.util.env_reader import get_env
 from conans.util.log import logger
 
@@ -51,18 +52,34 @@ def get_generator(settings):
                     '16': '16 2019'}
         base = "Visual Studio %s" % _visuals.get(compiler_version,
                                                  "UnknownVersion %s" % compiler_version)
-        if arch == "x86_64":
-            return base + " Win64"
-        elif "arm" in arch:
-            return base + " ARM"
-        else:
-            return base
+        if Version(compiler_version) < "16":
+            if arch == "x86_64":
+                base += " Win64"
+            elif "arm" in arch:
+                base += " ARM"
+        return base
 
     # The generator depends on the build machine, not the target
     if os_build == "Windows":
         return "MinGW Makefiles"  # it is valid only under Windows
 
     return "Unix Makefiles"
+
+
+def get_generator_platform(settings):
+    if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
+        return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
+
+    compiler = settings.get_safe("compiler")
+    arch = settings.get_safe("arch")
+    compiler_version = settings.get_safe("compiler.version")
+
+    if compiler == "Visual Studio" and Version(compiler_version) >= "16":
+        return {"x86": "Win32",
+                "x86_64": "x64",
+                "armv7": "ARM",
+                "armv8": "ARM64"}.get(arch)
+    return None
 
 
 def is_multi_configuration(generator):
@@ -301,9 +318,15 @@ class CMakeDefinitionsBuilder(object):
                 shared = self._conanfile.options.get_safe("shared")
                 ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
 
-        # Adjust automatically the module path in case the conanfile is using the cmake_find_package
+        # Adjust automatically the module path in case the conanfile is using the
+        # cmake_find_package or cmake_find_package_multi
         if "cmake_find_package" in self._conanfile.generators:
             ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
+
+        if "cmake_find_package_multi" in self._conanfile.generators:
+            # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
+            # that require the prefix path, not the module path
+            ret["CMAKE_PREFIX_PATH"] = self._conanfile.install_folder.replace("\\", "/")
 
         ret.update(self._get_make_program_definition())
 

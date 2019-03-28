@@ -27,7 +27,7 @@ class MockDepsCppInfo(object):
         self.libs = []
         self.defines = []
         self.cflags = []
-        self.cppflags = []
+        self.cxxflags = []
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""

@@ -211,12 +211,12 @@ class SayConan(ConanFile):
         client.run("install . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os, "Windows")
+        self.assertEqual(conan_info.settings.os, "Windows")
 
         client.run("install . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os, "Linux")
+        self.assertEqual(conan_info.settings.os, "Linux")
 
     def settings_as_a_list_conanfile_test(self):
         # Now with conanfile as a list
@@ -232,8 +232,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=Windows --build missing")
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os,  "Windows")
-        self.assertEquals(conan_info.settings.fields, ["arch", "os"])
+        self.assertEqual(conan_info.settings.os,  "Windows")
+        self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
     def settings_as_a_dict_conanfile_test(self):
         # Now with conanfile as a dict
@@ -250,8 +250,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=Windows --build missing")
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os,  "Windows")
-        self.assertEquals(conan_info.settings.fields, ["arch", "os"])
+        self.assertEqual(conan_info.settings.os,  "Windows")
+        self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
     def invalid_settings_test(self):
         '''Test wrong values and wrong constraints'''
@@ -364,7 +364,7 @@ class SayConan(ConanFile):
         client.run("install . --build missing")
         self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.dumps(), "")
+        self.assertEqual(conan_info.settings.dumps(), "")
 
         # Settings is {}
         content = """
@@ -379,4 +379,4 @@ class SayConan(ConanFile):
         client.run("install . --build missing")
         self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.dumps(), "")
+        self.assertEqual(conan_info.settings.dumps(), "")
