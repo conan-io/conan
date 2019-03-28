@@ -213,6 +213,7 @@ try{
         parallel builders
 
         //Now Windows and Mac, much slower
+        builders = [:]
         for (x in ['Windows', 'Macos']) {
             slave = x
             pyvers = all_pyvers[slave]
