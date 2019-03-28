@@ -162,7 +162,7 @@ parallel rest_builders
 
 try{
     for (flavor in flavors){
-        def linux_builders = [:]
+        /*def linux_builders = [:]
         def slave = "Linux"
         def pyvers = all_pyvers[slave]
         for (y in pyvers) {
@@ -205,18 +205,17 @@ try{
                         docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
                             sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} ${e_tags}")
                         }
-                        //step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
                     }
                 }
             }
         }
-        parallel linux_builders
+        parallel linux_builders*/
 
         //Now Windows and Mac, much slower
         def builders = [:]
         for (x in ['Windows', 'Macos']) {
-            slave = x
-            pyvers = all_pyvers[slave]
+            def slave = x
+            def pyvers = all_pyvers[slave]
             for (y in pyvers) {
                 def pyver = y
                 if(slave != "Linux" && pyver=="py37"){
