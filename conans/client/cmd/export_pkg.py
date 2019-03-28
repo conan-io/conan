@@ -53,9 +53,12 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
             packager.create_package(conanfile, package_id, source_folder, build_folder,
                                     dest_package_folder, install_folder, hook_manager,
                                     conan_file_path, ref, local=True)
+
+    readed_manifest = FileTreeManifest.load(dest_package_folder)
+    pref = PackageReference(pref.ref, pref.package_id, readed_manifest.summary_hash)
+    output.info("Package revision %s" % pref.revision)
     with cache.package_layout(ref).update_metadata() as metadata:
-        readed_manifest = FileTreeManifest.load(dest_package_folder)
-        metadata.packages[package_id].revision = readed_manifest.summary_hash
+        metadata.packages[package_id].revision = pref.revision
         metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 
     recorder.package_exported(pref)
