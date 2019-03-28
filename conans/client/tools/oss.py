@@ -7,7 +7,7 @@ import tempfile
 from subprocess import CalledProcessError
 
 from conans.client.tools.env import environment_append, no_op
-from conans.client.tools.files import chdir, load
+from conans.client.tools.files import chdir, load, which
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
