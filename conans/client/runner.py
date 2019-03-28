@@ -1,14 +1,36 @@
 import io
 import os
+import subprocess
 import sys
+import tempfile
 from contextlib import contextmanager
-from subprocess import PIPE, Popen, STDOUT
+from subprocess import PIPE, Popen, STDOUT, CalledProcessError
 
 import six
 
+from conans import load
+from conans.client.tools import no_op
 from conans.errors import ConanException
+from conans.tools import chdir
 from conans.unicode import get_cwd
 from conans.util.files import decode_text
+
+
+def check_output(cmd, folder=None, return_code=False):
+    _, tmp_file = tempfile.mkstemp()
+    with chdir(folder) if folder else no_op():
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
+        process.communicate()
+
+        if return_code:
+            return process.returncode
+
+        if process.returncode:
+            raise CalledProcessError(process.returncode, cmd)
+
+        output = load(tmp_file)
+        os.unlink(tmp_file)
+        return output
 
 
 class ConanRunner(object):
