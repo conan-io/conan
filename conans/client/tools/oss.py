@@ -4,7 +4,7 @@ import platform
 import subprocess
 import sys
 import tempfile
-from subprocess import CalledProcessError
+from subprocess import CalledProcessError, PIPE
 
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir, load, which
@@ -440,7 +440,7 @@ def check_output(cmd, folder=None, return_code=False):
     fd, tmp_file = tempfile.mkstemp()
     with chdir(folder) if folder else no_op():
         try:
-            process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
+            process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE)
             process.communicate()
 
             if return_code:
