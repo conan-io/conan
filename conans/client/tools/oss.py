@@ -6,13 +6,11 @@ import sys
 import tempfile
 from subprocess import CalledProcessError
 
-from conans.client.tools import which, no_op
-from conans.client.tools.env import environment_append
-from conans.client.tools.files import chdir
+from conans.client.tools.env import environment_append, no_op
+from conans.client.tools.files import chdir, load
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
-from conans.util.files import load
 
 
 def args_to_string(args):
@@ -81,7 +79,6 @@ def detected_architecture():
 
     return None
 
-
 # DETECT OS, VERSION AND DISTRIBUTIONS
 
 
@@ -145,13 +142,13 @@ class OSInfo(object):
     @property
     def with_apt(self):
         return self.is_linux and self.linux_distro in \
-               ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon")
+                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian", "neon")
 
     @property
     def with_yum(self):
         return self.is_linux and self.linux_distro in \
-               ("centos", "redhat", "fedora", "pidora", "scientific",
-                "xenserver", "amazon", "oracle", "rhel")
+                                 ("centos", "redhat", "fedora", "pidora", "scientific",
+                                  "xenserver", "amazon", "oracle", "rhel")
 
     @property
     def with_pacman(self):
