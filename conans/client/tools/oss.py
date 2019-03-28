@@ -437,7 +437,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
 
 
 def check_output(cmd, folder=None, return_code=False):
-    f, tmp_file = tempfile.mkstemp()
+    fd, tmp_file = tempfile.mkstemp()
     with chdir(folder) if folder else no_op():
         try:
             process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
@@ -452,5 +452,5 @@ def check_output(cmd, folder=None, return_code=False):
             output = load(tmp_file)
             return output
         finally:
-            f.close()
+            os.close(fd)
             os.unlink(tmp_file)
