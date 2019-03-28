@@ -1,12 +1,13 @@
 import os
 import unittest
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer,\
-    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
-from conans.paths import CONANFILE
-from parameterized import parameterized
 import time
+from parameterized import parameterized
+
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient, TestServer, \
+    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
 
 
 class PythonExtendTest(unittest.TestCase):
@@ -340,8 +341,8 @@ class Pkg2(base.Pkg):
         self.output.info("HEADER CONTENT!: %s" % load("header.h"))
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header", client.out)
+        client.run("create . Pkg/0.1@user/testing", assert_error=True)
+        self.assertIn("No such file or directory: 'header.h'", client.out)
 
     def reuse_class_members_test(self):
         client = TestClient()
