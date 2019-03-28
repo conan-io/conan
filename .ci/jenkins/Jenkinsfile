@@ -162,14 +162,14 @@ parallel rest_builders
 
 try{
     for (flavor in flavors){
-        /*def linux_builders = [:]
-        def slave = "Linux"
-        def pyvers = all_pyvers[slave]
-        for (y in pyvers) {
+        def linux_builders = [:]
+        def slave_linux = "Linux"
+        def pyvers_linux = all_pyvers[slave_linux]
+        for (y in pyvers_linux) {
             def pyver = y
-            def name = "${slave} - ${flavor} - ${pyver} - '${e_tags}'"
+            def name = "${slave_linux} - ${flavor} - ${pyver} - '${e_tags}'"
             linux_builders[name] = {
-                node(slave) {
+                node(slave_linux) {
                     stage(name){
                         def workdir
                         def sourcedir
@@ -209,7 +209,7 @@ try{
                 }
             }
         }
-        parallel linux_builders*/
+        parallel linux_builders
 
         //Now Windows and Mac, much slower
         def builders = [:]
