@@ -451,4 +451,7 @@ def check_output(cmd, folder=None, return_code=False):
         output = load(tmp_file)
         return output
     finally:
-        os.unlink(tmp_file)
+        try:
+            os.unlink(tmp_file)
+        except:
+            pass
