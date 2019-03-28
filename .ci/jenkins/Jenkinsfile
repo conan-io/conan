@@ -163,7 +163,7 @@ parallel rest_builders
 try{
     for (flavor in flavors){
         def builders = [:]
-        slave = "Linux"
+        def slave = "Linux"
         def pyvers = all_pyvers[slave]
         for (y in pyvers) {
             def pyver = y
@@ -214,8 +214,8 @@ try{
 
         //Now Windows and Mac, much slower
         for (x in ['Windows', 'Macos']) {
-            def slave = x
-            def pyvers = all_pyvers[slave]
+            slave = x
+            pyvers = all_pyvers[slave]
             for (y in pyvers) {
                 def pyver = y
                 if(slave != "Linux" && pyver=="py37"){
