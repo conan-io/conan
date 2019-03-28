@@ -186,7 +186,7 @@ try{
                             commit = vars["GIT_COMMIT"].substring(0, 4)
                             branch = vars["GIT_BRANCH"]
                             echo "Starting ${env.JOB_NAME} with branch ${env.BRANCH_NAME}"
-                            def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
+                            def base_dir = (slave_linux == "Windows") ? win_tmp_base : rest_tmp_base
                             workdir = "${base_dir}${commit}/${pyver}/${flavor}"
                             base_source = "${base_dir}source/${commit}"
                             sourcedir = "${base_source}/${pyver}/${flavor}"
