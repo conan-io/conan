@@ -3,8 +3,10 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
+from subprocess import CalledProcessError
 
-from conans.client.tools import which
+from conans.client.tools import which, no_op
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -432,3 +434,22 @@ def get_gnu_triplet(os_, arch, compiler=None):
             op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)
+
+
+def check_output(cmd, folder=None, return_code=False):
+    from conans.util.files import load
+    from conans.client.tools.files import chdir
+    _, tmp_file = tempfile.mkstemp()
+    with chdir(folder) if folder else no_op():
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
+        process.communicate()
+
+        if return_code:
+            return process.returncode
+
+        if process.returncode:
+            raise CalledProcessError(process.returncode, cmd)
+
+        output = load(tmp_file)
+        os.unlink(tmp_file)
+        return output

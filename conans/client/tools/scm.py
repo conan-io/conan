@@ -7,7 +7,7 @@ from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
-from conans.client.runner import check_output
+from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -129,8 +129,8 @@ class Git(SCMBase):
         ret = []
         try:
             file_paths = [os.path.normpath(
-                                os.path.join(
-                                    os.path.relpath(folder, self.folder), el)).replace("\\", "/")
+                os.path.join(
+                    os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             if file_paths:
@@ -219,6 +219,7 @@ class SVN(SCMBase):
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
             return decode_text(subprocess.check_output(command, shell=True))
+
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
@@ -252,7 +253,8 @@ class SVN(SCMBase):
     def _show_item(self, item, target='.'):
         self.check_repo()
         if self.version >= SVN.API_CHANGE_VERSION:
-            value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
+            value = self.run(
+                "info --show-item {item} \"{target}\"".format(item=item, target=target))
             return value.strip()
         else:
             output = self.run("info --xml \"{target}\"".format(target=target))
