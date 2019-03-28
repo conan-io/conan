@@ -3,13 +3,14 @@ import os
 import platform
 import re
 import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
 from conans.client.tools.env import environment_append, no_op
-from conans.client.tools.files import chdir
+from conans.client.tools.files import chdir, load
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
@@ -20,6 +21,19 @@ def _run_muted(cmd, folder=None):
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.communicate()
         return process.returncode
+
+
+def _run_capture_stdout(cmd, folder=None):
+    _, tmp_file = tempfile.mkstemp()
+    with chdir(folder) if folder else no_op():
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
+        process.communicate()
+        if process.returncode:
+            raise ConanException("Error '{}' calling command: '{}' ".format(process.returncode,
+                                                                            cmd))
+        output = load(tmp_file)
+        os.unlink(tmp_file)
+        return output
 
 
 def _check_repo(cmd, folder, msg=None):
@@ -53,7 +67,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True, stderr=PIPE).strip())
+                    return _run_capture_stdout(command).strip()
                 else:
                     return self._runner(command)
 
