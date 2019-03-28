@@ -169,17 +169,20 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertEqual("""macro(conan_basic_setup)
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
     if(CONAN_EXPORTED)
         conan_message(STATUS "Conan: called by CMake conan helper")
     endif()
+
     if(CONAN_IN_LOCAL_CACHE)
         conan_message(STATUS "Conan: called inside local cache")
     endif()
-    conan_check_compiler()
+
     if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(STATUS "Conan: Adjusting output directories")
         conan_output_dirs_setup()
     endif()
-    conan_set_find_library_paths()
+
     if(NOT ARGUMENTS_TARGETS)
         conan_message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
@@ -187,25 +190,32 @@ class CMakeGeneratorTest(unittest.TestCase):
         conan_message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
+
     if(ARGUMENTS_SKIP_RPATH)
         # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
         conan_message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
+
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
+
     if(NOT ARGUMENTS_SKIP_STD)
         conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
+
     if(NOT ARGUMENTS_SKIP_FPIC)
         conan_set_fpic()
     endif()
-    conan_set_vs_runtime()
+
+    conan_check_compiler()
     conan_set_libcxx()
+    conan_set_vs_runtime()
     conan_set_find_paths()
+    conan_set_find_library_paths()
 endmacro()""", macro)
 
         # extract the conan_set_find_paths macro

@@ -53,7 +53,7 @@ os=Windows
         out = MockOut()
         cache = ClientCache(tmp_dir, out)
 
-        base_settings = OrderedDict(detect_defaults_settings(out))
+        base_settings = OrderedDict(detect_defaults_settings(out, profile_path="~/.conan/profiles/default"))
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "4.6"}):
             expected = copy.copy(base_settings)

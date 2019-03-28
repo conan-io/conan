@@ -233,11 +233,11 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
 def _detect_scm_revision(path):
     if not path:
-        return None, None, None
+        raise ConanException("Not path supplied")
 
     repo_type = SCM.detect_scm(path)
     if not repo_type:
-        return None, None, None
+        raise ConanException("'{}' repository not detected".format(repo_type))
 
     repo_obj = SCM.availables.get(repo_type)(path)
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
@@ -255,10 +255,12 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
     else:
-        rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
-        if not rev_detected:
-            raise ConanException("Cannot detect revision using '{}' mode"
-                                 " from repository at '{}'".format(revision_mode, path))
+        try:
+            rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
+        except Exception as exc:
+            error_msg = "Cannot detect revision using '{}' mode from repository at " \
+                        "'{}'".format(revision_mode, path)
+            raise ConanException("{}: {}".format(error_msg, exc))
 
         revision = rev_detected
 
@@ -306,7 +308,7 @@ def export_source(conanfile, origin_folder, destination_source_folder):
         conanfile.exports_sources = (conanfile.exports_sources, )
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
-    copier = FileCopier(origin_folder, destination_source_folder)
+    copier = FileCopier([origin_folder], destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)
     output = conanfile.output
@@ -325,7 +327,7 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     except OSError:
         pass
 
-    copier = FileCopier(origin_folder, destination_folder)
+    copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
     output = conanfile.output

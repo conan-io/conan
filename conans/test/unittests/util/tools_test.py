@@ -15,6 +15,7 @@ import six
 from bottle import request, static_file
 from mock.mock import mock_open, patch
 from nose.plugins.attrib import attr
+from parameterized import parameterized
 from six import StringIO
 from six.moves.urllib.parse import quote
 
@@ -1126,7 +1127,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
         with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
-            tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
+            tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
                            retry=3, retry_wait=0)
@@ -1165,171 +1166,50 @@ ProgramFiles(x86)=C:\Program Files (x86)
                        requester=requests, out=out)
         http_server.stop()
 
-    def get_gnu_triplet_test(self):
-        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
-            build = tools.get_gnu_triplet(this_os, this_arch, compiler)
-            host = tools.get_gnu_triplet(setting_os, setting_arch, compiler)
-            return build, host
+    @parameterized.expand([
+        ["Linux", "x86", None, "x86-linux-gnu"],
+        ["Linux", "x86_64", None, "x86_64-linux-gnu"],
+        ["Linux", "armv6", None, "arm-linux-gnueabi"],
+        ["Linux", "sparc", None, "sparc-linux-gnu"],
+        ["Linux", "sparcv9", None, "sparc64-linux-gnu"],
+        ["Linux", "mips", None, "mips-linux-gnu"],
+        ["Linux", "mips64", None, "mips64-linux-gnu"],
+        ["Linux", "ppc32", None, "powerpc-linux-gnu"],
+        ["Linux", "ppc64", None, "powerpc64-linux-gnu"],
+        ["Linux", "ppc64le", None, "powerpc64le-linux-gnu"],
+        ["Linux", "armv5te", None, "arm-linux-gnueabi"],
+        ["Linux", "arm_whatever", None, "arm-linux-gnueabi"],
+        ["Linux", "armv7hf", None, "arm-linux-gnueabihf"],
+        ["Linux", "armv6", None, "arm-linux-gnueabi"],
+        ["Linux", "armv7", None, "arm-linux-gnueabi"],
+        ["Linux", "armv8_32", None, "aarch64-linux-gnu_ilp32"],
+        ["Linux", "armv5el", None, "arm-linux-gnueabi"],
+        ["Linux", "armv5hf", None, "arm-linux-gnueabihf"],
+        ["Linux", "s390", None, "s390-ibm-linux-gnu"],
+        ["Linux", "s390x", None, "s390x-ibm-linux-gnu"],
+        ["Android", "x86", None, "i686-linux-android"],
+        ["Android", "x86_64", None, "x86_64-linux-android"],
+        ["Android", "armv6", None, "arm-linux-androideabi"],
+        ["Android", "armv7", None, "arm-linux-androideabi"],
+        ["Android", "armv7hf", None, "arm-linux-androideabi"],
+        ["Android", "armv8", None, "aarch64-linux-android"],
+        ["Windows", "x86", "Visual Studio", "i686-windows-msvc"],
+        ["Windows", "x86", "gcc", "i686-w64-mingw32"],
+        ["Windows", "x86_64", "gcc", "x86_64-w64-mingw32"],
+        ["Darwin", "x86_64", None, "x86_64-apple-darwin"],
+        ["Macos", "x86", None, "i686-apple-darwin"],
+        ["iOS", "armv7", None, "arm-apple-darwin"],
+        ["watchOS", "armv7k", None, "arm-apple-darwin"],
+        ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
+        ["tvOS", "armv8", None, "aarch64-apple-darwin"],
+        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"]
+    ])
+    def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
+        triplet = tools.get_gnu_triplet(os, arch, compiler)
+        self.assertEqual(triplet, expected_triplet,
+                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
-        build, host = get_values("Linux", "armv6", "Linux", "armv6")
-        self.assertEqual(build, "arm-linux-gnueabi")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "sparc", "Linux", "sparcv9")
-        self.assertEqual(build, "sparc-linux-gnu")
-        self.assertEqual(host, "sparc64-linux-gnu")
-
-        build, host = get_values("Linux", "mips", "Linux", "mips64")
-        self.assertEqual(build, "mips-linux-gnu")
-        self.assertEqual(host, "mips64-linux-gnu")
-
-        build, host = get_values("Linux", "ppc64le", "Linux", "ppc64")
-        self.assertEqual(build, "powerpc64le-linux-gnu")
-        self.assertEqual(host, "powerpc64-linux-gnu")
-
-        build, host = get_values("Linux", "armv5te", "Linux", "arm_whatever")
-        self.assertEqual(build, "arm-linux-gnueabi")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86", "Linux", "armv7hf")
-        self.assertEqual(build, "x86-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "x86-linux-gnu")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-w64-mingw32")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-windows-msvc")  # Not very common but exists sometimes
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv7hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv7")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv6")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv8_32")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "aarch64-linux-gnu_ilp32")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv5el")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabi")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "armv5hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Linux", "x86_64", "Android", "x86")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-linux-android")
-
-        build, host = get_values("Linux", "x86_64", "Android", "x86_64")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "x86_64-linux-android")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv7")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv7hf")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv8")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "aarch64-linux-android")
-
-        build, host = get_values("Linux", "x86_64", "Android", "armv6")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "i686-w64-mingw32")
-
-        build, host = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "x86_64-w64-mingw32")
-
-        build, host = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
-        self.assertEqual(build, "x86_64-w64-mingw32")
-        self.assertEqual(host, "i686-w64-mingw32")
-
-        build, host = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
-        self.assertEqual(build, "x86_64-w64-mingw32")
-        self.assertEqual(host, "arm-linux-gnueabihf")
-
-        build, host = get_values("Darwin", "x86_64", "Android", "armv7hf")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "arm-linux-androideabi")
-
-        build, host = get_values("Darwin", "x86_64", "Macos", "x86")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "i686-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "iOS", "armv7")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "arm-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "watchOS", "armv7k")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "arm-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "aarch64-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "tvOS", "armv8.3")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "aarch64-apple-darwin")
-
-        build, host = get_values("Darwin", "x86_64", "watchOS", "armv8_32")
-        self.assertEqual(build, "x86_64-apple-darwin")
-        self.assertEqual(host, "aarch64-apple-darwin")
-
-        build, host = get_values("Linux", "x86_64", "Linux", "ppc32")
-        self.assertEqual(build, "x86_64-linux-gnu")
-        self.assertEqual(host, "powerpc-linux-gnu")
-
-        build, host = get_values("Linux", "x86", "Linux", "ppc64")
-        self.assertEqual(build, "x86-linux-gnu")
-        self.assertEqual(host, "powerpc64-linux-gnu")
-
-        for _os in ["Windows", "Linux"]:
-            for arch in ["x86_64", "x86"]:
-                triplet = tools.get_gnu_triplet(_os, arch, "gcc")
-
-                output = ""
-                if arch == "x86_64":
-                    output += "x86_64"
-                else:
-                    output += "i686" if _os != "Linux" else "x86"
-
-                output += "-"
-                if _os == "Windows":
-                    output += "w64-mingw32"
-                else:
-                    output += "linux-gnu"
-
-                self.assertIn(output, triplet)
-
-        # Compiler not specified for os="Windows"
+    def get_gnu_triplet_on_windows_without_compiler_test(self):
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
 

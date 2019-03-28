@@ -572,3 +572,23 @@ class Pkg(ConanFile):
         client.run("remote remove server1")
         client.run("upload Hello0/1.2.1@user/testing --all -r server2")
         self.assertNotIn("ERROR: 'server1'", client.out)
+
+    def upload_export_pkg_test(self):
+        """
+        Package metadata created when doing an export-pkg and then uploading the package works
+        """
+        server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
+        servers = OrderedDict()
+        servers["server1"] = server1
+        client = TestClient(servers=servers)
+        client.save({"release/kk.lib": ""})
+        client.run("user lasote -r server1 -p mypass")
+        client.run("new hello/1.0 --header")
+        client.run("export-pkg . user/testing -pf release")
+        client.run("upload hello/1.0@user/testing --all -r server1")
+        self.assertNotIn("Binary package hello/1.0@user/testing:5%s not found" %
+                         NO_SETTINGS_PACKAGE_ID, client.out)
+        ref = ConanFileReference("hello", "1.0", "user", "testing")
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
+        self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)

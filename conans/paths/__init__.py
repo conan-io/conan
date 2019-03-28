@@ -48,6 +48,7 @@ RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
 PACKAGE_METADATA = "metadata.json"
+CACERT_FILE = "cacert.pem"  # Server authorities file
 
 # Directories
 EXPORT_FOLDER = "export"
