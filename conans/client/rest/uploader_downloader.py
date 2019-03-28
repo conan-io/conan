@@ -28,6 +28,9 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 401:
+                raise AuthenticationException(response.content)
+
             if response.status_code == 403:
                 if auth.token is None:
                     raise AuthenticationException(response.content)
@@ -53,6 +56,9 @@ class Uploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+            if response.status_code == 401:
+                raise AuthenticationException(response.content)
+
             if response.status_code == 403:
                 if auth.token is None:
                     raise AuthenticationException(response.content)
