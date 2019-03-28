@@ -442,15 +442,17 @@ def get_gnu_triplet(os_, arch, compiler=None):
 def check_output(cmd, folder=None, return_code=False):
     _, tmp_file = tempfile.mkstemp()
     with chdir(folder) if folder else no_op():
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
-        process.communicate()
+        try:
+            process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True)
+            process.communicate()
 
-        if return_code:
-            return process.returncode
+            if return_code:
+                return process.returncode
 
-        if process.returncode:
-            raise CalledProcessError(process.returncode, cmd)
+            if process.returncode:
+                raise CalledProcessError(process.returncode, cmd)
 
-        output = load(tmp_file)
-        os.unlink(tmp_file)
-        return output
+            output = load(tmp_file)
+            return output
+        finally:
+            os.unlink(tmp_file)
