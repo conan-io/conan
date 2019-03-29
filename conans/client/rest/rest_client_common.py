@@ -162,15 +162,15 @@ class RestCommonMethods(object):
             self._remove_conanfile_files(ref, deleted)
 
     def get_recipe_snapshot(self, ref):
+        # this method is used only for UPLOADING, then it requires the credentials
         self.check_credentials()
-
         url = self.router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         return snap
 
     def get_package_snapshot(self, pref):
-        self.check_credentials()
-
+        # this method is also used to check the integrity of the package upstream
+        # while installing, so check_credentials is done in uploader.
         url = self.router.package_snapshot(pref)
         snap = self._get_snapshot(url)
         return snap

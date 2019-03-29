@@ -353,6 +353,7 @@ class CmdUpload(object):
         return files_to_upload, deleted
 
     def _package_files_to_upload(self, pref, policy, the_files, remote):
+        self._remote_manager.check_credentials()
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
         if remote_snapshot:
