@@ -374,18 +374,15 @@ class ConanClientConfigParser(ConfigParser, object):
             try:
                 # TODO: Fix this mess for Conan 2.0
                 env_conan_user_home = os.getenv("CONAN_USER_HOME")
+                current_dir = os.path.dirname(self.filename)
                 # if env var is declared, any specified path will be relative to CONAN_USER_HOME
                 # even with the ~/
-                if env_conan_user_home:
-                    storage = self.storage["path"]
-                    if storage[:2] == "~/":
-                        storage = storage[2:]
-                    result = os.path.join(env_conan_user_home, storage)
-                else:
-                    result = self.storage["path"]
-                    if result.startswith("."):
-                        result = os.path.join(os.path.dirname(self.filename), result)
-                result = os.path.abspath(result)
+                result = self.storage["path"]
+                if result.startswith("."):
+                    result = os.path.abspath(os.path.join(current_dir, result))
+                elif result[:2] == "~/":
+                    if env_conan_user_home:
+                        result = os.path.join(env_conan_user_home, result[2:])
             except (KeyError, ConanException):  # If storage not defined, to return None
                 pass
 
