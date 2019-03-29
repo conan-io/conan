@@ -1595,6 +1595,21 @@ class HelloConan(ConanFile):
         client.run("create . user/channel", assert_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
+    def git_commit_message_test(self):
+        client = TestClient()
+        git_repo = temp_folder()
+        client.runner("git init .", cwd=git_repo)
+        client.runner('git config user.email "you@example.com"', cwd=git_repo)
+        client.runner('git config user.name "Your Name"', cwd=git_repo)
+        client.runner("git checkout -b dev", cwd=git_repo)
+        git = Git(git_repo)
+        self.assertIsNone(git.get_commit_message())
+        save(os.path.join(git_repo, "test"), "contents")
+        client.runner("git add test", cwd=git_repo)
+        client.runner('git commit -m "first commit"', cwd=git_repo)
+        self.assertEqual("dev", git.get_branch())
+        self.assertEqual("first commit", git.get_commit_message())
+
 
 class GitToolsTests(unittest.TestCase):
 
@@ -1677,6 +1692,21 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.run("update")
         rev2 = int(svn.get_revision())
         self.assertEqual(rev2, rev + 1)
+
+    def svn_revision_message_test(self):
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=self.repo_url)
+        self.assertIsNone(svn.get_revision_message())
+
+        new_file = os.path.join(tmp_folder, "new_file")
+        with open(new_file, "w") as f:
+            f.write("content")
+
+        svn.run('add new_file')
+        svn.run('commit -m "add to file"')
+        svn.run('update')
+        self.assertEqual("add to file", svn.get_revision_message())
 
     def test_repo_url(self):
         svn = SVN(folder=self.gimme_tmp())
@@ -2076,6 +2106,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.svn.run('commit -m "add external"')
         self.svn.update()
         self.assertTrue(self.svn.is_pristine())
+        self.assertEqual("add external", self.svn.get_revision_message())
 
         self.svn_subrepo = SVN(folder=os.path.join(self.svn.folder, 'subrepo'))
         self.assertTrue(self.svn_subrepo.is_pristine())
@@ -2092,10 +2123,14 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.svn_subrepo.run('commit -m "up external"')
         self.assertFalse(self.svn_subrepo.is_pristine())
         self.assertFalse(self.svn.is_pristine())
+        self.assertEqual("add external", self.svn.get_revision_message())
 
         self.svn_subrepo.update()
         self.assertTrue(self.svn_subrepo.is_pristine())
         self.assertFalse(self.svn.is_pristine())
+        self.assertEqual("add external", self.svn.get_revision_message())
+        output = self.svn_subrepo.run('log -r COMMITTED')
+        self.assertIn("up external", output)
 
     def test_untracked_external(self):
         with open(os.path.join(self.svn.folder, "subrepo", "other_file"), "w") as f:
@@ -2124,6 +2159,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.svn.run('commit -m "change property"')
         self.svn.update()
         self.assertTrue(self.svn.is_pristine())
+        self.assertEqual("change property", self.svn.get_revision_message())
 
 
 @attr("slow")

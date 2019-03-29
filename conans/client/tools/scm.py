@@ -175,6 +175,19 @@ class Git(SCMBase):
 
     get_revision = get_commit
 
+    def get_commit_message(self):
+        self.check_repo()
+        try:
+            status = self.run("status")
+            if "No commits yet" in status:
+                return None
+
+            message = self.run("log -1 --format=%s%n%b")
+            return message.strip()
+        except Exception as error:
+            raise ConanException(
+                "Unable to get git commit message from '%s': %s" % (self.folder, str(error)))
+
     def is_pristine(self):
         self.check_repo()
         status = self.run("status --porcelain").strip()
@@ -352,6 +365,10 @@ class SVN(SCMBase):
 
     def get_revision(self):
         return self._show_item('revision')
+
+    def get_revision_message(self):
+        output = self.run("log -r COMMITTED").splitlines()
+        return output[3] if len(output) > 2 else None
 
     def get_repo_root(self):
         return self._show_item('wc-root')
