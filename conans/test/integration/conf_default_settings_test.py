@@ -53,17 +53,17 @@ os=Windows
         out = MockOut()
         cache = ClientCache(tmp_dir, None, out)
 
-        base_settings = OrderedDict(detect_defaults_settings(out))
+        base_settings = OrderedDict(detect_defaults_settings(out, profile_path="~/.conan/profiles/default"))
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "4.6"}):
             expected = copy.copy(base_settings)
             expected["compiler.version"] = "4.6"
-            self.assertEquals(cache.default_profile.settings, expected)
+            self.assertEqual(cache.default_profile.settings, expected)
 
         tmp_dir = temp_folder()
         cache = ClientCache(tmp_dir, None, out)
         with tools.environment_append({}):
-            self.assertEquals(cache.default_profile.settings, base_settings)
+            self.assertEqual(cache.default_profile.settings, base_settings)
 
         tmp_dir = temp_folder()
         cache = ClientCache(tmp_dir, None, out)
@@ -71,7 +71,7 @@ os=Windows
         with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio"}):
             expected = copy.copy(base_settings)
             expected["compiler"] = "Visual Studio"
-            self.assertEquals(cache.default_profile.settings, expected)
+            self.assertEqual(cache.default_profile.settings, expected)
 
         tmp_dir = temp_folder()
         cache = ClientCache(tmp_dir, None, out)
@@ -83,4 +83,4 @@ os=Windows
             expected["compiler.runtime"] = "MDd"
             expected["compiler.version"] = "14"
 
-            self.assertEquals(cache.default_profile.settings, expected)
+            self.assertEqual(cache.default_profile.settings, expected)

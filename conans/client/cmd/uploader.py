@@ -4,6 +4,7 @@ import tarfile
 import time
 from collections import defaultdict
 
+from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
@@ -136,10 +137,15 @@ class CmdUpload(object):
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
 
-                if all_packages:
-                    packages_ids = self._cache.conan_packages(ref)
-                elif query:
-                    packages = search_packages(self._cache, ref, query)
+                # TODO: This search of binary packages has to be improved, more robust
+                # So only real packages are retrieved
+                if all_packages or query:
+                    if all_packages:
+                        query = None
+                    # better to do a search, that will retrieve real packages with ConanInfo
+                    # Not only "package_id" folders that could be empty
+                    package_layout = self._cache.package_layout(ref.copy_clear_rev())
+                    packages = search_packages(package_layout, query)
                     packages_ids = list(packages.keys())
                 elif package_id:
                     packages_ids = [package_id, ]
@@ -149,21 +155,21 @@ class CmdUpload(object):
                     if conanfile.build_policy == "always":
                         raise ConanException("Conanfile '%s' has build_policy='always', "
                                              "no packages can be uploaded" % str(ref))
-                # Filter packages that don't match the recipe revision
-                if self._cache.config.revisions_enabled and ref.revision:
-                    recipe_package_ids = []
-                    for package_id in packages_ids:
-                        rec_rev = metadata.packages[package_id].recipe_revision
-                        if ref.revision != rec_rev:
-                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to "
-                                                   "the current recipe revision" % package_id)
-                        else:
-                            recipe_package_ids.append(package_id)
-                    packages_ids = recipe_package_ids
                 prefs = []
                 # Gather all the complete PREFS with PREV
                 for package_id in packages_ids:
+                    if package_id not in metadata.packages:
+                        raise ConanException("Binary package %s:%s not found"
+                                             % (str(ref), package_id))
+                    # Filter packages that don't match the recipe revision
+                    if self._cache.config.revisions_enabled and ref.revision:
+                        rec_rev = metadata.packages[package_id].recipe_revision
+                        if ref.revision != rec_rev:
+                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the "
+                                                   "current recipe revision" % package_id)
+                            continue
                     package_revision = metadata.packages[package_id].revision
+                    assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
                 refs_by_remote[remote].append((ref, conanfile, prefs))
 
@@ -347,23 +353,20 @@ class CmdUpload(object):
         return files_to_upload, deleted
 
     def _package_files_to_upload(self, pref, policy, the_files, remote):
-        # Get the remote snapshot
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
         if remote_snapshot:
+            if not is_package_snapshot_complete(remote_snapshot):
+                return the_files, set([])
             remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-
             if remote_manifest == local_manifest:
                 return None, None
-
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite.")
-        files_to_upload = the_files
+                raise ConanException("Local package is different from the remote package. Forbidden "
+                                     "overwrite.")
         deleted = set(remote_snapshot).difference(the_files)
-
-        return files_to_upload, deleted
+        return the_files, deleted
 
     def _upload_recipe_end_msg(self, ref, remote):
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)

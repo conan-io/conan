@@ -39,7 +39,7 @@ class InfoCommandTest(unittest.TestCase):
                                body='requires = "{}"'.format(self.ref_parent)),
                            "mylayout": self.conan_package_layout, },
                     path=lib_folder)
-        self.t.run('link "{}" {}'.format(lib_folder, self.ref))
+        self.t.run('editable add "{}" {}'.format(lib_folder, self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
         # Create child
@@ -48,7 +48,7 @@ class InfoCommandTest(unittest.TestCase):
         self.t.run('export . {}'.format(self.ref_child))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.ref))
+        self.t.run('editable remove {}'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
     @parameterized.expand([(True, ), (False, )])

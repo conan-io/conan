@@ -2,18 +2,17 @@ import os
 import shutil
 
 from conans import DEFAULT_REVISION_V1
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
-
-from conans.model.ref import ConanFileReference, PackageReference
-
-from conans.paths import PACKAGE_METADATA
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
 from conans.migrations import Migrator
+from conans.model.manifest import FileTreeManifest
+from conans.model.package_metadata import PackageMetadata
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
 
@@ -51,6 +50,10 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
+
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
+
         if old_version < Version("1.13.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
@@ -139,7 +142,7 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
                               % (CONAN_CONF, DEFAULT_PROFILE_NAME))
                 conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
 
-                migrate_to_default_profile(conf_path, default_profile_path, output=self.out)
+                migrate_to_default_profile(conf_path, default_profile_path)
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.cache, self.out)
@@ -153,7 +156,7 @@ def _get_refs(cache):
 def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
-    return [PackageReference(layout._ref, s) for s in folders]
+    return [PackageReference(layout.ref, s) for s in folders]
 
 
 def _migrate_create_metadata(cache, out):
@@ -165,7 +168,8 @@ def _migrate_create_metadata(cache, out):
             base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
             # Force using a package cache layout for everything, we want to alter the cache,
             # not the editables
-            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False)
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=False,
+                                        no_lock=True)
             folder = layout.export()
             try:
                 manifest = FileTreeManifest.load(folder)
@@ -216,6 +220,19 @@ def _migrate_lock_files(cache, out):
                                  "Please clean your local conan cache manually"
                                  % (pkg, str(e)))
     out.warn("Migration: Removing old lock files finished\n")
+
+
+def migrate_config_install(cache):
+    try:
+        item = cache.config.get_item("general.config_install")
+        config_type, uri, verify_ssl, args = [r.strip() for r in item.split(",")]
+        verify_ssl = "true" in verify_ssl.lower()
+        args = None if "none" in args.lower() else args
+        config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args, None, None)
+        _save_configs(cache.config_install_file, [config])
+        cache.config.rm_item("general.config_install")
+    except ConanException:
+        pass
 
 
 def migrate_to_default_profile(conf_path, default_profile_path):

@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 import deprecation
 
+from conans.client.tools import which
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, detected_architecture
 from conans.errors import ConanException
@@ -59,13 +60,13 @@ def _visual_compiler(output, version):
     if platform.system().startswith("CYGWIN"):
         return _visual_compiler_cygwin(output, version)
 
-    if version == "15":
-        vs_path = os.getenv('vs150comntools')
-        path = vs_path or vs_installation_path("15")
+    if Version(version) >= "15":
+        vs_path = os.getenv('vs%s0comntools' % version)
+        path = vs_path or vs_installation_path(version)
         if path:
             compiler = "Visual Studio"
-            output.success("Found %s %s" % (compiler, "15"))
-            return compiler, "15"
+            output.success("Found %s %s" % (compiler, version))
+            return compiler, version
         return None
 
     version = "%s.0" % version
@@ -93,7 +94,8 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
-MSVS_DEFAULT_TOOLSETS = {"15": "v141",
+MSVS_DEFAULT_TOOLSETS = {"16": "v142",
+                         "15": "v141",
                          "14": "v140",
                          "12": "v120",
                          "11": "v110",
@@ -102,7 +104,8 @@ MSVS_DEFAULT_TOOLSETS = {"15": "v141",
                          "8": "v80"}
 
 # inverse version of the above MSVS_DEFAULT_TOOLSETS (keys and values are swapped)
-MSVS_DEFAULT_TOOLSETS_INVERSE = {"v141": "15",
+MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
+                                 "v141": "15",
                                  "v140": "14",
                                  "v120": "12",
                                  "v110": "11",
@@ -131,15 +134,13 @@ def latest_visual_studio_version_installed(output):
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
+                       output=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    import warnings
-    warnings.warn("deprecated", DeprecationWarning)
-
-    vcvars = vcvars_command(settings, force=force_vcvars)
+    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms)
+                              parallel, toolset=toolset, platforms=platforms, output=output)
     command = "%s && %s" % (vcvars, build)
     return command
 
@@ -250,15 +251,18 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         raise ConanException("The 'legacy' parameter cannot be specified with either the "
                              "'products' or 'requires' parameter")
 
-    program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
-
+    installer_path = None
+    program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
     if program_files:
-        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
-                                    "vswhere.exe")
-        if not os.path.isfile(vswhere_path):
-            raise ConanException("Cannot locate 'vswhere'")
-    else:
-        raise ConanException("Cannot locate 'Program Files'/'Program Files (x86)' directory")
+        expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                     "vswhere.exe")
+        if os.path.isfile(expected_path):
+            installer_path = expected_path
+    vswhere_path = installer_path or which("vswhere")
+
+    if not vswhere_path:
+        raise ConanException("Cannot locate vswhere in 'Program Files'/'Program Files (x86)' "
+                             "directory nor in PATH")
 
     arguments = list()
     arguments.append(vswhere_path)
@@ -575,7 +579,8 @@ def unix_path(path, path_flavor=None):
     return None
 
 
-def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
+def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None,
+                        with_login=True):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
@@ -637,7 +642,8 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
-        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
+        login = "--login" if with_login else ""
+        wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
 
         # If is there any other env var that we know it contains paths, convert it to unix_path

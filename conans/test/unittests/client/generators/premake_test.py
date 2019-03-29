@@ -86,7 +86,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin1']
         cpp_info.version = "0.1"
         cpp_info.cflags = ['-fPIC']
-        cpp_info.cppflags = ['-fPIE']
+        cpp_info.cxxflags = ['-fPIE']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -99,7 +99,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin2']
         cpp_info.version = "3.2.3"
         cpp_info.cflags = ['-mtune=native']
-        cpp_info.cppflags = ['-march=native']
+        cpp_info.cxxflags = ['-march=native']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)

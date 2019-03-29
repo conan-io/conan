@@ -19,7 +19,7 @@ class HelloConan(ConanFile):
     version = "0.1"
     build_policy="missing"
     def package_info(self):
-        self.cpp_info.cppflags = ["MyFlag1", "MyFlag2"]
+        self.cpp_info.cxxflags = ["MyFlag1", "MyFlag2"]
         self.cpp_info.cflags = ["-load", "C:\some\path"]
         self.cpp_info.defines = ['MY_DEF=My" \string', 'MY_DEF2=My${} other \string']
 """
@@ -33,7 +33,7 @@ class ChatConan(ConanFile):
     requires = "Hello/0.1@lasote/testing"
     build_policy="missing"
     def package_info(self):
-        self.cpp_info.cppflags = ["MyChatFlag1", "MyChatFlag2"]
+        self.cpp_info.cxxflags = ["MyChatFlag1", "MyChatFlag2"]
 """
 
 conanfile = """[requires]

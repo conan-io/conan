@@ -6,6 +6,7 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir
+from conans.model.conan_file import get_env_context_manager
 
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
@@ -20,7 +21,8 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     # to be downloaded from remotes
     deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
                                              check_updates=False, update=False,
-                                             remote_name=None, recorder=recorder, workspace=None)
+                                             remote_name=None, recorder=recorder,
+                                             apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
@@ -47,12 +49,16 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
         packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
                             hook_manager, conan_file_path, ref)
     else:
-        packager.create_package(conanfile, package_id, source_folder, build_folder,
-                                dest_package_folder, install_folder, hook_manager, conan_file_path,
-                                ref, local=True)
-        with cache.package_layout(ref).update_metadata() as metadata:
-            readed_manifest = FileTreeManifest.load(dest_package_folder)
-            metadata.packages[package_id].revision = readed_manifest.summary_hash
-            metadata.packages[package_id].recipe_revision = metadata.recipe.revision
+        with get_env_context_manager(conanfile):
+            packager.create_package(conanfile, package_id, source_folder, build_folder,
+                                    dest_package_folder, install_folder, hook_manager,
+                                    conan_file_path, ref, local=True)
+
+    readed_manifest = FileTreeManifest.load(dest_package_folder)
+    pref = PackageReference(pref.ref, pref.id, readed_manifest.summary_hash)
+    output.info("Package revision %s" % pref.revision)
+    with cache.package_layout(ref).update_metadata() as metadata:
+        metadata.packages[package_id].revision = pref.revision
+        metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 
     recorder.package_exported(pref)

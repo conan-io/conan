@@ -2,6 +2,8 @@ import os
 import shutil
 import unittest
 
+import six
+
 from conans.client import defs_to_string
 from conans.client.build.meson import Meson
 from conans.client.conf import default_settings_yml
@@ -23,8 +25,8 @@ class MesonTest(unittest.TestCase):
     def _check_commands(self, cmd_ref, cmd_test):
         cmd_ref_splitted = cmd_ref.split(' ')
         cmd_test_splitted = cmd_test.split(' ')
-        self.assertEquals(cmd_ref_splitted[:3], cmd_test_splitted[:3])
-        self.assertEquals(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
+        self.assertEqual(cmd_ref_splitted[:3], cmd_test_splitted[:3])
+        self.assertEqual(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
 
     def partial_build_test(self):
         conan_file = ConanFileMock()
@@ -134,14 +136,14 @@ class MesonTest(unittest.TestCase):
         self._check_commands(cmd_expected, conan_file.command)
 
         # Raise mixing
-        with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+        with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
             meson.configure(source_folder="source", build_dir="build")
 
         meson.test()
-        self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
 
         meson.install()
-        self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
 
     def prefix_test(self):
         conan_file = ConanFileMock()
