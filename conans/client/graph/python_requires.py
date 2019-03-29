@@ -7,7 +7,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.errors import ConanException
 
-PythonRequire = namedtuple("PythonRequire", "ref module conanfile export_source_folder")
+PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
+                                             "exports_folder", "exports_sources_folder"])
 
 
 class ConanPythonRequire(object):
@@ -58,8 +59,11 @@ class ConanPythonRequire(object):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
-                export_source_folder = self._proxy._cache.export_sources(new_ref)
-                python_require = PythonRequire(new_ref, module, conanfile, export_source_folder)
+                package_layout = self._proxy._cache.package_layout(new_ref)  # FIXME: access private
+                exports_sources_folder = package_layout.export_sources()
+                exports_folder = package_layout.export()
+                python_require = PythonRequire(new_ref, module, conanfile,
+                                               exports_folder, exports_sources_folder)
             self._cached_requires[require] = python_require
 
         return python_require
