@@ -6,6 +6,7 @@ import yaml
 from jinja2 import Template
 
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.editable_layout import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
@@ -68,6 +69,7 @@ class Workspace(object):
 
     def generate(self, cwd, graph, output):
         if self._ws_generator == "cmake":
+            output = ScopedOutput("CMake workspace", output)
             unique_refs = OrderedDict()
             for node in graph.ordered_iterate():
                 if node.recipe != RECIPE_EDITABLE:
@@ -79,13 +81,16 @@ class Workspace(object):
                 ws_pkg = self._workspace_packages[node.ref]
                 layout = self._cache.package_layout(node.ref)
                 editable = layout.editable_cpp_info()
+                if not editable:
+                    output.warn("no layout available for reference '{}'".format(node.ref))
+                    continue
 
                 source_folder = editable.folder(node.ref, EditableLayout.SOURCE_FOLDER,
                                                 node.conanfile.settings, node.conanfile.options)
                 if source_folder:
                     source_folder = os.path.join(ws_pkg.root_folder, source_folder)
                 else:
-                    output.warn("CMake workspace: source_folder is not defined for reference '{}'"
+                    output.warn("source_folder is not defined for reference '{}'"
                                 " in layout file '{}'".format(node.ref, editable.filepath))
 
                 build_folder = editable.folder(node.ref, EditableLayout.BUILD_FOLDER,
@@ -93,7 +98,7 @@ class Workspace(object):
                 if build_folder:
                     build_folder = os.path.join(ws_pkg.root_folder, build_folder)
                 else:
-                    output.warn("CMake workspace: build_folder is not defined for reference '{}'"
+                    output.warn("build_folder is not defined for reference '{}'"
                                 " in layout file '{}'".format(node.ref, editable.filepath))
 
                 unique_refs[node.ref] = {
