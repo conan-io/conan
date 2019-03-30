@@ -87,7 +87,7 @@ class Workspace(object):
 
                 source_folder = editable.folder(node.ref, EditableLayout.SOURCE_FOLDER,
                                                 node.conanfile.settings, node.conanfile.options)
-                if source_folder:
+                if source_folder is not None:
                     source_folder = os.path.join(ws_pkg.root_folder, source_folder)
                 else:
                     output.warn("source_folder is not defined for reference '{}'"
@@ -95,7 +95,7 @@ class Workspace(object):
 
                 build_folder = editable.folder(node.ref, EditableLayout.BUILD_FOLDER,
                                                node.conanfile.settings, node.conanfile.options)
-                if build_folder:
+                if build_folder is not None:
                     build_folder = os.path.join(ws_pkg.root_folder, build_folder)
                 else:
                     output.warn("build_folder is not defined for reference '{}'"

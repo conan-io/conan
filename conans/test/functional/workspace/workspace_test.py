@@ -883,7 +883,7 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
                                                     "conanworkspace.cmake")))
 
-    def gen_subdirectories_test(self):
+    def test_gen_subdirectories_test(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -924,3 +924,5 @@ class Pkg(ConanFile):
         for p in ("HelloC", "HelloB", "HelloA"):
             self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
                           conanws_cmake)
+
+        # TODO: Require at least "." instead of an empty section?
