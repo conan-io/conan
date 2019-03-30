@@ -39,6 +39,10 @@ class EditableLayout(object):
     def __init__(self, filepath):
         self._filepath = filepath
 
+    @property
+    def filepath(self):
+        return self._filepath
+
     def folder(self, ref, name, settings, options):
         _, folders = self._load_data(ref, settings=settings, options=options)
         try:

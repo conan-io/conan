@@ -1,8 +1,9 @@
 import os
-
+import textwrap
 from collections import OrderedDict
 
 import yaml
+from jinja2 import Template
 
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
@@ -30,6 +31,8 @@ class LocalPackage(object):
             generators = ws_generators
         self.generators = generators
 
+        self.alias_target = data.pop("alias_target", None)
+
         if data:
             raise ConanException("Workspace unrecognized fields: %s" % data)
 
@@ -39,52 +42,69 @@ class LocalPackage(object):
 
 
 class Workspace(object):
+    ws_cmake = Template(textwrap.dedent("""
+        {% for item in editables %}
+            {% if item.source_folder -%}
+                set(PACKAGE_{{ item.name }}_SRC "{{ item.source_folder.replace('\\\\', '/') }}")
+            {% endif %}
+            {% if item.build_folder -%}
+                set(PACKAGE_{{ item.name }}_BUILD "{{ item.build_folder.replace('\\\\', '/') }}")
+            {% endif %}
+        {% endfor %}
+        
+        macro(conan_workspace_subdirectories)
+            set(CONAN_IS_WS TRUE)
+            {% for item in editables %}
+                {% if item.source_folder and item.build_folder %}
+                    # {{ item.name }}
+                    add_subdirectory(${PACKAGE_{{ item.name }}_SRC} ${PACKAGE_{{ item.name }}_BUILD})
+                    {% if item.alias_target %}
+                    add_library(CONAN_PKG::{{ item.name }} ALIAS {{ item.alias_target }}) # Use our library
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        endmacro()
+    """), trim_blocks=True, lstrip_blocks=True)
 
     def generate(self, cwd, graph, output):
         if self._ws_generator == "cmake":
-            cmake = ""
-            add_subdirs = ""
-            # To avoid multiple additions (can happen for build_requires repeated nodes)
             unique_refs = OrderedDict()
             for node in graph.ordered_iterate():
                 if node.recipe != RECIPE_EDITABLE:
                     continue
-                unique_refs[node.ref] = node
-            for ref, node in unique_refs.items():
-                ws_pkg = self._workspace_packages[ref]
-                layout = self._cache.package_layout(ref)
+                # To avoid multiple additions: build_requires repeated, diamonds
+                if node.ref in unique_refs:
+                    continue
+
+                ws_pkg = self._workspace_packages[node.ref]
+                layout = self._cache.package_layout(node.ref)
                 editable = layout.editable_cpp_info()
 
-                conanfile = node.conanfile
-                src = build = None
-                if editable:
-                    build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
-                                            conanfile.options)
-                    src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
-                                          conanfile.options)
-                if src is not None:
-                    src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
-                    cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)
+                source_folder = editable.folder(node.ref, EditableLayout.SOURCE_FOLDER,
+                                                node.conanfile.settings, node.conanfile.options)
+                if source_folder:
+                    source_folder = os.path.join(ws_pkg.root_folder, source_folder)
                 else:
-                    output.warn("CMake workspace: source_folder is not defined for %s" % str(ref))
-                if build is not None:
-                    build = os.path.join(ws_pkg.root_folder, build).replace("\\", "/")
-                    cmake += 'set(PACKAGE_%s_BUILD "%s")\n' % (ref.name, build)
-                else:
-                    output.warn("CMake workspace: build_folder is not defined for %s" % str(ref))
+                    output.warn("CMake workspace: source_folder is not defined for reference '{}'"
+                                " in layout file '{}'".format(node.ref, editable.filepath))
 
-                if src and build:
-                    add_subdirs += ('    add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})\n'
-                                    % (ref.name, ref.name))
+                build_folder = editable.folder(node.ref, EditableLayout.BUILD_FOLDER,
+                                               node.conanfile.settings, node.conanfile.options)
+                if build_folder:
+                    build_folder = os.path.join(ws_pkg.root_folder, build_folder)
                 else:
-                    output.warn("CMake workspace: cannot 'add_subdirectory()'")
+                    output.warn("CMake workspace: build_folder is not defined for reference '{}'"
+                                " in layout file '{}'".format(node.ref, editable.filepath))
 
-            if add_subdirs:
-                cmake += "macro(conan_workspace_subdirectories)\n"
-                cmake += add_subdirs
-                cmake += "endmacro()"
+                unique_refs[node.ref] = {
+                    'name': node.ref.name,
+                    'source_folder': source_folder,
+                    'build_folder': build_folder,
+                    'alias_target': ws_pkg.alias_target
+                }
+
             cmake_path = os.path.join(cwd, "conanworkspace.cmake")
-            save(cmake_path, cmake)
+            save(cmake_path, self.ws_cmake.render(editables=unique_refs.values()))
 
     def __init__(self, path, cache):
         self._cache = cache
