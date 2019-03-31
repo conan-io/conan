@@ -1318,6 +1318,8 @@ class Command(object):
                                                 "folder or path and name for a profile file")
         parser_new.add_argument("--detect", action='store_true', default=False,
                                 help='Autodetect settings and fill [settings] section')
+        parser_new.add_argument("--force", action='store_true', default=False,
+                                help='Overwrite existing profile if existing')
 
         parser_update = subparsers.add_parser('update', help='Update a profile with desired value')
         parser_update.add_argument('item',
@@ -1346,7 +1348,7 @@ class Command(object):
             profile_text = self._conan.read_profile(profile)
             self._outputer.print_profile(profile, profile_text)
         elif args.subcommand == "new":
-            self._conan.create_profile(profile, args.detect)
+            self._conan.create_profile(profile, args.detect, args.force)
         elif args.subcommand == "update":
             try:
                 key, value = args.item.split("=", 1)

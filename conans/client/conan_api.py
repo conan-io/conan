@@ -945,9 +945,9 @@ class ConanAPIV1(object):
         return cmd_profile_list(self._cache.profiles_path, self._user_io.out)
 
     @api_method
-    def create_profile(self, profile_name, detect=False):
+    def create_profile(self, profile_name, detect=False, force=False):
         return cmd_profile_create(profile_name, self._cache.profiles_path,
-                                  self._user_io.out, detect)
+                                  self._user_io.out, detect, force)
 
     @api_method
     def update_profile(self, profile_name, key, value):
