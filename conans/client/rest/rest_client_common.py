@@ -163,7 +163,7 @@ class RestCommonMethods(object):
 
     def get_recipe_snapshot(self, ref):
         # this method is used only for UPLOADING, then it requires the credentials
-        self.check_credentials()
+        # Check of credentials is done in the uploader
         url = self.router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         return snap
