@@ -14,7 +14,8 @@ from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
-from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
+from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
+    ConanMigrationError
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
@@ -1696,8 +1697,11 @@ def main(args):
     """
     try:
         conan_api, cache, user_io = Conan.factory()
-    except ConanException:  # Error migrating
+    except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
+    except ConanException as e:
+        sys.stderr.write("Error in Conan initialization: {}".format(e))
+        sys.exit(ERROR_GENERAL)
 
     outputer = CommandOutputer(user_io, cache)
     command = Command(conan_api, cache, user_io, outputer)
