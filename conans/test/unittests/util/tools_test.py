@@ -1291,7 +1291,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         filepath = os.path.join(tmp, "test.txt.gz")
         import gzip
         with gzip.open(filepath, "wb") as f:
-            f.write("hello world zipped!")
+            f.write(b"hello world zipped!")
 
         thread = StoppableThreadBottle()
 
