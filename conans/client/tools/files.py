@@ -70,6 +70,13 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
+    if filename.endswith(".gz"):
+        import gzip
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+            target_name = filename[:-3]
+            save(target_name, file_content)
+        return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
