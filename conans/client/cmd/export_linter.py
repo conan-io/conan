@@ -1,11 +1,11 @@
 import json
 import os
 import platform
-import subprocess
 import sys
 
 from conans import __path__ as root_path
 from conans.client.output import Color
+from conans.client.tools.oss import check_output
 from conans.errors import ConanException
 
 
@@ -43,10 +43,8 @@ def _runner(args):
     command = ["pylint",  "--output-format=json"] + args
     command = " ".join(command)
     shell = True if platform.system() != "Windows" else False
-    proc = subprocess.Popen(command, shell=shell, bufsize=10, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    stdout, _ = proc.communicate()
-    return json.loads(stdout.decode("utf-8")) if stdout else {}
+    output = check_output(command, shell=shell)
+    return json.loads(output.decode("utf-8")) if output else {}
 
 
 def _normal_linter(conanfile_path, hook):

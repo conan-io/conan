@@ -1,17 +1,15 @@
 import os
 import platform
 import re
-import subprocess
 import unittest
 from textwrap import dedent
 
 from conans.client import tools
+from conans.client.tools.oss import check_output, ConanSubprocessError
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient,\
-    TestServer
-
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 conanfile_py = """
 from conans import ConanFile
@@ -152,8 +150,7 @@ class InfoFoldersTest(unittest.TestCase):
         """
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
-        out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
-                                      % os.path.splitdrive(folder)[0])
+        out = check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
         if "NTFS" not in str(out):
             return
         short_folder = os.path.join(folder, ".cnacls")
@@ -168,8 +165,8 @@ class InfoFoldersTest(unittest.TestCase):
         # Explicitly revoke full control permission to current user
         cmd = r'cacls %s /E /R "%s\%s"' % (short_folder, current_domain, current_user)
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
+            check_output(cmd)
+        except ConanSubprocessError as e:
             raise Exception("Error %s setting ACL to short_folder: '%s'."
                             "Please check that cacls.exe exists" % (e, short_folder))
 
@@ -181,9 +178,8 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = subprocess.check_output("cacls %s" % short_folder,
-                                                        stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as e:
+            short_folder_acls = check_output("cacls %s" % short_folder, error_to_stdout=True)
+        except ConanSubprocessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
         # Check user has full control

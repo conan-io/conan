@@ -55,7 +55,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('subprocess.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conan.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), CYGWIN)
 
@@ -72,7 +72,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('subprocess.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conan.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS)
 
@@ -89,7 +89,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('subprocess.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conan.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS2)
 
@@ -106,7 +106,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_solaris)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
-                with mock.patch('subprocess.check_output', new=self.subprocess_check_output_mock):
+                with mock.patch('conan.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS2)
 

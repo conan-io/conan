@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import subprocess
-
 from conans.client.tools.oss import check_output
-from conans.errors import ConanException
 
 
 class PkgConfig(object):
@@ -43,10 +40,7 @@ class PkgConfig(object):
         if self.define_variables:
             for name, value in self.define_variables.items():
                 command.append('--define-variable=%s=%s' % (name, value))
-        try:
-            return self._cmd_output(command)
-        except subprocess.CalledProcessError as e:
-            raise ConanException('pkg-config command %s failed with error: %s' % (command, e))
+        return check_output(command).decode().strip()
 
     def _get_option(self, option):
         if option not in self.info:

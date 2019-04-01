@@ -1,12 +1,11 @@
-import os
 import platform
-import subprocess
 import unittest
 
 from mock import mock
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
+from conans.client.tools.oss import check_output, ConanSubprocessError
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.tools import TestBufferConanOutput
 
@@ -36,8 +35,8 @@ class DetectTest(unittest.TestCase):
             return
 
         try:
-            output = subprocess.check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:
+            output = check_output(["gcc", "--version"], error_to_stdout=True)
+        except ConanSubprocessError:
             # gcc is not installed or there is any error (no test scenario)
             return
 

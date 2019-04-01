@@ -1,35 +1,24 @@
 import os
 import platform
 import re
-import subprocess
 import xml.etree.ElementTree as ET
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
-from conans.client.tools.oss import check_output
+from conans.client.tools.oss import check_output, ConanSubprocessError
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
 
 
-def _run_muted(cmd, folder=None):
-    with chdir(folder) if folder else no_op():
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        process.communicate()
-        return process.returncode
-
-
 def _check_repo(cmd, folder, msg=None):
     msg = msg or "Not a valid '{}' repository".format(cmd[0])
     try:
-        ret = _run_muted(cmd, folder=folder)
-    except Exception:
+        check_output(cmd, folder=folder)
+    except ConanSubprocessError:
         raise ConanException(msg)
-    else:
-        if bool(ret):
-            raise ConanException(msg)
 
 
 class SCMBase(object):
@@ -125,6 +114,7 @@ class Git(SCMBase):
         return output
 
     def excluded_files(self):
+        import subprocess
         ret = []
         try:
             file_paths = [os.path.normpath(
@@ -218,14 +208,14 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return decode_text(subprocess.check_output(command, shell=True))
+            return decode_text(check_output(command))
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
+            out = check_output(["svn", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.split(' ', 3)[2]
             return Version(version_str)
@@ -323,7 +313,7 @@ class SVN(SCMBase):
         if self.version >= SVN.API_CHANGE_VERSION:
             try:
                 output = self.run("status -u -r {} --xml".format(self.get_revision()))
-            except subprocess.CalledProcessError:
+            except ConanSubprocessError:
                 return False
             else:
                 root = ET.fromstring(output)

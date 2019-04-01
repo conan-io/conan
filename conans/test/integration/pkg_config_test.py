@@ -1,7 +1,7 @@
 import platform
-import subprocess
 import unittest
 
+from conans.client.tools.oss import check_output
 from conans.test.utils.tools import TestClient
 
 hello_cpp = """
@@ -181,4 +181,4 @@ class LibAConan(ConanFile):
         client.run("install .")
         client.run("build .")
 
-        subprocess.Popen("./main", cwd=client.current_folder)
+        check_output("./main", folder=client.current_folder)

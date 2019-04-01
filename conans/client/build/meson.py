@@ -1,10 +1,9 @@
 import os
-import subprocess
 
 from conans.client import defs_to_string, join_arguments, tools
-from conans.client.tools.oss import args_to_string
+from conans.client.tools.oss import args_to_string, check_output
 from conans.errors import ConanException
-from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
 from conans.util.files import decode_text, get_abs_path, mkdir
 
@@ -197,7 +196,7 @@ class Meson(object):
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["meson", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = check_output(["meson", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)

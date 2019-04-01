@@ -5,13 +5,13 @@ import random
 import shlex
 import shutil
 import stat
-import subprocess
 import sys
 import tempfile
 import threading
 import time
 import unittest
 import uuid
+import xml.etree.ElementTree as ET
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
@@ -38,6 +38,7 @@ from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
+from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -510,21 +511,17 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
     try:
         rel_project_path = rel_project_path or str(uuid.uuid4())
         # Do not use SVN class as it is what we will be testing
-        subprocess.check_output('svn co "{url}" "{path}"'.format(url=repo_url,
-                                                                 path=tmp_dir),
-                                shell=True)
+        check_output('svn co "{url}" "{path}"'.format(url=repo_url, path=tmp_dir))
         tmp_project_dir = os.path.join(tmp_dir, rel_project_path)
         mkdir(tmp_project_dir)
         save_files(tmp_project_dir, files)
         with chdir(tmp_project_dir):
-            subprocess.check_output("svn add .", shell=True)
-            subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
+            check_output("svn add .")
+            check_output('svn commit -m "{}"'.format(commit_msg))
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = subprocess.check_output("svn info --show-item revision",
-                                              shell=True).decode().strip()
+                rev = check_output("svn info --show-item revision").decode().strip()
             else:
-                import xml.etree.ElementTree as ET
-                output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                output = check_output("svn info --xml").decode().strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
@@ -536,7 +533,7 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
 
 def create_remote_svn_repo(folder=None):
     tmp_dir = folder or temp_folder()
-    subprocess.check_output('svnadmin create "{}"'.format(tmp_dir), shell=True)
+    check_output('svnadmin create "{}"'.format(tmp_dir))
     return SVN.file_protocol + quote(tmp_dir.replace("\\", "/"), safe='/:')
 
 

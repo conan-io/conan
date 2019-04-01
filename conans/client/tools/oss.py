@@ -435,12 +435,12 @@ def get_gnu_triplet(os_, arch, compiler=None):
     return "%s-%s" % (machine, op_system)
 
 
-def check_output(cmd, folder=None, return_code=False, error_to_stdout=False):
+def check_output(cmd, folder=None, return_code=False, error_to_stdout=False, shell=True):
     tmp_file = tempfile.mktemp()
     try:
         stderr = subprocess.STDOUT if error_to_stdout else subprocess.PIPE
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
-                                   stderr=stderr, cwd=folder)
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=shell,
+                                   stdout=stdout, stderr=stderr, cwd=folder)
         process.communicate()
 
         if return_code:

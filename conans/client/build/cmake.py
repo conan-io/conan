@@ -1,6 +1,5 @@
 import os
 import platform
-import subprocess
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -11,7 +10,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform
 from conans.client.output import ConanOutput
-from conans.client.tools.oss import cpu_count, args_to_string
+from conans.client.tools.oss import cpu_count, args_to_string, check_output
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -366,7 +365,7 @@ class CMake(object):
     @staticmethod
     def get_version():
         try:
-            out, _ = subprocess.Popen(["cmake", "--version"], stdout=subprocess.PIPE).communicate()
+            out = check_output(["cmake", "--version"])
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.rsplit(' ', 1)[-1]
             return Version(version_str)

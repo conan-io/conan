@@ -1,28 +1,12 @@
 import os
 import platform
 import re
-import subprocess
 
 from conans.client.output import Color
 from conans.client.tools import detected_os
+from conans.client.tools.oss import check_output, ConanSubprocessError
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
-
-
-def _execute(command):
-    proc = subprocess.Popen(command, shell=True, bufsize=1, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-
-    output_buffer = []
-    while True:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        # output.write(line)
-        output_buffer.append(str(line))
-
-    proc.communicate()
-    return proc.returncode, "".join(output_buffer)
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
@@ -30,14 +14,12 @@ def _gcc_compiler(output, compiler_exe="gcc"):
     try:
         if platform.system() == "Darwin":
             # In Mac OS X check if gcc is a fronted using apple-clang
-            _, out = _execute("%s --version" % compiler_exe)
+            out = check_output("%s --version" % compiler_exe)
             out = out.lower()
             if "clang" in out:
                 return None
 
-        ret, out = _execute('%s -dumpversion' % compiler_exe)
-        if ret != 0:
-            return None
+        out = check_output('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
@@ -50,15 +32,15 @@ def _gcc_compiler(output, compiler_exe="gcc"):
                 output.info("gcc>=5, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except ConanSubprocessError:
+        return None
+    except Exception:
         return None
 
 
 def _clang_compiler(output, compiler_exe="clang"):
     try:
-        ret, out = _execute('%s --version' % compiler_exe)
-        if ret != 0:
-            return None
+        out = check_output('%s --version' % compiler_exe)
         if "Apple" in out:
             compiler = "apple-clang"
         elif "clang version" in out:
@@ -71,19 +53,23 @@ def _clang_compiler(output, compiler_exe="clang"):
                 output.info("clang>=8, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except ConanSubprocessError:
+        return None
+    except Exception:
         return None
 
 
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
-        _, out = _execute('%s -V' % compiler_exe)
+        out = check_output('%s -V' % compiler_exe)
         compiler = "sun-cc"
         installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
-    except:
+    except ConanSubprocessError:
+        return None
+    except Exception:
         return None
 
 

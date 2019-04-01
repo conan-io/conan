@@ -1,12 +1,12 @@
 import os
 import platform
 import shutil
-import subprocess
 import tempfile
 import textwrap
 import unittest
 
 from conans.client.remote_manager import uncompress_file
+from conans.client.tools.oss import check_output
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.test.utils.tools import TestBufferConanOutput
@@ -17,7 +17,7 @@ from conans.test.utils.tools import TestClient, TestServer
 class TgzMacosDotFilesTest(unittest.TestCase):
 
     def _add_macos_metadata_to_file(self, filepath):
-        subprocess.call(["xattr", "-w", "name", "value", filepath])
+        check_output(["xattr", "-w", "name", "value", filepath])
 
     def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
@@ -40,7 +40,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         tmp_folder = tempfile.mkdtemp()
         try:
             tgz = os.path.join(tmp_folder, 'compressed.tgz')
-            subprocess.call(["tar", "-zcvf", tgz, "-C", folder, "."])
+            check_output(["tar", "-zcvf", tgz, "-C", folder, "."])
             self._test_for_metadata_in_zip_file(tgz, annotated_file, dot_file_expected)
         finally:
             shutil.rmtree(tmp_folder)

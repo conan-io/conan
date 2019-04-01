@@ -40,6 +40,7 @@ from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle,
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
+from conans.client.tools.oss import check_output, ConanSubprocessError
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -1041,7 +1042,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return output_with_newline_and_spaces
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
+            with mock.patch('conan.client.tools.oss.check_output', new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
@@ -1294,13 +1295,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\notherline\n")
         if platform.system() != "Windows":
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], error_to_stdout=True)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
 
             tools.unix2dos(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], error_to_stdout=True)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
         else:
@@ -1314,13 +1314,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], error_to_stdout=True)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
 
             tools.dos2unix(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], error_to_stdout=True)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
         else:
@@ -1993,7 +1992,7 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
 
     def test_missing_remote(self):
         repo_url = self.gimme_tmp()
-        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
+        check_output('svnadmin create "{}"'.format(repo_url))
         project_url = SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
 
         svn = SVN(folder=self.gimme_tmp())

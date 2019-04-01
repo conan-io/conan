@@ -1,12 +1,11 @@
 import copy
 import os
 import re
-import subprocess
 
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, check_output
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
@@ -225,7 +224,7 @@ class MSBuild(object):
         vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
-            out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            out, _ = check_output(command)
             version_line = decode_text(out).split("\n")[-1]
             prog = re.compile("(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()
