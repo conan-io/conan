@@ -131,6 +131,18 @@ class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
 
+class ConanSubprocessError(ConanException):
+    def __init__(self, return_code, command):
+        self.return_code = return_code
+        self.command = command
+
+    def __str__(self):
+        if self.return_code and self.return_code < 0:
+            return "Command '{}' died with {!r}".format(self.cmd, self.return_code)
+        else:
+            return "Command '{}' returned non-zero exit status {}".format(self.cmd, self.return_code)
+
+
 # Remote exceptions #
 class InternalErrorException(ConanException):
     """

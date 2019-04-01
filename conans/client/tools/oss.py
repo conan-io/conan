@@ -7,7 +7,7 @@ import tempfile
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanSubprocessError
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
 
@@ -154,7 +154,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = subprocess.check_output(['uname.exe', '-s']).decode()
+            uname = check_output(['uname.exe', '-s']).decode()
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -298,7 +298,7 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
+                ret = check_output(command).decode().strip().lower()
                 return ret
         except Exception:
             return None
@@ -435,18 +435,19 @@ def get_gnu_triplet(os_, arch, compiler=None):
     return "%s-%s" % (machine, op_system)
 
 
-def check_output(cmd, folder=None, return_code=False):
+def check_output(cmd, folder=None, return_code=False, error_to_stdout=False):
     tmp_file = tempfile.mktemp()
     try:
+        stderr = subprocess.STDOUT if error_to_stdout else subprocess.PIPE
         process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
-                                   stderr=subprocess.PIPE, cwd=folder)
+                                   stderr=stderr, cwd=folder)
         process.communicate()
 
         if return_code:
             return process.returncode
 
         if process.returncode:
-            raise subprocess.CalledProcessError(process.returncode, cmd)
+            raise ConanSubprocessError(process.returncode, cmd)
 
         output = load(tmp_file)
         return output
