@@ -440,7 +440,7 @@ def check_output(cmd, folder=None, return_code=False, error_to_stdout=False, she
     try:
         stderr = subprocess.STDOUT if error_to_stdout else subprocess.PIPE
         process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=shell,
-                                   stdout=stdout, stderr=stderr, cwd=folder)
+                                   stderr=stderr, cwd=folder)
         process.communicate()
 
         if return_code:
