@@ -79,41 +79,8 @@ def zipdir(path, zipfilename):
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
-        # Save to the old registry, it has to be migrated
-        registry_path = self.client.cache.registry_path
-
-        save(registry_path, """
-{
- "remotes": [
-  {
-   "url": "https://myrepo2.com",
-   "verify_ssl": true,
-   "name": "my-repo-2"
-  },
-  {
-   "url": "https://conan-center.com",
-   "verify_ssl": true,
-   "name": "conan-center"
-  }
-<<<<<<< HEAD
- ]
-=======
- ],
- "references": {
-  "MyPkg/0.1@user/channel": "my-repo-2",
-  "Other/1.2@user/channel": "conan-center"
- }
->>>>>>> develop
-}
-""")
         save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
-
-        self.old_env = dict(os.environ)
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.old_env)
 
     def _create_profile_folder(self, folder=None):
         folder = folder or temp_folder(path_with_spaces=False)

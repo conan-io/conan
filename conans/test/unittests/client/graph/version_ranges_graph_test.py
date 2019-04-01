@@ -44,7 +44,7 @@ class VersionRangesTest(GraphTest):
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = TestConanFile("Say", v)
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
-            self.retriever.conan(say_ref, say_content)
+            self.retriever.save_recipe(say_ref, say_content)
 
     def build_graph(self, content, update=False):
         self.loader.cached_conanfiles = {}
@@ -129,9 +129,9 @@ class Dep1Conan(ConanFile):
     requires = "Say/[%s]@myuser/testing"
 """
         dep_ref = ConanFileReference.loads("Dep1/0.1@myuser/testing")
-        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        self.retriever.save_recipe(dep_ref, dep_content % ">=0.1")
         dep_ref = ConanFileReference.loads("Dep2/0.1@myuser/testing")
-        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        self.retriever.save_recipe(dep_ref, dep_content % ">=0.1")
 
         hello_content = """from conans import ConanFile
 class HelloConan(ConanFile):
@@ -167,7 +167,7 @@ class HelloConan(ConanFile):
         hello_text = TestConanFile("Hello", "1.2",
                                    requires=["Say/[>0.1, <1]@myuser/testing"])
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
-        self.retriever.conan(hello_ref, hello_text)
+        self.retriever.save_recipe(hello_ref, hello_text)
 
         chat_content = """
 from conans import ConanFile
@@ -213,7 +213,7 @@ class ChatConan(ConanFile):
     def duplicated_error_test(self):
         content = TestConanFile("log4cpp", "1.1.1")
         log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
-        self.retriever.conan(log4cpp_ref, content)
+        self.retriever.save_recipe(log4cpp_ref, content)
 
         content = """
 from conans import ConanFile
@@ -226,7 +226,7 @@ class LoggerInterfaceConan(ConanFile):
         self.requires("log4cpp/[~1.1]@myuser/testing")
 """
         logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@myuser/testing")
-        self.retriever.conan(logiface_ref, content)
+        self.retriever.save_recipe(logiface_ref, content)
 
         content = """
 from conans import ConanFile
@@ -237,7 +237,7 @@ class OtherConan(ConanFile):
     requires = "LoggerInterface/[~0.1]@myuser/testing"
 """
         other_ref = ConanFileReference.loads("other/2.0.11549@myuser/testing")
-        self.retriever.conan(other_ref, content)
+        self.retriever.save_recipe(other_ref, content)
 
         content = """
 from conans import ConanFile

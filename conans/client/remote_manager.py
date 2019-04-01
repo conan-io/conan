@@ -89,11 +89,12 @@ class RemoteManager(object):
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
-        rm_conandir(self._cache.source(ref))
+        package_layout = self._cache.package_layout(ref)
+        rm_conandir(package_layout.source())
         touch_folder(dest_folder)
-        conanfile_path = self._cache.conanfile(ref)
+        conanfile_path = package_layout.conanfile()
 
-        with self._cache.package_layout(ref).update_metadata() as metadata:
+        with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,

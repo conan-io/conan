@@ -48,7 +48,7 @@ class PackageCacheLayout(object):
     def ref(self):
         return self._ref
 
-    def conan(self):
+    def base_folder(self):
         """ Returns the base folder for this package reference """
         return self._base_folder
 
@@ -181,25 +181,25 @@ class PackageCacheLayout(object):
     def conanfile_read_lock(self, output):
         if self._no_lock:
             return NoLock()
-        return ReadLock(self.conan(), self._ref, output)
+        return ReadLock(self._base_folder, self._ref, output)
 
     def conanfile_write_lock(self, output):
         if self._no_lock:
             return NoLock()
-        return WriteLock(self.conan(), self._ref, output)
+        return WriteLock(self._base_folder, self._ref, output)
 
     def conanfile_lock_files(self, output):
         if self._no_lock:
             return ()
-        return WriteLock(self.conan(), self._ref, output).files
+        return WriteLock(self._base_folder, self._ref, output).files
 
     def package_lock(self, pref):
         if self._no_lock:
             return NoLock()
-        return SimpleLock(os.path.join(self.conan(), "locks", pref.id))
+        return SimpleLock(os.path.join(self._base_folder, "locks", pref.id))
 
     def remove_package_locks(self):
-        conan_folder = self.conan()
+        conan_folder = self._base_folder
         Lock.clean(conan_folder)
         rmdir(os.path.join(conan_folder, "locks"))
 
