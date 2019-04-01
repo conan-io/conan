@@ -56,7 +56,7 @@ class Workspace(object):
         macro(conan_workspace_subdirectories)
             set(CONAN_IS_WS TRUE)
             {% for item in editables %}
-                add_subdirectory(${PACKAGE_{{ item.name }}_SRC} {{ item.build_folder }})
+                add_subdirectory(${PACKAGE_{{ item.name }}_SRC} "{{ item.build_folder }}")
                 {% if item.alias_target %}
                 add_library(CONAN_PKG::{{ item.name }} ALIAS {{ item.alias_target }}) # Use our library
                 {% endif %}
