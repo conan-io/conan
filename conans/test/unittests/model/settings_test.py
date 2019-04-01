@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
 
@@ -22,6 +24,22 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "Windows"
         self.assertTrue(settings.os == "Windows")
         self.assertEqual("os=Windows", settings.values.dumps())
+
+    def getattr_none_test(self):
+        yml = "os: [None, Windows]"
+        settings = Settings.loads(yml)
+        self.assertEqual(settings.os, None)
+        _os = getattr(settings, "os")
+        self.assertEqual(_os, None)
+        self.assertEqual(str(_os), "None")
+
+    def test_get_safe(self):
+        yml = "os: [None, Windows]"
+        settings = Settings.loads(yml)
+        settings.os = "Windows"
+        self.assertEqual(settings.os, "Windows")
+        self.assertEqual(settings.get_safe("compiler.version"), None)
+        self.assertEqual(settings.get_safe("build_type"), None)
 
     def test_none_subsetting(self):
         yml = """os:
@@ -52,7 +70,7 @@ class SettingsLoadsTest(unittest.TestCase):
         subsystem: [None, cygwin]
     Windows:
 """
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      "settings.yml: None setting can't have subsettings"):
             Settings.loads(yml)
 
@@ -298,24 +316,24 @@ os: [Windows, Linux]
         self.sut.compiler = "gcc"
 
     def validate_test(self):
-        with self.assertRaisesRegexp(ConanException, str(undefined_value("settings.compiler"))):
+        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler"))):
             self.sut.validate()
 
         self.sut.compiler = "gcc"
-        with self.assertRaisesRegexp(ConanException, str(undefined_value("settings.compiler.arch"))):
+        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler.arch"))):
             self.sut.validate()
 
         self.sut.compiler.arch = "x86"
-        with self.assertRaisesRegexp(ConanException,
+        with six.assertRaisesRegex(self, ConanException,
                                      str(undefined_value("settings.compiler.arch.speed"))):
             self.sut.validate()
 
         self.sut.compiler.arch.speed = "A"
-        with self.assertRaisesRegexp(ConanException, str(undefined_value("settings.compiler.version"))):
+        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler.version"))):
             self.sut.validate()
 
         self.sut.compiler.version = "4.8"
-        with self.assertRaisesRegexp(ConanException, str(undefined_value("settings.os"))):
+        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.os"))):
             self.sut.validate()
 
         self.sut.os = "Windows"
@@ -329,11 +347,11 @@ os: [Windows, Linux]
     def validate2_test(self):
         self.sut.os = "Windows"
         self.sut.compiler = "Visual Studio"
-        with self.assertRaisesRegexp(ConanException, str(undefined_value("settings.compiler.runtime"))):
+        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler.runtime"))):
             self.sut.validate()
 
         self.sut.compiler.runtime = "MD"
-        with self.assertRaisesRegexp(ConanException, str(undefined_value("settings.compiler.version"))):
+        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler.version"))):
             self.sut.validate()
 
         self.sut.compiler.version = "10"

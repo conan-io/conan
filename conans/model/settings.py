@@ -85,7 +85,7 @@ class SettingsItem(object):
         return self.__bool__()
 
     def __str__(self):
-        return self._value
+        return str(self._value)
 
     def __eq__(self, other):
         if other is None:
@@ -227,7 +227,7 @@ class Settings(object):
 
     @staticmethod
     def loads(text):
-        return Settings(yaml.load(text) or {})
+        return Settings(yaml.safe_load(text) or {})
 
     def validate(self):
         for field in self.fields:

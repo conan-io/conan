@@ -13,10 +13,12 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import load, save_files
 
 
 class XZTest(TestCase):
+    output = TestBufferConanOutput()
 
     def test_error_xz(self):
         server = TestServer()
@@ -66,9 +68,9 @@ class Pkg(ConanFile):
 """
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, DEFAULT_REVISION_V1)
         server.server_store.update_last_package_revision(pref.copy_with_revs(DEFAULT_REVISION_V1,
-                                                                         DEFAULT_REVISION_V1))
+                                                                             DEFAULT_REVISION_V1))
 
         package = server.server_store.package(pref)
         save_files(package, {"conaninfo.txt": "#",
@@ -94,6 +96,6 @@ class Pkg(ConanFile):
 
     @unittest.skipUnless(six.PY2, "only Py2")
     def test_error_python2(self):
-        with self.assertRaisesRegexp(ConanException, "XZ format not supported in Python 2"):
+        with six.assertRaisesRegex(self, ConanException, "XZ format not supported in Python 2"):
             dest_folder = temp_folder()
-            unzip("somefile.tar.xz", dest_folder)
+            unzip("somefile.tar.xz", dest_folder, output=self.output)

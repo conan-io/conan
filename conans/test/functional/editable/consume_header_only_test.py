@@ -2,13 +2,12 @@
 
 import os
 import tempfile
-import unittest
 import textwrap
+import unittest
 
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference
-from conans.paths import LINKED_PACKAGE_SENTINEL, CONAN_PACKAGE_LAYOUT_FILE
+from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -27,17 +26,17 @@ class HeaderOnlyLibTestClient(TestClient):
     conanfile = textwrap.dedent("""\
         import os
         from conans import ConanFile, tools
-        
+
         class Pkg(ConanFile):
             name = "MyLib"
             version = "0.1"
-        
+
             exports_sources = "*"
-        
+
             def package(self):
                 self.copy("*.hpp", dst="include-inrepo", src="src/include-inrepo")
                 self.copy("*.hpp", dst="include-cache", src="src/include-cache")
-        
+
             def package_info(self):
                 self.cpp_info.libs = ["MyLib", "otra", ]
                 self.cpp_info.defines = ["MyLibDEFINES",]
@@ -51,7 +50,7 @@ class HeaderOnlyLibTestClient(TestClient):
         """)
 
     conan_cache_layout = textwrap.dedent("""\
-        [MyLib:includedirs]
+        [MyLib/0.1@user/editable:includedirs]
         src/include-cache
         """)
 
@@ -68,10 +67,11 @@ class HeaderOnlyLibTestClient(TestClient):
                    })
 
         if use_repo_file:
-            self.save({CONAN_PACKAGE_LAYOUT_FILE: self.conan_inrepo_layout, })
+            self.save({"mylayout": self.conan_inrepo_layout, })
 
         if use_cache_file:
-            save(self.cache.default_editable_path, self.conan_cache_layout)
+            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            save(file_path, self.conan_cache_layout)
 
     def update_hello_word(self, hello_word):
         self.save({"src/include-inrepo/hello.hpp": self.header.format(word=hello_word,
@@ -80,11 +80,6 @@ class HeaderOnlyLibTestClient(TestClient):
                                                                      origin='cache'),
                    "src/include-local/hello.hpp": self.header.format(word=hello_word,
                                                                      origin='local')})
-
-    def make_editable(self, full_reference):
-        ref = ConanFileReference.loads(full_reference)
-        cache_dir = self.cache.conan(ref)
-        save(os.path.join(cache_dir, LINKED_PACKAGE_SENTINEL), content=self.current_folder)
 
 
 class EditableReferenceTest(unittest.TestCase):
@@ -98,7 +93,10 @@ class EditableReferenceTest(unittest.TestCase):
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   use_cache_file=use_cache_file,
                                                   base_folder=base_folder)
-        client_editable.make_editable(full_reference="MyLib/0.1@user/editable")
+        if use_repo_file:
+            client_editable.run("editable add . MyLib/0.1@user/editable --layout=mylayout")
+        else:
+            client_editable.run("editable add . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)
@@ -147,7 +145,7 @@ int main() {
 
         # Build consumer project
         client.run("create . pkg/0.0@user/testing")
-        self.assertIn("    MyLib/0.1@user/editable from local cache - Editable", client.out)
+        self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("    MyLib/0.1@user/editable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable", client.out)
         self.assertIn("Hello EDITABLE!", client.out)

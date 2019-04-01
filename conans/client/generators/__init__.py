@@ -34,8 +34,8 @@ class _GeneratorManager(object):
     def __init__(self):
         self._generators = {}
 
-    def add(self, name, generator_class):
-        if name not in self._generators:
+    def add(self, name, generator_class, custom=False):
+        if name not in self._generators or custom:
             self._generators[name] = generator_class
 
     @property

@@ -19,7 +19,7 @@ class MyConanfile(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("create . Pkg/0.1@lasote/stable")
         client.run("upload '*' -c --all")
-        self.assertEquals(str(client.out).count("seconds to retry..."), 0)
+        self.assertEqual(str(client.out).count("seconds to retry..."), 0)
 
     def test_recipe_download_retry(self):
         test_server = TestServer()
@@ -38,7 +38,7 @@ class MyConanfile(ConanFile):
             ok = None
             status_code = None
             charset = None
-            headers = {}
+            headers = {"Content-Type": "application/json"}
 
             def __init__(self, ok, status_code):
                 self.ok = ok
@@ -69,5 +69,5 @@ class MyConanfile(ConanFile):
                             users={"default": [("lasote", "mypass")]},
                             requester_class=BuggyRequester)
         client.run("install Pkg/0.1@lasote/stable", assert_error=True)
-        self.assertEquals(str(client.out).count("Waiting 0 seconds to retry..."), 2)
-        self.assertEquals(str(client.out).count("ERROR: Error 200 downloading"), 3)
+        self.assertEqual(str(client.out).count("Waiting 0 seconds to retry..."), 2)
+        self.assertEqual(str(client.out).count("ERROR: Error 200 downloading"), 3)

@@ -35,7 +35,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin1']
         cpp_info.version = "0.1"
         cpp_info.cflags = ['-fgimple']
-        cpp_info.cppflags = ['-fdollars-in-identifiers']
+        cpp_info.cxxflags = ['-fdollars-in-identifiers']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -48,7 +48,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin2']
         cpp_info.version = "3.2.3"
         cpp_info.cflags = ['-fno-asm']
-        cpp_info.cppflags = ['-pthread']
+        cpp_info.cxxflags = ['-pthread']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -62,19 +62,19 @@ CONAN_ROOT_MYPKG1 ?=  \\
 CONAN_SYSROOT_MYPKG1 ?=  \\
 
 
-CONAN_INCLUDE_PATHS_MYPKG1 +=  \\
-{conan_include_paths_mypkg1}
+CONAN_INCLUDE_DIRS_MYPKG1 +=  \\
+{conan_include_dirs_mypkg1}
 
-CONAN_LIB_PATHS_MYPKG1 +=  \\
-{conan_lib_paths_mypkg1}
+CONAN_LIB_DIRS_MYPKG1 +=  \\
+{conan_lib_dirs_mypkg1}
 
-CONAN_BIN_PATHS_MYPKG1 +=  \\
-{conan_bin_paths_mypkg1}
+CONAN_BIN_DIRS_MYPKG1 +=  \\
+{conan_bin_dirs_mypkg1}
 
-CONAN_BUILD_PATHS_MYPKG1 +=  \\
-{conan_build_paths_mypkg1}
+CONAN_BUILD_DIRS_MYPKG1 +=  \\
+{conan_build_dirs_mypkg1}
 
-CONAN_RES_PATHS_MYPKG1 +=  \\
+CONAN_RES_DIRS_MYPKG1 +=  \\
 
 
 CONAN_LIBS_MYPKG1 +=  \\
@@ -86,7 +86,7 @@ MYDEFINE1
 CONAN_CFLAGS_MYPKG1 +=  \\
 -fgimple
 
-CONAN_CPPFLAGS_MYPKG1 +=  \\
+CONAN_CXXFLAGS_MYPKG1 +=  \\
 -fdollars-in-identifiers
 
 CONAN_SHAREDLINKFLAGS_MYPKG1 +=  \\
@@ -101,19 +101,19 @@ CONAN_ROOT_MYPKG2 ?=  \\
 CONAN_SYSROOT_MYPKG2 ?=  \\
 
 
-CONAN_INCLUDE_PATHS_MYPKG2 +=  \\
-{conan_include_paths_mypkg2}
+CONAN_INCLUDE_DIRS_MYPKG2 +=  \\
+{conan_include_dirs_mypkg2}
 
-CONAN_LIB_PATHS_MYPKG2 +=  \\
-{conan_lib_paths_mypkg2}
+CONAN_LIB_DIRS_MYPKG2 +=  \\
+{conan_lib_dirs_mypkg2}
 
-CONAN_BIN_PATHS_MYPKG2 +=  \\
-{conan_bin_paths_mypkg2}
+CONAN_BIN_DIRS_MYPKG2 +=  \\
+{conan_bin_dirs_mypkg2}
 
-CONAN_BUILD_PATHS_MYPKG2 +=  \\
-{conan_build_paths_mypkg2}
+CONAN_BUILD_DIRS_MYPKG2 +=  \\
+{conan_build_dirs_mypkg2}
 
-CONAN_RES_PATHS_MYPKG2 +=  \\
+CONAN_RES_DIRS_MYPKG2 +=  \\
 
 
 CONAN_LIBS_MYPKG2 +=  \\
@@ -125,7 +125,7 @@ MYDEFINE2
 CONAN_CFLAGS_MYPKG2 +=  \\
 -fno-asm
 
-CONAN_CPPFLAGS_MYPKG2 +=  \\
+CONAN_CXXFLAGS_MYPKG2 +=  \\
 -pthread
 
 CONAN_SHAREDLINKFLAGS_MYPKG2 +=  \\
@@ -142,25 +142,25 @@ CONAN_SYSROOT +=  \\
 $(CONAN_SYSROOT_MYPKG1) \\
 $(CONAN_SYSROOT_MYPKG2)
 
-CONAN_INCLUDE_PATHS +=  \\
-$(CONAN_INCLUDE_PATHS_MYPKG1) \\
-$(CONAN_INCLUDE_PATHS_MYPKG2)
+CONAN_INCLUDE_DIRS +=  \\
+$(CONAN_INCLUDE_DIRS_MYPKG1) \\
+$(CONAN_INCLUDE_DIRS_MYPKG2)
 
-CONAN_LIB_PATHS +=  \\
-$(CONAN_LIB_PATHS_MYPKG1) \\
-$(CONAN_LIB_PATHS_MYPKG2)
+CONAN_LIB_DIRS +=  \\
+$(CONAN_LIB_DIRS_MYPKG1) \\
+$(CONAN_LIB_DIRS_MYPKG2)
 
-CONAN_BIN_PATHS +=  \\
-$(CONAN_BIN_PATHS_MYPKG1) \\
-$(CONAN_BIN_PATHS_MYPKG2)
+CONAN_BIN_DIRS +=  \\
+$(CONAN_BIN_DIRS_MYPKG1) \\
+$(CONAN_BIN_DIRS_MYPKG2)
 
-CONAN_BUILD_PATHS +=  \\
-$(CONAN_BUILD_PATHS_MYPKG1) \\
-$(CONAN_BUILD_PATHS_MYPKG2)
+CONAN_BUILD_DIRS +=  \\
+$(CONAN_BUILD_DIRS_MYPKG1) \\
+$(CONAN_BUILD_DIRS_MYPKG2)
 
-CONAN_RES_PATHS +=  \\
-$(CONAN_RES_PATHS_MYPKG1) \\
-$(CONAN_RES_PATHS_MYPKG2)
+CONAN_RES_DIRS +=  \\
+$(CONAN_RES_DIRS_MYPKG1) \\
+$(CONAN_RES_DIRS_MYPKG2)
 
 CONAN_LIBS +=  \\
 $(CONAN_LIBS_MYPKG1) \\
@@ -174,9 +174,9 @@ CONAN_CFLAGS +=  \\
 $(CONAN_CFLAGS_MYPKG1) \\
 $(CONAN_CFLAGS_MYPKG2)
 
-CONAN_CPPFLAGS +=  \\
-$(CONAN_CPPFLAGS_MYPKG1) \\
-$(CONAN_CPPFLAGS_MYPKG2)
+CONAN_CXXFLAGS +=  \\
+$(CONAN_CXXFLAGS_MYPKG1) \\
+$(CONAN_CXXFLAGS_MYPKG2)
 
 CONAN_SHAREDLINKFLAGS +=  \\
 $(CONAN_SHAREDLINKFLAGS_MYPKG1) \\
@@ -199,13 +199,14 @@ $(CONAN_EXELINKFLAGS_MYPKG2)
         bin2 = os.path.join(tmp_folder2, 'bin2').replace('\\', '/')
 
         expected_content = content_template.format(conan_root_mypkg1=root1,
-                                                   conan_include_paths_mypkg1=inc1,
-                                                   conan_lib_paths_mypkg1=lib1,
-                                                   conan_bin_paths_mypkg1=bin1,
-                                                   conan_build_paths_mypkg1=root1 + "/",
+                                                   conan_include_dirs_mypkg1=inc1,
+                                                   conan_lib_dirs_mypkg1=lib1,
+                                                   conan_bin_dirs_mypkg1=bin1,
+                                                   conan_build_dirs_mypkg1=root1 + "/",
                                                    conan_root_mypkg2=root2,
-                                                   conan_include_paths_mypkg2=inc2,
-                                                   conan_lib_paths_mypkg2=lib2,
-                                                   conan_bin_paths_mypkg2=bin2,
-                                                   conan_build_paths_mypkg2=root2 + "/")
+                                                   conan_include_dirs_mypkg2=inc2,
+                                                   conan_lib_dirs_mypkg2=lib2,
+                                                   conan_bin_dirs_mypkg2=bin2,
+                                                   conan_build_dirs_mypkg2=root2 + "/")
+        self.maxDiff = None
         self.assertIn(expected_content, content)

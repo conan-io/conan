@@ -1,11 +1,13 @@
 import os
 import unittest
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer,\
-    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
-from conans.paths import CONANFILE
+import time
 from parameterized import parameterized
+
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE
+from conans.test.utils.tools import TestClient, TestServer, \
+    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
 
 
 class PythonExtendTest(unittest.TestCase):
@@ -339,8 +341,8 @@ class Pkg2(base.Pkg):
         self.output.info("HEADER CONTENT!: %s" % load("header.h"))
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header", client.out)
+        client.run("create . Pkg/0.1@user/testing", assert_error=True)
+        self.assertIn("No such file or directory: 'header.h'", client.out)
 
     def reuse_class_members_test(self):
         client = TestClient()
@@ -442,6 +444,39 @@ class MyConanfileBase(ConanFile):
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: MyHelperOutput!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: MyOtherHelperOutput!", client.out)
+
+    def update_test(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+somevar = 42
+class MyConanfileBase(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . MyConanfileBase/1.1@lasote/testing")
+        client.run("upload * --confirm")
+
+        client2 = TestClient(servers=client.servers, users={"default": [("lasote", "mypass")]})
+
+        reuse = """from conans import python_requires
+base = python_requires("MyConanfileBase/1.1@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    def configure(self):
+        self.output.info("PYTHON REQUIRE VAR %s" % base.somevar)
+"""
+
+        client2.save({"conanfile.py": reuse})
+        client2.run("install .")
+        self.assertIn("conanfile.py: PYTHON REQUIRE VAR 42", client2.out)
+
+        client.save({"conanfile.py": conanfile.replace("42", "143")})
+        time.sleep(1)  # guarantee time offset
+        client.run("export . MyConanfileBase/1.1@lasote/testing")
+        client.run("upload * --confirm")
+
+        client2.run("install . --update")
+        self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
 
 class PythonRequiresNestedTest(unittest.TestCase):

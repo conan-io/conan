@@ -10,8 +10,9 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.service.authorize import BasicAuthorizer
-from conans.server.service.service import ConanService, FileUploadDownloadService, \
-    SearchService
+from conans.server.service.common.search import SearchService
+from conans.server.service.v1.service import ConanService
+from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.test_files import hello_source_files, temp_folder
@@ -48,10 +49,10 @@ class FileUploadDownloadServiceTest(unittest.TestCase):
                                                        "pepe", len(self.content))
         path_to_file = self.service.get_file_path(self.relative_file_path, token)
 
-        self.assertEquals(path_to_file, self.absolute_file_path)
+        self.assertEqual(path_to_file, self.absolute_file_path)
 
         readed_content = load(self.absolute_file_path)
-        self.assertEquals(readed_content, self.content)
+        self.assertEqual(readed_content, self.content)
 
         # Expire token
         sleep(2)
@@ -113,7 +114,7 @@ class ConanServiceTest(unittest.TestCase):
                          'CMakeLists.txt':  md5sum(os.path.join(base_path, "CMakeLists.txt")),
                          'hellotest.h':  md5sum(os.path.join(base_path, "hellotest.h"))}
 
-        self.assertEquals(snap, snap_expected)
+        self.assertEqual(snap, snap_expected)
 
     def test_get_conanfile_download_urls(self):
         urls = self.service.get_conanfile_download_urls(self.ref)
@@ -132,7 +133,7 @@ class ConanServiceTest(unittest.TestCase):
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellotest.h': fake_url_build('hellotest.h'),
                          'main.cpp': fake_url_build('main.cpp')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_get_package_download_urls(self):
         urls = self.service.get_package_download_urls(self.pref)
@@ -152,7 +153,7 @@ class ConanServiceTest(unittest.TestCase):
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellopackage.h': fake_url_build('hellopackage.h'),
                          'main.cpp': fake_url_build('main.cpp')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_get_conanfile_upload_urls(self):
         urls = self.service.get_conanfile_upload_urls(self.ref,
@@ -169,7 +170,7 @@ class ConanServiceTest(unittest.TestCase):
 
         expected_urls = {'conanfile.py': fake_url_build('conanfile.py'),
                          'conanmanifest.txt': fake_url_build('conanmanifest.txt')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_get_package_upload_urls(self):
         urls = self.service.get_package_upload_urls(self.pref, {"uno.lib": 23, "dos.dll": 24})
@@ -186,7 +187,7 @@ class ConanServiceTest(unittest.TestCase):
 
         expected_urls = {'uno.lib': fake_url_build('uno.lib'),
                          'dos.dll': fake_url_build('dos.dll')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_search(self):
         """ check the dict is returned by get_packages_info service
@@ -221,15 +222,15 @@ class ConanServiceTest(unittest.TestCase):
         self.assertEqual(expected, info)
 
         info = self.search_service.search(pattern="Assimp*", ignorecase=False)
-        self.assertEqual(info, [ref3])
+        self.assertEqual(info, [ref3.copy_clear_rev()])
 
-        info = self.search_service.search_packages(ref2, None, v2_compatibility_mode=False)
+        info = self.search_service.search_packages(ref2, None)
         self.assertEqual(info, {'12345587754': {'full_requires': [],
                                                 'options': {'use_Qt': 'False'},
                                                 'settings': {},
                                                 'recipe_hash': None}})
 
-        info = self.search_service.search_packages(ref3, None, v2_compatibility_mode=False)
+        info = self.search_service.search_packages(ref3, None)
         self.assertEqual(info, {'77777777777': {'full_requires': [],
                                                 'options': {'use_Qt': 'True'},
                                                 'settings': {},
@@ -256,7 +257,8 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete one package
         self.service.remove_packages(ref3, ["77777777777"])
-        package_folder_3 = self.server_store.package(PackageReference(ref3, '77777777777'))
+        pref = PackageReference(ref3, '77777777777')
+        package_folder_3 = self.server_store.package_revisions_root(pref)
         self.assertFalse(os.path.exists(package_folder_3))
 
         # Raise an exception

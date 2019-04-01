@@ -8,6 +8,7 @@ from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.model.version import Version
 from conans.util.env_reader import get_env
 from conans.util.log import logger
 
@@ -36,7 +37,7 @@ def get_generator(settings):
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
-            # Not enough settings to set a generator in Windows
+            logger.warning("CMake generator could not be deduced from settings")
             return None
         return "Unix Makefiles"
 
@@ -47,15 +48,16 @@ def get_generator(settings):
                     '11': '11 2012',
                     '12': '12 2013',
                     '14': '14 2015',
-                    '15': '15 2017'}
+                    '15': '15 2017',
+                    '16': '16 2019'}
         base = "Visual Studio %s" % _visuals.get(compiler_version,
                                                  "UnknownVersion %s" % compiler_version)
-        if arch == "x86_64":
-            return base + " Win64"
-        elif "arm" in arch:
-            return base + " ARM"
-        else:
-            return base
+        if Version(compiler_version) < "16":
+            if arch == "x86_64":
+                base += " Win64"
+            elif "arm" in arch:
+                base += " ARM"
+        return base
 
     # The generator depends on the build machine, not the target
     if os_build == "Windows":
@@ -64,7 +66,25 @@ def get_generator(settings):
     return "Unix Makefiles"
 
 
+def get_generator_platform(settings):
+    if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
+        return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
+
+    compiler = settings.get_safe("compiler")
+    arch = settings.get_safe("arch")
+    compiler_version = settings.get_safe("compiler.version")
+
+    if compiler == "Visual Studio" and Version(compiler_version) >= "16":
+        return {"x86": "Win32",
+                "x86_64": "x64",
+                "armv7": "ARM",
+                "armv8": "ARM64"}.get(arch)
+    return None
+
+
 def is_multi_configuration(generator):
+    if not generator:
+        return False
     return "Visual" in generator or "Xcode" in generator
 
 

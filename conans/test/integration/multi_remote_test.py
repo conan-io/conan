@@ -119,7 +119,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)
 
-    @unittest.skipIf(TestClient().revisions,
+    @unittest.skipIf(TestClient().cache.config.revisions_enabled,
                      "This test is not valid for revisions, where we keep iterating the remotes "
                      "for searching a package for the same recipe revision")
     def package_binary_remote_test(self):
@@ -134,8 +134,8 @@ class ConanFileToolsTest(ConanFile):
         self.client.run("create . %s" % reference)
         self.client.run("upload %s -r=remote0 --all" % reference)
         self.client.run("upload %s -r=remote2 --all" % reference)
-
-        rev1 = self.client.get_revision(ConanFileReference.loads(reference))
+        ref = ConanFileReference.loads(reference)
+        rev1 = self.client.cache.package_layout(ref).recipe_revision()
 
         # Remove only binary from remote1 and everything in local
         self.client.run("remove -f %s -p -r remote0" % reference)
@@ -152,8 +152,8 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable from 'remote0' - Cache", self.client.out)
         registry = load(self.client.cache.registry_path)
         registry = json.loads(registry)
-        self.assertEquals(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
-        self.assertEquals(registry["package_references"],
+        self.assertEqual(registry["references"], {"Hello/0.1@lasote/stable": "remote0"})
+        self.assertEqual(registry["package_references"],
                           {"Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9":
                            "remote2"})
 
@@ -171,9 +171,3 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Update", self.client.out)
         self.assertIn("Downloading conan_package.tgz", self.client.out)
-
-        if not self.client.revisions and not self.client.block_v2:
-            self.client.run("install %s#%s --update" % (reference, rev1))
-
-            self.assertIn("Hello/0.1@lasote/stable:"
-                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", self.client.out)

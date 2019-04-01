@@ -5,7 +5,7 @@ import traceback
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException
-from conans.util.files import exception_message_safe, mkdir, save_append, sha1sum, to_file_bytes
+from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
@@ -19,16 +19,22 @@ class Uploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+        # Send always the header with the Sha1
+        headers = headers or {}
+        headers["X-Checksum-Sha1"] = sha1sum(abs_path)
         if dedup:
-            dedup_headers = {"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)}
+            dedup_headers = {"X-Checksum-Deploy": "true"}
             if headers:
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
-        headers = headers or {}
         self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
@@ -47,8 +53,14 @@ class Uploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+            if response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
+        except ConanException:
+            raise
         except Exception as exc:
-            raise ConanException(exception_message_safe(exc))
+            raise ConanException(exc)
 
         return response
 
@@ -140,7 +152,7 @@ class Downloader(object):
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
                                           headers=headers)
         except Exception as exc:
-            raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
+            raise ConanException("Error downloading file %s: '%s'" % (url, exc))
 
         if not response.ok:
             if response.status_code == 404:
@@ -246,7 +258,6 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
                 raise
             else:
                 if out:
-                    msg = exception_message_safe(exc)
-                    out.error(msg)
+                    out.error(exc)
                     out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)

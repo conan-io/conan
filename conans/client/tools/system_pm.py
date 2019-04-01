@@ -3,6 +3,7 @@ import sys
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
+from conans.client.tools.files import which
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
@@ -33,6 +34,8 @@ class SystemPackageTool(object):
     @staticmethod
     def _is_sudo_enabled():
         if "CONAN_SYSREQUIRES_SUDO" not in os.environ:
+            if not which("sudo"):
+                return False
             if os.name == 'posix' and os.geteuid() == 0:
                 return False
             if os.name == 'nt':

@@ -11,7 +11,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
-    detected_architecture, get_gnu_triplet
+    detected_architecture, detected_os, get_gnu_triplet
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
@@ -76,7 +76,7 @@ class AutoToolsBuildEnvironment(object):
         and complex verification"""
 
         arch_detected = detected_architecture() or platform.machine()
-        os_detected = platform.system()
+        os_detected = detected_os() or platform.system()
 
         if os_detected is None or arch_detected is None or self._arch is None or self._os is None:
             return False, False, False
@@ -255,7 +255,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_cxx_flags(self):
-        ret = copy.copy(self._deps_cpp_info.cppflags)
+        ret = copy.copy(self._deps_cpp_info.cxxflags)
         cxxf = libcxx_flag(compiler=self._compiler, libcxx=self._libcxx)
         if cxxf:
             ret.append(cxxf)

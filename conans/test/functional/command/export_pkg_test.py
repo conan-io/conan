@@ -9,6 +9,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
 
 
@@ -81,7 +82,7 @@ class HelloPythonConan(ConanFile):
                       client.out)
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg")
-        self.assertIn("Hello/0.1@lasote/stable: WARN: No files copied from package folder!",
+        self.assertIn("Hello/0.1@lasote/stable: WARN: No files in this package!",
                       client.out)
 
     def test_package_folder(self):
@@ -100,7 +101,8 @@ class HelloPythonConan(ConanFile):
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -pr=profile")
         self.assertNotIn("PACKAGE NOT CALLED", client.out)
-        self.assertIn("Hello/0.1@lasote/stable: Copied 1 '.h' file: myfile.h", client.out)
+        self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
+        self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pkg_folder = client.cache.packages(ref)
         folders = os.listdir(pkg_folder)
@@ -176,6 +178,9 @@ class HelloPythonConan(ConanFile):
         self.assertIn("optionOne: 123", client.out)
 
     @parameterized.expand([(False, ), (True, )])
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False),
+                     "This test exports several RREVS assuming that the "
+                     "packages will be preserved and they will be removed")
     def test_basic(self, short_paths):
         client = TestClient()
         conanfile = """
@@ -271,10 +276,10 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable %s" % settings)
         self.assertIn("Hello/0.1@lasote/stable: A new conanfile.py version was exported",
                       client.out)
-        self.assertNotIn("Hello/0.1@lasote/stable package(): WARN: No files copied",
+        self.assertNotIn("Hello/0.1@lasote/stable package(): WARN: No files in this package!",
                          client.out)  # --bare include a now mandatory package() method!
 
-        self.assertIn("Copied 1 '.a' file: libmycoollib.a", client.out)
+        self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g cmake")
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
@@ -380,7 +385,7 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . conan/stable")
-        self.assertIn("Hello/0.1@conan/stable package(): Copied 1 '.txt' file: file.txt", client.out)
+        self.assertIn("Hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt", client.out)
 
         # Specify different name or version is not working
         client.run("export-pkg . lib/1.0@conan/stable -f", assert_error=True)
@@ -400,7 +405,7 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . anyname/1.222@conan/stable")
-        self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' file: file.txt",
+        self.assertIn("anyname/1.222@conan/stable package(): Packaged 1 '.txt' file: file.txt",
                       client.out)
 
     def test_with_deps(self):
@@ -445,8 +450,10 @@ class TestConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            self.assertEqual(output["installed"][0]["recipe"]["id"],
-                             "mypackage/0.1.0@danimtb/testing")
+            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            if self.client.cache.config.revisions_enabled:
+                self.assertIsNotNone(tmp.revision)
+            self.assertEqual(str(tmp), "mypackage/0.1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
             self.assertTrue(output["installed"][0]["recipe"]["exported"])
             if with_error:
@@ -493,8 +500,10 @@ class MyConan(ConanFile):
             json_content = load(json_path)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
-            self.assertEqual(output["installed"][0]["recipe"]["id"],
-                             "pkg2/1.0@danimtb/testing")
+            tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
+            if self.client.cache.config.revisions_enabled:
+                self.assertIsNotNone(tmp.revision)
+            self.assertEqual(str(tmp), "pkg2/1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
             self.assertTrue(output["installed"][0]["recipe"]["exported"])
             if with_error:
@@ -503,8 +512,10 @@ class MyConan(ConanFile):
                 self.assertEqual(output["installed"][0]["packages"][0]["id"],
                                  "5825778de2dc9312952d865df314547576f129b3")
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
-                self.assertEqual(output["installed"][1]["recipe"]["id"],
-                                 "pkg1/1.0@danimtb/testing")
+                tmp = ConanFileReference.loads(output["installed"][1]["recipe"]["id"])
+                if self.client.cache.config.revisions_enabled:
+                    self.assertIsNotNone(tmp.revision)
+                self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
                 self.assertTrue(output["installed"][1]["recipe"]["dependency"])
 
         conanfile = """from conans import ConanFile

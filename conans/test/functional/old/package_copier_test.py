@@ -4,6 +4,7 @@ import unittest
 
 from conans.client.cmd.copy import package_copy
 from conans.client.userio import UserIO
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths.simple_paths import SimplePaths
 from conans.test.utils.test_files import temp_folder
@@ -65,10 +66,10 @@ class PackageCopierTest(unittest.TestCase):
         package_copy(ref, "lasote/stable", ["0101001", "2222222"], paths,
                      user_io=userio, force=False)
         conanfile_content = load(os.path.join(paths.export(new_ref), "conanfile.py"))
-        self.assertEquals(conanfile_content, "new content")
+        self.assertEqual(conanfile_content, "new content")
         package_content = load(os.path.join(paths.package(PackageReference(new_ref, "0101001")),
                                             "package.lib"))
-        self.assertEquals(package_content, "new lib content")
+        self.assertEqual(package_content, "new lib content")
 
         # Now we are going to answer always NO to override
         output._stream.truncate(0)  # Reset output
@@ -80,10 +81,10 @@ class PackageCopierTest(unittest.TestCase):
         package_copy(ref, "lasote/stable", ["0101001", "2222222"], paths,
                      user_io=userio, force=False)
         conanfile_content = load(os.path.join(paths.export(new_ref), "conanfile.py"))
-        self.assertEquals(conanfile_content, "new content")  # Not content22
+        self.assertEqual(conanfile_content, "new content")  # Not content22
         pref = PackageReference(new_ref, "0101001")
         package_content = load(os.path.join(paths.package(pref), "package.lib"))
-        self.assertEquals(package_content, "new lib content")  # Not newlib22
+        self.assertEqual(package_content, "new lib content")  # Not newlib22
         # If conanfile is not override it exist
         self.assertNotIn("Package '2222222' already exist. Override?", output)
         self.assertNotIn("Package '0101001' already exist. Override?", output)
@@ -122,6 +123,7 @@ class PackageCopierTest(unittest.TestCase):
         origin_reg = paths.export(ref)
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
+        save(os.path.join(paths.conan(ref), "metadata.json"), PackageMetadata().dumps())
         mkdir(paths.export_sources(ref))
 
     def _create_package(self, ref, package_id, paths, content="default_content"):

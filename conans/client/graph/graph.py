@@ -1,7 +1,3 @@
-from collections import OrderedDict
-
-from conans.errors import conanfile_exception_formatter
-from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -9,9 +5,8 @@ RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being us
 RECIPE_UPDATED = "Updated"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
-RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
+RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
-RECIPE_WORKSPACE = "Workspace"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
@@ -22,13 +17,14 @@ BINARY_UPDATE = "Update"
 BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
-BINARY_WORKSPACE = "Workspace"
 BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
+        self._package_id = None
+        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -37,9 +33,39 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
+        # all the public deps to which this node belongs
+        self.public_deps = None  # {ref.name: Node}
+        # all the public deps only in the closure of this node
+        self.public_closure = None  # {ref.name: Node}
+        self.ancestors = None  # set{ref.name}
+
+    def update_ancestors(self, ancestors):
+        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
+        self.ancestors.update(ancestors)
+        for n in self.neighbors():
+            n.update_ancestors(ancestors)
+
+    @property
+    def package_id(self):
+        return self._package_id
+
+    @package_id.setter
+    def package_id(self, pkg_id):
+        assert self._package_id is None, "Trying to override an existing package_id"
+        self._package_id = pkg_id
+
+    @property
+    def name(self):
+        return self.ref.name if self.ref else None
+
+    @property
+    def pref(self):
+        return PackageReference(self.ref, self.package_id, self.prev)
 
     def partial_copy(self):
+        # Used for collapse_graph
         result = Node(self.ref, self.conanfile)
         result.dependants = set()
         result.dependencies = []
@@ -60,12 +86,8 @@ class Node(object):
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
 
-    def public_neighbors(self):
-        return [edge.dst for edge in self.dependencies
-                if not edge.private and not edge.build_require]
-
     def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private or edge.build_require]
+        return [edge.dst for edge in self.dependencies if edge.private]
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
@@ -144,18 +166,9 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
         self.root = None
-
-    def add_graph(self, node, graph, build_require=False):
-        for n in graph.nodes:
-            if n != graph.root:
-                n.build_require = build_require
-                self.add_node(n)
-
-        for e in graph.root.dependencies:
-            e.src = node
-            e.build_require = build_require
-
-        node.dependencies = graph.root.dependencies + node.dependencies
+        self.aliased = {}
+        # These are the nodes with pref (not including PREV) that have been evaluated
+        self.evaluated = {}  # {pref: [nodes]}
 
     def add_node(self, node):
         if not self.nodes:
@@ -168,71 +181,11 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def compute_package_ids(self):
+    def ordered_iterate(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                conanfile = node.conanfile
-                neighbors = node.neighbors()
-                direct_reqs = []  # of PackageReference
-                indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for neighbor in neighbors:
-                    ref, nconan = neighbor.ref, neighbor.conanfile
-                    package_id = nconan.info.package_id()
-                    pref = PackageReference(ref, package_id)
-                    direct_reqs.append(pref)
-                    indirect_reqs.update(nconan.info.requires.refs())
-                    conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-                    # Might be never used, but update original requirement, just in case
-                    conanfile.requires[ref.name].ref = ref
-
-                # Make sure not duplicated
-                indirect_reqs.difference_update(direct_reqs)
-                # There might be options that are not upstream, backup them, might be
-                # for build-requires
-                conanfile.build_requires_options = conanfile.options.values
-                conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
-
-                conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                                  conanfile.options.values,
-                                                  direct_reqs,
-                                                  indirect_reqs)
-
-                # Once we are done, call package_id() to narrow and change possible values
-                with conanfile_exception_formatter(str(conanfile), "package_id"):
-                    conanfile.package_id()
-        return ordered
-
-    def full_closure(self, node, private=False):
-        # Needed to propagate correctly the cpp_info even with privates
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n] = n
-            for n in current:
-                neighbors = n.public_neighbors() if not private else n.neighbors()
-                for neigh in neighbors:
-                    if neigh not in new_current and neigh not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
-
-    def closure(self, node):
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n.ref.name] = n
-            for n in current:
-                neighs = n.public_neighbors()
-                for neigh in neighs:
-                    if neigh not in new_current and neigh.ref.name not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
+                yield node
 
     def _inverse_closure(self, references):
         closure = set()
@@ -261,7 +214,7 @@ class DepsGraph(object):
         for node in self.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            pref = PackageReference(node.ref, node.conanfile.info.package_id())
+            pref = PackageReference(node.ref, node.package_id)
             if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)
@@ -298,11 +251,10 @@ class DepsGraph(object):
 
     def nodes_to_build(self):
         ret = []
-        for level in self.by_levels():
-            for node in level:
-                if node.binary == BINARY_BUILD:
-                    if node.ref.copy_clear_rev() not in ret:
-                        ret.append(node.ref.copy_clear_rev())
+        for node in self.ordered_iterate():
+            if node.binary == BINARY_BUILD:
+                if node.ref.copy_clear_rev() not in ret:
+                    ret.append(node.ref.copy_clear_rev())
         return ret
 
     def by_levels(self):

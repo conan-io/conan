@@ -5,4 +5,7 @@ class BottleRoutes(RestRoutes):
 
     def __getattribute__(self, item):
         tmp = super(BottleRoutes, self).__getattribute__(item)
-        return tmp.replace("{path}", "<the_path:path>").replace("{", "<").replace("}", ">")
+        tmp = tmp.replace("{path}", "<the_path:path>").replace("{", "<").replace("}", ">")
+        if not tmp.startswith("/"):
+            return "/{}".format(tmp)
+        return tmp

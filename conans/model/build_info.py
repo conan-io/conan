@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 
+import deprecation
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -25,7 +26,7 @@ class _CppInfo(object):
         self.libs = []  # The libs to link against
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
-        self.cppflags = []  # C++ compilation flags
+        self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
@@ -38,11 +39,16 @@ class _CppInfo(object):
         self._src_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = True
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
-        return [p for p in abs_paths if os.path.isdir(p)]
+        if self.filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
 
     @property
     def include_paths(self):
@@ -79,6 +85,17 @@ class _CppInfo(object):
         if self._res_paths is None:
             self._res_paths = self._filter_paths(self.resdirs)
         return self._res_paths
+
+    # Compatibility for 'cppflags' (old style property to allow decoration)
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
+    def get_cppflags(self):
+        return self.cxxflags
+
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
+    def set_cppflags(self, value):
+        self.cxxflags = value
+
+    cppflags = property(get_cppflags, set_cppflags)
 
 
 class CppInfo(_CppInfo):
@@ -135,7 +152,7 @@ class _BaseDepsCppInfo(_CppInfo):
 
         # Note these are in reverse order
         self.defines = merge_lists(dep_cpp_info.defines, self.defines)
-        self.cppflags = merge_lists(dep_cpp_info.cppflags, self.cppflags)
+        self.cxxflags = merge_lists(dep_cpp_info.cxxflags, self.cxxflags)
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)

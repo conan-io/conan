@@ -6,6 +6,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient
+from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -38,7 +39,12 @@ class Pkg(ConanFile):
                                   settings=settings)
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
+        revisions_enabled = self.client.cache.config.revisions_enabled
+        self.client.disable_revisions()
+        # Trick to allow export a new recipe without removing old binary packages
         self.client.run("export . %s" % (channel or "lasote/stable"))
+        if revisions_enabled:
+            self.client.enable_revisions()
 
     @property
     def conaninfo(self):
@@ -63,9 +69,24 @@ class Pkg(ConanFile):
                      package_id_text='self.info.requires["Hello"].semver()',
                      requires=["Hello/1.5.0@lasote/stable"])
 
-        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install .")
-        self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
+        self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
+                         clean_first=True)
+
+        if not self.client.cache.config.revisions_enabled:
+            self.client.run("install .")
+            self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
+                          self.client.out)
+            self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
+        else:
+            # As we have changed Hello2, the binary is not valid anymore so it won't find it
+            # but will look for the same package_id
+            self.client.run("install .", assert_error=True)
+            self.assertIn("WARN: The package Hello2/2.3.8@lasote/stable:"
+                          "e0d17b497b58c730aac949f374cf0bdb533549ab doesn't belong to the "
+                          "installed recipe revision, removing folder",
+                          self.client.out)
+            self.assertIn("- Package ID: e0d17b497b58c730aac949f374cf0bdb533549ab",
+                          self.client.out)
 
         # Try to change user and channel too, should be the same, not rebuilt needed
         self._export("Hello", "1.5.0", package_id_text=None, requires=None, channel="memsharded/testing")
@@ -75,8 +96,16 @@ class Pkg(ConanFile):
                      requires=["Hello/1.5.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install .")
-        self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
+
+        if not self.client.cache.config.revisions_enabled:
+            self.client.run("install .")
+            self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
+                          self.client.out)
+            self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
+        else:
+            self.client.run("install .", assert_error=True)
+            self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
+                          self.client.out)
 
     def test_version_full_version_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -97,8 +126,16 @@ class Pkg(ConanFile):
                      requires=["Hello/1.2.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install .")
-        self.assertIn("Hello2/2.3.8", self.conaninfo)
+        if not self.client.cache.config.revisions_enabled:
+            self.client.run("install .")
+            self.assertIn("Hello2/2.3.8@lasote/stable:3ec60bb399a8bcb937b7af196f6685ba878aab02",
+                          self.client.out)
+        else:
+            # As we have changed Hello2, the binary is not valid anymore so it won't find it
+            # but will look for the same package_id
+            self.client.run("install .", assert_error=True)
+            self.assertIn("- Package ID: 3ec60bb399a8bcb937b7af196f6685ba878aab02",
+                          self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
         # needed the --build needed because Hello2 needs to be build
@@ -187,7 +224,16 @@ class Pkg(ConanFile):
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         # Not needed to rebuild Hello2, it doesn't matter its requires
-        self.client.run("install .")
+        if not self.client.cache.config.revisions_enabled:
+            self.client.run("install .")
+        else:  # We have changed hello2, so a new binary is required, but same id
+            self.client.run("install .", assert_error=True)
+            self.assertIn("The package "
+                          "Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 "
+                          "doesn't belong to the installed recipe revision, removing folder",
+                          self.client.out)
+            self.assertIn("Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 -"
+                          " Missing", self.client.out)
 
     def test_toolset_visual_compatibility(self):
         # By default is the same to build with native visual or the toolchain
@@ -257,8 +303,8 @@ class Pkg(ConanFile):
 
         info = install_and_get_info(None)  # Default
 
-        self.assertEquals(str(info.settings.os_build), "None")
-        self.assertEquals(str(info.settings.arch_build), "None")
+        self.assertEqual(str(info.settings.os_build), "None")
+        self.assertEqual(str(info.settings.arch_build), "None")
 
         # Package has to be present with only os and arch settings
         self.client.run('install Hello/1.2.0@user/testing '
@@ -274,8 +320,8 @@ class Pkg(ConanFile):
 
         # take into account build
         info = install_and_get_info("self.info.include_build_settings()")
-        self.assertEquals(str(info.settings.os_build), "Linux")
-        self.assertEquals(str(info.settings.arch_build), "x86")
+        self.assertEqual(str(info.settings.os_build), "Linux")
+        self.assertEqual(str(info.settings.arch_build), "x86")
 
         # Now the build settings matter
         err = self.client.run('install Hello/1.2.0@user/testing '
@@ -306,9 +352,10 @@ class Pkg(ConanFile):
         pref = PackageReference(ref, pkg[0])
         pkg_folder = self.client.cache.package(pref)
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
-        self.assertEquals(str(info.settings.os_build), "Linux")
-        self.assertEquals(str(info.settings.arch_build), "x86")
+        self.assertEqual(str(info.settings.os_build), "Linux")
+        self.assertEqual(str(info.settings.arch_build), "x86")
 
+    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
     def test_standard_version_default_matching(self):
         self._export("Hello", "1.2.0",
                      channel="user/testing",
