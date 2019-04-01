@@ -88,8 +88,9 @@ class Workspace(object):
                 source_folder = os.path.join(ws_pkg.root_folder, source_folder or '.')
                 if not os.path.exists(os.path.join(source_folder, "CMakeLists.txt")):
                     raise ConanException("Invalid source_folder for reference '{}' in layout"
-                                         " file '{}': cannot find a 'CMakeLists.txt' file".
-                                         format(node.ref, editable.filepath))
+                                         " file '{}': cannot find a 'CMakeLists.txt' file"
+                                         " in path '{}'".
+                                         format(node.ref, editable.filepath, source_folder))
 
                 build_folder = os.path.join(cwd, node.ref.name)
                 write_generators(node.conanfile, build_folder, output)
