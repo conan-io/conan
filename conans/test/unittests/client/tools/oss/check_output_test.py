@@ -5,7 +5,7 @@ import unittest
 
 import six
 
-from conans.client.tools.oss import check_output, CalledProcessError
+from conans.client.tools.oss import check_output, ConanSubprocessError
 
 
 class CheckOutputTestCase(unittest.TestCase):
@@ -29,7 +29,7 @@ class CheckOutputTestCase(unittest.TestCase):
         self.assertEqual(self.success_code, ret)
 
     def test_error_call(self):
-        with self.assertRaises(CalledProcessError) as e:
+        with self.assertRaises(ConanSubprocessError) as e:
             ret = check_output("asdf")
             self.assertEqual(None, ret)
         self.assertIn("Command 'asdf' returned non-zero exit status", str(e.exception))

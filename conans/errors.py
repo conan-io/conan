@@ -133,14 +133,14 @@ class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
 
 class ConanSubprocessError(ConanException):
     def __init__(self, return_code, command):
-        self.return_code = return_code
-        self.command = command
+        self.returncode = return_code
+        self.cmd = command
 
     def __str__(self):
-        if self.return_code and self.return_code < 0:
-            return "Command '{}' died with {!r}".format(self.cmd, self.return_code)
+        if self.returncode and self.returncode < 0:
+            return "Command '{}' died with {!r}".format(self.cmd, self.returncode)
         else:
-            return "Command '{}' returned non-zero exit status {}".format(self.cmd, self.return_code)
+            return "Command '{}' returned non-zero exit status {}".format(self.cmd, self.returncode)
 
 
 class ConanMigrationError(ConanException):

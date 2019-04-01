@@ -9,7 +9,7 @@ import deprecation
 
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture, check_output, CalledProcessError
+from conans.client.tools.oss import OSInfo, detected_architecture, check_output, ConanSubprocessError
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
@@ -310,7 +310,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         output = "\n".join([line for line in output.splitlines()
                             if not line.strip().startswith('"description"')])
 
-    except (ValueError, CalledProcessError, UnicodeDecodeError) as e:
+    except (ValueError, ConanSubprocessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
     return json.loads(output)
