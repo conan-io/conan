@@ -143,6 +143,10 @@ class ConanSubprocessError(ConanException):
             return "Command '{}' returned non-zero exit status {}".format(self.cmd, self.return_code)
 
 
+class ConanMigrationError(ConanException):
+    pass
+
+
 # Remote exceptions #
 class InternalErrorException(ConanException):
     """
