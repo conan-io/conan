@@ -4,7 +4,6 @@ import platform
 import subprocess
 import sys
 import tempfile
-from subprocess import CalledProcessError, PIPE
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
@@ -439,15 +438,15 @@ def get_gnu_triplet(os_, arch, compiler=None):
 def check_output(cmd, folder=None, return_code=False):
     tmp_file = tempfile.mktemp()
     try:
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file),
-                                   shell=True, stderr=PIPE, cwd=folder)
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
+                                   stderr=subprocess.PIPE, cwd=folder)
         process.communicate()
 
         if return_code:
             return process.returncode
 
         if process.returncode:
-            raise CalledProcessError(process.returncode, cmd)
+            raise subprocess.CalledProcessError(process.returncode, cmd)
 
         output = load(tmp_file)
         return output

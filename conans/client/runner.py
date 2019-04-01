@@ -1,8 +1,8 @@
 import io
 import os
+import subprocess
 import sys
 from contextlib import contextmanager
-from subprocess import PIPE, Popen, STDOUT
 
 import six
 
@@ -61,7 +61,8 @@ class ConanRunner(object):
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
+            proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 

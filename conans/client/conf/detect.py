@@ -1,16 +1,17 @@
 import os
 import platform
 import re
-from subprocess import PIPE, Popen, STDOUT
+import subprocess
 
 from conans.client.output import Color
-from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.client.tools import detected_os
+from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 
 
 def _execute(command):
-    proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
+    proc = subprocess.Popen(command, shell=True, bufsize=1, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
 
     output_buffer = []
     while True:

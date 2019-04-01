@@ -1,8 +1,8 @@
 import json
 import os
 import platform
+import subprocess
 import sys
-from subprocess import PIPE, Popen
 
 from conans import __path__ as root_path
 from conans.client.output import Color
@@ -43,7 +43,8 @@ def _runner(args):
     command = ["pylint",  "--output-format=json"] + args
     command = " ".join(command)
     shell = True if platform.system() != "Windows" else False
-    proc = Popen(command, shell=shell, bufsize=10, stdout=PIPE, stderr=PIPE)
+    proc = subprocess.Popen(command, shell=shell, bufsize=10, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
     stdout, _ = proc.communicate()
     return json.loads(stdout.decode("utf-8")) if stdout else {}
 

@@ -3,13 +3,12 @@ import platform
 import re
 import subprocess
 import xml.etree.ElementTree as ET
-from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
-from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
+from conans.client.tools.oss import check_output
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
@@ -134,13 +133,14 @@ class Git(SCMBase):
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             if file_paths:
-                p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
-                                     stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
+                p = subprocess.Popen(['git', 'check-ignore', '--stdin'], stdout=subprocess.PIPE,
+                                     stdin=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                     cwd=self.folder)
                 paths = to_file_bytes("\n".join(file_paths))
 
                 grep_stdout = decode_text(p.communicate(input=paths)[0])
                 ret = grep_stdout.splitlines()
-        except (CalledProcessError, IOError, OSError) as e:
+        except (subprocess.CalledProcessError, IOError, OSError) as e:
             if self._output:
                 self._output.warn("Error checking excluded git files: %s. "
                                   "Ignoring excluded files" % e)

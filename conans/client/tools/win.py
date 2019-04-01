@@ -9,7 +9,7 @@ import deprecation
 
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture
+from conans.client.tools.oss import OSInfo, detected_architecture, check_output, CalledProcessError
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
@@ -303,14 +303,14 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = subprocess.check_output(arguments)
+        output = check_output(arguments)
         output = decode_text(output).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
                             if not line.strip().startswith('"description"')])
 
-    except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+    except (ValueError, CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
     return json.loads(output)
@@ -448,7 +448,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && echo __BEGINS__ && set"
-    ret = decode_text(subprocess.check_output(cmd, shell=True))
+    ret = decode_text(check_output(cmd))
     new_env = {}
     start_reached = False
     for line in ret.splitlines():
