@@ -11,7 +11,7 @@ from conans.model.conan_file import get_env_context_manager
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
                ref, source_folder, build_folder, package_folder, install_folder,
-               graph_info, force):
+               graph_info, force, remotes):
 
     conan_file_path = cache.conanfile(ref)
     if not os.path.exists(conan_file_path):
@@ -19,7 +19,6 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
 
     # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
     # to be downloaded from remotes
-    remotes = cache.registry.load_remotes()
     deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
                                              check_updates=False, update=False,
                                              remotes=remotes, recorder=recorder,

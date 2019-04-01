@@ -84,11 +84,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, cache, remote_manager, user_io):
+    def __init__(self, cache, remote_manager, user_io, remotes):
         self._user_io = user_io
         self._cache = cache
         self._remote_manager = remote_manager
-        self._registry = cache.registry
+        self._remotes = remotes
 
     def _remote_remove(self, ref, package_ids, remote):
         assert(isinstance(remote, Remote))
@@ -159,7 +159,7 @@ class ConanRemover(object):
                                          "revision")
 
         if remote_name:
-            remote = self._registry.load_remotes()[remote_name]
+            remote = self._remotes[remote_name]
             if input_ref:
                 if not self._cache.config.revisions_enabled and input_ref.revision:
                     raise ConanException("Revisions not enabled in the client, cannot remove "

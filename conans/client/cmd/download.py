@@ -4,7 +4,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 
 
 def download(ref, package_ids, remote, recipe, remote_manager,
-             cache, out, recorder, loader, hook_manager):
+             cache, out, recorder, loader, hook_manager, remotes):
 
     assert(isinstance(ref, ConanFileReference))
     output = ScopedOutput(str(ref), out)
@@ -20,7 +20,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
 
     if not recipe:  # Not only the recipe
         # Download the sources too, don't be lazy
-        complete_recipe_sources(remote_manager, cache, conanfile, ref)
+        complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
 
         if not package_ids:  # User didn't specify a specific package binary
             output.info("Getting the complete package list from '%s'..." % ref.full_repr())

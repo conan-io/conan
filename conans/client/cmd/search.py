@@ -6,10 +6,10 @@ from conans.search.search import (filter_outdated, search_packages, search_recip
 
 
 class Search(object):
-    def __init__(self, cache, remote_manager):
+    def __init__(self, cache, remote_manager, remotes):
         self._cache = cache
         self._remote_manager = remote_manager
-        self._remotes = cache.registry.load_remotes()
+        self._remotes = remotes
 
     def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         ignorecase = not case_sensitive

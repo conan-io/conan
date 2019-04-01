@@ -446,12 +446,12 @@ class ConanAPIV1(object):
             # new_ref has revision
             recorder.recipe_exported(new_ref)
             recorder.add_recipe_being_developed(ref)
-
+            remotes = self._cache.registry.load_remotes()
             export_pkg(self._cache, self._graph_manager, self._hook_manager, recorder,
                        self._user_io.out,
                        ref, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
-                       graph_info=graph_info, force=force)
+                       graph_info=graph_info, force=force, remotes=remotes)
             return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -478,7 +478,7 @@ class ConanAPIV1(object):
             recorder = ActionRecorder()
             download(ref, package, remote, recipe, self._remote_manager,
                      self._cache, self._user_io.out, recorder, self._loader,
-                     self._hook_manager)
+                     self._hook_manager, remotes=remotes)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
 
@@ -793,7 +793,8 @@ class ConanAPIV1(object):
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
-        remover = ConanRemover(self._cache, self._remote_manager, self._user_io)
+        remotes = self._cache.registry.load_remotes()
+        remover = ConanRemover(self._cache, self._remote_manager, self._user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -803,10 +804,11 @@ class ConanAPIV1(object):
         param packages: None=No binaries, True=All binaries, else list of IDs
         """
         from conans.client.cmd.copy import cmd_copy
+        remotes = self._cache.registry.load_remotes()
         # FIXME: conan copy does not support short-paths in Windows
         ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self._cache,
-                 self._user_io, self._remote_manager, self._loader, force=force)
+                 self._user_io, self._remote_manager, self._loader, remotes, force=force)
 
     @api_method
     def authenticate(self, name, password, remote_name):
@@ -839,7 +841,8 @@ class ConanAPIV1(object):
     @api_method
     def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         search_recorder = SearchRecorder()
-        search = Search(self._cache, self._remote_manager)
+        remotes = self._cache.registry.load_remotes()
+        search = Search(self._cache, self._remote_manager, remotes)
 
         try:
             references = search.search_recipes(pattern, remote_name, case_sensitive)
@@ -856,7 +859,8 @@ class ConanAPIV1(object):
     @api_method
     def search_packages(self, reference, query=None, remote_name=None, outdated=False):
         search_recorder = SearchRecorder()
-        search = Search(self._cache, self._remote_manager)
+        remotes = self._cache.registry.load_remotes()
+        search = Search(self._cache, self._remote_manager, remotes)
 
         try:
             ref = ConanFileReference.loads(reference)
@@ -891,7 +895,7 @@ class ConanAPIV1(object):
         remotes.select(remote_name)
         self.python_requires.enable_remotes(remotes=remotes)
         try:
-            uploader.upload(upload_recorder, pattern, package, all_packages, confirm, retry,
+            uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm, retry,
                             retry_wait, integrity_check, policy, remotes, query=query)
             return upload_recorder.get_info()
         except ConanException as exc:

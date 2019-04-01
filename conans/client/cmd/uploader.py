@@ -72,9 +72,9 @@ class CmdUpload(object):
         self._loader = loader
         self._hook_manager = hook_manager
 
-    def upload(self, upload_recorder, reference_or_pattern, package_id=None, all_packages=None,
-               confirm=False, retry=0, retry_wait=0, integrity_check=False, policy=None,
-               remotes=None, query=None):
+    def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
+               all_packages=None, confirm=False, retry=0, retry_wait=0, integrity_check=False,
+               policy=None, query=None):
         t1 = time.time()
         refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
         refs_by_remote = self._collect_packages_to_upload(refs, confirm, remotes, all_packages,
@@ -84,7 +84,7 @@ class CmdUpload(object):
             self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
             for (ref, conanfile, prefs) in refs:
                 self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
-                                 integrity_check, policy, remote, upload_recorder)
+                                 integrity_check, policy, remote, upload_recorder, remotes)
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
@@ -174,7 +174,7 @@ class CmdUpload(object):
         return refs_by_remote
 
     def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
-                    recipe_remote, upload_recorder):
+                    recipe_remote, upload_recorder, remotes):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
@@ -185,7 +185,7 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
 
         self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
-        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote)
+        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
         # Now the binaries
@@ -205,7 +205,7 @@ class CmdUpload(object):
         self._hook_manager.execute("post_upload", conanfile_path=conanfile_path, reference=ref,
                                    remote=recipe_remote)
 
-    def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote):
+    def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
         if policy != UPLOAD_POLICY_FORCE:
             remote_manifest = self._check_recipe_date(ref, remote)
         else:
@@ -214,7 +214,7 @@ class CmdUpload(object):
         current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
 
         if remote.name != current_remote_name:
-            complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref)
+            complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
 
         conanfile_path = self._cache.conanfile(ref)
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,

@@ -28,8 +28,7 @@ def _hide_password(resource):
 def _handle_remotes(cache, remote_file):
     # FIXME: Should we encourage to pass the remotes in json?
     remotes, _ = load_registry_txt(load(remote_file))
-    registry = cache.registry
-    registry.define(remotes)
+    cache.registry.define(remotes)
 
 
 @contextmanager

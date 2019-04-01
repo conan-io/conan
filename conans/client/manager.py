@@ -85,7 +85,8 @@ class ConanManager(object):
             for node in deps_graph.nodes:
                 if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                     continue
-                complete_recipe_sources(self._remote_manager, self._cache, node.conanfile, node.ref)
+                complete_recipe_sources(self._remote_manager, self._cache, node.conanfile, node.ref,
+                                        remotes)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,
                                          interactive=manifest_interactive)

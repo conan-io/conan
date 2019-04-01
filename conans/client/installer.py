@@ -77,11 +77,11 @@ class _PackageBuilder(object):
         return build_folder, skip_build
 
     def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, package_folder):
+                         build_folder, package_folder, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
 
-        complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref)
+        complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
         try:
             rmdir(build_folder)
             rmdir(package_folder)
@@ -172,7 +172,7 @@ class _PackageBuilder(object):
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return package_hash
 
-    def build_package(self, node, keep_build, recorder):
+    def build_package(self, node, keep_build, recorder, remotes):
         t1 = time.time()
 
         conanfile = node.conanfile
@@ -190,7 +190,7 @@ class _PackageBuilder(object):
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
                 self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, package_folder)
+                                      build_folder, package_folder, remotes)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
@@ -292,15 +292,15 @@ class BinaryInstaller(object):
         self._recorder = recorder
         self._hook_manager = hook_manager
 
-    def install(self, deps_graph, keep_build=False, graph_info=None):
+    def install(self, deps_graph, remotes, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, keep_build, root_node, graph_info)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes)
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info):
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes):
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
@@ -320,7 +320,7 @@ class BinaryInstaller(object):
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs)
+                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node)
@@ -366,7 +366,7 @@ class BinaryInstaller(object):
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, keep_build, processed_package_references):
+    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
         pref = node.pref
         assert pref.id, "Package-ID without value"
 
@@ -380,7 +380,7 @@ class BinaryInstaller(object):
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     set_dirty(package_folder)
-                    pref = self._build_package(node, pref, output, keep_build)
+                    pref = self._build_package(node, pref, output, keep_build, remotes)
                     clean_dirty(package_folder)
                     assert node.prev is not None, "PREV for %s to be built is None" % str(pref)
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -410,7 +410,7 @@ class BinaryInstaller(object):
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(pref, conan_file.cpp_info)
 
-    def _build_package(self, node, pref, output, keep_build):
+    def _build_package(self, node, pref, output, keep_build, remotes):
         conanfile = node.conanfile
         assert pref.id, "Package-ID without value"
 
@@ -419,10 +419,10 @@ class BinaryInstaller(object):
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(self._remote_manager, self._cache,
-                                    conanfile, python_require.ref)
+                                    conanfile, python_require.ref, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
-        pref = builder.build_package(node, keep_build, self._recorder)
+        pref = builder.build_package(node, keep_build, self._recorder, remotes)
         return pref
 
     @staticmethod

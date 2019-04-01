@@ -61,7 +61,7 @@ def dump_registry(remotes, refs, prefs):
     return json.dumps(ret, indent=True)
 
 
-def load_registry(contents):
+def load_old_registry_json(contents):
     """From json"""
     data = json.loads(contents)
     remotes = OrderedDict()
@@ -71,7 +71,21 @@ def load_registry(contents):
         remotes[r["name"]] = (r["url"], r["verify_ssl"])
     return remotes, refs, prefs
 
-
+REGISTRY = "registry.txt"
+REGISTRY_JSON = "registry.json"
+reg_json_path = join(self.conan_folder, REMOTES)
+        if not os.path.exists(reg_json_path):
+            # Load the txt if exists and convert to json
+            reg_txt = join(self.conan_folder, REGISTRY)
+            if os.path.exists(reg_txt):
+                migrate_registry_file(reg_txt, reg_json_path)
+            else:
+                self._output.warn("Remotes registry file missing, "
+                                  "creating default one in %s" % reg_json_path)
+                save(reg_json_path, dump_registry(default_remotes, {}, {}))
+        return reg_json_path
+    
+    
 def migrate_registry_file(path, new_path):
     try:
         remotes, refs = load_registry_txt(load(path))
@@ -86,6 +100,12 @@ class Remotes(object):
     def __init__(self):
         self._remotes = OrderedDict()
         self.selected = None
+
+    @classmethod
+    def defaults(cls):
+        result = Remotes()
+        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True)
+        return result
 
     def select(self, remote_name):
         self.selected = self[remote_name] if remote_name is not None else None

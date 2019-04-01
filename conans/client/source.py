@@ -12,7 +12,7 @@ from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXP
 from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty, walk)
 
 
-def complete_recipe_sources(remote_manager, cache, conanfile, ref):
+def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
@@ -28,9 +28,8 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref):
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
     current_remote = cache.package_layout(ref).load_metadata().recipe.remote
-    # TODO: Optimize this, pass directly remote?
     if current_remote:
-        current_remote = cache.registry.load_remotes()[current_remote]
+        current_remote = remotes[current_remote]
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(ref))

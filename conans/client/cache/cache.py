@@ -5,7 +5,7 @@ from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import default_remotes, dump_registry, \
-    migrate_registry_file, RemoteRegistry
+    migrate_registry_file, RemoteRegistry, Remotes
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -25,8 +25,7 @@ import platform
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
-REGISTRY = "registry.txt"
-REGISTRY_JSON = "registry.json"
+REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 
@@ -203,16 +202,12 @@ class ClientCache(object):
 
     @property
     def registry_path(self):
-        reg_json_path = join(self.conan_folder, REGISTRY_JSON)
+        reg_json_path = join(self.conan_folder, REMOTES)
         if not os.path.exists(reg_json_path):
-            # Load the txt if exists and convert to json
-            reg_txt = join(self.conan_folder, REGISTRY)
-            if os.path.exists(reg_txt):
-                migrate_registry_file(reg_txt, reg_json_path)
-            else:
-                self._output.warn("Remotes registry file missing, "
-                                  "creating default one in %s" % reg_json_path)
-                save(reg_json_path, dump_registry(default_remotes, {}, {}))
+            self._output.warn("Remotes registry file missing, "
+                              "creating default one in %s" % reg_json_path)
+            remotes = Remotes.default()
+            remotes.save(reg_json_path)
         return reg_json_path
 
     @property
