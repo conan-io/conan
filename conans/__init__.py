@@ -9,7 +9,6 @@ from conans.client.run_environment import RunEnvironment
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.model.version import Version
 from conans.util.files import load
 
 # complex_search: With ORs and not filtering by not restricted settings
