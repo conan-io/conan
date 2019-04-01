@@ -47,7 +47,7 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import (ConanException, RecipeNotFoundException,
+from conans.errors import (ConanException, RecipeNotFoundException, ConanMigrationError,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import get_editable_abs_path
@@ -195,7 +195,7 @@ class ConanAPIV1(object):
             sys.path.append(os.path.join(user_home, "python"))
         except Exception as e:
             out.error(str(e))
-            raise
+            raise ConanMigrationError(e)
 
         with tools.environment_append(cache.config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
