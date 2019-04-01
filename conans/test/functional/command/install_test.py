@@ -9,6 +9,7 @@ from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, mkdir, rmdir
+from conans.test.utils.conanfile import TestConanFile
 
 
 class InstallTest(unittest.TestCase):
@@ -566,3 +567,15 @@ class TestConan(ConanFile):
         client.run("install -o boost:shared=True --build missing --build boost .")
         output_5 = "%s" % client.out
         self.assertEqual(output_4, output_5)
+
+    def install_anonymous_test(self):
+        # https://github.com/conan-io/conan/issues/4871
+        servers = {"default": TestServer()}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
+        client.run("create . lasote/testing")
+        client.run("upload * --confirm --all")
+
+        client2 = TestClient(servers=servers, users={})
+        client2.run("install Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Package installed", client2.out)
