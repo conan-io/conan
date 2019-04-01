@@ -74,8 +74,8 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         import gzip
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
-            target_name = filename[:-3]
-            save(target_name, file_content)
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:

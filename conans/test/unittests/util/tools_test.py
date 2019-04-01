@@ -1308,6 +1308,16 @@ ProgramFiles(x86)=C:\Program Files (x86)
                       output=out)
             self.assertTrue(os.path.exists("test.txt"))
             self.assertEqual(load("test.txt"), "hello world zipped!")
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out, destination="myfile.doc")
+            self.assertTrue(os.path.exists("myfile.doc"))
+            self.assertEqual(load("myfile.doc"), "hello world zipped!")
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out, destination="mytemp/myfile.txt")
+            self.assertTrue(os.path.exists("mytemp/myfile.txt"))
+            self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
         thread.stop()
 
