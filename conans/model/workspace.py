@@ -85,7 +85,7 @@ class Workspace(object):
 
                 source_folder = editable.folder(node.ref, EditableLayout.SOURCE_FOLDER,
                                                 node.conanfile.settings, node.conanfile.options)
-                source_folder = os.path.join(ws_pkg.root_folder, source_folder)
+                source_folder = os.path.join(ws_pkg.root_folder, source_folder or '.')
                 if not os.path.exists(os.path.join(source_folder, "CMakeLists.txt")):
                     raise ConanException("Invalid source_folder for reference '{}' in layout"
                                          " file '{}': cannot find a 'CMakeLists.txt' file".
