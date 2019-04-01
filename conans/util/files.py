@@ -62,7 +62,7 @@ def decode_text(text):
             return text.decode(decoder)
         except UnicodeDecodeError:
             continue
-    logger.warn("can't decode %s" % str(text))
+    logger.warning("can't decode %s" % str(text))
     return text.decode("utf-8", "ignore")  # Ignore not compatible characters
 
 

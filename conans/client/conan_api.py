@@ -47,7 +47,7 @@ from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
-from conans.errors import (ConanException, RecipeNotFoundException,
+from conans.errors import (ConanException, RecipeNotFoundException, ConanMigrationError,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import get_editable_abs_path
@@ -195,7 +195,7 @@ class ConanAPIV1(object):
             sys.path.append(os.path.join(user_home, "python"))
         except Exception as e:
             out.error(str(e))
-            raise
+            raise ConanMigrationError(e)
 
         with tools.environment_append(cache.config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
@@ -303,8 +303,8 @@ class ConanAPIV1(object):
         if not attributes:
             attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
-                          'short_paths', 'apply_env', 'build_policy', 'settings', 'options',
-                          'default_options']
+                          'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
+                          'options', 'default_options']
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
@@ -619,11 +619,12 @@ class ConanAPIV1(object):
         self._cache.invalidate()
 
     @api_method
-    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None):
-
+    def config_install(self, path_or_url, verify_ssl, config_type=None, args=None,
+                       source_folder=None, target_folder=None):
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(path_or_url, self._cache, self._user_io.out, verify_ssl,
-                                     requester=self._requester, config_type=config_type, args=args)
+                                     requester=self._requester, config_type=config_type, args=args,
+                                     source_folder=source_folder, target_folder=target_folder)
 
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env):
         cwd = get_cwd()
@@ -988,9 +989,9 @@ class ConanAPIV1(object):
         return cmd_profile_list(self._cache.profiles_path, self._user_io.out)
 
     @api_method
-    def create_profile(self, profile_name, detect=False):
+    def create_profile(self, profile_name, detect=False, force=False):
         return cmd_profile_create(profile_name, self._cache.profiles_path,
-                                  self._user_io.out, detect)
+                                  self._user_io.out, detect, force)
 
     @api_method
     def update_profile(self, profile_name, key, value):

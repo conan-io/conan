@@ -186,8 +186,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Upload with v1
         pref = self.c_v1.create(self.ref)
-        self.assertNotEquals(pref.revision, DEFAULT_REVISION_V1)
-        self.assertNotEquals(pref.ref.revision, DEFAULT_REVISION_V1)
+        self.assertNotEqual(pref.revision, DEFAULT_REVISION_V1)
+        self.assertNotEqual(pref.ref.revision, DEFAULT_REVISION_V1)
 
         remote_ref = self.c_v1.upload_all(self.ref)
         self.assertEqual(remote_ref.revision, DEFAULT_REVISION_V1)
@@ -198,7 +198,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         local_rev = self.c_v1.recipe_revision(self.ref)
 
-        self.assertNotEquals(local_rev, DEFAULT_REVISION_V1)
+        self.assertNotEqual(local_rev, DEFAULT_REVISION_V1)
 
         self.assertEqual(local_rev, pref.ref.revision)
 
@@ -251,8 +251,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev2_time_remote = self.server.package_revision_time(pref2)
 
         # Check different revision times
-        self.assertNotEquals(rrev1_time_remote, rrev2_time_remote)
-        self.assertNotEquals(prev1_time_remote, prev2_time_remote)
+        self.assertNotEqual(rrev1_time_remote, rrev2_time_remote)
+        self.assertNotEqual(prev1_time_remote, prev2_time_remote)
 
         client.run("install {} --update".format(self.ref))
         self.assertIn("Package installed {}".format(pref2.id), client.out)
@@ -285,7 +285,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         prev1_time_remote = self.server.package_revision_time(pref)
         prev2_time_remote = self.server.package_revision_time(pref2)
-        self.assertNotEquals(prev1_time_remote, prev2_time_remote)  # Two package revisions
+        self.assertNotEqual(prev1_time_remote, prev2_time_remote)  # Two package revisions
 
         client.run("install {} --update".format(self.ref))
         self.assertIn("{} from 'default' - Cache".format(self.ref), client.out)
@@ -865,7 +865,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         # Ensure that the first revision in the first remote is the same than in the second one
         revision_ref = refs[0][0].ref
         self.assertEqual(revision_ref.revision, refs2[0][0].ref.revision)
-        self.assertNotEquals(refs[1][0].ref.revision, refs2[0][0].ref.revision)
+        self.assertNotEqual(refs[1][0].ref.revision, refs2[0][0].ref.revision)
 
         # Check that in the remotes there are the packages we expect
         self.assertTrue(self.server.package_exists(refs[0][0]))
@@ -965,7 +965,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         conanfile2 = GenConanfile().with_build_msg("Rev2").with_setting("os")
         pref2a = client.create(self.ref, conanfile=conanfile2, args="-s os=Macos")
 
-        self.assertNotEquals(pref1a.ref.revision, pref2a.ref.revision)
+        self.assertNotEqual(pref1a.ref.revision, pref2a.ref.revision)
 
         # Search without RREV
         data = client.search(self.ref)
@@ -992,7 +992,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.c_v2.upload_all(self.ref)
 
         # Ensure we have uploaded two different revisions
-        self.assertNotEquals(pref.ref.revision, pref2.ref.revision)
+        self.assertNotEqual(pref.ref.revision, pref2.ref.revision)
 
         client = self.c_v1 if v1 else self.c_v2
         client.remove_all()
@@ -1298,7 +1298,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         with environment_append({"MY_VAR": "2"}):
             pref2 = client.create(self.ref, conanfile=conanfile)
 
-        self.assertNotEquals(pref.revision, pref2.revision)
+        self.assertNotEqual(pref.revision, pref2.revision)
 
         if v1:
             client.upload_all(self.ref, args="--no-overwrite", assert_error=True)
@@ -1321,7 +1321,7 @@ class SCMRevisions(unittest.TestCase):
          can be found"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile()
+        conanfile = GenConanfile().with_revision_mode("scm")
         commit = client.init_git_repo(files={"file.txt": "hey"}, origin_url="http://myrepo.git")
         client.create(ref, conanfile=conanfile)
         self.assertEqual(client.recipe_revision(ref), commit)
@@ -1332,6 +1332,19 @@ class SCMRevisions(unittest.TestCase):
         self.assertEqual(client.recipe_revision(ref), commit)
         self.assertIn("New changes!", client.out)
 
+    def auto_revision_without_commits_test(self):
+        """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client = TurboTestClient()
+        conanfile = GenConanfile().with_revision_mode("scm")
+        client.runner('git init .', cwd=client.current_folder)
+        client.save({"conanfile.py": str(conanfile)})
+        client.run("create . {}".format(ref), assert_error=True)
+        # It error, because the revision_mode is explicitly set to scm
+        self.assertIn("Cannot detect revision using 'scm' mode from repository at "
+                      "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
+                      client.out)
+
     @attr("svn")
     def auto_revision_even_without_scm_svn_test(self):
         """Even without using the scm feature, the revision is detected from repo.
@@ -1339,7 +1352,7 @@ class SCMRevisions(unittest.TestCase):
          can be found"""
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
-        conanfile = GenConanfile()
+        conanfile = GenConanfile().with_revision_mode("scm")
         commit = client.init_svn_repo("project",
                                       files={"file.txt": "hey", "conanfile.py": str(conanfile)})
         client.current_folder = os.path.join(client.current_folder, "project")

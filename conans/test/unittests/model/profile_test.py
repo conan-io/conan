@@ -48,10 +48,10 @@ compiler.runtime=MT
                                                  ("other", "value")]))
 
         self.assertEqual(dict(new_profile.settings), {"compiler": "Visual Studio",
-                                                       "os": "Windows",
-                                                       "compiler.runtime": "MT",
-                                                       "compiler.subsetting": "3",
-                                                       "other": "value"})
+                                                      "os": "Windows",
+                                                      "compiler.runtime": "MT",
+                                                      "compiler.subsetting": "3",
+                                                      "other": "value"})
 
     def package_settings_update_test(self):
         prof = '''[settings]
@@ -63,12 +63,12 @@ MyPackage:os=Windows
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
         self.assertEqual(np.package_settings_values,
-                          {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
+                         {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
 
         np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
         self.assertEqual(np.package_settings_values,
-                          {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
-                                         ("compiler", "2"), ("compiler.version", "3")]})
+                         {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
+                                        ("compiler", "2"), ("compiler.version", "3")]})
 
     def profile_dump_order_test(self):
         # Settings

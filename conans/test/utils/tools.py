@@ -853,6 +853,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
+    def run_command(self, command):
+        self.all_output += str(self.out)
+        self.init_dynamic_vars() # Resets the output
+        return self.runner(command, cwd=self.current_folder)
+
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
         param files: dict{filename: filecontents}
@@ -863,6 +868,15 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+    def copy_from_assets(self, origin_folder, assets):
+        for asset in assets:
+            s = os.path.join(origin_folder, asset)
+            d = os.path.join(self.current_folder, asset)
+            if os.path.isdir(s):
+                shutil.copytree(s, d)
+            else:
+                shutil.copy2(s, d)
 
 
 class TurboTestClient(TestClient):
@@ -999,6 +1013,11 @@ class GenConanfile(object):
         self._build_messages = []
         self._scm = {}
         self._requirements = []
+        self._revision_mode = None
+
+    def with_revision_mode(self, revision_mode):
+        self._revision_mode = revision_mode
+        return self
 
     def with_scm(self, scm):
         self._scm = scm
@@ -1046,6 +1065,13 @@ class GenConanfile(object):
             return ""
         line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
         return "scm = {%s}" % line
+
+    @property
+    def _revision_mode_line(self):
+        if not self._revision_mode:
+            return ""
+        line = "revision_mode=\"{}\"".format(self._revision_mode)
+        return line
 
     @property
     def _settings_line(self):
@@ -1111,6 +1137,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._requirements_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
+        if self._revision_mode_line:
+            ret.append("    {}".format(self._revision_mode_line))
         if self._settings_line:
             ret.append("    {}".format(self._settings_line))
         if self._options_line:

@@ -90,7 +90,7 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remotes, recorder):
+                   remotes, recorder, apply_build_requires=True):
 
         def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
@@ -109,7 +109,8 @@ class GraphManager(object):
         processed_profile = ProcessedProfile(profile, create_reference)
         ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, processed_profile)
+            conanfile = self._loader.load_virtual(reference, processed_profile,
+                                                  scope_options=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             if not self._cache.config.revisions_enabled and reference.revision is not None:
@@ -144,7 +145,8 @@ class GraphManager(object):
                                       build_mode=build_mode, remotes=remotes,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder,
-                                      processed_profile=processed_profile)
+                                      processed_profile=processed_profile,
+                                      apply_build_requires=apply_build_requires)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
@@ -171,10 +173,12 @@ class GraphManager(object):
         return conanfile.build_requires
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
-                                build_mode, remotes,
-                                profile_build_requires, recorder, processed_profile):
+                                build_mode, remotes, profile_build_requires, recorder,
+                                processed_profile, apply_build_requires=True):
 
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
+        if not apply_build_requires:
+            return
 
         for node in graph.ordered_iterate():
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
@@ -198,7 +202,7 @@ class GraphManager(object):
                                     # (no conflicts)
                                     # but the dict key is not used at all
                                     package_build_requires[build_require.name] = build_require
-                                else:  # Profile one
+                                elif build_require.name != node.name:  # Profile one
                                     new_profile_build_requires.append(build_require)
 
             if package_build_requires:
@@ -223,7 +227,7 @@ class GraphManager(object):
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    profile_build_requires, recorder, processed_profile):
+                    profile_build_requires, recorder, processed_profile, apply_build_requires):
 
         assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
@@ -234,7 +238,8 @@ class GraphManager(object):
 
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remotes,
-                                     profile_build_requires, recorder, processed_profile)
+                                     profile_build_requires, recorder, processed_profile,
+                                     apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}

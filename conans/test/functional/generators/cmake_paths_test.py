@@ -1,11 +1,34 @@
 import os
+import platform
 import shutil
 import unittest
 
-from conans.test.utils.tools import TestClient
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, TurboTestClient, GenConanfile
+from conans.util.files import load
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
+
+    def cmake_paths_contents_test(self):
+        ref1 = ConanFileReference.loads("lib1/1.0@conan/stable")
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+        client = TurboTestClient()
+        pref1 = client.create(ref1)
+        pref2 = client.create(ref2, conanfile=GenConanfile().with_requirement(ref1))
+        client.run("install {} -g cmake_paths".format(ref2))
+        pfolder1 = client.cache.package_layout(pref1.ref).package(pref1).replace("\\", "/")
+        pfolder2 = client.cache.package_layout(pref2.ref).package(pref2).replace("\\", "/")
+        contents = load(os.path.join(client.current_folder, "conan_paths.cmake"))
+        expected = 'set(CONAN_LIB2_ROOT "{pfolder2}")\r\n' \
+                   'set(CONAN_LIB1_ROOT "{pfolder1}")\r\n' \
+                   'set(CMAKE_MODULE_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
+                   '${{CMAKE_MODULE_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})\r\n' \
+                   'set(CMAKE_PREFIX_PATH "{pfolder2}/"\r\n\t\t\t"{pfolder1}/" ' \
+                   '${{CMAKE_PREFIX_PATH}} ${{CMAKE_CURRENT_LIST_DIR}})'
+        if platform.system() != "Windows":
+            expected = expected.replace("\r", "")
+        self.assertEqual(expected.format(pfolder1=pfolder1, pfolder2=pfolder2), contents)
 
     def cmake_paths_integration_test(self):
         """First package with own findHello0.cmake file"""
@@ -24,6 +47,7 @@ class TestConan(ConanFile):
                  "FindHello0.cmake": """
 SET(Hello0_FOUND 1)
 MESSAGE("HELLO FROM THE Hello0 FIND PACKAGE!")
+MESSAGE("ROOT PATH: ${CONAN_HELLO0_ROOT}")
 """}
         client.save(files)
         client.run("create . user/channel")
@@ -55,6 +79,11 @@ find_package(Hello0 REQUIRED)
                             cwd=build_dir)
         self.assertEqual(ret, 0)
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
+        ref = ConanFileReference.loads("Hello0/0.1@user/channel")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package_layout(ref).package(pref)
+        # Check that the CONAN_HELLO0_ROOT has been replaced with the real abs path
+        self.assertIn("ROOT PATH: %s" % package_folder.replace("\\", "/"), client.out)
 
         # Now try without toolchain but including the file
         files = {"CMakeLists.txt": """

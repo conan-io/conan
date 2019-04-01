@@ -1,8 +1,10 @@
+import time
 import unittest
+from collections import OrderedDict
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir
 
@@ -126,3 +128,23 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertIn("Downloading conan_package.tgz", new_client.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
                       new_client.user_io.out)
+
+    def install_outdated_checking_updates_test(self):
+        server = TestServer()
+        servers = OrderedDict([("default", server)])
+        client = TurboTestClient(servers=servers)
+        client2 = TurboTestClient(servers=servers)
+
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client.create(ref)
+        client.upload_all(ref)
+
+        # Generate a new recipe, the binary becomes outdated
+        time.sleep(1)
+        client2.create(ref, conanfile=GenConanfile().with_build_msg("Some modified stuff"))
+        client2.run("upload {} -r default".format(ref))
+
+        # Update, building the outdated
+        client.run("install -u -b outdated {}".format(ref))
+        # The outdated is built
+        self.assertIn("Some modified stuff", client.out)

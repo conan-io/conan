@@ -147,8 +147,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
                 _run_scm(conanfile, src_folder, local_sources_path, output, cache=cache)
 
                 if cache:
-                    _get_sources_from_exports(conanfile, src_folder, export_folder,
-                                              export_source_folder, cache)
+                    _get_sources_from_exports(src_folder, export_folder, export_source_folder)
                     _clean_source_folder(src_folder)
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
                     conanfile.source()
@@ -162,13 +161,7 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
             raise ConanException(e)
 
 
-def _get_sources_from_exports(conanfile, src_folder, export_folder, export_source_folder, cache):
-    # Files from python requires are obtained before the self files
-    from conans.client.cmd.export import export_source
-    for python_require in conanfile.python_requires:
-        src = cache.export_sources(python_require.ref)
-        export_source(conanfile, src, src_folder)
-
+def _get_sources_from_exports(src_folder, export_folder, export_source_folder):
     # so self exported files have precedence over python_requires ones
     merge_directories(export_folder, src_folder)
     # Now move the export-sources to the right location

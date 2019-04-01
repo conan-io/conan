@@ -113,6 +113,7 @@ class ConanProxy(object):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             _ref = self._remote_manager.get_recipe(ref, the_remote)
+            output.info("Downloaded recipe revision %s" % _ref.revision)
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 metadata.recipe.remote = the_remote.name
             recorder.recipe_downloaded(ref, the_remote.url)

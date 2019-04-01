@@ -52,7 +52,7 @@ class GraphManagerTest(unittest.TestCase):
         manifest = FileTreeManifest.create(self.cache.export(ref))
         manifest.save(self.cache.export(ref))
 
-    def build_graph(self, content, profile_build_requires=None, ref=None):
+    def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
@@ -69,7 +69,7 @@ class GraphManagerTest(unittest.TestCase):
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
-        deps_graph, _ = self.manager.load_graph(path, None, graph_info,
+        deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
                                                 build_mode, check_updates, update,
                                                 remotes, recorder)
         self.binary_installer.install(deps_graph, False, graph_info)
@@ -81,7 +81,11 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(node.ref.full_repr(), ref.full_repr())
         self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
-        self.assertEqual(len(node.dependants), len(dependents))
+
+        dependants = node.inverse_neighbors()
+        self.assertEqual(len(dependants), len(dependents))
+        for d in dependents:
+            self.assertIn(d, dependants)
 
         public_deps = {n.name: n for n in public_deps}
         self.assertEqual(node.public_deps, public_deps)

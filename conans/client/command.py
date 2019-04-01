@@ -14,7 +14,8 @@ from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
-from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable
+from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
+    ConanMigrationError
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
@@ -427,7 +428,8 @@ class Command(object):
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
         install_subparser.add_argument("item", nargs="?",
-                                       help="Configuration file or directory to use")
+                                       help="git repository, local folder or zip file (local or "
+                                       "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
@@ -435,6 +437,11 @@ class Command(object):
                                        help='Type of remote config')
         install_subparser.add_argument("--args", "-a",
                                        help='String with extra arguments for "git clone"')
+        install_subparser.add_argument("-sf", "--source-folder",
+                                       help='Install files only from a source subfolder from the '
+                                       'specified origin')
+        install_subparser.add_argument("-tf", "--target-folder",
+                                       help='Install to that path in the conan cache')
 
         args = parser.parse_args(*args)
 
@@ -453,7 +460,9 @@ class Command(object):
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
-            return self._conan.config_install(args.item, verify_ssl, args.type, args.args)
+            return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
+                                              source_folder=args.source_folder,
+                                              target_folder=args.target_folder)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe.
@@ -1310,6 +1319,8 @@ class Command(object):
                                                 "folder or path and name for a profile file")
         parser_new.add_argument("--detect", action='store_true', default=False,
                                 help='Autodetect settings and fill [settings] section')
+        parser_new.add_argument("--force", action='store_true', default=False,
+                                help='Overwrite existing profile if existing')
 
         parser_update = subparsers.add_parser('update', help='Update a profile with desired value')
         parser_update.add_argument('item',
@@ -1338,7 +1349,7 @@ class Command(object):
             profile_text = self._conan.read_profile(profile)
             self._outputer.print_profile(profile, profile_text)
         elif args.subcommand == "new":
-            self._conan.create_profile(profile, args.detect)
+            self._conan.create_profile(profile, args.detect, args.force)
         elif args.subcommand == "update":
             try:
                 key, value = args.item.split("=", 1)
@@ -1665,7 +1676,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
                        when missing binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.
                        Allows multiple --build parameters. 'pattern' is a fnmatch file pattern
-                       of a package name.
+                       of a package reference.
 
     Default behavior: If you don't specify anything, it will be similar to '--build=never', but
     package recipes can override it with their 'build_policy' attribute in the conanfile.py.
@@ -1688,8 +1699,11 @@ def main(args):
     """
     try:
         conan_api, cache, user_io = Conan.factory()
-    except ConanException:  # Error migrating
+    except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
+    except ConanException as e:
+        sys.stderr.write("Error in Conan initialization: {}".format(e))
+        sys.exit(ERROR_GENERAL)
 
     outputer = CommandOutputer(user_io, cache)
     command = Command(conan_api, cache, user_io, outputer)

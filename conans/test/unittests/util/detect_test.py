@@ -1,3 +1,4 @@
+import os
 import platform
 import subprocess
 import unittest
@@ -6,6 +7,7 @@ from mock import mock
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
+from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -18,7 +20,7 @@ class DetectTest(unittest.TestCase):
             "Windows": "Visual Studio"
         }
         output = TestBufferConanOutput()
-        result = detect_defaults_settings(output)
+        result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         platform_compiler = platform_default_compilers.get(platform.system(), None)
@@ -46,7 +48,7 @@ class DetectTest(unittest.TestCase):
 
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
-            result = detect_defaults_settings(output)
+            result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
         # No compiler should be detected
@@ -56,7 +58,39 @@ class DetectTest(unittest.TestCase):
 
     @mock.patch("platform.machine", return_value="")
     def test_detect_empty_arch(self, _):
-        result = detect_defaults_settings(output=TestBufferConanOutput())
+        result = detect_defaults_settings(output=TestBufferConanOutput(), profile_path=DEFAULT_PROFILE_NAME)
         result = dict(result)
         self.assertTrue("arch" not in result)
         self.assertTrue("arch_build" not in result)
+
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_custom_profile_test(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output, profile_path="~/.conan/profiles/mycustomprofile")
+            self.assertIn("edit the mycustomprofile profile at", output)
+            self.assertIn("~/.conan/profiles/mycustomprofile", output)
+
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_default_profile_test(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output, profile_path="~/.conan/profiles/default")
+            self.assertIn("edit the default profile at", output)
+            self.assertIn("~/.conan/profiles/default", output)
+
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_file_profile_test(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output, profile_path="./MyProfile")
+            self.assertIn("edit the MyProfile profile at", output)
+            self.assertIn("./MyProfile", output)
+
+    @mock.patch("conans.client.conf.detect._gcc_compiler", return_value=("gcc", "8"))
+    def detect_abs_file_profile_test(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            detect_defaults_settings(output, profile_path="/foo/bar/quz/custom-profile")
+            self.assertIn("edit the custom-profile profile at", output)
+            self.assertIn("/foo/bar/quz/custom-profile", output)
