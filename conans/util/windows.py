@@ -1,7 +1,7 @@
 import os
-import subprocess
 import tempfile
 
+from conans.client.tools.oss import check_output, CalledProcessError
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, rmdir, save
 from conans.util.log import logger
@@ -67,8 +67,8 @@ def path_shortener(path, short_paths):
         userdomain, username = os.getenv("USERDOMAIN"), os.environ["USERNAME"]
         domainname = "%s\%s" % (userdomain, username) if userdomain else username
         cmd = r'cacls %s /E /G "%s":F' % (short_home, domainname)
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, quiet
-    except subprocess.CalledProcessError:
+        check_output(cmd)  # Ignoring any returned output, quiet
+    except CalledProcessError:
         # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
         pass
 
