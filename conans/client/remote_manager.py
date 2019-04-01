@@ -32,6 +32,9 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
+    def check_credentials(self, remote):
+        self._call_remote(remote, "check_credentials")
+
     def get_recipe_snapshot(self, ref, remote):
         assert ref.revision, "get_recipe_snapshot requires revision"
         return self._call_remote(remote, "get_recipe_snapshot", ref)
