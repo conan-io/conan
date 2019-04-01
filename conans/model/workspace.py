@@ -5,6 +5,7 @@ from collections import OrderedDict
 import yaml
 from jinja2 import Template
 
+from conans.client.generators import write_generators
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
@@ -48,35 +49,30 @@ class Workspace(object):
             {% if item.source_folder -%}
                 set(PACKAGE_{{ item.name }}_SRC "{{ item.source_folder.replace('\\\\', '/') }}")
             {% endif %}
-            {% if item.build_folder -%}
-                set(PACKAGE_{{ item.name }}_BUILD "{{ item.build_folder.replace('\\\\', '/') }}")
-            {% endif %}
         {% endfor %}
         
         macro(conan_workspace_subdirectories)
             set(CONAN_IS_WS TRUE)
             {% for item in editables %}
-                {% if item.source_folder and item.build_folder %}
-                    # {{ item.name }}
-                    add_subdirectory(${PACKAGE_{{ item.name }}_SRC} ${PACKAGE_{{ item.name }}_BUILD})
-                    {% if item.alias_target %}
-                    add_library(CONAN_PKG::{{ item.name }} ALIAS {{ item.alias_target }}) # Use our library
-                    {% endif %}
+                add_subdirectory(${PACKAGE_{{ item.name }}_SRC} {{ item.build_folder }})
+                {% if item.alias_target %}
+                add_library(CONAN_PKG::{{ item.name }} ALIAS {{ item.alias_target }}) # Use our library
                 {% endif %}
+
             {% endfor %}
         endmacro()
     """), trim_blocks=True, lstrip_blocks=True)
 
     def generate(self, cwd, graph, output):
         if self._ws_generator == "cmake":
-            output = ScopedOutput("CMake workspace", output)
             unique_refs = OrderedDict()
             for node in graph.ordered_iterate():
                 if node.recipe != RECIPE_EDITABLE:
                     continue
                 # To avoid multiple additions: build_requires repeated, diamonds
-                if node.ref in unique_refs:
+                if node.ref.name in unique_refs:
                     continue
+                output = ScopedOutput("CMake workspace ({})".format(node.ref.name), output)
 
                 ws_pkg = self._workspace_packages[node.ref]
                 layout = self._cache.package_layout(node.ref)
@@ -87,21 +83,16 @@ class Workspace(object):
 
                 source_folder = editable.folder(node.ref, EditableLayout.SOURCE_FOLDER,
                                                 node.conanfile.settings, node.conanfile.options)
-                if source_folder is not None:
-                    source_folder = os.path.join(ws_pkg.root_folder, source_folder)
-                else:
-                    output.warn("source_folder is not defined for reference '{}'"
-                                " in layout file '{}'".format(node.ref, editable.filepath))
+                source_folder = os.path.join(ws_pkg.root_folder, source_folder)
+                if not os.path.exists(os.path.join(source_folder, "CMakeLists.txt")):
+                    raise ConanException("Invalid source_folder for reference '{}' in layout"
+                                         " file '{}': cannot find a 'CMakeLists.txt' file".
+                                         format(node.ref, editable.filepath))
 
-                build_folder = editable.folder(node.ref, EditableLayout.BUILD_FOLDER,
-                                               node.conanfile.settings, node.conanfile.options)
-                if build_folder is not None:
-                    build_folder = os.path.join(ws_pkg.root_folder, build_folder)
-                else:
-                    output.warn("build_folder is not defined for reference '{}'"
-                                " in layout file '{}'".format(node.ref, editable.filepath))
+                build_folder = os.path.join(cwd, node.ref.name)
+                write_generators(node.conanfile, build_folder, output)
 
-                unique_refs[node.ref] = {
+                unique_refs[node.ref.name] = {
                     'name': node.ref.name,
                     'source_folder': source_folder,
                     'build_folder': build_folder,
