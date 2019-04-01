@@ -439,7 +439,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
 def check_output(cmd, folder=None, return_code=False):
     tmp_file = tempfile.mktemp()
     try:
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE, cwd=folder)
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file),
+                                   shell=True, stderr=PIPE, cwd=folder)
         process.communicate()
 
         if return_code:
