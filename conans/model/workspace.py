@@ -5,8 +5,10 @@ from collections import OrderedDict
 import yaml
 from jinja2 import Template
 
+from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_generators
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.importer import run_imports
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.editable_layout import get_editable_abs_path, EditableLayout
@@ -91,6 +93,9 @@ class Workspace(object):
 
                 build_folder = os.path.join(cwd, node.ref.name)
                 write_generators(node.conanfile, build_folder, output)
+                copied_files = run_imports(node.conanfile, build_folder)
+                report_copied_files(copied_files, output)
+                # TODO: This logic is repeated in `BinaryInstaller::_handle_node_editable`
 
                 unique_refs[node.ref.name] = {
                     'name': node.ref.name,
