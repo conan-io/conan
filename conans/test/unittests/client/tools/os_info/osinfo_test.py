@@ -18,9 +18,9 @@ class OSInfoTest(unittest.TestCase):
 
     def subprocess_check_output_mock(self, cmd):
         if cmd.endswith('"uname"'):
-            return self._uname.encode()
+            return self._uname
         elif cmd.endswith('"uname -r"'):
-            return self._version.encode()
+            return self._version
         raise ValueError("don't know how to respond to %s" % cmd)
 
     def test_windows(self):
