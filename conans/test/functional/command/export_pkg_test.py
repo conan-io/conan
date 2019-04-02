@@ -303,6 +303,7 @@ class TestConan(ConanFile):
         self.assertNotIn("Hello/0.1@lasote/stable package(): WARN: No files in this package!",
                          client.out)  # --bare include a now mandatory package() method!
 
+        self.assertNotIn("Packaged 1 '.py' file: conanfile.py", client.out)
         self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g cmake")
 
