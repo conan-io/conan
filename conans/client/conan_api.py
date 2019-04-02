@@ -1179,9 +1179,9 @@ def get_conan_runner():
     return runner
 
 
-def migrate_and_get_cache(base_folder, out, storage_folder=None):
+def migrate_and_get_cache(base_folder, out):
     # Init paths
-    cache = ClientCache(base_folder, storage_folder, out)
+    cache = ClientCache(base_folder, out)
 
     # Migration system
     migrator = ClientMigrator(cache, Version(client_version), out)

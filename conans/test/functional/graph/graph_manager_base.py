@@ -28,7 +28,7 @@ class GraphManagerTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder, os.path.join(cache_folder, ".conan"), self.output)
+        cache = ClientCache(cache_folder, self.output)
         self.cache = cache
         self.remote_search = MockSearchRemote()
         remote_manager = None
