@@ -1031,7 +1031,7 @@ without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
 
-""".encode("utf-8")
+"""
 
         def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
                                 output):  # @UnusedVariable
@@ -1042,7 +1042,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             return output_with_newline_and_spaces
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with patch('conans.client.tools.oss.check_output', new=subprocess_check_output_mock):
+            with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
