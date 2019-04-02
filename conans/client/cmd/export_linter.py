@@ -44,6 +44,7 @@ def _runner(args):
     command = " ".join(command)
     shell = True if platform.system() != "Windows" else False
     output = check_output(command, shell=shell)
+    print(output)
     return json.loads(output.decode("utf-8")) if output else {}
 
 
