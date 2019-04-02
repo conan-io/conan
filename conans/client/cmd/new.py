@@ -68,7 +68,7 @@ class {package_name}Conan(ConanFile):
     topics = None
 
     def package(self):
-        self.copy("*")
+        self.copy("*", excludes="conanfile.py")
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
