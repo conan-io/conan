@@ -252,7 +252,7 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete all the conans folder
         self.service.remove_conanfile(self.ref)
-        conan_path = self.server_store.conan(self.ref)
+        conan_path = self.server_store.base_folder(self.ref)
         self.assertFalse(os.path.exists(conan_path))
 
         # Delete one package

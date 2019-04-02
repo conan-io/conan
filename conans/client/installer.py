@@ -337,7 +337,7 @@ class BinaryInstaller(object):
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
-        base_path = package_layout.conan()
+        base_path = package_layout.base_folder()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
         node.conanfile.cpp_info.filter_empty = False
