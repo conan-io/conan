@@ -303,8 +303,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = check_output(arguments)
-        output = decode_text(output).strip()
+        output = check_output(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -448,7 +447,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && echo __BEGINS__ && set"
-    ret = decode_text(check_output(cmd))
+    ret = check_output(cmd)
     new_env = {}
     start_reached = False
     for line in ret.splitlines():
