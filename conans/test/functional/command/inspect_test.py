@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
@@ -32,6 +33,25 @@ class Pkg(base.Pkg):
         client.run("search")
         self.assertIn("Base/0.1@lasote/testing", client.out)
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
+
+    def python_requires_not_found_test(self):
+        server = TestServer()
+        client = TestClient(servers={"default": server}, users={"default": [("user", "channel")]})
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+
+            base = python_requires("name/version@user/channel")
+
+            class MyLib(ConanFile):
+                pass
+            """)
+
+        client.save({'conanfile.py': conanfile})
+        client.run("inspect . -a options", assert_error=True)
+        self.assertIn("Error loading conanfile at ", client.out)
+        self.assertIn('Unable to find python_requires("name/version@user/channel")'
+                      ' in remotes', client.out)
+        self.assertEqual(3, len(str(client.out).splitlines()))
 
     def name_version_test(self):
         server = TestServer()
