@@ -13,7 +13,7 @@ class CheckOutputTestCase(unittest.TestCase):
     success_code = 0
 
     def test_command_success(self):
-        ret = check_output("ls")
+        ret = check_output('ls {}'.format(os.path.dirname(__file__)))
         self.assertTrue(isinstance(ret, six.string_types))
         self.assertIn("check_output_test.py\n", ret)
 
