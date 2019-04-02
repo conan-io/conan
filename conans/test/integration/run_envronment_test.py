@@ -154,4 +154,4 @@ execute_process(COMMAND say_hello)
                 command = "bash -c 'source activate_run.sh && say_hello'"
 
             output = check_output(command)
-            self.assertIn("Hello Tool!", str(output))
+            self.assertIn("Hello Tool!", output)

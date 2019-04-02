@@ -520,10 +520,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = check_output("svn info --show-item revision").decode().strip()
+                rev = check_output("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = check_output("svn info --xml").decode().strip()
+                output = check_output("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))

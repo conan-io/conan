@@ -155,7 +155,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = check_output(['uname.exe', '-s']).decode()
+            uname = check_output(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -299,7 +299,7 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = check_output(command).decode().strip().lower()
+                ret = check_output(command).strip().lower()
                 return ret
         except Exception:
             return None

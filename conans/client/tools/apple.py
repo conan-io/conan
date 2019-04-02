@@ -73,7 +73,7 @@ class XCRun(object):
 
     def _invoke(self, args):
         def cmd_output(cmd):
-            return check_output(cmd).decode().strip()
+            return check_output(cmd).strip()
 
         command = ['xcrun', '-find']
         if self.sdk:

@@ -6,12 +6,12 @@ import unittest
 from textwrap import dedent
 
 from conans.client import tools
+from conans.client.tools.oss import check_output
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient,\
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer
-
 
 conanfile_py = """
 from conans import ConanFile
