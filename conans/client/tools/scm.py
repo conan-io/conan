@@ -218,7 +218,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return decode_text(subprocess.check_output(command, shell=True))
+            return decode_text(check_output(command))
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 

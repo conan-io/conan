@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
-import subprocess
+
+from conans.client.tools.oss import check_output
 
 
 def is_apple_os(os_):
@@ -72,7 +73,7 @@ class XCRun(object):
 
     def _invoke(self, args):
         def cmd_output(cmd):
-            return subprocess.check_output(cmd).decode().strip()
+            return check_output(cmd).decode().strip()
 
         command = ['xcrun', '-find']
         if self.sdk:

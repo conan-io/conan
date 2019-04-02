@@ -152,8 +152,7 @@ class InfoFoldersTest(unittest.TestCase):
         """
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
-        out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
-                                      % os.path.splitdrive(folder)[0])
+        out = check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
         if "NTFS" not in str(out):
             return
         short_folder = os.path.join(folder, ".cnacls")
@@ -181,8 +180,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = subprocess.check_output("cacls %s" % short_folder,
-                                                        stderr=subprocess.STDOUT)
+            short_folder_acls = check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 

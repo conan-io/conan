@@ -25,6 +25,7 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
+from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.system_pm import AptTool, ChocolateyTool, OSInfo, SystemPackageTool
 from conans.client.tools.win import vcvars_dict, vswhere
@@ -1294,13 +1295,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\notherline\n")
         if platform.system() != "Windows":
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
 
             tools.unix2dos(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
         else:
@@ -1314,13 +1314,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
 
             tools.dos2unix(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
         else:
