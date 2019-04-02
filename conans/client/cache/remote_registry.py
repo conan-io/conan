@@ -52,15 +52,6 @@ def load_registry_txt(contents):
     return remotes, refs
 
 
-def dump_registry(remotes, refs, prefs):
-    """To json"""
-    ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v} for r, (u, v) in remotes.items()],
-           "references": refs,
-           "package_references": prefs}
-
-    return json.dumps(ret, indent=True)
-
-
 def load_old_registry_json(contents):
     """From json"""
     data = json.loads(contents)
