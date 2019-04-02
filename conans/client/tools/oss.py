@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 from subprocess import CalledProcessError, PIPE
-
+import six
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException
@@ -440,6 +440,7 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
     tmp_file = tempfile.mktemp()
     try:
         stderr = stderr or PIPE
+        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
         process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
                                    stderr=stderr, cwd=folder)
         process.communicate()

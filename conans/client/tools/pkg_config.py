@@ -10,7 +10,7 @@ from conans.errors import ConanException
 class PkgConfig(object):
     @staticmethod
     def _cmd_output(command):
-        return check_output(command).decode().strip()
+        return check_output(command).strip()
 
     def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None,
                  print_errors=True):
