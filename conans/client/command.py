@@ -208,10 +208,16 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json output file')
+        parser.add_argument('--raw', default=False, action='store_true',
+                            help='Print just the value of the attributes to be displayed (ordered)')
 
         args = parser.parse_args(*args)
+
+        if args.raw and not args.attribute:
+            raise ConanException("With option '--raw' a list of attributes is required")
+
         result = self._conan.inspect(args.path_or_reference, args.attribute, args.remote)
-        Printer(self._user_io.out).print_inspect(result)
+        Printer(self._user_io.out).print_inspect(result, raw=args.raw)
         if args.json:
             json_output = json.dumps(result)
             if not os.path.isabs(args.json):

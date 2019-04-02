@@ -20,7 +20,7 @@ class Printer(object):
     def __init__(self, out):
         self._out = out
 
-    def print_inspect(self, inspect):
+    def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
             if k == "default_options":
                 if isinstance(v, str):
@@ -34,7 +34,10 @@ class Printer(object):
                 for ok, ov in sorted(v.items()):
                     self._out.writeln("    %s: %s" % (ok, ov))
             else:
-                self._out.writeln("%s: %s" % (k, str(v)))
+                if not raw:
+                    self._out.writeln("%s: %s" % (k, str(v)))
+                else:
+                    self._out.writeln(str(v))
 
     def print_info(self, data, _info, package_filter=None, show_paths=False, show_revisions=False):
         """ Print in console the dependency information for a conan file
