@@ -40,7 +40,7 @@ class PkgConfig(object):
         if self.define_variables:
             for name, value in self.define_variables.items():
                 command.append('--define-variable=%s=%s' % (name, value))
-        return check_output(command).decode().strip()
+        return check_output(command).strip()
 
     def _get_option(self, option):
         if option not in self.info:

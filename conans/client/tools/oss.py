@@ -4,6 +4,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+import six
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
@@ -438,6 +439,7 @@ def get_gnu_triplet(os_, arch, compiler=None):
 def check_output(cmd, folder=None, return_code=False, error_to_stdout=False, shell=True):
     tmp_file = tempfile.mktemp()
     try:
+        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
         stderr = subprocess.STDOUT if error_to_stdout else subprocess.PIPE
         process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=shell,
                                    stderr=stderr, cwd=folder)
