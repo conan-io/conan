@@ -1012,9 +1012,9 @@ compiler:
             with tools.environment_append(ret):
                 self.assertEqual(os.environ["LIBPATH"], str_var_value)
 
-    def vcvars_dict_test(self):
+    def test_vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
-        output_with_newline_and_spaces = """__BEGINS__
+        output_with_newline_and_spaces = """
      PROCESSOR_ARCHITECTURE=AMD64
 
 PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel

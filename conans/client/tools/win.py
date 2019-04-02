@@ -446,16 +446,11 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
-    cmd += " && echo __BEGINS__ && set"
+    cmd += " && set"
     ret = check_output(cmd)
     new_env = {}
-    start_reached = False
     for line in ret.splitlines():
         line = line.strip()
-        if not start_reached:
-            if "__BEGINS__" in line:
-                start_reached = True
-            continue
 
         if line == "\n" or not line:
             continue
