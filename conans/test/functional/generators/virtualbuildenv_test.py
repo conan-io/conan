@@ -1,9 +1,9 @@
 import os
 import platform
-import subprocess
 import unittest
 
 from conans import load
+from conans.client.tools.oss import check_output
 from conans.test.utils.tools import TestClient
 
 
