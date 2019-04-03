@@ -746,7 +746,9 @@ class Command(object):
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports a recipe, then creates a package from local source and build folders.
+        """
+        Exports a recipe, then creates a package from local-source-folder and
+        build-folder (or use already packaged files if a package-folder is provided).
 
         The package is created by calling the package() method applied to the
         local folders '--source-folder' and '--build-folder' It's created in
