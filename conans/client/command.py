@@ -794,8 +794,7 @@ class Command(object):
 
     def export_pkg(self, *args):
         """
-        Exports a recipe, then creates a package from local-source-folder and
-        build-folder (or use already packaged files if a package-folder is provided).
+        Exports a recipe, then creates a package from local source and build folders.
 
         The package is created by calling the package() method applied to the
         local folders '--source-folder' and '--build-folder' It's created in
