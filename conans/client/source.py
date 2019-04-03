@@ -9,7 +9,8 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
-from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty, walk)
+from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty,
+                               merge_directories)
 
 
 def complete_recipe_sources(remote_manager, cache, conanfile, ref):
@@ -34,41 +35,6 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref):
 
     export_path = cache.export(ref)
     remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
-
-
-def merge_directories(src, dst, excluded=None, symlinks=True):
-    src = os.path.normpath(src)
-    dst = os.path.normpath(dst)
-    excluded = excluded or []
-    excluded = [os.path.normpath(entry) for entry in excluded]
-
-    def is_excluded(origin_path):
-        if origin_path == dst:
-            return True
-        rel_path = os.path.normpath(os.path.relpath(origin_path, src))
-        if rel_path in excluded:
-            return True
-        return False
-
-    for src_dir, dirs, files in walk(src, followlinks=True):
-        if is_excluded(src_dir):
-            dirs[:] = []
-            continue
-
-        # Overwriting the dirs will prevents walk to get into them
-        files[:] = [d for d in files if not is_excluded(os.path.join(src_dir, d))]
-
-        dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
-        if not os.path.exists(dst_dir):
-            os.makedirs(dst_dir)
-        for file_ in files:
-            src_file = os.path.join(src_dir, file_)
-            dst_file = os.path.join(dst_dir, file_)
-            if os.path.islink(src_file) and symlinks:
-                linkto = os.readlink(src_file)
-                os.symlink(linkto, dst_file)
-            else:
-                shutil.copy2(src_file, dst_file)
 
 
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
