@@ -43,7 +43,7 @@ other/1.0@lasote/testing conan.io
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
         save(f, dump_registry(default_remotes, {}, {}))
-        cache = ClientCache(os.path.dirname(f), None, TestBufferConanOutput())
+        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
         registry = RemoteRegistry(cache)
 
         # Add

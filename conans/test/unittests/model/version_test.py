@@ -22,10 +22,12 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(v1.compatible("1.X"))
         self.assertTrue(v1.compatible("1.2.Y"))
         self.assertFalse(v1.compatible("0.X"))
+        self.assertFalse(v1.compatible("1.2.2"))
         v2 = v1.minor()
         self.assertTrue(v2.compatible("1.X"))
         self.assertTrue(v2.compatible("1.2.3.4"))
         self.assertFalse(v2.compatible("1.3.3.4"))
+        self.assertTrue(v2.major().compatible("1.3.3.4"))
 
         v1 = Version("1.2.rc1")
         self.assertTrue(v1 < "1.2.0")

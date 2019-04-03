@@ -130,6 +130,51 @@ class ClientCache(object):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
 
     @property
+    def store(self):
+        return self._store_folder
+
+    def base_folder(self, ref):
+        """ the base folder for this package reference, for each ConanFileReference
+        """
+        return self.package_layout(ref).base_folder()
+
+    def export(self, ref):
+        return self.package_layout(ref).export()
+
+    def export_sources(self, ref, short_paths=False):
+        return self.package_layout(ref, short_paths).export_sources()
+
+    def source(self, ref, short_paths=False):
+        return self.package_layout(ref, short_paths).source()
+
+    def conanfile(self, ref):
+        return self.package_layout(ref).conanfile()
+
+    def builds(self, ref):
+        return self.package_layout(ref).builds()
+
+    def build(self, pref, short_paths=False):
+        return self.package_layout(pref.ref, short_paths).build(pref)
+
+    def system_reqs(self, ref):
+        return self.package_layout(ref).system_reqs()
+
+    def system_reqs_package(self, pref):
+        return self.package_layout(pref.ref).system_reqs_package(pref)
+
+    def packages(self, ref):
+        return self.package_layout(ref).packages()
+
+    def package(self, pref, short_paths=False):
+        return self.package_layout(pref.ref, short_paths).package(pref)
+
+    def scm_folder(self, ref):
+        return self.package_layout(ref).scm_folder()
+
+    def installed_as_editable(self, ref):
+        return isinstance(self.package_layout(ref), PackageEditableLayout)
+
+    @property
     def config_install_file(self):
         return os.path.join(self.conan_folder, "config_install.json")
 
