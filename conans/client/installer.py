@@ -89,7 +89,6 @@ class _PackageBuilder(object):
             raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % str(e))
 
-        self._output.info('Configuring sources in %s' % source_folder)
         config_source(export_folder, export_source_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
@@ -163,6 +162,7 @@ class _PackageBuilder(object):
 
         # Update package metadata
         package_hash = package_layout.package_summary_hash(pref)
+        self._output.info("Created package revision %s" % package_hash)
         with package_layout.update_metadata() as metadata:
             metadata.packages[package_id].revision = package_hash
             metadata.packages[package_id].recipe_revision = pref.ref.revision
@@ -337,7 +337,7 @@ class BinaryInstaller(object):
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
-        base_path = package_layout.conan()
+        base_path = package_layout.base_folder()
         self._call_package_info(node.conanfile, package_folder=base_path)
 
         node.conanfile.cpp_info.filter_empty = False
@@ -393,6 +393,7 @@ class BinaryInstaller(object):
                         self._remote_manager.get_package(pref, package_folder,
                                                          node.binary_remote, output,
                                                          self._recorder)
+                        output.info("Downloaded package revision %s" % pref.revision)
                         self._registry.prefs.set(pref, node.binary_remote.name)
                         clean_dirty(package_folder)
                     else:

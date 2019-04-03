@@ -4,7 +4,6 @@ import shutil
 import time
 
 from conans import SERVER_CAPABILITIES
-from conans.paths.simple_paths import SimplePaths
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
@@ -12,8 +11,7 @@ from conans.server.migrate import migrate_and_get_server_config
 from conans.server.rest.server import ConanServer
 from conans.server.service.authorize import BasicAuthenticator, BasicAuthorizer
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import mkdir
-from conans.util.log import logger
+
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"
 TESTING_REMOTE_PRIVATE_PASS = "private_pass"
@@ -33,12 +31,9 @@ class TestServerLauncher(object):
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
 
-        # Define storage_folder, if not, it will be read from conf file and
-        # pointed to real user home
-        self.storage_folder = os.path.join(base_path, ".conan_server", "data")
-        mkdir(self.storage_folder)
+        self._base_path = base_path
 
-        server_config = migrate_and_get_server_config(base_path, self.storage_folder)
+        server_config = migrate_and_get_server_config(base_path)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES)
 
@@ -71,9 +66,7 @@ class TestServerLauncher(object):
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
 
-        logger.debug("Storage path: %s" % self.storage_folder)
         self.port = TestServerLauncher.port
-        self.paths = SimplePaths(server_config.disk_storage_path)
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.server_store,
                               server_capabilities)
@@ -112,9 +105,9 @@ class TestServerLauncher(object):
         self.t1.stop()
 
     def clean(self):
-        if os.path.exists(self.storage_folder):
+        if os.path.exists(self._base_path):
             try:
-                shutil.rmtree(self.storage_folder)
+                shutil.rmtree(self._base_path)
             except:
                 print("Can't clean the test server data, probably a server process is still opened")
 

@@ -268,7 +268,7 @@ class TransitiveGraphTest(GraphManagerTest):
         ref1 = "base/1.0@user/testing"
         self._cache_recipe(ref1, TestConanFile("base", "0.1"))
         ref = ConanFileReference.loads("base/aaa@user/testing")
-        with self.assertRaisesRegexp(ConanException, "Loop detected: 'base/aaa@user/testing' "
+        with six.assertRaisesRegex(self, ConanException, "Loop detected: 'base/aaa@user/testing' "
                                      "requires 'base/aaa@user/testing'"):
             self.build_graph(TestConanFile("base", "aaa", requires=[ref1]), ref=ref, create_ref=ref)
 

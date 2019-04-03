@@ -408,7 +408,7 @@ class TestServer(object):
             if not ref.revision:
                 path = self.test_server.server_store.conan_revisions_root(ref)
             else:
-                path = self.test_server.server_store.conan(ref)
+                path = self.test_server.server_store.base_folder(ref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
@@ -636,7 +636,6 @@ class TestClient(object):
                  requester_class=None, runner=None, path_with_spaces=True,
                  revisions_enabled=None, cpu_count=1):
         """
-        storage_folder: Local storage path
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
@@ -649,11 +648,8 @@ class TestClient(object):
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
-
-        # Define storage_folder, if not, it will be read from conf file & pointed to real user home
-        self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.cache = ClientCache(self.base_folder, self.storage_folder,
-                                 TestBufferConanOutput())
+        self.cache = ClientCache(self.base_folder, TestBufferConanOutput())
+        self.storage_folder = self.cache.store
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -675,8 +671,6 @@ servers["r2"] = TestServer()
             self.update_servers()
 
         self.init_dynamic_vars()
-
-        logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def _set_revisions(self, value):
@@ -767,7 +761,7 @@ servers["r2"] = TestServer()
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, self.storage_folder, output)
+        self.cache = ClientCache(self.base_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
@@ -799,8 +793,7 @@ servers["r2"] = TestServer()
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
-        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput(),
-                                           storage_folder=self.storage_folder)
+        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput())
 
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)
@@ -854,6 +847,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
+    def run_command(self, command):
+        self.all_output += str(self.out)
+        self.init_dynamic_vars() # Resets the output
+        return self.runner(command, cwd=self.current_folder)
+
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
         param files: dict{filename: filecontents}
@@ -864,6 +862,15 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+    def copy_from_assets(self, origin_folder, assets):
+        for asset in assets:
+            s = os.path.join(origin_folder, asset)
+            d = os.path.join(self.current_folder, asset)
+            if os.path.isdir(s):
+                shutil.copytree(s, d)
+            else:
+                shutil.copy2(s, d)
 
 
 class TurboTestClient(TestClient):
@@ -1000,6 +1007,11 @@ class GenConanfile(object):
         self._build_messages = []
         self._scm = {}
         self._requirements = []
+        self._revision_mode = None
+
+    def with_revision_mode(self, revision_mode):
+        self._revision_mode = revision_mode
+        return self
 
     def with_scm(self, scm):
         self._scm = scm
@@ -1049,6 +1061,13 @@ class GenConanfile(object):
         return "scm = {%s}" % line
 
     @property
+    def _revision_mode_line(self):
+        if not self._revision_mode:
+            return ""
+        line = "revision_mode=\"{}\"".format(self._revision_mode)
+        return line
+
+    @property
     def _settings_line(self):
         if not self._settings:
             return ""
@@ -1059,7 +1078,7 @@ class GenConanfile(object):
     def _options_line(self):
         if not self._options:
             return ""
-        line = ", ".join('"%s": %s' % (k, v) for k,v in self._options.items())
+        line = ", ".join('"%s": %s' % (k, v) for k, v in self._options.items())
         tmp = "options = {%s}" % line
         if self._default_options:
             line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
@@ -1112,6 +1131,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._requirements_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
+        if self._revision_mode_line:
+            ret.append("    {}".format(self._revision_mode_line))
         if self._settings_line:
             ret.append("    {}".format(self._settings_line))
         if self._options_line:

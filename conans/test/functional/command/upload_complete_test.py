@@ -88,7 +88,7 @@ class UploadTest(unittest.TestCase):
         fake_metadata.recipe.revision = DEFAULT_REVISION_V1
         fake_metadata.packages[self.pref.id].revision = DEFAULT_REVISION_V1
         self.client.save({"metadata.json": fake_metadata.dumps()},
-                         path=self.client.cache.conan(self.ref))
+                         path=self.client.cache.base_folder(self.ref))
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: myconan1,
                           "include/math/lib1.h": "//copy",

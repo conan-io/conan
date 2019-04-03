@@ -1127,7 +1127,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
         with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
-            tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
+            tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
                            retry=3, retry_wait=0)
