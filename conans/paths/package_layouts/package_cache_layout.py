@@ -4,8 +4,9 @@ import os
 import platform
 from contextlib import contextmanager
 
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, conanfile_exception_formatter
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
+from conans.model.conan_file import ConanFile
 from conans.model.manifest import FileTreeManifest
 from conans.model.manifest import discarded_file
 from conans.model.package_metadata import PackageMetadata
@@ -15,6 +16,7 @@ from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDE
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
+from conans.client.installer import build_id
 
 
 def short_path(func):
@@ -67,10 +69,14 @@ class PackageCacheLayout(object):
         return os.path.join(self._base_folder, BUILD_FOLDER)
 
     @short_path
-    def build(self, pref):
+    def build(self, pref, conanfile):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
-        return os.path.join(self._base_folder, BUILD_FOLDER, pref.id)
+        assert conanfile is None or isinstance(conanfile, ConanFile)
+        pref_id = pref.id
+        if conanfile:
+            pref_id = build_id(conanfile) or pref_id
+        return os.path.join(self._base_folder, BUILD_FOLDER, pref_id)
 
     def system_reqs(self):
         return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, SYSTEM_REQS)

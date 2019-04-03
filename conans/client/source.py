@@ -11,6 +11,7 @@ from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty,
                                merge_directories)
+from conans.paths.package_layouts.package_local_layout import PackageLocalLayout
 
 
 def complete_recipe_sources(remote_manager, cache, conanfile, ref):
@@ -41,16 +42,16 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
     """ Entry point for the "conan source" command.
     """
     conanfile_folder = os.path.dirname(conanfile_path)
-    _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None,
-                cache=None, export_folder=None, export_source_folder=None,
+    package_layout = PackageLocalLayout(base_folder=conanfile_folder)
+    _run_source(conanfile, package_layout, src_folder, hook_manager,
                 local_sources_path=conanfile_folder)
 
 
-def config_source(export_folder, export_source_folder, src_folder, conanfile, output,
-                  conanfile_path, reference, hook_manager, cache):
+def config_source(package_layout, conanfile, output, hook_manager, cache):
     """ Implements the sources configuration when a package is going to be built in the
     local cache.
     """
+    src_folder = package_layout.source()
 
     def remove_source(raise_error=True):
         output.warn("This can take a while for big packages")
@@ -66,7 +67,7 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
             if raise_error or isinstance(e_rm, KeyboardInterrupt):
                 raise ConanException("Unable to remove source folder")
 
-    sources_pointer = cache.scm_folder(reference)
+    sources_pointer = package_layout.scm_folder()
     local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
     if is_dirty(src_folder):
         output.warn("Trying to remove corrupted source folder")
@@ -81,13 +82,11 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
     if not os.path.exists(src_folder):  # No source folder, need to get it
         set_dirty(src_folder)
         mkdir(src_folder)
-        _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                    cache, export_folder, export_source_folder, local_sources_path)
+        _run_source(conanfile, package_layout, src_folder, hook_manager, local_sources_path)
         clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                cache, export_folder, export_source_folder, local_sources_path):
+def _run_source(conanfile, package_layout, src_folder, hook_manager, local_sources_path):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
         - Getting sources from SCM
@@ -103,32 +102,34 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
         try:
             with get_env_context_manager(conanfile):
                 hook_manager.execute("pre_source", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=reference)
+                                     conanfile_path=package_layout.conanfile(),
+                                     reference=package_layout.ref)  # TODO: .ref is None for local workflow
                 output = conanfile.output
                 output.info('Configuring sources in %s' % src_folder)
-                _run_scm(conanfile, src_folder, local_sources_path, output, cache=cache)
 
-                if cache:
-                    _get_sources_from_exports(src_folder, export_folder, export_source_folder)
+                in_cache = not isinstance(package_layout, PackageLocalLayout)  # TODO: What about editables?
+                _run_scm(conanfile, src_folder, local_sources_path, output, in_cache=in_cache)
+
+                if in_cache:
+                    _get_sources_from_exports(src_folder, package_layout)
                     _clean_source_folder(src_folder)
                 with conanfile_exception_formatter(conanfile.display_name, "source"):
                     conanfile.source()
 
                 hook_manager.execute("post_source", conanfile=conanfile,
-                                     conanfile_path=conanfile_path,
-                                     reference=reference)
+                                     conanfile_path=package_layout.conanfile(),
+                                     reference=package_layout.ref)
         except ConanExceptionInUserConanfileMethod:
             raise
         except Exception as e:
             raise ConanException(e)
 
 
-def _get_sources_from_exports(src_folder, export_folder, export_source_folder):
+def _get_sources_from_exports(src_folder, package_layout):
     # so self exported files have precedence over python_requires ones
-    merge_directories(export_folder, src_folder)
+    merge_directories(package_layout.export(), src_folder)
     # Now move the export-sources to the right location
-    merge_directories(export_source_folder, src_folder)
+    merge_directories(package_layout.export_sources(), src_folder)
 
 
 def _clean_source_folder(folder):
@@ -144,13 +145,13 @@ def _clean_source_folder(folder):
         pass
 
 
-def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
+def _run_scm(conanfile, src_folder, local_sources_path, output, in_cache):
     scm_data = get_scm_data(conanfile)
     if not scm_data:
         return
 
     dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
-    if cache:
+    if in_cache:
         # When in cache, capturing the sources from user space is done only if exists
         if not local_sources_path or not os.path.exists(local_sources_path):
             local_sources_path = None
@@ -176,6 +177,6 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
         scm = SCM(scm_data, dest_dir, output)
         scm.checkout()
 
-    if cache:
+    if in_cache:
         # This is a bit weird. Why after a SCM should we remove files. Maybe check conan 2.0
         _clean_source_folder(dest_dir)

@@ -29,14 +29,14 @@ from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
 
-def build_id(conan_file):
-    if hasattr(conan_file, "build_id"):
+def build_id(conanfile):
+    if hasattr(conanfile, "build_id"):
         # construct new ConanInfo
-        build_id_info = conan_file.info.copy()
-        conan_file.info_build = build_id_info
+        build_id_info = conanfile.info.copy()
+        conanfile.info_build = build_id_info
         # effectively call the user function to change the package values
-        with conanfile_exception_formatter(str(conan_file), "build_id"):
-            conan_file.build_id()
+        with conanfile_exception_formatter(str(conanfile), "build_id"):
+            conanfile.build_id()
         # compute modified ID
         return build_id_info.package_id()
     return None
@@ -49,13 +49,11 @@ class _PackageBuilder(object):
         self._hook_manager = hook_manager
         self._remote_manager = remote_manager
 
-    def _get_build_folder(self, conanfile, package_layout, pref, keep_build, recorder):
+    def _skip_build(self, conanfile, package_layout, pref, keep_build, recorder):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
-        # and returns the build folder
-        new_id = build_id(conanfile)
-        build_pref = PackageReference(pref.ref, new_id) if new_id else pref
-        build_folder = package_layout.build(build_pref)
+        build_folder = package_layout.build(pref, conanfile=conanfile)
+        ori_build_folder = package_layout.build(pref, conanfile=None)
 
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
@@ -70,33 +68,28 @@ class _PackageBuilder(object):
                 recorder.package_install_error(pref, INSTALL_ERROR_MISSING_BUILD_FOLDER,
                                                msg, remote_name=None)
                 raise ConanException(msg)
-        elif build_pref != pref and os.path.exists(build_folder) and hasattr(conanfile, "build_id"):
+        elif build_folder != ori_build_folder and os.path.exists(build_folder) and hasattr(conanfile, "build_id"):
             self._output.info("Won't be built, using previous build folder as defined in build_id()")
             skip_build = True
 
-        return build_folder, skip_build
+        return skip_build
 
-    def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, package_folder):
-        export_folder = package_layout.export()
-        export_source_folder = package_layout.export_sources()
-
+    def _prepare_sources(self, conanfile, pref, package_layout):
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref)
+        build_folder = package_layout.build(pref, conanfile=conanfile)
         try:
             rmdir(build_folder)
-            rmdir(package_folder)
+            rmdir(package_layout.package(pref))
         except OSError as e:
             raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % str(e))
 
-        config_source(export_folder, export_source_folder, source_folder,
-                      conanfile, self._output, conanfile_path, pref.ref,
-                      self._hook_manager, self._cache)
+        config_source(package_layout, conanfile, self._output, self._hook_manager, self._cache)
 
         if not getattr(conanfile, 'no_copy_source', False):
             self._output.info('Copying sources to build folder')
             try:
-                shutil.copytree(source_folder, build_folder, symlinks=True)
+                shutil.copytree(package_layout.source(), build_folder, symlinks=True)
             except Exception as e:
                 msg = str(e)
                 if "206" in msg:  # System error shutil.Error 206: Filename or extension too long
@@ -180,17 +173,16 @@ class _PackageBuilder(object):
 
         package_layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
         source_folder = package_layout.source()
+        build_folder = package_layout.build(pref, conanfile=conanfile)
         conanfile_path = package_layout.conanfile()
         package_folder = package_layout.package(pref)
 
-        build_folder, skip_build = self._get_build_folder(conanfile, package_layout,
-                                                          pref, keep_build, recorder)
+        skip_build = self._skip_build(conanfile, package_layout, pref, keep_build, recorder)
         # PREPARE SOURCES
         if not skip_build:
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
-                self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, package_folder)
+                self._prepare_sources(conanfile, pref, package_layout)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):

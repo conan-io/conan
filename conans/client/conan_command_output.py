@@ -136,11 +136,8 @@ class CommandOutputer(object):
                 item_data["export_folder"] = package_layout.export()
                 item_data["source_folder"] = package_layout.source()
                 # @todo: check if this is correct or if it must always be package_id
-                package_id = build_id(conanfile) or package_id
                 pref = PackageReference(ref, package_id)
-                item_data["build_folder"] = package_layout.build(pref)
-
-                pref = PackageReference(ref, package_id)
+                item_data["build_folder"] = package_layout.build(pref, conanfile=conanfile)
                 item_data["package_folder"] = package_layout.package(pref)
 
             try:

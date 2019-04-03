@@ -41,7 +41,7 @@ class RunSCMTest(unittest.TestCase):
                          src_folder=self.src_folder,
                          local_sources_path=local_sources_path,
                          output=output,
-                         cache=True)
+                         in_cache=True)
 
         self.assertIn("Getting sources from folder: {}".format(local_sources_path), output)
 
@@ -68,7 +68,7 @@ class RunSCMTest(unittest.TestCase):
                          src_folder=self.src_folder,
                          local_sources_path=None,  # None or non existing path
                          output=output,
-                         cache=True)
+                         in_cache=True)
 
         self.assertIn("Getting sources from url: '{}'".format(url), output)
 
@@ -98,7 +98,7 @@ class RunSCMTest(unittest.TestCase):
                      src_folder=self.src_folder,
                      local_sources_path=local_sources_path,
                      output=output,
-                     cache=False)
+                     in_cache=False)
 
         self.assertIn("getting sources from folder: {}".format(local_sources_path).lower(),
                       str(output).lower())
@@ -120,6 +120,6 @@ class RunSCMTest(unittest.TestCase):
                      src_folder=self.src_folder,
                      local_sources_path=None,
                      output=output,
-                     cache=False)
+                     in_cache=False)
 
         self.assertIn("Getting sources from url: '{}'".format(url), output)

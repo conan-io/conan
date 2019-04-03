@@ -57,7 +57,7 @@ class DiskRemover(object):
         else:
             for id_ in ids:
                 # Removal build IDs should be those of the build_id if present
-                pkg_path = package_layout.build(PackageReference(package_layout.ref, id_))
+                pkg_path = package_layout.build(PackageReference(package_layout.ref, id_), None)
                 self._remove(pkg_path, package_layout.ref, "package:%s" % id_)
 
     def remove_packages(self, package_layout, ids_filter=None):
