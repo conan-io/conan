@@ -72,6 +72,14 @@ class OnceArgument(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+class SmartFormatter(argparse.HelpFormatter):
+
+    def _fill_text(self, text, width, indent):
+        import textwrap
+        text = textwrap.dedent(text)
+        return ''.join(indent + line for line in text.splitlines(keepends=True))
+
+
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
@@ -105,9 +113,12 @@ class Command(object):
         self._outputer = outputer
 
     def help(self, *args):
-        """Show help of a specific command.
         """
-        parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help")
+        Show help of a specific command.
+        """
+        parser = argparse.ArgumentParser(description=self.help.__doc__,
+                                         prog="conan help",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("command", help='command', nargs="?")
         args = parser.parse_args(*args)
         if not args.command:
@@ -122,10 +133,13 @@ class Command(object):
             raise ConanException("Unknown command '%s'" % args.command)
 
     def new(self, *args):
-        """Creates a new package recipe template with a 'conanfile.py' and optionally,
+        """
+        Creates a new package recipe template with a 'conanfile.py' and optionally,
         'test_package' testing files.
         """
-        parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new")
+        parser = argparse.ArgumentParser(description=self.new.__doc__,
+                                         prog="conan new",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("name", help='Package name, e.g.: "Poco/1.7.3" or complete reference'
                                          ' for CI scripts: "Poco/1.7.3@conan/stable"')
         parser.add_argument("-t", "--test", action='store_true', default=False,
@@ -195,10 +209,13 @@ class Command(object):
                         circleci_osx_versions=args.ci_circleci_osx)
 
     def inspect(self, *args):
-        """Displays conanfile attributes, like name, version, options
+        """
+        Displays conanfile attributes, like name, version, options
         Works both locally, in local cache and remote
         """
-        parser = argparse.ArgumentParser(description=self.inspect.__doc__, prog="conan inspect")
+        parser = argparse.ArgumentParser(description=self.inspect.__doc__,
+                                         prog="conan inspect",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py) or to a recipe file. e.g., "
                             "./my_project/conanfile.py. It could also be a reference")
@@ -221,7 +238,8 @@ class Command(object):
             save(json_output_file, json_output)
 
     def test(self, *args):
-        """Test a package consuming it from a conanfile.py with a test() method.
+        """
+        Test a package consuming it from a conanfile.py with a test() method.
 
         This command installs the conanfile dependencies (including the tested
         package), calls a 'conan build' to build test apps and finally executes
@@ -229,7 +247,9 @@ class Command(object):
         neither definition of package() or package_info() methods. The package
         to be tested must exist in the local cache or in any configured remote.
         """
-        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
+        parser = argparse.ArgumentParser(description=self.test.__doc__,
+                                         prog="conan test",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
                             ' to a recipe file with test() method'
                             'e.g. conan test_package/conanfile.py pkg/version@user/channel')
@@ -246,7 +266,8 @@ class Command(object):
                                 build_modes=args.build, test_build_folder=args.test_build_folder)
 
     def create(self, *args):
-        """Builds a binary package for a recipe (conanfile.py).
+        """
+        Builds a binary package for a recipe (conanfile.py).
 
         Uses the specified configuration in a profile or in -s settings, -o
         options etc. If a 'test_package' folder (the name can be configured
@@ -254,7 +275,9 @@ class Command(object):
         that the package has been created correctly. Check 'conan test' command
         to know more about 'test_folder' project.
         """
-        parser = argparse.ArgumentParser(description=self.create.__doc__, prog="conan create")
+        parser = argparse.ArgumentParser(description=self.create.__doc__,
+                                         prog="conan create",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference",
                             help='user/channel, version@user/channel or pkg/version@user/channel '
@@ -305,7 +328,8 @@ class Command(object):
                 self._outputer.json_output(info, args.json, cwd)
 
     def download(self, *args):
-        """Downloads recipe and binaries to the local cache, without using settings.
+        """
+        Downloads recipe and binaries to the local cache, without using settings.
 
         It works specifying the recipe reference and package ID to be
         installed. Not transitive, requirements of the specified reference will
@@ -315,7 +339,9 @@ class Command(object):
         If no remote is specified, it will use the default remote.
         """
 
-        parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
+        parser = argparse.ArgumentParser(description=self.download.__doc__,
+                                         prog="conan download",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("reference",
                             help='pkg/version@user/channel')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
@@ -332,7 +358,8 @@ class Command(object):
                                     remote_name=args.remote, recipe=args.recipe)
 
     def install(self, *args):
-        """Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
+        """
+        Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
 
         It can also be used to install a concrete package specifying a
         reference. If any requirement is not found in the local cache, it will
@@ -344,7 +371,9 @@ class Command(object):
         the package is installed, Conan will write the files for the specified
         generators.
         """
-        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
+        parser = argparse.ArgumentParser(description=self.install.__doc__,
+                                         prog="conan install",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
@@ -412,11 +441,14 @@ class Command(object):
                 self._outputer.json_output(info, args.json, cwd)
 
     def config(self, *args):
-        """Manages Conan configuration.
+        """
+        Manages Conan configuration.
 
         Used to edit conan.conf, or install config files.
         """
-        parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
+        parser = argparse.ArgumentParser(description=self.config.__doc__,
+                                         prog="conan config",
+                                         formatter_class=SmartFormatter)
 
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
@@ -465,7 +497,8 @@ class Command(object):
                                               target_folder=args.target_folder)
 
     def info(self, *args):
-        """Gets information about the dependency graph of a recipe.
+        """
+        Gets information about the dependency graph of a recipe.
 
         It can be used with a recipe or a reference for any existing package in
         your local cache.
@@ -477,7 +510,9 @@ class Command(object):
         str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
 
-        parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
+        parser = argparse.ArgumentParser(description=self.info.__doc__,
+                                         prog="conan info",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
@@ -585,11 +620,14 @@ class Command(object):
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
     def source(self, *args):
-        """ Calls your local conanfile.py 'source()' method.
+        """
+        Calls your local conanfile.py 'source()' method.
 
         Usually downloads and uncompresses the package sources.
         """
-        parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
+        parser = argparse.ArgumentParser(description=self.source.__doc__,
+                                         prog="conan source",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
@@ -616,7 +654,8 @@ class Command(object):
         return self._conan.source(args.path, args.source_folder, args.install_folder)
 
     def build(self, *args):
-        """Calls your local conanfile.py 'build()' method.
+        """
+        Calls your local conanfile.py 'build()' method.
 
         The recipe will be built in the local directory specified by
         --build-folder, reading the sources from --source-folder. If you are
@@ -624,7 +663,9 @@ class Command(object):
         configured as destination folder for the install step.
         """
 
-        parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
+        parser = argparse.ArgumentParser(description=self.build.__doc__,
+                                         prog="conan build",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-b", "--build", default=None, action="store_true",
                             help="Execute the build step (variable should_build=True). When "
@@ -671,7 +712,8 @@ class Command(object):
                                  should_test=test)
 
     def package(self, *args):
-        """ Calls your local conanfile.py 'package()' method.
+        """
+        Calls your local conanfile.py 'package()' method.
 
         This command works in the user space and it will copy artifacts from
         the --build-folder and --source-folder folder to the --package-folder
@@ -679,7 +721,9 @@ class Command(object):
         do it, use 'conan create' or 'conan export-pkg' after a 'conan build'
         command.
         """
-        parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
+        parser = argparse.ArgumentParser(description=self.package.__doc__,
+                                         prog="conan package",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
@@ -713,13 +757,16 @@ class Command(object):
                                    install_folder=args.install_folder)
 
     def imports(self, *args):
-        """ Calls your local conanfile.py or conanfile.txt 'imports' method.
+        """
+        Calls your local conanfile.py or conanfile.txt 'imports' method.
 
         It requires to have been previously installed and have a
         conanbuildinfo.txt generated file in the --install-folder (defaulted to
         current directory).
         """
-        parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
+        parser = argparse.ArgumentParser(description=self.imports.__doc__,
+                                         prog="conan imports",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path",
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous "
@@ -746,15 +793,19 @@ class Command(object):
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports a recipe, then creates a package from local source and build folders.
+        """
+        Exports a recipe, then creates a package from local-source-folder and
+        build-folder (or use already packaged files if a package-folder is provided).
 
         The package is created by calling the package() method applied to the
         local folders '--source-folder' and '--build-folder' It's created in
         the local cache for the specified 'reference' and for the specified
         '--settings', '--options' and or '--profile'.
         """
+
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
-                                         prog="conan export-pkg")
+                                         prog="conan export-pkg",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help="user/channel or pkg/version@user/channel "
                                               "(if name and version are not declared in the "
@@ -813,13 +864,16 @@ class Command(object):
                 self._outputer.json_output(info, args.json, cwd)
 
     def export(self, *args):
-        """Copies the recipe (conanfile.py & associated files) to your local cache.
+        """
+        Copies the recipe (conanfile.py & associated files) to your local cache.
 
         Use the 'reference' param to specify a user and channel where to export
         it. Once the recipe is in the local cache it can be shared, reused and
         to any remote with the 'conan upload' command.
         """
-        parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
+        parser = argparse.ArgumentParser(description=self.export.__doc__,
+                                         prog="conan export",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help="user/channel, or Pkg/version@user/channel (if name "
                                               "and version are not declared in the conanfile.py")
@@ -834,13 +888,16 @@ class Command(object):
                                   keep_source=args.keep_source)
 
     def remove(self, *args):
-        """Removes packages or binaries matching pattern from local cache or remote.
+        """
+        Removes packages or binaries matching pattern from local cache or remote.
 
         It can also be used to remove temporary source or build folders in the
         local conan cache. If no remote is specified, the removal will be done
         by default in the local conan cache.
         """
-        parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
+        parser = argparse.ArgumentParser(description=self.remove.__doc__,
+                                         prog="conan remove",
+                                         formatter_class=SmartFormatter)
         parser.add_argument('pattern_or_reference', nargs="?", help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-b', '--builds', nargs="*", action=Extender,
                             help=("By default, remove all the build folders or select one, "
@@ -904,12 +961,15 @@ class Command(object):
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
-        """Copies conan recipes and packages to another user/channel.
+        """
+        Copies conan recipes and packages to another user/channel.
 
         Useful to promote packages (e.g. from "beta" to "stable") or transfer
         them from one user to another.
         """
-        parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
+        parser = argparse.ArgumentParser(description=self.copy.__doc__,
+                                         prog="conan copy",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("reference", default="",
                             help='package reference. e.g., MyPackage/1.2@user/channel')
         parser.add_argument("user_channel", default="",
@@ -931,7 +991,8 @@ class Command(object):
                                 force=args.force, packages=args.package or args.all)
 
     def user(self, *args):
-        """Authenticates against a remote with user/pass, caching the auth token.
+        """
+        Authenticates against a remote with user/pass, caching the auth token.
 
         Useful to avoid the user and password being requested later. e.g. while
         you're uploading a package.  You can have one user for each remote.
@@ -943,7 +1004,9 @@ class Command(object):
         # - conan user list ('remote') -> list users (of a remote)
         # - conan user auth 'remote' ('user') ('password') -> login a remote (w/o user or pass)
         # - conan user set 'user' 'remote' -> set user for a remote (not login) necessary??
-        parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan user")
+        parser = argparse.ArgumentParser(description=self.user.__doc__,
+                                         prog="conan user",
+                                         formatter_class=SmartFormatter)
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. If no name is provided it will show the'
                             ' current user')
@@ -996,7 +1059,8 @@ class Command(object):
                 self._outputer.json_output(info, args.json, cwd)
 
     def search(self, *args):
-        """Searches package recipes and binaries in the local cache or in a remote.
+        """
+        Searches package recipes and binaries in the local cache or in a remote.
 
         If you provide a pattern, then it will search for existing package
         recipes matching it.  If a full reference is provided
@@ -1006,7 +1070,9 @@ class Command(object):
         has to be used. For case insensitive file systems, like Windows, case
         sensitive search can be forced with '--case-sensitive'.
         """
-        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
+        parser = argparse.ArgumentParser(description=self.search.__doc__,
+                                         prog="conan search",
+                                         formatter_class=SmartFormatter)
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument('-o', '--outdated', default=False, action='store_true',
                             help="Show only outdated from recipe packages. "
@@ -1110,13 +1176,15 @@ class Command(object):
                 self._outputer.json_output(info, args.json, cwd)
 
     def upload(self, *args):
-        """Uploads a recipe and binary packages to a remote.
+        """
+        Uploads a recipe and binary packages to a remote.
 
         If no remote is specified, the first configured remote (by default conan-center, use
         'conan remote list' to list the remotes) will be used.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
-                                         prog="conan upload")
+                                         prog="conan upload",
+                                         formatter_class=SmartFormatter)
         parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
         parser.add_argument("-p", "--package", default=None, action=OnceArgument,
                             help='package ID to upload')
@@ -1190,7 +1258,9 @@ class Command(object):
     def remote(self, *args):
         """Manages the remote list and the package recipes associated to a remote.
         """
-        parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
+        parser = argparse.ArgumentParser(description=self.remote.__doc__,
+                                         prog="conan remote",
+                                         formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         # create the parser for the "a" command
@@ -1305,7 +1375,9 @@ class Command(object):
         'show' subcommand is able to resolve absolute and relative paths, as well as to map names to
         '.conan/profiles' folder, in the same way as the '--profile' install argument.
         """
-        parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
+        parser = argparse.ArgumentParser(description=self.profile.__doc__,
+                                         prog="conan profile",
+                                         formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand')
 
         # create the parser for the "profile" command
@@ -1366,7 +1438,8 @@ class Command(object):
         """ Gets a file or list a directory of a given reference or package.
         """
         parser = argparse.ArgumentParser(description=self.get.__doc__,
-                                         prog="conan get")
+                                         prog="conan get",
+                                         formatter_class=SmartFormatter)
         parser.add_argument('reference', help='package recipe reference')
         parser.add_argument('path',
                             help='Path to the file or directory. If not specified will get the '
@@ -1416,7 +1489,8 @@ class Command(object):
         does not appear in the final dependency graph.
         """
         parser = argparse.ArgumentParser(description=self.alias.__doc__,
-                                         prog="conan alias")
+                                         prog="conan alias",
+                                         formatter_class=SmartFormatter)
         parser.add_argument('reference', help='Alias reference. e.g.: mylib/1.X@user/channel')
         parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
         args = parser.parse_args(*args)
@@ -1429,7 +1503,8 @@ class Command(object):
         """ command to manage workspaces
         """
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
-                                         prog="conan workspace")
+                                         prog="conan workspace",
+                                         formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         install_parser = subparsers.add_parser('install', help='same as a "conan install" command '
@@ -1448,7 +1523,8 @@ class Command(object):
         """ Manage editable packages
         """
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
-                                         prog="conan editable")
+                                         prog="conan editable",
+                                         formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
