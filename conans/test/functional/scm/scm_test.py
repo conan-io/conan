@@ -223,9 +223,10 @@ other_folder/excluded_subfolder
         self.client.runner('git remote add origin "%s"' % path.replace("\\", "/"), cwd=path)
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
-                                NO_SETTINGS_PACKAGE_ID)
-        bf = self.client.cache.build(pref)
+        ref = ConanFileReference.loads("lib/0.1@user/channel")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_layout = self.client.cache.package_layout(ref)
+        bf = package_layout.build(pref, conanfile=None)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(bf, ".git")))

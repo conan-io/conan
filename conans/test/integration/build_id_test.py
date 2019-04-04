@@ -86,9 +86,6 @@ class BuildIdTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . user/channel -s os=Windows -s build_type=Release")
-        print(client.out)
-        self.fail("AAA")
-
         self.assertIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Release!", client.user_io.out)

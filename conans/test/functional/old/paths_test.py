@@ -37,12 +37,13 @@ class PathsTest(unittest.TestCase):
         expected_base = os.path.join(folder, ".conan", "data",
                                      os.path.sep.join(["opencv", "2.4.10",
                                                        "lasote", "testing"]))
+        package_layout = paths.package_layout(ref)
         self.assertEqual(paths.base_folder(ref), expected_base)
-        self.assertEqual(paths.export(ref),
+        self.assertEqual(package_layout.export(),
                          os.path.join(expected_base, EXPORT_FOLDER))
-        self.assertEqual(paths.build(pref),
+        self.assertEqual(package_layout.build(pref, conanfile=None),
                          os.path.join(expected_base, BUILD_FOLDER,  "456fa678eae68"))
-        self.assertEqual(paths.package(pref),
+        self.assertEqual(package_layout.package(pref),
                          os.path.join(expected_base, PACKAGES_FOLDER,
                                       "456fa678eae68"))
 

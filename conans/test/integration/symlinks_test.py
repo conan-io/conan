@@ -42,10 +42,11 @@ Hello/0.1@lasote/stable
 @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
-    def _check(self, client, ref, build=True):
-        folders = [client.cache.package(ref), client.current_folder]
+    def _check(self, client, pref, build=True):
+        package_layout = client.cache.package_layout(pref.ref)
+        folders = [package_layout.package(pref), client.current_folder]
         if build:
-            folders.append(client.cache.build(ref))
+            folders.append(package_layout.build(pref, conanfile=None))
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
@@ -127,13 +128,15 @@ class TestConan(ConanFile):
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         team_pref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
+        package_layout = client.cache.package_layout(ref)
+        package_layout_team = client.cache.package_layout(team_ref)
 
-        for folder in [client.cache.export(ref),
-                       client.cache.source(ref),
-                       client.cache.build(pref),
-                       client.cache.package(pref),
-                       client.cache.export(team_ref),
-                       client.cache.package(team_pref)]:
+        for folder in [package_layout.export(),
+                       package_layout.source(),
+                       package_layout.build(pref, conanfile=None),
+                       package_layout.package(pref),
+                       package_layout_team.export(),
+                       package_layout_team.package(team_pref)]:
             exported_lib = os.path.join(folder, lib_name)
             exported_link = os.path.join(folder, link_name)
             self.assertEqual(os.readlink(exported_link), lib_name)

@@ -73,6 +73,7 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         assert conanfile is None or isinstance(conanfile, ConanFile)
+        # TODO: It makes sense to move here the 'build_id' logic
         pref_id = pref.id
         if conanfile:
             pref_id = build_id(conanfile) or pref_id

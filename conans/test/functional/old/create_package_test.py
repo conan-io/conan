@@ -71,8 +71,9 @@ class ExporterTest(unittest.TestCase):
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
         pref = PackageReference(ref, "myfakeid")
-        build_folder = client.cache.build(pref)
-        package_folder = client.cache.package(pref)
+        package_layout = client.cache.package_layout(ref)
+        build_folder = package_layout.build(pref, conanfile=None)
+        package_folder = package_layout.package(pref)
         install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)
