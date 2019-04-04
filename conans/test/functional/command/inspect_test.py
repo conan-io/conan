@@ -362,6 +362,8 @@ class InspectRawTest(unittest.TestCase):
         client.save({"conanfile.py": self.conanfile})
         client.run("inspect . -a version -a name --raw")
         self.assertEqual("1.2.3\nMyPkg\n", client.out)
+        client.run("inspect . -a name -a version --raw")
+        self.assertEqual("MyPkg\n1.2.3\n", client.out)
 
     def test_options(self):
         client = TestClient()
