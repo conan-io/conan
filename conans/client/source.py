@@ -13,6 +13,19 @@ from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_di
                                merge_directories)
 
 
+class PackageLocalLayout(object):
+    ref = None
+
+    def __init__(self, base_folder):
+        self._base_folder = base_folder
+
+    def base_folder(self):
+        return self._base_folder
+
+    def conanfile(self):
+        return os.path.join(self._base_folder, CONANFILE)
+
+
 def complete_recipe_sources(remote_manager, cache, conanfile, ref):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
@@ -40,18 +53,6 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref):
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
     """ Entry point for the "conan source" command.
     """
-    class PackageLocalLayout(object):
-        ref = None
-
-        def __init__(self, base_folder):
-            self._base_folder = base_folder
-
-        def base_folder(self):
-            return self._base_folder
-
-        def conanfile(self):
-            return os.path.join(self._base_folder, CONANFILE)
-
     conanfile_folder = os.path.dirname(conanfile_path)
     package_layout = PackageLocalLayout(base_folder=conanfile_folder)
     _run_source(conanfile, package_layout, src_folder, hook_manager, conanfile_folder)
