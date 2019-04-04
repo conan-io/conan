@@ -4,7 +4,8 @@ import os
 import platform
 from contextlib import contextmanager
 
-from conans.errors import NotFoundException, conanfile_exception_formatter
+from conans.client.installer import build_id
+from conans.errors import NotFoundException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.manifest import FileTreeManifest
@@ -16,7 +17,6 @@ from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDE
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
-from conans.client.installer import build_id
 
 
 def short_path(func):

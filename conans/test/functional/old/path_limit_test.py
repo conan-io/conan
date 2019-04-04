@@ -2,13 +2,14 @@ import os
 import platform
 import tempfile
 import unittest
+from textwrap import dedent
 
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import BUILD_FOLDER, SRC_FOLDER, PACKAGES_FOLDER
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
-from textwrap import dedent
 
 base = '''
 from conans import ConanFile
@@ -178,16 +179,16 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertEqual("Hello2 extra path length", file2)
         if platform.system() == "Windows":
 
-            source_folder = package_layout.source()
-            link_source = load(os.path.join(source_folder, ".conan_link"))
+            cache_source_folder = os.path.join(package_layout.base_folder(), SRC_FOLDER)
+            link_source = load(os.path.join(cache_source_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_source))
 
-            build_folder = package_layout.build(pref, conanfile=None)
-            link_build = load(os.path.join(build_folder, ".conan_link"))
+            cache_build_folder = os.path.join(package_layout.base_folder(), BUILD_FOLDER, pref.id)
+            link_build = load(os.path.join(cache_build_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_build))
 
-            package_folder = package_layout.package(pref)
-            link_package = load(os.path.join(package_folder, ".conan_link"))
+            cache_pkg_folder = os.path.join(package_layout.base_folder(), PACKAGES_FOLDER, pref.id)
+            link_package = load(os.path.join(cache_pkg_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_package))
 
             client.run("remove lib* -f")
@@ -214,13 +215,15 @@ class ConanLib(ConanFile):
 
         if platform.system() == "Windows":
             ref = ConanFileReference.loads("lib/0.1@user/channel")
+
             package_layout = client.cache.package_layout(ref)
-            source_folder = package_layout.source()
-            build_folder = package_layout.build(pref, conanfile=None)
-            package_folder = package_layout.package(pref)
-            link_source = os.path.join(source_folder, ".conan_link")
-            link_build = os.path.join(build_folder, ".conan_link")
-            link_package = os.path.join(package_folder, ".conan_link")
+            cache_source_folder = os.path.join(package_layout.base_folder(), SRC_FOLDER)
+            cache_build_folder = os.path.join(package_layout.base_folder(), BUILD_FOLDER, pref.id)
+            cache_pkg_folder = os.path.join(package_layout.base_folder(), PACKAGES_FOLDER, pref.id)
+
+            link_source = os.path.join(cache_source_folder, ".conan_link")
+            link_build = os.path.join(cache_build_folder, ".conan_link")
+            link_package = os.path.join(cache_pkg_folder, ".conan_link")
 
             self.assertTrue(os.path.exists(link_source))
             self.assertTrue(os.path.exists(link_build))
