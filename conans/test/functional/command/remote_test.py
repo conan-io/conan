@@ -363,3 +363,7 @@ class HelloConan(ConanFile):
         self.client.run("remote list_pref Hello1/0.1@user/testing")
         self.assertIn("Hello1/0.1@user/testing:555: remote2", self.client.user_io.out)
         self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)
+
+    def missing_subarguments_test(self):
+        self.client.run("remote", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)

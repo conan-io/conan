@@ -924,3 +924,8 @@ class Pkg(ConanFile):
         for p in ("HelloC", "HelloB", "HelloA"):
             self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
                           conanws_cmake)
+
+    def missing_subarguments_test(self):
+        client = TestClient()
+        client.run("workspace", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
