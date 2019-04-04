@@ -263,7 +263,6 @@ class MSBuildTest(unittest.TestCase):
                                  "compiler.version": "9",
                                  "os": "WindowsCE",
                                  "os.platform": "YOUR PLATFORM SDK (ARMV4)",
-                                 "os.version": "7.0",
                                  "arch": "armv4"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
