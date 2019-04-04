@@ -11,7 +11,6 @@ from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty,
                                merge_directories)
-from conans.paths.package_layouts.package_local_layout import PackageLocalLayout
 
 
 def complete_recipe_sources(remote_manager, cache, conanfile, ref):
@@ -41,10 +40,21 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref):
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
     """ Entry point for the "conan source" command.
     """
+    class PackageLocalLayout(object):
+        ref = None
+
+        def __init__(self, base_folder):
+            self._base_folder = base_folder
+
+        def base_folder(self):
+            return self._base_folder
+
+        def conanfile(self):
+            return os.path.join(self._base_folder, CONANFILE)
+
     conanfile_folder = os.path.dirname(conanfile_path)
     package_layout = PackageLocalLayout(base_folder=conanfile_folder)
-    _run_source(conanfile, package_layout, src_folder, hook_manager,
-                local_sources_path=conanfile_folder)
+    _run_source(conanfile, package_layout, src_folder, hook_manager, conanfile_folder)
 
 
 def config_source(package_layout, conanfile, output, hook_manager, cache):
