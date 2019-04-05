@@ -106,7 +106,6 @@ class HelloTestConan(ConanFile):
         # keep the source
         client.save({"conanfile.py": conanfile + " "})
         client.run("create . Pkg/0.1@lasote/testing --keep-source")
-        print("PRIIIINTtttt", client.out)
         self.assertIn("A new conanfile.py version was exported", client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
@@ -114,7 +113,6 @@ class HelloTestConan(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
         # keep build
         client.run("create . Pkg/0.1@lasote/testing --keep-build")
-        print("PRIIIINT", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build",
                       client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
