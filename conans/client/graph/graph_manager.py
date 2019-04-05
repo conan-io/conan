@@ -8,7 +8,6 @@ from conans.client.graph.graph import BINARY_BUILD, Node,\
     RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.loader import ProcessedProfile
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
@@ -68,10 +67,10 @@ class GraphManager(object):
             profile.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)
-        processed_profile = ProcessedProfile(profile, None)
+
         if conanfile_path.endswith(".py"):
             conanfile = self._loader.load_consumer(conanfile_path,
-                                                   processed_profile=processed_profile, test=test,
+                                                   profile=profile, test=test,
                                                    name=name, version=version,
                                                    user=user, channel=channel)
             with get_env_context_manager(conanfile, without_python=True):
@@ -83,7 +82,7 @@ class GraphManager(object):
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, profile)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -106,10 +105,10 @@ class GraphManager(object):
 
         # Computing the full dependency graph
         profile = graph_info.profile
-        processed_profile = ProcessedProfile(profile, create_reference)
+
         ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, processed_profile,
+            conanfile = self._loader.load_virtual(reference, profile,
                                                   scope_options=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
@@ -117,13 +116,13 @@ class GraphManager(object):
                 raise ConanException("Revisions not enabled in the client, specify a "
                                      "reference without revision")
             # create without test_package and install <ref>
-            conanfile = self._loader.load_virtual([reference], processed_profile)
+            conanfile = self._loader.load_virtual([reference], profile)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         else:
             path = reference
             if path.endswith(".py"):
                 test = str(create_reference) if create_reference else None
-                conanfile = self._loader.load_consumer(path, processed_profile, test=test,
+                conanfile = self._loader.load_consumer(path, profile, test=test,
                                                        name=graph_info.root.name,
                                                        version=graph_info.root.version,
                                                        user=graph_info.root.user,
@@ -135,7 +134,7 @@ class GraphManager(object):
                                          conanfile._conan_user, conanfile._conan_channel,
                                          validate=False)
             else:
-                conanfile = self._loader.load_conanfile_txt(path, processed_profile,
+                conanfile = self._loader.load_conanfile_txt(path, profile,
                                                             ref=graph_info.root)
 
             root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
@@ -145,8 +144,9 @@ class GraphManager(object):
                                       build_mode=build_mode, remote_name=remote_name,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder,
-                                      processed_profile=processed_profile,
-                                      apply_build_requires=apply_build_requires)
+                                      profile=profile,
+                                      apply_build_requires=apply_build_requires,
+                                      dev_reference=create_reference)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
@@ -174,7 +174,7 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
                                 build_mode, remote_name, profile_build_requires, recorder,
-                                processed_profile, apply_build_requires=True):
+                                profile, apply_build_requires=True):
 
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remote_name)
         if not apply_build_requires:
@@ -208,36 +208,36 @@ class GraphManager(object):
                 subgraph = builder.extend_build_requires(graph, node,
                                                          package_build_requires.values(),
                                                          check_updates, update, remote_name,
-                                                         processed_profile)
+                                                         profile)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remote_name, profile_build_requires, recorder,
-                                             processed_profile)
+                                             profile)
                 graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remote_name,
-                                                         processed_profile)
+                                                         profile)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remote_name, {}, recorder,
-                                             processed_profile)
+                                             profile)
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remote_name,
-                    profile_build_requires, recorder, processed_profile, apply_build_requires):
+                    profile_build_requires, recorder, profile, apply_build_requires, dev_reference):
 
         assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   recorder)
-        graph = builder.load_graph(root_node, check_updates, update, remote_name, processed_profile)
+                                   recorder, dev_reference=dev_reference)
+        graph = builder.load_graph(root_node, check_updates, update, remote_name, profile)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager)
 
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remote_name,
-                                     profile_build_requires, recorder, processed_profile,
+                                     profile_build_requires, recorder, profile,
                                      apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order

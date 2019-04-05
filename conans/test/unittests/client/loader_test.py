@@ -27,7 +27,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         output = TestBufferConanOutput()
         self.loader = ConanFileLoader(TestRunner(output), output, None)
 
-    def env_test(self):
+    def test_env_test(self):
         env_values = EnvValues()
         env_values.add("PREPEND_PATH", ["hello", "bye"])
         env_values.add("VAR", ["var_value"])
@@ -65,5 +65,6 @@ class LoadConanfileTest(unittest.TestCase):
                     version = "1.0"
              """))
         ref = ConanFileReference("hello", "1.0", "user", "channel")
-        conanfile = self.loader.load_conanfile(self.conanfile_path, self.profile, ref)
+        conanfile = self.loader.load_conanfile(self.conanfile_path, self.profile, ref,
+                                               is_develop=False)
         self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})

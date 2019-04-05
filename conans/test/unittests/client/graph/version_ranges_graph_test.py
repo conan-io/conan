@@ -9,7 +9,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
 from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import test_processed_profile
+from conans.test.utils.tools import test_profile
 
 
 def _get_nodes(graph, name):
@@ -47,9 +47,9 @@ class VersionRangesTest(GraphTest):
 
     def build_graph(self, content, update=False):
         self.loader.cached_conanfiles = {}
-        processed_profile = test_processed_profile()
-        root_conan = self.retriever.root(str(content), processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
+        profile = test_profile()
+        root_conan = self.retriever.root(str(content), profile)
+        deps_graph = self.builder.load_graph(root_conan, update, update, None, profile)
         self.output.write("\n".join(self.resolver.output))
         return deps_graph
 

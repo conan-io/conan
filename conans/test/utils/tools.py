@@ -31,7 +31,6 @@ from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.hook_manager import HookManager
-from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -79,12 +78,12 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     manifest.save(path)
 
 
-def test_processed_profile(profile=None, settings=None):
+def test_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
     if profile.processed_settings is None:
         profile.processed_settings = settings or Settings()
-    return ProcessedProfile(profile=profile)
+    return profile
 
 
 class TestingResponse(object):

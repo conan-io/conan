@@ -23,7 +23,7 @@ from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
-                                     test_processed_profile)
+                                     test_profile)
 
 say_content = TestConanFile("Say", "0.1")
 say_content2 = TestConanFile("Say", "0.2")
@@ -83,7 +83,7 @@ class GraphTest(unittest.TestCase):
         self.remote_search = MockSearchRemote()
         self.resolver = RangeResolver(paths, self.remote_search)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        self.resolver, None)
+                                        self.resolver, None, dev_reference=None)
         cache = Mock()
         cache.config.default_package_id_mode = "semver_direct_mode"
         remote_manager = None
@@ -96,9 +96,9 @@ class GraphTest(unittest.TestCase):
         profile = Profile()
         profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
-        processed_profile = test_processed_profile(profile=profile)
-        root_conan = self.retriever.root(str(content), processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+        profile = test_profile(profile=profile)
+        root_conan = self.retriever.root(str(content), profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
@@ -1459,7 +1459,7 @@ class ConsumerConan(ConanFile):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        Mock(), None)
+                                        Mock(), None, dev_reference=None)
         liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
         libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
@@ -1470,9 +1470,9 @@ class ConsumerConan(ConanFile):
         self.retriever.save_recipe(libd_ref, self.libd_content)
 
     def build_graph(self, content):
-        processed_profile = test_processed_profile()
-        root_conan = self.retriever.root(content, processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+        profile = test_profile()
+        root_conan = self.retriever.root(content, profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None, profile)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1845,10 +1845,10 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
 
-        processed_profile = test_processed_profile(profile=profile)
-        root_conan = self.retriever.root(chat_content, processed_profile)
+        profile = test_profile(profile=profile)
+        root_conan = self.retriever.root(chat_content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             processed_profile=processed_profile)
+                                             profile=profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
