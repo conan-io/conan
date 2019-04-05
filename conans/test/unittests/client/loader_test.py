@@ -27,7 +27,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         output = TestBufferConanOutput()
         self.loader = ConanFileLoader(TestRunner(output), output, None)
 
-    def test_env_test(self):
+    def env_test(self):
         env_values = EnvValues()
         env_values.add("PREPEND_PATH", ["hello", "bye"])
         env_values.add("VAR", ["var_value"])
