@@ -81,10 +81,12 @@ class ConanFileLoader(object):
     def _initialize_conanfile(conanfile, processed_profile):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
+        # TODO: Why not make this mix inside the Profile class? I can modify the implementation
+        # TODO:  of Profile::package_settings to return a Profile class mixing the global settings
+        # TODO:  with the specific ones
         tmp_settings = processed_profile._settings.copy()
         if (processed_profile._package_settings and
                 conanfile.name in processed_profile._package_settings):
-            # TODO: Investigate this, maybe I can populate in the update/process_settings function
             # Update the values, keeping old ones (confusing assign)
             values_tuple = processed_profile._package_settings[conanfile.name].settings
             tmp_settings.values = Values.from_list(values_tuple.items())

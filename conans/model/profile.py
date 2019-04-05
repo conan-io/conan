@@ -56,6 +56,9 @@ class _ProfileSettings(object):
             self.settings = res
 
 
+PackageSettings = _ProfileSettings
+
+
 class Profile(_ProfileSettings):
     """A profile contains a set of setting (with values), environment variables
     """
@@ -63,7 +66,7 @@ class Profile(_ProfileSettings):
     def __init__(self):
         # Sections
         super(Profile, self).__init__()
-        self._package_settings = defaultdict(_ProfileSettings)
+        self._package_settings = defaultdict(PackageSettings)
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()
@@ -114,4 +117,4 @@ class Profile(_ProfileSettings):
     def update_package_settings(self, name, settings):
         """Mix the specified package settings with the specified profile.
         Specified package settings are prioritized to profile"""
-        self._package_settings.setdefault(name, _ProfileSettings()).update_settings(settings)
+        self._package_settings.setdefault(name, PackageSettings()).update_settings(settings)
