@@ -51,19 +51,16 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("1.14.0"):
-            migrate_config_install(self.cache)
-
-        if old_version < Version("1.13.0"):
+        if old_version < Version("1.15.0"):
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -88,7 +85,7 @@ os:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -105,11 +102,11 @@ compiler:
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14", "15"]
+        version: ["8", "9", "10", "11", "12", "14", "15", "16"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
                   v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                   LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
-                  LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
+                  LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0",
@@ -124,6 +121,10 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
             self._update_settings_yml(old_settings)
 
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
+
+        if old_version < Version("1.13.0"):
             # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
             _migrate_create_metadata(self.cache, self.out)
 
