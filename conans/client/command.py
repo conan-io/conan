@@ -77,7 +77,7 @@ class SmartFormatter(argparse.HelpFormatter):
     def _fill_text(self, text, width, indent):
         import textwrap
         text = textwrap.dedent(text)
-        return ''.join(indent + line for line in text.splitlines(keepends=True))
+        return ''.join(indent + line for line in text.splitlines(True))
 
 
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -210,7 +210,7 @@ class Command(object):
 
     def inspect(self, *args):
         """
-        Displays conanfile attributes, like name, version, options
+        Displays conanfile attributes, like name, version, options.
         Works both locally, in local cache and remote
         """
         parser = argparse.ArgumentParser(description=self.inspect.__doc__,
@@ -1369,7 +1369,9 @@ class Command(object):
             return self._conan.remote_clean()
 
     def profile(self, *args):
-        """ Lists profiles in the '.conan/profiles' folder, or shows profile details.
+        """
+        Lists profiles in the '.conan/profiles' folder, or shows profile details.
+
         The 'list' subcommand will always use the default user 'conan/profiles' folder. But the
         'show' subcommand is able to resolve absolute and relative paths, as well as to map names to
         '.conan/profiles' folder, in the same way as the '--profile' install argument.
@@ -1434,7 +1436,8 @@ class Command(object):
             self._conan.delete_profile_key(profile, args.item)
 
     def get(self, *args):
-        """ Gets a file or list a directory of a given reference or package.
+        """
+        Gets a file or list a directory of a given reference or package.
         """
         parser = argparse.ArgumentParser(description=self.get.__doc__,
                                          prog="conan get",
@@ -1480,7 +1483,8 @@ class Command(object):
         return
 
     def alias(self, *args):
-        """Creates and exports an 'alias package recipe'.
+        """
+        Creates and exports an 'alias package recipe'.
 
         An "alias" package is a symbolic name (reference) for another package
         (target). When some package depends on an alias, the target one will be
@@ -1519,7 +1523,8 @@ class Command(object):
                                           args.profile, args.update)
 
     def editable(self, *args):
-        """ Manage editable packages
+        """
+        Manage editable packages
         """
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
                                          prog="conan editable",
@@ -1588,7 +1593,23 @@ class Command(object):
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 self._user_io.out.write(fmt % name, Color.GREEN)
-                self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0].strip())
+
+                # Help will be all the lines up to the first empty one
+                docstring_lines = commands[name].__doc__.split('\n')
+                start = False
+                data = []
+                for line in docstring_lines:
+                    line = line.strip()
+                    if not line:
+                        if start:
+                            break
+                        start = True
+                        continue
+                    data.append(line)
+
+                import textwrap
+                txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" "*(max_len+2))
+                self._user_io.out.writeln(txt)
 
         self._user_io.out.writeln("")
         self._user_io.out.writeln('Conan commands. Type "conan <command> -h" for help',
