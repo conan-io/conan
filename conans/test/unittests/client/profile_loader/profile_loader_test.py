@@ -82,7 +82,7 @@ class AConan(ConanFile):
 
 class ProfileTest(unittest.TestCase):
 
-    def test_profile_loads_test(self):
+    def profile_loads_test(self):
 
         tmp = temp_folder()
 
@@ -138,9 +138,6 @@ class ProfileTest(unittest.TestCase):
         new_profile, _ = self._get_profile(tmp, prof)
         self.assertEqual(new_profile.package_settings["zlib"], {"compiler": "gcc"})
         self.assertEqual(new_profile.settings["compiler"], "Visual Studio")
-
-        print(new_profile.dumps())
-        self.fail("AAA")
 
     def test_empty_env(self):
         tmp = temp_folder()

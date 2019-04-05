@@ -118,10 +118,12 @@ class SettingsCppStdTests(unittest.TestCase):
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertEqual(r.settings["cppstd"], "11")
 
+    # TODO: Add more tests with scoped settings
     def test_value_valid_scoped(self):
         self._save_profile(compiler_cppstd="11")
 
-        # It is not failing now
+        # TODO: I think that 'process_settings' function should be smart enough to validate also
+        #   scoped ones.
         r = profile_from_args(["default"], ["hh:compiler=apple-clang", "hh:compiler.cppstd=144"],
                               [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
