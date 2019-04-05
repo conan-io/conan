@@ -1,10 +1,12 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
 
 from conans.client import tools
-from conans.test.utils.tools import TestClient
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import load
 
 
@@ -68,29 +70,34 @@ class HelloTestConan(ConanFile):
     @parameterized.expand([(True, ), (False, )])
     def keep_build_test(self, with_test):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    exports_sources = "*.h"
-    def source(self):
-        self.output.info("mysource!!")
-    def build(self):
-        self.output.info("mybuild!!")
-    def package(self):
-        self.output.info("mypackage!!")
-        self.copy("*.h")
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class MyPkg(ConanFile):
+                exports_sources = "*.h"
+                def source(self):
+                    self.output.info("mysource!!")
+                def build(self):
+                    self.output.info("mybuild!!")
+                def package(self):
+                    self.output.info("mypackage!!")
+                    self.copy("*.h")
+            """)
         if with_test:
             client.save({"conanfile.py": conanfile,
                          "header.h": ""})
         else:
-            test_conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    def test(self):
-        pass
-"""
+            test_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class MyPkg(ConanFile):
+                def test(self):
+                    pass
+            """)
             client.save({"conanfile.py": conanfile,
                          "header.h": "",
                          "test_package/conanfile.py": test_conanfile})
+
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
@@ -99,6 +106,7 @@ class MyPkg(ConanFile):
         # keep the source
         client.save({"conanfile.py": conanfile + " "})
         client.run("create . Pkg/0.1@lasote/testing --keep-source")
+        print("PRIIIINTtttt", client.out)
         self.assertIn("A new conanfile.py version was exported", client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
@@ -106,6 +114,7 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
         # keep build
         client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        print("PRIIIINT", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build",
                       client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
@@ -134,6 +143,36 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing --keep-build", assert_error=True)
         self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
+
+    def keep_build_package_folder_test(self):
+        """
+        Package folder should be deleted always before a new conan create command, even with
+        --keep-build
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class MyPkg(ConanFile):
+                exports_sources = "*.h", "*.cpp"
+                def package(self):
+                    self.copy("*.h")
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "",
+                     "source.cpp": ""})
+        client.run("create . pkg/0.1@danimtb/testing")
+        ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_files = os.listdir(client.cache.package(pref))
+        self.assertIn("header.h", package_files)
+        self.assertNotIn("source.cpp", package_files)
+        client.save({"conanfile.py": conanfile.replace("self.copy(\"*.h\")",
+                                                       "self.copy(\"*.cpp\")")})
+        client.run("create . pkg/0.1@danimtb/testing -kb")
+        package_files = os.listdir(client.cache.package(pref))
+        self.assertNotIn("header.h", package_files)
+        self.assertIn("source.cpp", package_files)
 
     def create_test(self):
         client = TestClient()

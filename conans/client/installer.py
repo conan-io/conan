@@ -77,17 +77,12 @@ class _PackageBuilder(object):
         return build_folder, skip_build
 
     def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, package_folder):
+                         build_folder):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref)
-        try:
-            rmdir(build_folder)
-            rmdir(package_folder)
-        except OSError as e:
-            raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % str(e))
+        remove_folder_raising(build_folder)
 
         config_source(export_folder, export_source_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
@@ -140,6 +135,8 @@ class _PackageBuilder(object):
 
     def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
                  package_folder):
+        remove_folder_raising(package_folder)
+
         # FIXME: Is weak to assign here the recipe_hash
         manifest = package_layout.recipe_manifest()
         conanfile.info.recipe_hash = manifest.summary_hash
@@ -190,7 +187,7 @@ class _PackageBuilder(object):
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
                 self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, package_folder)
+                                      build_folder)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
@@ -226,6 +223,13 @@ class _PackageBuilder(object):
 
             return node.pref
 
+
+def remove_folder_raising(folder):
+    try:
+        rmdir(folder)
+    except OSError as e:
+        raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                             "Close any app using it, and retry" % str(e))
 
 def _handle_system_requirements(conan_file, pref, cache, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
