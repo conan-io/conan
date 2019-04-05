@@ -61,11 +61,11 @@ MyPackage:os=Windows
 '''
         np, _ = _load_profile(prof, None, None)
 
-        np.update_package_settings({"MyPackage": [("OTHER", "2")]})
+        np._update_package_settings({"MyPackage": [("OTHER", "2")]})
         self.assertEqual(np.package_settings_values,
                          {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
 
-        np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
+        np._update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
         self.assertEqual(np.package_settings_values,
                          {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
                                         ("compiler", "2"), ("compiler.version", "3")]})

@@ -22,7 +22,7 @@ class ProcessedProfile(object):
         self._settings = profile.processed_settings
         self._user_options = profile.options.copy()
 
-        self._package_settings = profile.package_settings_values
+        self._package_settings = profile.package_settings
         self._env_values = profile.env_values
         # Make sure the paths are normalized first, so env_values can be just a copy
         self._dev_reference = create_reference
