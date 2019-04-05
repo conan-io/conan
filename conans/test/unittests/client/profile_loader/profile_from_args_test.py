@@ -1,0 +1,135 @@
+# coding=utf-8
+
+import os
+import textwrap
+import unittest
+
+import six
+from jinja2 import Template
+from parameterized import parameterized
+
+from conans.client.cache.cache import ClientCache
+from conans.client.profile_loader import profile_from_args
+from conans.errors import ConanException
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
+from conans.util.files import save
+from contextlib import contextmanager
+import warnings
+
+
+@contextmanager
+def catch_deprecation_warning(test_suite, n=1):
+    with warnings.catch_warnings(record=True) as w:
+        warnings.filterwarnings("always", module="(.*\.)?conans\..*")
+        yield
+        test_suite.assertEqual(len(w), n)
+        test_suite.assertTrue(issubclass(w[0].category, UserWarning))
+
+
+class SettingsCppStdTests(unittest.TestCase):
+
+    def setUp(self):
+        self.tmp_folder = temp_folder()
+        self.cache = ClientCache(self.tmp_folder, TestBufferConanOutput())
+
+    def _save_profile(self, cppstd=None, compiler_cppstd=None, filename="default"):
+        fullpath = os.path.join(self.cache.profiles_path, filename)
+
+        t = Template(textwrap.dedent("""
+            [settings]
+            os=Macos
+            arch=x86_64
+            compiler=apple-clang
+            {% if compiler_cppstd %}compiler.cppstd={{ compiler_cppstd }}{% endif %}
+            compiler.libcxx=libc++
+            compiler.version=10.0
+            {% if cppstd %}cppstd={{ cppstd }}{% endif %}
+            """))
+
+        save(fullpath, t.render(cppstd=cppstd, compiler_cppstd=compiler_cppstd))
+        return filename
+
+    def test_no_value(self):
+        self._save_profile()
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r.process_settings(self.cache)
+        self.assertNotIn("compiler.cppstd", r.settings)
+        self.assertNotIn("cppstd", r.settings)
+
+    def test_value_none(self):
+        self._save_profile(compiler_cppstd="None")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r.process_settings(self.cache)
+        self.assertEqual(r.settings["compiler.cppstd"], "None")
+        self.assertNotIn("cppstd", r.settings)
+
+    def test_value_valid(self):
+        self._save_profile(compiler_cppstd="11")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r.process_settings(self.cache)
+        self.assertEqual(r.settings["compiler.cppstd"], "11")
+        self.assertNotIn("cppstd", r.settings)
+
+    def test_value_invalid(self):
+        self._save_profile(compiler_cppstd="13")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        with six.assertRaisesRegex(self, ConanException, "Invalid setting '13' is not a valid "
+                                                         "'settings.compiler.cppstd' value"):
+            r.process_settings(self.cache)
+        self.assertNotIn("cppstd", r.settings)
+
+    def test_value_duplicated_None(self):
+        self._save_profile(compiler_cppstd="None", cppstd="None")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r.process_settings(self.cache)
+        self.assertEqual(r.settings["compiler.cppstd"], "None")
+        self.assertEqual(r.settings["cppstd"], "None")
+
+    def test_value_duplicated(self):
+        self._save_profile(compiler_cppstd="11", cppstd="11")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        with catch_deprecation_warning(self):
+            r.process_settings(self.cache)
+        self.assertEqual(r.settings["compiler.cppstd"], "11")
+        self.assertEqual(r.settings["cppstd"], "11")
+
+    def test_value_different(self):
+        self._save_profile(cppstd="14", compiler_cppstd="11")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        with six.assertRaisesRegex(self, ConanException, "The specified 'compiler.cppstd=11' and"
+                                                         " 'cppstd=14' are different"):
+            with catch_deprecation_warning(self):
+                r.process_settings(self.cache)
+
+    def test_value_from_cppstd(self):
+        self._save_profile(cppstd="11")
+
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        with catch_deprecation_warning(self):
+            r.process_settings(self.cache)
+        self.assertEqual(r.settings["compiler.cppstd"], "11")
+        self.assertEqual(r.settings["cppstd"], "11")
+
+    def test_value_valid_scoped(self):
+        self._save_profile(compiler_cppstd="11")
+
+        # It is not failing now
+        r = profile_from_args(["default"], ["hh:compiler=apple-clang", "hh:compiler.cppstd=144"],
+                              [], [], cwd=self.tmp_folder, cache=self.cache)
+        r.process_settings(self.cache)
+        self.assertEqual(r.settings["compiler.cppstd"], "11")
+        self.assertNotIn("cppstd", r.settings)
+
+        # It fails inner in the graph
+        from conans.test.utils.tools import TestClient
+        t = TestClient(base_folder=self.tmp_folder)
+        t.run("new hh/0.1@user/channel --bare")
+        t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang -shh:compiler.cppstd=144")

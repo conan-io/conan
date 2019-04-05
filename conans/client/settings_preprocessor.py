@@ -1,3 +1,5 @@
+import warnings
+
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
 from conans.util.log import logger
@@ -11,7 +13,19 @@ def preprocess(settings):
 def check_cppstd(settings):
     compiler = settings.get_safe("compiler")
     compiler_version = settings.get_safe("compiler.version")
+    compiler_cppstd = settings.get_safe("compiler.cppstd")
     cppstd = settings.get_safe("cppstd")
+
+    if cppstd:
+        warnings.warn("cppstd setting is deprecated, use compiler.cppstd instead")
+
+    if cppstd and compiler_cppstd and cppstd != compiler_cppstd:
+        raise ConanException("The specified 'compiler.cppstd={}' and 'cppstd={}' are"
+                             " different.".format(compiler_cppstd, cppstd))
+
+    if cppstd and not compiler_cppstd:
+        settings.compiler.cppstd = cppstd
+
     if not cppstd or compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return
     cpp_values = settings.cppstd.values_range
