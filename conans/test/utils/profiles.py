@@ -14,7 +14,8 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
     profile.settings = settings or {}
 
     if package_settings:
-        profile.package_settings = package_settings
+        for pkg_name, values in package_settings.items():
+            profile.update_package_settings(pkg_name, values)
 
     if options:
         profile.options = OptionsValues(options)

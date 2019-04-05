@@ -136,7 +136,8 @@ class ProfileTest(unittest.TestCase):
     compiler=Visual Studio
     '''
         new_profile, _ = self._get_profile(tmp, prof)
-        self.assertEqual(new_profile.package_settings["zlib"], {"compiler": "gcc"})
+        self.assertEqual(new_profile.package_settings("zlib").settings.keys(), ["compiler"])
+        self.assertEqual(new_profile.package_settings("zlib").settings["compiler"], "gcc")
         self.assertEqual(new_profile.settings["compiler"], "Visual Studio")
 
     def test_empty_env(self):

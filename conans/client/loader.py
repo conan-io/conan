@@ -22,7 +22,7 @@ class ProcessedProfile(object):
         self._settings = profile.processed_settings
         self._user_options = profile.options.copy()
 
-        self._package_settings = profile.package_settings
+        self._package_settings = profile._package_settings
         self._env_values = profile.env_values
         # Make sure the paths are normalized first, so env_values can be just a copy
         self._dev_reference = create_reference
@@ -84,9 +84,10 @@ class ConanFileLoader(object):
         tmp_settings = processed_profile._settings.copy()
         if (processed_profile._package_settings and
                 conanfile.name in processed_profile._package_settings):
+            # TODO: Investigate this, maybe I can populate in the update/process_settings function
             # Update the values, keeping old ones (confusing assign)
-            values_tuple = processed_profile._package_settings[conanfile.name]
-            tmp_settings.values = Values.from_list(values_tuple)
+            values_tuple = processed_profile._package_settings[conanfile.name].settings
+            tmp_settings.values = Values.from_list(values_tuple.items())
 
         conanfile.initialize(tmp_settings, processed_profile._env_values)
 

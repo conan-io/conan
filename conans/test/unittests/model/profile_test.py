@@ -61,19 +61,19 @@ MyPackage:os=Windows
 '''
         np, _ = _load_profile(prof, None, None)
 
-        np._update_package_settings({"MyPackage": [("OTHER", "2")]})
-        self.assertEqual(np.package_settings_values,
-                         {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
+        np.update_package_settings("MyPackage", OrderedDict([("OTHER", "2")]))
+        self.assertEqual(np.package_settings("MyPackage").settings,
+                         OrderedDict([('os', 'Windows'), ('OTHER', '2')]))
 
-        np._update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
-        self.assertEqual(np.package_settings_values,
-                         {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
-                                        ("compiler", "2"), ("compiler.version", "3")]})
+        np.update_package_settings("MyPackage", OrderedDict([("compiler", "2"), ("compiler.version", "3")]))
+        self.assertEqual(np.package_settings("MyPackage").settings,
+                         OrderedDict([('os', 'Windows'), ('OTHER', '2'),
+                                      ('compiler', '2'), ('compiler.version', '3')]))
 
     def profile_dump_order_test(self):
         # Settings
         profile = Profile()
-        profile.package_settings["zlib"] = {"compiler": "gcc"}
+        profile.update_package_settings("zlib", OrderedDict({"compiler": "gcc"}))
         profile.settings["arch"] = "x86_64"
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"

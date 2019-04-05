@@ -193,7 +193,7 @@ def _apply_inner_profile(doc, base_profile):
                 raise ConanException("Invalid setting line '%s'" % setting)
             package_name, name, value = get_package_name_value(setting)
             if package_name:
-                base_profile.package_settings[package_name][name] = value
+                base_profile.update_package_settings(package_name, OrderedDict({name: value}))
             else:
                 base_profile.settings[name] = value
 
@@ -285,5 +285,5 @@ def _profile_parse_args(settings, options, envs):
     settings, package_settings = _get_simple_and_package_tuples(settings)
     result.settings = OrderedDict(settings)
     for pkg, values in package_settings.items():
-        result.package_settings[pkg] = OrderedDict(values)
+        result.update_package_settings(pkg, OrderedDict(values))
     return result
