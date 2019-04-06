@@ -139,10 +139,14 @@ path = ./data
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
+# http =
+#   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 

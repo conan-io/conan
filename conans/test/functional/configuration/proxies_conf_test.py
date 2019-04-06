@@ -21,18 +21,40 @@ class ProxiesConfTest(unittest.TestCase):
 [proxies]
 https=None
 no_proxy=http://someurl,http://otherurl.com
-http=http:/conan.url
+http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
         requester = get_basic_requester(client.cache)
 
         def verify_proxies(url, **kwargs):
-            self.assertEqual(kwargs["proxies"], {"https": None, "http": "http:/conan.url"})
+            self.assertEqual(kwargs["proxies"], {"https": None, "http": "http://conan.url"})
             return "mocked ok!"
 
         requester._requester.get = verify_proxies
         self.assertEqual(os.environ["NO_PROXY"], "http://someurl,http://otherurl.com")
+
+        self.assertEqual(requester.get("MyUrl"), "mocked ok!")
+
+    def test_requester_with_host_specific_proxies(self):
+        client = TestClient()
+        conf = """
+[proxies]
+https=http://conan.url
+  only.for.this.conan.url = http://special.url
+http=
+  only.for.that.conan.url = http://other.special.url
+        """
+        save(client.cache.conan_conf_path, conf)
+        client.cache.invalidate()
+        requester = get_basic_requester(client.cache)
+
+        def verify_proxies(url, **kwargs):
+            self.assertEqual(kwargs["proxies"], {"http://only.for.that.conan.url": "http://other.special.url", "https": "http://conan.url", "https://only.for.this.conan.url": "http://special.url"})
+            return "mocked ok!"
+
+        requester._requester.get = verify_proxies
+        self.assertFalse("NO_PROXY" in os.environ)
 
         self.assertEqual(requester.get("MyUrl"), "mocked ok!")
 

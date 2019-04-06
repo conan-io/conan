@@ -9,10 +9,30 @@ from conans import __version__ as client_version
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
+import sys
 
 class ConanRequester(object):
 
     def __init__(self, requester, cache, timeout):
+        # Handle proxy specifications of the form:
+        # http = http://proxy.xyz.com
+        #   special-hostname.xyz.com = http://special-proxy.xyz.com
+        # (where special-proxy.xyz.com is only used as a proxy when accessing special-hostname.xyz.com)
+        def _expand_proxies(scheme, proxy_string):
+            if not proxy_string:
+                return { scheme: proxy_string }
+
+            ret = {}
+            proxy_values = [p.strip() for p in proxy_string.split("\n")]
+            for proxy_value in proxy_values:
+                eq_pos = proxy_value.find('=')
+                for_host = proxy_value[0:max(0, eq_pos)].strip()
+                proxy_target = proxy_value[eq_pos+1:].strip()
+                if proxy_target:
+                    ret[(scheme + "://" + for_host) if for_host else scheme] = proxy_target
+
+            return ret
+
         self.proxies = cache.config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -23,6 +43,12 @@ class ConanRequester(object):
         no_proxy = self.proxies.pop("no_proxy", None)
         if no_proxy:
             os.environ["NO_PROXY"] = no_proxy
+
+        expanded_proxies = {}
+        for scheme, proxy_string in self.proxies.items():
+            expanded_proxies.update(_expand_proxies(scheme, proxy_string))
+
+        self.proxies = expanded_proxies
 
         self._requester = requester
         self._cache = cache
