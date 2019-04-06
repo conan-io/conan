@@ -50,7 +50,10 @@ http=
         requester = get_basic_requester(client.cache)
 
         def verify_proxies(url, **kwargs):
-            self.assertEqual(kwargs["proxies"], {"http://only.for.that.conan.url": "http://other.special.url", "https": "http://conan.url", "https://only.for.this.conan.url": "http://special.url"})
+            self.assertEqual(kwargs["proxies"], 
+                {"http://only.for.that.conan.url": "http://other.special.url", 
+                 "https": "http://conan.url", "https://only.for.this.conan.url": 
+                 "http://special.url"})
             return "mocked ok!"
 
         requester._requester.get = verify_proxies
