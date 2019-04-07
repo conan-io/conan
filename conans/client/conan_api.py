@@ -896,7 +896,7 @@ class ConanAPIV1(object):
         self.python_requires.enable_remotes(remotes=remotes)
         try:
             uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm, retry,
-                            retry_wait, integrity_check, policy, remotes, query=query)
+                            retry_wait, integrity_check, policy, query=query)
             return upload_recorder.get_info()
         except ConanException as exc:
             upload_recorder.error = True

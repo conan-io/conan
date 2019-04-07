@@ -1,11 +1,11 @@
 import os
+import platform
 import shutil
 from collections import OrderedDict
 from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import default_remotes, dump_registry, \
-    migrate_registry_file, RemoteRegistry, Remotes
+from conans.client.cache.remote_registry import RemoteRegistry, Remotes
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -20,7 +20,7 @@ from conans.paths.package_layouts.package_editable_layout import PackageEditable
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock
-import platform
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -130,51 +130,6 @@ class ClientCache(object):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
 
     @property
-    def store(self):
-        return self._store_folder
-
-    def base_folder(self, ref):
-        """ the base folder for this package reference, for each ConanFileReference
-        """
-        return self.package_layout(ref).base_folder()
-
-    def export(self, ref):
-        return self.package_layout(ref).export()
-
-    def export_sources(self, ref, short_paths=False):
-        return self.package_layout(ref, short_paths).export_sources()
-
-    def source(self, ref, short_paths=False):
-        return self.package_layout(ref, short_paths).source()
-
-    def conanfile(self, ref):
-        return self.package_layout(ref).conanfile()
-
-    def builds(self, ref):
-        return self.package_layout(ref).builds()
-
-    def build(self, pref, short_paths=False):
-        return self.package_layout(pref.ref, short_paths).build(pref)
-
-    def system_reqs(self, ref):
-        return self.package_layout(ref).system_reqs()
-
-    def system_reqs_package(self, pref):
-        return self.package_layout(pref.ref).system_reqs_package(pref)
-
-    def packages(self, ref):
-        return self.package_layout(ref).packages()
-
-    def package(self, pref, short_paths=False):
-        return self.package_layout(pref.ref, short_paths).package(pref)
-
-    def scm_folder(self, ref):
-        return self.package_layout(ref).scm_folder()
-
-    def installed_as_editable(self, ref):
-        return isinstance(self.package_layout(ref), PackageEditableLayout)
-
-    @property
     def config_install_file(self):
         return os.path.join(self.conan_folder, "config_install.json")
 
@@ -206,17 +161,9 @@ class ClientCache(object):
             self._no_lock = self.config.cache_no_locks
         return self._no_lock
 
-    def conanfile_read_lock(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_read_lock(self._output)
-
     def conanfile_write_lock(self, ref):
         layout = self.package_layout(ref)
         return layout.conanfile_write_lock(self._output)
-
-    def conanfile_lock_files(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_lock_files(self._output)
 
     def package_lock(self, pref):
         layout = self.package_layout(pref.ref)
@@ -251,7 +198,7 @@ class ClientCache(object):
         if not os.path.exists(reg_json_path):
             self._output.warn("Remotes registry file missing, "
                               "creating default one in %s" % reg_json_path)
-            remotes = Remotes.default()
+            remotes = Remotes.defaults()
             remotes.save(reg_json_path)
         return reg_json_path
 

@@ -5,18 +5,10 @@ from collections import OrderedDict, namedtuple
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 
-default_remotes = OrderedDict({"conan-center": ("https://conan.bintray.com", True)})
 
 Remote = namedtuple("Remote", "name url verify_ssl")
-
-
-def load_registry_json(text):
-    result = Remotes()
-    data = json.loads(text)
-    for r in data.get("remotes", []):
-        result._remotes[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
 
 
 def load_registry_txt(contents):
@@ -55,36 +47,48 @@ def load_registry_txt(contents):
 def load_old_registry_json(contents):
     """From json"""
     data = json.loads(contents)
-    remotes = OrderedDict()
+    remotes = Remotes()
     refs = data.get("references", {})
     prefs = data.get("package_references", {})
     for r in data["remotes"]:
-        remotes[r["name"]] = (r["url"], r["verify_ssl"])
+        remotes.add(r["name"], r["url"], r["verify_ssl"])
     return remotes, refs, prefs
 
-REGISTRY = "registry.txt"
-REGISTRY_JSON = "registry.json"
-reg_json_path = join(self.conan_folder, REMOTES)
-        if not os.path.exists(reg_json_path):
-            # Load the txt if exists and convert to json
-            reg_txt = join(self.conan_folder, REGISTRY)
-            if os.path.exists(reg_txt):
-                migrate_registry_file(reg_txt, reg_json_path)
-            else:
-                self._output.warn("Remotes registry file missing, "
-                                  "creating default one in %s" % reg_json_path)
-                save(reg_json_path, dump_registry(default_remotes, {}, {}))
-        return reg_json_path
-    
-    
-def migrate_registry_file(path, new_path):
+
+def migrate_registry_file(folder, cache):
+    REGISTRY = "registry.txt"
+    REGISTRY_JSON = "registry.json"
+    reg_json_path = os.path.join(folder, REGISTRY_JSON)
+    reg_txt_path = os.path.join(folder, REGISTRY)
+
+    def add_ref_remote(reference, remotes, remote_name):
+        ref = ConanFileReference.loads(reference, validate=True)
+        remote = remotes[remote_name]
+        with cache.package_layout(ref).update_metadata() as metadata:
+            metadata.recipe.remote = remote.name
+
+    def add_pref_remote(pkg_ref, remotes, remote_name):
+        pref = PackageReference.loads(pkg_ref, validate=True)
+        remote = remotes[remote_name]
+        with cache.package_layout(pref.ref).update_metadata() as metadata:
+            metadata.packages[pref.id].remote = remote.name
+
     try:
-        remotes, refs = load_registry_txt(load(path))
-        save(new_path, dump_registry(remotes, refs, {}))
+        if os.path.exists(reg_json_path):
+            remotes, refs, prefs = load_old_registry_json(load(reg_json_path))
+            for ref, remote_name in refs.items():
+                add_ref_remote(ref, remotes, remote_name)
+            for pref, remote_name in prefs.items():
+                add_pref_remote(pref, remotes, remote_name)
+            os.remove(reg_json_path)
+        elif os.path.exists(reg_txt_path):
+            remotes, refs = load_registry_txt(load(reg_txt_path))
+            for ref, remote_name in refs.items():
+                add_ref_remote(ref, remotes, remote_name)
+            os.remove(reg_txt_path)
+
     except Exception as e:
-        raise ConanException("Cannot migrate registry.txt to registry.json: %s" % str(e))
-    else:
-        os.unlink(path)
+        raise ConanException("Cannot migrate old registry to new %s: %s" % str(e))
 
 
 class Remotes(object):
