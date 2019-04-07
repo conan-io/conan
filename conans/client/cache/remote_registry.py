@@ -55,9 +55,10 @@ def load_old_registry_json(contents):
     return remotes, refs, prefs
 
 
-def migrate_registry_file(folder, cache):
+def migrate_registry_file(cache, out):
     REGISTRY = "registry.txt"
     REGISTRY_JSON = "registry.json"
+    folder = cache.conan_folder
     reg_json_path = os.path.join(folder, REGISTRY_JSON)
     reg_txt_path = os.path.join(folder, REGISTRY)
 
@@ -75,20 +76,24 @@ def migrate_registry_file(folder, cache):
 
     try:
         if os.path.exists(reg_json_path):
+            out.warn("%s has been deprecated. Migrating to remotes.json" % REGISTRY)
             remotes, refs, prefs = load_old_registry_json(load(reg_json_path))
+            remotes.save(cache.registry_path)
             for ref, remote_name in refs.items():
                 add_ref_remote(ref, remotes, remote_name)
             for pref, remote_name in prefs.items():
                 add_pref_remote(pref, remotes, remote_name)
             os.remove(reg_json_path)
         elif os.path.exists(reg_txt_path):
+            out.warn("%s has been deprecated. Migrating to remotes.json" % REGISTRY_JSON)
             remotes, refs = load_registry_txt(load(reg_txt_path))
+            remotes.save(cache.registry_path)
             for ref, remote_name in refs.items():
                 add_ref_remote(ref, remotes, remote_name)
             os.remove(reg_txt_path)
 
     except Exception as e:
-        raise ConanException("Cannot migrate old registry to new %s: %s" % str(e))
+        raise ConanException("Cannot migrate old registry: %s" % str(e))
 
 
 class Remotes(object):

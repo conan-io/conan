@@ -1,24 +1,25 @@
 import os
 import unittest
 
-from conans.client.cache.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
-    load_registry_txt, Remote
+from conans.client.cache.remote_registry import RemoteRegistry, Remote, Remotes,\
+    migrate_registry_file
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
 from conans.client.cache.cache import ClientCache
+from conans.migrations import CONAN_VERSION
+from conans.model.ref import ConanFileReference
 
 
 class RegistryTest(unittest.TestCase):
 
-    '''def retro_compatibility_test(self):
-        f = os.path.join(temp_folder(), "aux_file")
-        save(f, """conan.io https://server.conan.io
-""")  # Without SSL parameter
-        new_path = os.path.join(temp_folder(), "aux_file.json")
-        migrate_registry_file(f, new_path)
-        cache = ClientCache(os.path.dirname(new_path), None, TestBufferConanOutput())
+    def retro_compatibility_test(self):
+        folder = temp_folder()
+        f = os.path.join(folder, ".conan", "registry.txt")
+        save(f, "conan.io https://server.conan.io")  # Without SSL parameter
+        cache = ClientCache(folder, TestBufferConanOutput())
+        migrate_registry_file(cache, TestBufferConanOutput())
         registry = RemoteRegistry(cache)
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan.io", "https://server.conan.io", True)])
@@ -33,16 +34,27 @@ lib/1.0@conan/stable conan.io
 other/1.0@lasote/testing conan.io
 """)
         client = TestClient(base_folder=tmp, servers=False)
+        version_file = os.path.join(client.cache.conan_folder, CONAN_VERSION)
+        save(version_file, "1.12.0")
+        client.run("remote list")
+        self.assertIn("conan.io: https://server.conan.io", client.out)
         registry = client.cache.registry
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan.io", "https://server.conan.io", True)])
-        expected = {'lib/1.0@conan/stable': 'conan.io',
-                    'other/1.0@lasote/testing': 'conan.io'}
-        self.assertEqual(registry.refs_list, expected)'''
+        ref1 = ConanFileReference.loads('lib/1.0@conan/stable')
+        ref2 = ConanFileReference.loads('other/1.0@lasote/testing')
+        expected = {ref1: 'conan.io', ref2: 'conan.io'}
+
+        self.assertEqual(registry.refs_list, expected)
+
+        m = client.cache.package_layout(ref1).load_metadata()
+        self.assertEqual(m.recipe.remote, "conan.io")
+        m = client.cache.package_layout(ref2).load_metadata()
+        self.assertEqual(m.recipe.remote, "conan.io")
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
-        save(f, dump_registry(default_remotes, {}, {}))
+        Remotes().save(f)
         cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
         registry = RemoteRegistry(cache)
 
@@ -84,7 +96,7 @@ other/1.0@lasote/testing conan.io
 
     def insert_test(self):
         tmp_folder = temp_folder()
-        f = os.path.join(tmp_folder, ".conan", "registry.json")
+        f = os.path.join(tmp_folder, ".conan", "remotes.json")
         save(f, """
 {
  "remotes": [
@@ -93,11 +105,10 @@ other/1.0@lasote/testing conan.io
    "verify_ssl": true,
    "name": "conan.io"
   }
- ],
- "references": {}
+ ]
 }
 """)
-        cache = ClientCache(tmp_folder, None, TestBufferConanOutput())
+        cache = ClientCache(tmp_folder, TestBufferConanOutput())
         registry = RemoteRegistry(cache)
         registry.add("repo1", "url1", True, insert=0)
         self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
@@ -111,12 +122,3 @@ other/1.0@lasote/testing conan.io
                          Remote("repo2", "url2", True),
                          Remote("conan.io", "https://server.conan.io", True),
                          Remote("repo3", "url3", True)])
-
-    @staticmethod
-    def _get_registry():
-        f = os.path.join(temp_folder(), "aux_file")
-        remotes, refs = load_registry_txt("conan.io https://server.conan.io True\n"
-                                          "conan.io2 https://server2.conan.io True\n")
-        reg = dump_registry(remotes, refs, {})
-        save(f, reg)
-        return RemoteRegistry(f)

@@ -290,7 +290,6 @@ class HelloConan(ConanFile):
                       client.user_io.out)
         data = json.loads(load(client.cache.registry_path))
         self.assertEqual(data["remotes"], [])
-        self.assertEqual(data["references"], {})
 
     def errors_test(self):
         self.client.run("remote update origin url", assert_error=True)

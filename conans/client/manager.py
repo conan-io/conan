@@ -77,7 +77,7 @@ class ConanManager(object):
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=self._recorder,
                                     hook_manager=self._hook_manager)
-        installer.install(deps_graph, keep_build)
+        installer.install(deps_graph, remotes, keep_build=keep_build)
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
