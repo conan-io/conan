@@ -112,6 +112,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_CACHE
                 metadata = self._cache.package_layout(pref.ref).load_metadata()
                 node.prev = metadata.packages[pref.id].revision
+                assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
 
         else:  # Binary does NOT exist locally
