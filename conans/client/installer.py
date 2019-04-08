@@ -135,7 +135,6 @@ class _PackageBuilder(object):
 
     def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
                  package_folder):
-        remove_folder_raising(package_folder)
 
         # FIXME: Is weak to assign here the recipe_hash
         manifest = package_layout.recipe_manifest()
@@ -191,6 +190,8 @@ class _PackageBuilder(object):
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
+            remove_folder_raising(package_folder)
+            mkdir(package_folder)
             mkdir(build_folder)
             os.chdir(build_folder)
             self._output.info('Building your package in %s' % build_folder)
@@ -230,6 +231,7 @@ def remove_folder_raising(folder):
     except OSError as e:
         raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
                              "Close any app using it, and retry" % str(e))
+
 
 def _handle_system_requirements(conan_file, pref, cache, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
