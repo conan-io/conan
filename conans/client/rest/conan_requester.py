@@ -9,8 +9,6 @@ from conans import __version__ as client_version
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
-import sys
-
 class ConanRequester(object):
 
     def __init__(self, requester, cache, timeout):

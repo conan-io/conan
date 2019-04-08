@@ -42,8 +42,9 @@ http=http://conan.url
 [proxies]
 https=http://conan.url
   only.for.this.conan.url = http://special.url
+  only.for.that.conan.url = http://user:pass@extra.special.url
 http=
-  only.for.that.conan.url = http://other.special.url
+  only.for.the.other.conan.url = http://other.special.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
@@ -51,9 +52,10 @@ http=
 
         def verify_proxies(url, **kwargs):
             self.assertEqual(kwargs["proxies"], 
-                {"http://only.for.that.conan.url": "http://other.special.url", 
-                 "https": "http://conan.url", "https://only.for.this.conan.url": 
-                 "http://special.url"})
+                {"http://only.for.the.other.conan.url": "http://other.special.url",
+                 "https": "http://conan.url",
+                 "https://only.for.this.conan.url": "http://special.url",
+                 "https://only.for.that.conan.url": "http://user:pass@extra.special.url"})
             return "mocked ok!"
 
         requester._requester.get = verify_proxies
