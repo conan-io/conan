@@ -114,7 +114,7 @@ class Command(object):
 
     def help(self, *args):
         """
-        Show help of a specific command.
+        Shows help for a specific command.
         """
         parser = argparse.ArgumentParser(description=self.help.__doc__,
                                          prog="conan help",
@@ -239,7 +239,7 @@ class Command(object):
 
     def test(self, *args):
         """
-        Test a package consuming it from a conanfile.py with a test() method.
+        Tests a package consuming it from a conanfile.py with a test() method.
 
         This command installs the conanfile dependencies (including the tested
         package), calls a 'conan build' to build test apps and finally executes
@@ -1505,7 +1505,11 @@ class Command(object):
 
     def workspace(self, *args):
         """
-        Command to manage workspaces.
+        Manages a workspace (a set of packages consumed from the user workspace that
+        belongs to the same project).
+
+        Use this command to manage a Conan workspace, use the subcommand 'install' to
+        create the workspace from a file.
         """
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
                                          prog="conan workspace",
@@ -1526,7 +1530,11 @@ class Command(object):
 
     def editable(self, *args):
         """
-        Manage editable packages.
+        Manages editable packages (package that resides in the user workspace, but
+        are consumed as if they were in the cache).
+
+        Use the subcommands 'add', 'remove' and 'list' to create, remove an list
+        packages currently installed in this mode.
         """
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
                                          prog="conan editable",
