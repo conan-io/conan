@@ -1,25 +1,24 @@
 import os
 
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.cache.remote_registry import Remote
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.paths.simple_paths import SimplePaths
+from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 
 
 class ManifestManager(object):
 
     def __init__(self, folder, user_io, cache):
-        self._paths = SimplePaths(folder)
+        self._target_folder = folder
         self._user_io = user_io
         self._cache = cache
         self._log = []
 
     def check_graph(self, graph, verify, interactive):
-        if verify and not os.path.exists(self._paths.store):
-            raise ConanException("Manifest folder does not exist: %s"
-                                 % self._paths.store)
+        if verify and not os.path.exists(self._target_folder):
+            raise ConanException("Manifest folder does not exist: %s" % self._target_folder)
         for node in graph.ordered_iterate():
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
@@ -33,7 +32,7 @@ class ManifestManager(object):
         read_manifest = FileTreeManifest.load(export)
         expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)
-        folder = self._paths.export(ref)
+        folder = os.path.join(self._target_folder, ref.dir_repr(), EXPORT_FOLDER)
         self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
 
     def _handle_package(self, node, verify, interactive):
@@ -43,7 +42,7 @@ class ManifestManager(object):
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
         self._check_not_corrupted(pref, read_manifest, expected_manifest)
-        folder = self._paths.package(pref)
+        folder = os.path.join(self._target_folder, ref.dir_repr(), PACKAGES_FOLDER, pref.id)
         self._handle_folder(folder, pref, read_manifest, interactive, node.remote, verify)
 
     def _handle_folder(self, folder, ref, read_manifest, interactive, remote, verify):
@@ -94,6 +93,6 @@ class ManifestManager(object):
             read_manifest.save(folder)
 
     def print_log(self):
-        self._user_io.out.success("\nManifests : %s" % self._paths.store)
+        self._user_io.out.success("\nManifests : %s" % self._target_folder)
         for log_entry in self._log:
             self._user_io.out.info(log_entry)

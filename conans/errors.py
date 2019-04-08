@@ -131,6 +131,10 @@ class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
 
+class ConanMigrationError(ConanException):
+    pass
+
+
 # Remote exceptions #
 class InternalErrorException(ConanException):
     """

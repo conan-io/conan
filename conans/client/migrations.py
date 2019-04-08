@@ -176,7 +176,7 @@ def _migrate_create_metadata(cache, out):
                 rrev = manifest.summary_hash
             except:
                 rrev = DEFAULT_REVISION_V1
-            metadata_path = os.path.join(layout.conan(), PACKAGE_METADATA)
+            metadata_path = layout.package_metadata()
             if not os.path.exists(metadata_path):
                 out.info("Creating {} for {}".format(PACKAGE_METADATA, ref))
                 prefs = _get_prefs(layout)
@@ -225,7 +225,16 @@ def _migrate_lock_files(cache, out):
 def migrate_config_install(cache):
     try:
         item = cache.config.get_item("general.config_install")
-        config_type, uri, verify_ssl, args = [r.strip() for r in item.split(",")]
+        items = [r.strip() for r in item.split(",")]
+        if len(items) == 4:
+            config_type, uri, verify_ssl, args = items
+        elif len(items) == 1:
+            uri = items[0]
+            verify_ssl = "True"
+            args = "None"
+            config_type = None
+        else:
+            raise Exception("I don't know how to migrate this config install: %s" % items)
         verify_ssl = "true" in verify_ssl.lower()
         args = None if "none" in args.lower() else args
         config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args, None, None)
