@@ -147,8 +147,18 @@ class ClientCache(object):
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
+    def registry_path(self):
+        return join(self.conan_folder, REMOTES)
+
+    @property
     def registry(self):
         if not self._registry:
+            remotes_path = self.registry_path
+            if not os.path.exists(remotes_path):
+                self._output.warn("Remotes registry file missing, "
+                                  "creating default one in %s" % remotes_path)
+                remotes = Remotes.defaults()
+                remotes.save(remotes_path)
             self._registry = RemoteRegistry(self)
         return self._registry
 
@@ -191,16 +201,6 @@ class ClientCache(object):
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)
-
-    @property
-    def registry_path(self):
-        reg_json_path = join(self.conan_folder, REMOTES)
-        if not os.path.exists(reg_json_path):
-            self._output.warn("Remotes registry file missing, "
-                              "creating default one in %s" % reg_json_path)
-            remotes = Remotes.defaults()
-            remotes.save(reg_json_path)
-        return reg_json_path
 
     @property
     def config(self):

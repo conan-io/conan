@@ -214,7 +214,7 @@ class Pkg(ConanFile):
         content = load(file2)
         self.assertEqual(content, "BYE!!")
 
-    def dont_duplicate_configs(self):
+    def test_dont_duplicate_configs(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello"})
         self.client.run('config install "%s" -sf=subf' % folder)
@@ -225,6 +225,35 @@ class Pkg(ConanFile):
         content = load(self.client.cache.config_install_file)
         self.assertEqual(1, content.count("subf"))
         self.assertEqual(1, content.count("other"))
+
+    def test_install_registry_txt_error(self):
+        folder = temp_folder()
+        save_files(folder, {"registry.txt": "myrepo1 https://myrepourl.net False"})
+        self.client.run('config install "%s"' % folder)
+        self.assertIn("WARN: registry.txt has been deprecated. Migrating to remotes.json",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertEqual("myrepo1: https://myrepourl.net [Verify SSL: False]\n", self.client.out)
+
+    def test_install_registry_json_error(self):
+        folder = temp_folder()
+        registry_json = {"remotes": [{"url": "https://server.conan.io",
+                                      "verify_ssl": True,
+                                      "name": "conan.io"
+                                      }]}
+        save_files(folder, {"registry.json": json.dumps(registry_json)})
+        self.client.run('config install "%s"' % folder)
+        self.assertIn("WARN: registry.json has been deprecated. Migrating to remotes.json",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
+
+    def test_install_remotes_json_error(self):
+        folder = temp_folder()
+        save_files(folder, {"remotes.json": ""})
+        self.client.run('config install "%s"' % folder, assert_error=True)
+        self.assertIn("ERROR: remotes.json install is not supported yet. Use 'remotes.txt'",
+                      self.client.out)
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)

@@ -56,11 +56,10 @@ def load_old_registry_json(contents):
 
 
 def migrate_registry_file(cache, out):
-    REGISTRY = "registry.txt"
-    REGISTRY_JSON = "registry.json"
     folder = cache.conan_folder
-    reg_json_path = os.path.join(folder, REGISTRY_JSON)
-    reg_txt_path = os.path.join(folder, REGISTRY)
+    reg_json_path = os.path.join(folder, "registry.json")
+    reg_txt_path = os.path.join(folder, "registry.txt")
+    remotes_path = cache.registry_path
 
     def add_ref_remote(reference, remotes, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
@@ -76,18 +75,18 @@ def migrate_registry_file(cache, out):
 
     try:
         if os.path.exists(reg_json_path):
-            out.warn("%s has been deprecated. Migrating to remotes.json" % REGISTRY)
+            out.warn("registry.json has been deprecated. Migrating to remotes.json")
             remotes, refs, prefs = load_old_registry_json(load(reg_json_path))
-            remotes.save(cache.registry_path)
+            remotes.save(remotes_path)
             for ref, remote_name in refs.items():
                 add_ref_remote(ref, remotes, remote_name)
             for pref, remote_name in prefs.items():
                 add_pref_remote(pref, remotes, remote_name)
             os.remove(reg_json_path)
         elif os.path.exists(reg_txt_path):
-            out.warn("%s has been deprecated. Migrating to remotes.json" % REGISTRY_JSON)
+            out.warn("registry.txt has been deprecated. Migrating to remotes.json")
             remotes, refs = load_registry_txt(load(reg_txt_path))
-            remotes.save(cache.registry_path)
+            remotes.save(remotes_path)
             for ref, remote_name in refs.items():
                 add_ref_remote(ref, remotes, remote_name)
             os.remove(reg_txt_path)
@@ -166,6 +165,7 @@ class Remotes(object):
     @property
     def default(self):
         try:
+            # This is the python way to get the first element of an OrderedDict
             return self._remotes[next(iter(self._remotes))]
         except StopIteration:
             raise NoRemoteAvailable("No default remote defined")
