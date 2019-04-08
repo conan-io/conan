@@ -84,9 +84,6 @@ class HelloTestConan(ConanFile):
                     self.copy("*.h")
             """)
         if with_test:
-            client.save({"conanfile.py": conanfile,
-                         "header.h": ""})
-        else:
             test_conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -97,6 +94,9 @@ class HelloTestConan(ConanFile):
             client.save({"conanfile.py": conanfile,
                          "header.h": "",
                          "test_package/conanfile.py": test_conanfile})
+        else:
+            client.save({"conanfile.py": conanfile,
+                         "header.h": ""})
 
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
