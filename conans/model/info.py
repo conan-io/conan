@@ -11,6 +11,7 @@ from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
+from conans.client.graph.graph import BINARY_UNKNOWN
 
 PREV_MISSING = "prevmissing"
 
@@ -61,7 +62,7 @@ class RequirementInfo(object):
         if self.revision:
             vals.append(self.revision)
         if self.package_revision == PREV_MISSING:
-            return PREV_MISSING
+            return None
         if self.package_revision:
             # A package revision is required = True, but didn't get a real value
             vals.append(self.package_revision)
@@ -161,8 +162,11 @@ class RequirementsInfo(object):
     def update_prev(self, pref):
         for req_info in self._data.values():
             # CHECK: Checking only the REF, not the PREF, package_id?
-            if req_info.package.ref == pref.ref and req_info.package_revision == PREV_MISSING:
-                req_info.package_revision = pref.revision
+            if req_info.package.ref == pref.ref:
+                if req_info.package_revision == PREV_MISSING:
+                    req_info.package_revision = pref.revision
+                if req_info.package_id == BINARY_UNKNOWN:
+                    req_info.package_id = pref.id
 
     def copy(self):
         # For build_id() implementation
@@ -214,8 +218,8 @@ class RequirementsInfo(object):
         data = {k: v for k, v in self._data.items() if v.name}
         for key in sorted(data):
             s = data[key].sha
-            if s is PREV_MISSING:
-                return PREV_MISSING
+            if s is None:
+                return None
             result.append(s)
         return sha1('\n'.join(result).encode())
 
@@ -392,8 +396,8 @@ class ConanInfo(object):
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
         requires_sha = self.requires.sha
-        if requires_sha == PREV_MISSING:
-            return PREV_MISSING
+        if requires_sha is None:
+            return BINARY_UNKNOWN
         result.append(requires_sha)
 
         package_id = sha1('\n'.join(result).encode())

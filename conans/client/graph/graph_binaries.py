@@ -3,7 +3,8 @@ import os
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_SKIP, BINARY_UPDATE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL,
+                                       BINARY_UNKNOWN)
 from conans.errors import NoRemoteAvailable, NotFoundException,\
     conanfile_exception_formatter
 from conans.model.info import ConanInfo
@@ -18,7 +19,6 @@ class GraphBinariesAnalyzer(object):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
-        self._registry = cache.registry
 
     def _check_update(self, upstream_manifest, package_folder, output, node):
         read_manifest = FileTreeManifest.load(package_folder)
@@ -30,12 +30,15 @@ class GraphBinariesAnalyzer(object):
             else:
                 output.warn("Current package is newer than remote upstream one")
 
-    def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remote_name):
+    def _evaluate_node(self, node, build_mode, evaluated_nodes, update, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
+        assert node.package_id != BINARY_UNKNOWN, "Node.package_id shouldn't be Unknown"
+        assert node.prev is None, "Node.prev should be None"
 
         ref, conanfile = node.ref, node.conanfile
         pref = PackageReference(ref, node.package_id)
+        output = conanfile.output
 
         # Check that this same reference hasn't already been checked
         previous_nodes = evaluated_nodes.get(pref)
@@ -47,8 +50,6 @@ class GraphBinariesAnalyzer(object):
             node.prev = previous_node.prev
             return
         evaluated_nodes[pref] = [node]
-
-        output = conanfile.output
 
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE
@@ -78,14 +79,14 @@ class GraphBinariesAnalyzer(object):
                                 "to the installed recipe revision, removing folder".format(pref))
                     rmdir(package_folder)
 
-        if remote_name:
-            remote = self._registry.remotes.get(remote_name)
-        else:
+        remote = remotes.selected
+        if not remote:
             # If the remote_name is not given, follow the binary remote, or
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            remote = self._registry.prefs.get(pref) or self._registry.refs.get(ref)
-        remotes = self._registry.remotes.list
+            metadata = self._cache.package_layout(pref.ref).load_metadata()
+            remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
+            remote = remotes.get(remote_name)
 
         if os.path.exists(package_folder):
             if update:
@@ -128,9 +129,9 @@ class GraphBinariesAnalyzer(object):
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
-            if not remote or (not remote_info and self._cache.config.revisions_enabled
-                              and not remote_name):
-                for r in remotes:
+
+            if not remote or (not remote_info and self._cache.config.revisions_enabled):
+                for r in remotes.values():
                     try:
                         remote_info, pref = self._remote_manager.get_package_info(pref, r)
                     except NotFoundException:
@@ -207,12 +208,17 @@ class GraphBinariesAnalyzer(object):
                     n.binary = BINARY_SKIP
                     self._handle_private(n)
 
-    def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
+    def evaluate_graph(self, deps_graph, build_mode, update, remotes):
         default_package_id_mode = self._cache.config.default_package_id_mode
-        evaluated = deps_graph.evaluated
+        evaluated_nodes = deps_graph.evaluated
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated, remote_name)
+            if node.package_id == BINARY_UNKNOWN:
+                node.binary = BINARY_UNKNOWN
+                node.update = update
+                node.build_mode = build_mode
+                continue
+            self._evaluate_node(node, build_mode, evaluated_nodes, update, remotes)
             self._handle_private(node)

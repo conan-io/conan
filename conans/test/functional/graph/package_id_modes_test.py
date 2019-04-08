@@ -1,5 +1,6 @@
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.conanfile import TestConanFile
+from conans.client.graph.graph import BINARY_UNKNOWN
 
 
 class PackageIDGraphTests(GraphManagerTest):
@@ -50,4 +51,4 @@ class PackageIDGraphTests(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(libb.package_id, PREV_MISSING)
+        self.assertEqual(libb.package_id, BINARY_UNKNOWN)

@@ -96,3 +96,28 @@ class FullRevisionModeTest(unittest.TestCase):
         clientd.run("install . libd/0.1@user/testing --build=missing")
         print clientd.out
         clientd.run("install . libd/0.1@user/testing")
+
+    def reusing_artifacts_after_build_test(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_revision_mode")
+        conanfile = dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                pass
+                %s
+            """)
+        client.save({"conanfile.py": conanfile % ""})
+        client.run("create . liba/0.1@user/testing")
+
+        client.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
+        client.run("create . libb/0.1@user/testing")
+
+        client.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
+        client.run("create . libc/0.1@user/testing")
+
+        client.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
+        client.run("install . libd/0.1@user/testing --build=liba")
+        print client.out
+        
+
+       
