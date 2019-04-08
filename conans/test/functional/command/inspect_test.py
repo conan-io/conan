@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
@@ -32,6 +33,25 @@ class Pkg(base.Pkg):
         client.run("search")
         self.assertIn("Base/0.1@lasote/testing", client.out)
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
+
+    def python_requires_not_found_test(self):
+        server = TestServer()
+        client = TestClient(servers={"default": server}, users={"default": [("user", "channel")]})
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+
+            base = python_requires("name/version@user/channel")
+
+            class MyLib(ConanFile):
+                pass
+            """)
+
+        client.save({'conanfile.py': conanfile})
+        client.run("inspect . -a options", assert_error=True)
+        self.assertIn("Error loading conanfile at ", client.out)
+        self.assertIn('Unable to find python_requires("name/version@user/channel")'
+                      ' in remotes', client.out)
+        self.assertEqual(3, len(str(client.out).splitlines()))
 
     def name_version_test(self):
         server = TestServer()
@@ -83,6 +103,8 @@ class Pkg(ConanFile):
         self.assertIn("version: None", client.out)
         client.run("inspect . -a=settings")
         self.assertIn("settings: ('os', 'compiler', 'arch')", client.out)
+        client.run("inspect . -a=revision_mode")
+        self.assertIn("revision_mode: hash", client.out)
 
         client.run("inspect . -a=unexisting_attr", assert_error=True)
         self.assertIn("ERROR: 'Pkg' object has no attribute 'unexisting_attr'", client.out)
@@ -147,6 +169,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: hash
 settings: None
 options: None
 default_options: None
@@ -169,6 +192,7 @@ class Pkg(ConanFile):
     options = {"foo": [True, False], "bar": [True, False]}
     default_options = {"foo": True, "bar": False}
     _private = "Nothing"
+    revision_mode = "scm"
     def build(self):
         pass
 """
@@ -188,6 +212,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: scm
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]
@@ -229,6 +254,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: hash
 settings: ('os', 'compiler', 'arch', 'build_type')
 options:
     386: [True, False]
@@ -276,6 +302,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]
@@ -302,6 +329,7 @@ exports_sources: None
 short_paths: False
 apply_env: True
 build_policy: None
+revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')
 options:
     bar: [True, False]

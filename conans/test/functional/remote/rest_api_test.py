@@ -196,7 +196,7 @@ class RestApiTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
         self._upload_recipe(ref)
         ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-        path1 = self.server.server_store.conan(ref)
+        path1 = self.server.server_store.base_folder(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages
         self.api.remove_conanfile(ref)
@@ -218,7 +218,7 @@ class RestApiTest(unittest.TestCase):
             folders[sha] = folder
 
         self.api.remove_packages(ref, ["1"])
-        self.assertTrue(os.path.exists(self.server.server_store.conan(ref)))
+        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
         self.assertFalse(os.path.exists(folders["1"]))
         self.assertTrue(os.path.exists(folders["2"]))
         self.assertTrue(os.path.exists(folders["3"]))
@@ -226,7 +226,7 @@ class RestApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(folders["5"]))
 
         self.api.remove_packages(ref, ["2", "3"])
-        self.assertTrue(os.path.exists(self.server.server_store.conan(ref)))
+        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
         self.assertFalse(os.path.exists(folders["1"]))
         self.assertFalse(os.path.exists(folders["2"]))
         self.assertFalse(os.path.exists(folders["3"]))
@@ -234,7 +234,7 @@ class RestApiTest(unittest.TestCase):
         self.assertTrue(os.path.exists(folders["5"]))
 
         self.api.remove_packages(ref, [])
-        self.assertTrue(os.path.exists(self.server.server_store.conan(ref)))
+        self.assertTrue(os.path.exists(self.server.server_store.base_folder(ref)))
         for sha in ["1", "2", "3", "4", "5"]:
             self.assertFalse(os.path.exists(folders[sha]))
 

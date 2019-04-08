@@ -103,7 +103,7 @@ class GraphBinariesAnalyzer(object):
                             node.prev = pref.revision  # With revision
                             if build_mode.outdated:
                                 info, pref = self._remote_manager.get_package_info(pref, remote)
-                                package_hash = info.recipe_hash()
+                                package_hash = info.recipe_hash
                 elif remotes:
                     pass
                 else:
@@ -112,6 +112,7 @@ class GraphBinariesAnalyzer(object):
                 node.binary = BINARY_CACHE
                 metadata = self._cache.package_layout(pref.ref).load_metadata()
                 node.prev = metadata.packages[pref.id].revision
+                assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
 
         else:  # Binary does NOT exist locally
@@ -121,6 +122,9 @@ class GraphBinariesAnalyzer(object):
                     remote_info, pref = self._remote_manager.get_package_info(pref, remote)
                 except NotFoundException:
                     pass
+                except Exception:
+                    conanfile.output.error("Error downloading binary package: '{}'".format(pref))
+                    raise
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes

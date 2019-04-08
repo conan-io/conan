@@ -3,9 +3,11 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
+from subprocess import CalledProcessError, PIPE
 
-from conans.client.tools import which
 from conans.client.tools.env import environment_append
+from conans.client.tools.files import load, which
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
@@ -70,6 +72,10 @@ def detected_architecture():
         return "armv7"
     elif "arm" in machine:
         return "armv6"
+    elif "s390x" in machine:
+        return "s390x"
+    elif "s390" in machine:
+        return "s390"
 
     return None
 
@@ -390,6 +396,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "sparc64"
         elif "sparc" in arch:
             machine = "sparc"
+        elif "s390x" in arch:
+            machine = "s390x-ibm"
+        elif "s390" in arch:
+            machine = "s390-ibm"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -424,3 +434,24 @@ def get_gnu_triplet(os_, arch, compiler=None):
             op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)
+
+
+def check_output(cmd, folder=None, return_code=False):
+    tmp_file = tempfile.mktemp()
+    try:
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE, cwd=folder)
+        process.communicate()
+
+        if return_code:
+            return process.returncode
+
+        if process.returncode:
+            raise CalledProcessError(process.returncode, cmd)
+
+        output = load(tmp_file)
+        return output
+    finally:
+        try:
+            os.unlink(tmp_file)
+        except:
+            pass

@@ -38,7 +38,8 @@ class RestV2Methods(RestCommonMethods):
         return data
 
     def _get_remote_file_contents(self, url):
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
+        # We don't want traces in output of these downloads, they are ugly in output
+        downloader = Downloader(self.requester, None, self.verify_ssl)
         contents = downloader.download(url, auth=self.auth)
         return contents
 
@@ -174,9 +175,9 @@ class RestV2Methods(RestCommonMethods):
         t1 = time.time()
         failed = []
         uploader = Uploader(self.requester, self._output, self.verify_ssl)
-        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
-        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename in sorted(files, reverse=True):
+        # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
+        # or conanamanifest.txt with missing files due to a network failure
+        for filename in sorted(files):
             self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
@@ -213,6 +214,8 @@ class RestV2Methods(RestCommonMethods):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
+            if self._output:
+                self._output.writeln("")
 
     def _remove_conanfile_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed

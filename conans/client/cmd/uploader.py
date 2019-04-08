@@ -4,6 +4,7 @@ import tarfile
 import time
 from collections import defaultdict
 
+from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
@@ -334,6 +335,7 @@ class CmdUpload(object):
 
     def _recipe_files_to_upload(self, ref, policy, the_files, remote, remote_manifest):
         # Get the remote snapshot
+        self._remote_manager.check_credentials(remote)
         remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
 
         if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
@@ -352,23 +354,21 @@ class CmdUpload(object):
         return files_to_upload, deleted
 
     def _package_files_to_upload(self, pref, policy, the_files, remote):
-        # Get the remote snapshot
+        self._remote_manager.check_credentials(remote)
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
         if remote_snapshot:
+            if not is_package_snapshot_complete(remote_snapshot):
+                return the_files, set([])
             remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-
             if remote_manifest == local_manifest:
                 return None, None
-
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. "
-                                     "Forbidden overwrite.")
-        files_to_upload = the_files
+                raise ConanException("Local package is different from the remote package. Forbidden "
+                                     "overwrite.")
         deleted = set(remote_snapshot).difference(the_files)
-
-        return files_to_upload, deleted
+        return the_files, deleted
 
     def _upload_recipe_end_msg(self, ref, remote):
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)

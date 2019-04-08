@@ -32,6 +32,9 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
 
+    def check_credentials(self, remote):
+        self._call_remote(remote, "check_credentials")
+
     def get_recipe_snapshot(self, ref, remote):
         assert ref.revision, "get_recipe_snapshot requires revision"
         return self._call_remote(remote, "get_recipe_snapshot", ref)
@@ -86,11 +89,12 @@ class RemoteManager(object):
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
-        rm_conandir(self._cache.source(ref))
+        package_layout = self._cache.package_layout(ref)
+        rm_conandir(package_layout.source())
         touch_folder(dest_folder)
-        conanfile_path = self._cache.conanfile(ref)
+        conanfile_path = package_layout.conanfile()
 
-        with self._cache.package_layout(ref).update_metadata() as metadata:
+        with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
@@ -129,6 +133,9 @@ class RemoteManager(object):
         t1 = time.time()
         try:
             pref = self._resolve_latest_pref(pref, remote)
+            snapshot = self._call_remote(remote, "get_package_snapshot", pref)
+            if not is_package_snapshot_complete(snapshot):
+                raise PackageNotFoundException(pref)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
@@ -239,6 +246,15 @@ class RemoteManager(object):
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
+
+
+def is_package_snapshot_complete(snapshot):
+    integrity = True
+    for keyword in ["conaninfo", "conanmanifest", "conan_package"]:
+        if not any(keyword in key for key in snapshot):
+            integrity = False
+            break
+    return integrity
 
 
 def check_compressed_files(tgz_name, files):
