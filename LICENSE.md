@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2018 JFrog LTD
+Copyright (c) 2019 JFrog LTD
 
 
 

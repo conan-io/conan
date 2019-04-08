@@ -115,6 +115,9 @@ class PackageOptionValues(object):
     def remove(self, option_name):
         del self._dict[option_name]
 
+    def freeze(self):
+        self._freeze = True
+
     def propagate_upstream(self, down_package_values, down_ref, own_ref, package_name):
         if not down_package_values:
             return
@@ -123,6 +126,11 @@ class PackageOptionValues(object):
         for (name, value) in down_package_values.items():
             if name in self._dict and self._dict.get(name) == value:
                 continue
+
+            if self._freeze:
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already defined as %s"
+                                     % (down_ref, own_ref, name, value, self._dict.get(name)))
 
             modified = self._modified.get(name)
             if modified is not None:
@@ -362,6 +370,7 @@ class PackageOptions(object):
         self._data = {str(k): PackageOption(v, str(k))
                       for k, v in definition.items()}
         self._modified = {}
+        self._freeze = False
 
     def __contains__(self, option):
         return str(option) in self._data
@@ -444,6 +453,9 @@ class PackageOptions(object):
             if option in self._data:
                 self._data[option].value = value
 
+    def freeze(self):
+        self._freeze = True
+
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
         """
         :param: package_values: PackageOptionValues({"shared": "True"}
@@ -457,6 +469,10 @@ class PackageOptions(object):
             if name in self._data and self._data.get(name) == value:
                 continue
 
+            if self._freeze:
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already defined as %s"
+                                     % (down_ref, own_ref, name, value, self._data.get(name)))
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
@@ -486,6 +502,11 @@ class Options(object):
         # if more than 1 is present, 1 should be "private" requirement and its options
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
+
+    def freeze(self):
+        self._package_options.freeze()
+        for v in self._deps_package_values.values():
+            v.freeze()
 
     @property
     def deps_package_values(self):

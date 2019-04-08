@@ -7,17 +7,14 @@ from conans.util.files import mkdir
 conanfile_parent = """
 from conans import ConanFile
 
-
 class parentLib(ConanFile):
-
     name = "parent"
     version = "1.0"
-    
+
     def package_info(self):
-        self.cpp_info.cppflags.append("-myflag")
+        self.cpp_info.cxxflags.append("-myflag")
         self.user_info.MyVar = "MyVarValue"
         self.env_info.MyEnvVar = "MyEnvVarValue"
-
 """
 
 
@@ -28,48 +25,48 @@ from conans import ConanFile
 class AConan(ConanFile):
     name = "lib"
     version = "1.0"
-    
+
     # To save the folders and check later if the folder is the same
     copy_build_folder = None
     copy_source_folder = None
     copy_package_folder = None
-    
+
     counter_package_calls = 0
-    
+
     no_copy_source = %(no_copy_source)s
     requires = "parent/1.0@conan/stable"
     running_local_command = %(local_command)s
-    
+
     def assert_in_local_cache(self):
         if self.running_local_command:
             assert(self.in_local_cache == False)
-   
+
     def source(self):
         assert(self.source_folder == os.getcwd())
         self.assert_in_local_cache()
-        
+
         # Prevented to use them, it's dangerous, because the source is run only for the first
         # config, so only the first build_folder/package_folder would be modified
         assert(self.build_folder is None)
         assert(self.package_folder is None)
-                        
+
         assert(self.source_folder is not None)
         self.copy_source_folder = self.source_folder
-        
+
         if %(source_with_infos)s:
             self.assert_deps_infos()
 
     def assert_deps_infos(self):
         assert(self.deps_user_info["parent"].MyVar == "MyVarValue")
-        assert(self.deps_cpp_info["parent"].cppflags[0] == "-myflag")
+        assert(self.deps_cpp_info["parent"].cxxflags[0] == "-myflag")
         assert(self.deps_env_info["parent"].MyEnvVar == "MyEnvVarValue")
 
     def build(self):
         assert(self.build_folder == os.getcwd())
-        
+
         self.assert_in_local_cache()
         self.assert_deps_infos()
-        
+
         if self.no_copy_source and self.in_local_cache:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
             assert(self.install_folder == self.build_folder)
@@ -79,24 +76,13 @@ class AConan(ConanFile):
 
         assert(self.package_folder is not None)
         self.copy_build_folder = self.build_folder
-        
+
     def package(self):
         assert(self.install_folder is not None)
-
-        if self.no_copy_source:
-            # First call with source, second with build
-            if self.counter_package_calls == 0:
-               assert(self.source_folder == os.getcwd())
-               self.counter_package_calls += 1
-            elif self.counter_package_calls == 1:
-               assert(self.build_folder == os.getcwd()) 
-        else:
-            assert(self.build_folder == os.getcwd())
-    
+        assert(self.build_folder == os.getcwd())
         self.assert_in_local_cache()
         self.assert_deps_infos()
-    
-        
+
         if self.in_local_cache:
             assert(self.copy_build_folder == self.build_folder)
 
@@ -104,24 +90,22 @@ class AConan(ConanFile):
             assert(self.copy_source_folder == self.source_folder)  # Only in install
         else:
             assert(self.source_folder == self.build_folder)
-            
+
         self.copy_package_folder = self.package_folder
-            
+
     def package_info(self):
         assert(self.package_folder == os.getcwd())
         assert(self.in_local_cache == True)
-        
+
         assert(self.source_folder is None)
         assert(self.build_folder is None)
         assert(self.install_folder is None)
 
-        
     def imports(self):
         assert(self.imports_folder == os.getcwd())
-        
+
     def deploy(self):
         assert(self.install_folder == os.getcwd())
-
 """
 
 

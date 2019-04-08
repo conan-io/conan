@@ -1,9 +1,9 @@
 import fnmatch
 import os
 import platform
-import time
 
 import requests
+import time
 
 from conans import __version__ as client_version
 from conans.util.files import save
@@ -13,7 +13,7 @@ from conans.util.tracer import log_client_rest_api_call
 class ConanRequester(object):
 
     def __init__(self, requester, cache, timeout):
-        self.proxies = cache.conan_config.proxies or {}
+        self.proxies = cache.config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
         self._timeout_seconds = timeout
@@ -63,9 +63,10 @@ class ConanRequester(object):
             kwargs["timeout"] = self._timeout_seconds
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
-        kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s) %s" % (client_version,
-                                                                       platform.python_version(),
-                                                                       requests.utils.default_user_agent())
+
+        user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
+                                                  requests.utils.default_user_agent())
+        kwargs["headers"]["User-Agent"] = user_agent
         return kwargs
 
     def get(self, url, **kwargs):

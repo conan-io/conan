@@ -3,12 +3,15 @@ import platform
 import re
 import subprocess
 import unittest
+from textwrap import dedent
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient,\
+    TestServer
+
 
 conanfile_py = """
 from conans import ConanFile
@@ -108,9 +111,8 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertIn(os.path.join(base_path, "build"), output)
         self.assertNotIn("package", output)
 
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths(self):
-        if platform.system() != "Windows":
-            return
         folder = temp_folder(False)
         short_folder = os.path.join(folder, ".cn")
 
@@ -141,23 +143,23 @@ class InfoFoldersTest(unittest.TestCase):
                 self.assertFalse(os.path.exists(path))
                 self.assertTrue(os.path.exists(os.path.dirname(path)))
 
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths_home_set_acl(self):
         """
         When CONAN_USER_HOME_SHORT is living in NTFS file systems, current user needs to be
-        granted with full control permission to avoid access problems when cygwin/msys2 windows subsystems
-        are mounting/using that folder.
+        granted with full control permission to avoid access problems when cygwin/msys2
+        windows subsystems are mounting/using that folder.
         """
-        if platform.system() != "Windows":
-            return
-
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
-        out = subprocess.check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
+        out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
+                                      % os.path.splitdrive(folder)[0])
         if "NTFS" not in str(out):
             return
         short_folder = os.path.join(folder, ".cnacls")
 
-        self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists" % short_folder)
+        self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists"
+                         % short_folder)
         os.makedirs(short_folder)
 
         current_domain = os.environ['USERDOMAIN']
@@ -179,7 +181,8 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = subprocess.check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
+            short_folder_acls = subprocess.check_output("cacls %s" % short_folder,
+                                                        stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
@@ -196,3 +199,29 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("source_folder", output)
         self.assertNotIn("build_folder", output)
         self.assertNotIn("package_folder", output)
+
+    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
+    def test_short_paths_folders(self):
+        # https://github.com/conan-io/conan/issues/4612
+        folder = temp_folder(False)
+        short_folder = os.path.join(folder, ".cn")
+
+        conanfile = dedent("""
+            from conans import ConanFile
+
+            class Conan(ConanFile):
+                short_paths=True
+            """)
+        with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
+            client = TestClient(base_folder=folder, servers={"default": TestServer()},
+                                users={"default": [("lasote", "mypass")]})
+            client.save({CONANFILE: conanfile})
+            client.run("export . pkga/0.1@lasote/testing")
+            client.run("info pkga/0.1@lasote/testing --paths")
+            self.assertIn("source_folder: %s" % short_folder, client.out)
+            self.assertIn("build_folder: %s" % short_folder, client.out)
+            self.assertIn("package_folder: %s" % short_folder, client.out)
+
+            client.run("upload pkga/0.1@lasote/testing --all")
+            self.assertIn("Uploaded conan recipe", client.out)
+            self.assertNotIn("Uploading package 1/1", client.out)

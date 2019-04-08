@@ -5,7 +5,7 @@ from conans.client.loader import parse_conanfile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 
 PythonRequire = namedtuple("PythonRequire", "ref module conanfile")
 
@@ -17,6 +17,19 @@ class ConanPythonRequire(object):
         self._range_resolver = range_resolver
         self._requires = None
         self.valid = True
+        self._check_updates = False
+        self._update = False
+        self._remote_name = None
+
+    def enable_remotes(self, check_updates=False, update=False, remote_name=None):
+        self._check_updates = check_updates
+        self._update = update
+        self._remote_name = remote_name
+
+    def invalidate_caches(self):
+        self._cached_requires = {}
+        self.check_updates = False
+        self.update = False
 
     @contextmanager
     def capture_requires(self):
@@ -34,7 +47,8 @@ class ConanPythonRequire(object):
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remote_name=None)
             ref = requirement.ref
-            result = self._proxy.get_recipe(ref, False, False, remote_name=None,
+            result = self._proxy.get_recipe(ref, self._check_updates, self._update,
+                                            remote_name=self._remote_name,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
@@ -52,6 +66,9 @@ class ConanPythonRequire(object):
     def __call__(self, require):
         if not self.valid:
             raise ConanException("Invalid use of python_requires(%s)" % require)
-        python_req = self._look_for_require(require)
-        self._requires.append(python_req)
-        return python_req.module
+        try:
+            python_req = self._look_for_require(require)
+            self._requires.append(python_req)
+            return python_req.module
+        except NotFoundException:
+            raise ConanException('Unable to find python_requires("{}") in remotes'.format(require))

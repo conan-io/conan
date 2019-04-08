@@ -2,6 +2,8 @@ import json
 import time
 from collections import namedtuple
 
+from conans.util.dates import from_timestamp_to_iso8601, valid_iso8601
+
 _RevisionEntry = namedtuple("RevisionEntry", "revision time")
 
 
@@ -13,9 +15,20 @@ class RevisionList(object):
     @staticmethod
     def loads(contents):
         ret = RevisionList()
-        ret._data = [_RevisionEntry(e["revision"], e["time"])
+        ret._data = [_RevisionEntry(e["revision"], RevisionList._fix_timestamp(e["time"]))
                      for e in json.loads(contents)["revisions"]]
         return ret
+
+    @staticmethod
+    def _fix_timestamp(the_time):
+        """The time field has been converted to ISO8601 from timestamp, so we keep compatibility
+        by knowing how to read a file with timestamps.
+        FIXME: This function could be removed in Conan 2.0"""
+
+        if not isinstance(the_time, float):
+            return the_time
+        else:
+            return from_timestamp_to_iso8601(the_time)
 
     def dumps(self):
         return json.dumps({"revisions": [{"revision": e.revision,
@@ -30,8 +43,11 @@ class RevisionList(object):
         if index:
             self._data.pop(index)
 
-        now = time.time()
-        self._data.append(_RevisionEntry(revision_id, now))
+        self._data.append(_RevisionEntry(revision_id, self._now()))
+
+    @staticmethod
+    def _now():
+        return from_timestamp_to_iso8601(time.time())
 
     def latest_revision(self):
         if not self._data:
@@ -44,8 +60,8 @@ class RevisionList(object):
             return None
         return self._data[tmp].time
 
-    def items(self):
-        return reversed(self._data)
+    def as_list(self):
+        return list(reversed(self._data))
 
     def remove_revision(self, revision_id):
         index = self._find_revision_index(revision_id)

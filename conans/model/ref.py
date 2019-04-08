@@ -154,7 +154,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         text = text.strip()
         tmp = text.split(":")
         try:
-            ref = ConanFileReference.loads(tmp[0].strip())
+            ref = ConanFileReference.loads(tmp[0].strip(), validate=validate)
             package_id = tmp[1].strip()
         except IndexError:
             raise ConanException("Wrong package reference  %s" % text)
@@ -174,3 +174,6 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
     def copy_clear_rev(self):
         ref = self.ref.copy_clear_rev()
         return PackageReference(ref, self.id, revision=None)
+
+    def copy_clear_revs(self):
+        return self.copy_with_revs(None, None)

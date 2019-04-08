@@ -17,10 +17,10 @@ os=Windows
         new_profile, _ = _load_profile(prof, None, None)
 
         new_profile.update_settings(OrderedDict([("OTHER", "2")]))
-        self.assertEquals(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
+        self.assertEqual(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
 
         new_profile.update_settings(OrderedDict([("compiler", "2"), ("compiler.version", "3")]))
-        self.assertEquals(new_profile.settings,
+        self.assertEqual(new_profile.settings,
                           OrderedDict([("os", "Windows"), ("OTHER", "2"),
                                        ("compiler", "2"), ("compiler.version", "3")]))
 
@@ -30,7 +30,7 @@ os=Windows
         p2 = '''include(p1)\n[env]\nVAR=2'''
         save(os.path.join(tmp_dir, "p1"), p1)
         new_profile, _ = _load_profile(p2, tmp_dir, tmp_dir)
-        self.assertEquals(new_profile.env_values.data[None]["VAR"], "2")
+        self.assertEqual(new_profile.env_values.data[None]["VAR"], "2")
 
     def profile_subsettings_update_test(self):
         prof = '''[settings]
@@ -40,18 +40,18 @@ compiler.runtime=MT
 '''
         new_profile, _ = _load_profile(prof, None, None)
         new_profile.update_settings(OrderedDict([("compiler", "gcc")]))
-        self.assertEquals(dict(new_profile.settings), {"compiler": "gcc", "os": "Windows"})
+        self.assertEqual(dict(new_profile.settings), {"compiler": "gcc", "os": "Windows"})
 
         new_profile, _ = _load_profile(prof, None, None)
         new_profile.update_settings(OrderedDict([("compiler", "Visual Studio"),
                                                  ("compiler.subsetting", "3"),
                                                  ("other", "value")]))
 
-        self.assertEquals(dict(new_profile.settings), {"compiler": "Visual Studio",
-                                                       "os": "Windows",
-                                                       "compiler.runtime": "MT",
-                                                       "compiler.subsetting": "3",
-                                                       "other": "value"})
+        self.assertEqual(dict(new_profile.settings), {"compiler": "Visual Studio",
+                                                      "os": "Windows",
+                                                      "compiler.runtime": "MT",
+                                                      "compiler.subsetting": "3",
+                                                      "other": "value"})
 
     def package_settings_update_test(self):
         prof = '''[settings]
@@ -62,13 +62,13 @@ MyPackage:os=Windows
         np, _ = _load_profile(prof, None, None)
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
-        self.assertEquals(np.package_settings_values,
-                          {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
+        self.assertEqual(np.package_settings_values,
+                         {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
 
         np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
-        self.assertEquals(np.package_settings_values,
-                          {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
-                                         ("compiler", "2"), ("compiler.version", "3")]})
+        self.assertEqual(np.package_settings_values,
+                         {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
+                                        ("compiler", "2"), ("compiler.version", "3")]})
 
     def profile_dump_order_test(self):
         # Settings

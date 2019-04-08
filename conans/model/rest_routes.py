@@ -1,16 +1,13 @@
 
 class RestRoutes(object):
 
-    def __init__(self, base_url):
-        self.base_url = base_url
-
     @property
     def recipe(self):
-        return '%s/{name}/{version}/{username}/{channel}' % self.base_url
+        return 'conans/{name}/{version}/{username}/{channel}'
 
     @property
-    def recipe_files(self):
-        return '%s/files' % self.recipe
+    def recipe_latest(self):
+        return '%s/latest' % self.recipe
 
     @property
     def recipe_revision(self):
@@ -23,10 +20,6 @@ class RestRoutes(object):
     @property
     def recipe_revisions(self):
         return '%s/revisions' % self.recipe
-
-    @property
-    def recipe_file(self):
-        return '%s/files/{path}' % self.recipe
 
     @property
     def recipe_revision_file(self):
@@ -54,10 +47,6 @@ class RestRoutes(object):
         return '%s/{package_id}' % self.packages_revision
 
     @property
-    def package_recipe_revision_files(self):
-        return '%s/files' % self.package_recipe_revision
-
-    @property
     def package_revisions(self):
         return '%s/revisions' % self.package_recipe_revision
 
@@ -70,18 +59,18 @@ class RestRoutes(object):
         return '%s/files' % self.package_revision
 
     @property
-    def package_file(self):
-        return '%s/files/{path}' % self.package
+    def package_revision_latest(self):
+        return '%s/latest' % self.package_recipe_revision
 
     @property
     def package_revision_file(self):
         return '%s/files/{path}' % self.package_revision
 
-    @property
-    def package_recipe_revision_file(self):
-        return '%s/files/{path}' % self.package_recipe_revision
-
     # ONLY V1
+    @property
+    def v1_updown_file(self):
+        return "files/{path}"
+
     @property
     def v1_recipe_digest(self):
         return "%s/digest" % self.recipe
@@ -117,11 +106,11 @@ class RestRoutes(object):
     # COMMON URLS
     @property
     def ping(self):
-        return "%s/ping" % self.base_url
+        return "ping"
 
     @property
     def common_search(self):
-        return "%s/search" % self.base_url
+        return "conans/search"
 
     @property
     def common_search_packages(self):
@@ -133,8 +122,8 @@ class RestRoutes(object):
 
     @property
     def common_authenticate(self):
-        return "%s/authenticate" % self.base_url
+        return "users/authenticate"
 
     @property
     def common_check_credentials(self):
-        return "%s/check_credentials" % self.base_url
+        return "users/check_credentials"

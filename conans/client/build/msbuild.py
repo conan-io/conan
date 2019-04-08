@@ -11,6 +11,7 @@ from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
+from conans.tools import vcvars_command as tools_vcvars_command
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save
 
@@ -73,9 +74,11 @@ class MSBuild(object):
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents(definitions)
+            property_file_name = os.path.abspath(property_file_name)
             save(property_file_name, props_file_contents)
             vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
-                                    vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
+                                    vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
+                                    output=self._output)
             command = self.get_command(project_file, property_file_name,
                                        targets=targets, upgrade_project=upgrade_project,
                                        build_type=build_type, arch=arch, parallel=parallel,
@@ -101,6 +104,7 @@ class MSBuild(object):
 
         build_type = build_type or self._settings.get_safe("build_type")
         arch = arch or self._settings.get_safe("arch")
+        toolset = toolset or tools.msvs_toolset(self._settings)
         verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or verbosity or "minimal"
         if not build_type:
             raise ConanException("Cannot build_sln_command, build_type not defined")
@@ -159,7 +163,8 @@ class MSBuild(object):
             command.append('/verbosity:%s' % verbosity)
 
         if props_file_path:
-            command.append('/p:ForceImportBeforeCppTargets="%s"' % props_file_path)
+            command.append('/p:ForceImportBeforeCppTargets="%s"'
+                           % os.path.abspath(props_file_path))
 
         for name, value in properties.items():
             command.append('/p:%s="%s"' % (name, value))
@@ -217,7 +222,7 @@ class MSBuild(object):
     @staticmethod
     def get_version(settings):
         msbuild_cmd = "msbuild -version"
-        vcvars = vcvars_command(settings)
+        vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
             out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()

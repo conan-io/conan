@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import textwrap
@@ -8,6 +9,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
+from conans.test.utils.conanfile import TestConanFile
 
 
 class InfoTest(unittest.TestCase):
@@ -336,13 +338,10 @@ class MyTest(ConanFile):
                 Requires:
                     Hello1/0.1@lasote/stable""")
 
-        if self.client.revisions:
-            expected_output = expected_output % (
+        expected_output = expected_output % (
                 "\n    Revision: cba5c22478b987899b8ca26b2c359bde",
-                "\n    Revision: c0683fc1338c11821957d21265927a7b")
-
-        else:
-            expected_output = expected_output % ("", "")
+                "\n    Revision: c0683fc1338c11821957d21265927a7b") \
+            if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
         def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()
@@ -382,6 +381,28 @@ class MyTest(ConanFile):
                 Licenses: MIT, GPL""")
 
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
+
+    def test_json_info_outputs(self):
+        self.client = TestClient()
+        self._create("LibA", "0.1")
+        self._create("LibE", "0.1")
+        self._create("LibF", "0.1")
+
+        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
+        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
+
+        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
+                     export=False)
+
+        json_file = os.path.join(self.client.current_folder, "output.json")
+        self.client.run("info . -u --json=\"{}\"".format(json_file))
+
+        # Check a couple of values in the generated JSON
+        content = json.loads(load(json_file))
+        self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
+        self.assertEqual(content[0]["license"][0], "MIT")
+        self.assertEqual(content[1]["url"], "myurl")
+        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1@None/None)")
 
     def build_order_test(self):
         self.client = TestClient()
@@ -588,3 +609,20 @@ class MyTest(ConanFile):
         html_content = load(html_path)
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
+
+    def wrong_graph_info_test(self):
+        # https://github.com/conan-io/conan/issues/4443
+        conanfile = TestConanFile()
+        client = TestClient()
+        client.save({"conanfile.py": str(conanfile)})
+        client.run("install .")
+        path = os.path.join(client.current_folder, "graph_info.json")
+        graph_info = load(path)
+        graph_info = json.loads(graph_info)
+        graph_info.pop("root")
+        save(path, json.dumps(graph_info))
+        client.run("info .")
+        self.assertIn("conanfile.py (Hello/0.1@None/None)", client.out)
+        save(path, "broken thing")
+        client.run("info .", assert_error=True)
+        self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)

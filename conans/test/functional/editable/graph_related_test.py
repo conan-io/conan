@@ -6,7 +6,6 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_PACKAGE_LAYOUT_FILE
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -31,12 +30,11 @@ class EmptyCacheTestMixin(object):
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
                             path_with_spaces=False)
         self.ref = ConanFileReference.loads('lib/version@user/channel')
-        self.assertFalse(os.path.exists(self.t.cache.conan(self.ref)))
+        self.assertFalse(os.path.exists(self.t.cache.base_folder(self.ref)))
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.ref))
+        self.t.run('editable remove {}'.format(self.ref))
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
-        self.assertFalse(os.listdir(self.t.cache.conan(self.ref)))
 
 
 class ExistingCacheTestMixin(object):
@@ -48,15 +46,15 @@ class ExistingCacheTestMixin(object):
         self.ref = ConanFileReference.loads('lib/version@user/channel')
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(self.ref))
-        self.assertTrue(os.path.exists(self.t.cache.conan(self.ref)))
-        self.assertListEqual(sorted(os.listdir(self.t.cache.conan(self.ref))),
+        self.assertTrue(os.path.exists(self.t.cache.base_folder(self.ref)))
+        self.assertListEqual(sorted(os.listdir(self.t.cache.base_folder(self.ref))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'package', 'source'])
 
     def tearDown(self):
-        self.t.run('link {} --remove'.format(self.ref))
-        self.assertTrue(os.path.exists(self.t.cache.conan(self.ref)))
-        self.assertListEqual(sorted(os.listdir(self.t.cache.conan(self.ref))),
+        self.t.run('editable remove {}'.format(self.ref))
+        self.assertTrue(os.path.exists(self.t.cache.base_folder(self.ref)))
+        self.assertListEqual(sorted(os.listdir(self.t.cache.base_folder(self.ref))),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'package', 'source'])
 
@@ -65,8 +63,8 @@ class RelatedToGraphBehavior(object):
 
     def test_do_nothing(self):
         self.t.save(files={'conanfile.py': conanfile,
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
-        self.t.run('link . {}'.format(self.ref))
+                           "mylayout": conan_package_layout, })
+        self.t.run('editable add . {}'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     @parameterized.expand([(True, ), (False, )])
@@ -77,21 +75,21 @@ class RelatedToGraphBehavior(object):
         self.t.run('create . {}'.format(ref_parent))
         self.t.run('upload {} --all'.format(ref_parent))
         self.t.run('remove {} --force'.format(ref_parent))
-        self.assertFalse(os.path.exists(self.t.cache.conan(ref_parent)))
+        self.assertFalse(os.path.exists(self.t.cache.base_folder(ref_parent)))
 
         # Create our project and link it
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, })
-        self.t.run('link . {}'.format(self.ref))
+                           "mylayout": conan_package_layout, })
+        self.t.run('editable add . {}'.format(self.ref))
 
         # Install our project and check that everything is in place
         update = ' --update' if update else ''
         self.t.run('install {}{}'.format(self.ref, update))
-        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
-        self.assertTrue(os.path.exists(self.t.cache.conan(ref_parent)))
+        self.assertTrue(os.path.exists(self.t.cache.base_folder(ref_parent)))
 
     @parameterized.expand([(True,), (False,)])
     def test_middle_graph(self, update):
@@ -101,15 +99,15 @@ class RelatedToGraphBehavior(object):
         self.t.run('create . {}'.format(ref_parent))
         self.t.run('upload {} --all'.format(ref_parent))
         self.t.run('remove {} --force'.format(ref_parent))
-        self.assertFalse(os.path.exists(self.t.cache.conan(ref_parent)))
+        self.assertFalse(os.path.exists(self.t.cache.base_folder(ref_parent)))
 
         # Create our project and link it
         path_to_lib = os.path.join(self.t.current_folder, 'lib')
         self.t.save(files={'conanfile.py':
                            conanfile_base.format(body='requires = "{}"'.format(ref_parent)),
-                           CONAN_PACKAGE_LAYOUT_FILE: conan_package_layout, },
+                           "mylayout": conan_package_layout, },
                     path=path_to_lib)
-        self.t.run('link "{}" {}'.format(path_to_lib, self.ref))
+        self.t.run('editable add "{}" {}'.format(path_to_lib, self.ref))
 
         # Create a child an install it (in other folder, do not override the link!)
         path_to_child = os.path.join(self.t.current_folder, 'child')
@@ -123,9 +121,9 @@ class RelatedToGraphBehavior(object):
         child_remote = 'No remote' if update else 'Cache'
         self.assertIn("    child/version@lasote/channel from local cache - {}".format(child_remote),
                       self.t.out)
-        self.assertIn("    lib/version@user/channel from local cache - Editable", self.t.out)
+        self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
-        self.assertTrue(os.path.exists(self.t.cache.conan(ref_parent)))
+        self.assertTrue(os.path.exists(self.t.cache.base_folder(ref_parent)))
 
 
 class CreateLinkOverEmptyCache(EmptyCacheTestMixin, RelatedToGraphBehavior, unittest.TestCase):

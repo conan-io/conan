@@ -124,24 +124,25 @@ class ConanApiAuthManager(object):
         custom_headers['X-Client-Id'] = str(username or "")
 
     # ######### CONAN API METHODS ##########
+    @input_credentials_if_unauthorized
+    def check_credentials(self):
+        self._rest_client.check_credentials()
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
-        return self._rest_client.upload_recipe(ref, the_files, retry, retry_wait,
-                                               policy, remote_manifest)
+    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+        return self._rest_client.upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, pref, the_files, retry, retry_wait, policy):
-        return self._rest_client.upload_package(pref, the_files, retry, retry_wait,
-                                                policy)
+    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
+        return self._rest_client.upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     @input_credentials_if_unauthorized
-    def get_conan_manifest(self, ref):
-        return self._rest_client.get_conan_manifest(ref)
+    def get_recipe_manifest(self, ref):
+        return self._rest_client.get_recipe_manifest(ref)
 
     @input_credentials_if_unauthorized
-    def get_package_manifest(self, ref):
-        return self._rest_client.get_package_manifest(ref)
+    def get_package_manifest(self, pref):
+        return self._rest_client.get_package_manifest(pref)
 
     @input_credentials_if_unauthorized
     def get_package(self, pref, dest_folder):
@@ -150,6 +151,10 @@ class ConanApiAuthManager(object):
     @input_credentials_if_unauthorized
     def get_recipe(self, ref, dest_folder):
         return self._rest_client.get_recipe(ref, dest_folder)
+
+    @input_credentials_if_unauthorized
+    def get_recipe_snapshot(self, ref):
+        return self._rest_client.get_recipe_snapshot(ref)
 
     @input_credentials_if_unauthorized
     def get_recipe_sources(self, ref, dest_folder):
@@ -162,6 +167,10 @@ class ConanApiAuthManager(object):
     @input_credentials_if_unauthorized
     def get_package_info(self, pref):
         return self._rest_client.get_package_info(pref)
+
+    @input_credentials_if_unauthorized
+    def get_package_snapshot(self, pref):
+        return self._rest_client.get_package_snapshot(pref)
 
     @input_credentials_if_unauthorized
     def search(self, pattern, ignorecase):
@@ -180,8 +189,28 @@ class ConanApiAuthManager(object):
         return self._rest_client.remove_packages(ref, package_ids)
 
     @input_credentials_if_unauthorized
-    def get_path(self, ref, path, package_id):
-        return self._rest_client.get_path(ref, path, package_id)
+    def get_recipe_path(self, ref, path):
+        return self._rest_client.get_recipe_path(ref, path)
+
+    @input_credentials_if_unauthorized
+    def get_package_path(self, pref, path):
+        return self._rest_client.get_package_path(pref, path)
+
+    @input_credentials_if_unauthorized
+    def get_recipe_revisions(self, ref):
+        return self._rest_client.get_recipe_revisions(ref)
+
+    @input_credentials_if_unauthorized
+    def get_package_revisions(self, pref):
+        return self._rest_client.get_package_revisions(pref)
+
+    @input_credentials_if_unauthorized
+    def get_latest_recipe_revision(self, ref):
+        return self._rest_client.get_latest_recipe_revision(ref)
+
+    @input_credentials_if_unauthorized
+    def get_latest_package_revision(self, pref):
+        return self._rest_client.get_latest_package_revision(pref)
 
     def authenticate(self, user, password):
         if user is None:  # The user is already in DB, just need the passwd

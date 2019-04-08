@@ -1,7 +1,9 @@
 import os
 import unittest
 
-from conans.client.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
+import six
+
+from conans.client.cache.remote_registry import RemoteRegistry, default_remotes, dump_registry, \
     load_registry_txt, migrate_registry_file
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -136,5 +138,5 @@ other/1.0@lasote/testing conan.io
         ref = ConanFileReference.loads("lib/1.0@user/channel")
         # Test already exists
         registry.refs.set(ref, "conan.io", check_exists=True)
-        with self.assertRaisesRegexp(ConanException, "already exists"):
+        with six.assertRaisesRegex(self, ConanException, "already exists"):
             registry.refs.set(ref.copy_with_rev("revision"), "conan.io", check_exists=True)

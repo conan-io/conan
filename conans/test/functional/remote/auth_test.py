@@ -43,10 +43,12 @@ class AuthorizeTest(unittest.TestCase):
         # Check that return was  ok
         self.assertFalse(errors)
         # Check that upload was granted
-        self.assertTrue(os.path.exists(self.test_server.server_store.export(self.ref)))
+        rev = self.test_server.server_store.get_last_revision(self.ref).revision
+        ref = self.ref.copy_with_rev(rev)
+        self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
         # Check that login failed two times before ok
-        self.assertEquals(self.conan.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.user_io.login_index["default"], 3)
 
     def auth_with_env_test(self):
 
@@ -93,11 +95,11 @@ class AuthorizeTest(unittest.TestCase):
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
-        with self.assertRaises(NotFoundException):
-            self.test_server.server_store.export(self.ref)
+        rev = self.servers["default"].server_store.get_last_revision(self.ref)
+        self.assertIsNone(rev)
 
         # Check that login failed all times
-        self.assertEquals(self.conan.user_io.login_index["default"], 3)
+        self.assertEqual(self.conan.user_io.login_index["default"], 3)
 
     def no_client_username_checks_test(self):
         """Checks whether client username checks are disabled."""
@@ -112,7 +114,9 @@ class AuthorizeTest(unittest.TestCase):
         self.conan.run("upload %s" % str(self.ref))
 
         # Check that upload was granted
-        self.assertTrue(os.path.exists(self.test_server.server_store.export(self.ref)))
+        rev = self.test_server.server_store.get_last_revision(self.ref).revision
+        ref = self.ref.copy_with_rev(rev)
+        self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
 
         # Check that login failed once before ok
-        self.assertEquals(self.conan.user_io.login_index["default"], 2)
+        self.assertEqual(self.conan.user_io.login_index["default"], 2)

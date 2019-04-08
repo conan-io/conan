@@ -99,7 +99,7 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("install %s --build missing" % str(ref))
         # Check compilation ok
         package_ids = self.client.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 1)
+        self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_package_exists(pref, self.client.cache, files_without_conanfile)
 
@@ -108,7 +108,8 @@ class GoCompleteTest(unittest.TestCase):
 
         # Check that conans exists on server
         server_paths = self.servers["default"].server_store
-        conan_path = server_paths.export(ref)
+        rev = server_paths.get_last_revision(ref).revision
+        conan_path = server_paths.export(ref.copy_with_rev(rev))
         self.assertTrue(os.path.exists(conan_path))
 
         # Upload package

@@ -3,9 +3,11 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
+from subprocess import CalledProcessError, PIPE
 
-from conans.client.tools import which
 from conans.client.tools.env import environment_append
+from conans.client.tools.files import load, which
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
@@ -24,10 +26,21 @@ def cpu_count(output=None):
     output = default_output(output, 'conans.client.tools.oss.cpu_count')
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
+        if env_cpu_count is not None and not env_cpu_count.isdigit():
+            raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
+                                 "please specify a positive integer" % env_cpu_count)
         return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
+
+
+def detected_os():
+    if OSInfo().is_macos:
+        return "Macos"
+    if OSInfo().is_windows:
+        return "Windows"
+    return platform.system()
 
 
 def detected_architecture():
@@ -59,6 +72,10 @@ def detected_architecture():
         return "armv7"
     elif "arm" in machine:
         return "armv6"
+    elif "s390x" in machine:
+        return "s390x"
+    elif "s390" in machine:
+        return "s390"
 
     return None
 
@@ -173,6 +190,8 @@ class OSInfo(object):
 
         os_version = _OSVERSIONINFOEXW()
         os_version.dwOSVersionInfoSize = ctypes.sizeof(os_version)
+        if not hasattr(ctypes, "windll"):
+            return None
         retcode = ctypes.windll.Ntdll.RtlGetVersion(ctypes.byref(os_version))
         if retcode != 0:
             return None
@@ -288,6 +307,13 @@ class OSInfo(object):
     @staticmethod
     def detect_windows_subsystem():
         from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
+        if OSInfo().is_linux:
+            try:
+                # https://github.com/Microsoft/WSL/issues/423#issuecomment-221627364
+                with open("/proc/sys/kernel/osrelease") as f:
+                    return WSL if f.read().endswith("Microsoft") else None
+            except IOError:
+                return None
         try:
             output = OSInfo.uname()
         except ConanException:
@@ -323,8 +349,7 @@ def cross_building(settings, self_os=None, self_arch=None):
 
 
 def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or \
-               {"Darwin": "Macos"}.get(platform.system(), platform.system())
+    build_os = self_os or settings.get_safe("os_build") or detected_os()
     build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
     host_os = settings.get_safe("os")
     host_arch = settings.get_safe("arch")
@@ -371,6 +396,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "sparc64"
         elif "sparc" in arch:
             machine = "sparc"
+        elif "s390x" in arch:
+            machine = "s390x-ibm"
+        elif "s390" in arch:
+            machine = "s390-ibm"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -398,10 +427,31 @@ def get_gnu_triplet(os_, arch, compiler=None):
         if "arm" in arch and "armv8" not in arch:
             op_system += "eabi"
 
-        if arch == "armv7hf" and os_ == "Linux":
+        if (arch == "armv5hf" or arch == "armv7hf") and os_ == "Linux":
             op_system += "hf"
 
         if arch == "armv8_32" and os_ == "Linux":
             op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
     return "%s-%s" % (machine, op_system)
+
+
+def check_output(cmd, folder=None, return_code=False):
+    tmp_file = tempfile.mktemp()
+    try:
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE, cwd=folder)
+        process.communicate()
+
+        if return_code:
+            return process.returncode
+
+        if process.returncode:
+            raise CalledProcessError(process.returncode, cmd)
+
+        output = load(tmp_file)
+        return output
+    finally:
+        try:
+            os.unlink(tmp_file)
+        except:
+            pass

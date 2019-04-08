@@ -57,21 +57,21 @@ class HelloConan(ConanFile):
             return log_file_packaged_, client.user_io.out
 
         log_file_packaged, output = _install_a_package(False, True)
-        self.assertIn("Copied 1 '.log' file: conan_run.log", output)
+        self.assertIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
         self.assertNotIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(True, True)
-        self.assertIn("Copied 1 '.log' file: conan_run.log", output)
+        self.assertIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
         self.assertIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(False, False)
-        self.assertNotIn("Copied 1 '.log' file: conan_run.log", output)
+        self.assertNotIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
@@ -100,33 +100,33 @@ class HelloConan(ConanFile):
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
 
-        self.assertEquals(json.loads(without_rest_api[0])["_action"], "COMMAND")
-        self.assertEquals(json.loads(without_rest_api[0])["name"], "authenticate")
-        self.assertEquals(json.loads(without_rest_api[2])["_action"], "COMMAND")
-        self.assertEquals(json.loads(without_rest_api[2])["name"], "export")
-        self.assertEquals(json.loads(without_rest_api[3])["_action"], "COMMAND")
-        self.assertEquals(json.loads(without_rest_api[3])["name"], "install_reference")
-        self.assertEquals(json.loads(without_rest_api[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEquals(json.loads(without_rest_api[4])["_id"], "Hello0/0.1@lasote/stable")
-        self.assertEquals(json.loads(without_rest_api[5])["_action"], "PACKAGE_BUILT_FROM_SOURCES")
-        self.assertEquals(json.loads(without_rest_api[6])["_action"], "COMMAND")
-        self.assertEquals(json.loads(without_rest_api[6])["name"], "upload")
-        self.assertEquals(json.loads(without_rest_api[7])["_action"], "ZIP")
-        self.assertEquals(json.loads(without_rest_api[8])["_action"], "UPLOADED_RECIPE")
-        self.assertEquals(json.loads(without_rest_api[9])["_action"], "ZIP")
-        self.assertEquals(json.loads(without_rest_api[10])["_action"], "UPLOADED_PACKAGE")
+        self.assertEqual(json.loads(without_rest_api[0])["_action"], "COMMAND")
+        self.assertEqual(json.loads(without_rest_api[0])["name"], "authenticate")
+        self.assertEqual(json.loads(without_rest_api[2])["_action"], "COMMAND")
+        self.assertEqual(json.loads(without_rest_api[2])["name"], "export")
+        self.assertEqual(json.loads(without_rest_api[3])["_action"], "COMMAND")
+        self.assertEqual(json.loads(without_rest_api[3])["name"], "install_reference")
+        self.assertEqual(json.loads(without_rest_api[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
+        self.assertEqual(json.loads(without_rest_api[4])["_id"], "Hello0/0.1@lasote/stable")
+        self.assertEqual(json.loads(without_rest_api[5])["_action"], "PACKAGE_BUILT_FROM_SOURCES")
+        self.assertEqual(json.loads(without_rest_api[6])["_action"], "COMMAND")
+        self.assertEqual(json.loads(without_rest_api[6])["name"], "upload")
+        self.assertEqual(json.loads(without_rest_api[7])["_action"], "ZIP")
+        self.assertEqual(json.loads(without_rest_api[8])["_action"], "UPLOADED_RECIPE")
+        self.assertEqual(json.loads(without_rest_api[9])["_action"], "ZIP")
+        self.assertEqual(json.loads(without_rest_api[10])["_action"], "UPLOADED_PACKAGE")
 
         num_put = len([it for it in actions if "REST_API_CALL" in it and "PUT" in it])
-        self.assertEquals(num_put, 6)   # 3 files the recipe 3 files the package
+        self.assertEqual(num_put, 6)   # 3 files the recipe 3 files the package
 
         num_post = len([it for it in actions if "REST_API_CALL" in it and "POST" in it])
         if "/v2/" in traces:
-            self.assertEquals(num_post, 0)
+            self.assertEqual(num_post, 0)
         else:
-            self.assertEquals(num_post, 2)  # 2 get urls
+            self.assertEqual(num_post, 2)  # 2 get urls
 
         num_get = len([it for it in actions if "REST_API_CALL" in it and "GET" in it])
-        self.assertEquals(num_get, 10)
+        self.assertEqual(num_get, 10)
 
         # Check masked signature
         for action in actions:

@@ -67,8 +67,7 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
     env["PYTHONPATH"] = source_folder
     env["CONAN_LOGGING_LEVEL"] = "50" if platform.system() == "Darwin" else "50"
     env["CHANGE_AUTHOR_DISPLAY_NAME"] = ""
-    env["CONAN_API_V2_BLOCKED"] = "True" if flavor == "blocked_v2" else "False"
-    env["CONAN_CLIENT_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
+    env["TESTING_REVISIONS_ENABLED"] = "True" if flavor == "enabled_revisions" else "False"
     # Related with the error: LINK : fatal error LNK1318: Unexpected PDB error; RPC (23) '(0x000006BA)'
     # More info: http://blog.peter-b.co.uk/2017/02/stop-mspdbsrv-from-breaking-ci-build.html
     # Update, this doesn't solve the issue, other issues arise:
@@ -106,7 +105,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
     parser.add_argument('--exclude_tags', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
-    parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions, blocked_v2')
+    parser.add_argument('--flavor', '-f', help='enabled_revisions, disabled_revisions')
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,

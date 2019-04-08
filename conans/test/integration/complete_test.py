@@ -23,7 +23,7 @@ class CompleteFlowTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
         self.client.run("create . lasote/stable")
-        self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' file: helloHello0.h",
+        self.assertIn("Hello0/0.1@lasote/stable package(): Packaged 1 '.h' file: helloHello0.h",
                       self.client.out)
 
         # Upload package
@@ -42,7 +42,7 @@ class CompleteFlowTest(unittest.TestCase):
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
         package_ids = other_conan.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 2)
+        self.assertEqual(len(package_ids), 2)
 
     def reuse_test(self):
         test_server = TestServer()
@@ -53,11 +53,11 @@ class CompleteFlowTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
         self.client.save(files)
         self.client.run("create . lasote/stable")
-        self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' file: helloHello0.h",
+        self.assertIn("Hello0/0.1@lasote/stable package(): Packaged 1 '.h' file: helloHello0.h",
                       self.client.out)
         # Check compilation ok
         package_ids = self.client.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 1)
+        self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_library_exists(pref, self.client.cache)
 
@@ -71,7 +71,8 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Check that recipe exists on server
         server_paths = self.servers["default"].server_store
-        conan_path = server_paths.export(ref)
+        rev = server_paths.get_last_revision(ref).revision
+        conan_path = server_paths.export(ref.copy_with_rev(rev))
         self.assertTrue(os.path.exists(conan_path))
 
         # Upload package
@@ -104,7 +105,7 @@ class CompleteFlowTest(unittest.TestCase):
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
         package_ids = other_conan.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 2)
+        self.assertEqual(len(package_ids), 2)
         for package_id in package_ids:
             pref = PackageReference(ref, package_id)
             self._assert_library_exists(pref, other_conan.cache)
@@ -135,7 +136,7 @@ class CompleteFlowTest(unittest.TestCase):
 
     def _assert_library_files(self, path):
         libraries = os.listdir(os.path.join(path, "lib"))
-        self.assertEquals(len(libraries), 1)
+        self.assertEqual(len(libraries), 1)
 
     def _assert_library_exists_in_server(self, pref, paths):
         folder = uncompress_packaged_files(paths, pref)

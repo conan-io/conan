@@ -2,6 +2,8 @@ import os
 import shutil
 import unittest
 
+import six
+
 from conans.client import defs_to_string
 from conans.client.build.meson import Meson
 from conans.client.conf import default_settings_yml
@@ -23,8 +25,8 @@ class MesonTest(unittest.TestCase):
     def _check_commands(self, cmd_ref, cmd_test):
         cmd_ref_splitted = cmd_ref.split(' ')
         cmd_test_splitted = cmd_test.split(' ')
-        self.assertEquals(cmd_ref_splitted[:3], cmd_test_splitted[:3])
-        self.assertEquals(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
+        self.assertEqual(cmd_ref_splitted[:3], cmd_test_splitted[:3])
+        self.assertEqual(set(cmd_ref_splitted[3:]), set(cmd_test_splitted[3:]))
 
     def partial_build_test(self):
         conan_file = ConanFileMock()
@@ -58,8 +60,13 @@ class MesonTest(unittest.TestCase):
         meson = Meson(conan_file)
 
         defs = {
-            'default-library': 'shared',
+            'default_library': 'shared',
             'prefix': package_folder,
+            'libdir': 'lib',
+            'bindir': 'bin',
+            'sbindir': 'bin',
+            'libexecdir': 'bin',
+            'includedir': 'include',
             'cpp_std': 'none'
         }
 
@@ -119,9 +126,9 @@ class MesonTest(unittest.TestCase):
         self._check_commands(cmd_expected, conan_file.command)
 
         args = ['--werror', '--warnlevel 3']
-        defs['default-library'] = 'static'
+        defs['default_library'] = 'static'
         meson.configure(source_folder="source", build_folder="build", args=args,
-                        defs={'default-library': 'static'})
+                        defs={'default_library': 'static'})
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s %s --buildtype=release' \
@@ -129,11 +136,37 @@ class MesonTest(unittest.TestCase):
         self._check_commands(cmd_expected, conan_file.command)
 
         # Raise mixing
-        with self.assertRaisesRegexp(ConanException, "Use 'build_folder'/'source_folder'"):
+        with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
             meson.configure(source_folder="source", build_dir="build")
 
         meson.test()
-        self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
 
         meson.install()
-        self.assertEquals("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
+
+    def prefix_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.package_folder = os.getcwd()
+        expected_prefix = '-Dprefix="%s"' % os.getcwd()
+        meson = Meson(conan_file)
+        meson.configure()
+        self.assertIn(expected_prefix, conan_file.command)
+        meson.build()
+        self.assertIn("ninja -C", conan_file.command)
+        meson.install()
+        self.assertIn("ninja -C", conan_file.command)
+
+    def no_prefix_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.package_folder = None
+        meson = Meson(conan_file)
+        meson.configure()
+        self.assertNotIn('-Dprefix', conan_file.command)
+        meson.build()
+        self.assertIn("ninja -C", conan_file.command)
+        with self.assertRaises(TypeError):
+            meson.install()
+

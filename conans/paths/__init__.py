@@ -22,11 +22,6 @@ def get_conan_user_home():
     return os.path.abspath(tmp)
 
 
-def is_case_insensitive_os():
-    system = platform.system()
-    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
-
-
 # Files
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"
@@ -39,7 +34,7 @@ BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
-BUILD_INFO_PREMAKE = 'conanbuildinfo.lua'
+BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
 BUILD_INFO_MAKE = 'conanbuildinfo.mak'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
@@ -53,8 +48,7 @@ RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
 PACKAGE_METADATA = "metadata.json"
-LINKED_PACKAGE_SENTINEL = '.linked_package'
-CONAN_PACKAGE_LAYOUT_FILE = '.conan_layout'
+CACERT_FILE = "cacert.pem"  # Server authorities file
 
 # Directories
 EXPORT_FOLDER = "export"

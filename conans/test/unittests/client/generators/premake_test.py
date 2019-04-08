@@ -26,8 +26,8 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_bindirs = {{"{bin1}",
     "{bin2}"}}
     conan_libs = {{"libfoo", "libbar"}}
-    conan_cppdefines = {{"MYDEFINE2", "MYDEFINE1"}}
-    conan_cppflags = {{"-march=native", "-fPIE"}}
+    conan_defines = {{"MYDEFINE2", "MYDEFINE1"}}
+    conan_cxxflags = {{"-march=native", "-fPIE"}}
     conan_cflags = {{"-mtune=native", "-fPIC"}}
     conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework Cocoa"}}
     conan_exelinkflags = {{"-framework VideoToolbox", "-framework QuartzCore"}}
@@ -36,8 +36,8 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_libdirs_MyPkg1 = {{"{lib1}"}}
     conan_bindirs_MyPkg1 = {{"{bin1}"}}
     conan_libs_MyPkg1 = {{"libfoo"}}
-    conan_cppdefines_MyPkg1 = {{"MYDEFINE1"}}
-    conan_cppflags_MyPkg1 = {{"-fPIE"}}
+    conan_defines_MyPkg1 = {{"MYDEFINE1"}}
+    conan_cxxflags_MyPkg1 = {{"-fPIE"}}
     conan_cflags_MyPkg1 = {{"-fPIC"}}
     conan_sharedlinkflags_MyPkg1 = {{"-framework Cocoa"}}
     conan_exelinkflags_MyPkg1 = {{"-framework QuartzCore"}}
@@ -47,8 +47,8 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_libdirs_MyPkg2 = {{"{lib2}"}}
     conan_bindirs_MyPkg2 = {{"{bin2}"}}
     conan_libs_MyPkg2 = {{"libbar"}}
-    conan_cppdefines_MyPkg2 = {{"MYDEFINE2"}}
-    conan_cppflags_MyPkg2 = {{"-march=native"}}
+    conan_defines_MyPkg2 = {{"MYDEFINE2"}}
+    conan_cxxflags_MyPkg2 = {{"-march=native"}}
     conan_cflags_MyPkg2 = {{"-mtune=native"}}
     conan_sharedlinkflags_MyPkg2 = {{"-framework AudioFoundation"}}
     conan_exelinkflags_MyPkg2 = {{"-framework VideoToolbox"}}
@@ -60,7 +60,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         includedirs{{conan_includedirs}}
         libdirs{{conan_libdirs}}
         links{{conan_libs}}
-        defines{{conan_cppdefines}}
+        defines{{conan_defines}}
         bindirs{{conan_bindirs}}
     end
     """)
@@ -86,7 +86,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin1']
         cpp_info.version = "0.1"
         cpp_info.cflags = ['-fPIC']
-        cpp_info.cppflags = ['-fPIE']
+        cpp_info.cxxflags = ['-fPIE']
         cpp_info.sharedlinkflags = ['-framework Cocoa']
         cpp_info.exelinkflags = ['-framework QuartzCore']
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -99,7 +99,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.bindirs = ['bin2']
         cpp_info.version = "3.2.3"
         cpp_info.cflags = ['-mtune=native']
-        cpp_info.cppflags = ['-march=native']
+        cpp_info.cxxflags = ['-march=native']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)

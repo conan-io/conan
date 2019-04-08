@@ -32,7 +32,7 @@ class Pkg(ConanFile):
         client.run("create . lasote/stable")
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.cache.conanfile(ref)))
-        conan = client.cache.conan(ref)
+        conan = client.cache.base_folder(ref)
         self.assertTrue(os.path.exists(os.path.join(conan, "package")))
         client.run("upload pkg/0.1@lasote/stable --all")
         client.run("remove pkg/0.1@lasote/stable -f")
@@ -47,7 +47,7 @@ class Pkg(ConanFile):
         self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
         source = client.cache.export_sources(ref)
         self.assertFalse(os.path.exists(os.path.join(source, "file.h")))
-        conan = client.cache.conan(ref)
+        conan = client.cache.base_folder(ref)
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
 
     def download_with_sources_test(self):
@@ -126,7 +126,7 @@ class Pkg(ConanFile):
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.cache.conanfile(ref)))
 
-        package_folder = os.path.join(client.cache.conan(ref), "package",
+        package_folder = os.path.join(client.cache.base_folder(ref), "package",
                                       os.listdir(client.cache.packages(ref))[0])
 
         client.run("upload pkg/0.1@lasote/stable --all")
@@ -155,7 +155,7 @@ class Pkg(ConanFile):
         client.run("remove pkg/0.1@lasote/stable -f")
 
         client.run("download pkg/0.1@lasote/stable -p=wrong", assert_error=True)
-        self.assertIn("ERROR: Package binary 'pkg/0.1@lasote/stable:wrong' not found in 'default'",
+        self.assertIn("ERROR: Binary package not found: 'pkg/0.1@lasote/stable:wrong'",
                       client.out)
 
     def test_download_pattern(self):

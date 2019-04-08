@@ -34,7 +34,7 @@ class VisualStudioLegacyGenerator(Generator):
             'libs': "".join(['%s.lib ' % lib if not lib.endswith(".lib")
                              else '%s ' % lib for lib in self._deps_build_info.libs]),
             'definitions': "".join("%s;" % d for d in self._deps_build_info.defines),
-            'compiler_flags': " ".join(self._deps_build_info.cppflags + self._deps_build_info.cflags),
+            'compiler_flags': " ".join(self._deps_build_info.cxxflags + self._deps_build_info.cflags),
             'linker_flags': " ".join(self._deps_build_info.sharedlinkflags),
         }
         return self.template.format(**fields)

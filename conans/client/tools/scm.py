@@ -1,4 +1,3 @@
-
 import os
 import platform
 import re
@@ -8,11 +7,30 @@ from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
+from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import decode_text, to_file_bytes, walk
+
+
+def _run_muted(cmd, folder=None):
+    with chdir(folder) if folder else no_op():
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process.communicate()
+        return process.returncode
+
+
+def _check_repo(cmd, folder, msg=None):
+    msg = msg or "Not a valid '{}' repository".format(cmd[0])
+    try:
+        ret = _run_muted(cmd, folder=folder)
+    except Exception:
+        raise ConanException(msg)
+    else:
+        if bool(ret):
+            raise ConanException(msg)
 
 
 class SCMBase(object):
@@ -35,7 +53,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True).strip())
+                    return check_output(command).strip()
                 else:
                     return self._runner(command)
 
@@ -90,7 +108,7 @@ class Git(SCMBase):
         return output
 
     def checkout(self, element, submodule=None):
-        self._check_git_repo()
+        self.check_repo()
         output = self.run('checkout "%s"' % element)
 
         if submodule:
@@ -102,24 +120,27 @@ class Git(SCMBase):
                 output += self.run("submodule update --init --recursive")
             else:
                 raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
-                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']" % submodule)
+                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
+                                     % submodule)
         # Element can be a tag, branch or commit
         return output
 
     def excluded_files(self):
         ret = []
         try:
-
-            file_paths = [os.path.normpath(os.path.join(os.path.relpath(folder, self.folder), el)).replace("\\", "/")
+            file_paths = [os.path.normpath(
+                                os.path.join(
+                                    os.path.relpath(folder, self.folder), el)).replace("\\", "/")
                           for folder, dirpaths, fs in walk(self.folder)
                           for el in fs + dirpaths]
             if file_paths:
                 p = subprocess.Popen(['git', 'check-ignore', '--stdin'],
                                      stdout=PIPE, stdin=PIPE, stderr=STDOUT, cwd=self.folder)
                 paths = to_file_bytes("\n".join(file_paths))
+
                 grep_stdout = decode_text(p.communicate(input=paths)[0])
                 ret = grep_stdout.splitlines()
-        except (CalledProcessError, FileNotFoundError) as e:
+        except (CalledProcessError, IOError, OSError) as e:
             if self._output:
                 self._output.warn("Error checking excluded git files: %s. "
                                   "Ignoring excluded files" % e)
@@ -127,7 +148,7 @@ class Git(SCMBase):
         return ret
 
     def get_remote_url(self, remote_name=None, remove_credentials=False):
-        self._check_git_repo()
+        self.check_repo()
         remote_name = remote_name or "origin"
         remotes = self.run("remote -v")
         for remote in remotes.splitlines():
@@ -141,10 +162,10 @@ class Git(SCMBase):
 
     def is_local_repository(self):
         url = self.get_remote_url()
-        return os.path.exists(url)   
+        return os.path.exists(url)
 
     def get_commit(self):
-        self._check_git_repo()
+        self.check_repo()
         try:
             commit = self.run("rev-parse HEAD")
             commit = commit.strip()
@@ -155,19 +176,19 @@ class Git(SCMBase):
     get_revision = get_commit
 
     def is_pristine(self):
-        self._check_git_repo()
+        self.check_repo()
         status = self.run("status --porcelain").strip()
         if not status:
             return True
         else:
             return False
-        
+
     def get_repo_root(self):
-        self._check_git_repo()
+        self.check_repo()
         return self.run("rev-parse --show-toplevel")
 
     def get_branch(self):
-        self._check_git_repo()
+        self.check_repo()
         try:
             status = self.run("status -bs --porcelain")
             # ## feature/scm_branch...myorigin/feature/scm_branch
@@ -177,7 +198,7 @@ class Git(SCMBase):
             raise ConanException("Unable to get git branch from %s: %s" % (self.folder, str(e)))
 
     def get_tag(self):
-        self._check_git_repo()
+        self.check_repo()
         try:
             status = self.run("describe --exact-match --tags")
             tag = status.strip()
@@ -185,11 +206,9 @@ class Git(SCMBase):
         except Exception:
             return None
 
-    def _check_git_repo(self):
-        try:
-            self.run("status")
-        except Exception:
-            raise ConanException("Not a valid git repository")
+    def check_repo(self):
+        """ Check if it is a valid GIT repo """
+        _check_repo(["git", "status"], folder=self.folder)
 
 
 class SVN(SCMBase):
@@ -206,7 +225,7 @@ class SVN(SCMBase):
     @staticmethod
     def get_version():
         try:
-            out, err = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
+            out, _ = subprocess.Popen(["svn", "--version"], stdout=subprocess.PIPE).communicate()
             version_line = decode_text(out).split('\n', 1)[0]
             version_str = version_line.split(' ', 3)[2]
             return Version(version_str)
@@ -231,6 +250,7 @@ class SVN(SCMBase):
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def _show_item(self, item, target='.'):
+        self.check_repo()
         if self.version >= SVN.API_CHANGE_VERSION:
             value = self.run("info --show-item {item} \"{target}\"".format(item=item, target=target))
             return value.strip()
@@ -256,7 +276,7 @@ class SVN(SCMBase):
     def checkout(self, url, revision="HEAD"):
         output = ""
         try:
-            self._check_svn_repo()
+            self.check_repo()
         except ConanException:
             output += self.run('co "{url}" .'.format(url=url))
         else:
@@ -268,11 +288,11 @@ class SVN(SCMBase):
         return output
 
     def update(self, revision='HEAD'):
-        self._check_svn_repo()
+        self.check_repo()
         return self.run("update -r {rev}".format(rev=revision))
 
     def excluded_files(self):
-        self._check_svn_repo()
+        self.check_repo()
         excluded_list = []
         output = self.run("status --no-ignore")
         for it in output.splitlines():
@@ -292,11 +312,11 @@ class SVN(SCMBase):
         url = self.get_remote_url(remove_credentials=remove_credentials)
         revision = self.get_last_changed_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
-        
+
     def is_local_repository(self):
         url = self.get_remote_url()
-        return url.startswith(self.file_protocol) and \
-               os.path.exists(unquote(url[len(self.file_protocol):]))
+        return (url.startswith(self.file_protocol) and
+                os.path.exists(unquote(url[len(self.file_protocol):])))
 
     def is_pristine(self):
         # Check if working copy is pristine/consistent
@@ -323,10 +343,11 @@ class SVN(SCMBase):
                         return False
                 return True
         else:
-            import warnings
-            warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
-                          " returning not-pristine always because it cannot compare with"
-                          " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
+            if self._output:
+                self._output.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented,"
+                                  " it is returning not-pristine always because it cannot compare"
+                                  " with checked out version.".format(self.version,
+                                                                      SVN.API_CHANGE_VERSION))
             return False
 
     def get_revision(self):
@@ -358,8 +379,6 @@ class SVN(SCMBase):
         item = re.search(pattern, url)
         return item.group(0) if item else None
 
-    def _check_svn_repo(self):
-        try:
-            self.run("info")
-        except Exception:
-            raise ConanException("Not a valid SVN repository")
+    def check_repo(self):
+        """ Check if it is a valid SVN repo """
+        _check_repo(["svn", "info"], folder=self.folder)
