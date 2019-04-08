@@ -210,8 +210,8 @@ class Command(object):
 
     def inspect(self, *args):
         """
-        Displays conanfile attributes, like name, version, options.
-        Works both locally, in local cache and remote
+        Displays conanfile attributes, like name, version and options. Works locally,
+        in local cache and remote.
         """
         parser = argparse.ArgumentParser(description=self.inspect.__doc__,
                                          prog="conan inspect",
@@ -1255,7 +1255,8 @@ class Command(object):
                 self._outputer.json_output(info, args.json, cwd)
 
     def remote(self, *args):
-        """Manages the remote list and the package recipes associated to a remote.
+        """
+        Manages the remote list and the package recipes associated to a remote.
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__,
                                          prog="conan remote",
@@ -1503,7 +1504,8 @@ class Command(object):
         self._conan.export_alias(args.reference, args.target)
 
     def workspace(self, *args):
-        """ command to manage workspaces
+        """
+        Command to manage workspaces.
         """
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
                                          prog="conan workspace",
@@ -1524,7 +1526,7 @@ class Command(object):
 
     def editable(self, *args):
         """
-        Manage editable packages
+        Manage editable packages.
         """
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
                                          prog="conan editable",
@@ -1566,7 +1568,8 @@ class Command(object):
                 self._user_io.out.writeln("    Layout: %s" % v["layout"])
 
     def _show_help(self):
-        """Prints a summary of all commands
+        """
+        Prints a summary of all commands.
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
