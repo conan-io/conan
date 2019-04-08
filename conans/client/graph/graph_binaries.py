@@ -121,6 +121,9 @@ class GraphBinariesAnalyzer(object):
                     remote_info, pref = self._remote_manager.get_package_info(pref, remote)
                 except NotFoundException:
                     pass
+                except Exception:
+                    conanfile.output.error("Error downloading binary package: '{}'".format(pref))
+                    raise
 
             # If the "remote" came from the registry but the user didn't specified the -r, with
             # revisions iterate all remotes
