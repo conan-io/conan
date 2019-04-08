@@ -56,7 +56,7 @@ other/1.0@lasote/testing conan.io
         f = os.path.join(temp_folder(), "aux_file")
         Remotes().save(f)
         cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
-        registry = RemoteRegistry(cache)
+        registry = cache.registry
 
         # Add
         registry.add("local", "http://localhost:9300")
