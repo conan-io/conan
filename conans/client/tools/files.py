@@ -54,7 +54,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     """
     Unzip a zipped file
     :param filename: Path to the zip file
-    :param destination: Destination folder
+    :param destination: Destination folder (or file for .gz files)
     :param keep_permissions: Keep the zip permissions. WARNING: Can be
     dangerous if the zip was not created in a NIX system, the bits could
     produce undefined permission schema. Use this option only if you are sure
