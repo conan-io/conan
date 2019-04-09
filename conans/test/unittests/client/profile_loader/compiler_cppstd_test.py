@@ -117,20 +117,12 @@ class SettingsCppStdTests(unittest.TestCase):
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertEqual(r.settings["cppstd"], "11")
 
-    # TODO: Add more tests with scoped settings
     def test_value_valid_scoped(self):
-        self._save_profile(compiler_cppstd="11")
-
-        # TODO: I think that 'process_settings' function should be smart enough to validate also
-        #   scoped ones.
-        r = profile_from_args(["default"], ["hh:compiler=apple-clang", "hh:compiler.cppstd=144"],
-                              [], [], cwd=self.tmp_folder, cache=self.cache)
-        r.process_settings(self.cache)
-        self.assertEqual(r.settings["compiler.cppstd"], "11")
-        self.assertNotIn("cppstd", r.settings)
-
-        # It fails inner in the graph
+        # Validation of scoped settings is delayed until graph computation, a conanfile can
+        #   declare a different set of settings, so we should wait until then to validate it.
         from conans.test.utils.tools import TestClient
         t = TestClient(base_folder=self.tmp_folder)
         t.run("new hh/0.1@user/channel --bare")
-        t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang -shh:compiler.cppstd=144")
+        t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang -shh:compiler.cppstd=144",
+              assert_error=True)
+        self.assertIn("Invalid setting '144' is not a valid 'settings.compiler.cppstd' value", t.out)
