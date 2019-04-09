@@ -296,7 +296,7 @@ class OSInfo(object):
     @staticmethod
     def get_aix_version():
         try:
-            ret = subprocess.check_output("oslevel", shell=True).decode().strip()
+            ret = check_output("oslevel").strip()
             return Version(ret)
         except Exception:
             return Version("%s.%s" % (platform.version(), platform.release()))
@@ -332,7 +332,7 @@ class OSInfo(object):
             raise ConanException("Command only for AIX operating system")
 
         try:
-            ret = subprocess.check_output("getconf%s" % options, shell=True).decode().strip()
+            ret = check_output("getconf%s" % options).strip()
             return ret
         except Exception:
             return None
@@ -416,9 +416,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
         if os_ == "AIX":
-            if "rs6000" in arch:
+            if "ppc32" in arch:
                 machine = "rs6000"
-            elif "powerpc" in arch:
+            elif "ppc64" in arch:
                 machine = "powerpc"
         elif "arm" in arch:
             machine = "arm"

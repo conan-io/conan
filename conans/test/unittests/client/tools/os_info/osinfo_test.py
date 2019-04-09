@@ -197,10 +197,11 @@ class OSInfoTest(unittest.TestCase):
                     self.assertEqual(OSInfo.detect_windows_subsystem(), WSL)
 
     def test_aix(self):
+        self._uname = 'AIX'
         self._version = '7.1.0.0'
 
-        with mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
-                mock.patch('subprocess.check_output', new=self.subprocess_check_output_mock):
+        with mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
+                mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
             self.assertFalse(OSInfo().is_windows)
             self.assertFalse(OSInfo().is_cygwin)
             self.assertFalse(OSInfo().is_msys)
