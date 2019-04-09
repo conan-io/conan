@@ -187,7 +187,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Check user has full control
         user_acl = "%s\\%s:(OI)(CI)F" % (current_domain, current_user)
-        self.assertIn(user_acl.encode(), short_folder_acls)
+        self.assertIn(user_acl, short_folder_acls)
 
     def test_direct_conanfile(self):
         client = TestClient()
