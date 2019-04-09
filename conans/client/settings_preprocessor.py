@@ -13,18 +13,23 @@ def preprocess(settings):
 def check_cppstd(settings):
     compiler = settings.get_safe("compiler")
     compiler_version = settings.get_safe("compiler.version")
-    compiler_cppstd = settings.get_safe("compiler.cppstd")
     cppstd = settings.get_safe("cppstd")
 
     if cppstd:
         warnings.warn("cppstd setting is deprecated, use compiler.cppstd instead")
 
-    if cppstd and compiler_cppstd and cppstd != compiler_cppstd:
-        raise ConanException("The specified 'compiler.cppstd={}' and 'cppstd={}' are"
-                             " different.".format(compiler_cppstd, cppstd))
+    try:
+        compiler_cppstd = settings.get_safe("compiler.cppstd")
 
-    if cppstd and not compiler_cppstd:
-        settings.compiler.cppstd = cppstd
+        if cppstd and compiler_cppstd and cppstd != compiler_cppstd:
+            raise ConanException("The specified 'compiler.cppstd={}' and 'cppstd={}' are"
+                                 " different.".format(compiler_cppstd, cppstd))
+
+        if cppstd and not compiler_cppstd:
+            settings.compiler.cppstd = cppstd
+    except ConanException:
+        # There can be compilers that do not define 'compiler.cppstd'
+        pass
 
     if not cppstd or compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return

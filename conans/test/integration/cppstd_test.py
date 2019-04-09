@@ -1,6 +1,7 @@
 import unittest
 
 from conans.paths import CONANFILE
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 
 
@@ -40,9 +41,10 @@ class TestConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        client.run('create . user/testing -s compiler="gcc" '
-                   '-s compiler.libcxx="libstdc++11" '
-                   '-s compiler.version="8" -s cppstd=20')
+        with catch_deprecation_warning(self):
+            client.run('create . user/testing -s compiler="gcc" '
+                       '-s compiler.libcxx="libstdc++11" '
+                       '-s compiler.version="8" -s cppstd=20')
 
     def set_default_package_id_test(self):
         client = TestClient()
@@ -64,10 +66,11 @@ class TestConan(ConanFile):
 
         # Add the setting but with the default value, should not build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
-        client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
-                   '-s compiler.libcxx="libstdc++" '
-                   '-s cppstd=gnu14 '
-                   '--build missing')
+        with catch_deprecation_warning(self):
+            client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
+                       '-s compiler.libcxx="libstdc++" '
+                       '-s cppstd=gnu14 '
+                       '--build missing')
         if client.cache.config.revisions_enabled:
             self.assertIn("doesn't belong to the installed recipe revision, removing folder",
                           client.out)
