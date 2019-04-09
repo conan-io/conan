@@ -416,9 +416,23 @@ class ConanClientConfigParser(ConfigParser, object):
                 # until now is working because no one is using system-wide proxies or those proxies
                 # rules don't contain excluded urls.c #1777
                 return urllib.request.getproxies()
-            result = {k: (None if v == "None" else v) for k, v in proxies}
+            result = {}
+            # Handle proxy specifications of the form:
+            # http = http://proxy.xyz.com
+            #   special-host.xyz.com = http://special-proxy.xyz.com
+            # (where special-proxy.xyz.com is only used as a proxy when special-host.xyz.com)
+            for scheme, proxy_string in proxies:
+                if proxy_string is None or proxy_string == "None":
+                    result[scheme] = None
+                else:
+                    for line in proxy_string.splitlines():
+                        proxy_value = [t.strip() for t in line.split("=", 1)]
+                        if len(proxy_value) == 2:
+                            result[scheme+"://"+proxy_value[0]] = proxy_value[1]
+                        elif proxy_value[0]:
+                            result[scheme] = proxy_value[0]
             return result
-        except:
+        except Exception:
             return None
 
     @property
