@@ -456,5 +456,5 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
     finally:
         try:
             os.unlink(tmp_file)
-        except:
+        except Exception:
             pass
