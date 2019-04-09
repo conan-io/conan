@@ -51,8 +51,25 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("1.14.0"):
-            migrate_config_install(self.cache)
+        if old_version < Version("0.25"):
+            from conans.paths import DEFAULT_PROFILE_NAME
+            default_profile_path = os.path.join(self.cache.conan_folder, PROFILES_FOLDER,
+                                                DEFAULT_PROFILE_NAME)
+            if not os.path.exists(default_profile_path):
+                self.out.warn("Migration: Moving default settings from %s file to %s"
+                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
+                conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
+
+                migrate_to_default_profile(conf_path, default_profile_path)
+
+                self.out.warn("Migration: export_source cache new layout")
+                migrate_c_src_export_source(self.cache, self.out)
+
+        if old_version < Version("1.0"):
+            _migrate_lock_files(self.cache, self.out)
+
+        if old_version < Version("1.12.0"):
+            migrate_plugins_to_hooks(self.cache)
 
         if old_version < Version("1.13.0"):
             old_settings = """
@@ -127,25 +144,8 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
             # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
             _migrate_create_metadata(self.cache, self.out)
 
-        if old_version < Version("1.12.0"):
-            migrate_plugins_to_hooks(self.cache)
-
-        if old_version < Version("1.0"):
-            _migrate_lock_files(self.cache, self.out)
-
-        if old_version < Version("0.25"):
-            from conans.paths import DEFAULT_PROFILE_NAME
-            default_profile_path = os.path.join(self.cache.conan_folder, PROFILES_FOLDER,
-                                                DEFAULT_PROFILE_NAME)
-            if not os.path.exists(default_profile_path):
-                self.out.warn("Migration: Moving default settings from %s file to %s"
-                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-                conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
-
-                migrate_to_default_profile(conf_path, default_profile_path)
-
-                self.out.warn("Migration: export_source cache new layout")
-                migrate_c_src_export_source(self.cache, self.out)
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
 
         if old_version < Version("1.14.2"):
             _migrate_full_metadata(self.cache, self.out)
