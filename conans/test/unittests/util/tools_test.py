@@ -1285,6 +1285,43 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
+    @attr('slow')
+    def get_gunzip_test(self):
+        # Create a tar file to be downloaded from server
+        tmp = temp_folder()
+        filepath = os.path.join(tmp, "test.txt.gz")
+        import gzip
+        with gzip.open(filepath, "wb") as f:
+            f.write(b"hello world zipped!")
+
+        thread = StoppableThreadBottle()
+
+        @thread.server.get("/test.txt.gz")
+        def get_file():
+            return static_file(os.path.basename(filepath), root=os.path.dirname(filepath),
+                               mimetype="application/octet-stream")
+
+        thread.run_server()
+
+        out = TestBufferConanOutput()
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out)
+            self.assertTrue(os.path.exists("test.txt"))
+            self.assertEqual(load("test.txt"), "hello world zipped!")
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out, destination="myfile.doc")
+            self.assertTrue(os.path.exists("myfile.doc"))
+            self.assertEqual(load("myfile.doc"), "hello world zipped!")
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out, destination="mytemp/myfile.txt")
+            self.assertTrue(os.path.exists("mytemp/myfile.txt"))
+            self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
+
+        thread.stop()
+
     def unix_to_dos_unit_test(self):
 
         def save_file(contents):
