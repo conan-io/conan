@@ -7,10 +7,10 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
 
-def _prepare_sources(cache, ref, remote_manager, loader):
+def _prepare_sources(cache, ref, remote_manager, loader, remotes):
     conan_file_path = cache.conanfile(ref)
     conanfile = loader.load_class(conan_file_path)
-    complete_recipe_sources(remote_manager, cache, conanfile, ref)
+    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
     return conanfile.short_paths
 
 
@@ -26,7 +26,8 @@ def _get_package_ids(cache, ref, package_ids):
     return package_ids
 
 
-def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loader, force=False):
+def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loader, remotes,
+             force=False):
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
@@ -34,7 +35,7 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     # get the right revision sources, not latest
     src_metadata = cache.package_layout(ref).load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
-    short_paths = _prepare_sources(cache, ref, remote_manager, loader)
+    short_paths = _prepare_sources(cache, ref, remote_manager, loader, remotes)
     package_ids = _get_package_ids(cache, ref, package_ids)
     package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
 
