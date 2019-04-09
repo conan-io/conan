@@ -5,7 +5,7 @@ from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user
+from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -129,6 +129,8 @@ request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (secon
 # which is deleted after the test.
 # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
+# cacert_path                         # environment CONAN_CACERT_PATH
+
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
 # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
@@ -217,7 +219,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_HOOKS": self._env_c("hooks", "CONAN_HOOKS", None),
                "CONAN_MSBUILD_VERBOSITY": self._env_c("general.msbuild_verbosity",
                                                       "CONAN_MSBUILD_VERBOSITY",
-                                                      None)
+                                                      None),
+               "CONAN_CACERT_PATH": self._env_c("general.cacert_path", "CONAN_CACERT_PATH", None)
                }
 
         # Filter None values
@@ -415,3 +418,18 @@ class ConanClientConfigParser(ConfigParser, object):
             return result
         except:
             return None
+
+    @property
+    def cacert_path(self):
+        try:
+            cacert_path = get_env("CONAN_CACERT_PATH")
+            if not cacert_path:
+                cacert_path = self.get_item("general.cacert_path")
+        except ConanException:
+            cacert_path = os.path.join(os.path.dirname(self.filename), CACERT_FILE)
+        else:
+            # For explicit cacert files, the file should already exist
+            if not os.path.exists(cacert_path):
+                raise ConanException("Configured file for 'cacert_path'"
+                                     " doesn't exists: '{}'".format(cacert_path))
+        return cacert_path

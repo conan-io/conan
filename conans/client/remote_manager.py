@@ -11,8 +11,7 @@ from conans.client.source import merge_directories
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     NoRestV2Available, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_DIR_OLD, \
-    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir, CONANINFO, \
-    CONAN_MANIFEST
+    EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
@@ -32,6 +31,9 @@ class RemoteManager(object):
         self._output = output
         self._auth_manager = auth_manager
         self._hook_manager = hook_manager
+
+    def check_credentials(self, remote):
+        self._call_remote(remote, "check_credentials")
 
     def get_recipe_snapshot(self, ref, remote):
         assert ref.revision, "get_recipe_snapshot requires revision"

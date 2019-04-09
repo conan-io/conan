@@ -4,6 +4,7 @@ import shutil
 import unittest
 import zipfile
 
+import six
 from mock import patch
 
 from conans.client import tools
@@ -15,7 +16,6 @@ from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
-
 
 win_profile = """[settings]
     os: Windows
@@ -163,7 +163,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
-        with self.assertRaisesRegexp(ConanException, "'config_install' doesn't exist"):
+        with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
         self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
@@ -480,7 +480,7 @@ class Pkg(ConanFile):
         http_server = StoppableThreadBottle()
         path = self._create_zip()
 
-        from bottle import static_file, auth_basic
+        from bottle import static_file
 
         @http_server.server.get("/myconfig.zip")
         def get_zip():
