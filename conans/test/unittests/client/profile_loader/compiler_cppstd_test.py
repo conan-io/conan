@@ -3,8 +3,6 @@
 import os
 import textwrap
 import unittest
-import warnings
-from contextlib import contextmanager
 
 import six
 from jinja2 import Template
@@ -12,18 +10,10 @@ from jinja2 import Template
 from conans.client.cache.cache import ClientCache
 from conans.client.profile_loader import profile_from_args
 from conans.errors import ConanException
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
-
-
-@contextmanager
-def catch_deprecation_warning(test_suite, n=1):
-    with warnings.catch_warnings(record=True) as w:
-        warnings.filterwarnings("always", module="(.*\.)?conans\..*")
-        yield
-        test_suite.assertEqual(len(w), n)
-        test_suite.assertTrue(issubclass(w[0].category, UserWarning))
 
 
 class SettingsCppStdTests(unittest.TestCase):
@@ -117,12 +107,3 @@ class SettingsCppStdTests(unittest.TestCase):
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertEqual(r.settings["cppstd"], "11")
 
-    def test_value_valid_scoped(self):
-        # Validation of scoped settings is delayed until graph computation, a conanfile can
-        #   declare a different set of settings, so we should wait until then to validate it.
-        from conans.test.utils.tools import TestClient
-        t = TestClient(base_folder=self.tmp_folder)
-        t.run("new hh/0.1@user/channel --bare")
-        t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang -shh:compiler.cppstd=144",
-              assert_error=True)
-        self.assertIn("Invalid setting '144' is not a valid 'settings.compiler.cppstd' value", t.out)
