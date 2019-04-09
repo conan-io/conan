@@ -97,9 +97,9 @@ class DetectTest(unittest.TestCase):
             self.assertIn("/foo/bar/quz/custom-profile", output)
 
     @parameterized.expand([
-        ['powerpc', '64', '7.1.0.0', 'powerpc'],
-        ['powerpc', '32', '7.1.0.0', 'rs6000'],
-        ['rs6000', None, '4.2.1.0', 'rs6000']
+        ['powerpc', '64', '7.1.0.0', 'ppc64'],
+        ['powerpc', '32', '7.1.0.0', 'ppc32'],
+        ['rs6000', None, '4.2.1.0', 'ppc32']
     ])
     def test_detect_aix(self, processor, bitness, version, expected_arch):
         with mock.patch("platform.machine", mock.MagicMock(return_value='XXXXXXXXXXXX')), \

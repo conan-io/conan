@@ -82,9 +82,9 @@ def detected_architecture():
         if "powerpc" in processor:
             kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
             if kernel_bitness:
-                return "powerpc" if kernel_bitness == "64" else "rs6000"
+                return "ppc64" if kernel_bitness == "64" else "ppc32"
         elif "rs6000" in processor:
-            return "rs6000"
+            return "ppc32"
 
     return None
 

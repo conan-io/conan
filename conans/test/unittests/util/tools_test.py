@@ -1204,8 +1204,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
         ["tvOS", "armv8", None, "aarch64-apple-darwin"],
         ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
-        ["AIX", "rs6000", None, "rs6000-ibm-aix"],
-        ["AIX", "powerpc", None, "powerpc-ibm-aix"]
+        ["AIX", "ppc32", None, "rs6000-ibm-aix"],
+        ["AIX", "ppc64", None, "powerpc-ibm-aix"]
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)

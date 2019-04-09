@@ -38,9 +38,9 @@ def architecture_flag(compiler, arch, os=None):
         elif str(arch) in ['s390']:
             return '-m31'
         elif os == 'AIX':
-            if str(arch) in ['rs6000']:
+            if str(arch) in ['ppc32']:
                 return '-maix32'
-            elif str(arch) in ['powerpc']:
+            elif str(arch) in ['ppc64']:
                 return '-maix64'
     return ""
 
