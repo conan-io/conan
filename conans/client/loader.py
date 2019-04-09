@@ -41,14 +41,18 @@ class ConanFileLoader(object):
         self._python_requires.invalidate_caches()
 
     def load_class(self, conanfile_path):
+        conanfile = self.cached_conanfiles.get(conanfile_path)
+        if conanfile:
+            return conanfile
+
         try:
-            return self.cached_conanfiles[conanfile_path]
-        except KeyError:
             self._python_requires.valid = True
             _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
             self.cached_conanfiles[conanfile_path] = conanfile
-        return conanfile
+            return conanfile
+        except ConanException as e:
+            raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
@@ -274,6 +278,8 @@ def _parse_conanfile(conan_file_path):
                     if folder.startswith(current_dir):
                         module = sys.modules.pop(added)
                         sys.modules["%s.%s" % (module_id, added)] = module
+    except ConanException:
+        raise
     except Exception:
         import traceback
         trace = traceback.format_exc().split('\n')

@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -19,6 +18,7 @@ import bottle
 import nose
 import requests
 import six
+import time
 from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
@@ -26,7 +26,7 @@ from webtest.app import TestApp
 
 from conans import tools, load
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import dump_registry
+from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
@@ -55,7 +55,7 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir, save, save_files
+from conans.util.files import mkdir, save_files
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 ARTIFACTORY_DEFAULT_USER = "admin"
@@ -211,7 +211,6 @@ class TestRequester(object):
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
                 # translate it to data and content_type
-                import json
                 kwargs["params"] = json.dumps(kwargs["json"])
                 kwargs["content_type"] = "application/json"
             kwargs.pop("json", None)
@@ -714,18 +713,18 @@ servers["r2"] = TestServer()
         self.cache.invalidate()
 
     def update_servers(self):
-        save(self.cache.registry_path, dump_registry({}, {}, {}))
+        Remotes().save(self.cache.registry_path)
         registry = self.cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, ArtifactoryServer):
-                registry.remotes.add(name, server.repo_api_url)
+                registry.add(name, server.repo_api_url)
                 self.users.update({name: [(ARTIFACTORY_DEFAULT_USER,
                                            ARTIFACTORY_DEFAULT_PASSWORD)]})
             elif isinstance(server, TestServer):
-                registry.remotes.add(name, server.fake_url)
+                registry.add(name, server.fake_url)
             else:
-                registry.remotes.add(name, server)
+                registry.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
