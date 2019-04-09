@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -19,6 +18,7 @@ import bottle
 import nose
 import requests
 import six
+import time
 from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
@@ -26,6 +26,7 @@ from webtest.app import TestApp
 
 from conans import tools, load
 from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
@@ -37,6 +38,7 @@ from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
+from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -53,9 +55,7 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir, save, save_files
-from conans.util.log import logger
-from conans.client.cache.remote_registry import Remotes
+from conans.util.files import mkdir, save_files
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 ARTIFACTORY_DEFAULT_USER = "admin"
@@ -519,11 +519,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = subprocess.check_output("svn info --show-item revision",
-                                              shell=True).decode().strip()
+                rev = check_output("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                output = check_output("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
