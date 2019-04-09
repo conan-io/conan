@@ -382,8 +382,8 @@ class BinaryInstaller(object):
             node._package_id = node.conanfile.info.package_id()
             output.info("Updated ID: %s" % node.package_id)
             output.info("Analyzing binary availability for updated ID")
-            self._binaries_analyzer._evaluate_node(node, node.build_mode, graph.evaluated,
-                                                   node.update, remotes)
+            self._binaries_analyzer._evaluate_node(node, node.build_mode, node.update,
+                                                   graph.evaluated, remotes)
             output.info("Binary for updated ID from: %s" % node.binary)
             pref = node.pref
             propagate_unknown_downstream = True
