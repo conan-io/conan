@@ -29,15 +29,18 @@ class Printer(object):
                     v = OptionsValues(v)
                 elif isinstance(v, list):
                     v = OptionsValues(tuple(v))
-            if isinstance(v, (dict, OptionsValues)):
-                self._out.writeln("%s:" % k)
-                for ok, ov in sorted(v.items()):
-                    self._out.writeln("    %s: %s" % (ok, ov))
+                elif isinstance(v, dict):
+                    v = OptionsValues(v)
+
+            if raw:
+                self._out.write(str(v))
             else:
-                if not raw:
-                    self._out.writeln("%s: %s" % (k, str(v)))
+                if isinstance(v, (dict, OptionsValues)):
+                    self._out.writeln("%s:" % k)
+                    for ok, ov in sorted(v.items()):
+                        self._out.writeln("    %s: %s" % (ok, ov))
                 else:
-                    self._out.writeln(str(v))
+                    self._out.writeln("%s: %s" % (k, str(v)))
 
     def print_info(self, data, _info, package_filter=None, show_paths=False, show_revisions=False):
         """ Print in console the dependency information for a conan file

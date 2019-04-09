@@ -1,7 +1,7 @@
 import json
 import os
-import unittest
 import textwrap
+import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
@@ -333,54 +333,63 @@ class InspectRawTest(unittest.TestCase):
             settings = "os", "arch", "build_type", "compiler"
             options = {"foo": [True, False], "bar": [True, False]}
             default_options = "foo=True", "bar=True"
+            
             _private = "Nothing"
 
             def build(self):
                 pass
         """)
 
-    def test_no_field(self):
+    def test_no_field_or_multiple(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
         client.run("inspect . --raw", assert_error=True)
-        self.assertIn("With option '--raw' a list of attributes is required", client.out)
+        client.run("inspect . --raw=name --raw=version", assert_error=True)
+
+    def test_invalid_with_attribute(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=name -a=version", assert_error=True)
+        self.assertIn("ERROR: Argument '--raw' is incompatible with '-a'", client.out)
 
     def test_invalid_field(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
-        client.run("inspect . -a not_exists -a name --raw", assert_error=True)
+        client.run("inspect . --raw=not_exists", assert_error=True)
         self.assertIn("ERROR: 'Pkg' object has no attribute 'not_exists'", client.out)
 
     def test_private_field(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
-        client.run("inspect . -a _private -a name --raw")
-        self.assertEqual("Nothing\nMyPkg\n", client.out)
+        client.run("inspect . --raw=_private")
+        self.assertEqual("Nothing", client.out)
 
-    def test_list_fields(self):
-        client = TestClient()
-        client.save({"conanfile.py": self.conanfile})
-        client.run("inspect . -a version -a name --raw")
-        self.assertEqual("1.2.3\nMyPkg\n", client.out)
-        client.run("inspect . -a name -a version --raw")
-        self.assertEqual("MyPkg\n1.2.3\n", client.out)
-
-    @unittest.expectedFailure
-    def test_options(self):
-        client = TestClient()
-        client.save({"conanfile.py": self.conanfile})
-        client.run("inspect . -a options --raw")
-
-        # TODO: Invalid option
-        print(client.out)
-        self.fail("AAA")
-
-    @unittest.expectedFailure
     def test_settings(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
-        client.run("inspect . -a settings --raw", assert_error=True)
+        client.run("inspect . --raw=settings")
+        self.assertEqual("('os', 'arch', 'build_type', 'compiler')", client.out)
 
-        # TODO: Invalid option
-        print(client.out)
-        self.fail("AAA")
+    def test_options_dict(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=options")
+        self.assertEqual("{'foo': [True, False], 'bar': [True, False]}", client.out)
+
+    def test_default_options_list(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=default_options")
+        self.assertEqual("bar=True\nfoo=True", client.out)
+
+    def test_default_options_dict(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class Lib(ConanFile):
+                default_options = {"dict": True, "list": False}
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect . --raw=default_options")
+        self.assertEqual("dict=True\nlist=False", client.out)
