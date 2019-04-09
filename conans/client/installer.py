@@ -28,7 +28,6 @@ from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmd
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
-from conans.client.output import ScopedOutput
 
 
 def build_id(conan_file):
@@ -370,6 +369,9 @@ class BinaryInstaller(object):
                 report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, graph, keep_build, processed_package_references, remotes):
+        pref = node.pref
+        assert pref.id, "Package-ID without value"
+
         conan_file = node.conanfile
         output = conan_file.output
         pref = node.pref

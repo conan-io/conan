@@ -30,7 +30,7 @@ class GraphBinariesAnalyzer(object):
             else:
                 output.warn("Current package is newer than remote upstream one")
 
-    def _evaluate_node(self, node, build_mode, evaluated_nodes, update, remotes):
+    def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.package_id != BINARY_UNKNOWN, "Node.package_id shouldn't be Unknown"
@@ -210,7 +210,7 @@ class GraphBinariesAnalyzer(object):
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes):
         default_package_id_mode = self._cache.config.default_package_id_mode
-        evaluated_nodes = deps_graph.evaluated
+        evaluated = deps_graph.evaluated
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
@@ -220,5 +220,5 @@ class GraphBinariesAnalyzer(object):
                 node.update = update
                 node.build_mode = build_mode
                 continue
-            self._evaluate_node(node, build_mode, evaluated_nodes, update, remotes)
+            self._evaluate_node(node, build_mode, update, evaluated, remotes)
             self._handle_private(node)
