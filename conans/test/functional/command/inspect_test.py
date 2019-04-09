@@ -365,11 +365,15 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect . --raw", assert_error=True)
         client.run("inspect . --raw=name --raw=version", assert_error=True)
 
-    def test_invalid_with_attribute(self):
+    def test_incompatible_commands(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
+
         client.run("inspect . --raw=name -a=version", assert_error=True)
         self.assertIn("ERROR: Argument '--raw' is incompatible with '-a'", client.out)
+
+        client.run("inspect . --raw=name --json=tmp.json", assert_error=True)
+        self.assertIn("ERROR: Argument '--raw' is incompatible with '--json'", client.out)
 
     def test_invalid_field(self):
         client = TestClient()

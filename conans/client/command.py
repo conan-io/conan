@@ -216,6 +216,9 @@ class Command(object):
         if args.raw and args.attribute:
             raise ConanException("Argument '--raw' is incompatible with '-a'")
 
+        if args.raw and args.json:
+            raise ConanException("Argument '--raw' is incompatible with '--json'")
+
         attributes = [args.raw, ] if args.raw else args.attribute
 
         result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
