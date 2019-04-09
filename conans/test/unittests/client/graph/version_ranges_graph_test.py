@@ -10,6 +10,7 @@ from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import test_processed_profile
+from conans.client.cache.remote_registry import Remotes
 
 
 def _get_nodes(graph, name):
@@ -43,13 +44,14 @@ class VersionRangesTest(GraphTest):
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = TestConanFile("Say", v)
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
-            self.retriever.conan(say_ref, say_content)
+            self.retriever.save_recipe(say_ref, say_content)
 
     def build_graph(self, content, update=False):
         self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(str(content), processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
+                                             processed_profile)
         self.output.write("\n".join(self.resolver.output))
         return deps_graph
 
@@ -85,7 +87,8 @@ class VersionRangesTest(GraphTest):
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/[%s]@myuser/testing" % v)
             remote_packages.append(say_ref)
-        self.remote_search.packages = remote_packages
+        self.remotes.add("myremote", "myurl")
+        self.remote_manager.packages = remote_packages
         for expr, solution in [(">0.0", "2.2.1"),
                                (">0.1,<1", "0.3"),
                                (">0.1,<1||2.1", "2.1"),
@@ -99,7 +102,7 @@ class VersionRangesTest(GraphTest):
             deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
                                                         requires=["Say/[%s]@myuser/testing" % expr]),
                                           update=True)
-            self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
+            self.assertEqual(self.remote_manager.count, {'Say/*@myuser/testing': 1})
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
             say = _get_nodes(deps_graph, "Say")[0]
@@ -115,19 +118,20 @@ class VersionRangesTest(GraphTest):
     def test_remote_optimized(self):
         self.resolver._local_search = None
         remote_packages = []
+        self.remotes.add("myremote", "myurl")
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             remote_packages.append(say_ref)
-        self.remote_search.packages = remote_packages
+        self.remote_manager.packages = remote_packages
 
         dep_content = """from conans import ConanFile
 class Dep1Conan(ConanFile):
     requires = "Say/[%s]@myuser/testing"
 """
         dep_ref = ConanFileReference.loads("Dep1/0.1@myuser/testing")
-        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        self.retriever.save_recipe(dep_ref, dep_content % ">=0.1")
         dep_ref = ConanFileReference.loads("Dep2/0.1@myuser/testing")
-        self.retriever.conan(dep_ref, dep_content % ">=0.1")
+        self.retriever.save_recipe(dep_ref, dep_content % ">=0.1")
 
         hello_content = """from conans import ConanFile
 class HelloConan(ConanFile):
@@ -144,7 +148,7 @@ class HelloConan(ConanFile):
                                                   Edge(dep1, say), Edge(dep2, say)})
 
         # Most important check: counter of calls to remote
-        self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
+        self.assertEqual(self.remote_manager.count, {'Say/*@myuser/testing': 1})
 
     @parameterized.expand([("", "0.3", None, None),
                            ('"Say/1.1@myuser/testing"', "1.1", False, False),
@@ -163,7 +167,7 @@ class HelloConan(ConanFile):
         hello_text = TestConanFile("Hello", "1.2",
                                    requires=["Say/[>0.1, <1]@myuser/testing"])
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
-        self.retriever.conan(hello_ref, hello_text)
+        self.retriever.save_recipe(hello_ref, hello_text)
 
         chat_content = """
 from conans import ConanFile
@@ -209,7 +213,7 @@ class ChatConan(ConanFile):
     def duplicated_error_test(self):
         content = TestConanFile("log4cpp", "1.1.1")
         log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
-        self.retriever.conan(log4cpp_ref, content)
+        self.retriever.save_recipe(log4cpp_ref, content)
 
         content = """
 from conans import ConanFile
@@ -222,7 +226,7 @@ class LoggerInterfaceConan(ConanFile):
         self.requires("log4cpp/[~1.1]@myuser/testing")
 """
         logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@myuser/testing")
-        self.retriever.conan(logiface_ref, content)
+        self.retriever.save_recipe(logiface_ref, content)
 
         content = """
 from conans import ConanFile
@@ -233,7 +237,7 @@ class OtherConan(ConanFile):
     requires = "LoggerInterface/[~0.1]@myuser/testing"
 """
         other_ref = ConanFileReference.loads("other/2.0.11549@myuser/testing")
-        self.retriever.conan(other_ref, content)
+        self.retriever.save_recipe(other_ref, content)
 
         content = """
 from conans import ConanFile

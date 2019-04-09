@@ -517,10 +517,11 @@ class Pkg(ConanFile):
         client.run("export . Hello/0.1@lasote/stable")
         client.run("remote add_ref Hello/0.1@lasote/stable default")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        rmdir(os.path.join(client.cache.conan(ref)))
-
+        # Because the folder is removed, the metadata is removed and the
+        # origin remote is lost
+        rmdir(os.path.join(client.cache.base_folder(ref)))
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Hello/0.1@lasote/stable was not found in remote 'default'",
+        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
 
         # If it was associated, it has to be desasociated

@@ -15,6 +15,7 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
+from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
@@ -50,6 +51,9 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
+
+        if old_version < Version("1.15.0"):
+            migrate_registry_file(self.cache, self.out)
 
         if old_version < Version("1.14.0"):
             migrate_config_install(self.cache)
@@ -176,7 +180,7 @@ def _migrate_create_metadata(cache, out):
                 rrev = manifest.summary_hash
             except:
                 rrev = DEFAULT_REVISION_V1
-            metadata_path = os.path.join(layout.conan(), PACKAGE_METADATA)
+            metadata_path = layout.package_metadata()
             if not os.path.exists(metadata_path):
                 out.info("Creating {} for {}".format(PACKAGE_METADATA, ref))
                 prefs = _get_prefs(layout)

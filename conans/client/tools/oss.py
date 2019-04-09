@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 from subprocess import CalledProcessError, PIPE
-
+import six
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException
@@ -168,7 +168,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = subprocess.check_output(['uname.exe', '-s']).decode()
+            uname = check_output(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -320,7 +320,7 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
+                ret = check_output(command).strip().lower()
                 return ret
         except Exception:
             return None
@@ -477,10 +477,13 @@ def get_gnu_triplet(os_, arch, compiler=None):
     return "%s-%s" % (machine, op_system)
 
 
-def check_output(cmd, folder=None, return_code=False):
+def check_output(cmd, folder=None, return_code=False, stderr=None):
     tmp_file = tempfile.mktemp()
     try:
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE, cwd=folder)
+        stderr = stderr or PIPE
+        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
+                                   stderr=stderr, cwd=folder)
         process.communicate()
 
         if return_code:

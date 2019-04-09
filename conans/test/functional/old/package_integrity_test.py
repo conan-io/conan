@@ -16,7 +16,7 @@ class PackageIngrityTest(unittest.TestCase):
         client.run("create . lasote/testing")
         self.assertNotIn('does not contain a number!', client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        conan_folder = client.cache.conan(ref)
+        conan_folder = client.cache.base_folder(ref)
         self.assertIn("locks", os.listdir(conan_folder))
         self.assertTrue(os.path.exists(conan_folder + ".count"))
         self.assertTrue(os.path.exists(conan_folder + ".count.lock"))

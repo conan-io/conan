@@ -7,7 +7,8 @@ from time import sleep
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    TurboTestClient, GenConanfile
 from conans.util.files import load, save
 
 
@@ -292,3 +293,22 @@ class ConanLib(ConanFile):
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         header = os.path.join(client.cache.package(pref), "header.h")
         self.assertEqual(load(header), "mycontent2")
+
+    def fail_usefully_when_failing_retrieving_package_test(self):
+        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+        client = TurboTestClient(servers={"default": TestServer()})
+        pref1 = client.create(ref)
+        client.upload_all(ref)
+
+        client.create(ref2, conanfile=GenConanfile().with_requirement(ref))
+        client.upload_all(ref2)
+
+        # remove only the package from pref1
+        client.run("remove {} -p {} -f".format(pref1.ref, pref1.id))
+
+        # Now fake the remote url to force a network failure
+        client.run("remote update default http://this_not_exist8823.com")
+        # Try to install ref2, it will try to download the binary for ref1
+        client.run("install {}".format(ref2), assert_error=True)
+        self.assertIn("ERROR: Error downloading binary package: '{}'".format(pref1), client.out)

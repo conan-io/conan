@@ -7,6 +7,7 @@ from parameterized import parameterized
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
+from conans.client.tools.oss import check_output
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.tools import TestBufferConanOutput
 
@@ -36,12 +37,12 @@ class DetectTest(unittest.TestCase):
             return
 
         try:
-            output = subprocess.check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
+            output = check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             # gcc is not installed or there is any error (no test scenario)
             return
 
-        if b"clang" not in output:
+        if "clang" not in output:
             # Not test scenario gcc should display clang in output
             # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
             raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore! please check")
@@ -106,7 +107,7 @@ class DetectTest(unittest.TestCase):
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
                 mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
-            result = detect_defaults_settings(output=TestBufferConanOutput())
+            result = detect_defaults_settings(output=TestBufferConanOutput(), profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual("AIX", result['os'])
             self.assertEqual("AIX", result['os_build'])
