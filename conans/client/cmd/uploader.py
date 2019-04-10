@@ -2,6 +2,7 @@ import os
 import stat
 import tarfile
 import time
+import concurrent.futures
 from collections import defaultdict
 
 from conans.client.remote_manager import is_package_snapshot_complete
@@ -17,7 +18,7 @@ from conans.util.files import (load, clean_dirty, is_dirty,
 from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
-
+from conans import tools
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
@@ -81,10 +82,23 @@ class CmdUpload(object):
                                                           query, package_id)
         # Do the job
         for remote, refs in refs_by_remote.items():
-            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
-            for (ref, conanfile, prefs) in refs:
-                self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
-                                 integrity_check, policy, remote, upload_recorder, remotes)
+            num_workers = tools.cpu_count()
+            self._user_io.out.info("Uploading to remote '{}' in {} threads:".format(remote.name,
+                                                                                    num_workers))
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
+                future_to_upload = {
+                    upload_exec.submit(self._upload_ref, conanfile, ref, prefs, retry, retry_wait,
+                                       integrity_check, policy, remote, upload_recorder, remotes):
+                        (ref, conanfile, prefs) for (ref, conanfile, prefs) in refs}
+
+                for future in concurrent.futures.as_completed(future_to_upload):
+                    ret = future_to_upload[future]
+                    try:
+                        future_result = future.result()
+                    except Exception as exc:
+                        self._user_io.out.info("Error uploading file: %s %s" % (ret, str(exc)))
+                    else:
+                        self._user_io.out.info("Uploaded reference '{}':".format(future_result))
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
