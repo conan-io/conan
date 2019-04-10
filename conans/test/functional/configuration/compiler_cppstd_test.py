@@ -43,10 +43,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         self.assertIn("Package 'hh': The specified 'compiler.cppstd=14' and 'cppstd=11'"
                       " are different", self.t.out)
 
-    @unittest.expectedFailure
     def test_conanfile_without_compiler(self):
-        # TODO: This one fails, the settings object has the compiler too...
-
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -56,7 +53,8 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         t = TestClient(base_folder=temp_folder())
         t.save({'conanfile.py': conanfile})
 
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
+            # No mismatch, because settings for this conanfile does not include `compiler`
             self.t.run("create . hh/0.1@user/channel"
                        " -s cppstd=11"
                        " -s hh:compiler=apple-clang"

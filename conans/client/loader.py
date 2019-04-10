@@ -15,7 +15,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
 from conans.util.files import load
-from conans.client.settings_preprocessor import check_cppstd
 
 
 class ProcessedProfile(object):
@@ -88,10 +87,6 @@ class ConanFileLoader(object):
             # Update the values, keeping old ones (confusing assign)
             values_tuple = processed_profile._package_settings[conanfile.name]
             tmp_settings.values = Values.from_list(values_tuple)
-            try:
-                check_cppstd(tmp_settings)
-            except ConanException as e:
-                raise ConanException("Package '{}': {}".format(conanfile.name, e))
 
         conanfile.initialize(tmp_settings, processed_profile._env_values)
 
