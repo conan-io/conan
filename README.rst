@@ -1,24 +1,27 @@
+|Logo|
+
 Conan
 =====
 
-A distributed, open-source, C/C++ package manager.
+A distributed, open-source (MIT), C/C++ package manager.
 
-+------------------------+-------------------------+
-| **master**             | **develop**             |
-+========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |
-+------------------------+-------------------------+
++------------------------+-------------------------+-------------------------+
+| **master**             | **develop**             |  **Coverage**           |
++========================+=========================+=========================+
+| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |
++------------------------+-------------------------+-------------------------+
 
 
-+------------------------+---------------------------+---------------------------------------------+
-| **Coverage master**    | **Coverage develop**      | **Coverage graph**                          |
-+========================+===========================+=============================================+
-| |Master coverage|      | |Develop coverage|        | |Coverage graph|                            |
-+------------------------+---------------------------+---------------------------------------------+
+- Homepage: https://conan.io/
+- Docs: https://docs.conan.io/en/latest/
+- Slack: https://cpplang.now.sh/
+- Twitter: https://twitter.com/conan_io
 
 
 Setup
 =====
+
+Please read https://docs.conan.io/en/latest/installation.html
 
 From binaries
 -------------
@@ -250,6 +253,9 @@ License
    :height: 50px
    :width: 50 px
    :alt: Conan develop coverage
+   
+.. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
+
 
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 
