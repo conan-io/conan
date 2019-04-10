@@ -66,7 +66,6 @@ class TestConan(ConanFile):
                    '-s compiler.libcxx="libstdc++" '
                    '--build missing')
         self.assertIn("BUILDING!", client.out)
-        client.run("search MyLib/0.1@user/testing")
 
         # Add the setting but with the default value, should not build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
@@ -75,7 +74,6 @@ class TestConan(ConanFile):
                        '-s compiler.libcxx="libstdc++" '
                        '-s cppstd=gnu14 '
                        '--build missing')
-        client.run("search MyLib/0.1@user/testing")
 
         if client.cache.config.revisions_enabled:
             self.assertIn("doesn't belong to the installed recipe revision, removing folder",

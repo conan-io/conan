@@ -48,7 +48,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
-    def test_paths_cmake_multi_user_vars_test(self):
+    def paths_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock("Release", None, None,
