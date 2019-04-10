@@ -963,7 +963,7 @@ class Pkg(ConanFile):
         # For a non existing folder, it will try to load the default filename (it fails)
         non_existing = temp_folder()
         client.run('workspace install "{}"'.format(non_existing), assert_error=True)
-        trial_path = os.path.join(non_existing, Workspace.default_filename).replace('\\', '/')
+        trial_path = os.path.join(non_existing, Workspace.default_filename)
         self.assertIn("ERROR: Couldn't load workspace file in {}".format(trial_path), client.out)
 
         # For an existing file, it will try to use it (will fail because of the format)
@@ -974,5 +974,5 @@ class Pkg(ConanFile):
         # For an existing folder, without the default file (it will fail looking for it)
         no_default_file = os.path.join(client.current_folder)
         client.run('workspace install "{}"'.format(no_default_file), assert_error=True)
-        trial_path = os.path.join(no_default_file, Workspace.default_filename).replace('\\', '/')
+        trial_path = os.path.join(no_default_file, Workspace.default_filename)
         self.assertIn("ERROR: Couldn't load workspace file in {}".format(trial_path), client.out)
