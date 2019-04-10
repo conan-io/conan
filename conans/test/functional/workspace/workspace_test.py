@@ -924,3 +924,37 @@ class Pkg(ConanFile):
         for p in ("HelloC", "HelloB", "HelloA"):
             self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
                           conanws_cmake)
+
+    def test_install_folder(self):
+        project = dedent("""
+            editables:
+                HelloA/0.1@lasote/stable:
+                    path: A
+            layout: layout
+            workspace_generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """)
+
+        conanfile = dedent("""
+            from conans import ConanFile
+            
+            class Lib(ConanFile):
+                pass
+            """)
+
+        layout = dedent("""
+            [build_folder]
+
+            [source_folder]
+
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile},
+                    path=os.path.join(client.current_folder, "A"))
+
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+        client.run("workspace install conanws.yml --install-folder=ws_install")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
+                                                    "conanworkspace.cmake")))

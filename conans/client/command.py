@@ -1436,13 +1436,17 @@ class Command(object):
                                                'but using the workspace data from the file')
         install_parser.add_argument('path', help='path to workspace definition file')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                                    help="Folder where the workspace files will be created"
+                                         " (default to current working directory)")
 
         args = parser.parse_args(*args)
 
         if args.subcommand == "install":
             self._conan.workspace_install(args.path, args.settings, args.options, args.env,
                                           args.remote, args.build,
-                                          args.profile, args.update)
+                                          args.profile, args.update,
+                                          install_folder=args.install_folder)
 
     def editable(self, *args):
         """ Manage editable packages

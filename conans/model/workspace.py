@@ -40,7 +40,7 @@ class LocalPackage(object):
 
 class Workspace(object):
 
-    def generate(self, cwd, graph, output):
+    def generate(self, install_folder, graph, output):
         if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
@@ -83,7 +83,7 @@ class Workspace(object):
                 cmake += "macro(conan_workspace_subdirectories)\n"
                 cmake += add_subdirs
                 cmake += "endmacro()"
-            cmake_path = os.path.join(cwd, "conanworkspace.cmake")
+            cmake_path = os.path.join(install_folder, "conanworkspace.cmake")
             save(cmake_path, cmake)
 
     def __init__(self, path, cache):
