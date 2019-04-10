@@ -11,6 +11,15 @@ from conans.unicode import get_cwd
 from conans.util.files import decode_text
 
 
+class _UnbufferedWrite(object):
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, *args, **kwargs):
+        self._stream.write(*args, **kwargs)
+        self._stream.flush()
+
+
 class ConanRunner(object):
 
     def __init__(self, print_commands_to_output=False, generate_run_log_file=False,
@@ -32,6 +41,9 @@ class ConanRunner(object):
                   "use six.StringIO() instead ***")
 
         stream_output = output if output and hasattr(output, "write") else sys.stdout
+        if hasattr(output, "flush"):
+            # We do not want output from different streams to get mixed (sys.stdout, os.system)
+            stream_output = _UnbufferedWrite(stream_output)
 
         if not self._generate_run_log_file:
             log_filepath = None
