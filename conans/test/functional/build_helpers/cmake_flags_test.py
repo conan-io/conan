@@ -292,7 +292,7 @@ class MyLib(ConanFile):
         client.run("install .")
         client.run("build .")
 
-    def test_std_flag_applied_test(self):
+    def std_flag_applied_test(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -331,7 +331,8 @@ target_link_libraries(mylib ${CONAN_LIBS})
             # Now specify c++14
             with catch_deprecation_warning(self, n=2):
                 client.run("install . --install-folder=build -s cppstd=gnu14")
-            client.run("build . --build-folder=build")
+            with catch_deprecation_warning(self):
+                client.run("build . --build-folder=build")
             self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
             libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
             libpath = os.path.join(client.current_folder, "build", "lib", libname)
@@ -339,7 +340,8 @@ target_link_libraries(mylib ${CONAN_LIBS})
 
         with catch_deprecation_warning(self, n=2):
             client.run("install . --install-folder=build -s cppstd=14")
-        client.run("build . --build-folder=build")
+        with catch_deprecation_warning(self):
+            client.run("build . --build-folder=build")
         self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
         self.assertNotIn("Conan setting CXX_FLAGS flags", client.out)
         libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
