@@ -152,7 +152,8 @@ class InfoFoldersTest(unittest.TestCase):
         """
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
-        out = check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
+        out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
+                                      % os.path.splitdrive(folder)[0])
         if "NTFS" not in str(out):
             return
         short_folder = os.path.join(folder, ".cnacls")
@@ -186,7 +187,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Check user has full control
         user_acl = "%s\\%s:(OI)(CI)F" % (current_domain, current_user)
-        self.assertIn(user_acl.encode(), short_folder_acls)
+        self.assertIn(user_acl, short_folder_acls)
 
     def test_direct_conanfile(self):
         client = TestClient()
