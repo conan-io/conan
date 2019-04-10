@@ -1437,7 +1437,9 @@ class Command(object):
                                                     ' but using the workspace data from the file. If'
                                                     ' no file is provided, it will look for a file'
                                                     ' named "conanws.yml"')
-        install_parser.add_argument('path', help='path to workspace definition file')
+        install_parser.add_argument('path', help='path to workspace definition file (it will look'
+                                                 ' for a "conanws.yml" inside if a directory is'
+                                                 ' given)')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
