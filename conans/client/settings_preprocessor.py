@@ -20,24 +20,25 @@ def check_cppstd(settings):
 
     try:
         compiler_cppstd = settings.get_safe("compiler.cppstd")
-
+    except ConanException:
+        # There can be compilers that do not define 'compiler.cppstd'
+        pass
+    else:
         if cppstd and compiler_cppstd and cppstd != compiler_cppstd:
             raise ConanException("The specified 'compiler.cppstd={}' and 'cppstd={}' are"
                                  " different.".format(compiler_cppstd, cppstd))
 
         if cppstd and not compiler_cppstd:
             settings.compiler.cppstd = cppstd
-    except ConanException:
-        # There can be compilers that do not define 'compiler.cppstd'
-        pass
+            compiler_cppstd = cppstd
 
-    if not cppstd or compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
+    if not compiler_cppstd or compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return
-    cpp_values = settings.cppstd.values_range
+    cpp_values = settings.compiler.cppstd.values_range
     available = [v for v in cpp_values if cppstd_flag(compiler, compiler_version, v)]
-    if str(cppstd) not in available:
-        raise ConanException("The specified 'cppstd=%s' is not available "
-                             "for '%s %s'. Possible values are %s'" % (cppstd,
+    if str(compiler_cppstd) not in available:
+        raise ConanException("The specified 'compiler.cppstd=%s' is not available "
+                             "for '%s %s'. Possible values are %s'" % (compiler_cppstd,
                                                                        compiler,
                                                                        compiler_version,
                                                                        available))

@@ -48,11 +48,11 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
-    def paths_cmake_multi_user_vars_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
+    def test_paths_cmake_multi_user_vars_test(self):
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock("Release", None, None,
-                                           lambda x: x), EnvValues())
+                                           lambda x: x, []), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -69,10 +69,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
     def paths_cmake_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items")
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items, fields")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock(None, None, None, lambda x: x,
-                                           lambda: {}), EnvValues())
+                                           lambda: {}, []), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -89,9 +89,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
     def variables_cmake_multi_user_vars_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
+        conanfile.initialize(settings_mock("Release", None, None, lambda x: x, []),
                              EnvValues())
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
@@ -104,9 +104,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
     def variables_cmake_multi_user_vars_escape_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x: x,),
+        conanfile.initialize(settings_mock("Release", None, None, lambda x: x, []),
                              EnvValues())
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
         conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'

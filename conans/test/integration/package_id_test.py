@@ -38,7 +38,6 @@ class Pkg(ConanFile):
                                   default_options=[("an_option", "%s" % default_option_value)],
                                   package_id=package_id_text,
                                   settings=settings)
-
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         revisions_enabled = self.client.cache.config.revisions_enabled
         self.client.disable_revisions()
@@ -371,15 +370,20 @@ class Pkg(ConanFile):
                      settings='"compiler", "cppstd"')
 
         with catch_deprecation_warning(self):
+            self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
+                            '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
+                            '-s cppstd=gnu14')
+        with catch_deprecation_warning(self):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
 
         # Should NOT have binary available
-        self.client.run('install Hello/1.2.0@user/testing'
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 -s cppstd=gnu11',
-                        assert_error=True)
+        with catch_deprecation_warning(self):
+            self.client.run('install Hello/1.2.0@user/testing'
+                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                            ' -s compiler.version=7.2 -s cppstd=gnu11',
+                            assert_error=True)
 
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
