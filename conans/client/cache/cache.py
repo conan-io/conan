@@ -1,11 +1,11 @@
 import os
+import platform
 import shutil
 from collections import OrderedDict
 from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import default_remotes, dump_registry, \
-    migrate_registry_file, RemoteRegistry
+from conans.client.cache.remote_registry import RemoteRegistry, Remotes
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -20,13 +20,12 @@ from conans.paths.package_layouts.package_editable_layout import PackageEditable
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock
-import platform
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
-REGISTRY = "registry.txt"
-REGISTRY_JSON = "registry.json"
+REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 
@@ -80,6 +79,10 @@ class ClientCache(object):
         self._registry = None
 
         self.editable_packages = EditablePackages(self.conan_folder)
+
+    def all_refs(self):
+        subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
+        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
 
     @property
     def store(self):
@@ -144,9 +147,19 @@ class ClientCache(object):
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
+    def registry_path(self):
+        return join(self.conan_folder, REMOTES)
+
+    @property
     def registry(self):
         if not self._registry:
-            self._registry = RemoteRegistry(self.registry_path, self._output)
+            remotes_path = self.registry_path
+            if not os.path.exists(remotes_path):
+                self._output.warn("Remotes registry file missing, "
+                                  "creating default one in %s" % remotes_path)
+                remotes = Remotes.defaults()
+                remotes.save(remotes_path)
+            self._registry = RemoteRegistry(self)
         return self._registry
 
     @property
@@ -158,17 +171,9 @@ class ClientCache(object):
             self._no_lock = self.config.cache_no_locks
         return self._no_lock
 
-    def conanfile_read_lock(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_read_lock(self._output)
-
     def conanfile_write_lock(self, ref):
         layout = self.package_layout(ref)
         return layout.conanfile_write_lock(self._output)
-
-    def conanfile_lock_files(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_lock_files(self._output)
 
     def package_lock(self, pref):
         layout = self.package_layout(pref.ref)
@@ -196,20 +201,6 @@ class ClientCache(object):
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)
-
-    @property
-    def registry_path(self):
-        reg_json_path = join(self.conan_folder, REGISTRY_JSON)
-        if not os.path.exists(reg_json_path):
-            # Load the txt if exists and convert to json
-            reg_txt = join(self.conan_folder, REGISTRY)
-            if os.path.exists(reg_txt):
-                migrate_registry_file(reg_txt, reg_json_path)
-            else:
-                self._output.warn("Remotes registry file missing, "
-                                  "creating default one in %s" % reg_json_path)
-                save(reg_json_path, dump_registry(default_remotes, {}, {}))
-        return reg_json_path
 
     @property
     def config(self):
@@ -258,7 +249,8 @@ class ClientCache(object):
                                  "default profile (%s)" % self.default_profile_path,
                                  Color.BRIGHT_YELLOW)
 
-            default_settings = detect_defaults_settings(self._output, profile_path=self.default_profile_path)
+            default_settings = detect_defaults_settings(self._output,
+                                                        profile_path=self.default_profile_path)
             self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
             self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
                                  Color.BRIGHT_YELLOW)
