@@ -178,15 +178,10 @@ class Git(SCMBase):
     def get_commit_message(self):
         self.check_repo()
         try:
-            status = self.run("status")
-            if "No commits yet" in status:
-                return None
-
             message = self.run("log -1 --format=%s%n%b")
             return message.strip()
-        except Exception as error:
-            raise ConanException(
-                "Unable to get git commit message from '%s': %s" % (self.folder, str(error)))
+        except Exception:
+            return None
 
     def is_pristine(self):
         self.check_repo()
