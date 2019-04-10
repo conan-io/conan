@@ -152,6 +152,13 @@ class ConanFile(object):
         except ConanException:
             pass
 
+        try:
+            if 'cppstd' in self.settings.fields:
+                self.output.writeln("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                                    " please update your recipe.", front=Color.BRIGHT_RED)
+        except ConanException:
+            pass
+
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
