@@ -13,8 +13,8 @@ from conans.test.utils.tools import TestBufferConanOutput
 class CMakePathsGeneratorTest(unittest.TestCase):
 
     def cmake_vars_unit_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        settings = settings_mock("Release", None, None, lambda x: x)
+        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
+        settings = settings_mock("Release", None, None, lambda x: x, [])
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
