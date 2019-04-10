@@ -55,10 +55,32 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
 
         with catch_deprecation_warning(self):
             # No mismatch, because settings for this conanfile does not include `compiler`
-            self.t.run("create . hh/0.1@user/channel"
+            t.run("create . hh/0.1@user/channel"
                        " -s cppstd=11"
                        " -s hh:compiler=apple-clang"
                        " -s hh:compiler.cppstd=14")
+
+    def test_conanfile_without_compiler_but_cppstd(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+                settings = "os", "arch", "cppstd"
+                
+                def configure(self):
+                    self.output.info(">>> cppstd: {}".format(self.settings.cppstd))
+        """)
+        t = TestClient(base_folder=temp_folder())
+        t.save({'conanfile.py': conanfile}, clean_first=True)
+
+        with catch_deprecation_warning(self, n=2):
+            # No mismatch, because settings for this conanfile does not include `compiler`
+            t.run("create . hh/0.1@user/channel"
+                       " -s cppstd=11"
+                       " -s hh:compiler=apple-clang"
+                       " -s hh:compiler.cppstd=14")
+        self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", t.out)
+        self.assertIn(">>> cppstd: 11", t.out)
 
 
 class UseCompilerCppStdSettingTests(unittest.TestCase):
