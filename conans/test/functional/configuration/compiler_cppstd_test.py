@@ -44,6 +44,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             self.t.run("create . hh/0.1@user/channel"
                        " -s hh:cppstd=11"
                        " -s hh:compiler=apple-clang"
+                       " -s hh:compiler.version=10.0"
                        " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
         if self.recipe_cppstd:
             self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
