@@ -14,7 +14,7 @@ A distributed, open-source (MIT), C/C++ package manager.
 
 - Homepage: https://conan.io/
 - Docs: https://docs.conan.io/en/latest/
-- Slack: https://cpplang.now.sh/
+- Slack: https://cpplang.now.sh/ (#conan channel)
 - Twitter: https://twitter.com/conan_io
 
 
