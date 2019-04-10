@@ -20,6 +20,7 @@ class _MockSettings(object):
     build_type = None
     os = None
     os_build = None
+    fields = []
 
     def __init__(self, build_type=None):
         self.build_type = build_type
