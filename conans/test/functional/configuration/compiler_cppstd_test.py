@@ -1,11 +1,13 @@
 # coding=utf-8
 
+import os
 import textwrap
 import unittest
 
 from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
+from conans.client.tools import environment_append, save
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -15,6 +17,21 @@ from conans.test.utils.tools import TestClient
 class SettingsCppStdScopedPackageTests(unittest.TestCase):
     # Validation of scoped settings is delayed until graph computation, a conanfile can
     #   declare a different set of settings, so we should wait until then to validate it.
+
+    default_profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86
+        compiler=gcc
+        compiler.version=7
+        compiler.libcxx=libstdc++11
+    """)
+
+    def run(self, *args, **kwargs):
+        default_profile_path = os.path.join(temp_folder(), "default.profile")
+        save(default_profile_path, self.default_profile)
+        with environment_append({"CONAN_DEFAULT_PROFILE_PATH": default_profile_path}):
+            unittest.TestCase.run(self, *args, **kwargs)
 
     def setUp(self):
         self.tmp_folder = temp_folder()
@@ -29,7 +46,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             
             class Lib(ConanFile):
                 settings = "{}"           
-        """.format('", "'.join(settings)))
+            """.format('", "'.join(settings)))
         self.t.save({"conanfile.py": conanfile})
 
     def test_value_invalid(self):
@@ -43,9 +60,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         with catch_deprecation_warning(self, n=deprecation_number):
             self.t.run("create . hh/0.1@user/channel"
                        " -s hh:cppstd=11"
-                       " -s hh:compiler=apple-clang"
-                       " -s hh:compiler.version=10.0"
-                       " -s hh:compiler.libcxx=libc++"
+                       " -s hh:compiler=gcc"
                        " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
         if self.recipe_cppstd:
             self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
@@ -56,9 +71,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         with catch_deprecation_warning(self, n=deprecation_number):
             self.t.run("create . hh/0.1@user/channel"
                        " -s cppstd=17"
-                       " -s hh:compiler=apple-clang"
-                       " -s hh:compiler.version=10.0"
-                       " -s hh:compiler.libcxx=libc++"
+                       " -s hh:compiler=gcc"
                        " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
         if self.recipe_cppstd:
             self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
@@ -78,7 +91,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             # No mismatch, because settings for this conanfile does not include `compiler`
             t.run("create . hh/0.1@user/channel"
                   " -s cppstd=17"
-                  " -s hh:compiler=apple-clang"
+                  " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14")
 
     def test_conanfile_without_compiler_but_cppstd(self):
@@ -98,7 +111,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             # No mismatch, because settings for this conanfile does not include `compiler`
             t.run("create . hh/0.1@user/channel"
                   " -s cppstd=17"
-                  " -s hh:compiler=apple-clang"
+                  " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14")
         self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", t.out)
         self.assertIn(">>> cppstd: 17", t.out)
