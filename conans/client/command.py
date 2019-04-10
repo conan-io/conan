@@ -419,8 +419,6 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
@@ -1194,7 +1192,6 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
 
         # create the parser for the "a" command
         parser_list = subparsers.add_parser('list', help='List current remotes')
@@ -1310,7 +1307,6 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
         subparsers = parser.add_subparsers(dest='subcommand')
-        subparsers.required = True
 
         # create the parser for the "profile" command
         subparsers.add_parser('list', help='List current profiles')
@@ -1435,7 +1431,6 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
                                          prog="conan workspace")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
 
         install_parser = subparsers.add_parser('install', help='same as a "conan install" command '
                                                'but using the workspace data from the file')
@@ -1455,7 +1450,6 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
                                          prog="conan editable")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
 
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
         add_parser.add_argument('path', help='Path to the package folder in the user workspace')
