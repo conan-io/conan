@@ -55,14 +55,14 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         deprecation_number = 2 if self.recipe_cppstd else 0
         with catch_deprecation_warning(self, n=deprecation_number):
             self.t.run("create . hh/0.1@user/channel"
-                       " -s cppstd=11"
+                       " -s cppstd=17"
                        " -s hh:compiler=apple-clang"
                        " -s hh:compiler.version=10.0"
                        " -s hh:compiler.libcxx=libc++"
                        " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
         if self.recipe_cppstd:
             self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
-                          " 'cppstd=11' are different", self.t.out)
+                          " 'cppstd=17' are different", self.t.out)
 
     def test_conanfile_without_compiler(self):
         conanfile = textwrap.dedent("""
@@ -77,7 +77,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         with catch_deprecation_warning(self):
             # No mismatch, because settings for this conanfile does not include `compiler`
             t.run("create . hh/0.1@user/channel"
-                  " -s cppstd=11"
+                  " -s cppstd=17"
                   " -s hh:compiler=apple-clang"
                   " -s hh:compiler.cppstd=14")
 
@@ -97,11 +97,11 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         with catch_deprecation_warning(self, n=2):
             # No mismatch, because settings for this conanfile does not include `compiler`
             t.run("create . hh/0.1@user/channel"
-                  " -s cppstd=11"
+                  " -s cppstd=17"
                   " -s hh:compiler=apple-clang"
                   " -s hh:compiler.cppstd=14")
         self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", t.out)
-        self.assertIn(">>> cppstd: 11", t.out)
+        self.assertIn(">>> cppstd: 17", t.out)
 
 
 class UseCompilerCppStdSettingTests(unittest.TestCase):
@@ -128,15 +128,15 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
     def test_use_cppstd(self, compiler_setting):
-        settings_str = "-s cppstd=11 -s compiler.cppstd=11" if compiler_setting else "-s cppstd=11"
+        settings_str = "-s cppstd=14 -s compiler.cppstd=14" if compiler_setting else "-s cppstd=14"
         with catch_deprecation_warning(self, n=2):
             self.t.run("info . {}".format(settings_str))
-        self.assertIn(">>> cppstd: 11", self.t.out)
-        self.assertIn(">>> compiler.cppstd: 11", self.t.out)
+        self.assertIn(">>> cppstd: 14", self.t.out)
+        self.assertIn(">>> compiler.cppstd: 14", self.t.out)
 
     def test_only_compiler_cppstd(self):
         """ settings.cppstd is available only if declared explicitly (otherwise it is deprecated) """
-        self.t.run("info . -s compiler.cppstd=11")
-        self.assertNotIn(">>> cppstd: 11", self.t.out)
+        self.t.run("info . -s compiler.cppstd=14")
+        self.assertNotIn(">>> cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: None", self.t.out)
-        self.assertIn(">>> compiler.cppstd: 11", self.t.out)
+        self.assertIn(">>> compiler.cppstd: 14", self.t.out)
