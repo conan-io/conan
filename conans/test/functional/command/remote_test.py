@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
+from conans.model.ref import ConanFileReference
 
 
 class RemoteTest(unittest.TestCase):
@@ -122,7 +123,6 @@ class HelloConan(ConanFile):
         self.assertIn("remote2: http://", self.client.out)
         self.client.run("remote add_ref Hello/0.1@user/testing remote2")
         self.client.run("remote add_ref Hello2/0.1@user/testing remote1")
-
         self.client.run("remote remove remote1")
         self.client.run("remote list")
         self.assertNotIn("remote1", self.client.out)
@@ -133,7 +133,9 @@ class HelloConan(ConanFile):
         self.assertIn("Hello/0.1@user/testing", self.client.out)
         registry = load(self.client.cache.registry_path)
         self.assertNotIn("Hello2/0.1@user/testing", registry)
-        self.assertIn("Hello/0.1@user/testing", registry)
+        ref = ConanFileReference.loads("Hello/0.1@user/testing")
+        metadata = self.client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(metadata.recipe.remote, "remote2")
 
         self.client.run("remote remove remote2")
         self.client.run("remote list")
@@ -288,14 +290,13 @@ class HelloConan(ConanFile):
                       client.user_io.out)
         data = json.loads(load(client.cache.registry_path))
         self.assertEqual(data["remotes"], [])
-        self.assertEqual(data["references"], {})
 
     def errors_test(self):
         self.client.run("remote update origin url", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: No remote 'origin' defined in remotes", self.client.out)
 
     def duplicated_error_tests(self):
         """ check remote name and URL are not duplicated

@@ -11,7 +11,7 @@ from conans.model.conan_file import get_env_context_manager
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
                ref, source_folder, build_folder, package_folder, install_folder,
-               graph_info, force):
+               graph_info, force, remotes):
 
     conan_file_path = cache.conanfile(ref)
     if not os.path.exists(conan_file_path):
@@ -21,7 +21,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     # to be downloaded from remotes
     deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
                                              check_updates=False, update=False,
-                                             remote_name=None, recorder=recorder,
+                                             remotes=remotes, recorder=recorder,
                                              apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg

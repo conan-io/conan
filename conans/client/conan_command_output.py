@@ -111,6 +111,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
+        remotes = self.cache.registry.load_remotes()
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -144,7 +145,8 @@ class CommandOutputer(object):
                 item_data["package_folder"] = package_layout.package(pref)
 
             try:
-                reg_remote = self.cache.registry.refs.get(ref)
+                reg_remote = self.cache.package_layout(ref).load_metadata().recipe.remote
+                reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
             except:

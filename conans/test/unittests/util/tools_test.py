@@ -25,6 +25,7 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
+from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.system_pm import AptTool, ChocolateyTool, OSInfo, SystemPackageTool
 from conans.client.tools.win import vcvars_dict, vswhere
@@ -1013,7 +1014,7 @@ compiler:
 
     def vcvars_dict_test(self):
         # https://github.com/conan-io/conan/issues/2904
-        output_with_newline_and_spaces = """__BEGINS__
+        output_with_newline_and_spaces = """
      PROCESSOR_ARCHITECTURE=AMD64
 
 PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
@@ -1030,18 +1031,18 @@ without_equals_sign
 
 ProgramFiles(x86)=C:\Program Files (x86)
 
-""".encode("utf-8")
+"""
 
         def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
                                 output):  # @UnusedVariable
             return "unused command"
 
-        def subprocess_check_output_mock(cmd, shell):
+        def subprocess_check_output_mock(cmd):
             self.assertIn("unused command", cmd)
             return output_with_newline_and_spaces
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with mock.patch('subprocess.check_output', new=subprocess_check_output_mock):
+            with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
@@ -1284,6 +1285,43 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
+    @attr('slow')
+    def get_gunzip_test(self):
+        # Create a tar file to be downloaded from server
+        tmp = temp_folder()
+        filepath = os.path.join(tmp, "test.txt.gz")
+        import gzip
+        with gzip.open(filepath, "wb") as f:
+            f.write(b"hello world zipped!")
+
+        thread = StoppableThreadBottle()
+
+        @thread.server.get("/test.txt.gz")
+        def get_file():
+            return static_file(os.path.basename(filepath), root=os.path.dirname(filepath),
+                               mimetype="application/octet-stream")
+
+        thread.run_server()
+
+        out = TestBufferConanOutput()
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out)
+            self.assertTrue(os.path.exists("test.txt"))
+            self.assertEqual(load("test.txt"), "hello world zipped!")
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out, destination="myfile.doc")
+            self.assertTrue(os.path.exists("myfile.doc"))
+            self.assertEqual(load("myfile.doc"), "hello world zipped!")
+        with tools.chdir(tools.mkdir_tmp()):
+            tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
+                      output=out, destination="mytemp/myfile.txt")
+            self.assertTrue(os.path.exists("mytemp/myfile.txt"))
+            self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
+
+        thread.stop()
+
     def unix_to_dos_unit_test(self):
 
         def save_file(contents):
@@ -1294,13 +1332,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\notherline\n")
         if platform.system() != "Windows":
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
 
             tools.unix2dos(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
         else:
@@ -1314,13 +1351,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         fp = save_file(b"a line\r\notherline\r\n")
         if platform.system() != "Windows":
-            import subprocess
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertIn("CRLF", str(output))
 
             tools.dos2unix(fp)
-            output = subprocess.check_output(["file", fp], stderr=subprocess.STDOUT)
+            output = check_output(["file", fp], stderr=subprocess.STDOUT)
             self.assertIn("ASCII text", str(output))
             self.assertNotIn("CRLF", str(output))
         else:
