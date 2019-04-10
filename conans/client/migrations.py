@@ -53,6 +53,8 @@ class ClientMigrator(Migrator):
             return
 
         if old_version < Version("1.15.0"):
+            migrate_registry_file(self.cache, self.out)
+
             old_settings = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
