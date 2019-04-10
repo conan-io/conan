@@ -947,8 +947,8 @@ class Pkg(ConanFile):
 
         layout = dedent("""
             [build_folder]
-             [source_folder]
-             """)
+            [source_folder]
+            """)
 
         client.save({"conanfile.py": conanfile}, path=path_to_editable)
         ws_folder = temp_folder()
