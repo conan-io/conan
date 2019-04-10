@@ -6,12 +6,12 @@ import unittest
 from textwrap import dedent
 
 from conans.client import tools
+from conans.client.tools.oss import check_output
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient,\
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer
-
 
 conanfile_py = """
 from conans import ConanFile
@@ -181,14 +181,13 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Retrieve ACLs from short_folder
         try:
-            short_folder_acls = subprocess.check_output("cacls %s" % short_folder,
-                                                        stderr=subprocess.STDOUT)
+            short_folder_acls = check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
         # Check user has full control
         user_acl = "%s\\%s:(OI)(CI)F" % (current_domain, current_user)
-        self.assertIn(user_acl.encode(), short_folder_acls)
+        self.assertIn(user_acl, short_folder_acls)
 
     def test_direct_conanfile(self):
         client = TestClient()

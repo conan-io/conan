@@ -15,6 +15,7 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
+from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
