@@ -4,12 +4,14 @@ import textwrap
 import unittest
 
 from parameterized import parameterized
+from parameterized.parameterized import parameterized_class
 
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
+@parameterized_class([{"recipe_cppstd": True}, {"recipe_cppstd": False}, ])
 class SettingsCppStdScopedPackageTests(unittest.TestCase):
     # Validation of scoped settings is delayed until graph computation, a conanfile can
     #   declare a different set of settings, so we should wait until then to validate it.
@@ -17,7 +19,18 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
     def setUp(self):
         self.tmp_folder = temp_folder()
         self.t = TestClient(base_folder=self.tmp_folder)
-        self.t.run("new hh/0.1@user/channel --bare")
+
+        settings = ["os", "compiler", "build_type", "arch"]
+        if self.recipe_cppstd:
+            settings += ["cppstd"]
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class Lib(ConanFile):
+                settings = "{}"           
+        """.format('", "'.join(settings)))
+        self.t.save({"conanfile.py": conanfile})
 
     def test_value_invalid(self):
         self.t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang -shh:compiler.cppstd=144",
@@ -26,22 +39,26 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                       self.t.out)
 
     def test_value_different_with_scoped_setting(self):
-        with catch_deprecation_warning(self):
+        deprecation_number = 1 if self.recipe_cppstd else 0
+        with catch_deprecation_warning(self, n=deprecation_number):
             self.t.run("create . hh/0.1@user/channel"
                        " -s hh:cppstd=11"
                        " -s hh:compiler=apple-clang"
-                       " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("Package 'hh': The specified 'compiler.cppstd=14' and 'cppstd=11'"
-                      " are different", self.t.out)
+                       " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
+        if self.recipe_cppstd:
+            self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
+                          " 'cppstd=11' are different", self.t.out)
 
     def test_value_different_with_general_setting(self):
-        with catch_deprecation_warning(self, n=2):
+        deprecation_number = 2 if self.recipe_cppstd else 0
+        with catch_deprecation_warning(self, n=deprecation_number):
             self.t.run("create . hh/0.1@user/channel"
                        " -s cppstd=11"
                        " -s hh:compiler=apple-clang"
-                       " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("Package 'hh': The specified 'compiler.cppstd=14' and 'cppstd=11'"
-                      " are different", self.t.out)
+                       " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
+        if self.recipe_cppstd:
+            self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
+                          " 'cppstd=11' are different", self.t.out)
 
     def test_conanfile_without_compiler(self):
         conanfile = textwrap.dedent("""
@@ -108,7 +125,7 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
     @parameterized.expand([(True, ), (False, )])
     def test_use_cppstd(self, compiler_setting):
         settings_str = "-s cppstd=11 -s compiler.cppstd=11" if compiler_setting else "-s cppstd=11"
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             self.t.run("info . {}".format(settings_str))
         self.assertIn(">>> cppstd: 11", self.t.out)
         self.assertIn(">>> compiler.cppstd: 11", self.t.out)
