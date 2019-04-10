@@ -24,7 +24,7 @@ class TestConan(ConanFile):
                        '-s compiler.libcxx="libstdc++11" '
                        '-s compiler.version="4.6" -s cppstd=17', assert_error=True)
 
-        self.assertIn("The specified 'cppstd=17' is not available for 'gcc 4.6'", client.out)
+        self.assertIn("The specified 'compiler.cppstd=17' is not available for 'gcc 4.6'", client.out)
         self.assertIn("Possible values are ['11', '98', 'gnu11', 'gnu98']", client.out)
 
         with catch_deprecation_warning(self):

@@ -19,10 +19,10 @@ def check_cppstd(settings):
         warnings.warn("cppstd setting is deprecated, use compiler.cppstd instead")
 
     try:
-        compiler_cppstd = settings.get_safe("compiler.cppstd")
+        compiler_cppstd = settings.compiler.cppstd
     except ConanException:
-        # There can be compilers that do not define 'compiler.cppstd'
-        pass
+        # There can be compilers that do not define 'compiler.cppstd' (keep compatibility)
+        compiler_cppstd = cppstd
     else:
         if cppstd and compiler_cppstd and cppstd != compiler_cppstd:
             raise ConanException("The specified 'compiler.cppstd={}' and 'cppstd={}' are"
