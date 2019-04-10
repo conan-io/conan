@@ -2129,7 +2129,7 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.assertTrue(self.svn_subrepo.is_pristine())
         self.assertFalse(self.svn.is_pristine())
         self.assertEqual("add external", self.svn.get_revision_message())
-        output = self.svn_subrepo.run('log -r COMMITTED')
+        output = self.svn_subrepo.get_revision_message()
         self.assertIn("up external", output)
 
     def test_untracked_external(self):
