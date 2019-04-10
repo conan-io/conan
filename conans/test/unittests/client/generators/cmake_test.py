@@ -1,11 +1,11 @@
 import os
 import re
 import unittest
-from collections import namedtuple
 
 from conans.client.conf import default_settings_yml
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
+from conans.errors import ConanException
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
@@ -14,6 +14,28 @@ from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
+
+
+class _MockSettings(object):
+    build_type = None
+    os = None
+    os_build = None
+
+    def __init__(self, build_type=None):
+        self.build_type = build_type
+
+    @property
+    def compiler(self):
+        raise ConanException("mock: not available")
+
+    def constraint(self, _):
+        return self
+
+    def get_safe(self, _):
+        return None
+
+    def items(self):
+        return {}
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -49,10 +71,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
     def paths_cmake_multi_user_vars_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
+        settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings_mock("Release", None, None,
-                                           lambda x: x, []), EnvValues())
+        conanfile.initialize(settings_mock, EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -69,10 +90,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
     def paths_cmake_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, items, fields")
+        settings_mock = _MockSettings()
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings_mock(None, None, None, lambda x: x,
-                                           lambda: {}, []), EnvValues())
+        conanfile.initialize(settings_mock, EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         tmp_folder = temp_folder()
         save(os.path.join(tmp_folder, "lib", "mylib.lib"), "")
@@ -89,10 +109,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_LIB_DIRS_MYPKG_RELEASE "root_folder/lib")', cmake_lines)
 
     def variables_cmake_multi_user_vars_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
+        settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x: x, []),
-                             EnvValues())
+        conanfile.initialize(settings_mock, EnvValues())
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
         conanfile.deps_user_info["lib2"].MYVAR2 = "myvalue4"
@@ -104,10 +123,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
     def variables_cmake_multi_user_vars_escape_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint, fields")
+        settings_mock = _MockSettings(build_type="Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings_mock("Release", None, None, lambda x: x, []),
-                             EnvValues())
+        conanfile.initialize(settings_mock, EnvValues())
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
         conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
         conanfile.deps_user_info["FOO"].myvar3 = 'my\\value'

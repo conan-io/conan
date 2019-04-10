@@ -16,7 +16,7 @@ def check_cppstd(settings):
     cppstd = settings.get_safe("cppstd")
 
     if cppstd:
-        warnings.warn("cppstd setting is deprecated, use compiler.cppstd instead")
+        warnings.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'")
 
     try:
         compiler_cppstd = settings.compiler.cppstd
