@@ -2,7 +2,7 @@ import os
 import stat
 import tarfile
 import time
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
 from conans.client.remote_manager import is_package_snapshot_complete
@@ -84,21 +84,23 @@ class CmdUpload(object):
         num_workers = tools.cpu_count() if parallel_upload else 1
         for remote, refs in refs_by_remote.items():
             self._user_io.out.info("Uploading to remote '{}' using {} thread(s):".format(remote.name,
-                                                                                    num_workers))
-            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
+                                                                                         num_workers))
+            with ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
                 future_to_upload = {
                     upload_exec.submit(self._upload_ref, conanfile, ref, prefs, retry, retry_wait,
                                        integrity_check, policy, remote, upload_recorder,
                                        remotes, num_workers): (ref, conanfile, prefs) for (ref,
-                                                                                     conanfile,
-                                                                                     prefs) in refs}
+                                                                                           conanfile,
+                                                                                           prefs) in
+                    refs}
 
-                for future in concurrent.futures.as_completed(future_to_upload):
+                for future in as_completed(future_to_upload):
                     ret = future_to_upload[future]
                     try:
                         future.result()
                     except Exception as exc:
-                        self._user_io.out.info("Error uploading reference: %s %s" % (ret[0], str(exc)))
+                        self._user_io.out.info(
+                            "Error uploading reference: %s %s" % (ret[0], str(exc)))
                     else:
                         self._user_io.out.info("Uploaded reference {}: ".format(ret[0]))
 
@@ -206,7 +208,7 @@ class CmdUpload(object):
 
         # Now the binaries: upload in parallel
         future_to_upload = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
+        with ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
             if prefs:
                 total = len(prefs)
                 for index, pref in enumerate(prefs):
@@ -220,7 +222,7 @@ class CmdUpload(object):
                                                                               p_remote.name,
                                                                               p_remote.url)
 
-            for future in concurrent.futures.as_completed(future_to_upload):
+            for future in as_completed(future_to_upload):
                 ret = future_to_upload[future]
                 try:
                     future.result()
