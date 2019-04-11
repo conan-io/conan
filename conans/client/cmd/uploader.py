@@ -81,25 +81,28 @@ class CmdUpload(object):
         refs_by_remote = self._collect_packages_to_upload(refs, confirm, remotes, all_packages,
                                                           query, package_id)
         # Do the job
+        num_workers = tools.cpu_count() if parallel_upload else 1
         for remote, refs in refs_by_remote.items():
-            num_workers = tools.cpu_count() if parallel_upload else 1
-            self._user_io.out.info("Uploading to remote '{}' in {} threads:".format(remote.name,
+            self._user_io.out.info("Uploading to remote '{}' using {} thread(s):".format(remote.name,
                                                                                     num_workers))
             with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
                 future_to_upload = {
                     upload_exec.submit(self._upload_ref, conanfile, ref, prefs, retry, retry_wait,
-                                       integrity_check, policy, remote, upload_recorder, remotes):
-                        (ref, conanfile, prefs) for (ref, conanfile, prefs) in refs}
+                                       integrity_check, policy, remote, upload_recorder,
+                                       remotes, num_workers): (ref, conanfile, prefs) for (ref,
+                                                                                     conanfile,
+                                                                                     prefs) in refs}
 
                 for future in concurrent.futures.as_completed(future_to_upload):
                     ret = future_to_upload[future]
                     try:
-                        future_result = future.result()
+                        future.result()
                     except Exception as exc:
-                        self._user_io.out.info("Error uploading file: %s %s" % (ret, str(exc)))
+                        self._user_io.out.info("Error uploading reference: %s %s" % (ret[0], str(exc)))
                     else:
-                        self._user_io.out.info("Uploaded reference '{}':".format(future_result))
+                        self._user_io.out.info("Uploaded reference {}: ".format(ret[0]))
 
+        self._user_io.out.info("UPLOAD: Time manager upload: {}".format(time.time() - t1))
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
@@ -188,7 +191,7 @@ class CmdUpload(object):
         return refs_by_remote
 
     def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
-                    recipe_remote, upload_recorder, remotes):
+                    recipe_remote, upload_recorder, remotes, num_workers):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
@@ -202,17 +205,32 @@ class CmdUpload(object):
         self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
-        # Now the binaries
-        if prefs:
-            total = len(prefs)
-            for index, pref in enumerate(prefs):
-                p_remote = recipe_remote
-                msg = ("Uploading package %d/%d: %s to '%s'" % (index+1, total, str(pref.id),
-                                                                p_remote.name))
-                self._user_io.out.info(msg)
-                self._upload_package(pref, retry, retry_wait,
-                                     integrity_check, policy, p_remote)
-                upload_recorder.add_package(pref, p_remote.name, p_remote.url)
+        # Now the binaries: upload in parallel
+        future_to_upload = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
+            if prefs:
+                total = len(prefs)
+                for index, pref in enumerate(prefs):
+                    p_remote = recipe_remote
+                    msg = ("Uploading package %d/%d: %s to '%s'" % (index + 1, total, str(pref.id),
+                                                                    p_remote.name))
+                    self._user_io.out.info(msg)
+                    future_to_upload[upload_exec.submit(self._upload_package, pref, retry,
+                                                        retry_wait, integrity_check,
+                                                        policy, p_remote)] = (pref,
+                                                                              p_remote.name,
+                                                                              p_remote.url)
+
+            for future in concurrent.futures.as_completed(future_to_upload):
+                ret = future_to_upload[future]
+                try:
+                    future.result()
+                    upload_recorder.add_package(ret[0], ret[1], ret[2])
+                    self._user_io.out.info("Uploaded package to remote {}, {}, {}".format(ret[0],
+                                                                                          ret[1],
+                                                                                          ret[2]))
+                except Exception as exc:
+                    self._user_io.out.info("Error uploading package: %s %s" % (ret[0], str(exc)))
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
