@@ -747,13 +747,11 @@ class Command(object):
 
     def export_pkg(self, *args):
         """
-        Exports a recipe, then creates a package from local-source-folder and
-        build-folder (or use already packaged files if a package-folder is provided).
+        Exports a recipe and create a binary package from local files.
 
-        The package is created by calling the package() method applied to the
-        local folders '--source-folder' and '--build-folder' It's created in
-        the local cache for the specified 'reference' and for the specified
-        '--settings', '--options' and or '--profile'.
+        If '--package-folder' is provided it will copy the files from there, otherwise it
+        will execute package() method over '--source-folder' and '--build-folder' to create
+        the binary package.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg")
