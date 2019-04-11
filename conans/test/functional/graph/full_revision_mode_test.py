@@ -91,13 +91,17 @@ class FullRevisionModeTest(unittest.TestCase):
         # Change A PREV
         clienta.run("create . liba/0.1@user/testing")
         clientd.run("install . libd/0.1@user/testing", assert_error=True)
-        print clientd.out
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientd.out)
         clientd.run("install . libd/0.1@user/testing --build=missing")
-        print clientd.out
-        clientd.run("install . libd/0.1@user/testing")
+
+        self.assertIn("libc/0.1@user/testing: Unknown binary", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Updated ID", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Binary for updated ID from: Build", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
 
     def reusing_artifacts_after_build_test(self):
+        # An unknown binary that after build results in the exact same PREF with PREV, doesn't
+        # fire build of downstream
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_revision_mode")
         conanfile = dedent("""
@@ -116,8 +120,11 @@ class FullRevisionModeTest(unittest.TestCase):
         client.run("create . libc/0.1@user/testing")
 
         client.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
+        # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . libd/0.1@user/testing --build=liba")
-        print client.out
-        
-
-       
+        # So it is not necessary to build the downstream consumers of LibA
+        for lib in ("libb", "libc"):
+            self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)
+            self.assertIn("%s/0.1@user/testing: Updated ID" % lib, client.out)
+            self.assertIn("%s/0.1@user/testing: Binary for updated ID from: Cache" % lib, client.out)
+            self.assertIn("%s/0.1@user/testing: Already installed!" % lib, client.out)

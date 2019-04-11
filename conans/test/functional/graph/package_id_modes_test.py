@@ -1,6 +1,5 @@
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.conanfile import TestConanFile
-from conans.client.graph.graph import BINARY_UNKNOWN
 
 
 class PackageIDGraphTests(GraphManagerTest):
@@ -36,12 +35,10 @@ class PackageIDGraphTests(GraphManagerTest):
             self.assertEqual(libb.package_id, package_id)
 
     def test_full_package_revision_mode(self):
-        self.cache.config.set_item("general.package_id_mode", "full_package_revision_mode")
+        self.cache.config.set_item("general.default_package_id_mode", "full_package_revision_mode")
         liba_ref1 = "liba/0.1.1@user/testing"
-        liba_ref2 = "liba/0.1.2@user/testing"
         libb_ref = "libb/0.1@user/testing"
         self._cache_recipe(liba_ref1, TestConanFile("liba", "0.1.1"))
-        self._cache_recipe(liba_ref2, TestConanFile("liba", "0.1.2"))
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref1]))
         deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref]))
 
@@ -51,4 +48,4 @@ class PackageIDGraphTests(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         self.assertEqual(liba.package_id, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        self.assertEqual(libb.package_id, BINARY_UNKNOWN)
+        self.assertEqual(libb.package_id, "941d920c2c974492cf5ebb916953228fc706645d")

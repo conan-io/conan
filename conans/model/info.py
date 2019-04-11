@@ -11,14 +11,15 @@ from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
-from conans.client.graph.graph import BINARY_UNKNOWN
 
-PREV_MISSING = "prevmissing"
+PREV_UNKNOWN = "PREV unknown"
+PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
 
 
 class RequirementInfo(object):
 
-    def __init__(self, pref, default_package_id_mode, indirect=False):
+    def __init__(self, pref, node, default_package_id_mode, indirect=False):
+        self._node = node
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
@@ -36,7 +37,7 @@ class RequirementInfo(object):
 
     def copy(self):
         # Useful for build_id()
-        result = RequirementInfo(self.package, "unrelated_mode")
+        result = RequirementInfo(self.package, None, "unrelated_mode")
         for f in ("name", "version", "user", "channel", "revision", "package_id",
                   "package_revision"):
 
@@ -55,14 +56,20 @@ class RequirementInfo(object):
             result.append(":%s" % self.package_id)
         return "".join(result)
 
+    def update_prev(self):
+        if self.package_revision == PREV_UNKNOWN and self._node.prev:
+            self.package_revision = self._node.prev
+        if self.package_id == PACKAGE_ID_UNKNOWN and self._node.package_id:
+            self.package_id = self._node.package_id
+
     @property
     def sha(self):
+        if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
+            return None
         vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
         # This is done later to NOT affect existing package-IDs (before revisions)
         if self.revision:
             vals.append(self.revision)
-        if self.package_revision == PREV_MISSING:
-            return None
         if self.package_revision:
             # A package revision is required = True, but didn't get a real value
             vals.append(self.package_revision)
@@ -149,24 +156,20 @@ class RequirementInfo(object):
         self.package_id = self.full_package_id
         self.revision = self.full_revision
         # It is requested to use, but not defined (binary not build yet)
-        self.package_revision = self.full_package_revision or PREV_MISSING
+        self.package_revision = self.full_package_revision or PREV_UNKNOWN
 
 
 class RequirementsInfo(object):
 
-    def __init__(self, prefs, default_package_id_mode):
+    def __init__(self, nodes, default_package_id_mode):
         # {PackageReference: RequirementInfo}
-        self._data = {pref: RequirementInfo(pref, default_package_id_mode=default_package_id_mode)
-                      for pref in prefs}
+        self._data = {pref: RequirementInfo(pref, node,
+                                            default_package_id_mode=default_package_id_mode)
+                      for (pref, node) in nodes}
 
-    def update_prev(self, pref):
-        for req_info in self._data.values():
-            # CHECK: Checking only the REF, not the PREF, package_id?
-            if req_info.package.ref == pref.ref:
-                if req_info.package_revision == PREV_MISSING:
-                    req_info.package_revision = pref.revision
-                if req_info.package_id == BINARY_UNKNOWN:
-                    req_info.package_id = pref.id
+    def update_prevs(self):
+        for d in self._data.values():
+            d.update_prev()
 
     def copy(self):
         # For build_id() implementation
@@ -181,18 +184,18 @@ class RequirementsInfo(object):
         for name in args:
             del self._data[self._get_key(name)]
 
-    def add(self, prefs_indirect, default_package_id_mode):
+    def add(self, nodes_indirect, default_package_id_mode):
         """ necessary to propagate from upstream the real
         package requirements
         """
-        for r in prefs_indirect:
-            self._data[r] = RequirementInfo(r, indirect=True,
-                                            default_package_id_mode=default_package_id_mode)
+        for pref, node in nodes_indirect.items():
+            self._data[pref] = RequirementInfo(pref, node, indirect=True,
+                                               default_package_id_mode=default_package_id_mode)
 
-    def refs(self):
+    def nodes(self):
         """ used for updating downstream requirements with this
         """
-        return list(self._data.keys())
+        return {pref: req._node for pref, req in self._data.items()}
 
     def _get_key(self, item):
         for reference in self._data:
@@ -296,17 +299,17 @@ class ConanInfo(object):
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode):
+    def create(settings, options, nodes_direct, nodes_indirect, default_package_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
         result.options = options.copy()
         result.options.clear_indirect()
-        result.full_requires = _PackageReferenceList(prefs_direct)
-        result.requires = RequirementsInfo(prefs_direct, default_package_id_mode)
-        result.requires.add(prefs_indirect, default_package_id_mode)
-        result.full_requires.extend(prefs_indirect)
+        result.full_requires = _PackageReferenceList([pref for (pref, _) in nodes_direct])
+        result.full_requires.extend(nodes_indirect)
+        result.requires = RequirementsInfo(nodes_direct, default_package_id_mode)
+        result.requires.add(nodes_indirect, default_package_id_mode)
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
@@ -330,7 +333,8 @@ class ConanInfo(object):
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        result.requires = RequirementsInfo(result.full_requires, "semver_direct_mode")
+        result.requires = RequirementsInfo([(r, None) for r in result.full_requires],
+                                           "semver_direct_mode")
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now
@@ -386,7 +390,7 @@ class ConanInfo(object):
         info_path = os.path.join(package_folder, CONANINFO)
         return ConanInfo.load_file(info_path)
 
-    def package_id(self):
+    def package_id(self, update_prevs=False):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
@@ -395,9 +399,11 @@ class ConanInfo(object):
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
+        if update_prevs:
+            self.requires.update_prevs()
         requires_sha = self.requires.sha
         if requires_sha is None:
-            return BINARY_UNKNOWN
+            return PACKAGE_ID_UNKNOWN
         result.append(requires_sha)
 
         package_id = sha1('\n'.join(result).encode())

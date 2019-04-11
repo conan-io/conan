@@ -65,14 +65,14 @@ class GraphManagerTest(unittest.TestCase):
         update = check_updates = False
         recorder = ActionRecorder()
         remotes = Remotes()
-        build_mode = []
+        build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
         deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
                                                 build_mode, check_updates, update,
                                                 remotes, recorder)
-        self.binary_installer.install(deps_graph, False, graph_info)
+        self.binary_installer.install(deps_graph, None, False, graph_info)
         return deps_graph
 
     def _check_node(self, node, ref, deps, build_deps, dependents, closure, public_deps):

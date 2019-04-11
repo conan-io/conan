@@ -6,7 +6,7 @@ from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
-    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE, BINARY_UNKNOWN
+    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import create_package
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -28,6 +28,7 @@ from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmd
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.model.info import PACKAGE_ID_UNKNOWN
 
 
 def build_id(conan_file):
@@ -375,20 +376,19 @@ class BinaryInstaller(object):
         conan_file = node.conanfile
         output = conan_file.output
         pref = node.pref
-        propagate_unknown_downstream = False
-        if node.binary == BINARY_UNKNOWN:
-            node.binary = None
+
+        if node.package_id == PACKAGE_ID_UNKNOWN:
+            assert node.binary is None
             output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-            node._package_id = node.conanfile.info.package_id()
+            node._package_id = node.conanfile.info.package_id(update_prevs=True)
             output.info("Updated ID: %s" % node.package_id)
             output.info("Analyzing binary availability for updated ID")
             self._binaries_analyzer._evaluate_node(node, node.build_mode, node.update,
                                                    graph.evaluated, remotes)
             output.info("Binary for updated ID from: %s" % node.binary)
             pref = node.pref
-            propagate_unknown_downstream = True
 
-        assert pref.id and pref.id != BINARY_UNKNOWN, "Package-ID error: %s" % str(pref)
+        assert pref.id and pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         package_folder = self._cache.package(pref, conan_file.short_paths)
 
         with self._cache.package_lock(pref):
@@ -399,7 +399,6 @@ class BinaryInstaller(object):
                     set_dirty(package_folder)
                     pref = self._build_package(node, output, keep_build, remotes)
                     clean_dirty(package_folder)
-                    propagate_unknown_downstream = True
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert node.prev is not None, "PREV for %s to be built is None" % str(pref)
@@ -430,13 +429,6 @@ class BinaryInstaller(object):
             # Call the info method
             self._call_package_info(conan_file, package_folder)
             self._recorder.package_cpp_info(pref, conan_file.cpp_info)
-
-        # Updating dependants packageIDs, in case they were BINARY_UNKNOWN they recompute
-        if propagate_unknown_downstream:
-            output.info("Propagating downstream new PREF: %s" % pref.full_repr())
-            # FIXME: BUGGY AND WRONG WAY TO DO IT
-            for dependant in graph.nodes:
-                dependant.conanfile.info.requires.update_prev(pref)
 
     def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile
