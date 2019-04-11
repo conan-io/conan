@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 
@@ -7,12 +8,50 @@ from conans import __version__
 from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile
 from conans.client.output import ConanOutput
 from conans.migrations import CONAN_VERSION
+from conans.model.ref import ConanFileReference
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 
 class TestMigrations(unittest.TestCase):
+
+    def test_migrate_revision_metadata(self):
+        # https://github.com/conan-io/conan/issues/4898
+        client = TestClient()
+        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.run("create . user/testing")
+        ref = ConanFileReference.loads("Hello/0.1@user/testing")
+        layout1 = client.cache.package_layout(ref)
+        metadata = json.loads(load(layout1.package_metadata()))
+        metadata["recipe"]["revision"] = None
+        metadata["packages"]["WRONG"] = {"revision": ""}
+        metadata["packages"]["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]["revision"] = None
+        metadata["packages"]["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]["recipe_revision"] = None
+        save(layout1.package_metadata(), json.dumps(metadata))
+
+        client.run("create . user/stable")
+        ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
+        layout2 = client.cache.package_layout(ref2)
+        metadata = json.loads(load(layout2.package_metadata()))
+        metadata["recipe"]["revision"] = "Other"
+        save(layout2.package_metadata(), json.dumps(metadata))
+
+        version_file = os.path.join(client.cache.conan_folder, CONAN_VERSION)
+        save(version_file, "1.14.1")
+        client.run("search")  # This will fire a migration
+
+        metadata_ref1 = client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(metadata_ref1.recipe.revision, "2e48797069e65568befd81854aa8aaf0")
+        pkg_metadata = metadata_ref1.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]
+        self.assertEqual(pkg_metadata.recipe_revision, "2e48797069e65568befd81854aa8aaf0")
+        self.assertEqual(pkg_metadata.revision, "38d05b42210ca2becb43a05f9265abbe")
+        self.assertEqual(list(metadata_ref1.packages.keys()),
+                         ["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"])
+
+        metadata_ref2 = client.cache.package_layout(ref2).load_metadata()
+        self.assertEqual(metadata_ref2.recipe.revision, "Other")
 
     def test_migrate_config_install(self):
         client = TestClient()
