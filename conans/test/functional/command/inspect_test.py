@@ -397,7 +397,10 @@ class InspectRawTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
         client.run("inspect . --raw=options")
-        self.assertEqual("{'foo': [True, False], 'bar': [True, False]}", client.out)
+        # The output is a dictionary, no order guaranteed, we need to compare as dict
+        import ast
+        output = ast.literal_eval(str(client.out))
+        self.assertDictEqual(output, {'bar': [True, False], 'foo': [True, False]})
 
     def test_default_options_list(self):
         client = TestClient()
