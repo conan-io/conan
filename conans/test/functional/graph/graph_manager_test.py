@@ -661,3 +661,58 @@ class TransitiveGraphTest(GraphManagerTest):
 
         self._check_node(zlib, "zlib/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[tool], closure=[], public_deps=[zlib])
+
+    def test_transitive_private_conflict(self):
+        # https://github.com/conan-io/conan/issues/4931
+        # cheetah -> gazelle -> grass
+        #    \--(private)------0.2----/
+        self._cache_recipe("grass/0.1@user/testing", TestConanFile("grass", "0.1"))
+        self._cache_recipe("grass/0.2@user/testing", TestConanFile("grass", "0.2"))
+        self._cache_recipe("gazelle/0.1@user/testing",
+                           TestConanFile("gazelle", "0.1",
+                                         requires=["grass/0.1@user/testing"]))
+
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Requirement grass/0.2@user/testing conflicts"):
+            self.build_graph(TestConanFile("cheetah", "0.1", requires=["gazelle/0.1@user/testing"],
+                                           private_requires=["grass/0.2@user/testing"]))
+
+    def test_build_require_conflict(self):
+        # https://github.com/conan-io/conan/issues/4931
+        # cheetah -> gazelle -> grass
+        #    \--(br)------0.2----/
+        self._cache_recipe("grass/0.1@user/testing", TestConanFile("grass", "0.1"))
+        self._cache_recipe("grass/0.2@user/testing", TestConanFile("grass", "0.2"))
+        self._cache_recipe("gazelle/0.1@user/testing",
+                           TestConanFile("gazelle", "0.1",
+                                         requires=["grass/0.1@user/testing"]))
+
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Requirement grass/0.2@user/testing conflicts"):
+            self.build_graph(TestConanFile("cheetah", "0.1", requires=["gazelle/0.1@user/testing"],
+                                           build_requires=["grass/0.2@user/testing"]))
+
+    def test_build_require_link_order(self):
+        # https://github.com/conan-io/conan/issues/4931
+        # cheetah -> gazelle -> grass
+        #    \--(br)------------/
+        self._cache_recipe("grass/0.1@user/testing", TestConanFile("grass", "0.1"))
+        self._cache_recipe("gazelle/0.1@user/testing",
+                           TestConanFile("gazelle", "0.1",
+                                         requires=["grass/0.1@user/testing"]))
+
+        deps_graph = self.build_graph(TestConanFile("cheetah", "0.1",
+                                                    requires=["gazelle/0.1@user/testing"],
+                                                    build_requires=["grass/0.1@user/testing"]))
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        cheetah = deps_graph.root
+        gazelle = cheetah.dependencies[0].dst
+        grass = gazelle.dependencies[0].dst
+        grass2 = cheetah.dependencies[1].dst
+
+        self._check_node(cheetah, "cheetah/0.1@None/None", deps=[gazelle], build_deps=[grass2],
+                         dependents=[], closure=[gazelle, grass],
+                         public_deps=[cheetah, gazelle, grass])
+        self.assertEqual(cheetah.conanfile.deps_cpp_info.libs,
+                         ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
