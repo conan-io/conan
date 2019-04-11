@@ -136,7 +136,8 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         previous = node.public_deps.get(name)
-        if require.private or require.build_require or not previous:
+        previous_closure = node.public_closure.get(name)
+        if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
             # node -> new_node
             new_node = self._create_new_node(node, dep_graph, require, name,
