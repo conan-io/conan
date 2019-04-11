@@ -102,7 +102,6 @@ class CmdUpload(object):
                     else:
                         self._user_io.out.info("Uploaded reference {}: ".format(ret[0]))
 
-        self._user_io.out.info("UPLOAD: Time manager upload: {}".format(time.time() - t1))
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
@@ -226,9 +225,6 @@ class CmdUpload(object):
                 try:
                     future.result()
                     upload_recorder.add_package(ret[0], ret[1], ret[2])
-                    self._user_io.out.info("Uploaded package to remote {}, {}, {}".format(ret[0],
-                                                                                          ret[1],
-                                                                                          ret[2]))
                 except Exception as exc:
                     self._user_io.out.info("Error uploading package: %s %s" % (ret[0], str(exc)))
 
