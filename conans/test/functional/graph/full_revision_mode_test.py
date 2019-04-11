@@ -99,6 +99,53 @@ class FullRevisionModeTest(unittest.TestCase):
         self.assertIn("libc/0.1@user/testing: Binary for updated ID from: Build", clientd.out)
         self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
 
+    def binary_id_recomputation_with_build_requires_test(self):
+        clienta = TestClient()
+        clienta.save({"conanfile.py": str(TestConanFile("Tool", "0.1", info=True))})
+        clienta.run("create . user/testing")
+        clienta.run("config set general.default_package_id_mode=full_revision_mode")
+        conanfile = dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import uuid, os
+            class Pkg(ConanFile):
+                build_requires = "Tool/0.1@user/testing"
+                %s
+                def build(self):
+                    self.output.info("TOOLS LIBS: {}".format(self.deps_cpp_info["Tool"].libs))
+                def package(self):
+                    save(os.path.join(self.package_folder, "file.txt"),
+                         str(uuid.uuid1()))
+            """)
+        clienta.save({"conanfile.py": conanfile % ""})
+        clienta.run("create . liba/0.1@user/testing")
+
+        clientb = TestClient(base_folder=clienta.base_folder)
+        clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
+        clientb.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientb.run("create . libb/0.1@user/testing")
+
+        clientc = TestClient(base_folder=clienta.base_folder)
+        clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
+        clientc.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientc.run("create . libc/0.1@user/testing")
+
+        clientd = TestClient(base_folder=clienta.base_folder)
+        clientd.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
+        clientd.run("install . libd/0.1@user/testing")
+
+        # Change A PREV
+        clienta.run("create . liba/0.1@user/testing")
+        clientd.run("install . libd/0.1@user/testing", assert_error=True)
+        self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientd.out)
+        clientd.run("install . libd/0.1@user/testing --build=missing")
+
+        self.assertIn("libc/0.1@user/testing: Unknown binary", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Updated ID", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Binary for updated ID from: Build", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
+
     def reusing_artifacts_after_build_test(self):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
