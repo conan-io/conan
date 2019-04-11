@@ -9,8 +9,9 @@ Replace this module with other that keeps the interface or super class.
 
 '''
 
-
 from abc import ABCMeta, abstractmethod
+
+import six
 
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.model.ref import ConanFileReference
@@ -20,12 +21,11 @@ from conans.model.ref import ConanFileReference
 #  ############ ABSTRACT CLASSES ##############
 #  ############################################
 
-
+@six.add_metaclass(ABCMeta)
 class Authorizer(object):
     """
     Handles the access permissions to conans and packages
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def check_read_conan(self, username, ref):
@@ -60,12 +60,11 @@ class Authorizer(object):
         raise NotImplemented()
 
 
+@six.add_metaclass(ABCMeta)
 class Authenticator(object):
     """
     Handles the user authentication
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def valid_user(self, username, plain_password):
         """
