@@ -976,3 +976,8 @@ class Pkg(ConanFile):
         client.run('workspace install "{}"'.format(no_default_file), assert_error=True)
         trial_path = os.path.join(no_default_file, Workspace.default_filename)
         self.assertIn("ERROR: Couldn't load workspace file in {}".format(trial_path), client.out)
+
+    def missing_subarguments_test(self):
+        client = TestClient()
+        client.run("workspace", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)

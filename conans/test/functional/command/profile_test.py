@@ -216,3 +216,8 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("\nos=FakeOS", load(pr_path))
         self.assertNotIn("[env]\nMyEnv=MYVALUe", load(pr_path))
         self.assertEqual(load(pr_path), detected_profile)
+
+    def missing_subarguments_test(self):
+        client = TestClient()
+        client.run("profile", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
