@@ -491,3 +491,24 @@ class TestConanLib(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
+
+    def package_folder_build_error_test(self):
+        """
+        Check package folder is not created if the build step fails
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class MyPkg(ConanFile):
+
+            def build(self):
+                raise ConanException("Build error")
+        """)
+        client.save({"conanfile.py": conanfile})
+        ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
+        client.run("create . %s" % ref.full_repr(), assert_error=True)
+        self.assertIn("Build error", client.out)
+        package_folder = client.cache.package(pref)
+        self.assertFalse(os.path.exists(package_folder))

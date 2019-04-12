@@ -82,7 +82,7 @@ class _PackageBuilder(object):
         export_source_folder = package_layout.export_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
-        remove_folder_raising(build_folder)
+        _remove_folder_raising(build_folder)
 
         config_source(export_folder, export_source_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
@@ -190,8 +190,7 @@ class _PackageBuilder(object):
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
-            remove_folder_raising(package_folder)
-            mkdir(package_folder)
+            _remove_folder_raising(package_folder)
             mkdir(build_folder)
             os.chdir(build_folder)
             self._output.info('Building your package in %s' % build_folder)
@@ -225,7 +224,7 @@ class _PackageBuilder(object):
             return node.pref
 
 
-def remove_folder_raising(folder):
+def _remove_folder_raising(folder):
     try:
         rmdir(folder)
     except OSError as e:
