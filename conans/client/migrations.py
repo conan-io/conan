@@ -15,6 +15,7 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
+from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
@@ -51,8 +52,25 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("1.14.0"):
-            migrate_config_install(self.cache)
+        if old_version < Version("0.25"):
+            from conans.paths import DEFAULT_PROFILE_NAME
+            default_profile_path = os.path.join(self.cache.conan_folder, PROFILES_FOLDER,
+                                                DEFAULT_PROFILE_NAME)
+            if not os.path.exists(default_profile_path):
+                self.out.warn("Migration: Moving default settings from %s file to %s"
+                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
+                conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
+
+                migrate_to_default_profile(conf_path, default_profile_path)
+
+                self.out.warn("Migration: export_source cache new layout")
+                migrate_c_src_export_source(self.cache, self.out)
+
+        if old_version < Version("1.0"):
+            _migrate_lock_files(self.cache, self.out)
+
+        if old_version < Version("1.12.0"):
+            migrate_plugins_to_hooks(self.cache)
 
         if old_version < Version("1.13.0"):
             old_settings = """
@@ -127,25 +145,14 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
             # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
             _migrate_create_metadata(self.cache, self.out)
 
-        if old_version < Version("1.12.0"):
-            migrate_plugins_to_hooks(self.cache)
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
 
-        if old_version < Version("1.0"):
-            _migrate_lock_files(self.cache, self.out)
+        if old_version < Version("1.14.2"):
+            _migrate_full_metadata(self.cache, self.out)
 
-        if old_version < Version("0.25"):
-            from conans.paths import DEFAULT_PROFILE_NAME
-            default_profile_path = os.path.join(self.cache.conan_folder, PROFILES_FOLDER,
-                                                DEFAULT_PROFILE_NAME)
-            if not os.path.exists(default_profile_path):
-                self.out.warn("Migration: Moving default settings from %s file to %s"
-                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-                conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
-
-                migrate_to_default_profile(conf_path, default_profile_path)
-
-                self.out.warn("Migration: export_source cache new layout")
-                migrate_c_src_export_source(self.cache, self.out)
+        if old_version < Version("1.15.0"):
+            migrate_registry_file(self.cache, self.out)
 
 
 def _get_refs(cache):
@@ -157,6 +164,50 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def _migrate_full_metadata(cache, out):
+    # Fix for https://github.com/conan-io/conan/issues/4898
+    out.warn("Running a full revision metadata migration")
+    refs = _get_refs(cache)
+    for ref in refs:
+        try:
+            base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=None,
+                                        no_lock=True)
+            with layout.update_metadata() as metadata:
+                # Updating the RREV
+                if metadata.recipe.revision is None:
+                    out.warn("Package %s metadata had recipe revision None, migrating" % str(ref))
+                    folder = layout.export()
+                    try:
+                        manifest = FileTreeManifest.load(folder)
+                        rrev = manifest.summary_hash
+                    except Exception:
+                        rrev = DEFAULT_REVISION_V1
+                    metadata.recipe.revision = rrev
+
+                prefs = _get_prefs(layout)
+                existing_ids = [pref.id for pref in prefs]
+                for pkg_id in list(metadata.packages.keys()):
+                    if pkg_id not in existing_ids:
+                        out.warn("Package %s metadata had stalled package information %s, removing"
+                                 % (str(ref), pkg_id))
+                        del metadata.packages[pkg_id]
+                # UPDATING PREVS
+                for pref in prefs:
+                    try:
+                        pmanifest = FileTreeManifest.load(layout.package(pref))
+                        prev = pmanifest.summary_hash
+                    except Exception:
+                        prev = DEFAULT_REVISION_V1
+                    metadata.packages[pref.id].revision = prev
+                    metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
+
+        except Exception as e:
+            raise ConanException("Something went wrong while migrating metadata.json files "
+                                 "in the cache, please try to fix the issue or wipe the cache: {}"
+                                 ":{}".format(ref, e))
 
 
 def _migrate_create_metadata(cache, out):
@@ -174,7 +225,7 @@ def _migrate_create_metadata(cache, out):
             try:
                 manifest = FileTreeManifest.load(folder)
                 rrev = manifest.summary_hash
-            except:
+            except Exception:
                 rrev = DEFAULT_REVISION_V1
             metadata_path = layout.package_metadata()
             if not os.path.exists(metadata_path):
@@ -186,7 +237,7 @@ def _migrate_create_metadata(cache, out):
                     try:
                         pmanifest = FileTreeManifest.load(layout.package(pref))
                         prev = pmanifest.summary_hash
-                    except:
+                    except Exception:
                         prev = DEFAULT_REVISION_V1
                     metadata.packages[pref.id].revision = prev
                     metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
