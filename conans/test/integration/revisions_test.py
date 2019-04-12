@@ -111,7 +111,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # This is not updating the remote in the registry with a --update
         # Is this a bug?
-        self.assertEqual("default", self.c_v2.cache.registry.refs.get(self.ref).name)
+        metadata = self.c_v2.cache.package_layout(self.ref).load_metadata()
+        self.assertEqual("default", metadata.recipe.remote)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
