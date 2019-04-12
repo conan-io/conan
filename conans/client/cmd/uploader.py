@@ -5,6 +5,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
+from tqdm import tqdm
+
 from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
@@ -527,9 +529,10 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
         i_file = 0
         n_files = len(files)
-        last_progress = None
-        if output and n_files > 1 and not output.is_terminal:
-            output.write("[")
+        progress_bar = None
+        if n_files > 0:
+            progress_bar = tqdm(total=len(files), desc="Compressing files...")
+
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
@@ -543,20 +546,15 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                     tgz.addfile(tarinfo=info, fileobj=file_handler)
             if output and n_files > 1:
                 i_file = i_file + 1
-                units = min(50, int(50 * i_file / n_files))
-                if last_progress != units:  # Avoid screen refresh if nothing has change
-                    if output.is_terminal:
-                        text = "%s/%s files" % (i_file, n_files)
-                        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), text))
-                    else:
-                        output.write('=' * (units - (last_progress or 0)))
-                    last_progress = units
+                if output.is_terminal:
+                    progress_bar.set_description("%s/%s files" % (i_file, n_files))
+                    progress_bar.update()
+                else:
+                    progress_bar.update()
 
-        if output and n_files > 1:
-            if output.is_terminal:
-                output.writeln("")
-            else:
-                output.writeln("]")
+        if progress_bar:
+            progress_bar.close()
+
         tgz.close()
 
     clean_dirty(tgz_path)
