@@ -2,6 +2,8 @@ import os
 import time
 import traceback
 
+from tqdm import tqdm
+
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException
@@ -93,22 +95,20 @@ class upload_with_progress(object):
         self.chunk_size = chunk_size
         self.aprox_chunks = self.totalsize * 1.0 / chunk_size
         self.groups = iterator
+        if output.is_terminal:
+            self.progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
+                                     unit_divisor=1024, desc="Uploading File...")
+        else:
+            self.progress_bar = None
 
     def __iter__(self):
-        last_progress = None
         for index, chunk in enumerate(self.groups):
-            if self.aprox_chunks == 0:
-                index = self.aprox_chunks
-
-            units = progress_units(index, self.aprox_chunks)
-            progress = human_readable_progress(index * self.chunk_size, self.totalsize)
-            if last_progress != units:  # Avoid screen refresh if nothing has change
-                print_progress(self.output, units, progress)
-                last_progress = units
+            if self.progress_bar:
+                self.progress_bar.update(self.chunk_size)
             yield chunk
 
-        progress = human_readable_progress(self.totalsize, self.totalsize)
-        print_progress(self.output, progress_units(100, 100), progress)
+        if self.progress_bar:
+            self.progress_bar.close()
 
     def __len__(self):
         return self.totalsize
