@@ -21,15 +21,15 @@ class Version(object):
 
     @property
     def major(self):
-        return self._semver.major
+        return str(self._semver.major)
 
     @property
     def minor(self):
-        return self._semver.minor
+        return str(self._semver.minor)
 
     @property
     def patch(self):
-        return self._semver.patch
+        return str(self._semver.patch)
 
     def __eq__(self, other):
         if not isinstance(other, Version):
