@@ -298,7 +298,7 @@ def tar_extract(fileobj, destination_dir):
         return not realpath(abspath(joinpath(base, path))).startswith(base)
 
     def safemembers(members):
-        base = realpath(abspath("."))
+        base = realpath(abspath(destination_dir))
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
