@@ -7,6 +7,7 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.tools import save
 from conans.util.files import load
+from conans.model.graph_lock import GraphLock
 
 
 GRAPH_INFO_FILE = "graph_info.json"
@@ -14,11 +15,12 @@ GRAPH_INFO_FILE = "graph_info.json"
 
 class GraphInfo(object):
 
-    def __init__(self, profile=None, options=None, root_ref=None):
+    def __init__(self, profile=None, options=None, root_ref=None, graph_lock=None):
         self.profile = profile
         # This field is a temporary hack, to store dependencies options for the local flow
         self.options = options
         self.root = root_ref
+        self.graph_lock = graph_lock
 
     @staticmethod
     def load(path):
@@ -46,15 +48,17 @@ class GraphInfo(object):
         root = graph_json.get("root", {"name": None, "version": None, "user": None, "channel": None})
         root_ref = ConanFileReference(root["name"], root["version"], root["user"], root["channel"],
                                       validate=False)
-        return GraphInfo(profile=profile, options=options, root_ref=root_ref)
+
+        graph_lock = GraphLock.from_dict(graph_json.get("graph_lock"))
+        return GraphInfo(profile=profile, options=options, root_ref=root_ref, graph_lock=graph_lock)
 
     def save(self, folder, filename=None):
         filename = filename or GRAPH_INFO_FILE
         p = os.path.join(folder, filename)
-        serialized_graph_str = self.dumps()
+        serialized_graph_str = self._dumps()
         save(p, serialized_graph_str)
 
-    def dumps(self):
+    def _dumps(self):
         result = {"profile": self.profile.dumps()}
         if self.options is not None:
             result["options"] = self.options.as_list()
@@ -62,4 +66,6 @@ class GraphInfo(object):
                           "version": self.root.version,
                           "user": self.root.user,
                           "channel": self.root.channel}
+        if self.graph_lock is not None:
+            result["graph_lock"] = self.graph_lock.as_dict()
         return json.dumps(result, indent=True)

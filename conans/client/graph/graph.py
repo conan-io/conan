@@ -40,6 +40,17 @@ class Node(object):
         # all the public deps only in the closure of this node
         self.public_closure = None  # {ref.name: Node}
         self.ancestors = None  # set{ref.name}
+        self._id = None
+
+    @property
+    def id(self):
+        if self._id is None:
+            self._id = str(id(self))
+        return self._id
+
+    @id.setter
+    def id(self, id_):
+        self._id = id_
 
     def update_ancestors(self, ancestors):
         # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
@@ -62,6 +73,7 @@ class Node(object):
 
     @property
     def pref(self):
+        assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
         return PackageReference(self.ref, self.package_id, self.prev)
 
     def partial_copy(self):

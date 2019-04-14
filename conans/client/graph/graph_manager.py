@@ -15,6 +15,7 @@ from conans.model.graph_info import GraphInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
+from conans.model.graph_lock import GraphLock
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -108,6 +109,7 @@ class GraphManager(object):
         profile = graph_info.profile
         processed_profile = ProcessedProfile(profile, create_reference)
         ref = None
+        graph_lock = graph_info.graph_lock
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile,
                                                   scope_options=False)
@@ -119,6 +121,8 @@ class GraphManager(object):
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
+            if graph_lock:  # Find the Node ID in the lock of current root
+                graph_lock.find_node(root_node, reference)
         else:
             path = reference
             if path.endswith(".py"):
@@ -140,17 +144,23 @@ class GraphManager(object):
 
             root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
 
+            if graph_lock:  # Find the Node ID in the lock of current root
+                graph_lock.find_node(root_node, create_reference)
+
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
                                       profile_build_requires=profile.build_requires,
                                       recorder=recorder,
                                       processed_profile=processed_profile,
-                                      apply_build_requires=apply_build_requires)
+                                      apply_build_requires=apply_build_requires,
+                                      graph_lock=graph_lock)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
         graph_info.options = root_node.conanfile.options.values
+        if graph_info.graph_lock is None:
+            graph_info.graph_lock = GraphLock(deps_graph)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -174,7 +184,7 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
                                 build_mode, remotes, profile_build_requires, recorder,
-                                processed_profile, apply_build_requires=True):
+                                processed_profile, graph_lock, apply_build_requires=True):
 
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
         if not apply_build_requires:
@@ -209,36 +219,39 @@ class GraphManager(object):
                 subgraph = builder.extend_build_requires(graph, node,
                                                          package_build_requires.values(),
                                                          check_updates, update, remotes,
-                                                         processed_profile)
+                                                         processed_profile, graph_lock)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, profile_build_requires, recorder,
-                                             processed_profile)
+                                             processed_profile, graph_lock)
                 graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
-                                                         processed_profile)
+                                                         processed_profile, graph_lock)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, {}, recorder,
-                                             processed_profile)
+                                             processed_profile, graph_lock)
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    profile_build_requires, recorder, processed_profile, apply_build_requires):
+                    profile_build_requires, recorder, processed_profile, apply_build_requires,
+                    graph_lock):
 
         assert isinstance(build_mode, BuildMode)
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    recorder)
-        graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile)
+        graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile,
+                                   graph_lock)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager)
 
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remotes,
                                      profile_build_requires, recorder, processed_profile,
+                                     graph_lock,
                                      apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order

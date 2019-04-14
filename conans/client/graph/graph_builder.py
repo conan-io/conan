@@ -23,7 +23,8 @@ class DepsGraphBuilder(object):
         self._resolver = resolver
         self._recorder = recorder
 
-    def load_graph(self, root_node, check_updates, update, remotes, processed_profile):
+    def load_graph(self, root_node, check_updates, update, remotes, processed_profile,
+                   graph_lock=None):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
@@ -37,12 +38,12 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         self._load_deps(dep_graph, root_node, Requirements(), None, None,
                         check_updates, update, remotes,
-                        processed_profile)
+                        processed_profile, graph_lock)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
-                              remotes, processed_profile):
+                              remotes, processed_profile, graph_lock):
 
         # The options that will be defined in the node will be the real options values that have
         # been already propagated downstream from the dependency graph. This will override any
@@ -61,7 +62,7 @@ class DepsGraphBuilder(object):
             name = require.ref.name
             require.build_require = True
             self._handle_require(name, node, require, graph, check_updates, update,
-                                 remotes, processed_profile, new_reqs, new_options)
+                                 remotes, processed_profile, new_reqs, new_options, graph_lock)
 
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
         # This is to make sure that build_requires have precedence over the normal requires
@@ -107,7 +108,7 @@ class DepsGraphBuilder(object):
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, dep_graph, node, down_reqs, down_ref, down_options,
-                   check_updates, update, remotes, processed_profile):
+                   check_updates, update, remotes, processed_profile, graph_lock):
         """ expands the dependencies of the node, recursively
 
         param node: Node object to be expanded in this step
@@ -118,6 +119,15 @@ class DepsGraphBuilder(object):
         # basic node configuration: calling configure() and requirements()
         new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref, down_options)
 
+        if graph_lock:
+            assert not check_updates and not update
+            prefs = graph_lock.dependencies(node.id)
+            for name, require in node.conanfile.requires.items():
+                # Not new unlocked dependencies at this stage
+                locked_pref, locked_id = prefs[name]
+                require.ref = locked_pref.ref
+                require._locked_id = locked_id
+
         # if there are version-ranges, resolve them before expanding each of the requirements
         self._resolve_deps(dep_graph, node, update, remotes)
 
@@ -126,10 +136,10 @@ class DepsGraphBuilder(object):
             if require.override:
                 continue
             self._handle_require(name, node, require, dep_graph, check_updates, update,
-                                 remotes, processed_profile, new_reqs, new_options)
+                                 remotes, processed_profile, new_reqs, new_options, graph_lock)
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
-                        remotes, processed_profile, new_reqs, new_options):
+                        remotes, processed_profile, new_reqs, new_options, graph_lock):
 
         if name in node.ancestors or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
@@ -170,7 +180,7 @@ class DepsGraphBuilder(object):
             # RECURSION!
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
                             new_options, check_updates, update,
-                            remotes, processed_profile)
+                            remotes, processed_profile, graph_lock)
         else:  # a public node already exist with this name
             # This is closing a diamond, the node is existing in the public_deps scope
             alias_ref = dep_graph.aliased.get(require.ref)
@@ -207,7 +217,7 @@ class DepsGraphBuilder(object):
             if self._recurse(previous.public_closure, new_reqs, new_options):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
                                 new_options, check_updates, update,
-                                remotes, processed_profile)
+                                remotes, processed_profile, graph_lock)
 
     @staticmethod
     def _conflicting_references(previous_ref, new_ref):
@@ -334,6 +344,9 @@ class DepsGraphBuilder(object):
         new_node.remote = remote
         new_node.ancestors = current_node.ancestors.copy()
         new_node.ancestors.add(current_node.name)
+        locked_id = getattr(requirement, "_locked_id", None)
+        if locked_id:
+            new_node.id = locked_id
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private, requirement.build_require)
         return new_node

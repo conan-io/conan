@@ -307,7 +307,8 @@ class Command(object):
                                       args.build, args.keep_source, args.keep_build, args.verify,
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
-                                      test_build_folder=args.test_build_folder)
+                                      test_build_folder=args.test_build_folder,
+                                      locked=args.locked)
         except ConanException as exc:
             info = exc.info
             raise
@@ -398,7 +399,8 @@ class Command(object):
                                            build=args.build, profile_names=args.profile,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
-                                           install_folder=args.install_folder)
+                                           install_folder=args.install_folder,
+                                           locked=args.locked)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -575,7 +577,8 @@ class Command(object):
                                     profile_names=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
-                                    build=args.dry_build)
+                                    build=args.dry_build,
+                                    locked=args.locked)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -1687,6 +1690,8 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
+    parser.add_argument("-l", "--locked",
+                        help="Use locked dependencies in graph_info.json")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
