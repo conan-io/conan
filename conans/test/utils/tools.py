@@ -23,6 +23,7 @@ from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
+from requests.exceptions import HTTPError
 
 from conans import tools, load
 from conans.client.cache.cache import ClientCache
@@ -108,6 +109,18 @@ class TestingResponse(object):
     @property
     def ok(self):
         return self.test_response.status_code == 200
+
+    def raise_for_status(self):
+        """Raises stored :class:`HTTPError`, if one occurred."""
+        http_error_msg = ''
+        if 400 <= self.status_code < 500:
+            http_error_msg = u'%s Client Error: %s' % (self.status_code, self.content)
+
+        elif 500 <= self.status_code < 600:
+            http_error_msg = u'%s Server Error: %s' % (self.status_code, self.content)
+
+        if http_error_msg:
+            raise HTTPError(http_error_msg, response=self)
 
     @property
     def content(self):
