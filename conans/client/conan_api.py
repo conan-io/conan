@@ -372,7 +372,7 @@ class ConanAPIV1(object):
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
             ref = new_ref.copy_clear_rev()
-            recorder.recipe_exported(ref)
+            recorder.recipe_exported(new_ref)
 
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [ref.name]
@@ -434,7 +434,7 @@ class ConanAPIV1(object):
                                  self._hook_manager, self._loader, self._cache)
             ref = new_ref.copy_clear_rev()
             # new_ref has revision
-            recorder.recipe_exported(ref)
+            recorder.recipe_exported(new_ref)
             recorder.add_recipe_being_developed(ref)
             remotes = self._cache.registry.load_remotes()
             export_pkg(self._cache, self._graph_manager, self._hook_manager, recorder,
