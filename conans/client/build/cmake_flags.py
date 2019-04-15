@@ -71,14 +71,12 @@ def get_generator_platform(settings):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
-    os_build = settings.get_safe("os")
-    os_platform = settings.get_safe("os.platform")
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
 
-    if os_build == "WindowsCE":
-        return os_platform
+    if settings.get_safe("os") == "WindowsCE":
+        return settings.get_safe("os.platform")
 
     if compiler == "Visual Studio" and Version(compiler_version) >= "16":
         return {"x86": "Win32",
