@@ -53,10 +53,10 @@ def get_generator(settings):
                     '16': '16 2019'}
         base = "Visual Studio %s" % _visuals.get(compiler_version,
                                                  "UnknownVersion %s" % compiler_version)
-        if Version(compiler_version) < "16":
+        if os_host == "Windows" and Version(compiler_version) < "16":
             if arch == "x86_64":
                 base += " Win64"
-            elif os_host != "WindowsCE" and "arm" in arch:
+            elif "arm" in arch:
                 base += " ARM"
         return base
 
