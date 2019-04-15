@@ -1692,7 +1692,7 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
-    parser.add_argument("-l", "--lock",
+    parser.add_argument("-l", "--lock", nargs="?", const=".",
                         help="Use lock dependencies in graph_info.json")
 
 

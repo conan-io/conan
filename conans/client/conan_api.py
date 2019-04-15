@@ -11,8 +11,7 @@ from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source, \
-    check_casing_conflict
+from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
@@ -366,30 +365,27 @@ class ConanAPIV1(object):
             remotes.select(remote_name)
             self.python_requires.enable_remotes(update=update, remotes=remotes)
 
-            conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-            ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                                     conanfile.channel)
+            lock_folder = _make_abs_path(lock, cwd) if lock else None
+            graph_info = get_graph_info(profile_names, settings, options, env, cwd, lock_folder,
+                                        self._cache, self._user_io.out, lock=lock)
+            graph_lock = graph_info.graph_lock if lock else None
+
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
-            # Forcing an export!
-            if not not_export:
-                check_casing_conflict(cache=self._cache, ref=ref)
-                package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
-                new_ref = cmd_export(package_layout, conanfile_path, conanfile, keep_source,
-                                     self._cache.config.revisions_enabled, self._user_io.out,
-                                     self._hook_manager)
-                # The new_ref contains the revision
-                recorder.recipe_exported(new_ref)
+            new_ref = cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                                 self._cache.config.revisions_enabled, self._user_io.out,
+                                 self._hook_manager, self._loader, self._cache, not not_export,
+                                 graph_lock=graph_lock)
+            # The new_ref contains the revision
+            # To not break existing things, that they used this ref without revision
+            ref = new_ref.copy_clear_rev()
+            recorder.recipe_exported(ref)
 
             if build_modes is None:  # Not specified, force build the tested library
-                build_modes = [conanfile.name]
+                build_modes = [ref.name]
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
-            lock_folder = _make_abs_path(lock, cwd) if lock else None
-
-            graph_info = get_graph_info(profile_names, settings, options, env, cwd, lock_folder,
-                                        self._cache, self._user_io.out, lock=lock)
 
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(ref)
@@ -397,6 +393,8 @@ class ConanAPIV1(object):
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
 
+            if lock:
+                graph_info.save(lock_folder)
             return recorder.get_info(self._cache.config.revisions_enabled)
 
         except ConanException as exc:
@@ -438,21 +436,16 @@ class ConanAPIV1(object):
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
                                         self._cache, self._user_io.out)
 
-            conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-            ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-
-            check_casing_conflict(cache=self._cache, ref=ref)
-            package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
-            new_ref = cmd_export(package_layout, conanfile_path, conanfile, False,
+            new_ref = cmd_export(conanfile_path, name, version, user, channel, True,
                                  self._cache.config.revisions_enabled, self._user_io.out,
-                                 self._hook_manager)
+                                 self._hook_manager, self._loader, self._cache)
             # new_ref has revision
             recorder.recipe_exported(new_ref)
-            recorder.add_recipe_being_developed(ref)
+            recorder.add_recipe_being_developed(new_ref)
             remotes = self._cache.registry.load_remotes()
             export_pkg(self._cache, self._graph_manager, self._hook_manager, recorder,
                        self._user_io.out,
-                       ref, source_folder=source_folder, build_folder=build_folder,
+                       new_ref, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
                        graph_info=graph_info, force=force, remotes=remotes)
             return recorder.get_info(self._cache.config.revisions_enabled)
@@ -788,21 +781,18 @@ class ConanAPIV1(object):
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None, lock=None):
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         lock_folder = _make_abs_path(lock, cwd) if lock else None
+        graph_lock = None
         if lock_folder:
             graph_info = get_graph_info(None, None, None, None, cwd, lock_folder,
                                         self._cache, self._user_io.out, lock=lock)
             graph_lock = graph_info.graph_lock
         remotes = self._cache.registry.load_remotes()
         self.python_requires.enable_remotes(remotes=remotes)
-        conanfile = self._loader.load_export(conanfile_path, name, version, user, channel)
-        ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                                 conanfile.channel)
 
-        check_casing_conflict(cache=self._cache, ref=ref)
-        package_layout = self._cache.package_layout(ref, short_paths=conanfile.short_paths)
-        cmd_export(package_layout, conanfile_path, conanfile, keep_source,
+        cmd_export(conanfile_path, name, version, user, channel, keep_source,
                    self._cache.config.revisions_enabled, self._user_io.out,
-                   self._hook_manager, graph_lock=graph_lock)
+                   self._hook_manager, self._loader, self._cache, graph_lock=graph_lock)
+
         if lock_folder:
             graph_info.save(lock_folder)
 

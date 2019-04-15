@@ -1,4 +1,4 @@
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import PackageReference
 from conans.errors import ConanException
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 
@@ -26,7 +26,7 @@ class GraphLock(object):
         # return {pkg_name: PREF}
         return {self._nodes[i].ref.name: (self._nodes[i], i) for i in self._edges[node_id]}
 
-    def _get_node(self, ref):
+    def get_node(self, ref):
         # Build a map to search by REF without REV
         inverse_map = {}
         for id_, pref in self._nodes.items():
@@ -45,17 +45,20 @@ class GraphLock(object):
         else:
             raise ConanException("There are %s binaries for ref %s" % (len(binaries), ref))
 
+    def update_ref(self, ref):
+        node_id = self.get_node(ref)
+        self._nodes[node_id] = PackageReference(ref, "Unkonwn Package ID")
+
     def find_node(self, node, reference):
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
-            node_id = self._get_node(reference)
+            node_id = self.get_node(reference)
             self._nodes[node.id] = None
-            self._nodes[node_id] = PackageReference(reference, "Unkonwn Package ID")
             self._edges[node.id] = [node_id]
             return
 
         assert node.recipe == RECIPE_CONSUMER
-        node_id = self._get_node(None)
+        node_id = self.get_node(None)
         node.id = node_id
 
     @staticmethod

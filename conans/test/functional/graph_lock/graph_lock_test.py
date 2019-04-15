@@ -27,6 +27,9 @@ class CIGraphLockTest(unittest.TestCase):
         # The consumer node is None => null in json
         self.assertNotIn("PkgB", lock_file)
         client.run("export . user/testing --lock")
+        lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
+        self.assertIn("PkgB/0.1@user/testing#180919b324d7823f2683af9381d11431:Unkonwn Package ID",
+                      lock_file)
 
     def version_ranges_lock_test(self):
         # locking a version range
@@ -58,7 +61,7 @@ class CIGraphLockTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # To use the stored graph_info.json, it has to be explicit in "--install-folder"
-        client.run("install . -g=cmake --lock=.")
+        client.run("install . -g=cmake --lock")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
         cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
@@ -66,12 +69,16 @@ class CIGraphLockTest(unittest.TestCase):
         self.assertNotIn("PkgA/0.2/user/channel", cmake)
 
         # Info also works
-        client.run("info . --lock=.")
+        client.run("info . --lock")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
         # Create is also possible
         # Updating the root in the graph-info file
-        client.run("create . PkgB/0.1@user/channel --lock=.")
+        client.run("create . PkgB/0.1@user/channel --lock")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
+
+        lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
+        self.assertIn("PkgB/0.1@user/channel#180919b324d7823f2683af9381d11431:Unkonwn Package ID",
+                      lock_file)
