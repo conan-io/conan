@@ -74,6 +74,7 @@ class CmdUpload(object):
         self._remote_manager = remote_manager
         self._loader = loader
         self._hook_manager = hook_manager
+        self._num_threads = 1
 
     def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
                all_packages=None, confirm=False, retry=0, retry_wait=0, integrity_check=False,
@@ -83,18 +84,17 @@ class CmdUpload(object):
         refs_by_remote = self._collect_packages_to_upload(refs, confirm, remotes, all_packages,
                                                           query, package_id)
         # Do the job
-        num_workers = tools.cpu_count() if parallel_upload else 1
+        self._num_threads = tools.cpu_count() if parallel_upload else 1
         for remote, refs in refs_by_remote.items():
-            self._user_io.out.info("Uploading to remote '{}' using {} thread(s):".format(remote.name,
-                                                                                         num_workers))
-            with ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
-                future_to_upload = {
-                    upload_exec.submit(self._upload_ref, conanfile, ref, prefs, retry, retry_wait,
-                                       integrity_check, policy, remote, upload_recorder,
-                                       remotes, num_workers): (ref, conanfile, prefs) for (ref,
-                                                                                           conanfile,
-                                                                                           prefs) in
-                    refs}
+            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
+            future_to_upload = {}
+            with ThreadPoolExecutor(max_workers=self._num_threads) as upload_exec:
+                for ref, conanfile, prefs in refs:
+                    future_to_upload[upload_exec.submit(self._upload_ref, conanfile, ref, prefs,
+                                                        retry, retry_wait, integrity_check,
+                                                        policy,
+                                                        remote, upload_recorder,
+                                                        remotes)] = (ref, conanfile, prefs)
 
                 for future in as_completed(future_to_upload):
                     ret = future_to_upload[future]
@@ -194,7 +194,7 @@ class CmdUpload(object):
         return refs_by_remote
 
     def _upload_ref(self, conanfile, ref, prefs, retry, retry_wait, integrity_check, policy,
-                    recipe_remote, upload_recorder, remotes, num_workers):
+                    recipe_remote, upload_recorder, remotes):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
@@ -210,7 +210,7 @@ class CmdUpload(object):
 
         # Now the binaries: upload in parallel
         future_to_upload = {}
-        with ThreadPoolExecutor(max_workers=num_workers) as upload_exec:
+        with ThreadPoolExecutor(max_workers=self._num_threads) as upload_exec:
             if prefs:
                 total = len(prefs)
                 for index, pref in enumerate(prefs):
@@ -218,9 +218,10 @@ class CmdUpload(object):
                     msg = ("Uploading package %d/%d: %s to '%s'" % (index + 1, total, str(pref.id),
                                                                     p_remote.name))
                     self._user_io.out.info(msg)
-                    future_to_upload[upload_exec.submit(self._upload_package, pref, retry,
-                                                        retry_wait, integrity_check,
-                                                        policy, p_remote)] = (pref,
+                    future_to_upload[upload_exec.submit(self._upload_package, pref, retry=retry,
+                                                        retry_wait=retry_wait,
+                                                        integrity_check=integrity_check,
+                                                        policy=policy, p_remote=p_remote)] = (pref,
                                                                               p_remote.name,
                                                                               p_remote.url)
 
@@ -531,7 +532,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         n_files = len(files)
         progress_bar = None
         if n_files > 0:
-            progress_bar = tqdm(total=len(files), desc="Compressing files...")
+            progress_bar = tqdm(total=len(files), desc="Compressing files...", unit="files")
 
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
