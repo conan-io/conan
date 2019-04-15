@@ -56,6 +56,15 @@ class DepsGraphBuilder(object):
         conanfile = node.conanfile
         scope = conanfile.display_name
         requires = [Requirement(ref) for ref in build_requires_refs]
+        if graph_lock:
+            assert not check_updates and not update
+            prefs = graph_lock.dependencies(node.id)
+            for require in requires:
+                # Not new unlocked dependencies at this stage
+                locked_pref, locked_id = prefs[require.ref.name]
+                require.ref = locked_pref.ref
+                require._locked_id = locked_id
+
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
         for require in requires:
