@@ -33,7 +33,8 @@ def get_generator(settings):
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
-    os_build, _, os_host, _ = get_cross_building_settings(settings)
+    os_build, _, _, _ = get_cross_building_settings(settings)
+    os_host = settings.get_safe("os")
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
