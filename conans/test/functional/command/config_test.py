@@ -84,3 +84,7 @@ class ConfigTest(unittest.TestCase):
         self.client.run('config rm env.MY_VAR')
         conf_file = load(self.client.cache.conan_conf_path)
         self.assertNotIn('MY_VAR', conf_file)
+
+    def missing_subarguments_test(self):
+        self.client.run("config", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
