@@ -24,13 +24,13 @@ class ForbiddenRemoveTest(unittest.TestCase):
         t.run('editable add . {}'.format(ref))
         self.assertTrue(t.cache.installed_as_editable(ref))
         t.run('remove {} --force'.format(ref), assert_error=True)
-        self.assertIn("Package 'lib/version@user/name' is installed as editable, unlink it first "
-                      "using command 'conan link lib/version@user/name --remove'", t.out)
+        self.assertIn("Package 'lib/version@user/name' is installed as editable, remove it first "
+                      "using command 'conan editable remove lib/version@user/name'", t.out)
 
         # Also with a pattern, but only a warning
         t.run('remove lib* --force')
         self.assertIn("WARN: Package 'lib/version@user/name' is installed as editable, "
-                      "unlink it first using command 'conan link lib/version@user/name --remove'",
+                      "remove it first using command 'conan editable remove lib/version@user/name'",
                       t.out)
         self.assertTrue(t.cache.installed_as_editable(ref))
 

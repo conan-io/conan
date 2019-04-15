@@ -7,10 +7,10 @@ from bottle import PluginError, request
 from conans.util.log import logger
 
 
+@six.add_metaclass(ABCMeta)
 class AuthorizationHeader(object):
     """ Generic plugin to handle Authorization header. Must be extended and implement
     some abstract methods in subclasses """
-    __metaclass__ = ABCMeta
 
     name = 'authorizationheader'
     api = 2

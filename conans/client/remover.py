@@ -101,8 +101,8 @@ class ConanRemover(object):
 
     @staticmethod
     def _message_removing_editable(ref):
-        return "Package '{r}' is installed as editable, unlink it first using " \
-               "command 'conan link {r} --remove'".format(r=ref)
+        return "Package '{r}' is installed as editable, remove it first using " \
+               "command 'conan editable remove {r}'".format(r=ref)
 
     def _local_remove(self, ref, src, build_ids, package_ids):
         if self._cache.installed_as_editable(ref):
