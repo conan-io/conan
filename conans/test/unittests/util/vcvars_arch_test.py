@@ -102,6 +102,6 @@ class VCVarsArchTest(unittest.TestCase):
         settings = Settings.loads(default_settings_yml)
         settings.os = 'WindowsCE'
         settings.compiler = 'Visual Studio'
-        settings.compiler.version = '9'
+        settings.compiler.version = '15'
         settings.arch = 'armv4i'
-        self.assertEqual('x86', tools.vcvars_arch_config(settings, 9))
+        self.assert_vcvars_command(settings, "x86")
