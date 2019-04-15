@@ -256,7 +256,9 @@ def print_progress(output, units, progress=""):
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
     for counter in range(retry):
         try:
-            return method(*args, **kwargs)
+            response = method(*args, **kwargs)
+            if response.ok or counter == (retry - 1):
+                return method(*args, **kwargs)
         except NotFoundException:
             raise
         except ConanException as exc:
