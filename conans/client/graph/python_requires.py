@@ -20,6 +20,7 @@ class ConanPythonRequire(object):
         self._check_updates = False
         self._update = False
         self._remote_name = None
+        self.locked_versions = None
 
     def enable_remotes(self, check_updates=False, update=False, remotes=None):
         self._check_updates = check_updates
@@ -39,10 +40,11 @@ class ConanPythonRequire(object):
         self._requires = old_requires
 
     def _look_for_require(self, require):
+        ref = ConanFileReference.loads(require)
+        ref = self.locked_versions[ref.name] if self.locked_versions is not None else ref
         try:
             python_require = self._cached_requires[require]
         except KeyError:
-            ref = ConanFileReference.loads(require)
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
                                          remotes=self._remotes)

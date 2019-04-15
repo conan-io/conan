@@ -190,14 +190,15 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": consumer})
         client.run("install .")
         self.assertIn("Tool/0.1@user/channel", client.out)
-        client.run("build .")
-        self.assertIn("conanfile.py: VAR=42", client.out)
         lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
         print lock_file
         self.assertIn("Tool/0.1@user/channel", lock_file)
 
+        client.run("build .")
+        self.assertIn("conanfile.py: VAR=42", client.out)
+
         # If we create a new Tool version
-        client.save({"conanfile.py": conanfile.replace("42", "24")})
+        client.save({"conanfile.py": conanfile.replace("42", "111")})
         client.run("export . Tool/0.2@user/channel")
 
         # Normal install will use it
@@ -206,15 +207,15 @@ class Pkg(ConanFile):
         client.run("install . -if=tmp")
         self.assertIn("Tool/0.2@user/channel", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py: VAR=24", client.out)
+        self.assertIn("conanfile.py: VAR=111", client.out)
 
         # Locked create will use Tool/0.1
         # Updating the root in the graph-info file
-        client.run("install . Pkg/0.1@user/channel --graph-info=.")
-        print client.out
+        client.run("install . --lock")
         lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
         print lock_file
         self.assertIn("Tool/0.1@user/channel", lock_file)
+
         client.run("create . Pkg/0.1@user/channel --graph-info=.")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)

@@ -1,4 +1,4 @@
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.errors import ConanException
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 
@@ -8,6 +8,7 @@ class GraphLock(object):
     def __init__(self, graph=None):
         self._nodes = {}  # {numeric id: PREF or None}
         self._edges = {}  # {numeric_id: [numeric_ids]}
+        self._python_requires = {}  # {numeric_id: [REFS (with RREV)]}
         if graph:
             for node in graph.nodes:
                 dependencies = []
@@ -18,9 +19,14 @@ class GraphLock(object):
                                                                          RECIPE_CONSUMER)
                                         else None)
                 self._edges[node.id] = dependencies
+                self._python_requires[node.id] = [r.ref for r in getattr(node.conanfile,
+                                                                         "python_requires", [])]
 
     def pref(self, node_id):
         return self._nodes[node_id]
+
+    def python_requires(self, node_id):
+        return self._python_requires[node_id]
 
     def dependencies(self, node_id):
         # return {pkg_name: PREF}
@@ -71,6 +77,8 @@ class GraphLock(object):
             graph_lock._nodes[id_] = PackageReference.loads(pref) if pref else None
         for id_, dependencies in data["edges"].items():
             graph_lock._edges[id_] = dependencies
+        for id_, refs in data["python_requires"].items():
+            graph_lock._python_requires[id_] = [ConanFileReference.loads(ref) for ref in refs]
         return graph_lock
 
     def as_dict(self):
@@ -80,4 +88,6 @@ class GraphLock(object):
             nodes[id_] = pref.full_repr() if pref else None
         result["nodes"] = nodes
         result["edges"] = self._edges
+        result["python_requires"] = {id_: [r.full_repr() for r in reqs]
+                                     for id_, reqs in self._python_requires.items()}
         return result
