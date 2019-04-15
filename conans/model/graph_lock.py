@@ -6,8 +6,8 @@ from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 class GraphLock(object):
 
     def __init__(self, graph=None):
-        self._nodes = {}
-        self._edges = {}
+        self._nodes = {}  # {numeric id: PREF or None}
+        self._edges = {}  # {numeric_id: [numeric_ids]}
         if graph:
             for node in graph.nodes:
                 dependencies = []
@@ -23,16 +23,18 @@ class GraphLock(object):
         return self._nodes[node_id]
 
     def dependencies(self, node_id):
+        # return {pkg_name: PREF}
         return {self._nodes[i].ref.name: (self._nodes[i], i) for i in self._edges[node_id]}
 
     def _get_node(self, ref):
+        # Build a map to search by REF without REV
         inverse_map = {}
         for id_, pref in self._nodes.items():
-            inverse_map.setdefault(str(pref.ref) if pref else None,
+            inverse_map.setdefault(pref.ref.copy_clear_rev() if pref else None,
                                    {})[pref.id if pref else None] = id_
 
         try:
-            binaries = inverse_map[str(ref) if ref else None]
+            binaries = inverse_map[ref.copy_clear_rev() if ref else None]
         except KeyError:
             binaries = inverse_map[None]
 
@@ -44,12 +46,11 @@ class GraphLock(object):
             raise ConanException("There are %s binaries for ref %s" % (len(binaries), ref))
 
     def find_node(self, node, reference):
-
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self._get_node(reference)
             self._nodes[node.id] = None
-            self._nodes[node_id] = PackageReference(reference, "UNkonwn")
+            self._nodes[node_id] = PackageReference(reference, "Unkonwn Package ID")
             self._edges[node.id] = [node_id]
             return
 

@@ -308,7 +308,7 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      locked=args.locked)
+                                      lock=args.lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -400,7 +400,7 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           locked=args.locked)
+                                           lock=args.lock)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -578,7 +578,7 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    locked=args.locked)
+                                    lock=args.lock)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -841,13 +841,15 @@ class Command(object):
                                               "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
+        parser.add_argument("-l", "--lock", nargs="?", const=".",
+                            help="Use lock dependencies in graph_info.json")
 
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source)
+                                  keep_source=args.keep_source, lock=args.lock)
 
     def remove(self, *args):
         """Removes packages or binaries matching pattern from local cache or remote.
@@ -1690,8 +1692,8 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
-    parser.add_argument("-l", "--locked",
-                        help="Use locked dependencies in graph_info.json")
+    parser.add_argument("-l", "--lock",
+                        help="Use lock dependencies in graph_info.json")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
