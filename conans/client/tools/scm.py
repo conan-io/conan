@@ -1,4 +1,3 @@
-
 import os
 import platform
 import re
@@ -8,6 +7,7 @@ from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
+from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -53,7 +53,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True).strip())
+                    return check_output(command).strip()
                 else:
                     return self._runner(command)
 
@@ -218,7 +218,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return decode_text(subprocess.check_output(command, shell=True))
+            return check_output(command)
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 

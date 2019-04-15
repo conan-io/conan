@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -19,6 +18,7 @@ import bottle
 import nose
 import requests
 import six
+import time
 from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
@@ -26,7 +26,7 @@ from webtest.app import TestApp
 
 from conans import tools, load
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import dump_registry
+from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
@@ -38,6 +38,7 @@ from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
+from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -54,8 +55,7 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir, save, save_files
-from conans.util.log import logger
+from conans.util.files import mkdir, save_files
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 ARTIFACTORY_DEFAULT_USER = "admin"
@@ -211,7 +211,6 @@ class TestRequester(object):
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
                 # translate it to data and content_type
-                import json
                 kwargs["params"] = json.dumps(kwargs["json"])
                 kwargs["content_type"] = "application/json"
             kwargs.pop("json", None)
@@ -408,7 +407,7 @@ class TestServer(object):
             if not ref.revision:
                 path = self.test_server.server_store.conan_revisions_root(ref)
             else:
-                path = self.test_server.server_store.conan(ref)
+                path = self.test_server.server_store.base_folder(ref)
             return self.test_server.server_store.path_exists(path)
         except NotFoundException:  # When resolves the latest and there is no package
             return False
@@ -520,11 +519,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = subprocess.check_output("svn info --show-item revision",
-                                              shell=True).decode().strip()
+                rev = check_output("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                output = check_output("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
@@ -636,7 +634,6 @@ class TestClient(object):
                  requester_class=None, runner=None, path_with_spaces=True,
                  revisions_enabled=None, cpu_count=1):
         """
-        storage_folder: Local storage path
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
@@ -649,11 +646,8 @@ class TestClient(object):
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
-
-        # Define storage_folder, if not, it will be read from conf file & pointed to real user home
-        self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.cache = ClientCache(self.base_folder, self.storage_folder,
-                                 TestBufferConanOutput())
+        self.cache = ClientCache(self.base_folder, TestBufferConanOutput())
+        self.storage_folder = self.cache.store
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -675,8 +669,6 @@ servers["r2"] = TestServer()
             self.update_servers()
 
         self.init_dynamic_vars()
-
-        logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def _set_revisions(self, value):
@@ -721,18 +713,18 @@ servers["r2"] = TestServer()
         self.cache.invalidate()
 
     def update_servers(self):
-        save(self.cache.registry_path, dump_registry({}, {}, {}))
+        Remotes().save(self.cache.registry_path)
         registry = self.cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, ArtifactoryServer):
-                registry.remotes.add(name, server.repo_api_url)
+                registry.add(name, server.repo_api_url)
                 self.users.update({name: [(ARTIFACTORY_DEFAULT_USER,
                                            ARTIFACTORY_DEFAULT_PASSWORD)]})
             elif isinstance(server, TestServer):
-                registry.remotes.add(name, server.fake_url)
+                registry.add(name, server.fake_url)
             else:
-                registry.remotes.add(name, server)
+                registry.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
@@ -767,7 +759,7 @@ servers["r2"] = TestServer()
 
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, self.storage_folder, output)
+        self.cache = ClientCache(self.base_folder, output)
         self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
@@ -799,8 +791,7 @@ servers["r2"] = TestServer()
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
-        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput(),
-                                           storage_folder=self.storage_folder)
+        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput())
 
         # Maybe something have changed with migrations
         return self._init_collaborators(user_io)
@@ -854,6 +845,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
+    def run_command(self, command):
+        self.all_output += str(self.out)
+        self.init_dynamic_vars() # Resets the output
+        return self.runner(command, cwd=self.current_folder)
+
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
         param files: dict{filename: filecontents}
@@ -864,6 +860,15 @@ servers["r2"] = TestServer()
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
+
+    def copy_from_assets(self, origin_folder, assets):
+        for asset in assets:
+            s = os.path.join(origin_folder, asset)
+            d = os.path.join(self.current_folder, asset)
+            if os.path.isdir(s):
+                shutil.copytree(s, d)
+            else:
+                shutil.copy2(s, d)
 
 
 class TurboTestClient(TestClient):
@@ -1000,6 +1005,11 @@ class GenConanfile(object):
         self._build_messages = []
         self._scm = {}
         self._requirements = []
+        self._revision_mode = None
+
+    def with_revision_mode(self, revision_mode):
+        self._revision_mode = revision_mode
+        return self
 
     def with_scm(self, scm):
         self._scm = scm
@@ -1049,6 +1059,13 @@ class GenConanfile(object):
         return "scm = {%s}" % line
 
     @property
+    def _revision_mode_line(self):
+        if not self._revision_mode:
+            return ""
+        line = "revision_mode=\"{}\"".format(self._revision_mode)
+        return line
+
+    @property
     def _settings_line(self):
         if not self._settings:
             return ""
@@ -1059,7 +1076,7 @@ class GenConanfile(object):
     def _options_line(self):
         if not self._options:
             return ""
-        line = ", ".join('"%s": %s' % (k, v) for k,v in self._options.items())
+        line = ", ".join('"%s": %s' % (k, v) for k, v in self._options.items())
         tmp = "options = {%s}" % line
         if self._default_options:
             line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
@@ -1112,6 +1129,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._requirements_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
+        if self._revision_mode_line:
+            ret.append("    {}".format(self._revision_mode_line))
         if self._settings_line:
             ret.append("    {}".format(self._settings_line))
         if self._options_line:

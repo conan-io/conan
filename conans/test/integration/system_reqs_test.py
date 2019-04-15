@@ -5,7 +5,6 @@ import unittest
 import six
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import SYSTEM_REQS_FOLDER
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 
@@ -152,8 +151,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        system_reqs_path = os.path.join(
-            client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)
+        system_reqs_path = os.path.dirname(client.cache.package_layout(ref).system_reqs())
 
         # create package to populate system_reqs folder
         self.assertFalse(os.path.exists(system_reqs_path))
@@ -199,8 +197,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        system_reqs_path = os.path.join(
-            client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)
+        system_reqs_path = os.path.dirname(client.cache.package_layout(ref).system_reqs())
 
         # create package to populate system_reqs folder
         self.assertFalse(os.path.exists(system_reqs_path))
@@ -223,8 +220,7 @@ class SystemReqsTest(unittest.TestCase):
         client = TestClient()
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
         client.save(files)
-        system_reqs_path = os.path.join(
-            client.cache.package_layout(ref).conan(), SYSTEM_REQS_FOLDER)
+        system_reqs_path = os.path.dirname(client.cache.package_layout(ref).system_reqs())
 
         # create package to populate system_reqs folder
         self.assertFalse(os.path.exists(system_reqs_path))

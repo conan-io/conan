@@ -84,9 +84,9 @@ def satisfying(list_versions, versionexpr, result):
 
 class RangeResolver(object):
 
-    def __init__(self, cache, remote_search):
+    def __init__(self, cache, remote_manager):
         self._cache = cache
-        self._remote_search = remote_search
+        self._remote_manager = remote_manager
         self._cached_remote_found = {}
         self._result = []
 
@@ -96,7 +96,7 @@ class RangeResolver(object):
         self._result = []
         return result
 
-    def resolve(self, require, base_conanref, update, remote_name):
+    def resolve(self, require, base_conanref, update, remotes):
         version_range = require.version_range
         if version_range is None:
             return
@@ -119,11 +119,11 @@ class RangeResolver(object):
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
 
         if update:
-            resolved_ref = (self._resolve_remote(search_ref, version_range, remote_name) or
+            resolved_ref = (self._resolve_remote(search_ref, version_range, remotes) or
                             self._resolve_local(search_ref, version_range))
         else:
             resolved_ref = (self._resolve_local(search_ref, version_range) or
-                            self._resolve_remote(search_ref, version_range, remote_name))
+                            self._resolve_remote(search_ref, version_range, remotes))
 
         if resolved_ref:
             self._result.append("Version range '%s' required by '%s' resolved to '%s'"
@@ -138,12 +138,25 @@ class RangeResolver(object):
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _resolve_remote(self, search_ref, version_range, remote_name):
+    def search_remotes(self, pattern, remotes):
+        remote = remotes.selected
+        if remote:
+            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+            return search_result
+
+        for remote in remotes.values():
+            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+            if search_result:
+                return search_result
+
+    def _resolve_remote(self, search_ref, version_range, remotes):
+        remote = remotes.selected
+        remote_name = remote.name if remote else None
         remote_cache = self._cached_remote_found.setdefault(remote_name, {})
         # We should use ignorecase=False, we want the exact case!
         remote_found = remote_cache.get(search_ref)
         if remote_found is None:
-            remote_found = self._remote_search.search_remotes(search_ref, remote_name)
+            remote_found = self.search_remotes(search_ref, remotes)
             # We don't want here to resolve the revision that should be done in the proxy
             # as any other regular flow
             remote_found = [ref.copy_clear_rev() for ref in remote_found or []]

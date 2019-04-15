@@ -64,3 +64,42 @@ class VisualStudioGeneratorTest(unittest.TestCase):
             xml.etree.ElementTree.fromstring(content)
             self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)/pkg1/include;"
                           "$(USERPROFILE)/pkg2/include;", content)
+
+    def multi_config_test(self):
+        tmp_folder = temp_folder()
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        cpp_info = CppInfo(tmp_folder)
+        cpp_info.defines = ["_WIN32_WINNT=x0501"]
+        cpp_info.debug.defines = ["_DEBUG", "DEBUG"]
+        cpp_info.release.defines = ["NDEBUG"]
+        cpp_info.custom.defines = ["CUSTOM_BUILD"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = VisualStudioGenerator(conanfile)
+
+        content = generator.content
+
+        defines_common = "<PreprocessorDefinitions>" \
+                         "_WIN32_WINNT=x0501;%(PreprocessorDefinitions)" \
+                         "</PreprocessorDefinitions>"
+        defines_debug = "<PreprocessorDefinitions>" \
+                        "_DEBUG;DEBUG;%(PreprocessorDefinitions)" \
+                        "</PreprocessorDefinitions>"
+        defines_release = "<PreprocessorDefinitions>" \
+                        "NDEBUG;%(PreprocessorDefinitions)" \
+                        "</PreprocessorDefinitions>"
+        defines_custom = "<PreprocessorDefinitions>" \
+                          "CUSTOM_BUILD;%(PreprocessorDefinitions)" \
+                          "</PreprocessorDefinitions>"
+        self.assertIn(defines_common, content)
+        self.assertIn(defines_debug, content)
+        self.assertIn(defines_release, content)
+        self.assertIn(defines_custom, content)
+
+        condition_debug = "<ItemDefinitionGroup Condition=\"'$(Configuration)' == 'debug'\">"
+        condition_release = "<ItemDefinitionGroup Condition=\"'$(Configuration)' == 'release'\">"
+        condition_custom = "<ItemDefinitionGroup Condition=\"'$(Configuration)' == 'custom'\">"
+        self.assertIn(condition_debug, content)
+        self.assertIn(condition_release, content)
+        self.assertIn(condition_custom, content)

@@ -20,7 +20,7 @@ class CacheTest(unittest.TestCase):
         tmp_dir = temp_folder()
         stream = StringIO()
         output = ConanOutput(stream)
-        self.cache = ClientCache(tmp_dir, tmp_dir, output)
+        self.cache = ClientCache(tmp_dir, output)
         self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
 
     def test_recipe_exists(self):
@@ -31,7 +31,7 @@ class CacheTest(unittest.TestCase):
         self.assertTrue(layout.recipe_exists())
 
         # But if ref has revision and it doesn't match, it doesn't exist
-        save(os.path.join(self.cache.conan(self.ref), "metadata.json"),
+        save(os.path.join(self.cache.base_folder(self.ref), "metadata.json"),
              PackageMetadata().dumps())
 
         ref2 = self.ref.copy_with_rev("revision")
@@ -51,7 +51,7 @@ class CacheTest(unittest.TestCase):
 
         mkdir(self.cache.export(self.ref))
         mkdir(self.cache.package(pref))
-        save(os.path.join(self.cache.conan(self.ref), "metadata.json"),
+        save(os.path.join(self.cache.base_folder(self.ref), "metadata.json"),
              PackageMetadata().dumps())
 
         self.assertTrue(layout.package_exists(pref))
