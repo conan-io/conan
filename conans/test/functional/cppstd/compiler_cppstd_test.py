@@ -63,6 +63,9 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         if self.recipe_cppstd:
             self.assertIn("Package 'hh/0.1@user/channel': Do not use settings 'compiler.cppstd'"
                           " together with 'cppstd'. Use only the former one.", self.t.out)
+        else:
+            # TODO: Settings are being constrained before checking...
+            pass
 
     def test_value_different_with_general_setting(self):
         deprecation_number = 1 if self.recipe_cppstd else 0
@@ -91,6 +94,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14")
+            # TODO: Settings are being constrained before checking...
 
     def test_conanfile_without_compiler_but_cppstd(self):
         conanfile = textwrap.dedent("""
@@ -113,6 +117,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                   " -s hh:compiler.cppstd=14")
         self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", t.out)
         self.assertIn(">>> cppstd: 17", t.out)
+        # TODO: Settings are being constrained before checking...
 
 
 class UseCompilerCppStdSettingTests(unittest.TestCase):
