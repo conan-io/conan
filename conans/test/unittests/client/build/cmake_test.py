@@ -694,7 +694,6 @@ class CMakeTest(unittest.TestCase):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "9"
         settings.os = "WindowsCE"
-        settings.os.version = "7.0"
         settings.os.platform = "Your platform name (ARMv4I)"
         settings.build_type = "Debug"
         check('-G "Visual Studio 9 2008" '
