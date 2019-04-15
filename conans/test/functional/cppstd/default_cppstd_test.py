@@ -41,6 +41,7 @@ class DefaultCppTestCase(unittest.TestCase):
     id_default = "d17189cfe7b11efbc5d701339a32d203745f8b81"
 
     def run(self, *args, **kwargs):
+        # Create and use a different default profile
         default_profile_path = os.path.join(temp_folder(), "default.profile")
         save(default_profile_path, self.default_profile)
         with environment_append({"CONAN_DEFAULT_PROFILE_PATH": default_profile_path}):
@@ -74,7 +75,7 @@ class DefaultCppTestCase(unittest.TestCase):
         data = json.loads(load(json_file))
         self.assertEqual(len(data), 1)
 
-        # Return ID, output and loaded conaninfo.txt file (UX)
+        # Return: ID, output
         return data[0]["id"], info_output
 
     def test_no_value(self):
