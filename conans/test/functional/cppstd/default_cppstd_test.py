@@ -14,6 +14,7 @@ import json
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.paths import CONANINFO
 from conans.model.info import ConanInfo
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class DefaultCppTestCase(unittest.TestCase):
@@ -99,14 +100,16 @@ class DefaultCppTestCase(unittest.TestCase):
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
         cppstd = cppstd_default(self.compiler, self.compiler_version)
-        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
+        with catch_deprecation_warning(self, n=2):
+            id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: gnu14", output)
         self.assertEqual(self.target_id, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
-        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
+        with catch_deprecation_warning(self, n=2):
+            id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: 14", output)
         self.assertNotEqual(self.target_id, id_with)
