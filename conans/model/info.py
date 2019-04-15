@@ -403,13 +403,13 @@ class ConanInfo(object):
             default = cppstd_default(str(self.full_settings.compiler),
                                      str(self.full_settings.compiler.version))
 
-            if self.full_settings.cppstd == default:
+            if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None
 
-            if self.full_settings.compiler.cppstd == default:
+            if str(self.full_settings.compiler.cppstd) == default:
                 # FIXME: Conan 2.0 we probably want to keep the value of cppstd (or even explicitly
                 #   assign to it the default value)
-                self.full_settings.compiler.cppstd = None
+                self.settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
         if self.full_settings.compiler.cppstd:
