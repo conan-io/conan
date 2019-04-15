@@ -432,13 +432,14 @@ class ConanAPIV1(object):
             new_ref = cmd_export(conanfile_path, name, version, user, channel, True,
                                  self._cache.config.revisions_enabled, self._user_io.out,
                                  self._hook_manager, self._loader, self._cache)
+            ref = new_ref.copy_clear_rev()
             # new_ref has revision
-            recorder.recipe_exported(new_ref)
-            recorder.add_recipe_being_developed(new_ref)
+            recorder.recipe_exported(ref)
+            recorder.add_recipe_being_developed(ref)
             remotes = self._cache.registry.load_remotes()
             export_pkg(self._cache, self._graph_manager, self._hook_manager, recorder,
                        self._user_io.out,
-                       new_ref, source_folder=source_folder, build_folder=build_folder,
+                       ref, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
                        graph_info=graph_info, force=force, remotes=remotes)
             return recorder.get_info(self._cache.config.revisions_enabled)
