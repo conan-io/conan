@@ -397,16 +397,22 @@ class ConanInfo(object):
         If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
         """
+
         if self.full_settings.compiler and \
-                self.full_settings.compiler.version and \
-                self.full_settings.compiler.cppstd:
+            self.full_settings.compiler.version:
             default = cppstd_default(str(self.full_settings.compiler),
                                      str(self.full_settings.compiler.version))
-            if default == str(self.full_settings.compiler.cppstd):
-                self.settings.compiler.cppstd = None
+
+            if self.full_settings.cppstd == default:
                 self.settings.cppstd = None
+
+            if self.full_settings.compiler.cppstd == default:
+                # FIXME: Conan 2.0 we probably want to keep the value of cppstd (or even explicitly
+                #   assign to it the default value)
+                self.full_settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
-            self.settings.cppstd = self.full_settings.compiler.cppstd
+        if self.full_settings.cppstd:
+            self.settings.cppstd = self.full_settings.cppstd

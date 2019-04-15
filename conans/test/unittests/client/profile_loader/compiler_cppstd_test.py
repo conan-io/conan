@@ -84,8 +84,11 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(compiler_cppstd="11", cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with catch_deprecation_warning(self):
-            r.process_settings(self.cache)
+        with six.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
+                                                         " together with 'cppstd'. Use only the"
+                                                         " former one."):
+            with catch_deprecation_warning(self):
+                r.process_settings(self.cache)
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertEqual(r.settings["cppstd"], "11")
 
@@ -93,8 +96,9 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(cppstd="14", compiler_cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with six.assertRaisesRegex(self, ConanException, "The specified 'compiler.cppstd=11' and"
-                                                         " 'cppstd=14' are different"):
+        with six.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
+                                                         " together with 'cppstd'. Use only the"
+                                                         " former one"):
             with catch_deprecation_warning(self):
                 r.process_settings(self.cache)
 
@@ -104,6 +108,6 @@ class SettingsCppStdTests(unittest.TestCase):
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         with catch_deprecation_warning(self):
             r.process_settings(self.cache)
-        self.assertEqual(r.settings["compiler.cppstd"], "11")
+        self.assertNotIn('cppstd', r.settings["compiler"])
         self.assertEqual(r.settings["cppstd"], "11")
 

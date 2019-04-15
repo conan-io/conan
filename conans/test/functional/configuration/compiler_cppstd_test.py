@@ -56,26 +56,24 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                       self.t.out)
 
     def test_value_different_with_scoped_setting(self):
-        deprecation_number = 1 if self.recipe_cppstd else 0
-        with catch_deprecation_warning(self, n=deprecation_number):
-            self.t.run("create . hh/0.1@user/channel"
-                       " -s hh:cppstd=11"
-                       " -s hh:compiler=gcc"
-                       " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
+        self.t.run("create . hh/0.1@user/channel"
+                   " -s hh:cppstd=11"
+                   " -s hh:compiler=gcc"
+                   " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
         if self.recipe_cppstd:
-            self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
-                          " 'cppstd=11' are different", self.t.out)
+            self.assertIn("Package 'hh/0.1@user/channel': Do not use settings 'compiler.cppstd'"
+                          " together with 'cppstd'. Use only the former one.", self.t.out)
 
     def test_value_different_with_general_setting(self):
-        deprecation_number = 2 if self.recipe_cppstd else 0
+        deprecation_number = 1 if self.recipe_cppstd else 0
         with catch_deprecation_warning(self, n=deprecation_number):
             self.t.run("create . hh/0.1@user/channel"
                        " -s cppstd=17"
                        " -s hh:compiler=gcc"
                        " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
         if self.recipe_cppstd:
-            self.assertIn("Package 'hh/0.1@user/channel': The specified 'compiler.cppstd=14' and"
-                          " 'cppstd=17' are different", self.t.out)
+            self.assertIn("Package 'hh/0.1@user/channel': Do not use settings 'compiler.cppstd'"
+                          " together with 'cppstd'. Use only the former one.", self.t.out)
 
     def test_conanfile_without_compiler(self):
         conanfile = textwrap.dedent("""
@@ -139,13 +137,12 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
         self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
                       " please update your recipe.", self.t.out)
 
-    @parameterized.expand([(True, ), (False, )])
-    def test_use_cppstd(self, compiler_setting):
-        settings_str = "-s cppstd=14 -s compiler.cppstd=14" if compiler_setting else "-s cppstd=14"
+    def test_only_cppstd(self):
         with catch_deprecation_warning(self, n=2):
-            self.t.run("info . {}".format(settings_str))
+            self.t.run("info . -s cppstd=14")
+        self.assertNotIn(">>> compiler.cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: 14", self.t.out)
-        self.assertIn(">>> compiler.cppstd: 14", self.t.out)
+        self.assertIn(">>> compiler.cppstd: None", self.t.out)
 
     def test_only_compiler_cppstd(self):
         """ settings.cppstd is available only if declared explicitly (otherwise it is deprecated) """
@@ -153,3 +150,10 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
         self.assertNotIn(">>> cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: None", self.t.out)
         self.assertIn(">>> compiler.cppstd: 14", self.t.out)
+
+    def test_both(self):
+        settings_str = "-s cppstd=14 -s compiler.cppstd=14"
+        self.t.run("info . {}".format(settings_str), assert_error=True)
+        self.assertIn("Do not use settings 'compiler.cppstd' together with 'cppstd'."
+                      " Use only the former one.", self.t.out)
+

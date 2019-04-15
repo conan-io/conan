@@ -87,7 +87,7 @@ class DefaultCppTestCase(unittest.TestCase):
 
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
-        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})
+        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})  # TODO: It doesn't with value None!
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
         self.assertEqual(self.target_id, id_with)
