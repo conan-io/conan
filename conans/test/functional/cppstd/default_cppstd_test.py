@@ -1,20 +1,15 @@
 # coding=utf-8
 
+import json
 import os
 import textwrap
 import unittest
 
-from parameterized import parameterized
-from parameterized.parameterized import parameterized_class
-
+from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.tools import environment_append, save, load
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-import json
-from conans.client.build.cppstd_flags import cppstd_default
-from conans.paths import CONANINFO
-from conans.model.info import ConanInfo
-from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class DefaultCppTestCase(unittest.TestCase):
