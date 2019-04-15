@@ -39,6 +39,7 @@ class Node(object):
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         self.public_closure = None  # {ref.name: Node}
+        self.acc_closure = None
         self.ancestors = None  # set{ref.name}
 
     def update_ancestors(self, ancestors):
@@ -88,6 +89,12 @@ class Node(object):
 
     def private_neighbors(self):
         return [edge.dst for edge in self.dependencies if edge.private]
+
+    def make_public(self):
+        self.private = False
+        for edge in self.dependencies:
+            if not edge.private:
+                edge.dst.make_public()
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]

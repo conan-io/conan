@@ -248,7 +248,8 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(liba_ref2, TestConanFile("liba", "0.2"))
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
-        with six.assertRaisesRegex(self, ConanException, "Requirement liba/0.2@user/testing conflicts"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Requirement liba/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libb_ref, libc_ref]))
 
     def test_loop(self):
@@ -261,7 +262,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[libb_ref]))
         with six.assertRaisesRegex(self, ConanException, "Loop detected: 'liba/0.1@user/testing' "
-                                     "requires 'libc/0.1@user/testing'"):
+                                   "requires 'libc/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
 
     def test_self_loop(self):
@@ -269,7 +270,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(ref1, TestConanFile("base", "0.1"))
         ref = ConanFileReference.loads("base/aaa@user/testing")
         with six.assertRaisesRegex(self, ConanException, "Loop detected: 'base/aaa@user/testing' "
-                                     "requires 'base/aaa@user/testing'"):
+                                   "requires 'base/aaa@user/testing'"):
             self.build_graph(TestConanFile("base", "aaa", requires=[ref1]), ref=ref, create_ref=ref)
 
     @parameterized.expand([("recipe", ), ("profile", )])
@@ -326,7 +327,7 @@ class TransitiveGraphTest(GraphManagerTest):
                            TestConanFile("lib", "0.1",
                                          build_requires=["tool/0.1@user/testing"]))
         with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
-                                     "requires 'lib/0.1@user/testing'"):
+                                   "requires 'lib/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
     def test_transitive_build_require_recipe_profile(self):
@@ -378,7 +379,8 @@ class TransitiveGraphTest(GraphManagerTest):
                            TestConanFile("lib", "0.1", requires=[zlib_ref],
                                          build_requires=["gtest/0.1@user/testing"]))
 
-        with six.assertRaisesRegex(self, ConanException, "Requirement zlib/0.2@user/testing conflicts"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Requirement zlib/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
     def test_not_conflict_transitive_build_requires(self):
@@ -461,7 +463,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                          build_requires=["gtest/0.1@user/testing"]))
 
         with six.assertRaisesRegex(self, ConanException,
-                                     "tried to change zlib/0.1@user/testing option shared to True"):
+                                   "tried to change zlib/0.1@user/testing option shared to True"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
     def test_consecutive_diamonds_build_requires(self):
@@ -616,7 +618,8 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(liba_ref2, TestConanFile("liba", "0.2"))
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref2]))
-        with six.assertRaisesRegex(self, ConanException, "Requirement liba/0.2@user/testing conflicts"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Requirement liba/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("app", "0.1", private_requires=[libb_ref, libc_ref]))
 
     def test_loop_private(self):
@@ -629,7 +632,7 @@ class TransitiveGraphTest(GraphManagerTest):
                            TestConanFile("lib", "0.1",
                                          private_requires=["tool/0.1@user/testing"]))
         with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
-                                     "requires 'lib/0.1@user/testing'"):
+                                   "requires 'lib/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=[lib_ref]))
 
     def test_build_require_private(self):
@@ -716,3 +719,40 @@ class TransitiveGraphTest(GraphManagerTest):
                          public_deps=[cheetah, gazelle, grass])
         self.assertEqual(cheetah.conanfile.deps_cpp_info.libs,
                          ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+
+    @parameterized.expand([(True, ), (False, )])
+    def test_dont_skip_private(self, private_first):
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
+
+        libc = TestConanFile("libc", "0.1", requires=[libb_ref],
+                             private_requires=[liba_ref], private_first=private_first)
+        self._cache_recipe(libc_ref, libc)
+
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        if private_first:
+            liba = libc.dependencies[0].dst
+            libb = libc.dependencies[1].dst
+            liba2 = libb.dependencies[0].dst
+        else:
+            libb = libc.dependencies[0].dst
+            liba = libb.dependencies[0].dst
+            liba2 = libc.dependencies[1].dst
+
+        self.assertIs(liba, liba2)
+        self.assertFalse(liba.private)
+
+        main_public_deps = [app, libb, liba, libc]
+        self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
+                         closure=[libc, libb, liba], public_deps=main_public_deps)
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba], build_deps=[],
+                         dependents=[app], closure=[libb, liba],
+                         public_deps=main_public_deps)
