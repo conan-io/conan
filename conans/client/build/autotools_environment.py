@@ -65,7 +65,7 @@ class AutoToolsBuildEnvironment(object):
         self.build, self.host, self.target = self._get_host_build_target_flags()
 
     def _configure_fpic(self):
-        if str(self._os) not in ["Windows", "WindowsStore"]:
+        if not str(self._os).startswith("Windows"):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
