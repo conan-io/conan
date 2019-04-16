@@ -1203,7 +1203,9 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["watchOS", "armv7k", None, "arm-apple-darwin"],
         ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
         ["tvOS", "armv8", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"]
+        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
+        ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
+        ["Emscripten", "wasm", None, "wasm32-local-emscripten"]
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
