@@ -35,12 +35,13 @@ class Node(object):
         self.build_require = False
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
-        # all the public deps to which this node belongs
+
+        # The dependencies that can conflict to downstream consumers
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
+        # The dependencies that will be part of deps_cpp_info, can't conflict
         self.public_closure = None  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
-        self.acc_closure = None
         self.ancestors = None  # set{ref.name}
 
     def update_ancestors(self, ancestors):

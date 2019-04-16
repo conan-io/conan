@@ -28,9 +28,8 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
         name = root_node.name
-        root_node.public_deps = {name: root_node}
         root_node.public_closure = OrderedDict([(name, root_node)])
-        root_node.acc_closure = {name: root_node}
+        root_node.public_deps = {name: root_node}
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -134,7 +133,7 @@ class DepsGraphBuilder(object):
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
-        previous = node.acc_closure.get(name)
+        previous = node.public_deps.get(name)
         previous_closure = node.public_closure.get(name)
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
@@ -147,36 +146,30 @@ class DepsGraphBuilder(object):
             new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
             node.public_closure[name] = new_node
             new_node.inverse_closure.add(node)
-            node.acc_closure[new_node.name] = new_node
+            node.public_deps[new_node.name] = new_node
 
             # New nodes will inherit the private property of its ancestor
             new_node.private = node.private or require.private
             if require.private or require.build_require:
                 # If the requirement is private (or build_require), a new public scope is defined
-                new_node.public_deps = node.public_closure
-                new_node.acc_closure = node.public_closure.copy()
-                new_node.acc_closure[name] = new_node
+                new_node.public_deps = node.public_closure.copy()
+                new_node.public_deps[name] = new_node
             else:
-                new_node.acc_closure = node.acc_closure.copy()
-                new_node.acc_closure[name] = new_node
-                # But if it is a normal require, the public_deps scope is the same as its parent
-                new_node.public_deps = node.public_deps
-
-                # add this new node to the public deps
-                node.public_deps[name] = new_node
+                new_node.public_deps = node.public_deps.copy()
+                new_node.public_deps[name] = new_node
 
                 # Update the closure of each dependent
                 for dep_node in node.inverse_closure:
                     dep_node.public_closure[new_node.name] = new_node
                     new_node.inverse_closure.add(dep_node)
-                    dep_node.acc_closure[new_node.name] = new_node
+                    dep_node.public_deps[new_node.name] = new_node
 
             # RECURSION!
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
                             new_options, check_updates, update,
                             remote_name, processed_profile)
         else:  # a public node already exist with this name
-            # This is closing a diamond, the node is existing in the public_deps scope
+            # This is closing a diamond, the node is existing in the scope
             alias_ref = dep_graph.aliased.get(require.ref)
             # Necessary to make sure that it is pointing to the correct aliased
             if alias_ref:
@@ -200,7 +193,6 @@ class DepsGraphBuilder(object):
             node.public_closure[name] = previous
             previous.inverse_closure.add(node)
             node.public_deps[name] = previous
-            node.acc_closure[name] = previous
             dep_graph.add_edge(node, previous, require.private, require.build_require)
             # Update the closure of each dependent
             for name, n in previous.public_closure.items():
@@ -210,7 +202,7 @@ class DepsGraphBuilder(object):
                 n.inverse_closure.add(node)
                 for dep_node in node.inverse_closure:
                     dep_node.public_closure[name] = n
-                    dep_node.acc_closure[name] = n
+                    dep_node.public_deps[name] = n
                     n.inverse_closure.add(dep_node)
 
             # RECURSION!

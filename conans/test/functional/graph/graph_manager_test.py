@@ -59,11 +59,11 @@ class TransitiveGraphTest(GraphManagerTest):
 
         # No Revision??? Because of consumer?
         self._check_node(app, "app/0.1@None/None", deps=[libb], build_deps=[], dependents=[],
-                         closure=[libb, liba], public_deps=[app, libb, liba])
+                         closure=[libb, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=[app, libb, liba])
+                         dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb], closure=[], public_deps=[app, libb, liba])
+                         dependents=[libb], closure=[])
 
     def test_diamond(self):
         # app -> libb0.1 -> liba0.1
@@ -84,13 +84,13 @@ class TransitiveGraphTest(GraphManagerTest):
 
         # No Revision??? Because of consumer?
         self._check_node(app, "app/0.1@None/None", deps=[libb, libc], build_deps=[], dependents=[],
-                         closure=[libb, libc, liba], public_deps=[app, libb, libc, liba])
+                         closure=[libb, libc, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=[app, libb, libc, liba])
+                         dependents=[app], closure=[liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=[app, libb, libc, liba])
+                         dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc], closure=[], public_deps=[app, libb, libc, liba])
+                         dependents=[libb, libc], closure=[])
 
     def test_consecutive_diamonds(self):
         # app -> libe0.1 -> libd0.1 -> libb0.1 -> liba0.1
@@ -118,24 +118,20 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        public_deps = [app, libb, libc, liba, libd, libe, libf]
         self._check_node(app, "app/0.1@None/None", deps=[libe, libf], build_deps=[], dependents=[],
-                         closure=[libe, libf, libd, libb, libc, liba], public_deps=public_deps)
+                         closure=[libe, libf, libd, libb, libc, liba])
         self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[app], closure=[libd, libb, libc, liba],
-                         public_deps=public_deps)
+                         dependents=[app], closure=[libd, libb, libc, liba])
         self._check_node(libf, "libf/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[app], closure=[libd, libb, libc, liba],
-                         public_deps=public_deps)
+                         dependents=[app], closure=[libd, libb, libc, liba])
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb, libc], build_deps=[],
-                         dependents=[libe, libf], closure=[libb, libc, liba],
-                         public_deps=public_deps)
+                         dependents=[libe, libf], closure=[libb, libc, liba])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[libd], closure=[liba], public_deps=public_deps)
+                         dependents=[libd], closure=[liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[libd], closure=[liba], public_deps=public_deps)
+                         dependents=[libd], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc], closure=[], public_deps=public_deps)
+                         dependents=[libb, libc], closure=[])
 
     def test_parallel_diamond(self):
         # app -> libb0.1 -> liba0.1
@@ -159,17 +155,16 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        public_deps = [app, libb, libc, liba, libd]
         self._check_node(app, "app/0.1@None/None", deps=[libb, libc, libd], build_deps=[],
-                         dependents=[], closure=[libb, libc, libd, liba], public_deps=public_deps)
+                         dependents=[], closure=[libb, libc, libd, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
+                         dependents=[app], closure=[liba])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
+                         dependents=[app], closure=[liba])
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
+                         dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc, libd], closure=[], public_deps=public_deps)
+                         dependents=[libb, libc, libd], closure=[])
 
     def test_nested_diamond(self):
         # app --------> libb0.1 -> liba0.1
@@ -193,17 +188,16 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        public_deps = [app, libb, libc, liba, libd]
         self._check_node(app, "app/0.1@None/None", deps=[libb, libc, libd], build_deps=[],
-                         dependents=[], closure=[libb, libd, libc, liba], public_deps=public_deps)
+                         dependents=[], closure=[libb, libd, libc, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
+                         dependents=[app], closure=[liba])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app, libd], closure=[liba], public_deps=public_deps)
+                         dependents=[app, libd], closure=[liba])
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[libc], build_deps=[],
-                         dependents=[app], closure=[libc, liba], public_deps=public_deps)
+                         dependents=[app], closure=[libc, liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc], closure=[], public_deps=public_deps)
+                         dependents=[libb, libc], closure=[])
 
     def test_multiple_transitive(self):
         # https://github.com/conanio/conan/issues/4720
@@ -226,16 +220,14 @@ class TransitiveGraphTest(GraphManagerTest):
         libb = liba.dependencies[2].dst
 
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[liba, libc], closure=[], public_deps=[liba, libb, libc, libd])
+                         dependents=[liba, libc], closure=[])
         self._check_node(liba, "liba/0.1@None/None", deps=[libd, libc, libb], build_deps=[],
                          dependents=[],
-                         closure=[libb, libc, libd], public_deps=[liba, libb, libc, libd])
+                         closure=[libb, libc, libd])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[libc], build_deps=[],
-                         dependents=[liba], closure=[libc, libd],
-                         public_deps=[liba, libb, libc, libd])
+                         dependents=[liba], closure=[libc, libd])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[liba, libb], closure=[libd],
-                         public_deps=[liba, libb, libc, libd])
+                         dependents=[liba, libb], closure=[libd])
 
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
@@ -291,9 +283,9 @@ class TransitiveGraphTest(GraphManagerTest):
         tool = app.dependencies[0].dst
 
         self._check_node(app, "app/0.1@None/None", deps=[], build_deps=[tool], dependents=[],
-                         closure=[tool], public_deps=[app])
+                         closure=[tool])
         self._check_node(tool, "tool/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[app], closure=[], public_deps=[tool, app])
+                         dependents=[app], closure=[])
 
     def test_transitive_build_require_recipe(self):
         # app -> lib -(br)-> tool
@@ -310,13 +302,11 @@ class TransitiveGraphTest(GraphManagerTest):
         tool = lib.dependencies[0].dst
 
         self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
-                         closure=[lib], public_deps=[app, lib])
-
+                         closure=[lib])
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[tool],
-                         dependents=[app], closure=[tool], public_deps=[app, lib])
-
+                         dependents=[app], closure=[tool])
         self._check_node(tool, "tool/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[lib], closure=[], public_deps=[tool, lib])
+                         dependents=[lib], closure=[])
 
     def test_loop_build_require(self):
         # app -> lib -(br)-> tool ->|
@@ -353,19 +343,19 @@ class TransitiveGraphTest(GraphManagerTest):
         mingw_app = app.dependencies[1].dst
 
         self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[mingw_app], dependents=[],
-                         closure=[mingw_app, lib], public_deps=[app, lib])
+                         closure=[mingw_app, lib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[mingw_lib, gtest],
-                         dependents=[app], closure=[mingw_lib, gtest], public_deps=[app, lib])
+                         dependents=[app], closure=[mingw_lib, gtest])
         self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[mingw_gtest],
-                         dependents=[lib], closure=[mingw_gtest], public_deps=[gtest, lib])
+                         dependents=[lib], closure=[mingw_gtest])
         # MinGW leaf nodes
         self._check_node(mingw_gtest, "mingw/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[gtest], closure=[], public_deps=[mingw_gtest, gtest])
+                         dependents=[gtest], closure=[])
         self._check_node(mingw_lib, "mingw/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[lib], closure=[], public_deps=[mingw_lib, gtest, lib])
+                         dependents=[lib], closure=[])
         self._check_node(mingw_app, "mingw/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[app], closure=[], public_deps=[mingw_app, lib, app])
+                         dependents=[app], closure=[])
 
     def test_conflict_transitive_build_requires(self):
         zlib_ref = "zlib/0.1@user/testing"
@@ -405,13 +395,13 @@ class TransitiveGraphTest(GraphManagerTest):
         gtest = lib.dependencies[1].dst
         zlib2 = gtest.dependencies[0].dst
         self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
-                         closure=[lib, zlib], public_deps=[app, lib, zlib])
+                         closure=[lib, zlib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], build_deps=[gtest],
-                         dependents=[app], closure=[gtest, zlib], public_deps=[app, lib, zlib])
+                         dependents=[app], closure=[gtest, zlib])
 
         self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[zlib2],
-                         dependents=[lib], closure=[zlib2], public_deps=[gtest, lib, zlib])
+                         dependents=[lib], closure=[zlib2])
 
     def test_diamond_no_option_conflict_build_requires(self):
         # Same as above, but gtest->(build_require)->zlib2
@@ -438,13 +428,13 @@ class TransitiveGraphTest(GraphManagerTest):
         zlib2 = gtest.dependencies[0].dst
         self.assertIs(zlib, zlib2)
         self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
-                         closure=[lib, zlib], public_deps=[app, lib, zlib])
+                         closure=[lib, zlib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], build_deps=[gtest],
-                         dependents=[app], closure=[gtest, zlib], public_deps=[app, lib, zlib])
+                         dependents=[app], closure=[gtest, zlib])
 
         self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[zlib2], build_deps=[],
-                         dependents=[lib], closure=[zlib2], public_deps=[gtest, lib, zlib])
+                         dependents=[lib], closure=[zlib2])
 
     def test_diamond_option_conflict_build_requires(self):
         # Same as above, but gtest->(build_require)->zlib2
@@ -494,30 +484,20 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        public_deps = [app, libb, liba, libd, libe]
         self._check_node(app, "app/0.1@None/None", deps=[libe], build_deps=[libf], dependents=[],
-                         closure=[libf, libe, libd, libb, liba], public_deps=public_deps)
+                         closure=[libf, libe, libd, libb, liba])
         self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[app], closure=[libd, libb, liba],
-                         public_deps=public_deps)
-
-        public_deps = [app, libb, liba, libd, libe, libf]
+                         dependents=[app], closure=[libd, libb, liba])
         self._check_node(libf, "libf/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[app], closure=[libd, libb, liba],
-                         public_deps=public_deps)
-
-        public_deps = [app, libb, liba, libd, libe]
+                         dependents=[app], closure=[libd, libb, liba])
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb], build_deps=[libc],
-                         dependents=[libe, libf], closure=[libc, libb, liba],
-                         public_deps=public_deps)
-        public_deps = [libd, libb, libc, liba]
+                         dependents=[libe, libf], closure=[libc, libb, liba])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[libd], closure=[liba], public_deps=public_deps)
-        public_deps = [app, libb, liba, libd, libe]
+                         dependents=[libd], closure=[liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[libd], closure=[liba], public_deps=public_deps)
+                         dependents=[libd], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc], closure=[], public_deps=public_deps)
+                         dependents=[libb, libc], closure=[])
 
     def test_consecutive_diamonds_private(self):
         # app -> libe0.1 -------------> libd0.1 -> libb0.1 -------------> liba0.1
@@ -547,30 +527,21 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        main_public_deps = [app, libb, liba, libd, libe]
         self._check_node(app, "app/0.1@None/None", deps=[libe, libf], build_deps=[], dependents=[],
-                         closure=[libe, libf, libd, libb, liba], public_deps=main_public_deps)
+                         closure=[libe, libf, libd, libb, liba], )
         self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[app], closure=[libd, libb, liba],
-                         public_deps=main_public_deps)
+                         dependents=[app], closure=[libd, libb, liba])
 
-        libf_public_deps = [libb, liba, libd, libe, libf]
         self._check_node(libf, "libf/0.1@user/testing#123", deps=[libd], build_deps=[],
-                         dependents=[app], closure=[libd, libb, liba],
-                         public_deps=libf_public_deps)
-
+                         dependents=[app], closure=[libd, libb, liba])
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[libb, libc], build_deps=[],
-                         dependents=[libe, libf], closure=[libb, libc, liba],
-                         public_deps=main_public_deps)
-
-        libc_public_deps = [libb, libc, liba]
+                         dependents=[libe, libf], closure=[libb, libc, liba])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[libd], closure=[liba], public_deps=libc_public_deps)
-
+                         dependents=[libd], closure=[liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[libd], closure=[liba], public_deps=main_public_deps)
+                         dependents=[libd], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc], closure=[], public_deps=main_public_deps)
+                         dependents=[libb, libc], closure=[])
 
     def test_parallel_diamond_build_requires(self):
         # app --------> libb0.1 ---------> liba0.1
@@ -595,19 +566,16 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        public_deps = [app, libb, libc, liba]
         self._check_node(app, "app/0.1@None/None", deps=[libb, libc], build_deps=[libd],
-                         dependents=[], closure=[libd, libb, libc, liba], public_deps=public_deps)
+                         dependents=[], closure=[libd, libb, libc, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
+                         dependents=[app], closure=[liba])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
-        public_deps = [app, libd, libb, libc, liba]
+                         dependents=[app], closure=[liba])
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[liba], build_deps=[],
-                         dependents=[app], closure=[liba], public_deps=public_deps)
-        public_deps = [app, libb, libc, liba]
+                         dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[libb, libc, libd], closure=[], public_deps=public_deps)
+                         dependents=[libb, libc, libd], closure=[])
 
     def test_conflict_private(self):
         liba_ref = "liba/0.1@user/testing"
@@ -654,16 +622,16 @@ class TransitiveGraphTest(GraphManagerTest):
         zlib = tool.dependencies[0].dst
 
         self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
-                         closure=[lib], public_deps=[app, lib])
+                         closure=[lib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[tool],
-                         dependents=[app], closure=[tool], public_deps=[app, lib])
+                         dependents=[app], closure=[tool])
 
         self._check_node(tool, "tool/0.1@user/testing#123", deps=[zlib], build_deps=[],
-                         dependents=[lib], closure=[zlib], public_deps=[tool, lib])
+                         dependents=[lib], closure=[zlib])
 
         self._check_node(zlib, "zlib/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[tool], closure=[], public_deps=[zlib])
+                         dependents=[tool], closure=[])
 
     def test_transitive_private_conflict(self):
         # https://github.com/conan-io/conan/issues/4931
@@ -715,8 +683,7 @@ class TransitiveGraphTest(GraphManagerTest):
         grass2 = cheetah.dependencies[1].dst
 
         self._check_node(cheetah, "cheetah/0.1@None/None", deps=[gazelle], build_deps=[grass2],
-                         dependents=[], closure=[gazelle, grass],
-                         public_deps=[cheetah, gazelle, grass])
+                         dependents=[], closure=[gazelle, grass])
         self.assertEqual(cheetah.conanfile.deps_cpp_info.libs,
                          ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
 
@@ -750,12 +717,10 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertIs(liba, liba2)
         self.assertFalse(liba.private)
 
-        main_public_deps = [app, libb, liba, libc]
         self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
-                         closure=[libc, libb, liba], public_deps=main_public_deps)
+                         closure=[libc, libb, liba], )
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba], build_deps=[],
-                         dependents=[app], closure=[libb, liba],
-                         public_deps=main_public_deps)
+                         dependents=[app], closure=[libb, liba])
 
     @parameterized.expand([(True, ), (False, )])
     def test_dont_conflict_private(self, private_first):
@@ -787,10 +752,8 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertTrue(liba1.private)
         self.assertTrue(liba2.private)
 
-        main_public_deps = [app, libb, libc]
         self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
-                         closure=[libc, libb], public_deps=main_public_deps)
+                         closure=[libc, libb])
         closure = [liba2, libb] if private_first else [libb, liba2]
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba2], build_deps=[],
-                         dependents=[app], closure=closure,
-                         public_deps=[app, libb, libc])
+                         dependents=[app], closure=closure)
