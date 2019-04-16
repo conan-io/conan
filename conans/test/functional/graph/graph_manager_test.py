@@ -721,6 +721,10 @@ class TransitiveGraphTest(GraphManagerTest):
                          closure=[libc, libb, liba], )
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba], build_deps=[],
                          dependents=[app], closure=[libb, liba])
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libc], closure=[liba])
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libc, libb], closure=[])
 
     @parameterized.expand([(True, ), (False, )])
     def test_dont_conflict_private(self, private_first):
@@ -757,3 +761,38 @@ class TransitiveGraphTest(GraphManagerTest):
         closure = [liba2, libb] if private_first else [libb, liba2]
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba2], build_deps=[],
                          dependents=[app], closure=closure)
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba1], build_deps=[],
+                         dependents=[libc], closure=[liba1])
+        self._check_node(liba1, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb], closure=[])
+        self._check_node(liba2, "liba/0.2@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libc], closure=[])
+
+    def consecutive_private(self):
+        liba_ref = "liba/0.1@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", private_requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", private_requires=[libb_ref]))
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self.assertTrue(liba.private)
+        self.assertTrue(libb.private)
+        self.assertFalse(libc.private)
+
+        self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
+                         closure=[libc])
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb], build_deps=[],
+                         dependents=[app], closure=[libb])
+        self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
+                         dependents=[libc], closure=[liba])
+        self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[libb], closure=[])
