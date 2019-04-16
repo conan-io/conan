@@ -27,9 +27,6 @@ class DeployGeneratorTest(unittest.TestCase):
                 self.copy("*.h", dst="include")
                 self.copy("*.lib", dst="my_libs")
                 self.copy("*.config")
-                
-            def package_info(self):
-                self.cpp_info.libdirs = ["my_libs"]
         """)
 
         self.client = TestClient()
@@ -44,11 +41,9 @@ class DeployGeneratorTest(unittest.TestCase):
     def deploy_folder_path_test(self):
         base_path = os.path.join(self.client.current_folder, "name")
         expected_include_path = os.path.join(base_path, "include")
-        expected_lib_path = os.path.join(base_path, "lib")
-        expected_build_path = os.path.join(base_path, "build")
+        expected_lib_path = os.path.join(base_path, "my_libs")
         self.assertTrue(os.path.exists(expected_include_path))
         self.assertTrue(os.path.exists(expected_lib_path))
-        self.assertTrue(os.path.exists(expected_build_path))
 
     def deploy_manifest_path_test(self):
         expected_manifest_path = os.path.join(self.client.current_folder, "deploy_manifest.txt")
@@ -57,8 +52,8 @@ class DeployGeneratorTest(unittest.TestCase):
     def deploy_manifest_content_test(self):
         base_path = os.path.join(self.client.current_folder, "name")
         header_path = os.path.join(base_path, "include", "header.h")
-        lib_path = os.path.join(base_path, "lib", "file.lib")
-        config_path = os.path.join(base_path, "build", "file.config")
+        lib_path = os.path.join(base_path, "my_libs", "file.lib")
+        config_path = os.path.join(base_path, "file.config")
         manifest_path = os.path.join(self.client.current_folder, "deploy_manifest.txt")
         content = load(manifest_path)
         self.assertIn(header_path, content)
@@ -78,7 +73,7 @@ class DeployGeneratorTest(unittest.TestCase):
             self.assertNotIn(name, content)
 
 
-class DeployGeneratorTest(unittest.TestCase):
+class DeployGeneratorGraphTest(unittest.TestCase):
     """
     Deploy generator set of tests with more than one package in the graph
     """
@@ -94,9 +89,6 @@ class DeployGeneratorTest(unittest.TestCase):
                 self.copy("*.h", dst="include")
                 self.copy("*.lib", dst="my_libs")
                 self.copy("*.config")
-
-            def package_info(self):
-                self.cpp_info.libdirs = ["my_libs"]
         """)
         self.client = TestClient()
         self.client.save({"conanfile.py": conanfile1,
@@ -116,11 +108,6 @@ class DeployGeneratorTest(unittest.TestCase):
                 self.copy("*.h", dst="include_files")
                 self.copy("*.lib", dst="my_other_libs")
                 self.copy("*.config", dst="build")
-
-            def package_info(self):
-                self.cpp_info.includedirs = ["include_files"]
-                self.cpp_info.libdirs = ["my_other_libs"]
-                self.cpp_info.builddirs = ["build"]
         """)
         self.client.save({"conanfile.py": conanfile2,
                           "header2.h": "",
@@ -133,12 +120,12 @@ class DeployGeneratorTest(unittest.TestCase):
     def get_expected_paths(self):
         base1_path = os.path.join(self.client.current_folder, "name1")
         header1_path = os.path.join(base1_path, "include", "header1.h")
-        lib1_path = os.path.join(base1_path, "lib", "file1.lib")
-        config1_path = os.path.join(base1_path, "build", "file1.config")
+        lib1_path = os.path.join(base1_path, "my_libs", "file1.lib")
+        config1_path = os.path.join(base1_path, "file1.config")
 
         base2_path = os.path.join(self.client.current_folder, "name2")
-        header2_path = os.path.join(base2_path, "include", "header2.h")
-        lib2_path = os.path.join(base2_path, "lib", "file2.lib")
+        header2_path = os.path.join(base2_path, "include_files", "header2.h")
+        lib2_path = os.path.join(base2_path, "my_other_libs", "file2.lib")
         config2_path = os.path.join(base2_path, "build", "file2.config")
 
         return [header1_path, lib1_path, config1_path, header2_path, lib2_path, config2_path]
@@ -146,7 +133,6 @@ class DeployGeneratorTest(unittest.TestCase):
     def deploy_manifest_content_test(self):
         manifest_path = os.path.join(self.client.current_folder, "deploy_manifest.txt")
         content = load(manifest_path)
-        print(content)
         for path in self.get_expected_paths():
             self.assertIn(path, content)
 

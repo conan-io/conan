@@ -13,21 +13,6 @@ from conans.util.files import mkdir, md5sum
 
 
 class DeployGenerator(Generator):
-    directory_dict = OrderedDict({"include_paths": "include",
-                                  "src_paths": "src",
-                                  "lib_paths": "lib",
-                                  "res_paths": "res",
-                                  "build_paths": "build"
-                                  })
-
-    @staticmethod
-    def files(path):
-        for file in os.listdir(path):
-            if os.path.isfile(os.path.join(path, file)):
-                yield file
-
-    def to_directory_dir_name(self, directory_path_name):
-        return self.directory_dict.get(directory_path_name)
 
     def deploy_manifest_content(self, copied_files):
         date = calendar.timegm(time.gmtime())
@@ -40,7 +25,7 @@ class DeployGenerator(Generator):
 
     @property
     def directory_path_names(self):
-        return self.directory_dict.keys()
+        return ["include_paths", "src_paths", "lib_paths", "res_paths", "build_paths"]
 
     @property
     def filename(self):
@@ -54,24 +39,16 @@ class DeployGenerator(Generator):
             for directory_path in self.directory_path_names:
                 if not getattr(dep_cpp_info, directory_path):
                     continue
-                for path in getattr(dep_cpp_info, directory_path):
-                    if os.path.normpath(path) == os.path.normpath(dep_cpp_info.rootpath):
-                        # Copy only first level files of default value build_paths
-                        for file in self.files(path):
-                            if file in ["conaninfo.txt", "conanmanifest.txt"]:
-                                continue
-                            src = os.path.normpath(os.path.join(path, file))
-                            dst = os.path.join(self.output_path, dep_name,
-                                               self.to_directory_dir_name(directory_path), file)
-                            mkdir(os.path.dirname(dst))
-                            shutil.copyfile(src, dst)
-                            copied_files.append(dst)
-                    else:
-                        if os.listdir(path):
-                            src = os.path.normpath(path)
-                            dst = os.path.join(self.output_path, dep_name,
-                                               self.to_directory_dir_name(directory_path))
-                            copier = FileCopier([src], dst)
-                            copier("*")
-                            copied_files.extend([os.path.join(dst, f) for f in copier._copied])
+
+                for root, _, files in os.walk(os.path.normpath(dep_cpp_info.rootpath)):
+                    for f in files:
+                        if f in ["conaninfo.txt", "conanmanifest.txt"]:
+                            continue
+                        src = os.path.normpath(os.path.join(root, f))
+                        dst = os.path.join(self.output_path, dep_name,
+                                           os.path.relpath(root, dep_cpp_info.rootpath), f)
+                        dst = os.path.normpath(dst)
+                        mkdir(os.path.dirname(dst))
+                        shutil.copyfile(src, dst)
+                        copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
