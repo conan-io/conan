@@ -756,3 +756,41 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba], build_deps=[],
                          dependents=[app], closure=[libb, liba],
                          public_deps=main_public_deps)
+
+    @parameterized.expand([(True, ), (False, )])
+    def test_dont_conflict_private(self, private_first):
+        liba_ref = "liba/0.1@user/testing"
+        liba_ref2 = "liba/0.2@user/testing"
+        libb_ref = "libb/0.1@user/testing"
+        libc_ref = "libc/0.1@user/testing"
+
+        self._cache_recipe(liba_ref, TestConanFile("liba", "0.1"))
+        self._cache_recipe(liba_ref2, TestConanFile("liba", "0.2"))
+        self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", private_requires=[liba_ref]))
+        self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[libb_ref],
+                                                   private_requires=[liba_ref2],
+                                                   private_first=private_first))
+
+        deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libc_ref]))
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        if private_first:
+            liba2 = libc.dependencies[0].dst
+            libb = libc.dependencies[1].dst
+        else:
+            libb = libc.dependencies[0].dst
+            liba2 = libc.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+
+        self.assertTrue(liba1.private)
+        self.assertTrue(liba2.private)
+
+        main_public_deps = [app, libb, libc]
+        self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
+                         closure=[libc, libb], public_deps=main_public_deps)
+        closure = [liba2, libb] if private_first else [libb, liba2]
+        self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba2], build_deps=[],
+                         dependents=[app], closure=closure,
+                         public_deps=[app, libb, libc])

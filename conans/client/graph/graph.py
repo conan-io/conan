@@ -39,6 +39,7 @@ class Node(object):
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         self.public_closure = None  # {ref.name: Node}
+        self.inverse_closure = set()  # set of nodes that have this one in their public
         self.acc_closure = None
         self.ancestors = None  # set{ref.name}
 
