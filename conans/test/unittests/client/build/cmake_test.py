@@ -691,6 +691,19 @@ class CMakeTest(unittest.TestCase):
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
+        settings.compiler.version = "15"
+        settings.arch = "armv8"
+        check('-G "Visual Studio 15 2017 ARM" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.arch = "x86_64"
+        check('-G "Visual Studio 15 2017 Win64" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
         settings.compiler = "Visual Studio"
         settings.compiler.version = "9"
         settings.os = "WindowsCE"
