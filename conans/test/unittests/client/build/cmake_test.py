@@ -695,6 +695,7 @@ class CMakeTest(unittest.TestCase):
         settings.compiler.version = "9"
         settings.os = "WindowsCE"
         settings.os.platform = "Your platform name (ARMv4I)"
+        settings.os.version = "7.0"
         settings.build_type = "Debug"
         check('-G "Visual Studio 9 2008" '
               '-A "Your platform name (ARMv4I)" '
@@ -1340,3 +1341,13 @@ build_type: [ Release]
         self.assertIn("WARN: CMake generator could not be deduced from settings", conanfile.output)
         cmake.configure()
         cmake.build()
+
+    def test_cmake_system_version_windowsce(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsCE"
+        settings.os.version = "8.0"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")
