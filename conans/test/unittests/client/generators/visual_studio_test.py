@@ -56,14 +56,14 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         with tools.environment_append({"USERPROFILE": tmp_folder}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)/pkg1/include;"
-                          "$(USERPROFILE)/pkg2/include;", content)
+            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)\pkg1\include;"
+                          "$(USERPROFILE)\pkg2\include;", content)
 
         with tools.environment_append({"USERPROFILE": tmp_folder.upper()}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)/pkg1/include;"
-                          "$(USERPROFILE)/pkg2/include;", content)
+            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)\pkg1\include;"
+                          "$(USERPROFILE)\pkg2\include;", content)
 
     def multi_config_test(self):
         tmp_folder = temp_folder()
@@ -87,11 +87,11 @@ class VisualStudioGeneratorTest(unittest.TestCase):
                         "_DEBUG;DEBUG;%(PreprocessorDefinitions)" \
                         "</PreprocessorDefinitions>"
         defines_release = "<PreprocessorDefinitions>" \
-                        "NDEBUG;%(PreprocessorDefinitions)" \
-                        "</PreprocessorDefinitions>"
-        defines_custom = "<PreprocessorDefinitions>" \
-                          "CUSTOM_BUILD;%(PreprocessorDefinitions)" \
+                          "NDEBUG;%(PreprocessorDefinitions)" \
                           "</PreprocessorDefinitions>"
+        defines_custom = "<PreprocessorDefinitions>" \
+                         "CUSTOM_BUILD;%(PreprocessorDefinitions)" \
+                         "</PreprocessorDefinitions>"
         self.assertIn(defines_common, content)
         self.assertIn(defines_debug, content)
         self.assertIn(defines_release, content)

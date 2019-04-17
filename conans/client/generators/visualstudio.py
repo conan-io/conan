@@ -98,7 +98,7 @@ class VisualStudioGenerator(Generator):
 
         userprofile = os.getenv("USERPROFILE")
         if userprofile:
-            userprofile = userprofile.replace("\\", "/")
+            userprofile = userprofile.replace("\\", "\\\\")
             formatted_template = re.sub(userprofile, "$(USERPROFILE)", formatted_template,
                                         flags=re.I)
         return formatted_template
