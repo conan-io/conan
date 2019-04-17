@@ -73,7 +73,9 @@ def touch(fname, times=None):
 def touch_folder(folder):
     for dirname, _, filenames in walk(folder):
         for fname in filenames:
-            os.utime(os.path.join(dirname, fname), None)
+            path = os.path.join(dirname, fname)
+            if not os.path.islink(path):
+                os.utime(path, None)
 
 
 def normalize(text):
