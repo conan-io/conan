@@ -109,6 +109,7 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        ':python_version == \"2.7\"': ['futures'],
         'dev': dev_requirements,
         'test': dev_requirements,
     },
