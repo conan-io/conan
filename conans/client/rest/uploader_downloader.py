@@ -95,9 +95,11 @@ class upload_with_progress(object):
         self.chunk_size = chunk_size
         self.aprox_chunks = self.totalsize * 1.0 / chunk_size
         self.groups = iterator
+        self._progress_bar_position = output.get_bar_pos()
         if output.is_terminal:
             self.progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
-                                     unit_divisor=1024, desc="Uploading File...")
+                                     unit_divisor=1024, desc="Uploading File...", leave=True,
+                                     position=self._progress_bar_position)
         else:
             self.progress_bar = None
 
@@ -109,6 +111,7 @@ class upload_with_progress(object):
 
         if self.progress_bar:
             self.progress_bar.close()
+            self.output.release_bar_pos(self._progress_bar_position)
 
     def __len__(self):
         return self.totalsize

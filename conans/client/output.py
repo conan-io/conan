@@ -1,5 +1,6 @@
 import six
 from colorama import Fore, Style
+from tqdm import tqdm
 
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text
@@ -44,6 +45,20 @@ class ConanOutput(object):
     def __init__(self, stream, color=False):
         self._stream = stream
         self._color = color
+        self._bar_slots = []
+
+    def get_bar_pos(self):
+        try:
+            available_slot = self._bar_slots.index(True)
+        except ValueError as err:
+            self._bar_slots.append(True)
+            available_slot = self._bar_slots.index(True)
+
+        self._bar_slots[available_slot] = False
+        return available_slot
+
+    def release_bar_pos(self, slot_num):
+        self._bar_slots[slot_num] = True
 
     @property
     def is_terminal(self):

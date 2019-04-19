@@ -264,7 +264,7 @@ class CmdUpload(object):
                                                remote, retry, retry_wait)
             self._upload_recipe_end_msg(ref, remote)
         else:
-            self._user_io.out.info("Recipe is up to date, upload skipped")
+            self._user_io.out.info("Recipe {} is up to date, upload skipped".format(ref))
         duration = time.time() - t1
         log_recipe_upload(ref, duration, the_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
@@ -300,7 +300,7 @@ class CmdUpload(object):
                                                 retry_wait)
             logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
         else:
-            self._user_io.out.info("Package is up to date, upload skipped")
+            self._user_io.out.info("Package {} is up to date, upload skipped".format(pref))
 
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, p_remote)
@@ -517,6 +517,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
     set_dirty(tgz_path)
+    progress_bar_position = 0
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -532,7 +533,9 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         n_files = len(files)
         progress_bar = None
         if n_files > 0:
-            progress_bar = tqdm(total=len(files), desc="Compressing files...", unit="files")
+            progress_bar_position = output.get_bar_pos()
+            progress_bar = tqdm(total=len(files), desc="Compressing files...", unit="files",
+                                position=progress_bar_position, leave=True)
 
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
@@ -555,6 +558,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
 
         if progress_bar:
             progress_bar.close()
+            output.release_bar_pos(progress_bar_position)
 
         tgz.close()
 
