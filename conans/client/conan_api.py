@@ -406,6 +406,8 @@ class ConanAPIV1(object):
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None):
 
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         settings = settings or []
         options = options or []
         env = env or []
@@ -697,6 +699,8 @@ class ConanAPIV1(object):
               install_folder=None, should_configure=True, should_build=True, should_install=True,
               should_test=True, cwd=None):
 
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
@@ -713,6 +717,9 @@ class ConanAPIV1(object):
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
                 cwd=None):
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
+
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
@@ -733,6 +740,9 @@ class ConanAPIV1(object):
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
+
         cwd = cwd or get_cwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
