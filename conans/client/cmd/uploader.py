@@ -97,14 +97,13 @@ class CmdUpload(object):
                                                         remotes)] = (ref, conanfile, prefs)
 
                 for future in as_completed(future_to_upload):
-                    ret = future_to_upload[future]
+                    reference, _, _ = future_to_upload[future]
                     try:
                         future.result()
+                        self._user_io.out.info("Uploaded reference {}: ".format(reference))
                     except Exception as exc:
                         self._user_io.out.info(
-                            "Error uploading reference: %s %s" % (ret[0], str(exc)))
-                    else:
-                        self._user_io.out.info("Uploaded reference {}: ".format(ret[0]))
+                            "Error uploading reference: %s %s" % (reference, str(exc)))
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
@@ -221,17 +220,18 @@ class CmdUpload(object):
                     future_to_upload[upload_exec.submit(self._upload_package, pref, retry=retry,
                                                         retry_wait=retry_wait,
                                                         integrity_check=integrity_check,
-                                                        policy=policy, p_remote=p_remote)] = (pref,
-                                                                              p_remote.name,
-                                                                              p_remote.url)
+                                                        policy=policy,
+                                                        p_remote=p_remote)] = (pref,
+                                                                               p_remote.name,
+                                                                               p_remote.url)
 
             for future in as_completed(future_to_upload):
-                ret = future_to_upload[future]
+                pref, remote_name, remote_url = future_to_upload[future]
                 try:
                     future.result()
-                    upload_recorder.add_package(ret[0], ret[1], ret[2])
+                    upload_recorder.add_package(pref, remote_name, remote_url)
                 except Exception as exc:
-                    self._user_io.out.info("Error uploading package: %s %s" % (ret[0], str(exc)))
+                    self._user_io.out.info("Error uploading package: %s %s" % (pref, str(exc)))
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
