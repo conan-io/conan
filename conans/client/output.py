@@ -91,20 +91,35 @@ class ConanOutput(object):
 
         self._stream.flush()
 
-    def info(self, data):
-        self.writeln(data, Color.BRIGHT_CYAN)
+    def info(self, data, progress_bar=False):
+        if progress_bar:
+            tqdm.write(data)
+        else:
+            self.writeln(data, Color.BRIGHT_CYAN)
 
-    def highlight(self, data):
-        self.writeln(data, Color.BRIGHT_MAGENTA)
+    def highlight(self, data, progress_bar=False):
+        if progress_bar:
+            tqdm.write(data)
+        else:
+            self.writeln(data, Color.BRIGHT_MAGENTA)
 
-    def success(self, data):
-        self.writeln(data, Color.BRIGHT_GREEN)
+    def success(self, data, progress_bar=False):
+        if progress_bar:
+            tqdm.write(data)
+        else:
+            self.writeln(data, Color.BRIGHT_GREEN)
 
-    def warn(self, data):
-        self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW)
+    def warn(self, data, progress_bar=False):
+        if progress_bar:
+            tqdm.write(data)
+        else:
+            self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW)
 
-    def error(self, data):
-        self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED)
+    def error(self, data, progress_bar=False):
+        if progress_bar:
+            tqdm.write(data)
+        else:
+            self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED)
 
     def input_text(self, data):
         self.write(data, Color.GREEN)

@@ -132,10 +132,9 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.package_upload_urls(pref)
         file_sizes = {filename: os.stat(abs_path).st_size for filename,
                       abs_path in files_to_upload.items()}
-        self._output.rewrite_line("Requesting upload urls...")
+        self._output.info("Requesting upload urls...", progress_bar=True)
         urls = self._get_file_to_url_dict(url, data=file_sizes)
-        self._output.rewrite_line("Requesting upload urls...Done!")
-        self._output.writeln("")
+        self._output.info("Requesting upload urls...Done!", progress_bar=True)
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
 
     def _upload_files(self, file_urls, files, output, retry, retry_wait):
@@ -145,20 +144,21 @@ class RestV1Methods(RestCommonMethods):
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
-            output.rewrite_line("Uploading %s" % filename)
+            output.info("Uploading %s" % filename, progress_bar=True)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                            retry=retry, retry_wait=retry_wait,
                                            headers=self._put_headers)
-                output.writeln("")
                 if not response.ok:
-                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
+                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content),
+                                 progress_bar=True)
                     failed.append(filename)
                 else:
                     pass
             except Exception as exc:
-                output.error("\nError uploading file: %s, '%s'" % (filename, exc))
+                output.error("\nError uploading file: %s, '%s'" % (filename, exc),
+                             progress_bar=True)
                 failed.append(filename)
 
         if failed:

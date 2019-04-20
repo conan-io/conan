@@ -40,12 +40,12 @@ class Uploader(object):
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
-        self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
         # Now it is a chunked read file
         file_size = os.stat(abs_path).st_size
-        it = upload_with_progress(file_size, it, self.chunk_size, self.output)
+        file_name = os.path.basename(abs_path)
+        it = upload_with_progress(file_size, it, self.chunk_size, self.output, file_name)
         # Now it will print progress in each iteration
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
@@ -89,17 +89,18 @@ class IterableToFileAdapter(object):
 
 
 class upload_with_progress(object):
-    def __init__(self, totalsize, iterator, chunk_size, output):
+    def __init__(self, totalsize, iterator, chunk_size, output, file_name):
         self.totalsize = totalsize
         self.output = output
         self.chunk_size = chunk_size
         self.aprox_chunks = self.totalsize * 1.0 / chunk_size
         self.groups = iterator
         self._progress_bar_position = output.get_bar_pos()
+        self._file_name = file_name
         if output.is_terminal:
             self.progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
-                                     unit_divisor=1024, desc="Uploading File...", leave=True,
-                                     position=self._progress_bar_position)
+                                     unit_divisor=1024, desc="Uploading {}".format(file_name),
+                                     leave=False, position=self._progress_bar_position)
         else:
             self.progress_bar = None
 
@@ -268,5 +269,5 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
             else:
                 if out:
                     out.error(exc)
-                    out.info("Waiting %d seconds to retry..." % retry_wait)
+                    out.info("Waiting %d seconds to retry..." % retry_wait, progress_bar=True)
                 time.sleep(retry_wait)
