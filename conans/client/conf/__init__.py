@@ -94,6 +94,7 @@ default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
+default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
@@ -222,7 +223,9 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_MSBUILD_VERBOSITY": self._env_c("general.msbuild_verbosity",
                                                       "CONAN_MSBUILD_VERBOSITY",
                                                       None),
-               "CONAN_CACERT_PATH": self._env_c("general.cacert_path", "CONAN_CACERT_PATH", None)
+               "CONAN_CACERT_PATH": self._env_c("general.cacert_path", "CONAN_CACERT_PATH", None),
+               "CONAN_DEFAULT_PACKAGE_ID_MODE": self._env_c("general.default_package_id_mode",
+                                                            "CONAN_DEFAULT_PACKAGE_ID_MODE", None),
                }
 
         # Filter None values
@@ -364,9 +367,12 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def default_package_id_mode(self):
         try:
-            return self.get_item("general.default_package_id_mode")
+            default_package_id_mode = get_env("CONAN_DEFAULT_PACKAGE_ID_MODE")
+            if default_package_id_mode is None:
+                default_package_id_mode = self.get_item("general.default_package_id_mode")
         except ConanException:
             return "semver_direct_mode"
+        return default_package_id_mode
 
     @property
     def storage_path(self):
