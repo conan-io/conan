@@ -2,8 +2,6 @@ import os
 import time
 import traceback
 
-from tqdm import tqdm
-
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException
