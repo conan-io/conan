@@ -467,16 +467,14 @@ class CmdUpload(object):
             if "conanfile.py" in difference:
                 contents = load(os.path.join(self._cache.export(ref), "conanfile.py"))
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
-                self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines,
-                                       progress_bar=True)
+                self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
                                                                        remote=remote)
                 endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
                 self._user_io.out.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
             self._user_io.out.info("\n%s" % ("-"*40))
         except Exception as e:
-            self._user_io.out.info("Error printing information about the diff: %s" % str(e),
-                                   progress_bar=True)
+            self._user_io.out.info("Error printing information about the diff: %s" % str(e))
 
 
 def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output, ref):

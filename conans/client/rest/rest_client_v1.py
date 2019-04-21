@@ -151,14 +151,12 @@ class RestV1Methods(RestCommonMethods):
                                            retry=retry, retry_wait=retry_wait,
                                            headers=self._put_headers)
                 if not response.ok:
-                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content),
-                                 progress_bar=True)
+                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
                     failed.append(filename)
                 else:
                     pass
             except Exception as exc:
-                output.error("\nError uploading file: %s, '%s'" % (filename, exc),
-                             progress_bar=True)
+                output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
 
         if failed:
