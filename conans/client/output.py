@@ -58,7 +58,11 @@ class ConanOutput(object):
         return available_slot
 
     def release_bar_pos(self, slot_num):
-        self._bar_slots[slot_num] = True
+        try:
+            if len(self._bar_slots) > slot_num:
+                self._bar_slots[slot_num] = True
+        except ValueError:
+            pass
 
     @property
     def is_terminal(self):
