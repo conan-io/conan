@@ -691,6 +691,32 @@ class CMakeTest(unittest.TestCase):
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
+        settings.compiler.version = "15"
+        settings.arch = "armv8"
+        check('-G "Visual Studio 15 2017 ARM" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.arch = "x86_64"
+        check('-G "Visual Studio 15 2017 Win64" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "9"
+        settings.os = "WindowsCE"
+        settings.os.platform = "Your platform name (ARMv4I)"
+        settings.os.version = "7.0"
+        settings.build_type = "Debug"
+        check('-G "Visual Studio 9 2008" '
+              '-A "Your platform name (ARMv4I)" '
+              '-DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="9" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
     def deleted_os_test(self):
         partial_settings = """
 os: [Linux]
@@ -1328,3 +1354,13 @@ build_type: [ Release]
         self.assertIn("WARN: CMake generator could not be deduced from settings", conanfile.output)
         cmake.configure()
         cmake.build()
+
+    def test_cmake_system_version_windowsce(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsCE"
+        settings.os.version = "8.0"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")
