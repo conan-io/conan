@@ -139,7 +139,7 @@ class UploadTest(unittest.TestCase):
         with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
                         new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
-            self.assertIn("ERROR: Error gzopen conan_sources.tgz", client.out)
+            self.assertIn("Error gzopen conan_sources.tgz", client.out)
 
             export_folder = client.cache.export(ref)
             tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
@@ -167,7 +167,7 @@ class UploadTest(unittest.TestCase):
         with mock.patch('conans.client.cmd.uploader.gzopen_without_timestamps',
                         new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
-            self.assertIn("ERROR: Error gzopen conan_package.tgz", client.out)
+            self.assertIn("Error gzopen conan_package.tgz", client.out)
 
             export_folder = client.cache.package(pref)
             tgz = os.path.join(export_folder, PACKAGE_TGZ_NAME)
@@ -196,7 +196,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello0/1.2.1@frodo/stable --all --check", assert_error=True)
         self.assertIn("WARN: Mismatched checksum 'added.txt'", client.user_io.out)
         self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.user_io.out)
-        self.assertIn("ERROR: Cannot upload corrupted package", client.user_io.out)
+        self.assertIn("Cannot upload corrupted package", client.user_io.out)
 
     def upload_modified_recipe_test(self):
         client = self._client()
@@ -375,7 +375,7 @@ class MyPkg(ConanFile):
                    assert_error=not client.cache.config.revisions_enabled)
         if not client.cache.config.revisions_enabled:
             self.assertIn("Recipe is up to date, upload skipped", client.out)
-            self.assertIn("ERROR: Local package is different from the remote package", client.out)
+            self.assertIn("Local package is different from the remote package", client.out)
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading conan_package.tgz", client.out)
         else:
@@ -514,7 +514,7 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("upload Hello0/1.2.1@user/testing", assert_error=True)
 
-        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
+        self.assertIn('Conan interactive mode disabled', client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
@@ -530,7 +530,7 @@ class Pkg(ConanFile):
         client.run("user -c")
         client.run("user lasote")
         client.run("upload Hello0/1.2.1@user/testing", assert_error=True)
-        self.assertIn('ERROR: Conan interactive mode disabled', client.out)
+        self.assertIn('Conan interactive mode disabled', client.out)
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
