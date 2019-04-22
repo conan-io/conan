@@ -37,8 +37,8 @@ class Uploader(object):
                 if auth.token is None:
                     raise AuthenticationException(response.content)
                 raise ForbiddenException(response.content)
-            #if response.status_code == 201:  # Artifactory returns 201 if the file is there
-            #    return response
+            if response.status_code == 201:  # Artifactory returns 201 if the file is there
+                return response
 
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
@@ -271,4 +271,3 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
                     out.error(exc)
                     out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)
-                
