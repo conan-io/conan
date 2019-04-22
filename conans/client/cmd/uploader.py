@@ -334,11 +334,29 @@ class CmdUpload(object):
         return the_files
 
     def _recipe_files_to_upload(self, ref, policy, the_files, remote, remote_manifest):
-        # Get the remote snapshot
-        self._remote_manager.check_credentials(remote)
-        remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
 
-        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
+        self._remote_manager.check_credentials(remote)
+
+        files_to_upload = {filename.replace("\\", "/"): path
+                           for filename, path in the_files.items()}
+
+        # Get the remote snapshot
+        remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
+        if not remote_snapshot:
+            return files_to_upload, set()
+
+        deleted = set(remote_snapshot).difference(the_files)
+
+        if policy == UPLOAD_POLICY_FORCE:
+            return files_to_upload, deleted
+
+        if remote_manifest is None:
+            # https://github.com/conan-io/conan/issues/4953
+            # probably that is a concurrency issue or corruption issue?
+            self._user_io.out.warn("The remote recipe doesn't have the 'conanmanifest.txt'"
+                                   " file, the recipe needs to be overwritten: '{}'"
+                                   "".format(ref))
+        else:
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
 
             if remote_manifest == local_manifest:
@@ -348,9 +366,6 @@ class CmdUpload(object):
                 raise ConanException("Local recipe is different from the remote recipe. "
                                      "Forbidden overwrite.")
 
-        files_to_upload = {filename.replace("\\", "/"): path
-                           for filename, path in the_files.items()}
-        deleted = set(remote_snapshot).difference(the_files)
         return files_to_upload, deleted
 
     def _package_files_to_upload(self, pref, policy, the_files, remote):
