@@ -626,12 +626,11 @@ class Pkg(ConanFile):
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client.create(ref)
         client.upload_all(ref)
-        # Simulate a missing manifest, maybe because it hasn't been uploaded yet
+        # The _check_recipe_date returns None, but later it will get the manifest ok
         with patch.object(CmdUpload, "_check_recipe_date") as check_date:
             check_date.return_value = None
             # Upload same with client2
             client2.create(ref)
             client2.run("upload lib/1.0@conan/testing")
-
             self.assertIn("Recipe is up to date, upload skipped", client2.out)
             self.assertNotIn("WARN", client2.out)
