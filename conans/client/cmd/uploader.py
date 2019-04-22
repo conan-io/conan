@@ -102,8 +102,8 @@ class CmdUpload(object):
                         future.result()
                         self._user_io.out.info("Uploaded reference {}: ".format(reference))
                     except Exception as exc:
-                        self._user_io.out.info(
-                            "Error uploading reference: %s %s" % (reference, str(exc)))
+                        raise ConanException("Error uploading reference: %s %s" %
+                                             (reference, str(exc)))
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
@@ -231,7 +231,7 @@ class CmdUpload(object):
                     future.result()
                     upload_recorder.add_package(pref, remote_name, remote_url)
                 except Exception as exc:
-                    self._user_io.out.info("Error uploading package: %s %s" % (pref, str(exc)))
+                    raise ConanException("Error uploading package: %s %s" % (pref, str(exc)))
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
@@ -264,7 +264,7 @@ class CmdUpload(object):
                                                remote, retry, retry_wait)
             self._upload_recipe_end_msg(ref, remote)
         else:
-            self._user_io.out.info("Recipe {} is up to date, upload skipped".format(ref))
+            self._user_io.out.info("Recipe is up to date, upload skipped")
         duration = time.time() - t1
         log_recipe_upload(ref, duration, the_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
@@ -300,7 +300,7 @@ class CmdUpload(object):
                                                 retry_wait)
             logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
         else:
-            self._user_io.out.info("Package {} is up to date, upload skipped".format(pref))
+            self._user_io.out.info("Package is up to date, upload skipped")
 
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, p_remote)
@@ -493,9 +493,9 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
             tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
             result[tgz_name] = tgz_path
 
-    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing {}".format(ref))
+    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
     add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
-            "Compressing {} sources ".format(ref))
+            "Compressing recipe sources...")
 
     return result
 
