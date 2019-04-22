@@ -3,16 +3,20 @@ import os
 import unittest
 from collections import OrderedDict
 
-from mock import mock
+from mock import mock, patch
+
 
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer,\
+    TurboTestClient
 from conans.util.files import gzopen_without_timestamps, is_dirty, save
 from conans.test.utils.conanfile import TestConanFile
+from conans.client.cmd.uploader import CmdUpload
+
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -362,7 +366,8 @@ class MyPkg(ConanFile):
         # *1
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                    assert_error=not client.cache.config.revisions_enabled)
-        if not client.cache.config.revisions_enabled:  # The --no-overwrite makes no sense with revisions
+        if not client.cache.config.revisions_enabled:
+            # The --no-overwrite makes no sense with revisions
             self.assertIn("Forbidden overwrite", client.out)
             self.assertNotIn("Uploading conan_package.tgz", client.out)
 
@@ -553,10 +558,8 @@ class Pkg(ConanFile):
 
     def upload_key_error_test(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
-        server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
-                                     users={"lasote": "mypass"})
-        server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
-                                     users={"lasote": "mypass"})
+        server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
+        server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         servers = OrderedDict()
         servers["server1"] = server1
         servers["server2"] = server2
@@ -592,3 +595,43 @@ class Pkg(ConanFile):
         metadata = client.cache.package_layout(ref).load_metadata()
         self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
         self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)
+
+    def test_no_remote_recipe_manifest(self):
+        # https://github.com/conan-io/conan/issues/4953
+        server = TestServer()
+        servers = OrderedDict([("default", server)])
+        client = TurboTestClient(servers=servers)
+        client2 = TurboTestClient(servers=servers)
+
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client.create(ref)
+        complete_ref = client.upload_all(ref)
+        # Simulate a missing manifest, maybe because it hasn't been uploaded yet
+        export_folder = server.server_store.export(complete_ref)
+        os.unlink(os.path.join(export_folder, "conanmanifest.txt"))
+
+        # Upload same with client2
+        client2.create(ref)
+        client2.upload_all(ref)
+        self.assertIn("WARN: The remote recipe doesn't have the 'conanmanifest.txt' file "
+                      "and will be uploaded: 'lib/1.0@conan/testing'", client2.out)
+
+    def test_concurrent_upload(self):
+        # https://github.com/conan-io/conan/issues/4953
+        server = TestServer()
+        servers = OrderedDict([("default", server)])
+        client = TurboTestClient(servers=servers)
+        client2 = TurboTestClient(servers=servers)
+
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client.create(ref)
+        client.upload_all(ref)
+        # Simulate a missing manifest, maybe because it hasn't been uploaded yet
+        with patch.object(CmdUpload, "_check_recipe_date") as check_date:
+            check_date.return_value = None
+            # Upload same with client2
+            client2.create(ref)
+            client2.run("upload lib/1.0@conan/testing")
+
+            self.assertIn("Recipe is up to date, upload skipped", client2.out)
+            self.assertNotIn("WARN", client2.out)
