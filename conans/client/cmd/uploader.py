@@ -353,8 +353,8 @@ class CmdUpload(object):
         if remote_manifest is None:
             # https://github.com/conan-io/conan/issues/4953
             # probably that is a concurrency issue or corruption issue?
-            self._user_io.out.warn("The remote recipe doesn't have the 'conanmanifest.txt'"
-                                   " file, the recipe needs to be overwritten: '{}'"
+            self._user_io.out.warn("The remote recipe doesn't have the 'conanmanifest.txt' file"
+                                   " and needs to be overwritten: '{}'"
                                    "".format(ref))
         else:
             local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))

@@ -10,7 +10,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
 from conans.util.files import gzopen_without_timestamps, is_dirty, save
 from conans.test.utils.conanfile import TestConanFile
 
@@ -592,3 +592,22 @@ class Pkg(ConanFile):
         metadata = client.cache.package_layout(ref).load_metadata()
         self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
         self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)
+
+    def test_no_remote_recipe_manifest(self):
+        server = TestServer()
+        servers = OrderedDict([("default", server)])
+        client = TurboTestClient(servers=servers)
+        client2 = TurboTestClient(servers=servers)
+
+        ref = ConanFileReference.loads("lib/1.0@conan/testing")
+        client.create(ref)
+        complete_ref = client.upload_all(ref)
+        # Simulate a missing manifest, maybe because it hasn't been uploaded yet
+        export_folder = server.server_store.export(complete_ref)
+        os.unlink(os.path.join(export_folder, "conanmanifest.txt"))
+
+        # Upload same with client2
+        client2.create(ref)
+        client2.upload_all(ref)
+        self.assertIn("WARN: The remote recipe doesn't have the 'conanmanifest.txt' file "
+                      "and needs to be overwritten: 'lib/1.0@conan/testing'", client2.out)
