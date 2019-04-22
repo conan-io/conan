@@ -2,13 +2,14 @@ import os
 import time
 import traceback
 
+from tqdm import tqdm
+
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
-from conans.util import progress_bar
 
 
 class Uploader(object):
@@ -36,20 +37,21 @@ class Uploader(object):
                 if auth.token is None:
                     raise AuthenticationException(response.content)
                 raise ForbiddenException(response.content)
-            if response.status_code == 201:  # Artifactory returns 201 if the file is there
-                return response
+            #if response.status_code == 201:  # Artifactory returns 201 if the file is there
+            #    return response
 
-        try:
-            with progress_bar.open_binary(abs_path,
-                                          desc="Uploading %s" % os.path.basename(abs_path),
-                                          output=self.output,
-                                          leave=False) as file_handler:
-                ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                                      data=file_handler, headers=headers, auth=auth)
+        # Actual transfer of the real content
+        it = load_in_chunks(abs_path, self.chunk_size)
+        # Now it is a chunked read file
+        file_size = os.stat(abs_path).st_size
+        file_name = os.path.basename(abs_path)
+        it = upload_with_progress(file_size, it, self.chunk_size, self.output, file_name)
+        # Now it will print progress in each iteration
+        iterable_to_file = IterableToFileAdapter(it, file_size)
+        # Now it is prepared to work with request
+        ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
+                              data=iterable_to_file, headers=headers, auth=auth)
 
-        except Exception as e:
-            error_msg = "Error while uploading files to %s\n%s\n" % (url, str(e))
-            raise ConanException(error_msg)
         return ret
 
     def _upload_file(self, url, data,  headers, auth):
@@ -84,6 +86,47 @@ class IterableToFileAdapter(object):
 
     def __iter__(self):
         return self.iterator.__iter__()
+
+
+class upload_with_progress(object):
+    def __init__(self, totalsize, iterator, chunk_size, output, file_name):
+        self.totalsize = totalsize
+        self.output = output
+        self.chunk_size = chunk_size
+        self.aprox_chunks = self.totalsize * 1.0 / chunk_size
+        self.groups = iterator
+        self._progress_bar_position = output.get_bar_pos()
+        self._file_name = file_name
+        if output.is_terminal:
+            self.progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
+                                     unit_divisor=1024, desc="Uploading {}".format(file_name),
+                                     leave=False, position=self._progress_bar_position)
+        else:
+            self.progress_bar = None
+
+    def __iter__(self):
+        for index, chunk in enumerate(self.groups):
+            if self.progress_bar:
+                self.progress_bar.update(self.chunk_size)
+            yield chunk
+
+        if self.progress_bar:
+            self.progress_bar.close()
+            self.output.release_bar_pos(self._progress_bar_position)
+
+    def __len__(self):
+        return self.totalsize
+
+
+def load_in_chunks(path, chunk_size=1024):
+    """Lazy function (generator) to read a file piece by piece.
+    Default chunk size: 1k."""
+    with open(path, 'rb') as file_object:
+        while True:
+            data = file_object.read(chunk_size)
+            if not data:
+                break
+            yield data
 
 
 class Downloader(object):
@@ -228,3 +271,4 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
                     out.error(exc)
                     out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)
+                

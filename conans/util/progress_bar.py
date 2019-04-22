@@ -15,22 +15,17 @@ class _FileReaderWithProgressBar(object):
                      'ascii': False,  # Fancy output (forces unicode progress bar)
                      }
 
-    def __init__(self, fileobj, output, desc=None, leave=True):
+    def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
-        self._output = output
-        self._progress_bar_position = output.get_bar_pos()
-        self._fileobj = fileobj
-        self.seek(0, os.SEEK_END)
+
         # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
         if not output.is_terminal:
             output = _NoTerminalOutput(output)
             pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
-            self._tqdm_bar = tqdm(total=self.tell(), desc=desc, file=output,
-                                  position=self._progress_bar_position, **pb_kwargs)
-        else:
-            self._tqdm_bar = tqdm(total=self.tell(), desc=desc, leave=leave,
-                                  position=self._progress_bar_position, **pb_kwargs)
 
+        self._fileobj = fileobj
+        self.seek(0, os.SEEK_END)
+        self._tqdm_bar = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
         self.seek(0)
 
     def seekable(self):
@@ -49,7 +44,6 @@ class _FileReaderWithProgressBar(object):
         return ret
 
     def pb_close(self):
-        self._output.release_bar_pos(self._progress_bar_position)
         self._tqdm_bar.close()
 
 
