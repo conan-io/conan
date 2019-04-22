@@ -144,7 +144,7 @@ class RestV1Methods(RestCommonMethods):
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
-            output.info("Uploading %s" % filename)
+            output.info("\nUploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
