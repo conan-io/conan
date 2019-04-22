@@ -48,7 +48,7 @@ class UserIO(object):
             username = self.get_username(remote_name)
 
         if self._interactive:
-            self.out.write('Please enter a password for "%s" account: ' % username)
+            self.out.write('Please enter a password for "%s" account: ' % username, newline=True)
         try:
             pwd = self.get_password(remote_name)
         except ConanException:
