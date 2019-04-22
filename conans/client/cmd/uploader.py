@@ -532,7 +532,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         i_file = 0
         n_files = len(files)
         progress_bar = None
-        if n_files > 0:
+        if n_files > 0 and output:
             progress_bar_position = output.get_bar_pos()
             progress_bar = tqdm(total=len(files), desc="Compressing files...", unit="files",
                                 position=progress_bar_position, leave=False)
