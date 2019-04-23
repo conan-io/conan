@@ -376,6 +376,7 @@ class ConanAPIV1(object):
                                  self._cache.config.revisions_enabled, self._user_io.out,
                                  self._hook_manager, self._loader, self._cache, not not_export,
                                  graph_lock=graph_lock)
+
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
             ref = new_ref.copy_clear_rev()
