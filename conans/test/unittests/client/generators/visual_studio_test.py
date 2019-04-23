@@ -43,13 +43,13 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         pkg1 = os.path.join(tmp_folder, "pkg1")
         cpp_info = CppInfo(pkg1)
         cpp_info.includedirs = ["include"]
-        save(os.path.join(pkg1, "include/file.h"), "")
+        save(os.path.join(pkg1, "include", "file.h"), "")
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
         pkg2 = os.path.join(tmp_folder, "pkg2")
         cpp_info = CppInfo(pkg2)
         cpp_info.includedirs = ["include"]
-        save(os.path.join(pkg2, "include/file.h"), "")
+        save(os.path.join(pkg2, "include", "file.h"), "")
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = VisualStudioGenerator(conanfile)
 

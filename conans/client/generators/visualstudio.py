@@ -53,7 +53,7 @@ class VisualStudioGenerator(Generator):
         sections = []
         for dep_name, cpp_info in self._deps_build_info.dependencies:
             fields = {
-                'root_dir': cpp_info.rootpath.replace("\\", "/"),
+                'root_dir': cpp_info.rootpath,
                 'name': dep_name.replace(".", "-")
             }
             section = self.item_template.format(**fields)
