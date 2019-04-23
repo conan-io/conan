@@ -53,17 +53,18 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = VisualStudioGenerator(conanfile)
 
+        path1 = os.path.join("$(USERPROFILE)", "pkg1", "include")
+        path2 = os.path.join("$(USERPROFILE)", "pkg2", "include")
+        expected = "<AdditionalIncludeDirectories>%s;%s;" % (path1, path2)
         with tools.environment_append({"USERPROFILE": tmp_folder}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)\pkg1\include;"
-                          "$(USERPROFILE)\pkg2\include;", content)
+            self.assertIn(expected, content)
 
         with tools.environment_append({"USERPROFILE": tmp_folder.upper()}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)\pkg1\include;"
-                          "$(USERPROFILE)\pkg2\include;", content)
+            self.assertIn(expected, content)
 
     def multi_config_test(self):
         tmp_folder = temp_folder()
