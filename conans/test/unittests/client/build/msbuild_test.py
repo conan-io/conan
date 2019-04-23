@@ -256,3 +256,15 @@ class MSBuildTest(unittest.TestCase):
         props_file_path = match.group(1)
         self.assertTrue(os.path.isabs(props_file_path))
         self.assertEqual(os.path.basename(props_file_path), "conan_build.props")
+
+    def windows_ce_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "9",
+                                 "os": "WindowsCE",
+                                 "os.platform": "YOUR PLATFORM SDK (ARMV4)",
+                                 "arch": "armv4"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("test.sln")
+        self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)
