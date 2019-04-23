@@ -533,9 +533,12 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         n_files = len(files)
         progress_bar = None
         if n_files > 0 and output:
-            progress_bar_position = output.get_bar_pos()
-            progress_bar = tqdm(total=len(files), desc="Compressing files...", unit="files",
-                                position=progress_bar_position, leave=False)
+            if output.is_terminal:
+                progress_bar_position = output.get_bar_pos()
+                progress_bar = tqdm(total=len(files), desc="Compressing files...", unit="files",
+                                    position=progress_bar_position, leave=False)
+            else:
+                output.write("Compressing files...", newline=True)
 
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
@@ -554,7 +557,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                     progress_bar.set_description("%s/%s files" % (i_file, n_files))
                     progress_bar.update()
                 else:
-                    progress_bar.update()
+                    output.write("Compressing... %s/%s files" % (i_file, n_files), newline=True)
 
         if progress_bar:
             progress_bar.close()
