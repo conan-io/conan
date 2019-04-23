@@ -57,6 +57,13 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
     ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
                              conanfile.channel)
+    if graph_lock:
+        # To invalidate previous version range output
+        loader._python_requires._range_resolver.output
+        node_id = graph_lock.get_node(ref)
+        python_requires = graph_lock.python_requires(node_id)
+        conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
+                                       conanfile.user, conanfile.channel, python_requires)
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
 

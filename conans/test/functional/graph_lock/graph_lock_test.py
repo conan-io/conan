@@ -191,7 +191,6 @@ class Pkg(ConanFile):
         client.run("install .")
         self.assertIn("Tool/0.1@user/channel", client.out)
         lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
-        print lock_file
         self.assertIn("Tool/0.1@user/channel", lock_file)
 
         client.run("build .")
@@ -212,10 +211,12 @@ class Pkg(ConanFile):
         # Locked create will use Tool/0.1
         # Updating the root in the graph-info file
         client.run("install . --lock")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2@user/channel", client.out)
         lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
-        print lock_file
         self.assertIn("Tool/0.1@user/channel", lock_file)
+        self.assertNotIn("Tool/0.2@user/channel", lock_file)
 
-        client.run("create . Pkg/0.1@user/channel --graph-info=.")
+        client.run("create . Pkg/0.1@user/channel --lock")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)

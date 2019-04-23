@@ -59,6 +59,8 @@ class GraphLock(object):
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self.get_node(reference)
+            # Adding a new node, has the problem of 
+            #python_requires
             self._nodes[node.id] = None
             self._edges[node.id] = [node_id]
             return

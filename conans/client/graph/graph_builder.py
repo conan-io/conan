@@ -161,7 +161,7 @@ class DepsGraphBuilder(object):
             # node -> new_node
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remotes,
-                                             processed_profile)
+                                             processed_profile, graph_lock)
 
             # The closure of a new node starts with just itself
             new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
@@ -316,7 +316,8 @@ class DepsGraphBuilder(object):
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, name_req,
-                         check_updates, update, remotes, processed_profile, alias_ref=None):
+                         check_updates, update, remotes, processed_profile, graph_lock,
+                         alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
 
@@ -331,8 +332,11 @@ class DepsGraphBuilder(object):
             raise e
         conanfile_path, recipe_status, remote, new_ref = result
 
+        locked_id = getattr(requirement, "_locked_id", None)
+        lock_python_requires = graph_lock.python_requires(locked_id) if locked_id else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
-                                                    ref=requirement.ref)
+                                                    ref=requirement.ref,
+                                                    lock_python_requires=lock_python_requires)
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
@@ -343,7 +347,7 @@ class DepsGraphBuilder(object):
             dep_graph.aliased[alias_ref] = requirement.ref
             return self._create_new_node(current_node, dep_graph, requirement,
                                          name_req, check_updates, update,
-                                         remotes, processed_profile,
+                                         remotes, processed_profile, graph_lock,
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
@@ -353,7 +357,7 @@ class DepsGraphBuilder(object):
         new_node.remote = remote
         new_node.ancestors = current_node.ancestors.copy()
         new_node.ancestors.add(current_node.name)
-        locked_id = getattr(requirement, "_locked_id", None)
+
         if locked_id:
             new_node.id = locked_id
         dep_graph.add_node(new_node)

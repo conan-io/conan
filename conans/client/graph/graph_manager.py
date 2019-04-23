@@ -127,11 +127,23 @@ class GraphManager(object):
             path = reference
             if path.endswith(".py"):
                 test = str(create_reference) if create_reference else None
+                lock_python_requires = None
+                if graph_lock:
+                    if graph_info.root.name:
+                        ref = ConanFileReference(graph_info.root.name, graph_info.root.version,
+                                                 graph_info.root.user, graph_info.root.channel,
+                                                 validate=False)
+                    else:
+                        ref = None
+                    node_id = graph_lock.get_node(ref)
+                    lock_python_requires = graph_lock.python_requires(node_id)
+
                 conanfile = self._loader.load_consumer(path, processed_profile, test=test,
                                                        name=graph_info.root.name,
                                                        version=graph_info.root.version,
                                                        user=graph_info.root.user,
-                                                       channel=graph_info.root.channel)
+                                                       channel=graph_info.root.channel,
+                                                       lock_python_requires=lock_python_requires)
                 if create_reference:  # create with test_package
                     _inject_require(conanfile, create_reference)
 

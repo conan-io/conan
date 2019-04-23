@@ -43,7 +43,7 @@ class ConanPythonRequire(object):
         ref = ConanFileReference.loads(require)
         ref = self.locked_versions[ref.name] if self.locked_versions is not None else ref
         try:
-            python_require = self._cached_requires[require]
+            python_require = self._cached_requires[ref]
         except KeyError:
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
@@ -61,7 +61,7 @@ class ConanPythonRequire(object):
                 python_require = self._look_for_require(conanfile.alias)
             else:
                 python_require = PythonRequire(new_ref, module, conanfile)
-            self._cached_requires[require] = python_require
+            self._cached_requires[ref] = python_require
 
         return python_require
 
