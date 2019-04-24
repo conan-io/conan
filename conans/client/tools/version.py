@@ -31,12 +31,20 @@ class Version(object):
     def patch(self):
         return str(self._semver.patch)
 
+    @property
+    def prerelease(self):
+        return str(".".join(map(str, self._semver.prerelease)))
+
+    @property
+    def build(self):
+        return str(".".join(map(str, self._semver.build)))
+
     def __eq__(self, other):
         if not isinstance(other, Version):
             other = Version(other)
-        return self._semver.compare_main(other._semver) == 0
+        return self._semver.compare(other._semver) == 0
 
     def __lt__(self, other):
         if not isinstance(other, Version):
             other = Version(other)
-        return self._semver.compare_main(other._semver) < 0
+        return self._semver.compare(other._semver) < 0

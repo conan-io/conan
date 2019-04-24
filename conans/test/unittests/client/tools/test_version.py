@@ -9,7 +9,7 @@ from conans.client.tools.version import Version
 from conans.errors import ConanException
 
 
-class ToolVersionTests(unittest.TestCase):
+class ToolVersionMainComponentsTests(unittest.TestCase):
 
     def test_invalid_values(self):
         self.assertRaises(ConanException, Version, "")
@@ -21,7 +21,7 @@ class ToolVersionTests(unittest.TestCase):
             Version("not-valid")
 
     def test_valid_values(self):
-        for v_str in ["1.2.3", "1.2.3-dev90", "1.2.3+dev90", "1.2.3-dev90+more", "1.2.3-dev90+a-b"]:
+        for v_str in ["1.2.3", "1.2.3-dev90", "1.2.3+dev90", "1.2.3-dev90+more", "1.2.3-dev90+a.b"]:
             v = Version(v_str)
             self.assertEqual(v.major, "1")
             self.assertEqual(v.minor, "2")
@@ -78,13 +78,34 @@ class ToolVersionTests(unittest.TestCase):
         self.assertFalse(Version("1") > "1.0")
         self.assertFalse(Version("1") > "1.0.0")
 
-    def test_with_more_components(self):
-        # Prerelease, micro,... any other components but main ones are NOT considered
-        self.assertTrue(Version("1.2.3-dev90") == "1.2.3")
-        self.assertTrue(Version("1.2.3-dev90") == Version("1.2.3"))
 
+class ToolVersionExtraComponentsTests(unittest.TestCase):
+
+    def test_parsing(self):
+        v = Version("1.2.3-dev.90.80-dev2+build.b1.b2")
+        self.assertEqual(v.prerelease, "dev.90.80-dev2")
+        self.assertEqual(v.build, "build.b1.b2")
+
+        v = Version("1.2.305-dev4")
+        self.assertEqual(v.prerelease, "dev4")
+        self.assertEqual(v.build, "")
+
+        v = Version("1.2.305+dev4")
+        self.assertEqual(v.prerelease, "")
+        self.assertEqual(v.build, "dev4")
+
+    def test_compare(self):
+        # prerelease is taken into account
+        self.assertTrue(Version("1.2.3-dev90") != "1.2.3")
+        self.assertTrue(Version("1.2.3-dev90") < "1.2.3")
+        self.assertTrue(Version("1.2.3-dev90") < Version("1.2.3"))
+
+        # build is not taken into account
+        self.assertTrue(Version("1.2") == Version("1.2+dev0"))
+        self.assertFalse(Version("1.2") > Version("1.2+dev0"))
+        self.assertFalse(Version("1.2") < Version("1.2+dev0"))
+
+        # Unknown release field, not fail (loose=True) and don't affect compare
         self.assertTrue(Version.loose)
         self.assertTrue(Version("1.2.3.4") == Version("1.2.3"))
 
-        self.assertFalse(Version("1.2") > Version("1.2-dev0"))
-        self.assertFalse(Version("1.2") < Version("1.2-dev0"))
