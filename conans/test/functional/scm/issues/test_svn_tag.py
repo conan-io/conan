@@ -22,33 +22,41 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
             class Lib(ConanFile):
                 scm = {"type": "svn", "url": "auto", "revision": "auto"}
         """)
-        files = {'level0.txt': "level0",
-                 'level1/level1.txt': "level1",
-                 'level1/conanfile.py': conanfile,
+        files = {'trunk/level0.txt': "level0",
+                 'trunk/level1/level1.txt': "level1",
+                 'trunk/level1/conanfile.py': "invalid content",
                  'tags/sentinel': ""}
         self.project_url, rev = self.create_project(files=files)
         self.project_url = self.project_url.replace(" ", "%20")
 
-        # Create a tag for 'level1' component
+        # Modify the recipe file and commit in trunk
         t = TestClient()
-        t.runner('svn copy {url}/level1 {url}/tags/level1-1.0'
-                 ' -m "Release level1-1.0"'.format(url=self.project_url), cwd=t.current_folder)
+        t.runner('svn co "{url}/trunk" "{path}"'.format(url=self.project_url, path=t.current_folder))
+        t.save({"level1/conanfile.py": conanfile})
+        t.runner('svn commit -m "created the conanfile"', cwd=t.current_folder)
+
+        # Create a tag for 'release 1.0'
+        t.runner('svn copy {url}/trunk {url}/tags/release-1.0'
+                 ' -m "Release 1.0"'.format(url=self.project_url), cwd=t.current_folder)
 
     def test_auto_tag(self):
         t = TestClient()
         ref = ConanFileReference.loads("lib/version@issue/testing")
 
         # Clone the tag to local folder
-        url = os.path.join(self.project_url, "tags/level1-1.0")
+        url = os.path.join(self.project_url, "tags/release-1.0")
         t.runner('svn co "{url}" "{path}"'.format(url=url, path=t.current_folder))
 
         # Export the recipe (be sure sources are retrieved from the repository)
-        t.run("export . {ref}".format(ref=ref))
+        t.run("export level1/conanfile.py {ref}".format(ref=ref))
         package_layout = t.cache.package_layout(ref)
         exported_conanfile = load(package_layout.conanfile())
         self.assertNotIn("auto", exported_conanfile)
-        os.remove(package_layout.scm_folder())
+        self.assertIn('"revision": "3",', exported_conanfile)
+        self.assertIn('tags/release-1.0/level1@3', exported_conanfile)
+        os.remove(package_layout.scm_folder())  # Just in case, avoid scm_folder optimization
 
+        # Compile (it will clone the repo)
         t.run("install {ref} --build=lib".format(ref=ref))
         print(t.out)
         self.fail("AAA")
