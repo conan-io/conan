@@ -66,7 +66,7 @@ def get_generator(settings):
     return "Unix Makefiles"
 
 
-def get_generator_platform(settings, generator: str):
+def get_generator_platform(settings, generator):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
