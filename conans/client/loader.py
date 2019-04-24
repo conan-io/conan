@@ -41,6 +41,10 @@ class ConanFileLoader(object):
         self._python_requires.invalidate_caches()
 
     def load_class(self, conanfile_path, lock_python_requires=None):
+        cached = self.cached_conanfiles.get(conanfile_path)
+        if cached and cached[1] == lock_python_requires:
+            return cached[0]
+
         if lock_python_requires is not None:
             self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
         try:
@@ -48,6 +52,7 @@ class ConanFileLoader(object):
             _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
             self._python_requires.locked_versions = None
+            self.cached_conanfiles[conanfile_path] = (conanfile, lock_python_requires)
             return conanfile
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
@@ -125,10 +130,6 @@ class ConanFileLoader(object):
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     def load_conanfile(self, conanfile_path, processed_profile, ref, lock_python_requires=None):
-        conanfile = self.cached_conanfiles.get(conanfile_path)
-        if conanfile:
-            return conanfile
-
         conanfile_class = self.load_class(conanfile_path, lock_python_requires)
         conanfile_class.name = ref.name
         conanfile_class.version = ref.version
@@ -137,7 +138,6 @@ class ConanFileLoader(object):
             conanfile.develop = True
         try:
             self._initialize_conanfile(conanfile, processed_profile)
-            self.cached_conanfiles[conanfile_path] = conanfile
             return conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
