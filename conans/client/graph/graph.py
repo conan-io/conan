@@ -1,4 +1,5 @@
 from conans.model.ref import PackageReference
+import uuid
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -45,7 +46,7 @@ class Node(object):
     @property
     def id(self):
         if self._id is None:
-            self._id = str(id(self))
+            self._id = str(uuid.uuid1())
         return self._id
 
     @id.setter

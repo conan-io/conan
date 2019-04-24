@@ -2,6 +2,8 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.errors import ConanException
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 
+UNKNOWN_PACKAGE_ID = "Unknown Graph Lock PackageID"
+
 
 class GraphLock(object):
 
@@ -21,6 +23,16 @@ class GraphLock(object):
                 self._edges[node.id] = dependencies
                 self._python_requires[node.id] = [r.ref for r in getattr(node.conanfile,
                                                                          "python_requires", [])]
+
+    def update_check_graph(self, deps_graph, output):
+        for node in deps_graph.nodes:
+            lock_node_pref = self._nodes[node.id]
+            if not lock_node_pref or lock_node_pref.id == UNKNOWN_PACKAGE_ID:
+                self._nodes[node.id] = node.pref
+            else:
+                if lock_node_pref != node.pref:
+                    raise ConanException("Mistmatch between lock and graph:\nLock %s\nGraph: %s"
+                                         % (lock_node_pref.full_repr(), node.pref.full_repr()))
 
     def pref(self, node_id):
         return self._nodes[node_id]
@@ -53,14 +65,14 @@ class GraphLock(object):
 
     def update_ref(self, ref):
         node_id = self.get_node(ref)
-        self._nodes[node_id] = PackageReference(ref, "Unkonwn Package ID")
+        self._nodes[node_id] = PackageReference(ref, UNKNOWN_PACKAGE_ID)
 
     def find_node(self, node, reference):
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self.get_node(reference)
-            # Adding a new node, has the problem of 
-            #python_requires
+            # Adding a new node, has the problem of
+            # python_requires
             self._nodes[node.id] = None
             self._edges[node.id] = [node_id]
             return

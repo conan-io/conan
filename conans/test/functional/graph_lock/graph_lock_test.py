@@ -72,9 +72,17 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         # Create is also possible
         client = self.client
         client.run("create . PkgB/0.1@user/channel --lock")
-        print client.out
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
+
+        lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
+        self.assertIn("PkgB/0.1@user/channel#180919b324d7823f2683af9381d11431:"
+                      "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5",
+                      lock_file)
+
+    def export_pkg_test(self):
+        client = self.client
+        client.run("export-pkg . PkgB/0.1@user/channel --lock")
 
         lock_file = load(os.path.join(client.current_folder, "graph_info.json"))
         self.assertIn("PkgB/0.1@user/channel#180919b324d7823f2683af9381d11431:"

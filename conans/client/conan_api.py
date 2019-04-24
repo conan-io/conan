@@ -406,7 +406,8 @@ class ConanAPIV1(object):
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
-                   options=None, env=None, force=False, user=None, version=None, cwd=None):
+                   options=None, env=None, force=False, user=None, version=None, cwd=None,
+                   lock=None):
 
         remotes = self._cache.registry.load_remotes()
         self.python_requires.enable_remotes(remotes=remotes)
@@ -437,11 +438,12 @@ class ConanAPIV1(object):
 
             # Checks that no both settings and info files are specified
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                        self._cache, self._user_io.out)
+                                        self._cache, self._user_io.out, lock=lock)
 
             new_ref = cmd_export(conanfile_path, name, version, user, channel, True,
                                  self._cache.config.revisions_enabled, self._user_io.out,
-                                 self._hook_manager, self._loader, self._cache)
+                                 self._hook_manager, self._loader, self._cache,
+                                 graph_lock=graph_info.graph_lock)
             ref = new_ref.copy_clear_rev()
             # new_ref has revision
             recorder.recipe_exported(new_ref)

@@ -799,6 +799,8 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
+        parser.add_argument("-l", "--lock", nargs="?", const=".",
+                            help="Use lock dependencies in graph_info.json")
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -820,7 +822,8 @@ class Command(object):
                                           options=args.options,
                                           force=args.force,
                                           user=user,
-                                          channel=channel)
+                                          channel=channel,
+                                          lock=args.lock)
         except ConanException as exc:
             info = exc.info
             raise

@@ -62,7 +62,7 @@ class DepsGraphBuilder(object):
             for require in requires:
                 # Not new unlocked dependencies at this stage
                 locked_pref, locked_id = prefs[require.ref.name]
-                require.ref = locked_pref.ref
+                require.ref = require.range_ref = locked_pref.ref
                 require._locked_id = locked_id
 
         self._resolve_ranges(graph, requires, scope, update, remotes)
@@ -134,7 +134,7 @@ class DepsGraphBuilder(object):
             for name, require in node.conanfile.requires.items():
                 # Not new unlocked dependencies at this stage
                 locked_pref, locked_id = prefs[name]
-                require.ref = locked_pref.ref
+                require.ref = require.range_ref = locked_pref.ref
                 require._locked_id = locked_id
 
         # if there are version-ranges, resolve them before expanding each of the requirements

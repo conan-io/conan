@@ -173,6 +173,8 @@ class GraphManager(object):
         graph_info.options = root_node.conanfile.options.values
         if graph_info.graph_lock is None:
             graph_info.graph_lock = GraphLock(deps_graph)
+        else:
+            graph_info.graph_lock.update_check_graph(deps_graph, self._output)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
