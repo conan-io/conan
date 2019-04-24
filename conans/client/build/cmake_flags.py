@@ -66,7 +66,7 @@ def get_generator(settings):
     return "Unix Makefiles"
 
 
-def get_generator_platform(settings):
+def get_generator_platform(settings, generator: str):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
@@ -74,7 +74,7 @@ def get_generator_platform(settings):
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
 
-    if compiler == "Visual Studio" and Version(compiler_version) >= "16":
+    if compiler == "Visual Studio" and Version(compiler_version) >= "16" and generator.find('Visual Studio') != -1:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",

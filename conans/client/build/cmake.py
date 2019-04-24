@@ -50,7 +50,7 @@ class CMake(object):
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
         self.generator = generator or get_generator(conanfile.settings)
-        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings)
+        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings, self.generator)
         if not self.generator:
             self._conanfile.output.warn("CMake generator could not be deduced from settings")
         self.parallel = parallel
