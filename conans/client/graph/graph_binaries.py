@@ -198,10 +198,13 @@ class GraphBinariesAnalyzer(object):
         if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
             private_neighbours = node.private_neighbors()
             for neigh in private_neighbours:
+                if not neigh.private:
+                    continue
                 # Current closure contains own node to be skipped
                 for n in neigh.public_closure.values():
-                    n.binary = BINARY_SKIP
-                    self._handle_private(n)
+                    if n.private:
+                        n.binary = BINARY_SKIP
+                        self._handle_private(n)
 
     def evaluate_graph(self, deps_graph, build_mode, update, remote_name):
         default_package_id_mode = self._cache.config.default_package_id_mode
