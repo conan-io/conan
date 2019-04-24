@@ -283,7 +283,7 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.install("a_package", force=False)
                 self.assertEqual(runner.command_called,
                                  'choco search --local-only --exact a_package | '
-                                 ' findstr /c:"1 packages installed."')
+                                 'findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
