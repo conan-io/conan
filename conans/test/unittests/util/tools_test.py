@@ -22,7 +22,7 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
-from conans.client.tools.oss import check_output
+from conans.client.tools.oss import check_output, OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
 from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
@@ -106,14 +106,15 @@ class ToolsTest(unittest.TestCase):
         self.assertFalse(ret)
 
         # Multiple matches
-        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        s = 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext'
+        save(path, s)
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          windows_paths=True, output=out)
         self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
         self.assertTrue(ret)
 
         # Automatic windows_paths
-        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        save(path, s)
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          output=out)
         if platform.system() == "Windows":
@@ -196,7 +197,8 @@ class ToolsTest(unittest.TestCase):
             ["1", "2", "3"]
         )
         self.assertEqual(
-            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
+            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED":
+                                                                          " 1 , 2 , 3 "}),
             ["1", "2", "3"]
         )
 
@@ -499,7 +501,8 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
-        with six.assertRaisesRegex(self, ConanException, "VS non-existing installation: Visual Studio 5"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
             tools.vcvars_command(settings, output=output)
 
@@ -517,7 +520,7 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         with six.assertRaisesRegex(self, ConanException,
-                                     "compiler.version setting required for vcvars not defined"):
+                                   "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings, output=output)
 
         new_out = StringIO()
@@ -527,7 +530,7 @@ compiler:
             tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with six.assertRaisesRegex(self, ConanException,
-                                             "Error, Visual environment already set to 12"):
+                                           "Error, Visual environment already set to 12"):
                     tools.vcvars_command(settings, output=output)
 
             with tools.environment_append({"VisualStudioVersion": "12"}):
@@ -625,7 +628,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
             with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
-                self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
+                self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
+                                 "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
                 self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
                 self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
@@ -678,7 +682,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 fmanual.write("this is some content")
                 manual_file = os.path.abspath("manual.html")
 
-        from bottle import static_file, auth_basic
+        from bottle import auth_basic
+
         @http_server.server.get("/manual.html")
         def get_manual():
             return static_file(os.path.basename(manual_file),
@@ -788,7 +793,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
         self.assertEqual(triplet, expected_triplet,
-                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
+                         "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
     def get_gnu_triplet_on_windows_without_compiler_test(self):
         with self.assertRaises(ConanException):
@@ -837,7 +842,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with six.assertRaisesRegex(self, ConanException,
-                                     "Cannot deduce file name form url. Use 'filename' parameter."):
+                                   "Cannot deduce file name form url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
         # Test: Works with filename parameter instead of '?file=1'
@@ -968,12 +973,6 @@ class HelloConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
-
-
-
-
-
-
 
 
 class CollectLibTestCase(unittest.TestCase):
