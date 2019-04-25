@@ -74,7 +74,8 @@ def get_generator_platform(settings, generator):
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
 
-    if compiler == "Visual Studio" and Version(compiler_version) >= "16" and generator.find('Visual Studio') != -1:
+    if compiler == "Visual Studio" and Version(compiler_version) >= "16" \
+            and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",
