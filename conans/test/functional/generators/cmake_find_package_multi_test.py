@@ -6,6 +6,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 @attr('slow')
@@ -49,6 +50,11 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             with c.chdir("build"):
                 for bt in ("Debug", "Release"):
                     c.run("install .. user/channel -s build_type={}".format(bt))
+
+                # Test that we are using find_dependency with the NO_MODULE option
+                # to skip finding first possible FindBye somewhere
+                self.assertIn("find_dependency(hello REQUIRED NO_MODULE)",
+                              load(os.path.join(c.current_folder, "byeConfig.cmake")))
 
                 if platform.system() == "Windows":
                     c.run_command('cmake .. -G "Visual Studio 15 Win64"')
