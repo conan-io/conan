@@ -49,8 +49,8 @@ class GraphManagerTest(unittest.TestCase):
         save(self.cache.conanfile(ref), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.cache.export(ref))
-        manifest.save(self.cache.export(ref))
+        manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
+        manifest.save(self.cache.package_layout(ref).export())
 
     def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None):
         path = temp_folder()

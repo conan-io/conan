@@ -36,16 +36,16 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(conan, "package")))
         client.run("upload pkg/0.1@lasote/stable --all")
         client.run("remove pkg/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.export(ref)))
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
         client.run("download pkg/0.1@lasote/stable --recipe")
 
         self.assertIn("Downloading conanfile.py", client.out)
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
         self.assertNotIn("Downloading conan_package.tgz", client.out)
-        export = client.cache.export(ref)
+        export = client.cache.package_layout(ref).export()
         self.assertTrue(os.path.exists(os.path.join(export, "conanfile.py")))
         self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
-        source = client.cache.export_sources(ref)
+        source = client.cache.package_layout(ref).export_sources()
         self.assertFalse(os.path.exists(os.path.join(source, "file.h")))
         conan = client.cache.base_folder(ref)
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
@@ -74,11 +74,11 @@ class Pkg(ConanFile):
 
         client.run("upload pkg/0.1@lasote/stable")
         client.run("remove pkg/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.export(ref)))
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
 
         client.run("download pkg/0.1@lasote/stable")
         self.assertIn("Downloading conan_sources.tgz", client.out)
-        source = client.cache.export_sources(ref)
+        source = client.cache.package_layout(ref).export_sources()
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))
 
@@ -100,7 +100,7 @@ class Pkg(ConanFile):
 
         client.run("upload pkg/0.1@lasote/stable")
         client.run("remove pkg/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.export(ref)))
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
 
         client.run("download pkg/0.1@lasote/stable")
         # Check 'No remote binary packages found' warning
@@ -131,7 +131,7 @@ class Pkg(ConanFile):
 
         client.run("upload pkg/0.1@lasote/stable --all")
         client.run("remove pkg/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.export(ref)))
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
 
         client.run("download pkg/0.1@lasote/stable")
 

@@ -288,7 +288,7 @@ class CmdUpload(object):
         return pref
 
     def _compress_recipe_files(self, ref):
-        export_folder = self._cache.export(ref)
+        export_folder = self._cache.package_layout(ref).export()
 
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
@@ -300,7 +300,7 @@ class CmdUpload(object):
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
-        export_src_folder = self._cache.export_sources(ref, short_paths=None)
+        export_src_folder = self._cache.package_layout(ref).export_sources()
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._user_io.out)
@@ -445,7 +445,7 @@ class CmdUpload(object):
             self._user_io.out.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
-                contents = load(os.path.join(self._cache.export(ref), "conanfile.py"))
+                contents = load(self._cache.package_layout(ref).conanfile())
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",

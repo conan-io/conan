@@ -40,15 +40,16 @@ class InstallSelectedPackagesTest(unittest.TestCase):
     def download_recipe_twice_test(self):
         expected_conanfile_contents = self.files[CONANFILE]
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        got_conanfile = load(os.path.join(self.new_client.cache.export(self.ref), CONANFILE))
+        conanfile_path = self.new_client.cache.package_layout(self.ref).conanfile()
+        got_conanfile = load(conanfile_path)
         self.assertEqual(expected_conanfile_contents, got_conanfile)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        got_conanfile = load(os.path.join(self.new_client.cache.export(self.ref), CONANFILE))
+        got_conanfile = load(conanfile_path)
         self.assertEqual(expected_conanfile_contents, got_conanfile)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        got_conanfile = load(os.path.join(self.new_client.cache.export(self.ref), CONANFILE))
+        got_conanfile = load(conanfile_path)
         self.assertEqual(expected_conanfile_contents, got_conanfile)
 
     def download_packages_twice_test(self):

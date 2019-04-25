@@ -77,7 +77,7 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        dest_folder = self._cache.export(ref)
+        dest_folder = self._cache.package_layout(ref).export()
         rmdir(dest_folder)
 
         ref = self._resolve_latest_ref(ref, remote)

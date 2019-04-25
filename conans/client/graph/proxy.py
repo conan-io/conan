@@ -29,7 +29,7 @@ class ConanProxy(object):
             # TODO: recorder.recipe_fetched_as_editable(reference)
             return conanfile_path, status, None, ref
 
-        with self._cache.conanfile_write_lock(ref):
+        with self._cache.package_layout(ref).conanfile_write_lock(self._out):
             result = self._get_recipe(ref, check_updates, update, remotes, recorder)
             conanfile_path, status, remote, new_ref = result
 
@@ -85,7 +85,7 @@ class ConanProxy(object):
             ref = ref.copy_with_rev(cur_revision)
             return conanfile_path, status, selected_remote, ref
 
-        export = self._cache.export(ref)
+        export = self._cache.package_layout(ref).export()
         read_manifest = FileTreeManifest.load(export)
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:

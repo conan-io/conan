@@ -27,8 +27,8 @@ class ManifestManager(object):
 
     def _handle_recipe(self, node, verify, interactive):
         ref = node.ref
-        export = self._cache.export(ref)
-        exports_sources_folder = self._cache.export_sources(ref)
+        export = self._cache.package_layout(ref).export()
+        exports_sources_folder = self._cache.package_layout(ref).export_sources()
         read_manifest = FileTreeManifest.load(export)
         expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)

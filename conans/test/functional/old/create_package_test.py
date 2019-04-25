@@ -44,7 +44,7 @@ class ExporterTest(unittest.TestCase):
         files = hello_source_files()
 
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        reg_folder = client.cache.export(ref)
+        reg_folder = client.cache.package_layout(ref).export()
 
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,

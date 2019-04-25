@@ -78,7 +78,7 @@ class Pkg(ConanFile):
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         conanfile = load(client2.cache.conanfile(ref))
         self.assertNotIn("# Recipe revision 2", conanfile)
-        data = load(os.path.join(client2.cache.export_sources(ref), "myfile.txt"))
+        data = load(os.path.join(client2.cache.package_layout(ref).export_sources(), "myfile.txt"))
         # With revisions, it work, it fetches the correct one
         if revision_enabled:
             self.assertIn("my data!", data)

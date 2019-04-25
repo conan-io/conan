@@ -383,7 +383,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: License! MyLicense", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Author! author@company.com", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        self.assertTrue(os.path.exists(os.path.join(client.cache.export(ref),
+        self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
     def reuse_exports_conflict_test(self):

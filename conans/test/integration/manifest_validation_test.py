@@ -284,7 +284,7 @@ class ConanFileTest(ConanFile):
         self.assertIn("ERROR: Do not specify both", self.client.user_io.out)
 
     def test_corrupted_recipe(self):
-        export_path = self.client.cache.export(self.ref)
+        export_path = self.client.cache.package_layout(self.ref).export()
         file_path = os.path.join(export_path, "data.txt")
         save(file_path, "BAD CONTENT")
 

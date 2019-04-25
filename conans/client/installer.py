@@ -236,8 +236,9 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     if "system_requirements" not in type(conan_file).__dict__:
         return
 
-    system_reqs_path = cache.system_reqs(pref.ref)
-    system_reqs_package_path = cache.system_reqs_package(pref)
+    package_layout = cache.package_layout(pref.ref)
+    system_reqs_path = package_layout.system_reqs()
+    system_reqs_package_path = package_layout.system_reqs_package(pref)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
         return
 
@@ -374,7 +375,7 @@ class BinaryInstaller(object):
         output = conan_file.output
         package_folder = self._cache.package(pref, conan_file.short_paths)
 
-        with self._cache.package_lock(pref):
+        with self._cache.package_layout(pref.ref).package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
