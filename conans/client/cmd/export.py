@@ -158,6 +158,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
             remover.remove_packages(package_layout, ids_filter=to_remove)
 
     ref = ref.copy_with_rev(revision)
+    output.info("Exported revision: %s" % revision)
     if graph_lock:
         graph_lock.update_ref(ref)
     return ref

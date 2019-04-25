@@ -129,13 +129,7 @@ class GraphManager(object):
                 test = str(create_reference) if create_reference else None
                 lock_python_requires = None
                 if graph_lock:
-                    if graph_info.root.name:
-                        ref = ConanFileReference(graph_info.root.name, graph_info.root.version,
-                                                 graph_info.root.user, graph_info.root.channel,
-                                                 validate=False)
-                    else:
-                        ref = None
-                    node_id = graph_lock.get_node(ref)
+                    node_id = graph_lock.get_node(graph_info.root)
                     lock_python_requires = graph_lock.python_requires(node_id)
 
                 conanfile = self._loader.load_consumer(path, processed_profile, test=test,
@@ -171,6 +165,8 @@ class GraphManager(object):
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
         graph_info.options = root_node.conanfile.options.values
+        if ref:
+            graph_info.root = ref
         if graph_info.graph_lock is None:
             graph_info.graph_lock = GraphLock(deps_graph)
         else:

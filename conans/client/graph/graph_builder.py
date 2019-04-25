@@ -57,13 +57,7 @@ class DepsGraphBuilder(object):
         scope = conanfile.display_name
         requires = [Requirement(ref) for ref in build_requires_refs]
         if graph_lock:
-            assert not check_updates and not update
-            prefs = graph_lock.dependencies(node.id)
-            for require in requires:
-                # Not new unlocked dependencies at this stage
-                locked_pref, locked_id = prefs[require.ref.name]
-                require.ref = require.range_ref = locked_pref.ref
-                require._locked_id = locked_id
+            graph_lock.lock_node(node, requires)
 
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
@@ -129,13 +123,7 @@ class DepsGraphBuilder(object):
         new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref, down_options)
 
         if graph_lock:
-            assert not check_updates and not update
-            prefs = graph_lock.dependencies(node.id)
-            for name, require in node.conanfile.requires.items():
-                # Not new unlocked dependencies at this stage
-                locked_pref, locked_id = prefs[name]
-                require.ref = require.range_ref = locked_pref.ref
-                require._locked_id = locked_id
+            graph_lock.lock_node(node, node.conanfile.requires.values())
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         self._resolve_deps(dep_graph, node, update, remotes)

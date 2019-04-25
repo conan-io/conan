@@ -454,6 +454,8 @@ class ConanAPIV1(object):
                        ref, source_folder=source_folder, build_folder=build_folder,
                        package_folder=package_folder, install_folder=install_folder,
                        graph_info=graph_info, force=force, remotes=remotes)
+            if lock:
+                graph_info.save(install_folder)
             return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True

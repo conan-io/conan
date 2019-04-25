@@ -2,8 +2,6 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.errors import ConanException
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 
-UNKNOWN_PACKAGE_ID = "Unknown Graph Lock PackageID"
-
 
 class GraphLock(object):
 
@@ -13,59 +11,84 @@ class GraphLock(object):
         self._python_requires = {}  # {numeric_id: [REFS (with RREV)]}
         if graph:
             for node in graph.nodes:
+                if node.recipe == RECIPE_VIRTUAL:
+                    continue
                 dependencies = []
                 for edge in node.dependencies:
                     dependencies.append(edge.dst.id)
-                # The pref.ref CAN BE None, for conanfile.txt
-                self._nodes[node.id] = (node.pref if node.recipe not in (RECIPE_VIRTUAL,
-                                                                         RECIPE_CONSUMER)
-                                        else None)
+                self._nodes[node.id] = node.pref if node.ref else None
                 self._edges[node.id] = dependencies
                 self._python_requires[node.id] = [r.ref for r in getattr(node.conanfile,
                                                                          "python_requires", [])]
 
     def update_check_graph(self, deps_graph, output):
         for node in deps_graph.nodes:
+            if node.recipe == RECIPE_VIRTUAL:
+                continue
             lock_node_pref = self._nodes[node.id]
-            if not lock_node_pref or lock_node_pref.id == UNKNOWN_PACKAGE_ID:
+            if not lock_node_pref or lock_node_pref.revision is None:
+                # Means the consumer
                 self._nodes[node.id] = node.pref
             else:
-                if lock_node_pref != node.pref:
+                if lock_node_pref.full_repr() != node.pref.full_repr():
                     raise ConanException("Mistmatch between lock and graph:\nLock %s\nGraph: %s"
                                          % (lock_node_pref.full_repr(), node.pref.full_repr()))
+
+    def lock_node(self, node, requires):
+        if node.recipe == RECIPE_VIRTUAL:
+            return
+        prefs = self.dependencies(node.id)
+        for require in requires:
+            # Not new unlocked dependencies at this stage
+            locked_pref, locked_id = prefs[require.ref.name]
+            require.ref = require.range_ref = locked_pref.ref
+            require._locked_id = locked_id
 
     def pref(self, node_id):
         return self._nodes[node_id]
 
     def python_requires(self, node_id):
-        return self._python_requires[node_id]
+        return self._python_requires.get(node_id)
 
     def dependencies(self, node_id):
         # return {pkg_name: PREF}
         return {self._nodes[i].ref.name: (self._nodes[i], i) for i in self._edges[node_id]}
 
     def get_node(self, ref):
-        # Build a map to search by REF without REV
-        inverse_map = {}
+        # None reference
+        if ref is None:
+            try:
+                return self._nodes[None]
+            except KeyError:
+                raise ConanException("Unspecified reference in graph-lock, please specify")
+
+        # First search by ref (without RREV)
+        ids = []
+        search_ref = str(ref)
         for id_, pref in self._nodes.items():
-            inverse_map.setdefault(pref.ref.copy_clear_rev() if pref else None,
-                                   {})[pref.id if pref else None] = id_
+            if pref and str(pref.ref) == search_ref:
+                ids.append(id_)
+        if ids:
+            if len(ids) == 1:
+                return ids[0]
+            raise ConanException("There are %s binaries for ref %s" % (len(ids), ref))
 
-        try:
-            binaries = inverse_map[ref.copy_clear_rev() if ref else None]
-        except KeyError:
-            binaries = inverse_map[None]
+        # Search by approximate name
+        ids = []
+        for id_, pref in self._nodes.items():
+            if pref and pref.ref.name == ref.name:
+                ids.append(id_)
+        if ids:
+            if len(ids) == 1:
+                return ids[0]
+            raise ConanException("There are %s binaries with name %s" % (len(ids), ref.name))
 
-        if len(binaries) == 1:
-            id_ = next(iter(binaries.values()))
-            assert id_
-            return id_
-        else:
-            raise ConanException("There are %s binaries for ref %s" % (len(binaries), ref))
+        raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_repr())
 
     def update_ref(self, ref):
         node_id = self.get_node(ref)
-        self._nodes[node_id] = PackageReference(ref, UNKNOWN_PACKAGE_ID)
+        pref = self._nodes[node_id]
+        self._nodes[node_id] = PackageReference(ref, pref.id)
 
     def find_node(self, node, reference):
         if node.recipe == RECIPE_VIRTUAL:
@@ -73,12 +96,12 @@ class GraphLock(object):
             node_id = self.get_node(reference)
             # Adding a new node, has the problem of
             # python_requires
-            self._nodes[node.id] = None
-            self._edges[node.id] = [node_id]
+            for require in node.conanfile.requires.values():
+                require._locked_id = node_id
             return
 
         assert node.recipe == RECIPE_CONSUMER
-        node_id = self.get_node(None)
+        node_id = self.get_node(node.ref)
         node.id = node_id
 
     @staticmethod
@@ -103,5 +126,5 @@ class GraphLock(object):
         result["nodes"] = nodes
         result["edges"] = self._edges
         result["python_requires"] = {id_: [r.full_repr() for r in reqs]
-                                     for id_, reqs in self._python_requires.items()}
+                                     for id_, reqs in self._python_requires.items() if reqs}
         return result
