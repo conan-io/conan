@@ -1,6 +1,7 @@
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.errors import ConanException
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
+    BINARY_BUILD
 
 
 class GraphLock(object):
@@ -26,8 +27,7 @@ class GraphLock(object):
             if node.recipe == RECIPE_VIRTUAL:
                 continue
             lock_node_pref = self._nodes[node.id]
-            if not lock_node_pref or lock_node_pref.revision is None:
-                # Means the consumer
+            if node.binary == BINARY_BUILD:
                 self._nodes[node.id] = node.pref
             else:
                 if lock_node_pref.full_repr() != node.pref.full_repr():

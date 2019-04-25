@@ -214,6 +214,7 @@ class _PackageBuilder(object):
 
                 prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
                                      package_folder)
+                assert prev
                 node.prev = prev
                 log_file = os.path.join(build_folder, RUN_LOG_NAME)
                 log_file = log_file if os.path.exists(log_file) else None

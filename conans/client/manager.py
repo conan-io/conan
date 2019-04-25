@@ -78,6 +78,8 @@ class ConanManager(object):
                                     recorder=self._recorder,
                                     hook_manager=self._hook_manager)
         installer.install(deps_graph, remotes, keep_build=keep_build)
+        if graph_info.graph_lock:
+            graph_info.graph_lock.update_check_graph(deps_graph, self._user_io.out)
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,

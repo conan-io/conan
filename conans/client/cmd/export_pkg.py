@@ -57,8 +57,11 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     readed_manifest = FileTreeManifest.load(dest_package_folder)
     pref = PackageReference(pref.ref, pref.id, readed_manifest.summary_hash)
     output.info("Package revision %s" % pref.revision)
+    nodes[0].prev = pref.revision
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.packages[package_id].revision = pref.revision
         metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 
+    if graph_info.graph_lock:
+        graph_info.graph_lock.update_check_graph(deps_graph, output)
     recorder.package_exported(pref)

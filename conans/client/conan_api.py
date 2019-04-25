@@ -716,10 +716,14 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
+        graph_info = get_graph_info(None, None, None, None, cwd, install_folder,
+                                    self._cache, self._user_io.out, lock="if-exists")
+
         build(self._graph_manager, self._hook_manager, conanfile_path,
               source_folder, build_folder, package_folder, install_folder,
               should_configure=should_configure, should_build=should_build,
-              should_install=should_install, should_test=should_test)
+              should_install=should_install, should_test=should_test,
+              graph_lock=graph_info.graph_lock)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
@@ -738,8 +742,11 @@ class ConanAPIV1(object):
         if package_folder == build_folder:
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build-folder and package folder can't be the same")
+        graph_info = get_graph_info(None, None, None, None, cwd, install_folder,
+                                    self._cache, self._user_io.out, lock="if-exists")
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                                deps_info_required=True)
+                                                                deps_info_required=True,
+                                                                graph_lock=graph_info.graph_lock)
         with get_env_context_manager(conanfile):
             packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                     install_folder, self._hook_manager, conanfile_path, None,
@@ -1200,6 +1207,8 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
             graph_info.graph_lock = None
     except IOError:  # Only if file is missing
         if install_folder or lock:
+            if lock == "if-exists":
+                return GraphInfo()
             raise ConanException("Failed to load graphinfo file in install-folder: %s"
                                  % install_folder)
         graph_info = None

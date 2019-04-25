@@ -53,7 +53,7 @@ class GraphManager(object):
         self._loader = loader
 
     def load_consumer_conanfile(self, conanfile_path, info_folder,
-                                deps_info_required=False, test=None):
+                                deps_info_required=False, test=None, graph_lock=None):
         """loads a conanfile for local flow: source, imports, package, build
         """
         try:
@@ -71,10 +71,15 @@ class GraphManager(object):
             profile.options.update(graph_info.options)
         processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
+            lock_python_requires = None
+            if graph_lock:
+                node_id = graph_lock.get_node(graph_info.root)
+                lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    processed_profile=processed_profile, test=test,
                                                    name=name, version=version,
-                                                   user=user, channel=channel)
+                                                   user=user, channel=channel,
+                                                   lock_python_requires=lock_python_requires)
             with get_env_context_manager(conanfile, without_python=True):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
