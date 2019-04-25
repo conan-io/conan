@@ -206,8 +206,9 @@ class CmdUpload(object):
                                    remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
-        current_remote = self._registry.refs.get(ref)
-        if remote != current_remote:
+        current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
+
+        if remote.name != current_remote_name:
             complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
 
         conanfile_path = self._cache.conanfile(ref)
