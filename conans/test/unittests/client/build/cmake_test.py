@@ -249,7 +249,7 @@ class CMakeTest(unittest.TestCase):
                            ('x86_64', 'x64'),
                            ('armv7', 'ARM'),
                            ('armv8', 'ARM64')])
-    def cmake_generator_platform_vs2019_test(self, arch, platform):
+    def cmake_generator_platform_vs2019_test(self, arch, pf):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -260,7 +260,21 @@ class CMakeTest(unittest.TestCase):
         conan_file.settings = settings
 
         cmake = CMake(conan_file)
-        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % platform, cmake.command_line)
+        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % pf, cmake.command_line)
+
+    def cmake_generator_platform_vs2019_with_ninja_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "16"
+        settings.arch = "x86_64"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file, generator="Ninja")
+        self.assertIn('-G "Ninja"', cmake.command_line)
+        self.assertNotIn("-A", cmake.command_line)
 
     @parameterized.expand([('arm',),
                            ('ppc',),
