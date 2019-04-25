@@ -30,7 +30,7 @@ class GraphLock(object):
             if node.binary == BINARY_BUILD:
                 self._nodes[node.id] = node.pref
             else:
-                if lock_node_pref.full_repr() != node.pref.full_repr():
+                if lock_node_pref and node.ref and lock_node_pref.full_repr() != node.pref.full_repr():
                     raise ConanException("Mistmatch between lock and graph:\nLock %s\nGraph: %s"
                                          % (lock_node_pref.full_repr(), node.pref.full_repr()))
 
