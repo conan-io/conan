@@ -44,11 +44,11 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         ref = ConanFileReference.loads("lib/version@issue/testing")
 
         # Clone the tag to local folder
-        url = os.path.join(self.project_url, "tags/release-1.0")
+        url = os.path.join(self.project_url, "tags/release-1.0/level1")
         t.runner('svn co "{url}" "{path}"'.format(url=url, path=t.current_folder))
 
         # Export the recipe (be sure sources are retrieved from the repository)
-        t.run("export level1/conanfile.py {ref}".format(ref=ref))
+        t.run("export conanfile.py {ref}".format(ref=ref))
         package_layout = t.cache.package_layout(ref)
         exported_conanfile = load(package_layout.conanfile())
         self.assertNotIn("auto", exported_conanfile)
@@ -58,5 +58,4 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
 
         # Compile (it will clone the repo)
         t.run("install {ref} --build=lib".format(ref=ref))
-        print(t.out)
-        self.fail("AAA")
+        self.assertIn("lib/version@issue/testing: Getting sources from url:", t.out)
