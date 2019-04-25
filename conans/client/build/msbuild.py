@@ -119,6 +119,8 @@ class MSBuild(object):
         if platforms:
             msvc_arch.update(platforms)
         msvc_arch = msvc_arch.get(str(arch))
+        if self._settings.get_safe("os") == "WindowsCE":
+            msvc_arch = self._settings.get_safe("os.platform")
         try:
             sln = tools.load(project_file)
             pattern = re.compile(r"GlobalSection\(SolutionConfigurationPlatforms\)"

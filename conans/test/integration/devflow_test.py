@@ -237,6 +237,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         # cmake finds it, using an install_folder different from build_folder
         client = TestClient()
         client.run("new lib/1.0")
+        # FIXME: this test, so it doesn't need to clone from github
         client.run("source . --source-folder src")
 
         # Patch the CMakeLists to include the generator file from a different folder

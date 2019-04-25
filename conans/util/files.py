@@ -73,7 +73,10 @@ def touch(fname, times=None):
 def touch_folder(folder):
     for dirname, _, filenames in walk(folder):
         for fname in filenames:
-            os.utime(os.path.join(dirname, fname), None)
+            try:
+                os.utime(os.path.join(dirname, fname), None)
+            except Exception:
+                pass
 
 
 def normalize(text):
