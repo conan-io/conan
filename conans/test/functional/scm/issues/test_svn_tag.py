@@ -48,7 +48,7 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         t.runner('svn co "{url}" "{path}"'.format(url=url, path=t.current_folder))
 
         # Export the recipe (be sure sources are retrieved from the repository)
-        t.run("export conanfile.py {ref}".format(ref=ref))
+        t.run("export . {ref}".format(ref=ref))
         package_layout = t.cache.package_layout(ref)
         exported_conanfile = load(package_layout.conanfile())
         self.assertNotIn("auto", exported_conanfile)
