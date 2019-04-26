@@ -53,7 +53,7 @@ class VisualStudioGenerator(Generator):
         sections = []
         for dep_name, cpp_info in self._deps_build_info.dependencies:
             fields = {
-                'root_dir': cpp_info.rootpath.replace("\\", "/"),
+                'root_dir': cpp_info.rootpath,
                 'name': dep_name.replace(".", "-")
             }
             section = self.item_template.format(**fields)
@@ -67,10 +67,10 @@ class VisualStudioGenerator(Generator):
     def _format_properties(self, build_info, condition):
         fields = {
             'condition': condition,
-            'bin_dirs': "".join("%s;" % p for p in build_info.bin_paths).replace("\\", "/"),
-            'res_dirs': "".join("%s;" % p for p in build_info.res_paths).replace("\\", "/"),
-            'include_dirs': "".join("%s;" % p for p in build_info.include_paths).replace("\\", "/"),
-            'lib_dirs': "".join("%s;" % p for p in build_info.lib_paths).replace("\\", "/"),
+            'bin_dirs': "".join("%s;" % p for p in build_info.bin_paths),
+            'res_dirs': "".join("%s;" % p for p in build_info.res_paths),
+            'include_dirs': "".join("%s;" % p for p in build_info.include_paths),
+            'lib_dirs': "".join("%s;" % p for p in build_info.lib_paths),
             'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
                              else '%s;' % lib for lib in build_info.libs]),
             'definitions': "".join("%s;" % d for d in build_info.defines),
@@ -98,7 +98,7 @@ class VisualStudioGenerator(Generator):
 
         userprofile = os.getenv("USERPROFILE")
         if userprofile:
-            userprofile = userprofile.replace("\\", "/")
+            userprofile = userprofile.replace("\\", "\\\\")
             formatted_template = re.sub(userprofile, "$(USERPROFILE)", formatted_template,
                                         flags=re.I)
         return formatted_template

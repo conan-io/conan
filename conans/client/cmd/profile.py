@@ -35,10 +35,10 @@ def cmd_profile_list(cache_profiles_path, output):
     return profiles
 
 
-def cmd_profile_create(profile_name, cache_profiles_path, output, detect=False):
+def cmd_profile_create(profile_name, cache_profiles_path, output, detect=False, force=False):
     profile_path = get_profile_path(profile_name, cache_profiles_path, get_cwd(),
                                     exists=False)
-    if os.path.exists(profile_path):
+    if not force and os.path.exists(profile_path):
         raise ConanException("Profile already exists")
 
     profile = Profile()

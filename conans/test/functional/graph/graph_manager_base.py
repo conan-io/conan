@@ -16,11 +16,12 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.unittests.model.transitive_reqs_test import MockSearchRemote
+from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
+from conans.client.cache.remote_registry import Remotes
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -28,18 +29,17 @@ class GraphManagerTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder, os.path.join(cache_folder, ".conan"), self.output)
+        cache = ClientCache(cache_folder, self.output)
         self.cache = cache
-        self.remote_search = MockSearchRemote()
-        remote_manager = None
-        self.resolver = RangeResolver(cache, self.remote_search)
-        proxy = ConanProxy(cache, self.output, remote_manager)
+        self.remote_manager = MockRemoteManager()
+        self.resolver = RangeResolver(cache, self.remote_manager)
+        proxy = ConanProxy(cache, self.output, self.remote_manager)
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
-        self.manager = GraphManager(self.output, cache, remote_manager, self.loader, proxy,
+        self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver)
         hook_manager = Mock()
         recorder = Mock()
-        self.binary_installer = BinaryInstaller(cache, self.output, remote_manager, recorder,
+        self.binary_installer = BinaryInstaller(cache, self.output, self.remote_manager, recorder,
                                                 hook_manager)
 
     def _cache_recipe(self, reference, test_conanfile, revision=None):
@@ -64,18 +64,18 @@ class GraphManagerTest(unittest.TestCase):
         profile.process_settings(self.cache)
         update = check_updates = False
         recorder = ActionRecorder()
-        remote_name = None
+        remotes = Remotes()
         build_mode = []
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
         deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
                                                 build_mode, check_updates, update,
-                                                remote_name, recorder)
+                                                remotes, recorder)
         self.binary_installer.install(deps_graph, False, graph_info)
         return deps_graph
 
-    def _check_node(self, node, ref, deps, build_deps, dependents, closure, public_deps):
+    def _check_node(self, node, ref, deps, build_deps, dependents, closure):
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
         self.assertEqual(node.ref.full_repr(), ref.full_repr())
@@ -86,9 +86,6 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(len(dependants), len(dependents))
         for d in dependents:
             self.assertIn(d, dependants)
-
-        public_deps = {n.name: n for n in public_deps}
-        self.assertEqual(node.public_deps, public_deps)
 
         # The recipe requires is resolved to the reference WITH revision!
         self.assertEqual(len(deps), len(conanfile.requires))

@@ -68,7 +68,8 @@ xcode
         definition_group = xmldoc.getElementsByTagName('ItemDefinitionGroup')[0]
         compiler = definition_group.getElementsByTagName("ClCompile")[0]
 
-        include_dirs = compiler.getElementsByTagName("AdditionalIncludeDirectories")[0].firstChild.data
+        elem = compiler.getElementsByTagName("AdditionalIncludeDirectories")
+        include_dirs = elem[0].firstChild.data
         definitions = compiler.getElementsByTagName("PreprocessorDefinitions")[0].firstChild.data
 
         linker = definition_group.getElementsByTagName("Link")[0]
@@ -77,12 +78,12 @@ xcode
 
         package_id = os.listdir(client.cache.packages(ref))[0]
         pref = PackageReference(ref, package_id)
-        package_path = client.cache.package(pref).replace("\\", "/")
+        package_path = client.cache.package(pref)
 
-        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),
+        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "\\\\"),
                                "$(USERPROFILE)", package_path, flags=re.I)
-        expected_lib_dirs = os.path.join(replaced_path, "lib").replace("\\", "/")
-        expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
+        expected_lib_dirs = os.path.join(replaced_path, "lib")
+        expected_include_dirs = os.path.join(replaced_path, "include")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
         self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
@@ -102,4 +103,5 @@ xcode
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
-        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"), xcode)
+        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"),
+                      xcode)

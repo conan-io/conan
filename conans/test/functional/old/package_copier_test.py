@@ -2,11 +2,11 @@ import os
 import sys
 import unittest
 
+from conans.client.cache.cache import ClientCache
 from conans.client.cmd.copy import package_copy
 from conans.client.userio import UserIO
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths.simple_paths import SimplePaths
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import load, mkdir, save
@@ -28,7 +28,7 @@ class PackageCopierTest(unittest.TestCase):
     def test_copy(self):
         output = TestBufferConanOutput()
         userio = MockedBooleanUserIO(True, out=output)
-        paths = SimplePaths(temp_folder())
+        paths = ClientCache(temp_folder(), output)
 
         # Create some packages to copy
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
@@ -123,7 +123,7 @@ class PackageCopierTest(unittest.TestCase):
         origin_reg = paths.export(ref)
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
-        save(os.path.join(paths.conan(ref), "metadata.json"), PackageMetadata().dumps())
+        save(os.path.join(paths.base_folder(ref), "metadata.json"), PackageMetadata().dumps())
         mkdir(paths.export_sources(ref))
 
     def _create_package(self, ref, package_id, paths, content="default_content"):

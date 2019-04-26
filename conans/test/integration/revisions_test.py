@@ -111,7 +111,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # This is not updating the remote in the registry with a --update
         # Is this a bug?
-        self.assertEqual("default", self.c_v2.cache.registry.refs.get(self.ref).name)
+        metadata = self.c_v2.cache.package_layout(self.ref).load_metadata()
+        self.assertEqual("default", metadata.recipe.remote)
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
@@ -1097,6 +1098,8 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
+    @unittest.skipIf(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
+                     "Not implemented in artifactory")
     def search_in_remote_by_revision_pattern_test(self, v1):
         """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
          1. With v2 client: We get the revs without refs matching the pattern

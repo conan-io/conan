@@ -15,6 +15,7 @@ from conans.paths import CONANFILE
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
+from conans.model.ref import ConanFileReference
 
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
@@ -47,12 +48,24 @@ def check_casing_conflict(cache, ref):
                              % (str(ref), " ".join(str(s) for s in refs)))
 
 
-def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions_enabled,
-               output, hook_manager):
+def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisions_enabled,
+               output, hook_manager, loader, cache, export=True):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
+    conanfile = loader.load_export(conanfile_path, name, version, user, channel)
+    ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
+                             conanfile.channel)
+    check_casing_conflict(cache=cache, ref=ref)
+    package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+
+    if not export:
+        metadata = package_layout.load_metadata()
+        recipe_revision = metadata.recipe.revision
+        ref = ref.copy_with_rev(recipe_revision)
+        return ref
+
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=package_layout.ref)
     logger.debug("EXPORT: %s" % conanfile_path)
@@ -132,7 +145,8 @@ def cmd_export(package_layout, conanfile_path, conanfile, keep_source, revisions
             remover = DiskRemover()
             remover.remove_packages(package_layout, ids_filter=to_remove)
 
-    return package_layout.ref.copy_with_rev(revision)
+    ref = ref.copy_with_rev(revision)
+    return ref
 
 
 def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
@@ -209,7 +223,8 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                             else:
                                 next_line = statements[i+1].lineno - 1
                                 next_line_content = lines[next_line].strip()
-                                if next_line_content.endswith('"""') or next_line_content.endswith("'''"):
+                                if (next_line_content.endswith('"""') or
+                                        next_line_content.endswith("'''")):
                                     next_line += 1
                         except IndexError:
                             next_line = stmt.lineno

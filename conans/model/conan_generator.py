@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractproperty
 
+import six
 
+
+@six.add_metaclass(ABCMeta)
 class Generator(object):
-    __metaclass__ = ABCMeta
 
     def __init__(self, conanfile):
         self.conanfile = conanfile
