@@ -44,9 +44,9 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
         ref = ConanFileReference.loads("lib/version@issue/testing")
 
         # Clone the tag to local folder
-        url = os.path.join(self.project_url, "tags/release-1.0/level1")
+        url = os.path.join(self.project_url, "tags/release-1.0/level1").replace('\\', '/')
         t.runner('svn co "{url}" "{path}"'.format(url=url, path=t.current_folder))
-
+        
         # Export the recipe (be sure sources are retrieved from the repository)
         t.run("export . {ref}".format(ref=ref))
         package_layout = t.cache.package_layout(ref)
