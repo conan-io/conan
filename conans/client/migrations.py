@@ -36,20 +36,29 @@ class ClientMigrator(Migrator):
             return
 
         var_name = "settings_{}".format(old_version.replace(".", "_"))
+
+        def save_new():
+            new_path = self.cache.settings_path + ".new"
+            save(new_path, default_settings_yml)
+            self.out.warn("*" * 40)
+            self.out.warn("settings.yml is locally modified, can't be updated")
+            self.out.warn("The new settings.yml has been stored in: %s" % new_path)
+            self.out.warn("*" * 40)
+
+        self.out.warn("Migration: Updating settings.yml")
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
             if version_default_contents != default_settings_yml:
-                self.out.warn("Migration: Updating settings.yml")
                 current_settings = load(self.cache.settings_path)
                 if current_settings != version_default_contents:
-                    new_path = self.cache.settings_path + ".new"
-                    save(new_path, default_settings_yml)
-                    self.out.warn("*" * 40)
-                    self.out.warn("settings.yml is locally modified, can't be updated")
-                    self.out.warn("The new settings.yml has been stored in: %s" % new_path)
-                    self.out.warn("*" * 40)
+                    save_new()
                 else:
                     save(self.cache.settings_path, default_settings_yml)
+            else:
+                self.out.warn("Migration: Settings already up to date")
+        else:
+            # We don't have the value for that version, so don't override
+            save_new()
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
