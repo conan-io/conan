@@ -43,27 +43,28 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         pkg1 = os.path.join(tmp_folder, "pkg1")
         cpp_info = CppInfo(pkg1)
         cpp_info.includedirs = ["include"]
-        save(os.path.join(pkg1, "include/file.h"), "")
+        save(os.path.join(pkg1, "include", "file.h"), "")
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
         pkg2 = os.path.join(tmp_folder, "pkg2")
         cpp_info = CppInfo(pkg2)
         cpp_info.includedirs = ["include"]
-        save(os.path.join(pkg2, "include/file.h"), "")
+        save(os.path.join(pkg2, "include", "file.h"), "")
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = VisualStudioGenerator(conanfile)
 
+        path1 = os.path.join("$(USERPROFILE)", "pkg1", "include")
+        path2 = os.path.join("$(USERPROFILE)", "pkg2", "include")
+        expected = "<AdditionalIncludeDirectories>%s;%s;" % (path1, path2)
         with tools.environment_append({"USERPROFILE": tmp_folder}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)/pkg1/include;"
-                          "$(USERPROFILE)/pkg2/include;", content)
+            self.assertIn(expected, content)
 
         with tools.environment_append({"USERPROFILE": tmp_folder.upper()}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn("<AdditionalIncludeDirectories>$(USERPROFILE)/pkg1/include;"
-                          "$(USERPROFILE)/pkg2/include;", content)
+            self.assertIn(expected, content)
 
     def multi_config_test(self):
         tmp_folder = temp_folder()
@@ -87,11 +88,11 @@ class VisualStudioGeneratorTest(unittest.TestCase):
                         "_DEBUG;DEBUG;%(PreprocessorDefinitions)" \
                         "</PreprocessorDefinitions>"
         defines_release = "<PreprocessorDefinitions>" \
-                        "NDEBUG;%(PreprocessorDefinitions)" \
-                        "</PreprocessorDefinitions>"
-        defines_custom = "<PreprocessorDefinitions>" \
-                          "CUSTOM_BUILD;%(PreprocessorDefinitions)" \
+                          "NDEBUG;%(PreprocessorDefinitions)" \
                           "</PreprocessorDefinitions>"
+        defines_custom = "<PreprocessorDefinitions>" \
+                         "CUSTOM_BUILD;%(PreprocessorDefinitions)" \
+                         "</PreprocessorDefinitions>"
         self.assertIn(defines_common, content)
         self.assertIn(defines_debug, content)
         self.assertIn(defines_release, content)
