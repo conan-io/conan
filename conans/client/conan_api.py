@@ -530,7 +530,8 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
-                          update=False, generators=None, install_folder=None, cwd=None):
+                          update=False, generators=None, install_folder=None, cwd=None,
+                          lock=None):
 
         try:
             recorder = ActionRecorder()
@@ -540,8 +541,9 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
-                                        self._cache, self._user_io.out)
+            lock_folder = _make_abs_path(lock, cwd) if lock else None
+            graph_info = get_graph_info(profile_names, settings, options, env, cwd, lock_folder,
+                                        self._cache, self._user_io.out, lock=lock)
 
             if not generators:  # We don't want the default txt
                 generators = False

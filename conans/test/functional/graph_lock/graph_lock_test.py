@@ -71,6 +71,20 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
+    def install_ref_lock_test(self):
+        client = self.client
+        client.run("install PkgA/[>=0.1]@user/channel -if=tmp")
+        self.assertIn("PkgA/0.2@user/channel: Already installed!", client.out)
+        self.assertNotIn("PkgA/0.1@user/channel", client.out)
+        # Explicit one
+        client.run("install PkgA/0.1@user/channel --lock")
+        self.assertIn("PkgA/0.1@user/channel: Already installed!", client.out)
+        self.assertNotIn("PkgA/0.2@user/channel", client.out)
+        # Range locked one
+        client.run("install PkgA/[>=0.1]@user/channel --lock")
+        self.assertIn("PkgA/0.1@user/channel: Already installed!", client.out)
+        self.assertNotIn("PkgA/0.2@user/channel", client.out)
+
     def export_lock_test(self):
         # locking a version range at export
         self.client.run("export . user/channel --lock")

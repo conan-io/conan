@@ -94,10 +94,13 @@ class GraphLock(object):
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self.get_node(reference)
+            pref = self._nodes[node_id]
             # Adding a new node, has the problem of
             # python_requires
+
             for require in node.conanfile.requires.values():
                 require._locked_id = node_id
+                require.ref = require.range_ref = pref.ref
             return
 
         assert node.recipe == RECIPE_CONSUMER

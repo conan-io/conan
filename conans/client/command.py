@@ -416,7 +416,8 @@ class Command(object):
                                                      build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder)
+                                                     install_folder=args.install_folder,
+                                                     lock=args.lock)
         except ConanException as exc:
             info = exc.info
             raise
