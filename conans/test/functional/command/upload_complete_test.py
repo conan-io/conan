@@ -175,7 +175,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 1 --retry-wait=1", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
-        self.assertIn("Execute upload again to retry upload the failed files: "
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
                       "conan_export.tgz. [Remote: default]", client.user_io.out)
 
         # Try with broken connection even with 10 retries
@@ -185,7 +185,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry-wait=0", assert_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
-        self.assertIn("Execute upload again to retry upload the failed files", client.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
