@@ -271,6 +271,9 @@ class ConanInfo(object):
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
+        # TODO: Apply here the _fill_compiler_cppstd for settings and full_settings for legacy
+        # TODO: packages, but there is no way to know the std_matching mode if ID is requested?
+
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
