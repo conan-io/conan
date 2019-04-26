@@ -37,7 +37,6 @@ class ClientMigrator(Migrator):
 
         var_name = "settings_{}".format(old_version.replace(".", "_"))
         if hasattr(migrations_settings, var_name):
-            print(var_name)
             version_default_contents = getattr(migrations_settings, var_name)
             if version_default_contents != default_settings_yml:
                 self.out.warn("Migration: Updating settings.yml")

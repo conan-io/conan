@@ -2,10 +2,12 @@ settings_1_9_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
 arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
 arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
 # - For building cross compilation tools: Where the cross compiler will run.
@@ -59,10 +61,10 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
+
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
-
 
 settings_1_9_1 = settings_1_9_0
 settings_1_9_2 = settings_1_9_1
@@ -76,10 +78,12 @@ settings_1_12_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
 arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
 arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
 # - For building cross compilation tools: Where the cross compiler will run.
@@ -133,6 +137,7 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
+
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
@@ -144,10 +149,12 @@ settings_1_13_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
 arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
 arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
+
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
 # - For building cross compilation tools: Where the cross compiler will run.
@@ -201,6 +208,7 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
+
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
@@ -212,10 +220,12 @@ settings_1_14_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
 arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
+
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
 os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
 arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
+
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
 # - For building cross compilation tools: Where the cross compiler will run.
@@ -269,6 +279,7 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
+
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 """
