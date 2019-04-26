@@ -1,23 +1,41 @@
 import warnings
 
+from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
 from conans.util.log import logger
 
 
 def preprocess(settings):
-    fill_runtime(settings)
-    check_cppstd(settings)
+    _fill_runtime(settings)
+    _fill_compiler_cppstd(settings)
+    _check_cppstd(settings)
 
 
-def check_cppstd(settings):
+def _fill_compiler_cppstd(settings):
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    cppstd = settings.get_safe("cppstd")
+    compiler_cppstd = settings.get_safe("compiler.cppstd")
+
+    # Assign the explicit default value to compiler.cppstd (only if not given cppstd)
+    if not cppstd and not compiler_cppstd and compiler and compiler_version:
+        default_cppstd = cppstd_default(compiler, compiler_version)
+        if default_cppstd:
+            try:
+                settings.compiler.cppstd = default_cppstd
+            except Exception:
+                # Settings structure does not have cppstd
+                pass
+
+
+def _check_cppstd(settings):
     compiler = settings.get_safe("compiler")
     compiler_version = settings.get_safe("compiler.version")
     cppstd = settings.get_safe("cppstd")
     compiler_cppstd = settings.get_safe("compiler.cppstd")
 
     if not cppstd and not compiler_cppstd:
-        # TODO: Why not add the default one?
         return
 
     # Checks: one or the other, but not both
@@ -31,27 +49,25 @@ def check_cppstd(settings):
     if compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return
 
+    # Check that we have a flag available for that value of the C++ Standard
+    def check_flag_available(values_range, value, setting_id):
+        available = [v for v in values_range if cppstd_flag(compiler, compiler_version, v)]
+        if str(value) not in available:
+            raise ConanException("The specified '%s=%s' is not available "
+                                 "for '%s %s'. Possible values are %s'" % (setting_id,
+                                                                           value,
+                                                                           compiler,
+                                                                           compiler_version,
+                                                                           available))
+
     if cppstd:
-        cppstd_values = settings.cppstd.values_range
-        available = [v for v in cppstd_values if cppstd_flag(compiler, compiler_version, v)]
-        if str(cppstd) not in available:
-            raise ConanException("The specified 'cppstd=%s' is not available "
-                                 "for '%s %s'. Possible values are %s'" % (cppstd,
-                                                                           compiler,
-                                                                           compiler_version,
-                                                                           available))
+        check_flag_available(settings.cppstd.values_range, cppstd, "cppstd")
     else:
-        cppstd_values = settings.compiler.cppstd.values_range
-        available = [v for v in cppstd_values if cppstd_flag(compiler, compiler_version, v)]
-        if str(compiler_cppstd) not in available:
-            raise ConanException("The specified 'compiler.cppstd=%s' is not available "
-                                 "for '%s %s'. Possible values are %s'" % (compiler_cppstd,
-                                                                           compiler,
-                                                                           compiler_version,
-                                                                           available))
+        check_flag_available(settings.compiler.cppstd.values_range,
+                             compiler_cppstd, "compiler.cppstd")
 
 
-def fill_runtime(settings):
+def _fill_runtime(settings):
     try:
         if settings.compiler == "Visual Studio":
             if settings.get_safe("compiler.runtime") is None:

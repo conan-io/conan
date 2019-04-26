@@ -551,6 +551,7 @@ class ProfileAggregationTest(unittest.TestCase):
                              [settings]
                              arch=x86_64
                              compiler=Visual Studio
+                             compiler.cppstd=14
                              compiler.runtime=MD
                              compiler.version=15
                              os=Windows"""), self.client.out)

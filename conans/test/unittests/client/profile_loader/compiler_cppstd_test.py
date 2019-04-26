@@ -44,7 +44,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
-        self.assertNotIn("compiler.cppstd", r.settings)
+        self.assertIn("compiler.cppstd", r.settings)
         self.assertNotIn("cppstd", r.settings)
 
     def test_value_none(self):
@@ -52,7 +52,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
-        self.assertEqual(r.settings["compiler.cppstd"], "None")
+        self.assertEqual(r.settings["compiler.cppstd"], "gnu98")
         self.assertNotIn("cppstd", r.settings)
 
     def test_value_valid(self):
@@ -77,7 +77,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
-        self.assertEqual(r.settings["compiler.cppstd"], "None")
+        self.assertEqual(r.settings["compiler.cppstd"], "gnu98")
         self.assertEqual(r.settings["cppstd"], "None")
 
     def test_value_duplicated(self):

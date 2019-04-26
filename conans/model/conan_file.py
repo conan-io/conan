@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from conans.client import tools
 from conans.client.output import Color, ScopedOutput
-from conans.client.settings_preprocessor import check_cppstd
+from conans.client.settings_preprocessor import preprocess
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
@@ -135,7 +135,7 @@ class ConanFile(object):
         self.settings = create_settings(self, settings)
 
         try:
-            check_cppstd(self.settings)
+            preprocess(self.settings)
         except ConanException as e:
             raise ConanException("Package '{}': {}".format(self.display_name, e))
 

@@ -336,7 +336,7 @@ class ConanInfo(object):
         options and settings
         """
         result = []
-        result.append(self.settings.sha)
+        result.append(self._settings_sha())
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
@@ -407,12 +407,23 @@ class ConanInfo(object):
                 self.settings.cppstd = None
 
             if str(self.full_settings.compiler.cppstd) == default:
-                # FIXME: Conan 2.0 we probably want to keep the value of cppstd (or even explicitly
-                #   assign to it the default value)
-                self.settings.compiler.cppstd = None
+                def remove_cppstd(settings):
+                    # FIXME: Conan 2.0, do we want to keep the default value? (will break IDs)
+                    settings.compiler.cppstd = None  # It's the default, assign None
+                    return settings
+                self._std_matching = remove_cppstd
 
     def default_std_non_matching(self):
-        if self.full_settings.compiler.cppstd:
-            self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
         if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
+        self._std_matching = None  # Do nothing
+
+    # Handle std_matching strategy for compiler.cppstd
+    _std_matching = None
+
+    def _settings_sha(self):
+        if self._std_matching:
+            settings = self.settings.copy()
+            settings = self._std_matching(settings)
+            return settings.sha
+        return self.settings.sha
