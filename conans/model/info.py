@@ -411,9 +411,13 @@ class ConanInfo(object):
 
             if str(self.full_settings.compiler.cppstd) == default:
                 def remove_cppstd(settings):
-                    # FIXME: Conan 2.0, do we want to keep the default value? (will break IDs)
-                    settings.compiler.cppstd = None  # It's the default, assign None
-                    return settings
+                    try:
+                        settings.compiler.cppstd = None  # It's the default, assign None
+                    except AttributeError:
+                        # Your settings can be different at the moment of executing this function
+                        pass
+                    finally:
+                        return settings
                 self._std_matching = remove_cppstd
 
     def default_std_non_matching(self):
