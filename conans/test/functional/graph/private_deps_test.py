@@ -9,6 +9,8 @@ from conans.paths import BUILD_INFO_CMAKE, CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
+from textwrap import dedent
+from conans.test.utils.conanfile import TestConanFile
 
 
 class PrivateBinariesTest(unittest.TestCase):
@@ -40,7 +42,7 @@ class Pkg(ConanFile):
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
         html = load(os.path.join(client.current_folder, "file.html"))
-        self.assertEqual(2, html.count("label: 'PkgC/0.1', shape: 'box'"))
+        self.assertEqual(1, html.count("label: 'PkgC/0.1', shape: 'box'"))
 
     def test_private_regression_skip(self):
         # https://github.com/conan-io/conan/issues/3166
@@ -165,6 +167,29 @@ class V3D(ConanFile):
         # The order is dictated by public mypackage -> zlib
         self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
+
+    def test_private_dont_skip(self):
+        client = TestClient()
+        client.save({"conanfile.py": str(TestConanFile("LibA", "0.1", info=True))})
+        client.run("create . LibA/0.1@conan/stable")
+
+        client.save({"conanfile.py": str(TestConanFile("LibB", "0.1",
+                                                       requires=["LibA/0.1@conan/stable"]))})
+        client.run("create . LibB/0.1@conan/stable")
+
+        client.save({"conanfile.py": str(TestConanFile("LibC", "0.1",
+                                                       private_requires=["LibA/0.1@conan/stable"]))})
+        client.run("create . LibC/0.1@conan/stable")
+
+        for requires in (["LibB/0.1@conan/stable", "LibC/0.1@conan/stable"],
+                         ["LibC/0.1@conan/stable", "LibB/0.1@conan/stable"]):
+            client.save({"conanfile.py": str(TestConanFile("LibD", "0.1",
+                                                           requires=requires))})
+            client.run("install . -g cmake")
+            self.assertIn("LibA/0.1@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                          client.out)
+            conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+            self.assertIn("set(CONAN_LIBS mylibLibA0.1lib ${CONAN_LIBS})", conanbuildinfo)
 
 
 @attr("slow")

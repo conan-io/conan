@@ -50,8 +50,8 @@ class DefaultCppTestCase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()
         # Compute ID without the setting 'cppstd'
-        self.target_id, output = self._get_id(with_cppstd=False)
-        self.assertEqual(self.target_id, self.id_default)
+        target_id, output = self._get_id(with_cppstd=False)
+        self.assertEqual(target_id, self.id_default)
         self.assertIn(">> settings: ['compiler', 'os']", output)
         self.assertIn(">> cppstd: None", output)
         self.assertIn(">> compiler.cppstd: gnu14", output)
@@ -92,7 +92,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">> cppstd: None", output)
         self.assertIn(">> compiler.cppstd: gnu14", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
@@ -100,7 +100,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">> cppstd: None", output)
         self.assertIn(">> compiler.cppstd: gnu14", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
@@ -110,7 +110,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">> cppstd: gnu14", output)
         self.assertIn(">> compiler.cppstd: None", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_non_default(self):
         # Explicit value (not the default) passed to setting 'cppstd'
@@ -119,7 +119,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">> cppstd: 14", output)
         self.assertIn(">> compiler.cppstd: None", output)
-        self.assertNotEqual(self.target_id, id_with)
+        self.assertNotEqual(self.id_default, id_with)
 
 
 class SettingsCompilerCppStdTests(DefaultCppTestCase):
@@ -140,7 +140,7 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'os']", output)
         self.assertIn(">> cppstd: None", output)
         self.assertIn(">> compiler.cppstd: gnu14", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'compiler.cppstd'
@@ -149,7 +149,7 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'os']", output)
         self.assertIn(">> cppstd: None", output)
         self.assertIn(">> compiler.cppstd: gnu14", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
@@ -157,7 +157,7 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
         self.assertIn(">> settings: ['compiler', 'os']", output)
         self.assertIn(">> cppstd: None", output)
         self.assertIn(">> compiler.cppstd: 14", output)
-        self.assertNotEqual(self.target_id, id_with)
+        self.assertNotEqual(self.id_default, id_with)
 
 
 class SettingsCompareCppStdApproaches(DefaultCppTestCase):
@@ -167,7 +167,7 @@ class SettingsCompareCppStdApproaches(DefaultCppTestCase):
     the same.
     """
 
-    def test_cppstd_approaches(self):
+    def test_cppstd_non_defaults(self):
         cppstd_value = "14"  # Not the default
         with catch_deprecation_warning(self, n=2):
             id_with_old, _ = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd_value})
@@ -175,8 +175,8 @@ class SettingsCompareCppStdApproaches(DefaultCppTestCase):
                                       settings_values={'compiler.cppstd': cppstd_value})
 
         # Those are different from the target one (ID using default value or None)
-        self.assertNotEqual(self.target_id, id_with_old)
-        self.assertNotEqual(self.target_id, id_with_new)
+        self.assertNotEqual(self.id_default, id_with_old)
+        self.assertNotEqual(self.id_default, id_with_new)
 
         # They are different between them
         self.assertNotEqual(id_with_new, id_with_old)
