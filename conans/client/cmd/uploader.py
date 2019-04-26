@@ -101,9 +101,8 @@ class CmdUpload(object):
                     try:
                         future.result()
                         self._user_io.out.info("Uploaded reference {}: ".format(reference))
-                    except Exception as exc:
-                        raise ConanException("Error uploading reference: %s %s" %
-                                             (reference, str(exc)))
+                    except ConanException:
+                        raise
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
@@ -230,8 +229,8 @@ class CmdUpload(object):
                 try:
                     future.result()
                     upload_recorder.add_package(pref, remote_name, remote_url)
-                except Exception as exc:
-                    raise ConanException("Error uploading package: %s %s" % (pref, str(exc)))
+                except ConanException:
+                    raise
 
         # FIXME: I think it makes no sense to specify a remote to "post_upload"
         # FIXME: because the recipe can have one and the package a different one
