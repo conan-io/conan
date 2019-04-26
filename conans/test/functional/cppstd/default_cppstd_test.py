@@ -50,8 +50,8 @@ class DefaultCppTestCase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()
         # Compute ID without the setting 'cppstd'
-        self.target_id, output = self._get_id(with_cppstd=False)
-        self.assertEqual(self.target_id, self.id_default)
+        target_id, output = self._get_id(with_cppstd=False)
+        self.assertEqual(target_id, self.id_default)
         self.assertIn(">>>> settings: ['compiler', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
 
@@ -83,14 +83,14 @@ class DefaultCppTestCase(unittest.TestCase):
         id_with, output = self._get_id(with_cppstd=True)  # TODO: Should raise?
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
         id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
@@ -98,12 +98,12 @@ class DefaultCppTestCase(unittest.TestCase):
         id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: gnu14", output)
-        self.assertEqual(self.target_id, id_with)
+        self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
         id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: 14", output)
-        self.assertNotEqual(self.target_id, id_with)
+        self.assertNotEqual(self.id_default, id_with)
 
