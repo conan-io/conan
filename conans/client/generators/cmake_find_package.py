@@ -84,7 +84,12 @@ def find_dependency_lines(name, cpp_info, find_modules):
             lines.append("find_dependency(%s REQUIRED)" % dep)
         else:
             # https://github.com/conan-io/conan/issues/4994
-            lines.append("find_dependency(%s REQUIRED NO_MODULE)" % dep)
+            # https://github.com/conan-io/conan/issues/5040
+            lines.append('if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
+            lines.append('  find_package(%s REQUIRED NO_MODULE)' % dep)
+            lines.append("else()")
+            lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep)
+            lines.append("endif()")
 
         lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
         lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
