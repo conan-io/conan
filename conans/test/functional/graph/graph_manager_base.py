@@ -46,7 +46,7 @@ class GraphManagerTest(unittest.TestCase):
         if isinstance(test_conanfile, TestConanFile):
             test_conanfile.info = True
         ref = ConanFileReference.loads(reference)
-        save(self.cache.conanfile(ref), str(test_conanfile))
+        save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
         manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())

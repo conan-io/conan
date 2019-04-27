@@ -23,13 +23,13 @@ class Pkg(ConanFile):
 
         # Copy all packages
         client.run("copy Hello0/0.1@lasote/stable pepe/testing --all")
-        pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/testing"))
+        pkgdir = client.cache.package_layout(ConanFileReference.loads("Hello0/0.1@pepe/testing")).packages()
         packages = os.listdir(pkgdir)
         self.assertEqual(len(packages), 3)
 
         # Copy just one
         client.run("copy Hello0/0.1@lasote/stable pepe/stable -p %s" % packages[0])
-        pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/stable"))
+        pkgdir = client.cache.package_layout(ConanFileReference.loads("Hello0/0.1@pepe/stable")).packages()
         packages = os.listdir(pkgdir)
         self.assertEqual(len(packages), 1)
 
@@ -40,7 +40,7 @@ class Pkg(ConanFile):
 
         # Copy only recipe
         client.run("copy Hello0/0.1@lasote/stable pepe/alpha")
-        pkgdir = client.cache.packages(ConanFileReference.loads("Hello0/0.1@pepe/alpha"))
+        pkgdir = client.cache.package_layout(ConanFileReference.loads("Hello0/0.1@pepe/alpha")).packages()
         self.assertFalse(os.path.exists(pkgdir))
 
     @parameterized.expand([(True, ), (False,)])
@@ -76,7 +76,7 @@ class Pkg(ConanFile):
         self.assertIn("Downloading conan_sources.tgz", client2.out)
 
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
-        conanfile = load(client2.cache.conanfile(ref))
+        conanfile = load(client2.cache.package_layout(ref).conanfile())
         self.assertNotIn("# Recipe revision 2", conanfile)
         data = load(os.path.join(client2.cache.package_layout(ref).export_sources(), "myfile.txt"))
         # With revisions, it work, it fetches the correct one

@@ -129,7 +129,7 @@ class CmdUpload(object):
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
-                    conanfile_path = self._cache.conanfile(ref)
+                    conanfile_path = self._cache.package_layout(ref).conanfile()
                     conanfile = self._loader.load_class(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
@@ -178,7 +178,7 @@ class CmdUpload(object):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
-        conanfile_path = self._cache.conanfile(ref)
+        conanfile_path = self._cache.package_layout(ref).conanfile()
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
@@ -211,7 +211,7 @@ class CmdUpload(object):
         if remote.name != current_remote_name:
             complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
 
-        conanfile_path = self._cache.conanfile(ref)
+        conanfile_path = self._cache.package_layout(ref).conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
@@ -253,7 +253,7 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        conanfile_path = self._cache.conanfile(pref.ref)
+        conanfile_path = self._cache.package_layout(pref.ref).conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
                                    package_id=pref.id,
@@ -310,7 +310,7 @@ class CmdUpload(object):
 
         t1 = time.time()
         # existing package, will use short paths if defined
-        package_folder = self._cache.package(pref, short_paths=None)
+        package_folder = self._cache.package_layout(pref.ref, short_paths=None).package(pref)
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"

@@ -45,7 +45,7 @@ class SymLinksTest(unittest.TestCase):
     def _check(self, client, ref, build=True):
         folders = [client.cache.package(ref), client.current_folder]
         if build:
-            folders.append(client.cache.build(ref))
+            folders.append(client.cache.package_layout(ref.ref).build(ref))
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")

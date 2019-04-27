@@ -34,7 +34,7 @@ class SystemReqsTest(unittest.TestCase):
         client.run("install Test/0.1@user/channel")
         self.assertNotIn("*+Running system requirements+*", client.user_io.out)
         ref = ConanFileReference.loads("Test/0.1@user/channel")
-        pfs = client.cache.packages(ref)
+        pfs = client.cache.package_layout(ref).packages()
         pid = os.listdir(pfs)[0]
         reqs_file = client.cache.package_layout(ref).system_reqs_package(PackageReference(ref, pid))
         os.unlink(reqs_file)

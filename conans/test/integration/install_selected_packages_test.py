@@ -21,20 +21,20 @@ class InstallSelectedPackagesTest(unittest.TestCase):
     def install_all_test(self):
         # Should retrieve the three packages
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        p1 = os.path.join(self.new_client.cache.packages(self.ref))
+        p1 = os.path.join(self.new_client.cache.package_layout(self.ref).packages())
         packages = os.listdir(p1)
         self.assertEqual(len(packages), 3)
 
     def install_some_reference_test(self):
         # Should retrieve the specified packages
         self.new_client.run("download Hello0/0.1@lasote/stable -p %s" % self.package_ids[0])
-        packages = os.listdir(self.new_client.cache.packages(self.ref))
+        packages = os.listdir(self.new_client.cache.package_layout(self.ref).packages())
         self.assertEqual(len(packages), 1)
         self.assertEqual(packages[0], self.package_ids[0])
 
         self.new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (self.package_ids[0],
                                                                                self.package_ids[1]))
-        packages = os.listdir(self.new_client.cache.packages(self.ref))
+        packages = os.listdir(self.new_client.cache.package_layout(self.ref).packages())
         self.assertEqual(len(packages), 2)
 
     def download_recipe_twice_test(self):
@@ -100,4 +100,4 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "
                    "compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")
-        return os.listdir(self.client.cache.packages(self.ref))
+        return os.listdir(self.client.cache.package_layout(self.ref).packages())

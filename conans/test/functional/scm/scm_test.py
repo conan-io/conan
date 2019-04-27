@@ -228,7 +228,7 @@ other_folder/excluded_subfolder
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
                                 NO_SETTINGS_PACKAGE_ID)
-        bf = self.client.cache.build(pref)
+        bf = self.client.cache.package_layout(pref.ref).build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(bf, ".git")))
@@ -523,7 +523,7 @@ class MyLib(ConanFile):
 
         self.client.run("export . user/channel")
         ref = ConanFileReference.loads("issue/3831@user/channel")
-        exported_conanfile = self.client.cache.conanfile(ref)
+        exported_conanfile = self.client.cache.package_layout(ref).conanfile()
         content = load(exported_conanfile)
         self.assertIn(commit, content)
 
@@ -560,7 +560,7 @@ class MyLib(ConanFile):
 
         client.run("export . pkg/0.1@user/channel")
         ref = ConanFileReference.loads("pkg/0.1@user/channel")
-        exported_conanfile = client.cache.conanfile(ref)
+        exported_conanfile = client.cache.package_layout(ref).conanfile()
         content = load(exported_conanfile)
         self.assertIn(commit, content)
 
@@ -712,7 +712,7 @@ class ConanLib(ConanFile):
         self.assertIn("Copying sources to build folder", self.client.out)
         pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
                                 NO_SETTINGS_PACKAGE_ID)
-        bf = self.client.cache.build(pref)
+        bf = self.client.cache.package_layout(pref.ref).build(pref)
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(bf, ".svn")))

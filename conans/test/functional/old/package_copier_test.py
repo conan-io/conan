@@ -109,7 +109,7 @@ class PackageCopierTest(unittest.TestCase):
         self._assert_package_doesnt_exists(new_ref, "2222222", paths)
 
     def _assert_conanfile_exists(self, reference, paths):
-        self.assertTrue(os.path.exists(paths.conanfile(reference)))
+        self.assertTrue(os.path.exists(paths.package_layout(reference).conanfile()))
 
     def _assert_package_exists(self, ref, package_id, paths):
         pref = PackageReference(ref, package_id)

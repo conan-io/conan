@@ -373,7 +373,7 @@ class BinaryInstaller(object):
 
         conan_file = node.conanfile
         output = conan_file.output
-        package_folder = self._cache.package(pref, conan_file.short_paths)
+        package_folder = self._cache.package_layout(pref.ref, conan_file.short_paths).package(pref)
 
         with self._cache.package_layout(pref.ref).package_lock(pref):
             if pref not in processed_package_references:

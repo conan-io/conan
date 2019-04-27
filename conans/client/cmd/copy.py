@@ -8,7 +8,7 @@ from conans.util.files import rmdir
 
 
 def _prepare_sources(cache, ref, remote_manager, loader, remotes):
-    conan_file_path = cache.conanfile(ref)
+    conan_file_path = cache.package_layout(ref).conanfile()
     conanfile = loader.load_class(conan_file_path)
     complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
     return conanfile.short_paths
@@ -18,7 +18,7 @@ def _get_package_ids(cache, ref, package_ids):
     if not package_ids:
         return []
     if package_ids is True:
-        packages = cache.packages(ref)
+        packages = cache.package_layout(ref).packages()
         if os.path.exists(packages):
             package_ids = os.listdir(packages)
         else:
@@ -33,7 +33,8 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     """
     # It is important to get the revision early, so "complete_recipe_sources" can
     # get the right revision sources, not latest
-    src_metadata = cache.package_layout(ref).load_metadata()
+    layout = cache.package_layout(ref)
+    src_metadata = layout.load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
     short_paths = _prepare_sources(cache, ref, remote_manager, loader, remotes)
     package_ids = _get_package_ids(cache, ref, package_ids)

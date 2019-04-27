@@ -93,19 +93,8 @@ class ClientCache(object):
         """
         return self.package_layout(ref).base_folder()
 
-    def conanfile(self, ref):
-        return self.package_layout(ref).conanfile()
-
-    def builds(self, ref):
-        return self.package_layout(ref).builds()
-
-    def build(self, pref, short_paths=False):
-        return self.package_layout(pref.ref, short_paths).build(pref)
-
-    def packages(self, ref):
-        return self.package_layout(ref).packages()
-
     def package(self, pref, short_paths=False):
+        # TODO: This is deprecated, only used in testing
         return self.package_layout(pref.ref, short_paths).package(pref)
 
     def installed_as_editable(self, ref):
