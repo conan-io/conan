@@ -11,6 +11,7 @@ from conans.util.files import mkdir, md5sum
 
 FILTERED_FILES = ["conaninfo.txt", "conanmanifest.txt"]
 
+
 class DeployGenerator(Generator):
 
     def deploy_manifest_content(self, copied_files):
@@ -30,14 +31,15 @@ class DeployGenerator(Generator):
     def content(self):
         copied_files = []
 
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            for root, _, files in os.walk(os.path.normpath(dep_cpp_info.rootpath)):
+        for dep_name in self.conanfile.deps_cpp_info.deps:
+            rootpath = self.conanfile.deps_cpp_info[dep_name].rootpath
+            for root, _, files in os.walk(os.path.normpath(rootpath)):
                 for f in files:
                     if f in FILTERED_FILES:
                         continue
                     src = os.path.normpath(os.path.join(root, f))
                     dst = os.path.join(self.output_path, dep_name,
-                                       os.path.relpath(root, dep_cpp_info.rootpath), f)
+                                       os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
                     shutil.copyfile(src, dst)
