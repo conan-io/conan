@@ -77,17 +77,12 @@ class _PackageBuilder(object):
         return build_folder, skip_build
 
     def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, package_folder, remotes):
+                         build_folder, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
-        try:
-            rmdir(build_folder)
-            rmdir(package_folder)
-        except OSError as e:
-            raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % str(e))
+        _remove_folder_raising(build_folder)
 
         config_source(export_folder, export_source_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
@@ -140,6 +135,7 @@ class _PackageBuilder(object):
 
     def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
                  package_folder):
+
         # FIXME: Is weak to assign here the recipe_hash
         manifest = package_layout.recipe_manifest()
         conanfile.info.recipe_hash = manifest.summary_hash
@@ -190,10 +186,11 @@ class _PackageBuilder(object):
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
                 self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, package_folder, remotes)
+                                      build_folder, remotes)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
+            _remove_folder_raising(package_folder)
             mkdir(build_folder)
             os.chdir(build_folder)
             self._output.info('Building your package in %s' % build_folder)
@@ -225,6 +222,14 @@ class _PackageBuilder(object):
                 raise exc
 
             return node.pref
+
+
+def _remove_folder_raising(folder):
+    try:
+        rmdir(folder)
+    except OSError as e:
+        raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                             "Close any app using it, and retry" % str(e))
 
 
 def _handle_system_requirements(conan_file, pref, cache, out):
