@@ -1,14 +1,10 @@
 import os
-import platform
-import textwrap
 import unittest
 
-from nose.plugins.attrib import attr
-
 from conans import load
-from conans.client.tools import chdir, replace_in_file
+from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import GenConanfile, TurboTestClient
 
 
 class DeployGeneratorTest(unittest.TestCase):
@@ -17,26 +13,16 @@ class DeployGeneratorTest(unittest.TestCase):
     """
 
     def setUp(self):
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        conanfile = GenConanfile()
+        conanfile.with_package_file("include/header.h", "whatever")
+        conanfile.with_package_file("my_libs/file.lib", "whatever")
+        conanfile.with_package_file("file.config", "whatever")
 
-        class Test(ConanFile):
-            exports_sources = "*"
-
-            def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.lib", dst="my_libs")
-                self.copy("*.config")
-        """)
-
-        self.client = TestClient()
-        self.client.save({"conanfile.py": conanfile,
-                          "header.h": "",
-                          "file.lib": "",
-                          "file.config": ""})
-        self.client.run("create . name/version@user/channel")
+        self.client = TurboTestClient()
+        ref = ConanFileReference("name", "version", "user", "channel")
+        self.client.create(ref, conanfile)
         self.client.current_folder = temp_folder()
-        self.client.run("install name/version@user/channel -g deploy")
+        self.client.run("install %s -g deploy" % ref.full_repr())
 
     def deploy_folder_path_test(self):
         base_path = os.path.join(self.client.current_folder, "name")
@@ -79,43 +65,24 @@ class DeployGeneratorGraphTest(unittest.TestCase):
     """
 
     def setUp(self):
-        conanfile1 = textwrap.dedent("""
-        from conans import ConanFile
+        conanfile1 = GenConanfile()
+        conanfile1.with_package_file("include/header1.h", "whatever")
+        conanfile1.with_package_file("my_libs/file1.lib", "whatever")
+        conanfile1.with_package_file("file1.config", "whatever")
+        ref1 = ConanFileReference("name1", "version", "user", "channel")
 
-        class Test(ConanFile):
-            exports_sources = "*"
+        conanfile2 = GenConanfile()
+        conanfile2.with_requirement(ref1)
+        conanfile2.with_package_file("include_files/header2.h", "whatever")
+        conanfile2.with_package_file("my_other_libs/file2.lib", "whatever")
+        conanfile2.with_package_file("build/file2.config", "whatever")
+        ref2 = ConanFileReference("name2", "version", "user", "channel")
 
-            def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.lib", dst="my_libs")
-                self.copy("*.config")
-        """)
-        self.client = TestClient()
-        self.client.save({"conanfile.py": conanfile1,
-                          "header1.h": "",
-                          "file1.lib": "",
-                          "file1.config": ""})
-        self.client.run("create . name1/version@user/channel")
-
-        conanfile2 = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Test(ConanFile):
-            exports_sources = "*"
-            requires = "name1/version@user/channel"
-
-            def package(self):
-                self.copy("*.h", dst="include_files")
-                self.copy("*.lib", dst="my_other_libs")
-                self.copy("*.config", dst="build")
-        """)
-        self.client.save({"conanfile.py": conanfile2,
-                          "header2.h": "",
-                          "file2.lib": "",
-                          "file2.config": ""}, clean_first=True)
-        self.client.run("create . name2/version@user/channel")
+        self.client = TurboTestClient()
+        self.client.create(ref1, conanfile1)
+        self.client.create(ref2, conanfile2)
         self.client.current_folder = temp_folder()
-        self.client.run("install name2/version@user/channel -g deploy")
+        self.client.run("install %s -g deploy" % ref2.full_repr())
 
     def get_expected_paths(self):
         base1_path = os.path.join(self.client.current_folder, "name1")
