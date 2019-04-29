@@ -232,7 +232,7 @@ class _PackageReferenceList(list):
 class ConanInfo(object):
 
     def __init__(self):
-        self._adjust_settings_for_std = lambda u: u
+        self._adjust_settings_for_std = None
 
     def copy(self):
         """ Useful for build_id implementation
@@ -426,9 +426,11 @@ class ConanInfo(object):
     def default_std_non_matching(self):
         if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
-        self._adjust_settings_for_std = lambda u: u  # Do nothing
+        self._adjust_settings_for_std = None  # Do nothing
 
     def _settings_sha(self):
-        settings = self.settings.copy()
-        settings = self._adjust_settings_for_std(settings)
-        return settings.sha
+        if self._adjust_settings_for_std:
+            settings = self.settings.copy()
+            settings = self._adjust_settings_for_std(settings)
+            return settings.sha
+        return self.settings.sha
