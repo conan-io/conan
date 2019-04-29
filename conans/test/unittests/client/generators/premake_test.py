@@ -29,8 +29,8 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_defines = {{"MYDEFINE2", "MYDEFINE1"}}
     conan_cxxflags = {{"-march=native", "-fPIE"}}
     conan_cflags = {{"-mtune=native", "-fPIC"}}
-    conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework Cocoa"}}
-    conan_exelinkflags = {{"-framework VideoToolbox", "-framework QuartzCore"}}
+    conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\"", "-framework Cocoa"}}
+    conan_exelinkflags = {{"-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\"", "-framework QuartzCore"}}
 
     conan_includedirs_MyPkg1 = {{"{include1}"}}
     conan_libdirs_MyPkg1 = {{"{lib1}"}}
@@ -50,8 +50,8 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_defines_MyPkg2 = {{"MYDEFINE2"}}
     conan_cxxflags_MyPkg2 = {{"-march=native"}}
     conan_cflags_MyPkg2 = {{"-mtune=native"}}
-    conan_sharedlinkflags_MyPkg2 = {{"-framework AudioFoundation"}}
-    conan_exelinkflags_MyPkg2 = {{"-framework VideoToolbox"}}
+    conan_sharedlinkflags_MyPkg2 = {{"-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\""}}
+    conan_exelinkflags_MyPkg2 = {{"-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\""}}
     conan_rootpath_MyPkg2 = "{root2}"
 
     function conan_basic_setup()
@@ -100,8 +100,8 @@ class PremakeGeneratorTest(unittest.TestCase):
         cpp_info.version = "3.2.3"
         cpp_info.cflags = ['-mtune=native']
         cpp_info.cxxflags = ['-march=native']
-        cpp_info.sharedlinkflags = ['-framework AudioFoundation']
-        cpp_info.exelinkflags = ['-framework VideoToolbox']
+        cpp_info.sharedlinkflags = ['-framework AudioFoundation', '-framework "Some Spaced Framework"']
+        cpp_info.exelinkflags = ['-framework VideoToolbox', '-framework "Other Spaced Framework"']
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
     def test_variables_content(self):
