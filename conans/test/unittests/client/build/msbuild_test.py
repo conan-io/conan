@@ -152,6 +152,34 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
+    def skip_toolset_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "arch": "x86_64"})
+
+        class Runner(object):
+
+            def __init__(self):
+                self.commands = []
+
+            def __call__(self, *args, **kwargs):
+                self.commands.append(args[0])
+
+        runner = Runner()
+        conanfile = MockConanfile(settings, runner=runner)
+        msbuild = MSBuild(conanfile)
+        msbuild.build("myproject", toolset=False)
+        self.assertEqual(len(runner.commands), 1)
+        self.assertNotIn("PlatformToolset", runner.commands[0])
+
+        runner = Runner()
+        conanfile = MockConanfile(settings, runner=runner)
+        msbuild = MSBuild(conanfile)
+        msbuild.build("myproject", toolset="mytoolset")
+        self.assertEqual(len(runner.commands), 1)
+        self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
+
     @parameterized.expand([("v142",),
                            ("v141",),
                            ("v140",),
