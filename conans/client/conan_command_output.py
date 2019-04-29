@@ -7,7 +7,6 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths.simple_paths import SimplePaths
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
@@ -112,6 +111,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
+        remotes = self.cache.registry.load_remotes()
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -133,19 +133,20 @@ class CommandOutputer(object):
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
-                item_data["export_folder"] = self.cache.export(ref)
-                item_data["source_folder"] = self.cache.source(ref, conanfile.short_paths)
-                if isinstance(self.cache, SimplePaths):
-                    # @todo: check if this is correct or if it must always be package_id
-                    package_id = build_id(conanfile) or package_id
-                    pref = PackageReference(ref, package_id)
-                    item_data["build_folder"] = self.cache.build(pref, conanfile.short_paths)
+                package_layout = self.cache.package_layout(ref, conanfile.short_paths)
+                item_data["export_folder"] = package_layout.export()
+                item_data["source_folder"] = package_layout.source()
+                # @todo: check if this is correct or if it must always be package_id
+                package_id = build_id(conanfile) or package_id
+                pref = PackageReference(ref, package_id)
+                item_data["build_folder"] = package_layout.build(pref)
 
-                    pref = PackageReference(ref, package_id)
-                    item_data["package_folder"] = self.cache.package(pref, conanfile.short_paths)
+                pref = PackageReference(ref, package_id)
+                item_data["package_folder"] = package_layout.package(pref)
 
             try:
-                reg_remote = self.cache.registry.refs.get(ref)
+                reg_remote = self.cache.package_layout(ref).load_metadata().recipe.remote
+                reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
             except:

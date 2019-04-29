@@ -249,7 +249,7 @@ class CMakeTest(unittest.TestCase):
                            ('x86_64', 'x64'),
                            ('armv7', 'ARM'),
                            ('armv8', 'ARM64')])
-    def cmake_generator_platform_vs2019_test(self, arch, platform):
+    def cmake_generator_platform_vs2019_test(self, arch, pf):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -260,7 +260,21 @@ class CMakeTest(unittest.TestCase):
         conan_file.settings = settings
 
         cmake = CMake(conan_file)
-        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % platform, cmake.command_line)
+        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % pf, cmake.command_line)
+
+    def cmake_generator_platform_vs2019_with_ninja_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "16"
+        settings.arch = "x86_64"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file, generator="Ninja")
+        self.assertIn('-G "Ninja"', cmake.command_line)
+        self.assertNotIn("-A", cmake.command_line)
 
     @parameterized.expand([('arm',),
                            ('ppc',),
@@ -688,6 +702,32 @@ class CMakeTest(unittest.TestCase):
         settings.os.version = "10.0"
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.compiler.version = "15"
+        settings.arch = "armv8"
+        check('-G "Visual Studio 15 2017 ARM" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.arch = "x86_64"
+        check('-G "Visual Studio 15 2017 Win64" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "9"
+        settings.os = "WindowsCE"
+        settings.os.platform = "Your platform name (ARMv4I)"
+        settings.os.version = "7.0"
+        settings.build_type = "Debug"
+        check('-G "Visual Studio 9 2008" '
+              '-A "Your platform name (ARMv4I)" '
+              '-DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="9" '
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
@@ -1328,3 +1368,13 @@ build_type: [ Release]
         self.assertIn("WARN: CMake generator could not be deduced from settings", conanfile.output)
         cmake.configure()
         cmake.build()
+
+    def test_cmake_system_version_windowsce(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsCE"
+        settings.os.version = "8.0"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")

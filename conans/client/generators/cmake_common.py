@@ -244,7 +244,7 @@ endmacro()
 macro(conan_set_std)
     # Do not warn "Manually-specified variables were not used by the project"
     set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}")
-    if (CMAKE_VERSION VERSION_LESS "3.1" OR 
+    if (CMAKE_VERSION VERSION_LESS "3.1" OR
         (CMAKE_VERSION VERSION_LESS "3.12" AND ("${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")))
     if(CONAN_STD_CXX_FLAG)
         conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
@@ -347,14 +347,29 @@ endfunction()
 function(check_compiler_version)
     conan_split_version(${CMAKE_CXX_COMPILER_VERSION} VERSION_MAJOR VERSION_MINOR)
     if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-        # https://cmake.org/cmake/help/v3.2/variable/MSVC_VERSION.html
-        if( (CONAN_COMPILER_VERSION STREQUAL "14" AND NOT VERSION_MAJOR STREQUAL "19") OR
+        # MSVC_VERSION is defined since 2.8.2 at least
+        # https://cmake.org/cmake/help/v2.8.2/cmake.html#variable:MSVC_VERSION
+        # https://cmake.org/cmake/help/v3.14/variable/MSVC_VERSION.html
+        if(
+            # 1920-1929 = VS 16.0 (v142 toolset)
+            (CONAN_COMPILER_VERSION STREQUAL "16" AND NOT((MSVC_VERSION GREATER 1919) AND (MSVC_VERSION LESS 1930))) OR
+            # 1910-1919 = VS 15.0 (v141 toolset)
+            (CONAN_COMPILER_VERSION STREQUAL "15" AND NOT((MSVC_VERSION GREATER 1909) AND (MSVC_VERSION LESS 1920))) OR
+            # 1900      = VS 14.0 (v140 toolset)
+            (CONAN_COMPILER_VERSION STREQUAL "14" AND NOT(MSVC_VERSION EQUAL 1900)) OR
+            # 1800      = VS 12.0 (v120 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "12" AND NOT VERSION_MAJOR STREQUAL "18") OR
+            # 1700      = VS 11.0 (v110 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "11" AND NOT VERSION_MAJOR STREQUAL "17") OR
+            # 1600      = VS 10.0 (v100 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "10" AND NOT VERSION_MAJOR STREQUAL "16") OR
+            # 1500      = VS  9.0 (v90 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "9" AND NOT VERSION_MAJOR STREQUAL "15") OR
+            # 1400      = VS  8.0 (v80 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "8" AND NOT VERSION_MAJOR STREQUAL "14") OR
+            # 1310      = VS  7.1, 1300      = VS  7.0
             (CONAN_COMPILER_VERSION STREQUAL "7" AND NOT VERSION_MAJOR STREQUAL "13") OR
+            # 1200      = VS  6.0
             (CONAN_COMPILER_VERSION STREQUAL "6" AND NOT VERSION_MAJOR STREQUAL "12") )
             conan_error_compiler_version()
         endif()

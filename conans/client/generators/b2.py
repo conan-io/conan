@@ -243,7 +243,7 @@ class B2Generator(Generator):
                 'mips': '32', 'mips64': '64',
             }.get(self.conanfile.settings.get_safe('arch'))
             self._b2_variation['target-os'] = {
-                'Windows': 'windows', 'WindowsStore': 'windows',
+                'Windows': 'windows', 'WindowsStore': 'windows', 'WindowsCE': 'windows',
                 'Linux': 'linux',
                 'Macos': 'darwin',
                 'Android': 'android',

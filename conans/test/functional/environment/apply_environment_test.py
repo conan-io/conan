@@ -776,7 +776,7 @@ class LibConan(ConanFile):
 
         def load_conaninfo(lib):
             # Read the LIB_A conaninfo
-            packages_path = client.cache.packages(ConanFileReference.loads("LIB_%s/1.0@lasote/stable" % lib))
+            packages_path = client.cache.package_layout(ConanFileReference.loads("LIB_%s/1.0@lasote/stable" % lib)).packages()
             package_path = os.path.join(packages_path, os.listdir(packages_path)[0])
             info = ConanInfo.loads(load(os.path.join(package_path, CONANINFO)))
             return info

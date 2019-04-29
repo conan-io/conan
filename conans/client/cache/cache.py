@@ -1,11 +1,11 @@
 import os
+import platform
 import shutil
 from collections import OrderedDict
 from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import default_remotes, dump_registry, \
-    migrate_registry_file, RemoteRegistry
+from conans.client.cache.remote_registry import RemoteRegistry, Remotes
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -17,17 +17,15 @@ from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.paths.simple_paths import SimplePaths
-from conans.paths.simple_paths import check_ref_case
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock
 
+
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
-REGISTRY = "registry.txt"
-REGISTRY_JSON = "registry.json"
+REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 
@@ -37,23 +35,70 @@ CLIENT_CERT = "client.crt"
 CLIENT_KEY = "client.key"
 
 
-class ClientCache(SimplePaths):
+def is_case_insensitive_os():
+    system = platform.system()
+    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
+
+
+if is_case_insensitive_os():
+    def check_ref_case(ref, store_folder):
+        if not os.path.exists(store_folder):
+            return
+
+        tmp = store_folder
+        for part in ref.dir_repr().split("/"):
+            items = os.listdir(tmp)
+            try:
+                idx = [item.lower() for item in items].index(part.lower())
+                if part != items[idx]:
+                    raise ConanException("Requested '%s' but found case incompatible '%s'\n"
+                                         "Case insensitive filesystem can't manage this"
+                                         % (str(ref), items[idx]))
+                tmp = os.path.normpath(tmp + os.sep + part)
+            except ValueError:
+                return
+else:
+    def check_ref_case(ref, store_folder):  # @UnusedVariable
+        pass
+
+
+class ClientCache(object):
     """ Class to represent/store/compute all the paths involved in the execution
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, base_folder, store_folder, output):
+    def __init__(self, base_folder, output):
         self.conan_folder = join(base_folder, ".conan")
         self._config = None
         self._output = output
-        self._store_folder = store_folder or self.config.storage_path or self.conan_folder
+        # Remove this self.conan_folder in Conan 2.0
+        self._store_folder = self.config.storage_path or self.conan_folder
         self._no_lock = None
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
         self._registry = None
 
-        super(ClientCache, self).__init__(self._store_folder)
         self.editable_packages = EditablePackages(self.conan_folder)
+
+    def all_refs(self):
+        subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
+        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+
+    @property
+    def store(self):
+        return self._store_folder
+
+    def base_folder(self, ref):
+        """ the base folder for this package reference, for each ConanFileReference
+        """
+        return self.package_layout(ref).base_folder()
+
+    def package(self, pref, short_paths=False):
+        # TODO: This is deprecated, only used in testing
+        return self.package_layout(pref.ref, short_paths).package(pref)
+
+    def installed_as_editable(self, ref):
+        return isinstance(self.package_layout(ref), PackageEditableLayout)
 
     @property
     def config_install_file(self):
@@ -73,9 +118,19 @@ class ClientCache(SimplePaths):
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
+    def registry_path(self):
+        return join(self.conan_folder, REMOTES)
+
+    @property
     def registry(self):
         if not self._registry:
-            self._registry = RemoteRegistry(self.registry_path, self._output)
+            remotes_path = self.registry_path
+            if not os.path.exists(remotes_path):
+                self._output.warn("Remotes registry file missing, "
+                                  "creating default one in %s" % remotes_path)
+                remotes = Remotes.defaults()
+                remotes.save(remotes_path)
+            self._registry = RemoteRegistry(self)
         return self._registry
 
     @property
@@ -86,22 +141,6 @@ class ClientCache(SimplePaths):
         if self._no_lock is None:
             self._no_lock = self.config.cache_no_locks
         return self._no_lock
-
-    def conanfile_read_lock(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_read_lock(self._output)
-
-    def conanfile_write_lock(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_write_lock(self._output)
-
-    def conanfile_lock_files(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_lock_files(self._output)
-
-    def package_lock(self, pref):
-        layout = self.package_layout(pref.ref)
-        return layout.package_lock(pref)
 
     @property
     def put_headers_path(self):
@@ -125,20 +164,6 @@ class ClientCache(SimplePaths):
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)
-
-    @property
-    def registry_path(self):
-        reg_json_path = join(self.conan_folder, REGISTRY_JSON)
-        if not os.path.exists(reg_json_path):
-            # Load the txt if exists and convert to json
-            reg_txt = join(self.conan_folder, REGISTRY)
-            if os.path.exists(reg_txt):
-                migrate_registry_file(reg_txt, reg_json_path)
-            else:
-                self._output.warn("Remotes registry file missing, "
-                                  "creating default one in %s" % reg_json_path)
-                save(reg_json_path, dump_registry(default_remotes, {}, {}))
-        return reg_json_path
 
     @property
     def config(self):
@@ -187,7 +212,8 @@ class ClientCache(SimplePaths):
                                  "default profile (%s)" % self.default_profile_path,
                                  Color.BRIGHT_YELLOW)
 
-            default_settings = detect_defaults_settings(self._output, profile_path=self.default_profile_path)
+            default_settings = detect_defaults_settings(self._output,
+                                                        profile_path=self.default_profile_path)
             self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
             self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
                                  Color.BRIGHT_YELLOW)
@@ -244,7 +270,7 @@ class ClientCache(SimplePaths):
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
-            ref_path = self.conan(ref)
+            ref_path = self.base_folder(ref)
             for _ in range(4):
                 if os.path.exists(ref_path):
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
@@ -255,7 +281,7 @@ class ClientCache(SimplePaths):
 
     def remove_package_system_reqs(self, reference):
         assert isinstance(reference, ConanFileReference)
-        conan_folder = self.conan(reference)
+        conan_folder = self.base_folder(reference)
         system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
         if not os.path.exists(conan_folder):
             raise ValueError("%s does not exist" % repr(reference))
@@ -264,7 +290,8 @@ class ClientCache(SimplePaths):
         try:
             rmdir(system_reqs_folder)
         except Exception as e:
-            raise ConanException("Unable to remove system requirements at %s: %s" % (system_reqs_folder, str(e)))
+            raise ConanException("Unable to remove system requirements at %s: %s"
+                                 % (system_reqs_folder, str(e)))
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)

@@ -21,7 +21,7 @@ class PackageEditableLayout(object):
     def ref(self):
         return self._ref
 
-    def conan(self):
+    def base_folder(self):
         """ Returns the base folder for this package reference """
         return self._base_folder
 

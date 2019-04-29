@@ -7,7 +7,8 @@ from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt
+from conans.client.cache.remote_registry import load_registry_txt,\
+    migrate_registry_file
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -28,8 +29,7 @@ def _hide_password(resource):
 def _handle_remotes(cache, remote_file):
     # FIXME: Should we encourage to pass the remotes in json?
     remotes, _ = load_registry_txt(load(remote_file))
-    registry = cache.registry
-    registry.remotes.define(remotes)
+    cache.registry.define(remotes)
 
 
 @contextmanager
@@ -89,6 +89,13 @@ def _process_folder(config, folder, cache, output):
             elif f == "remotes.txt":
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
+            elif f in ("registry.txt", "registry.json"):
+                os.remove(cache.registry_path)
+                shutil.copy(os.path.join(root, f), cache.conan_folder)
+                migrate_registry_file(cache, output)
+            elif f == "remotes.json":
+                # Fix for Conan 2.0
+                raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
             else:
                 # This is ugly, should be removed in Conan 2.0
                 if root == folder and f in ("README.md", "LICENSE.txt"):

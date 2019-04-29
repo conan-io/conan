@@ -1,4 +1,3 @@
-import os
 import platform
 import subprocess
 import unittest
@@ -7,6 +6,7 @@ from mock import mock
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
+from conans.client.tools.oss import check_output
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.tools import TestBufferConanOutput
 
@@ -36,12 +36,12 @@ class DetectTest(unittest.TestCase):
             return
 
         try:
-            output = subprocess.check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
+            output = check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             # gcc is not installed or there is any error (no test scenario)
             return
 
-        if b"clang" not in output:
+        if "clang" not in output:
             # Not test scenario gcc should display clang in output
             # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
             raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore! please check")
