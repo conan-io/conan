@@ -102,8 +102,6 @@ class ClientMigrator(Migrator):
         if old_version < Version("1.15.0"):
             migrate_registry_file(self.cache, self.out)
 
-        # TODO: Add settings migration
-        
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
