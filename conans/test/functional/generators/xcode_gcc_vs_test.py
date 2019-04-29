@@ -76,7 +76,7 @@ xcode
         lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
         libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
 
-        package_id = os.listdir(client.cache.packages(ref))[0]
+        package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
         package_path = client.cache.package(pref)
 

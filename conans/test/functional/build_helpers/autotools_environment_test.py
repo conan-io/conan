@@ -158,7 +158,7 @@ class HelloConan(ConanFile):
         self.assertNotIn("PKG_CONFIG_PATH=", client.out)
 
         ref = ConanFileReference.loads("Hello/1.2.1@conan/testing")
-        builds_folder = client.cache.builds(ref)
+        builds_folder = client.cache.package_layout(ref).builds()
         bf = os.path.join(builds_folder, os.listdir(builds_folder)[0])
 
         client.save({CONANFILE: conanfile % ("'pkg_config'", "")})
