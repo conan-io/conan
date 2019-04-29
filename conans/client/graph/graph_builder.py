@@ -148,6 +148,7 @@ class DepsGraphBuilder(object):
             new_node.inverse_closure.add(node)
             node.public_deps[new_node.name] = new_node
 
+            new_node.build_require = node.build_require or require.build_require
             # New nodes will inherit the private property of its ancestor
             new_node.private = node.private or require.private
             if require.private or require.build_require:
