@@ -34,9 +34,9 @@ class DefaultCppTestCase(unittest.TestCase):
             def configure(self):
                 cppstd = self.settings.get_safe("cppstd")
                 compiler_cppstd = self.settings.get_safe("compiler.cppstd")
-                self.output.info(">> settings: {{}}".format(self.settings.fields))
-                self.output.info(">> cppstd: {{}}".format(cppstd))
-                self.output.info(">> compiler.cppstd: {{}}".format(compiler_cppstd))
+                self.output.info(">>>> settings: {{}}".format(self.settings.fields))
+                self.output.info(">>>> cppstd: {{}}".format(cppstd))
+                self.output.info(">>>> compiler.cppstd: {{}}".format(compiler_cppstd))
         """)
 
     id_default = "d17189cfe7b11efbc5d701339a32d203745f8b81"
@@ -52,9 +52,9 @@ class DefaultCppTestCase(unittest.TestCase):
         # Compute ID without the setting 'cppstd'
         target_id, output = self._get_id(with_cppstd=False)
         self.assertEqual(target_id, self.id_default)
-        self.assertIn(">> settings: ['compiler', 'os']", output)
-        self.assertIn(">> cppstd: None", output)
-        self.assertIn(">> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: gnu14", output)
 
     def _get_id(self, with_cppstd, settings_values=None):
         # Create the conanfile with corresponding settings
@@ -76,7 +76,7 @@ class DefaultCppTestCase(unittest.TestCase):
         data = json.loads(load(json_file))
         self.assertEqual(len(data), 1)
 
-        # Return ID, output and loaded conaninfo.txt file (UX)
+        # Return ID, output
         return data[0]["id"], info_output
 
 
@@ -89,17 +89,17 @@ class SettingsCppStdTests(DefaultCppTestCase):
     def test_no_value(self):
         # No value passed for setting 'cppstd'
         id_with, output = self._get_id(with_cppstd=True)  # TODO: Should raise?
-        self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
-        self.assertIn(">> cppstd: None", output)
-        self.assertIn(">> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: gnu14", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
-        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})  # TODO: It doesn't with value None!
-        self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
-        self.assertIn(">> cppstd: None", output)
-        self.assertIn(">> compiler.cppstd: gnu14", output)
+        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})
+        self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: gnu14", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
@@ -107,18 +107,18 @@ class SettingsCppStdTests(DefaultCppTestCase):
         cppstd = cppstd_default(self.compiler, self.compiler_version)
         with catch_deprecation_warning(self, n=2):
             id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
-        self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
-        self.assertIn(">> cppstd: gnu14", output)
-        self.assertIn(">> compiler.cppstd: None", output)
+        self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
+        self.assertIn(">>>> cppstd: gnu14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_non_default(self):
         # Explicit value (not the default) passed to setting 'cppstd'
         with catch_deprecation_warning(self, n=2):
             id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
-        self.assertIn(">> settings: ['compiler', 'cppstd', 'os']", output)
-        self.assertIn(">> cppstd: 14", output)
-        self.assertIn(">> compiler.cppstd: None", output)
+        self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
+        self.assertIn(">>>> cppstd: 14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertNotEqual(self.id_default, id_with)
 
 
@@ -136,27 +136,27 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
 
     def test_value_none(self):
         # Explicit value 'None' passed to setting 'cppstd'
-        id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})  # TODO: It doesn't with value None!
-        self.assertIn(">> settings: ['compiler', 'os']", output)
-        self.assertIn(">> cppstd: None", output)
-        self.assertIn(">> compiler.cppstd: gnu14", output)
+        id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: gnu14", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'compiler.cppstd'
         cppstd = cppstd_default(self.compiler, self.compiler_version)
         id_with, output = self._get_id(settings_values={"compiler.cppstd": cppstd})
-        self.assertIn(">> settings: ['compiler', 'os']", output)
-        self.assertIn(">> cppstd: None", output)
-        self.assertIn(">> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: gnu14", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
         id_with, output = self._get_id(settings_values={"compiler.cppstd": "14"})
-        self.assertIn(">> settings: ['compiler', 'os']", output)
-        self.assertIn(">> cppstd: None", output)
-        self.assertIn(">> compiler.cppstd: 14", output)
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: 14", output)
         self.assertNotEqual(self.id_default, id_with)
 
 
