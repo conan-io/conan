@@ -59,7 +59,7 @@ class ConanPythonRequire(object):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
-                package_layout = self._proxy._cache.package_layout(new_ref)  # FIXME: access private
+                package_layout = self._proxy._cache.package_layout(new_ref, conanfile.short_paths)
                 exports_sources_folder = package_layout.export_sources()
                 exports_folder = package_layout.export()
                 python_require = PythonRequire(new_ref, module, conanfile,
