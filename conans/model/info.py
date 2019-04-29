@@ -231,6 +231,9 @@ class _PackageReferenceList(list):
 
 class ConanInfo(object):
 
+    def __init__(self):
+        self._adjust_settings_for_std = lambda u: u
+
     def copy(self):
         """ Useful for build_id implementation
         """
@@ -414,23 +417,18 @@ class ConanInfo(object):
                     try:
                         settings.compiler.cppstd = None  # It's the default, assign None
                     except AttributeError:
-                        # Your settings can be different at the moment of executing this function
+                        # Settings can be different at the moment of executing this function
                         pass
                     finally:
                         return settings
-                self._std_matching = remove_cppstd
+                self._adjust_settings_for_std = remove_cppstd
 
     def default_std_non_matching(self):
         if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
-        self._std_matching = None  # Do nothing
-
-    # Handle std_matching strategy for compiler.cppstd
-    _std_matching = None
+        self._adjust_settings_for_std = lambda u: u  # Do nothing
 
     def _settings_sha(self):
-        if self._std_matching:
-            settings = self.settings.copy()
-            settings = self._std_matching(settings)
-            return settings.sha
-        return self.settings.sha
+        settings = self.settings.copy()
+        settings = self._adjust_settings_for_std(settings)
+        return settings.sha
