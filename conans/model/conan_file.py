@@ -135,11 +135,6 @@ class ConanFile(object):
         self.settings = create_settings(self, settings)
 
         try:
-            preprocess(self.settings)
-        except ConanException as e:
-            raise ConanException("Package '{}': {}".format(self.display_name, e))
-
-        try:
             if self.settings.os_build and self.settings.os:
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
                 self.output.writeln("  This package defines both 'os' and 'os_build' ",

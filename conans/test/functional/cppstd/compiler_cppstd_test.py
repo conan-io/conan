@@ -4,7 +4,6 @@ import os
 import textwrap
 import unittest
 
-from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
 from conans.client.tools import environment_append, save
@@ -59,13 +58,9 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         self.t.run("create . hh/0.1@user/channel"
                    " -s hh:cppstd=11"
                    " -s hh:compiler=gcc"
-                   " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
-        if self.recipe_cppstd:
-            self.assertIn("Package 'hh/0.1@user/channel': Do not use settings 'compiler.cppstd'"
-                          " together with 'cppstd'. Use only the former one.", self.t.out)
-        else:
-            # TODO: Settings are being constrained before checking...
-            pass
+                   " -s hh:compiler.cppstd=14", assert_error=True)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
     def test_value_different_with_general_setting(self):
         deprecation_number = 1 if self.recipe_cppstd else 0
@@ -73,10 +68,9 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             self.t.run("create . hh/0.1@user/channel"
                        " -s cppstd=17"
                        " -s hh:compiler=gcc"
-                       " -s hh:compiler.cppstd=14", assert_error=self.recipe_cppstd)
-        if self.recipe_cppstd:
-            self.assertIn("Package 'hh/0.1@user/channel': Do not use settings 'compiler.cppstd'"
-                          " together with 'cppstd'. Use only the former one.", self.t.out)
+                       " -s hh:compiler.cppstd=14", assert_error=True)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
     def test_conanfile_without_compiler(self):
         conanfile = textwrap.dedent("""
@@ -93,8 +87,9 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             t.run("create . hh/0.1@user/channel"
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
-                  " -s hh:compiler.cppstd=14")
-            # TODO: Settings are being constrained before checking...
+                  " -s hh:compiler.cppstd=14", assert_error=True)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", t.out)
 
     def test_conanfile_without_compiler_but_cppstd(self):
         conanfile = textwrap.dedent("""
@@ -109,15 +104,14 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         t = TestClient(base_folder=temp_folder())
         t.save({'conanfile.py': conanfile}, clean_first=True)
 
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             # No mismatch, because settings for this conanfile does not include `compiler`
             t.run("create . hh/0.1@user/channel"
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
-                  " -s hh:compiler.cppstd=14")
-        self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", t.out)
-        self.assertIn(">>> cppstd: 17", t.out)
-        # TODO: Settings are being constrained before checking...
+                  " -s hh:compiler.cppstd=14", assert_error=True)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", t.out)
 
 
 class UseCompilerCppStdSettingTests(unittest.TestCase):
@@ -143,7 +137,7 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
                       " please update your recipe.", self.t.out)
 
     def test_only_cppstd(self):
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.t.run("info . -s cppstd=14")
         self.assertNotIn(">>> compiler.cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: 14", self.t.out)
