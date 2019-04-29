@@ -38,10 +38,11 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
                      "exports_sources.txt": "exports_sources: {}".format(str(self.pyreq)),
                      "exports.txt": "exports: {}".format(str(self.pyreq))})
         self.t.run("export . {}".format(self.pyreq))
+        package_layout = self.t.cache.package_layout(self.pyreq)
         self.assertListEqual(['exports_sources.txt'],
-                             os.listdir(self.t.cache.export_sources(self.pyreq)))
+                             os.listdir(package_layout.export_sources()))
         self.assertListEqual(sorted(['exports.txt', 'conanfile.py', 'conanmanifest.txt']),
-                             sorted(os.listdir(self.t.cache.export(self.pyreq))))
+                             sorted(os.listdir(package_layout.export())))
 
     @parameterized.expand([(False, ), (True, )])
     def test_locate_pyreq_folders(self, empty_exports):
@@ -77,7 +78,7 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
         self.t.run("create . {}".format(ref))
 
         # Check things written in 'source' method (source folder executed in consumer context)
-        source_folder = self.t.cache.source(ref)
+        source_folder = self.t.cache.package_layout(ref).source()
         self.assertIn(">>>> PyReq::source", self.t.out)
         self.assertIn(">>>> - source_folder: {}".format(source_folder), self.t.out)
         if not empty_exports:
