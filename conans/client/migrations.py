@@ -55,7 +55,7 @@ class ClientMigrator(Migrator):
                 else:
                     save(self.cache.settings_path, default_settings_yml)
             else:
-                self.out.warn("Migration: Settings already up to date")
+                self.out.info("Migration: Settings already up to date")
         else:
             # We don't have the value for that version, so don't override
             save_new()

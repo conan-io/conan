@@ -23,14 +23,16 @@ class TestMigrations(unittest.TestCase):
         from conans import __version__ as current_version
 
         tmp = Version(current_version)
-        if tmp.minor == 0:
+        if int(tmp.minor) == 0:
             return unittest.skip("2.0, this will make sense for 2.1")
-
-        previous_version = "{}.{}".format(tmp.major, int(tmp.minor) - 1)
+        if int(tmp.patch) > 0:
+            previous_version = "{}.{}.{}".format(tmp.major, tmp.minor, int(tmp.patch) - 1)
+        else:
+            previous_version = "{}.{}.0".format(tmp.major, int(tmp.minor) - 1)
 
         from conans.client import migrations_settings
         var_name = "settings_{}".format(previous_version.replace(".", "_"))
-        self.assertTrue(any([i for i in dir(migrations_settings) if i.startswith(var_name)]),
+        self.assertTrue(any([i for i in dir(migrations_settings) if i == var_name]),
                         "Introduce the previous settings.yml file in the 'migrations_settings.yml")
 
     def test_migrate_revision_metadata(self):
