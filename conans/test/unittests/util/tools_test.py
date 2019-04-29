@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 import platform
-import shutil
 import subprocess
 import sys
 import unittest
-import uuid
 import warnings
 from collections import namedtuple
 
@@ -17,7 +15,6 @@ from mock.mock import mock_open, patch
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 from six import StringIO
-from six.moves.urllib.parse import quote
 
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
@@ -25,436 +22,19 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
 from conans.client.tools.files import replace_in_file, which
-from conans.client.tools.oss import check_output
-from conans.client.tools.scm import Git, SVN
-from conans.client.tools.system_pm import AptTool, ChocolateyTool, OSInfo, SystemPackageTool
+from conans.client.tools.oss import check_output, OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
 from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
-from conans.model.version import Version
 from conans.test.utils.conanfile import ConanFileMock
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import SVNLocalRepoTestCase, StoppableThreadBottle, \
-    TestBufferConanOutput, TestClient, create_local_git_repo, try_remove_readonly
+from conans.test.utils.tools import StoppableThreadBottle, \
+    TestBufferConanOutput, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
-
-
-class SystemPackageToolTest(unittest.TestCase):
-    def setUp(self):
-        self.out = TestBufferConanOutput()
-
-    def test_sudo_tty(self):
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",}):
-            self.assertFalse(SystemPackageTool._is_sudo_enabled())
-            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
-
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            self.assertTrue(SystemPackageTool._is_sudo_enabled())
-            self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo -A ")
-
-            with mock.patch("sys.stdout.isatty", return_value=True):
-                self.assertEqual(SystemPackageTool._get_sudo_str(), "sudo ")
-
-    def test_system_without_sudo(self):
-        with mock.patch("os.path.isfile", return_value=False):
-            self.assertFalse(SystemPackageTool._is_sudo_enabled())
-            self.assertEqual(SystemPackageTool._get_sudo_str(), "")
-
-            with mock.patch("sys.stdout.isatty", return_value=True):
-                self.assertEqual(SystemPackageTool._get_sudo_str(), "")
-
-    def verify_update_test(self):
-        # https://github.com/conan-io/conan/issues/3142
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
-                                       "CONAN_SYSREQUIRES_MODE": "Verify"}):
-            runner = RunnerMock()
-            # fake os info to linux debian, default sudo
-            os_info = OSInfo()
-            os_info.is_macos = False
-            os_info.is_linux = True
-            os_info.is_windows = False
-            os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, None)
-            self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
-                          self.out)
-
-    def add_repositories_exception_cases_test(self):
-        os_info = OSInfo()
-        os_info.is_macos = False
-        os_info.is_linux = True
-        os_info.is_windows = False
-        os_info.linux_distro = "fedora"  # Will instantiate YumTool
-
-        with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
-            new_out = StringIO()
-            spt = SystemPackageTool(os_info=os_info, output=ConanOutput(new_out))
-            spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
-                               repo_key=None)
-
-    def add_repository_test(self):
-        class RunnerOrderedMock:
-            commands = []  # Command + return value
-
-            def __call__(runner_self, command, output, win_bash=False, subsystem=None):
-                if not len(runner_self.commands):
-                    self.fail("Commands list exhausted, but runner called with '%s'" % command)
-                expected, ret = runner_self.commands.pop(0)
-                self.assertEqual(expected, command)
-                return ret
-
-        def _run_add_repository_test(repository, gpg_key, sudo, isatty, update):
-            sudo_cmd = ""
-            if sudo:
-                sudo_cmd = "sudo " if isatty else "sudo -A "
-
-            runner = RunnerOrderedMock()
-            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
-            if gpg_key:
-                runner.commands.append(
-                    ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
-            if update:
-                runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
-
-            with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": str(sudo)}):
-                os_info = OSInfo()
-                os_info.is_macos = False
-                os_info.is_linux = True
-                os_info.is_windows = False
-                os_info.linux_distro = "debian"
-                new_out = StringIO()
-                spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
-
-                spt.add_repository(repository=repository, repo_key=gpg_key, update=update)
-                self.assertEqual(len(runner.commands), 0)
-
-        # Run several test cases
-        repository = "deb http://repo/url/ saucy universe multiverse"
-        gpg_key = 'http://one/key.gpg'
-        _run_add_repository_test(repository, gpg_key, sudo=True, isatty=False, update=True)
-        _run_add_repository_test(repository, gpg_key, sudo=True, isatty=False, update=False)
-        _run_add_repository_test(repository, gpg_key, sudo=False, isatty=False, update=True)
-        _run_add_repository_test(repository, gpg_key, sudo=False, isatty=False, update=False)
-        _run_add_repository_test(repository, gpg_key=None, sudo=True, isatty=False, update=True)
-        _run_add_repository_test(repository, gpg_key=None, sudo=False, isatty=True, update=False)
-
-        with mock.patch("sys.stdout.isatty", return_value=True):
-            _run_add_repository_test(repository, gpg_key, sudo=True, isatty=True, update=True)
-
-    def system_package_tool_test(self):
-
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMock()
-            # fake os info to linux debian, default sudo
-            os_info = OSInfo()
-            os_info.is_macos = False
-            os_info.is_linux = True
-            os_info.is_windows = False
-            os_info.linux_distro = "debian"
-
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A apt-get update")
-
-            os_info.linux_distro = "ubuntu"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A apt-get update")
-
-            os_info.linux_distro = "knoppix"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A apt-get update")
-
-            os_info.linux_distro = "neon"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A apt-get update")
-
-            os_info.linux_distro = "fedora"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A yum update -y")
-
-            os_info.linux_distro = "opensuse"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A zypper --non-interactive ref")
-
-            os_info.linux_distro = "redhat"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.install("a_package", force=False)
-            self.assertEqual(runner.command_called, "rpm -q a_package")
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "sudo -A yum install -y a_package")
-
-            os_info.linux_distro = "debian"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            with self.assertRaises(ConanException):
-                runner.return_ok = False
-                spt.install("a_package")
-                self.assertEqual(runner.command_called, "sudo -A apt-get install -y --no-install-recommends a_package")
-
-            runner.return_ok = True
-            spt.install("a_package", force=False)
-            self.assertEqual(runner.command_called, 'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
-
-            os_info.is_macos = True
-            os_info.is_linux = False
-            os_info.is_windows = False
-
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "brew update")
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "brew install a_package")
-
-            os_info.is_freebsd = True
-            os_info.is_macos = False
-
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "sudo -A pkg update")
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "sudo -A pkg install -y a_package")
-            spt.install("a_package", force=False)
-            self.assertEqual(runner.command_called, "pkg info a_package")
-
-            # Chocolatey is an optional package manager on Windows
-            if platform.system() == "Windows" and which("choco.exe"):
-                os_info.is_freebsd = False
-                os_info.is_windows = True
-                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
-                                        tool=ChocolateyTool(output=self.out))
-                spt.update()
-                self.assertEqual(runner.command_called, "choco outdated")
-                spt.install("a_package", force=True)
-                self.assertEqual(runner.command_called, "choco install --yes a_package")
-                spt.install("a_package", force=False)
-                self.assertEqual(runner.command_called,
-                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
-
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
-
-            os_info = OSInfo()
-            os_info.is_linux = True
-            os_info.linux_distro = "redhat"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "yum install -y a_package")
-            spt.update()
-            self.assertEqual(runner.command_called, "yum update -y")
-
-            os_info.linux_distro = "ubuntu"
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "apt-get install -y --no-install-recommends a_package")
-
-            spt.update()
-            self.assertEqual(runner.command_called, "apt-get update")
-
-            os_info.is_macos = True
-            os_info.is_linux = False
-            os_info.is_windows = False
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-
-            spt.update()
-            self.assertEqual(runner.command_called, "brew update")
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "brew install a_package")
-
-            os_info.is_freebsd = True
-            os_info.is_macos = False
-            os_info.is_windows = False
-
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "pkg update")
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "pkg install -y a_package")
-            spt.install("a_package", force=False)
-            self.assertEqual(runner.command_called, "pkg info a_package")
-
-            os_info.is_solaris = True
-            os_info.is_freebsd = False
-            os_info.is_windows = False
-
-            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-            spt.update()
-            self.assertEqual(runner.command_called, "pkgutil --catalog")
-            spt.install("a_package", force=True)
-            self.assertEqual(runner.command_called, "pkgutil --install --yes a_package")
-
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-
-            # Chocolatey is an optional package manager on Windows
-            if platform.system() == "Windows" and which("choco.exe"):
-                os_info.is_solaris = False
-                os_info.is_windows = True
-
-                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
-                                        tool=ChocolateyTool(output=self.out))
-                spt.update()
-                self.assertEqual(runner.command_called, "choco outdated")
-                spt.install("a_package", force=True)
-                self.assertEqual(runner.command_called, "choco install --yes a_package")
-                spt.install("a_package", force=False)
-                self.assertEqual(runner.command_called,
-                                  'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
-
-    def system_package_tool_try_multiple_test(self):
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, output):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
-        packages = ["a_package", "another_package", "yet_another_package"]
-        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | grep -q "ok installed"'])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install(packages)
-            self.assertEqual(2, runner.calls)
-            runner = RunnerMultipleMock(["sudo -A apt-get update",
-                                         "sudo -A apt-get install -y --no-install-recommends yet_another_package"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install(packages)
-            self.assertEqual(7, runner.calls)
-
-            runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException):
-                spt.install(packages)
-            self.assertEqual(7, runner.calls)
-
-    def system_package_tool_mode_test(self):
-        """
-        System Package Tool mode is defined by CONAN_SYSREQUIRES_MODE env variable.
-        Allowed values: (enabled, verify, disabled). Parser accepts it in lower/upper case or any combination.
-        """
-
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, *args, **kwargs):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
-        packages = ["a_package", "another_package", "yet_another_package"]
-
-        # Check invalid mode raises ConanException
-        with tools.environment_append({
-            "CONAN_SYSREQUIRES_MODE": "test_not_valid_mode",
-            "CONAN_SYSREQUIRES_SUDO": "True"
-        }):
-            runner = RunnerMultipleMock([])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException) as exc:
-                spt.install(packages)
-            self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
-            self.assertEqual(0, runner.calls)
-
-        # Check verify mode, a package report should be displayed in output and ConanException raised.
-        # No system packages are installed
-        with tools.environment_append({
-            "CONAN_SYSREQUIRES_MODE": "VeRiFy",
-            "CONAN_SYSREQUIRES_SUDO": "True"
-        }):
-            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException) as exc:
-                spt.install(packages)
-            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
-            self.assertIn('\n'.join(packages), self.out)
-            self.assertEqual(3, runner.calls)
-
-        # Check disabled mode, a package report should be displayed in output.
-        # No system packages are installed
-        with tools.environment_append({
-            "CONAN_SYSREQUIRES_MODE": "DiSaBlEd",
-            "CONAN_SYSREQUIRES_SUDO": "True"
-        }):
-            packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
-            runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            spt.install(packages)
-            self.assertIn('\n'.join(packages), self.out)
-            self.assertEqual(0, runner.calls)
-
-        # Check enabled, default mode, system packages must be installed.
-        with tools.environment_append({
-            "CONAN_SYSREQUIRES_MODE": "EnAbLeD",
-            "CONAN_SYSREQUIRES_SUDO": "True"
-        }):
-            runner = RunnerMultipleMock(["sudo -A apt-get update"])
-            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException) as exc:
-                spt.install(packages)
-            self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
-            self.assertEqual(7, runner.calls)
-
-    def system_package_tool_installed_test(self):
-        if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
-            return
-        if platform.system() == "Windows" and not which("choco.exe"):
-            return
-        spt = SystemPackageTool(output=self.out)
-        expected_package = "git"
-        if platform.system() == "Windows" and which("choco.exe"):
-            spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
-            # Git is not installed by default on Chocolatey
-            expected_package = "chocolatey"
-        # The expected should be installed on development/testing machines
-        self.assertTrue(spt._tool.installed(expected_package))
-        # This package hopefully doesn't exist
-        self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
-
-    def system_package_tool_fail_when_not_0_returned_test(self):
-        def get_linux_error_message():
-            """
-            Get error message for Linux platform if distro is supported, None otherwise
-            """
-            os_info = OSInfo()
-            update_command = None
-            if os_info.with_apt:
-                update_command = "sudo -A apt-get update"
-            elif os_info.with_yum:
-                update_command = "sudo -A yum update -y"
-            elif os_info.with_zypper:
-                update_command = "sudo -A zypper --non-interactive ref"
-            elif os_info.with_pacman:
-                update_command = "sudo -A pacman -Syyu --noconfirm"
-
-            return "Command '{0}' failed".format(update_command) if update_command is not None else None
-
-        platform_update_error_msg = {
-            "Linux": get_linux_error_message(),
-            "Darwin": "Command 'brew update' failed",
-            "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
-        }
-
-        runner = RunnerMock(return_ok=False)
-        output = ConanOutput(StringIO())
-        pkg_tool = ChocolateyTool(output=output) if which("choco.exe") else None
-        spt = SystemPackageTool(runner=runner, tool=pkg_tool, output=output)
-
-        msg = platform_update_error_msg.get(platform.system(), None)
-        if msg is not None:
-            with six.assertRaisesRegex(self, ConanException, msg):
-                spt.update()
-        else:
-            spt.update()  # Won't raise anything because won't do anything
 
 
 class RunnerMock(object):
@@ -526,14 +106,15 @@ class ToolsTest(unittest.TestCase):
         self.assertFalse(ret)
 
         # Multiple matches
-        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        s = 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext'
+        save(path, s)
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          windows_paths=True, output=out)
         self.assertEqual(load(path), 'Some other contentsMYPATH"finally all textMYPATHMoretext')
         self.assertTrue(ret)
 
         # Automatic windows_paths
-        save(path, 'Some other contentsD:/Path\\TO\\file.txt"finally all textd:\\PATH\\to\\file.TXTMoretext')
+        save(path, s)
         ret = tools.replace_path_in_file(path, "D:/PATH/to/FILE.txt", replace_with, strict=False,
                                          output=out)
         if platform.system() == "Windows":
@@ -616,7 +197,8 @@ class ToolsTest(unittest.TestCase):
             ["1", "2", "3"]
         )
         self.assertEqual(
-            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
+            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED":
+                                                                          " 1 , 2 , 3 "}),
             ["1", "2", "3"]
         )
 
@@ -919,7 +501,8 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
-        with six.assertRaisesRegex(self, ConanException, "VS non-existing installation: Visual Studio 5"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
             tools.vcvars_command(settings, output=output)
 
@@ -937,7 +520,7 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         with six.assertRaisesRegex(self, ConanException,
-                                     "compiler.version setting required for vcvars not defined"):
+                                   "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings, output=output)
 
         new_out = StringIO()
@@ -947,7 +530,7 @@ compiler:
             tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with six.assertRaisesRegex(self, ConanException,
-                                             "Error, Visual environment already set to 12"):
+                                           "Error, Visual environment already set to 12"):
                     tools.vcvars_command(settings, output=output)
 
             with tools.environment_append({"VisualStudioVersion": "12"}):
@@ -1045,7 +628,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
             with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
                 vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
-                self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"], "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
+                self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
+                                 "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
                 self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
                 self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
                 self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
@@ -1098,7 +682,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
                 fmanual.write("this is some content")
                 manual_file = os.path.abspath("manual.html")
 
-        from bottle import static_file, auth_basic
+        from bottle import auth_basic
+
         @http_server.server.get("/manual.html")
         def get_manual():
             return static_file(os.path.basename(manual_file),
@@ -1119,7 +704,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
 
         # Connection error
-        with six.assertRaisesRegex(self, ConanException, "HTTPConnectionPool"):
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
@@ -1203,12 +788,14 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["watchOS", "armv7k", None, "arm-apple-darwin"],
         ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
         ["tvOS", "armv8", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"]
+        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
+        ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
+        ["Emscripten", "wasm", None, "wasm32-local-emscripten"]
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
         self.assertEqual(triplet, expected_triplet,
-                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
+                         "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
     def get_gnu_triplet_on_windows_without_compiler_test(self):
         with self.assertRaises(ConanException):
@@ -1257,7 +844,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
         with six.assertRaisesRegex(self, ConanException,
-                                     "Cannot deduce file name form url. Use 'filename' parameter."):
+                                   "Cannot deduce file name form url. Use 'filename' parameter."):
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
 
         # Test: Works with filename parameter instead of '?file=1'
@@ -1387,827 +974,6 @@ class HelloConan(ConanFile):
         assert("\\r\\n" in tools.load("file.txt"))
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
-        client.run("create . user/channel")
-
-
-@attr('git')
-class GitToolTest(unittest.TestCase):
-
-    def test_repo_root(self):
-        root_path, _ = create_local_git_repo({"myfile": "anything"})
-
-        # Initialized in the root folder
-        git = Git(root_path)
-        self.assertEqual(root_path, git.get_repo_root())
-
-        # Initialized elsewhere
-        subfolder = os.path.join(root_path, 'subfolder')
-        os.makedirs(subfolder)
-        git = Git(subfolder)
-        self.assertEqual(root_path, git.get_repo_root())
-
-    def test_is_pristine(self):
-        root_path, _ = create_local_git_repo({"myfile": "anything"})
-
-        git = Git(root_path)
-        self.assertTrue(git.is_pristine())
-
-        save(os.path.join(root_path, "other_file"), "content")
-        self.assertFalse(git.is_pristine())
-
-        git.run("add .")
-        self.assertFalse(git.is_pristine())
-
-        git.run('commit -m "commit"')
-        self.assertTrue(git.is_pristine())
-
-    def test_is_local_repository(self):
-        root_path, _ = create_local_git_repo({"myfile": "anything"})
-
-        git = Git(temp_folder())
-        git.clone(root_path)
-        self.assertTrue(git.is_local_repository())
-        # TODO: Check that with remote one it is working too
-
-    def test_clone_git(self):
-        path, _ = create_local_git_repo({"myfile": "contents"})
-        tmp = temp_folder()
-        git = Git(tmp)
-        git.clone(path)
-        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
-
-    def test_clone_existing_folder_git(self):
-        path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
-
-        tmp = temp_folder()
-        save(os.path.join(tmp, "file"), "dummy contents")
-        git = Git(tmp)
-        git.clone(path, branch="my_release")
-        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
-
-        # Checkout a commit
-        git.checkout(commit)
-        self.assertEqual(git.get_revision(), commit)
-
-    def test_clone_existing_folder_without_branch(self):
-        tmp = temp_folder()
-        save(os.path.join(tmp, "file"), "dummy contents")
-        git = Git(tmp)
-        with six.assertRaisesRegex(self, ConanException, "specify a branch to checkout"):
-            git.clone("https://github.com/conan-community/conan-zlib.git")
-
-    def test_credentials(self):
-        tmp = temp_folder()
-        git = Git(tmp, username="peter", password="otool")
-        url_credentials = git.get_url_with_credentials("https://some.url.com")
-        self.assertEqual(url_credentials, "https://peter:otool@some.url.com")
-
-    def test_verify_ssl(self):
-        class MyRunner(object):
-            def __init__(self):
-                self.calls = []
-
-            def __call__(self, *args, **kwargs):
-                self.calls.append(args[0])
-                return ""
-
-        runner = MyRunner()
-        tmp = temp_folder()
-        git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
-                  force_english=True)
-        git.clone(url="https://myrepo.git")
-        self.assertIn("git config http.sslVerify true", runner.calls[1])
-
-        runner = MyRunner()
-        git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
-                  force_english=False)
-        git.clone(url="https://myrepo.git")
-        self.assertIn("git config http.sslVerify false", runner.calls[1])
-
-    def test_clone_submodule_git(self):
-        subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
-        submodule, _ = create_local_git_repo({"submodule": "contents"}, submodules=[subsubmodule])
-        path, commit = create_local_git_repo({"myfile": "contents"}, submodules=[submodule])
-
-        def _create_paths():
-            tmp = temp_folder()
-            submodule_path = os.path.join(
-                tmp,
-                os.path.basename(os.path.normpath(submodule)))
-            subsubmodule_path = os.path.join(
-                submodule_path,
-                os.path.basename(os.path.normpath(subsubmodule)))
-            return tmp, submodule_path, subsubmodule_path
-
-        # Check old (default) behaviour
-        tmp, submodule_path, subsubmodule_path = _create_paths()
-        git = Git(tmp)
-        git.clone(path)
-        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
-        self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
-
-        # Check invalid value
-        tmp, submodule_path, subsubmodule_path = _create_paths()
-        git = Git(tmp)
-        git.clone(path)
-        with six.assertRaisesRegex(self, ConanException, "Invalid 'submodule' attribute value in the 'scm'."):
-            git.checkout(commit, submodule="invalid")
-
-        # Check shallow
-        tmp, submodule_path, subsubmodule_path = _create_paths()
-        git = Git(tmp)
-        git.clone(path)
-        git.checkout(commit, submodule="shallow")
-        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
-        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
-        self.assertFalse(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
-
-        # Check recursive
-        tmp, submodule_path, subsubmodule_path = _create_paths()
-        git = Git(tmp)
-        git.clone(path)
-        git.checkout(commit, submodule="recursive")
-        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
-        self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
-        self.assertTrue(os.path.exists(os.path.join(subsubmodule_path, "subsubmodule")))
-
-    def git_to_capture_branch_test(self):
-        conanfile = """
-import re
-from conans import ConanFile, tools
-
-def get_version():
-    git = tools.Git()
-    try:
-        branch = git.get_branch()
-        branch = re.sub('[^0-9a-zA-Z]+', '_', branch)
-        return "%s_%s" % (branch, git.get_revision())
-    except:
-        return None
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = get_version()
-
-    def build(self):
-        assert("r3le_ase__" in self.version)
-        assert(len(self.version) == 50)
-"""
-        path, _ = create_local_git_repo({"conanfile.py": conanfile}, branch="r3le-ase-")
-        client = TestClient()
-        client.current_folder = path
-        client.run("create . user/channel")
-
-    def git_helper_in_recipe_test(self):
-        client = TestClient()
-        git_repo = temp_folder()
-        save(os.path.join(git_repo, "file.h"), "contents")
-        client.runner("git init .", cwd=git_repo)
-        client.runner('git config user.email "you@example.com"', cwd=git_repo)
-        client.runner('git config user.name "Your Name"', cwd=git_repo)
-        client.runner("git checkout -b dev", cwd=git_repo)
-        client.runner("git add .", cwd=git_repo)
-        client.runner('git commit -m "comm"', cwd=git_repo)
-
-        conanfile = """
-import os
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    exports_sources = "other"
-
-    def source(self):
-        git = tools.Git()
-        git.clone("%s", "dev")
-
-    def build(self):
-        assert(os.path.exists("file.h"))
-""" % git_repo.replace("\\", "/")
-        client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
-
-        # Now clone in a subfolder with later checkout
-        conanfile = """
-import os
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    exports_sources = "other"
-
-    def source(self):
-        tools.mkdir("src")
-        git = tools.Git("./src")
-        git.clone("%s")
-        git.checkout("dev")
-
-    def build(self):
-        assert(os.path.exists(os.path.join("src", "file.h")))
-""" % git_repo.replace("\\", "/")
-        client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
-
-        # Base dir, with exports without subfolder and not specifying checkout fails
-        conanfile = """
-import os
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    exports_sources = "other"
-
-    def source(self):
-        git = tools.Git()
-        git.clone("%s")
-
-    def build(self):
-        assert(os.path.exists("file.h"))
-""" % git_repo.replace("\\", "/")
-        client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel", assert_error=True)
-        self.assertIn("specify a branch to checkout", client.out)
-
-
-class GitToolsTests(unittest.TestCase):
-
-    def setUp(self):
-        self.folder, self.rev = create_local_git_repo({'myfile.txt': "contents"})
-
-    def test_no_tag(self):
-        """
-        No tags has been created in repo
-        """
-        git = Git(folder=self.folder)
-        tag = git.get_tag()
-        self.assertIsNone(tag)
-
-    def test_in_tag(self):
-        """
-        Current checkout is on a tag
-        """
-        git = Git(folder=self.folder)
-        git.run("tag 0.0.0")
-        tag = git.get_tag()
-        self.assertEqual("0.0.0", tag)
-
-    def test_in_branch_with_tag(self):
-        """
-        Tag is defined but current commit is ahead of it
-        """
-        git = Git(folder=self.folder)
-        git.run("tag 0.0.0")
-        save(os.path.join(self.folder, "file.txt"), "")
-        git.run("add .")
-        git.run("commit -m \"new file\"")
-        tag = git.get_tag()
-        self.assertIsNone(tag)
-
-    def test_get_tag_no_git_repo(self):
-        """
-        Try to get tag out of a git repo
-        """
-        git = Git(folder=temp_folder())
-        with six.assertRaisesRegex(self, ConanException, "Not a valid 'git' repository"):
-            git.get_tag()
-
-    def test_excluded_files(self):
-        folder = temp_folder()
-        save(os.path.join(folder, "file"), "some contents")
-        git = Git(folder)
-        with tools.environment_append({"PATH": ""}):
-            git.excluded_files()
-
-
-@attr("slow")
-@attr('svn')
-class SVNToolTestsBasic(SVNLocalRepoTestCase):
-
-    def test_check_svn_repo(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        with six.assertRaisesRegex(self, ConanException, "Not a valid 'svn' repository"):
-            svn.check_repo()
-        svn.checkout(url=project_url)
-        try:
-            svn.check_repo()
-        except Exception:
-            self.fail("After checking out, it should be a valid SVN repository")
-
-    def test_clone(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=project_url)
-        self.assertTrue(os.path.exists(os.path.join(tmp_folder, 'myfile')))
-
-    def test_revision_number(self):
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=self.repo_url)
-        rev = int(svn.get_revision())
-        self.create_project(files={'another_file': "content"})
-        svn.run("update")
-        rev2 = int(svn.get_revision())
-        self.assertEqual(rev2, rev + 1)
-
-    def test_repo_url(self):
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=self.repo_url)
-        remote_url = svn.get_remote_url()
-        self.assertEqual(remote_url.lower(), self.repo_url.lower())
-
-        svn2 = SVN(folder=self.gimme_tmp(create=False))
-        svn2.checkout(url=remote_url)  # clone using quoted url
-        self.assertEqual(svn2.get_remote_url().lower(), self.repo_url.lower())
-
-    def test_repo_project_url(self):
-        project_url, _ = self.create_project(files={"myfile": "content"})
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=project_url)
-        self.assertEqual(svn.get_remote_url().lower(), project_url.lower())
-
-    def test_checkout(self):
-        # Ensure we have several revisions in the repository
-        self.create_project(files={'file': "content"})
-        self.create_project(files={'file': "content"})
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=self.repo_url)
-        rev = int(svn.get_revision())
-        svn.update(revision=rev - 1)  # Checkout previous revision
-        self.assertTrue(int(svn.get_revision()), rev-1)
-
-    def test_clone_over_dirty_directory(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=project_url)
-
-        new_file = os.path.join(tmp_folder, "new_file")
-        with open(new_file, "w") as f:
-            f.write("content")
-
-        mod_file = os.path.join(tmp_folder, "myfile")
-        with open(mod_file, "a") as f:
-            f.write("new content")
-
-        self.assertFalse(svn.is_pristine())
-        svn.checkout(url=project_url)  # SVN::clone over a dirty repo reverts all changes (but it doesn't delete non versioned files)
-        self.assertEqual(open(mod_file).read(), "contents")
-        self.assertFalse(svn.is_pristine())
-
-    def test_excluded_files(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=project_url)
-
-        # Add untracked file
-        new_file = os.path.join(tmp_folder, str(uuid.uuid4()))
-        with open(new_file, "w") as f:
-            f.write("content")
-
-        # Add ignore file
-        file_to_ignore = str(uuid.uuid4())
-        with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
-            f.write("content")
-        svn.run("propset svn:ignore {} .".format(file_to_ignore))
-        svn.run('commit -m "add ignored file"')
-
-        excluded_files = svn.excluded_files()
-        self.assertIn(file_to_ignore, excluded_files)
-        self.assertNotIn('.svn', excluded_files)
-        self.assertEqual(len(excluded_files), 1)
-
-    def test_credentials(self):
-        svn = SVN(folder=self.gimme_tmp(), username="ada", password="lovelace")
-        url_credentials = svn.get_url_with_credentials("https://some.url.com")
-        self.assertEqual(url_credentials, "https://ada:lovelace@some.url.com")
-
-    def test_verify_ssl(self):
-        class MyRunner(object):
-            def __init__(self, svn):
-                self.calls = []
-                self._runner = svn._runner
-                svn._runner = self
-
-            def __call__(self, command, *args, **kwargs):
-                self.calls.append(command)
-                return self._runner(command, *args, **kwargs)
-
-        project_url, _ = self.create_project(files={'myfile': "contents",
-                                                    'subdir/otherfile': "content"})
-
-        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=True)
-        runner = MyRunner(svn)
-        svn.checkout(url=project_url)
-        self.assertNotIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
-
-        svn = SVN(folder=self.gimme_tmp(), username="peter", password="otool", verify_ssl=False)
-        runner = MyRunner(svn)
-        svn.checkout(url=project_url)
-        if svn.version >= SVN.API_CHANGE_VERSION:
-            self.assertIn("--trust-server-cert-failures=unknown-ca", runner.calls[1])
-        else:
-            self.assertIn("--trust-server-cert", runner.calls[1])
-
-    def test_repo_root(self):
-        project_url, _ = self.create_project(files={'myfile': "contents",
-                                                    'subdir/otherfile': "content"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=project_url)
-
-        path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
-        self.assertEqual(path, svn.get_repo_root().lower())
-
-        # SVN instantiated in a subfolder
-        svn2 = SVN(folder=os.path.join(tmp_folder, 'subdir'))
-        self.assertFalse(svn2.folder == tmp_folder)
-        path = os.path.realpath(tmp_folder).replace('\\', '/').lower()
-        self.assertEqual(path, svn2.get_repo_root().lower())
-
-    def test_is_local_repository(self):
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=self.repo_url)
-        self.assertTrue(svn.is_local_repository())
-
-        # TODO: Test not local repository
-
-    def test_last_changed_revision(self):
-        project_url, _ = self.create_project(files={'project1/myfile': "contents",
-                                                    'project2/myfile': "content",
-                                                    'project2/subdir1/myfile': "content",
-                                                    'project2/subdir2/myfile': "content",
-                                                    })
-        prj1 = SVN(folder=self.gimme_tmp())
-        prj1.checkout(url='/'.join([project_url, 'project1']))
-
-        prj2 = SVN(folder=self.gimme_tmp())
-        prj2.checkout(url='/'.join([project_url, 'project2']))
-
-        self.assertEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
-
-        # Modify file in one subfolder of prj2
-        with open(os.path.join(prj2.folder, "subdir1", "myfile"), "a") as f:
-            f.write("new content")
-        prj2.run('commit -m "add to file"')
-        prj2.run('update')
-        prj1.run('update')
-
-        self.assertNotEqual(prj1.get_last_changed_revision(), prj2.get_last_changed_revision())
-        self.assertEqual(prj1.get_revision(), prj2.get_revision())
-
-        # Instantiate a SVN in the other subfolder
-        prj2_subdir2 = SVN(folder=os.path.join(prj2.folder, "subdir2"))
-        prj2_subdir2.run('update')
-        self.assertEqual(prj2.get_last_changed_revision(),
-                         prj2_subdir2.get_last_changed_revision())
-        self.assertNotEqual(prj2.get_last_changed_revision(use_wc_root=False),
-                            prj2_subdir2.get_last_changed_revision(use_wc_root=False))
-
-    def test_branch(self):
-        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
-                                                    'prj1/branches/my_feature/myfile': "",
-                                                    'prj1/branches/issue3434/myfile': "",
-                                                    'prj1/tags/v12.3.4/myfile': "",
-                                                    })
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
-        self.assertEqual("trunk", svn.get_branch())
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
-        self.assertEqual("my_feature", svn.get_branch())
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
-        self.assertEqual("issue3434", svn.get_branch())
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
-        self.assertIsNone(svn.get_branch())
-
-        svn = SVN(folder=self.gimme_tmp())
-        with six.assertRaisesRegex(self, ConanException, "Unable to get svn branch"):
-            svn.get_branch()
-
-    def test_tag(self):
-        project_url, _ = self.create_project(files={'prj1/trunk/myfile': "contents",
-                                                    'prj1/branches/my_feature/myfile': "",
-                                                    'prj1/branches/issue3434/myfile': "",
-                                                    'prj1/tags/v12.3.4/myfile': "",
-                                                    })
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'trunk']))
-        self.assertIsNone(svn.get_tag())
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'my_feature']))
-        self.assertIsNone(svn.get_tag())
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'branches', 'issue3434']))
-        self.assertIsNone(svn.get_tag())
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url='/'.join([project_url, 'prj1', 'tags', 'v12.3.4']))
-        self.assertEqual("v12.3.4", svn.get_tag())
-
-        svn = SVN(folder=self.gimme_tmp())
-        with six.assertRaisesRegex(self, ConanException, "Unable to get svn tag"):
-            svn.get_tag()
-
-
-
-@attr("slow")
-@attr('svn')
-class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
-    def run(self, *args, **kwargs):
-        try:
-            setattr(SVN, '_version', Version("1.5"))
-            self.assertTrue(SVN().version < SVN.API_CHANGE_VERSION)
-            super(SVNToolTestsBasicOldVersion, self).run(*args, **kwargs)
-        finally:
-            delattr(SVN, '_version')
-            assert SVN().version == SVN.get_version(), \
-                "{} != {}".format(SVN().version, SVN.get_version())
-
-    # Do not add tests to this class, all should be compatible with new version of SVN
-
-
-@attr("slow")
-@attr('svn')
-class SVNToolTestsPristine(SVNLocalRepoTestCase):
-
-    def setUp(self):
-        unittest.skipUnless(SVN.get_version() >= SVN.API_CHANGE_VERSION,
-                            "SVN::is_pristine not implemented")
-
-    def test_checkout(self):
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=self.repo_url)
-        self.assertTrue(svn.is_pristine())
-
-    def test_checkout_project(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=project_url)
-        self.assertTrue(svn.is_pristine())
-
-    def test_modified_file(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=project_url)
-        with open(os.path.join(tmp_folder, "myfile"), "a") as f:
-            f.write("new content")
-        self.assertFalse(svn.is_pristine())
-
-    def test_untracked_file(self):
-        self.create_project(files={'myfile': "contents"})
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=tmp_folder)
-        svn.checkout(url=self.repo_url)
-        self.assertTrue(svn.is_pristine())
-        with open(os.path.join(tmp_folder, "not_tracked.txt"), "w") as f:
-            f.write("content")
-        self.assertFalse(svn.is_pristine())
-
-    def test_ignored_file(self):
-        tmp_folder = self.gimme_tmp()
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=self.repo_url)
-        file_to_ignore = "secret.txt"
-        with open(os.path.join(tmp_folder, file_to_ignore), "w") as f:
-            f.write("content")
-        svn.run("propset svn:ignore {} .".format(file_to_ignore))
-        self.assertFalse(svn.is_pristine())  # Folder properties have been modified
-        svn.run('commit -m "add ignored file"')
-        self.assertTrue(svn.is_pristine())
-
-    def test_conflicted_file(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-
-        def work_on_project(tmp_folder):
-            svn = SVN(folder=tmp_folder)
-            svn.checkout(url=project_url)
-            self.assertTrue(svn.is_pristine())
-            with open(os.path.join(tmp_folder, "myfile"), "a") as f:
-                f.write("random content: {}".format(uuid.uuid4()))
-            return svn
-
-        # Two users working on the same project
-        svn1 = work_on_project(self.gimme_tmp())
-        svn2 = work_on_project(self.gimme_tmp())
-
-        # User1 is faster
-        svn1.run('commit -m "user1 commit"')
-        self.assertFalse(svn1.is_pristine())
-        svn1.run('update')  # Yes, we need to update local copy in order to have the same revision everywhere.
-        self.assertTrue(svn1.is_pristine())
-
-        # User2 updates and get a conflicted file
-        svn2.run('update')
-        self.assertFalse(svn2.is_pristine())
-        svn2.run('revert . -R')
-        self.assertTrue(svn2.is_pristine())
-
-    def test_mixed_revisions(self):
-        project_url, _ = self.create_project(files={'myfile': "cc", 'another': 'aa'})
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=project_url)
-        with open(os.path.join(svn.folder, 'myfile'), "a") as f:
-            f.write('more')
-        svn.run('commit -m "up version"')
-        self.assertFalse(svn.is_pristine())
-
-    def test_missing_remote(self):
-        repo_url = self.gimme_tmp()
-        subprocess.check_output('svnadmin create "{}"'.format(repo_url), shell=True)
-        project_url = SVN.file_protocol + quote(repo_url.replace("\\", "/"), safe='/:')
-
-        svn = SVN(folder=self.gimme_tmp())
-        svn.checkout(url=project_url)
-        self.assertTrue(svn.is_pristine())
-
-        shutil.rmtree(repo_url, ignore_errors=False, onerror=try_remove_readonly)
-        self.assertFalse(os.path.exists(repo_url))
-        self.assertFalse(svn.is_pristine())
-
-
-@attr("svn")
-class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
-
-    def _propset_cmd(self, relpath, rev, url):
-        return 'propset svn:externals "{} -r{} {}" .'.format(relpath, rev, url)
-
-    def setUp(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        project2_url, rev = self.create_project(files={'nestedfile': "contents"})
-
-        self.svn = SVN(folder=self.gimme_tmp())
-        self.svn.checkout(url=project_url)
-        self.svn.run(self._propset_cmd("subrepo_nestedfile", rev, project2_url + '/nestedfile'))
-        self.svn.run('commit -m "add external"')
-        self.svn.update()
-        self.assertTrue(self.svn.is_pristine())
-
-    def test_modified_external(self):
-        with open(os.path.join(self.svn.folder, "subrepo_nestedfile"), "a") as f:
-            f.write("cosass")
-        self.assertFalse(self.svn.is_pristine())
-
-
-@attr("svn")
-class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
-
-    def _propset_cmd(self, relpath, url):
-        return 'propset svn:externals "{} {}" .'.format(relpath, url)
-
-    def setUp(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        project2_url, _ = self.create_project(files={'nestedfile': "contents"})
-
-        self.svn = SVN(folder=self.gimme_tmp())
-        self.svn.checkout(url=project_url)
-        self.svn.run(self._propset_cmd("subrepo", project2_url))
-        self.svn.run('commit -m "add external"')
-        self.svn.update()
-        self.assertTrue(self.svn.is_pristine())
-
-        self.svn2 = SVN(folder=self.gimme_tmp())
-        self.svn2.checkout(url=project2_url)
-        self.assertTrue(self.svn.is_pristine())
-
-    def test_modified_external(self):
-        with open(os.path.join(self.svn2.folder, "nestedfile"), "a") as f:
-            f.write("cosass")
-        self.svn2.run('commit -m "another"')
-        self.svn2.update()
-        self.assertTrue(self.svn2.is_pristine())
-
-        # Known: without fixed external, it won't be pristine if there is something new in remote.
-        self.assertFalse(self.svn.is_pristine())
-
-
-@attr("svn")
-class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
-
-    def _propset_cmd(self, relpath, rev, url):
-        return 'propset svn:externals "{} -r{} {}" .'.format(relpath, rev, url)
-
-    def setUp(self):
-        project_url, _ = self.create_project(files={'myfile': "contents"})
-        project2_url, rev = self.create_project(files={'nestedfile': "contents"})
-
-        self.svn = SVN(folder=self.gimme_tmp())
-        self.svn.checkout(url=project_url)
-        self.svn.run(self._propset_cmd("subrepo", rev, project2_url))
-        self.svn.run('commit -m "add external"')
-        self.svn.update()
-        self.assertTrue(self.svn.is_pristine())
-
-        self.svn_subrepo = SVN(folder=os.path.join(self.svn.folder, 'subrepo'))
-        self.assertTrue(self.svn_subrepo.is_pristine())
-
-    def test_modified_external(self):
-        with open(os.path.join(self.svn.folder, "subrepo", "nestedfile"), "a") as f:
-            f.write("cosass")
-        self.assertFalse(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-    def test_commit_external(self):
-        with open(os.path.join(self.svn.folder, "subrepo", "nestedfile"), "a") as f:
-            f.write("cosass")
-        self.svn_subrepo.run('commit -m "up external"')
-        self.assertFalse(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-        self.svn_subrepo.update()
-        self.assertTrue(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-    def test_untracked_external(self):
-        with open(os.path.join(self.svn.folder, "subrepo", "other_file"), "w") as f:
-            f.write("cosass")
-        self.assertFalse(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-    def test_ignored_external(self):
-        file_to_ignore = "secret.txt"
-        with open(os.path.join(self.svn_subrepo.folder, file_to_ignore), "w") as f:
-            f.write("cosas")
-
-        self.svn_subrepo.run("propset svn:ignore {} .".format(file_to_ignore))
-        self.assertFalse(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-        self.svn_subrepo.run('commit -m "add ignored file"')
-        self.assertTrue(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-        subrepo_rev = self.svn_subrepo.get_revision()
-        self.svn.run(self._propset_cmd("subrepo", subrepo_rev, self.svn_subrepo.get_remote_url()))
-        self.assertTrue(self.svn_subrepo.is_pristine())
-        self.assertFalse(self.svn.is_pristine())
-
-        self.svn.run('commit -m "change property"')
-        self.svn.update()
-        self.assertTrue(self.svn.is_pristine())
-
-
-@attr("slow")
-@attr('svn')
-class SVNToolsTestsRecipe(SVNLocalRepoTestCase):
-
-    conanfile = """
-import os
-from conans import ConanFile, tools
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    exports_sources = "other"
-
-    def source(self):
-        svn = tools.SVN({svn_folder})
-        svn.checkout(url="{svn_url}")
-
-    def build(self):
-        assert(os.path.exists("{file_path}"))
-        assert(os.path.exists("other"))
-"""
-
-    def test_clone_root_folder(self):
-        tmp_folder = self.gimme_tmp()
-        client = TestClient()
-        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
-        save(os.path.join(tmp_folder, "file.h"), "contents")
-        client.runner("svn add file.h", cwd=tmp_folder)
-        client.runner('svn commit -m "message"', cwd=tmp_folder)
-
-        conanfile = self.conanfile.format(svn_folder="", svn_url=self.repo_url,
-                                          file_path="file.h")
-        client.save({"conanfile.py": conanfile, "other": "hello"})
-        client.run("create . user/channel")
-
-    def test_clone_subfolder(self):
-        tmp_folder = self.gimme_tmp()
-        client = TestClient()
-        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
-        save(os.path.join(tmp_folder, "file.h"), "contents")
-        client.runner("svn add file.h", cwd=tmp_folder)
-        client.runner('svn commit -m "message"', cwd=tmp_folder)
-
-        conanfile = self.conanfile.format(svn_folder="\"src\"", svn_url=self.repo_url,
-                                          file_path="src/file.h")
-        client.save({"conanfile.py": conanfile, "other": "hello"})
         client.run("create . user/channel")
 
 

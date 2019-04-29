@@ -321,7 +321,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib"):
+            if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:

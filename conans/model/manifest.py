@@ -5,6 +5,7 @@ import time
 
 from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.util.env_reader import get_env
 from conans.util.files import load, md5, md5sum, save, walk
 
 
@@ -36,9 +37,10 @@ def gather_files(folder):
             if os.path.exists(abs_path):
                 file_dict[rel_path] = abs_path
             else:
-                raise ConanException("The file is a broken symlink, verify that "
-                                     "you are packaging the needed destination files: '%s'"
-                                     % abs_path)
+                if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
+                    raise ConanException("The file is a broken symlink, verify that "
+                                         "you are packaging the needed destination files: '%s'"
+                                         % abs_path)
 
     return file_dict, symlinks
 

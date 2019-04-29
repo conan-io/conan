@@ -1008,3 +1008,9 @@ class Pkg(ConanFile):
         client.run("workspace install conanws.yml --install-folder=ws_install")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
                                                     "conanworkspace.cmake")))
+
+    def missing_subarguments_test(self):
+        client = TestClient()
+        client.run("workspace", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
+

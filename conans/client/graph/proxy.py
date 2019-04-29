@@ -23,13 +23,13 @@ class ConanProxy(object):
 
     def get_recipe(self, ref, check_updates, update, remotes, recorder):
         if self._cache.installed_as_editable(ref):
-            conanfile_path = self._cache.conanfile(ref)
+            conanfile_path = self._cache.package_layout(ref).conanfile()
             status = RECIPE_EDITABLE
             # TODO: log_recipe_got_from_editable(reference)
             # TODO: recorder.recipe_fetched_as_editable(reference)
             return conanfile_path, status, None, ref
 
-        with self._cache.conanfile_write_lock(ref):
+        with self._cache.package_layout(ref).conanfile_write_lock(self._out):
             result = self._get_recipe(ref, check_updates, update, remotes, recorder)
             conanfile_path, status, remote, new_ref = result
 
@@ -42,7 +42,7 @@ class ConanProxy(object):
     def _get_recipe(self, ref, check_updates, update, remotes, recorder):
         output = ScopedOutput(str(ref), self._out)
         # check if it is in disk
-        conanfile_path = self._cache.conanfile(ref)
+        conanfile_path = self._cache.package_layout(ref).conanfile()
 
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
@@ -85,7 +85,7 @@ class ConanProxy(object):
             ref = ref.copy_with_rev(cur_revision)
             return conanfile_path, status, selected_remote, ref
 
-        export = self._cache.export(ref)
+        export = self._cache.package_layout(ref).export()
         read_manifest = FileTreeManifest.load(export)
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:

@@ -27,8 +27,9 @@ class ManifestManager(object):
 
     def _handle_recipe(self, node, verify, interactive):
         ref = node.ref
-        export = self._cache.export(ref)
-        exports_sources_folder = self._cache.export_sources(ref)
+        layout = self._cache.package_layout(ref)
+        export = layout.export()
+        exports_sources_folder = layout.export_sources()
         read_manifest = FileTreeManifest.load(export)
         expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)
@@ -38,7 +39,7 @@ class ManifestManager(object):
     def _handle_package(self, node, verify, interactive):
         ref = node.ref
         pref = PackageReference(ref, node.package_id)
-        package_folder = self._cache.package(pref)
+        package_folder = self._cache.package_layout(pref.ref).package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
         self._check_not_corrupted(pref, read_manifest, expected_manifest)

@@ -430,6 +430,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
+
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
@@ -757,12 +759,12 @@ class Command(object):
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports a recipe, then creates a package from local source and build folders.
+        """
+        Exports a recipe and create a binary package from local files.
 
-        The package is created by calling the package() method applied to the
-        local folders '--source-folder' and '--build-folder' It's created in
-        the local cache for the specified 'reference' and for the specified
-        '--settings', '--options' and or '--profile'.
+        If '--package-folder' is provided it will copy the files from there, otherwise it
+        will execute package() method over '--source-folder' and '--build-folder' to create
+        the binary package.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg")
@@ -1203,6 +1205,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
 
         # create the parser for the "a" command
         parser_list = subparsers.add_parser('list', help='List current remotes')
@@ -1318,6 +1321,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
         subparsers = parser.add_subparsers(dest='subcommand')
+        subparsers.required = True
 
         # create the parser for the "profile" command
         subparsers.add_parser('list', help='List current profiles')
@@ -1442,6 +1446,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
                                          prog="conan workspace")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
 
         install_parser = subparsers.add_parser('install',
                                                help='same as a "conan install" command'
@@ -1470,6 +1475,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
                                          prog="conan editable")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
 
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
         add_parser.add_argument('path', help='Path to the package folder in the user workspace')

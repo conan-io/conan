@@ -8,6 +8,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer, \
     NO_SETTINGS_PACKAGE_ID, create_local_git_repo
+from conans.test.utils.conanfile import TestConanFile
 
 
 class PythonExtendTest(unittest.TestCase):
@@ -382,7 +383,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Pkg/0.1@lasote/testing: License! MyLicense", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Author! author@company.com", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        self.assertTrue(os.path.exists(os.path.join(client.cache.export(ref),
+        self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
     def reuse_exports_conflict_test(self):
@@ -605,3 +606,28 @@ class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
         #   - no mention to alias
         self.assertNotIn("alias", client.out)
         self.assertNotIn("alias2", client.out)
+
+    def local_build_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": "var=42\n"+str(TestConanFile("Tool", "0.1"))})
+        client.run("export . Tool/0.1@user/channel")
+
+        conanfile = """from conans import ConanFile, python_requires
+pkg1 = python_requires("Tool/0.1@user/channel")
+class MyConanfileBase(ConanFile):
+    def source(self):
+        self.output.info("Pkg1 source: %s" % pkg1.var)
+    def build(self):
+        self.output.info("Pkg1 build: %s" % pkg1.var)
+    def package(self):
+        self.output.info("Pkg1 package: %s" % pkg1.var)
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        self.assertIn("conanfile.py: Pkg1 source: 42", client.out)
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("conanfile.py: Pkg1 build: 42", client.out)
+        client.run("package .")
+        self.assertIn("conanfile.py: Pkg1 package: 42", client.out)
+        client.run("export-pkg . pkg1/0.1@user/testing")

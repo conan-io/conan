@@ -93,38 +93,9 @@ class ClientCache(object):
         """
         return self.package_layout(ref).base_folder()
 
-    def export(self, ref):
-        return self.package_layout(ref).export()
-
-    def export_sources(self, ref, short_paths=False):
-        return self.package_layout(ref, short_paths).export_sources()
-
-    def source(self, ref, short_paths=False):
-        return self.package_layout(ref, short_paths).source()
-
-    def conanfile(self, ref):
-        return self.package_layout(ref).conanfile()
-
-    def builds(self, ref):
-        return self.package_layout(ref).builds()
-
-    def build(self, pref, short_paths=False):
-        return self.package_layout(pref.ref, short_paths).build(pref)
-
-    def system_reqs(self, ref):
-        return self.package_layout(ref).system_reqs()
-
-    def system_reqs_package(self, pref):
-        return self.package_layout(pref.ref).system_reqs_package(pref)
-
-    def packages(self, ref):
-        return self.package_layout(ref).packages()
-
     def package(self, pref, short_paths=False):
+        # TODO: This is deprecated, only used in testing
         return self.package_layout(pref.ref, short_paths).package(pref)
-
-    def scm_folder(self, ref):
-        return self.package_layout(ref).scm_folder()
 
     def installed_as_editable(self, ref):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
@@ -170,14 +141,6 @@ class ClientCache(object):
         if self._no_lock is None:
             self._no_lock = self.config.cache_no_locks
         return self._no_lock
-
-    def conanfile_write_lock(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_write_lock(self._output)
-
-    def package_lock(self, pref):
-        layout = self.package_layout(pref.ref)
-        return layout.package_lock(pref)
 
     @property
     def put_headers_path(self):

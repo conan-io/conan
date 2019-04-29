@@ -96,7 +96,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
 
         # 3) In the upload process, the metadata is lost again
         ref = ConanFileReference.loads("lib/version@lasote/channel")
-        export_folder = t.cache.export(ref)
+        export_folder = t.cache.package_layout(ref).export()
         tgz = os.path.join(export_folder, EXPORT_SOURCES_TGZ_NAME)
         self.assertFalse(os.path.exists(tgz))
         t.run("upload lib/version@lasote/channel")

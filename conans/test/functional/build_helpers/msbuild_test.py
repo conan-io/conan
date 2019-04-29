@@ -91,7 +91,7 @@ class HelloConan(ConanFile):
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
         full_ref = "Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1"
         pref = PackageReference.loads(full_ref)
-        build_folder = client.cache.build(pref)
+        build_folder = client.cache.package_layout(pref.ref).build(pref)
         self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")

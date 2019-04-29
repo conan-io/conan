@@ -60,10 +60,11 @@ class GraphBinariesAnalyzer(object):
             node.prev = None
             return
 
-        package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
+        package_folder = self._cache.package_layout(pref.ref,
+                                                    short_paths=conanfile.short_paths).package(pref)
 
         # Check if dirty, to remove it
-        with self._cache.package_lock(pref):
+        with self._cache.package_layout(pref.ref).package_lock(pref):
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
@@ -201,10 +202,13 @@ class GraphBinariesAnalyzer(object):
         if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
             private_neighbours = node.private_neighbors()
             for neigh in private_neighbours:
+                if not neigh.private:
+                    continue
                 # Current closure contains own node to be skipped
                 for n in neigh.public_closure.values():
-                    n.binary = BINARY_SKIP
-                    self._handle_private(n)
+                    if n.private:
+                        n.binary = BINARY_SKIP
+                        self._handle_private(n)
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes):
         default_package_id_mode = self._cache.config.default_package_id_mode

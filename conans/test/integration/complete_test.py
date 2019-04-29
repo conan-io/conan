@@ -96,7 +96,7 @@ class CompleteFlowTest(unittest.TestCase):
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s" % str(ref))
         # Build should be empty
-        build_path = other_conan.cache.build(pref)
+        build_path = other_conan.cache.package_layout(pref.ref).build(pref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
         self._assert_library_exists(pref, other_conan.cache)
