@@ -848,7 +848,7 @@ servers["r2"] = TestServer()
 
     def run_command(self, command):
         self.all_output += str(self.out)
-        self.init_dynamic_vars() # Resets the output
+        self.init_dynamic_vars()  # Resets the output
         return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
@@ -858,6 +858,7 @@ servers["r2"] = TestServer()
         path = path or self.current_folder
         if clean_first:
             shutil.rmtree(self.current_folder, ignore_errors=True)
+        files = {f: str(content) for f, content in files.items()}
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
