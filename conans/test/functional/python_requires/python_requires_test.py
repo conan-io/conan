@@ -2,6 +2,7 @@ import os
 import unittest
 
 import time
+import textwrap
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -479,6 +480,31 @@ class PkgTest(base.MyConanfileBase):
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
+    def duplicate_pyreq_test(self):
+        t = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class PyReq(ConanFile):
+                pass
+        """)
+        t.save({"conanfile.py": conanfile})
+        t.run("export . pyreq/1.0@user/channel")
+        t.run("export . pyreq/2.0@user/channel")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+
+            pyreq1 = python_requires("pyreq/1.0@user/channel")
+            pyreq2 = python_requires("pyreq/2.0@user/channel")
+
+            class Lib(ConanFile):
+                pass
+        """)
+        t.save({"conanfile.py": conanfile})
+        t.run("create . name/version@user/channel", assert_error=True)
+        self.assertIn("ERROR: Error loading conanfile", t.out)
+        self.assertIn("Same python_requires with different versions not allowed for a conanfile",
+                      t.out)
 
 class PythonRequiresNestedTest(unittest.TestCase):
 
