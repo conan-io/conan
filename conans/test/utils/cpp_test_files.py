@@ -126,6 +126,7 @@ class {name}Conan(ConanFile):
 
     def config(self):
         {libcxx_remove}
+        {cppstd_remove}
         for name, req in self.requires.iteritems():
             self.options[name].language = self.options.language
 
@@ -355,6 +356,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         pure_c=pure_c, cmake_targets=cmake_targets,
                                         with_exe=with_exe)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
+    cppstd_remove = "del self.settings.compiler.cppstd" if pure_c else ""
     build_env = conanfile_build_cmake if use_cmake else conanfile_build_new_env
 
     info_tmp = """
@@ -371,6 +373,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                           language=language,
                                           static=static,
                                           libcxx_remove=libcxx_remove,
+                                          cppstd_remove=cppstd_remove,
                                           build=build_env,
                                           additional_info=res,
                                           settings=settings)
