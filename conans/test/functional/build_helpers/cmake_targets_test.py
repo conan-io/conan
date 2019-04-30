@@ -107,7 +107,7 @@ class Alpha(ConanFile):
 
             client.run('install . %s -s build_type=Debug -g cmake_multi' % debug_install)
             client.run('install . %s -s build_type=Release -g cmake_multi' % release_install)
-            client.runner("cmake .", cwd=client.current_folder)
+            client.runner('cmake . -G "Visual Studio 14 Win64"', cwd=client.current_folder)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
             self.assertNotIn("', skipping the version check...", client.user_io.out)
             self.assertIn("Configuring done", client.user_io.out)
