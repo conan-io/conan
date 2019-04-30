@@ -2,6 +2,7 @@ import os
 import re
 import unittest
 
+from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
@@ -292,3 +293,17 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_VERSION "12")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
+
+    def cmake_find_package_multi_definitions_test(self):
+        """ CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be present in cmake_find_package_multi definitions
+        """
+        settings_mock = _MockSettings(build_type="Release")
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(settings_mock, EnvValues())
+        install_folder = "/c/foo/testing"
+        setattr(conanfile, "install_folder", install_folder)
+        conanfile.generators = ["cmake_find_package_multi"]
+        definitions_builder = CMakeDefinitionsBuilder(conanfile)
+        definitions = definitions_builder.get_definitions()
+        self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
+        self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])

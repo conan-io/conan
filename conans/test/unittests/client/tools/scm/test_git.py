@@ -270,6 +270,21 @@ class HelloConan(ConanFile):
         client.run("create . user/channel", assert_error=True)
         self.assertIn("specify a branch to checkout", client.out)
 
+    def git_commit_message_test(self):
+        client = TestClient()
+        git_repo = temp_folder()
+        client.runner("git init .", cwd=git_repo)
+        client.runner('git config user.email "you@example.com"', cwd=git_repo)
+        client.runner('git config user.name "Your Name"', cwd=git_repo)
+        client.runner("git checkout -b dev", cwd=git_repo)
+        git = Git(git_repo)
+        self.assertIsNone(git.get_commit_message())
+        save(os.path.join(git_repo, "test"), "contents")
+        client.runner("git add test", cwd=git_repo)
+        client.runner('git commit -m "first commit"', cwd=git_repo)
+        self.assertEqual("dev", git.get_branch())
+        self.assertEqual("first commit", git.get_commit_message())
+
 
 class GitToolsTests(unittest.TestCase):
 

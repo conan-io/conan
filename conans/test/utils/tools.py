@@ -66,7 +66,7 @@ ARTIFACTORY_DEFAULT_URL = os.getenv("ARTIFACTORY_DEFAULT_URL", "http://localhost
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(reference)
-    path = cache.export(ref)
+    path = cache.package_layout(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -992,8 +992,8 @@ class GenConanfile(object):
         with_default_option("shared", True).\
         with_build_msg("holaaa").\
         with_build_msg("adiooos").\
-        with_package_file("file.txt", "hola"). \
-        with_package_file("file2.txt", "hola").gen()
+        with_package_file("file.txt", "hola").\
+        with_package_file("file2.txt", "hola")
     """
 
     def __init__(self):
@@ -1040,11 +1040,11 @@ class GenConanfile(object):
     def with_package_file(self, file_name, contents=None, env_var=None):
         if not contents and not env_var:
             raise Exception("Specify contents or env_var")
+        self.with_import("import os")
         self.with_import("from conans import tools")
         if contents:
             self._package_files[file_name] = contents
         if env_var:
-            self.with_import("import os")
             self._package_files_env[file_name] = env_var
         return self
 

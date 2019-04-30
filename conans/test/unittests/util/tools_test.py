@@ -976,7 +976,6 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
 
-
 class CollectLibTestCase(unittest.TestCase):
 
     def collect_libs_test(self):
