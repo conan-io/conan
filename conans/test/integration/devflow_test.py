@@ -244,7 +244,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         install_dir = os.path.join(client.current_folder, "install_x86_64")
         tools.replace_in_file(os.path.join(client.current_folder, "src", "hello", "CMakeLists.txt"),
                               "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake",
-                              '"%s/conanbuildinfo.cmake"' % install_dir,
+                              '"%s/conanbuildinfo.cmake"' % install_dir.replace("\\", "/"),
                               output=client.out)
 
         client.run("install . --install-folder install_x86_64 -s arch=x86_64")
