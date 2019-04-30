@@ -41,7 +41,7 @@ class CompleteFlowTest(unittest.TestCase):
         # Now install it but with other options
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.cache.conan_packages(ref)
+        package_ids = other_conan.cache.package_layout(ref).conan_packages()
         self.assertEqual(len(package_ids), 2)
 
     def reuse_test(self):
@@ -56,7 +56,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable package(): Packaged 1 '.h' file: helloHello0.h",
                       self.client.out)
         # Check compilation ok
-        package_ids = self.client.cache.conan_packages(ref)
+        package_ids = self.client.cache.package_layout(ref).conan_packages()
         self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_library_exists(pref, self.client.cache)
@@ -104,7 +104,7 @@ class CompleteFlowTest(unittest.TestCase):
         # Now install it but with other options
         other_conan.run('install %s -o language=1 --build missing' % (str(ref)))
         # Should have two packages
-        package_ids = other_conan.cache.conan_packages(ref)
+        package_ids = other_conan.cache.package_layout(ref).conan_packages()
         self.assertEqual(len(package_ids), 2)
         for package_id in package_ids:
             pref = PackageReference(ref, package_id)

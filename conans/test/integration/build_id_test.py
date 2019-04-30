@@ -205,9 +205,9 @@ class BuildIdTest(unittest.TestCase):
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
 
         def _check_builds():
-            builds = client.cache.conan_builds(ref)
+            builds = client.cache.package_layout(ref).conan_builds()
             self.assertEqual(1, len(builds))
-            packages = client.cache.conan_packages(ref)
+            packages = client.cache.package_layout(ref).conan_packages()
             self.assertEqual(2, len(packages))
             self.assertNotIn(builds[0], packages)
             return builds[0], packages
@@ -216,9 +216,9 @@ class BuildIdTest(unittest.TestCase):
         client.run("remove Pkg/0.1@user/channel -b %s -f" % packages[0])
         _check_builds()
         client.run("remove Pkg/0.1@user/channel -b %s -f" % build)
-        builds = client.cache.conan_builds(ref)
+        builds = client.cache.package_layout(ref).conan_builds()
         self.assertEqual(0, len(builds))
-        packages = client.cache.conan_packages(ref)
+        packages = client.cache.package_layout(ref).conan_packages()
         self.assertEqual(2, len(packages))
 
     @parameterized.expand([(True, ), (False,)])

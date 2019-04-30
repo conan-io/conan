@@ -17,8 +17,7 @@ class SynchronizeTest(unittest.TestCase):
     def upload_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" %
-                                                   DEFAULT_REVISION_V1)
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
@@ -83,7 +82,7 @@ class SynchronizeTest(unittest.TestCase):
 
         client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = client.cache.conan_packages(ref)
+        package_ids = client.cache.package_layout(ref).conan_packages()
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that conans exists on server

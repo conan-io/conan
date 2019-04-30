@@ -249,7 +249,7 @@ class Pkg(ConanFile):
 
         client2.run("install Hello0/1.0@lasote/stable --update")
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-        package_ids = client2.cache.conan_packages(ref)
+        package_ids = client2.cache.package_layout(ref).conan_packages()
         package_path = client2.cache.package(PackageReference(ref, package_ids[0]))
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")

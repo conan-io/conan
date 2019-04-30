@@ -258,16 +258,6 @@ class ClientCache(object):
                 hooks.append(hook_name[:-3])
         return hooks
 
-    def conan_packages(self, ref):
-        """ Returns a list of package_id from a local cache package folder """
-        layout = self.package_layout(ref)
-        return layout.conan_packages()
-
-    def conan_builds(self, ref):
-        """ Returns a list of package ids from a local cache build folder """
-        layout = self.package_layout(ref)
-        return layout.conan_builds()
-
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
             ref_path = self.base_folder(ref)
@@ -299,10 +289,6 @@ class ClientCache(object):
             conan_folder = os.path.join(self._store_folder, folder)
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
-
-    def remove_package_locks(self, ref):
-        package_layout = self.package_layout(ref=ref)
-        package_layout.remove_package_locks()
 
     def invalidate(self):
         self._config = None
