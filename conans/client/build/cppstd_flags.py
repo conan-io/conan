@@ -1,4 +1,19 @@
+from conans.errors import ConanException
 from conans.model.version import Version
+
+
+def cppstd_from_settings(settings):
+    ss_cppstd = settings.get_safe("cppstd")
+    compiler_cppstd = settings.get_safe("compiler.cppstd")
+
+    if not ss_cppstd and not compiler_cppstd:
+        return None
+
+    if ss_cppstd and compiler_cppstd:
+        raise ConanException("Both settings, 'cppstd' and 'compiler.cppstd', should never arrive"
+                             " together to build_helpers")
+
+    return compiler_cppstd or ss_cppstd
 
 
 def cppstd_flag(compiler, compiler_version, cppstd):

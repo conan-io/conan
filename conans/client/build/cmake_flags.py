@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -130,7 +130,7 @@ class CMakeDefinitionsBuilder(object):
         return self._conanfile.settings.get_safe(setname)
 
     def _get_cpp_standard_vars(self):
-        cppstd = self._ss("cppstd")
+        cppstd = cppstd_from_settings(self._conanfile.settings)
         compiler = self._ss("compiler")
         compiler_version = self._ss("compiler.version")
 
