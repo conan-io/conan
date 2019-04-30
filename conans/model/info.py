@@ -1,5 +1,5 @@
 import os
-
+import warnings
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
@@ -231,9 +231,6 @@ class _PackageReferenceList(list):
 
 class ConanInfo(object):
 
-    def __init__(self):
-        self._adjust_settings_for_std = None
-
     def copy(self):
         """ Useful for build_id implementation
         """
@@ -259,7 +256,7 @@ class ConanInfo(object):
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
         result.discard_build_settings()
-        result.default_std_matching()
+        result._default_std_matching(raise_for_compiler_cppstd=False)
 
         return result
 
@@ -399,6 +396,10 @@ class ConanInfo(object):
         self.settings.arch_build = self.full_settings.arch_build
 
     def default_std_matching(self):
+        self._default_std_matching(raise_for_compiler_cppstd=True)
+        warnings.warn("Function 'default_std_matching' is deprecated")
+
+    def _default_std_matching(self, raise_for_compiler_cppstd):
         """
         If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
@@ -412,25 +413,30 @@ class ConanInfo(object):
             if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None
 
-            if str(self.full_settings.compiler.cppstd) == default:
-                def remove_cppstd(settings):
-                    try:
-                        settings.compiler.cppstd = None  # It's the default, assign None
-                    except AttributeError:
-                        # Settings can be different at the moment of executing this function
-                        pass
-                    finally:
-                        return settings
-                self._adjust_settings_for_std = remove_cppstd
+            if self.full_settings.compiler.cppstd and raise_for_compiler_cppstd:
+                raise ConanException("Function 'default_std_matching' is not supported if using"
+                                     " subsetting 'compiler.cppstd'")
 
     def default_std_non_matching(self):
+        if self.full_settings.compiler.cppstd:
+            raise ConanException("Function 'default_std_non_matching' is not supported if using"
+                                 " subsetting 'compiler.cppstd'")
+
+        warnings.warn("Function 'default_std_non_matching' is deprecated")
+
         if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
-        self._adjust_settings_for_std = None  # Do nothing
 
     def _settings_sha(self):
-        if self._adjust_settings_for_std:
-            settings = self.settings.copy()
-            settings = self._adjust_settings_for_std(settings)
-            return settings.sha
+        # Remove compiler.cppstd if its value is equal to the standard
+        try:
+            if self.full_settings.compiler.cppstd:
+                default = cppstd_default(str(self.full_settings.compiler),
+                                     str(self.full_settings.compiler.version))
+                if str(self.full_settings.compiler.cppstd) == default:
+                    settings = self.settings.copy()
+                    settings.compiler.cppstd = None
+                    return settings.sha
+        except AttributeError:
+            pass
         return self.settings.sha
