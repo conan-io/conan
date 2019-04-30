@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestServer, TurboTestClient
 
 class CompressSymlinksZeroSize(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
+    @unittest.skipIf(platform.system() != "Linux", "Only linux")
     def test_package_symlinks_zero_size(self):
         server = TestServer()
         client = TurboTestClient(servers={"default": server})
@@ -41,6 +41,7 @@ class HelloConan(ConanFile):
 lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
         """
 
+        self.assertIn("link.txt", " ".join(lines))
         for line in lines:
             if ".txt" not in line:
                 continue
