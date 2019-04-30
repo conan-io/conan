@@ -133,7 +133,7 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     def test_user_notice(self):
         self.t.run("info .")
-        self.assertIn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+        self.assertIn("WARN: Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
                       " please update your recipe.", self.t.out)
 
     def test_only_cppstd(self):
