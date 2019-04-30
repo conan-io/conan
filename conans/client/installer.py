@@ -421,7 +421,7 @@ class BinaryInstaller(object):
         assert pref.id, "Package-ID without value"
 
         # It is necessary to complete the sources of python requires, which might be used
-        for python_require in conanfile.python_requires:
+        for name, python_require in conanfile.python_requires.items():
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(self._remote_manager, self._cache,
