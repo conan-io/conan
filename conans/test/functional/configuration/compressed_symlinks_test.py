@@ -41,12 +41,12 @@ class HelloConan(ConanFile):
 lrw-r--r-- 0/0               0 1970-01-01 01:00 link.txt -> file.txt
         """
 
-        for l in lines:
-            if ".txt" not in l:
+        for line in lines:
+            if ".txt" not in line:
                 continue
 
-            size = int(filter(None, l.split(" "))[2])
-            if "link.txt" in l:
+            size = int([i for i in line.split(" ") if i][2])
+            if "link.txt" in line:
                 self.assertEqual(int(size), 0)
             elif "file.txt":
                 self.assertGreater(int(size), 0)
