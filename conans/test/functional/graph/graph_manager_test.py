@@ -768,7 +768,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(liba2, "liba/0.2@user/testing#123", deps=[], build_deps=[],
                          dependents=[libc], closure=[])
 
-    def consecutive_private(self):
+    def test_consecutive_private(self):
         liba_ref = "liba/0.1@user/testing"
         libb_ref = "libb/0.1@user/testing"
         libc_ref = "libc/0.1@user/testing"
