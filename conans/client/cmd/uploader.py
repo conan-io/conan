@@ -502,6 +502,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             info = tarfile.TarInfo(name=filename)
             info.type = tarfile.SYMTYPE
             info.linkname = dest
+            info.size = 0  # A symlink shouldn't have size
             tgz.addfile(tarinfo=info)
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
@@ -516,6 +517,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
+                info.size = 0  # A symlink shouldn't have size
                 info.linkname = os.readlink(abs_path)  # @UndefinedVariable
                 tgz.addfile(tarinfo=info)
             else:
