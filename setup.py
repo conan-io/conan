@@ -47,11 +47,12 @@ def load_version():
         return version
 
 
-# def generate_long_description_file():
-#     import pypandoc
-#
-#     output = pypandoc.convert('README.md', 'rst')
-#     return output
+def generate_long_description_file():
+    this_directory = path.abspath(path.dirname(__file__))
+    with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+        long_description = f.read()
+    return long_description
+
 
 setup(
     name='conan',
@@ -63,6 +64,8 @@ setup(
     description='Conan C/C++ package manager',
     # long_description="An open source, decentralized package manager, to automate building and sharing of packages",
     # long_description=generate_long_description_file(),
+    long_description=generate_long_description_file(),
+    long_description_content_type='text/markdown',
 
     # The project's main homepage.
     url='https://conan.io',
