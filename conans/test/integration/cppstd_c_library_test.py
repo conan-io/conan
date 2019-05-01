@@ -1,12 +1,10 @@
 # coding=utf-8
 
-import unittest
-import textwrap
-from conans.test.utils.tools import TestClient
-import os
-import json
-from conans.util.files import load
 import platform
+import textwrap
+import unittest
+
+from conans.test.utils.tools import TestClient
 
 
 class CppStdCLibraryTest(unittest.TestCase):
@@ -33,21 +31,9 @@ class CppStdCLibraryTest(unittest.TestCase):
             settings = "os", "arch", "compiler", "build_type"
     """)
 
-    def test_id(self):
-        t = TestClient()
-        t.save({"conanfile.py": self.base_conanfile})
-
-        # Call `conan info`
-        json_file = os.path.join(t.current_folder, "tmp.json")
-        t.run('info . --json="{}"'.format(json_file))
-        data = json.loads(load(json_file))
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["id"], "f8bda7f0751e4bc3beaa6c3b2eb02d455291c8a2")
-
     def _check_result(self, test_client, generator, path_to_app="./bin/app"):
         test_client.run("install . -g {}".format(generator))
         test_client.run("build .")
-        test_client.runner("ls -la", cwd=test_client.current_folder)
         test_client.runner(path_to_app, cwd=test_client.current_folder)
         self.assertIn("Hello >>>C<<<", test_client.out)
 
@@ -74,7 +60,8 @@ class CppStdCLibraryTest(unittest.TestCase):
                 "main.c": self.main_c,
                 "CMakeLists.txt": cmakelists})
 
-        self._check_result(t, "cmake")
+        path_to_app = "bin\\app.exe" if platform.system() == "Windows" else "./bin/app"
+        self._check_result(t, "cmake", path_to_app)
 
     def test_meson(self):
         conanfile = self.base_conanfile + textwrap.dedent("""
@@ -95,9 +82,10 @@ class CppStdCLibraryTest(unittest.TestCase):
                 "main.c": self.main_c,
                 "meson.build": meson_build})
 
-        self._check_result(t, "txt")
+        path_to_app = "bin\\app.exe" if platform.system() == "Windows" else "./bin/app"
+        self._check_result(t, "txt", path_to_app)
 
-    @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
+    @unittest.skipUnless(platform.system() == "Linux", "Requires Linux (could be installed in Mac)")
     def test_autotoolsbuildenvironment(self):
         conanfile = self.base_conanfile + textwrap.dedent("""
                 def build(self):
@@ -129,7 +117,6 @@ class CppStdCLibraryTest(unittest.TestCase):
         t.runner("aclocal", cwd=t.current_folder)
         t.runner("autoconf", cwd=t.current_folder)
         t.runner("automake --add-missing", cwd=t.current_folder)
-
         self._check_result(t, "txt", path_to_app="./app")
 
     @unittest.skipUnless(platform.system() == "Windows", "Only in Windows")
@@ -139,7 +126,7 @@ class CppStdCLibraryTest(unittest.TestCase):
                     env_build = VisualStudioBuildEnvironment(self)
                     with tools.environment_append(env_build.vars):
                         vcvars = tools.vcvars_command(self.settings)
-                        self.run('%s && cl /Tc main.c /out:app.exe' % vcvars)
+                        self.run('%s && cl /Tc main.c /Fe:app.exe' % vcvars)
             # Using VisualStudioBuildEnvironment
         """)
 
@@ -153,7 +140,8 @@ class CppStdCLibraryTest(unittest.TestCase):
         conanfile = self.base_conanfile + textwrap.dedent("""
                 def build(self):
                     compiler_args = CompilerArgsGenerator(self).content
-                    command = 'cl /Tc main.c {} /out:app.exe'
+                    vcvars = tools.vcvars_command(self.settings)
+                    command = '%s && cl /Tc main.c /Fe:app.exe {}' % vcvars
                     self.run(command.format(compiler_args))
             # Using CompilerArgsGenerator
         """)
@@ -161,7 +149,7 @@ class CppStdCLibraryTest(unittest.TestCase):
         t = TestClient()
         t.save({"conanfile.py": conanfile,
                 "main.c": self.main_c})
-        self._check_result(t, "txt", path_to_app="./app.exe")
+        self._check_result(t, "txt", path_to_app="app.exe")
 
     @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
     def test_compiler_args_generator_not_win(self):
