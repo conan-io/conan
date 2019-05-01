@@ -62,7 +62,8 @@ class CppStdCLibraryTest(unittest.TestCase):
                 "main.c": self.main_c,
                 "CMakeLists.txt": cmakelists})
 
-        self._check_result(t, "cmake")
+        path_to_app = "bin\\app.exe" if platform.system() == "Windows" else "./bin/app"
+        self._check_result(t, "cmake", path_to_app)
 
     def test_meson(self):
         conanfile = self.base_conanfile + textwrap.dedent("""
@@ -83,7 +84,8 @@ class CppStdCLibraryTest(unittest.TestCase):
                 "main.c": self.main_c,
                 "meson.build": meson_build})
 
-        self._check_result(t, "txt")
+        path_to_app = "bin\\app.exe" if platform.system() == "Windows" else "./bin/app"
+        self._check_result(t, "txt", path_to_app)
 
     @unittest.skipUnless(platform.system() == "Linux", "Requires Linux (could be installed in Mac)")
     def test_autotoolsbuildenvironment(self):
@@ -126,7 +128,7 @@ class CppStdCLibraryTest(unittest.TestCase):
                     env_build = VisualStudioBuildEnvironment(self)
                     with tools.environment_append(env_build.vars):
                         vcvars = tools.vcvars_command(self.settings)
-                        self.run('%s && cl /Tc main.c /out:app.exe' % vcvars)
+                        self.run('%s && cl /Tc main.c /Fe:app.exe' % vcvars)
             # Using VisualStudioBuildEnvironment
         """)
 
@@ -140,7 +142,8 @@ class CppStdCLibraryTest(unittest.TestCase):
         conanfile = self.base_conanfile + textwrap.dedent("""
                 def build(self):
                     compiler_args = CompilerArgsGenerator(self).content
-                    command = 'cl /Tc main.c {} /out:app.exe'
+                    vcvars = tools.vcvars_command(self.settings)
+                    command = '%s && cl /Tc main.c /Fe:app.exe {}' % vcvars
                     self.run(command.format(compiler_args))
             # Using CompilerArgsGenerator
         """)
@@ -148,7 +151,7 @@ class CppStdCLibraryTest(unittest.TestCase):
         t = TestClient()
         t.save({"conanfile.py": conanfile,
                 "main.c": self.main_c})
-        self._check_result(t, "txt", path_to_app="./app.exe")
+        self._check_result(t, "txt", path_to_app="app.exe")
 
     @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
     def test_compiler_args_generator_not_win(self):
