@@ -33,25 +33,6 @@ class CppStdCLibraryTest(unittest.TestCase):
             settings = "os", "arch", "compiler", "build_type"
     """)
 
-    def test_id(self):
-        t = TestClient()
-        t.save({"conanfile.py": self.base_conanfile})
-
-        # Call `conan info`
-        json_file = os.path.join(t.current_folder, "tmp.json")
-        t.run('info . --json="{}"'.format(json_file))
-        data = json.loads(load(json_file))
-        self.assertEqual(len(data), 1)
-        if platform.system() == "Windows":
-            self.assertEqual(data[0]["id"], "<unknown>")
-        elif platform.system() == "Linux":
-            self.assertEqual(data[0]["id"], "90ee443cae5dd5c1b4861766ac14dc6fae231a92")
-        elif platform.system() == "Darwin":
-            self.assertEqual(data[0]["id"], "f8bda7f0751e4bc3beaa6c3b2eb02d455291c8a2")
-        else:
-            self.fail("Platform '{}' not known considered yet:"
-                      " id='{}'".format(platform.system(), data[0]["id"]))
-
     def _check_result(self, test_client, generator, path_to_app="./bin/app"):
         test_client.run("install . -g {}".format(generator))
         test_client.run("build .")
