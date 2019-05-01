@@ -1,12 +1,10 @@
 # coding=utf-8
 
-import unittest
-import textwrap
-from conans.test.utils.tools import TestClient
-import os
-import json
-from conans.util.files import load
 import platform
+import textwrap
+import unittest
+
+from conans.test.utils.tools import TestClient
 
 
 class CppStdCLibraryTest(unittest.TestCase):
@@ -128,7 +126,7 @@ class CppStdCLibraryTest(unittest.TestCase):
                     env_build = VisualStudioBuildEnvironment(self)
                     with tools.environment_append(env_build.vars):
                         vcvars = tools.vcvars_command(self.settings)
-                        self.run('%s && cl /Tc main.c /Fe app.exe' % vcvars)
+                        self.run('%s && cl /Tc main.c /Fe:app.exe' % vcvars)
             # Using VisualStudioBuildEnvironment
         """)
 
@@ -143,7 +141,7 @@ class CppStdCLibraryTest(unittest.TestCase):
                 def build(self):
                     compiler_args = CompilerArgsGenerator(self).content
                     vcvars = tools.vcvars_command(self.settings)
-                    command = '%s && cl /Tc main.c {} /Fe app.exe' % vcvars
+                    command = '%s && cl /Tc main.c /Fe:app.exe {}' % vcvars
                     self.run(command.format(compiler_args))
             # Using CompilerArgsGenerator
         """)
