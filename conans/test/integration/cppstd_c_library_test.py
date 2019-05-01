@@ -36,7 +36,6 @@ class CppStdCLibraryTest(unittest.TestCase):
     def _check_result(self, test_client, generator, path_to_app="./bin/app"):
         test_client.run("install . -g {}".format(generator))
         test_client.run("build .")
-        test_client.runner("ls -la", cwd=test_client.current_folder)
         test_client.runner(path_to_app, cwd=test_client.current_folder)
         self.assertIn("Hello >>>C<<<", test_client.out)
 
@@ -86,7 +85,7 @@ class CppStdCLibraryTest(unittest.TestCase):
 
         self._check_result(t, "txt")
 
-    @unittest.skipIf(platform.system() == "Windows", "Not in Windows")
+    @unittest.skipUnless(platform.system() == "Linux", "Requires Linux (could be installed in Mac)")
     def test_autotoolsbuildenvironment(self):
         conanfile = self.base_conanfile + textwrap.dedent("""
                 def build(self):
@@ -118,7 +117,6 @@ class CppStdCLibraryTest(unittest.TestCase):
         t.runner("aclocal", cwd=t.current_folder)
         t.runner("autoconf", cwd=t.current_folder)
         t.runner("automake --add-missing", cwd=t.current_folder)
-
         self._check_result(t, "txt", path_to_app="./app")
 
     @unittest.skipUnless(platform.system() == "Windows", "Only in Windows")
