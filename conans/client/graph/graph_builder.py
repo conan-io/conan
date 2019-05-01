@@ -150,6 +150,9 @@ class DepsGraphBuilder(object):
             new_node.inverse_closure.add(node)
             node.public_deps[new_node.name] = new_node
 
+            # If the parent node is a build-require, this new node will be a build-require
+            # If the requirement is a build-require, this node will also be a build-require
+            new_node.build_require = node.build_require or require.build_require
             # New nodes will inherit the private property of its ancestor
             new_node.private = node.private or require.private
             if require.private or require.build_require:
