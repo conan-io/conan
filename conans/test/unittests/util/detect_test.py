@@ -105,7 +105,7 @@ class DetectTest(unittest.TestCase):
         with mock.patch("platform.machine", mock.MagicMock(return_value='XXXXXXXXXXXX')), \
                 mock.patch("platform.processor", mock.MagicMock(return_value=processor)), \
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
-                mock.patch("conans.client.tools.oss.OSInfo.getconf", mock.MagicMock(return_value=bitness)), \
+                mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
             result = detect_defaults_settings(output=TestBufferConanOutput(), profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)

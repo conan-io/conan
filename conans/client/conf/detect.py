@@ -35,26 +35,14 @@ def _gcc_compiler(output, compiler_exe="gcc"):
                 return None
 
         ret, out = _execute('%s -dumpversion' % compiler_exe)
-
-        print(ret)
         if ret != 0:
             return None
         compiler = "gcc"
-
-        print( out )
-
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
         if installed_version:
-            if not "." in installed_version and int(installed_version) >= 7:
-                ret, out = _execute('%s -dumpfullversion' % compiler_exe)
-                if ret != 0:
-                    return None
-
-            installed_version = re.search("([0-9](\.[0-9])?)", out).group()
-
             output.success("Found %s %s" % (compiler, installed_version))
             major = installed_version.split(".")[0]
             if int(major) >= 5:
@@ -205,7 +193,6 @@ def detect_defaults_settings(output, profile_path):
     :param profile_path: Conan profile file path
     :return: A list with default settings
     """
-    print('detect_defaults_settings')
     result = []
     _detect_os_arch(result, output)
     _detect_compiler_version(result, output, profile_path)

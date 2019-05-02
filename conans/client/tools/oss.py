@@ -80,7 +80,7 @@ def detected_architecture():
     if OSInfo().is_aix:
         processor = platform.processor()
         if "powerpc" in processor:
-            kernel_bitness = OSInfo().getconf("KERNEL_BITMODE")
+            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
             if kernel_bitness:
                 return "ppc64" if kernel_bitness == "64" else "ppc32"
         elif "rs6000" in processor:
@@ -326,7 +326,7 @@ class OSInfo(object):
             return None
 
     @staticmethod
-    def getconf(options=None):
+    def get_aix_conf(options=None):
         options = " %s" % options if options else ""
         if not OSInfo().is_aix:
             raise ConanException("Command only for AIX operating system")
@@ -413,8 +413,6 @@ def get_gnu_triplet(os_, arch, compiler=None):
                "wasm": "wasm32",
                }.get(arch, None)
 
-
-
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
         if os_ == "AIX":
@@ -466,8 +464,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "tvOS": "apple-darwin",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
-                 "Emscripten": "local-emscripten"}.get(os_, os_.lower()),
+                 "Emscripten": "local-emscripten",
                  "AIX": "ibm-aix"}.get(os_, os_.lower())
+
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:
