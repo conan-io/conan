@@ -42,6 +42,18 @@ class MyPkg(ConanFile):
 
 class UploadTest(unittest.TestCase):
 
+    def test_upload_force(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.run("create . lasote/testing")
+        client.run("upload * --all --confirm")
+        self.assertIn("Uploading conan_package.tgz", client.out)
+        client.run("upload * --all --confirm")
+        self.assertNotIn("Uploading conan_package.tgz", client.out)
+        client.run("upload * --all --confirm --force")
+        self.assertIn("Uploading conan_package.tgz", client.out)
+
     def test_upload_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
