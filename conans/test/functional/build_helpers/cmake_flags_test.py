@@ -6,7 +6,6 @@ from textwrap import dedent
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans import load
 from conans.client.build.cmake import CMake
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient
@@ -132,7 +131,8 @@ int main(){
                      "CMakeLists.txt": cmake}, clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -151,7 +151,8 @@ int main(){
                      "CMakeLists.txt": cmake}, clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
@@ -172,7 +173,8 @@ int main(){
                     clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -198,7 +200,9 @@ int main(){
                     clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake . -DCONAN_CXX_FLAGS=CmdCXXFlag", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s -DCONAN_CXX_FLAGS=CmdCXXFlag" % generator,
+                      cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
@@ -227,7 +231,8 @@ int main(){
                     clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
 
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
