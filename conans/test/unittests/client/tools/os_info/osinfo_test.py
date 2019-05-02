@@ -76,6 +76,23 @@ class OSInfoTest(unittest.TestCase):
                     self.assertEqual(OSInfo.uname(), self._uname.lower())
                     self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS)
 
+    def test_msys3(self):
+        self._uname = 'MSYS_NT-10.0'
+        self._version = '3.0.6(0.338/5/3)'
+        with mock.patch("platform.system", mock.MagicMock(return_value=self._uname)):
+            self.assertTrue(OSInfo().is_windows)
+            self.assertFalse(OSInfo().is_cygwin)
+            self.assertTrue(OSInfo().is_msys)
+            self.assertFalse(OSInfo().is_linux)
+            self.assertFalse(OSInfo().is_freebsd)
+            self.assertFalse(OSInfo().is_macos)
+            self.assertFalse(OSInfo().is_solaris)
+
+            with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
+                with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+                    self.assertEqual(OSInfo.uname(), self._uname.lower())
+                    self.assertEqual(OSInfo.detect_windows_subsystem(), MSYS2)
+
     def test_mingw32(self):
         self._uname = 'MINGW32_NT-10.0'
         self._version = '2.10.0(0.325/5/3)'
