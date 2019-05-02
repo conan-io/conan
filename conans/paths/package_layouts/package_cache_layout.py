@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 import fasteners
 
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.manifest import discarded_file
@@ -83,6 +83,18 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
+
+    def remove_system_reqs(self):
+        system_reqs_folder = os.path.join(self._base_folder, SYSTEM_REQS_FOLDER)
+        if not os.path.exists(self._base_folder):
+            raise ValueError("%s does not exist" % repr(self._ref))
+        if not os.path.exists(system_reqs_folder):
+            return
+        try:
+            rmdir(system_reqs_folder)
+        except Exception as e:
+            raise ConanException("Unable to remove system requirements at %s: %s"
+                                 % (system_reqs_folder, str(e)))
 
     def packages(self):
         return os.path.join(self._base_folder, PACKAGES_FOLDER)

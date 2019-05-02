@@ -93,7 +93,7 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = client.cache.package(pref)
+        pack_path = client.cache.package_layout(pref.ref).package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
@@ -129,6 +129,6 @@ class SynchronizeTest(unittest.TestCase):
 
     def _create_manifest(self, client, package_reference):
         # Create the manifest to be able to upload the package
-        pack_path = client.cache.package(package_reference)
+        pack_path = client.cache.package_layout(package_reference.ref).package(package_reference)
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

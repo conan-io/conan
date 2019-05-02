@@ -88,11 +88,6 @@ class ClientCache(object):
     def store(self):
         return self._store_folder
 
-    def base_folder(self, ref):
-        """ the base folder for this package reference, for each ConanFileReference
-        """
-        return self.package_layout(ref).base_folder()
-
     def package(self, pref, short_paths=False):
         # TODO: This is deprecated, only used in testing
         return self.package_layout(pref.ref, short_paths).package(pref)
@@ -260,7 +255,7 @@ class ClientCache(object):
 
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
-            ref_path = self.base_folder(ref)
+            ref_path = self.package_layout(ref).base_folder()
             for _ in range(4):
                 if os.path.exists(ref_path):
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
@@ -268,20 +263,6 @@ class ClientCache(object):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
-
-    def remove_package_system_reqs(self, reference):
-        assert isinstance(reference, ConanFileReference)
-        conan_folder = self.base_folder(reference)
-        system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
-        if not os.path.exists(conan_folder):
-            raise ValueError("%s does not exist" % repr(reference))
-        if not os.path.exists(system_reqs_folder):
-            return
-        try:
-            rmdir(system_reqs_folder)
-        except Exception as e:
-            raise ConanException("Unable to remove system requirements at %s: %s"
-                                 % (system_reqs_folder, str(e)))
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)

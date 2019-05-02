@@ -78,7 +78,7 @@ xcode
 
         package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
-        package_path = client.cache.package(pref)
+        package_path = client.cache.package_layout(pref.ref).package(pref)
 
         replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "\\\\"),
                                "$(USERPROFILE)", package_path, flags=re.I)

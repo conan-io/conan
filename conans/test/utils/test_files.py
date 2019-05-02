@@ -48,7 +48,7 @@ def uncompress_packaged_files(paths, pref):
     prev = paths.get_last_package_revision(pref.copy_with_revs(rev, None)).revision
     pref = pref.copy_with_revs(rev, prev)
 
-    package_path = paths.package(pref)
+    package_path = paths.package_layout(pref.ref).package(pref)
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
         raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
     tmp = temp_folder()

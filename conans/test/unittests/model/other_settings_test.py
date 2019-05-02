@@ -78,7 +78,7 @@ class Pkg(ConanFile):
         self.assertNotIn("os: None", client.out)
         pref = PackageReference.loads("Pkg/0.1@lasote/testing:"
                                                    "544c1d8c53e9d269737e68e00ec66716171d2704")
-        info_path = os.path.join(client.cache.package(pref), CONANINFO)
+        info_path = os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO)
         info = load(info_path)
         self.assertNotIn("os", info)
         # Explicitly specifying None, put it in the conaninfo.txt, but does not affect the hash

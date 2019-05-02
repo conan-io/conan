@@ -130,7 +130,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertIn("Hola Hello0", client3.user_io.out)
 
     def _assert_library_exists(self, pref, paths):
-        package_path = paths.package(pref)
+        package_path = paths.package_layout(pref.ref).package(pref)
         self.assertTrue(os.path.exists(os.path.join(package_path, "lib")))
         self._assert_library_files(package_path)
 

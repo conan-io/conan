@@ -143,7 +143,7 @@ class GoCompleteTest(unittest.TestCase):
         self.assertIn("Hello, Go!", reuse_conan.user_io.out)
 
     def _assert_package_exists(self, pref, paths, files):
-        package_path = paths.package(pref)
+        package_path = paths.package_layout(pref.ref).package(pref)
         self.assertTrue(os.path.exists(os.path.join(package_path)))
         real_files = scan_folder(package_path)
         for f in files:

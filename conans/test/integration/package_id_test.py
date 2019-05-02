@@ -298,7 +298,7 @@ class Pkg(ConanFile):
             ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
             pkg = os.listdir(self.client.cache.package_layout(ref).packages())
             pref = PackageReference(ref, pkg[0])
-            pkg_folder = self.client.cache.package(pref)
+            pkg_folder = self.client.cache.package_layout(pref.ref).package(pref)
             return ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
 
         info = install_and_get_info(None)  # Default
@@ -350,7 +350,7 @@ class Pkg(ConanFile):
         ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
         pkg = os.listdir(self.client.cache.package_layout(ref).packages())
         pref = PackageReference(ref, pkg[0])
-        pkg_folder = self.client.cache.package(pref)
+        pkg_folder = self.client.cache.package_layout(pref.ref).package(pref)
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
         self.assertEqual(str(info.settings.os_build), "Linux")
         self.assertEqual(str(info.settings.arch_build), "x86")

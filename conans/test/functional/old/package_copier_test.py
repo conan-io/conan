@@ -67,7 +67,8 @@ class PackageCopierTest(unittest.TestCase):
                      user_io=userio, force=False)
         conanfile_content = load(paths.package_layout(new_ref).conanfile())
         self.assertEqual(conanfile_content, "new content")
-        package_content = load(os.path.join(paths.package(PackageReference(new_ref, "0101001")),
+        pref = PackageReference(new_ref, "0101001")
+        package_content = load(os.path.join(paths.package_layout(ref).package(pref),
                                             "package.lib"))
         self.assertEqual(package_content, "new lib content")
 
@@ -83,7 +84,8 @@ class PackageCopierTest(unittest.TestCase):
         conanfile_content = load(paths.package_layout(new_ref).conanfile())
         self.assertEqual(conanfile_content, "new content")  # Not content22
         pref = PackageReference(new_ref, "0101001")
-        package_content = load(os.path.join(paths.package(pref), "package.lib"))
+        package_content = load(os.path.join(paths.package_layout(new_ref).package(pref),
+                                            "package.lib"))
         self.assertEqual(package_content, "new lib content")  # Not newlib22
         # If conanfile is not override it exist
         self.assertNotIn("Package '2222222' already exist. Override?", output)
@@ -113,11 +115,13 @@ class PackageCopierTest(unittest.TestCase):
 
     def _assert_package_exists(self, ref, package_id, paths):
         pref = PackageReference(ref, package_id)
-        self.assertTrue(os.path.exists(os.path.join(paths.package(pref), "package.lib")))
+        self.assertTrue(os.path.exists(os.path.join(paths.package_layout(ref).pref(pref),
+                                                    "package.lib")))
 
     def _assert_package_doesnt_exists(self, ref, package_id, paths):
         pref = PackageReference(ref, package_id)
-        self.assertFalse(os.path.exists(os.path.join(paths.package(pref), "package.lib")))
+        self.assertFalse(os.path.exists(os.path.join(paths.package_layout(ref).package(pref),
+                                                     "package.lib")))
 
     def _create_conanfile(self, ref, paths, content="default_content"):
         origin_reg = paths.package_layout(ref).export()
@@ -128,6 +132,6 @@ class PackageCopierTest(unittest.TestCase):
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
         pref = PackageReference(ref, package_id)
-        package1_dir = paths.package(pref)
+        package1_dir = paths.package_layout(ref).pref(pref)
         mkdir(package1_dir)
         save(os.path.join(package1_dir, "package.lib"), content)

@@ -735,19 +735,19 @@ class LibConan(ConanFile):
         # With no overrides, B takes dependency D and the value should be ValueByLibD
         client.run("install libB/1.0@foo/bar --build")
         self.assertTrue("Value of MYVAR: ValueByLibD")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
 
         # B takes dependency C and the value should be ValueByLibC
         client.run("install libB/1.0@foo/bar --build -e DEP=C")
         self.assertTrue("Value of MYVAR: ValueByLibC")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
 
         # Consumer overrides MYVAR, so his conaninfo should have it
         client.run("install libB/1.0@foo/bar --build -e MYVAR=ValueByConsumer")
         self.assertTrue("Value of MYVAR: ValueByConsumer")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n    MYVAR=ValueByConsumer\n"))
 
         # Consumer overrides MYVAR, so his conaninfo should have it, but not the libC, because
@@ -755,14 +755,14 @@ class LibConan(ConanFile):
         client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
                    "-e libC:MYVAR=OtherValue")
         self.assertTrue("Value of MYVAR: ValueByConsumer")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"))
 
         # Consumer overrides MYVAR, so his conaninfo should have it, both libB and libD
         client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
                    "-e libD:MYVAR=OtherValue")
         self.assertTrue("Value of MYVAR: ValueByConsumer")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"
                                            "    libD:MYVAR=OtherValue\n"))  # Not user input env
 

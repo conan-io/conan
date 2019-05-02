@@ -176,7 +176,7 @@ class Pkg(ConanFile):
         pref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
         export_folder = self.client.cache.package_layout(ref).export()
         recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
-        package_folder = self.client.cache.package(pref)
+        package_folder = self.client.cache.package_layout(pref.ref).package(pref)
         package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
         def timestamps():
@@ -250,7 +250,8 @@ class Pkg(ConanFile):
         client2.run("install Hello0/1.0@lasote/stable --update")
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         package_ids = client2.cache.package_layout(ref).conan_packages()
-        package_path = client2.cache.package(PackageReference(ref, package_ids[0]))
+        pref = PackageReference(ref, package_ids[0])
+        package_path = client2.cache.package_layout(ref).package(pref)
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
 
@@ -291,7 +292,7 @@ class ConanLib(ConanFile):
                       client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        header = os.path.join(client.cache.package(pref), "header.h")
+        header = os.path.join(client.cache.package_layout(pref.ref).package(pref), "header.h")
         self.assertEqual(load(header), "mycontent2")
 
     def fail_usefully_when_failing_retrieving_package_test(self):

@@ -74,7 +74,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     pref = PackageReference.loads(package_reference)
-    path = cache.package(pref)
+    path = cache.package_layout(pref.ref).package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)

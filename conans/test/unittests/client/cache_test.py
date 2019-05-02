@@ -51,7 +51,7 @@ class CacheTest(unittest.TestCase):
 
         mkdir(layout.export())
         mkdir(layout.package(pref))
-        save(os.path.join(self.cache.base_folder(self.ref), "metadata.json"),
+        save(os.path.join(self.cache.package_layout(self.ref).package_metadata()),
              PackageMetadata().dumps())
 
         self.assertTrue(layout.package_exists(pref))
