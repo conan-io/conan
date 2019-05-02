@@ -323,13 +323,14 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-r")
-            if output.startswith("2"):
-                return MSYS2
-            elif output.startswith("1"):
-                return MSYS
-            else:
-                return None
+            version = OSInfo.uname("-r").split('.')
+            if version and version[0].isdigit():
+                major = int(version[0])
+                if major == 1:
+                    return MSYS
+                elif major >= 2:
+                    return MSYS2
+            return None
         elif "linux" in output:
             return WSL
         else:
