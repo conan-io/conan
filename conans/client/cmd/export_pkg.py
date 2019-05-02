@@ -3,17 +3,17 @@ import os
 from conans.client import packager
 from conans.client.graph.graph_manager import load_deps_info
 from conans.errors import ConanException
+from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import rmdir
-from conans.model.conan_file import get_env_context_manager
 
 
 def export_pkg(cache, graph_manager, hook_manager, recorder, output,
                ref, source_folder, build_folder, package_folder, install_folder,
                graph_info, force, remotes):
 
-    conan_file_path = cache.conanfile(ref)
+    conan_file_path = cache.package_layout(ref).conanfile()
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(ref))
 
@@ -33,7 +33,8 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     package_id = nodes[0].package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
-    dest_package_folder = cache.package(pref, short_paths=conanfile.short_paths)
+    layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+    dest_package_folder = layout.package(pref)
 
     if os.path.exists(dest_package_folder):
         if force:
@@ -42,7 +43,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
             raise ConanException("Package already exists. Please use --force, -f to "
                                  "overwrite it")
 
-    recipe_hash = cache.package_layout(ref).recipe_manifest().summary_hash
+    recipe_hash = layout.recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:
@@ -57,7 +58,7 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     readed_manifest = FileTreeManifest.load(dest_package_folder)
     pref = PackageReference(pref.ref, pref.id, readed_manifest.summary_hash)
     output.info("Package revision %s" % pref.revision)
-    with cache.package_layout(ref).update_metadata() as metadata:
+    with layout.update_metadata() as metadata:
         metadata.packages[package_id].revision = pref.revision
         metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 

@@ -35,9 +35,13 @@ def _gcc_compiler(output, compiler_exe="gcc"):
                 return None
 
         ret, out = _execute('%s -dumpversion' % compiler_exe)
+
+        print(ret)
         if ret != 0:
             return None
         compiler = "gcc"
+
+        print( out )
 
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
@@ -95,6 +99,7 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
 
 
 def _get_default_compiler(output):
+    print('_get_default_compiler')
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
     if cc or cxx:  # Env defined, use them
@@ -200,6 +205,7 @@ def detect_defaults_settings(output, profile_path):
     :param profile_path: Conan profile file path
     :return: A list with default settings
     """
+    print('detect_defaults_settings')
     result = []
     _detect_os_arch(result, output)
     _detect_compiler_version(result, output, profile_path)

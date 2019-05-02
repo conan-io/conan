@@ -408,7 +408,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
-               "armv8.3": "aarch64"
+               "armv8.3": "aarch64",
+               "asm.js": "asmjs",
+               "wasm": "wasm32",
                }.get(arch, None)
 
 
@@ -462,6 +464,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "iOS": "apple-darwin",
                  "watchOS": "apple-darwin",
                  "tvOS": "apple-darwin",
+                 # NOTE: it technically must be "asmjs-unknown-emscripten" or
+                 # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
+                 "Emscripten": "local-emscripten"}.get(os_, os_.lower()),
                  "AIX": "ibm-aix"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
@@ -497,5 +502,5 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
     finally:
         try:
             os.unlink(tmp_file)
-        except:
+        except Exception:
             pass

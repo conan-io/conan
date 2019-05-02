@@ -34,6 +34,7 @@ def get_generator(settings):
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
     os_build, _, _, _ = get_cross_building_settings(settings)
+    os_host = settings.get_safe("os")
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
@@ -52,7 +53,7 @@ def get_generator(settings):
                     '16': '16 2019'}
         base = "Visual Studio %s" % _visuals.get(compiler_version,
                                                  "UnknownVersion %s" % compiler_version)
-        if Version(compiler_version) < "16":
+        if os_host != "WindowsCE" and Version(compiler_version) < "16":
             if arch == "x86_64":
                 base += " Win64"
             elif "arm" in arch:
@@ -66,7 +67,7 @@ def get_generator(settings):
     return "Unix Makefiles"
 
 
-def get_generator_platform(settings):
+def get_generator_platform(settings, generator):
     if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
@@ -74,7 +75,11 @@ def get_generator_platform(settings):
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
 
-    if compiler == "Visual Studio" and Version(compiler_version) >= "16":
+    if settings.get_safe("os") == "WindowsCE":
+        return settings.get_safe("os.platform")
+
+    if compiler == "Visual Studio" and Version(compiler_version) >= "16" \
+            and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",
@@ -312,7 +317,7 @@ class CMakeDefinitionsBuilder(object):
             pass
 
         # fpic
-        if str(os_) not in ["Windows", "WindowsStore"]:
+        if not str(os_).startswith("Windows"):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
@@ -320,13 +325,15 @@ class CMakeDefinitionsBuilder(object):
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
+        install_folder = self._conanfile.install_folder.replace("\\", "/")
         if "cmake_find_package" in self._conanfile.generators:
-            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
+            ret["CMAKE_MODULE_PATH"] = install_folder
 
         if "cmake_find_package_multi" in self._conanfile.generators:
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
-            # that require the prefix path, not the module path
-            ret["CMAKE_PREFIX_PATH"] = self._conanfile.install_folder.replace("\\", "/")
+            # that require the prefix path and the module path
+            ret["CMAKE_PREFIX_PATH"] = install_folder
+            ret["CMAKE_MODULE_PATH"] = install_folder
 
         ret.update(self._get_make_program_definition())
 

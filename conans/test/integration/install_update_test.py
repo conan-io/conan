@@ -174,7 +174,7 @@ class Pkg(ConanFile):
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         pref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
-        export_folder = self.client.cache.export(ref)
+        export_folder = self.client.cache.package_layout(ref).export()
         recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
         package_folder = self.client.cache.package(pref)
         package_manifest = os.path.join(package_folder, CONAN_MANIFEST)

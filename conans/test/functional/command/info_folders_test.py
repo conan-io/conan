@@ -137,9 +137,9 @@ class InfoFoldersTest(unittest.TestCase):
             ref = ConanFileReference.loads(self.reference1)
             id_ = re.search('ID:\s*([a-z0-9]*)', str(client.user_io.out)).group(1)
             pref = PackageReference(ref, id_)
-            for path in (client.cache.source(ref, True),
-                         client.cache.build(pref, True),
-                         client.cache.package(pref, True)):
+            for path in (client.cache.package_layout(ref, True).source(),
+                         client.cache.package_layout(ref, True).build(pref),
+                         client.cache.package_layout(ref, True).package(pref)):
                 self.assertFalse(os.path.exists(path))
                 self.assertTrue(os.path.exists(os.path.dirname(path)))
 
@@ -152,7 +152,8 @@ class InfoFoldersTest(unittest.TestCase):
         """
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
-        out = check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
+        out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
+                                      % os.path.splitdrive(folder)[0])
         if "NTFS" not in str(out):
             return
         short_folder = os.path.join(folder, ".cnacls")
@@ -186,7 +187,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Check user has full control
         user_acl = "%s\\%s:(OI)(CI)F" % (current_domain, current_user)
-        self.assertIn(user_acl.encode(), short_folder_acls)
+        self.assertIn(user_acl, short_folder_acls)
 
     def test_direct_conanfile(self):
         client = TestClient()

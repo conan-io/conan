@@ -65,7 +65,7 @@ class PackageCopierTest(unittest.TestCase):
         output._stream.truncate(0)  # Reset output
         package_copy(ref, "lasote/stable", ["0101001", "2222222"], paths,
                      user_io=userio, force=False)
-        conanfile_content = load(os.path.join(paths.export(new_ref), "conanfile.py"))
+        conanfile_content = load(paths.package_layout(new_ref).conanfile())
         self.assertEqual(conanfile_content, "new content")
         package_content = load(os.path.join(paths.package(PackageReference(new_ref, "0101001")),
                                             "package.lib"))
@@ -80,7 +80,7 @@ class PackageCopierTest(unittest.TestCase):
         self._create_package(ref, "2222222", paths, "newlib22")
         package_copy(ref, "lasote/stable", ["0101001", "2222222"], paths,
                      user_io=userio, force=False)
-        conanfile_content = load(os.path.join(paths.export(new_ref), "conanfile.py"))
+        conanfile_content = load(paths.package_layout(new_ref).conanfile())
         self.assertEqual(conanfile_content, "new content")  # Not content22
         pref = PackageReference(new_ref, "0101001")
         package_content = load(os.path.join(paths.package(pref), "package.lib"))
@@ -109,7 +109,7 @@ class PackageCopierTest(unittest.TestCase):
         self._assert_package_doesnt_exists(new_ref, "2222222", paths)
 
     def _assert_conanfile_exists(self, reference, paths):
-        self.assertTrue(os.path.exists(paths.conanfile(reference)))
+        self.assertTrue(os.path.exists(paths.package_layout(reference).conanfile()))
 
     def _assert_package_exists(self, ref, package_id, paths):
         pref = PackageReference(ref, package_id)
@@ -120,11 +120,11 @@ class PackageCopierTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(paths.package(pref), "package.lib")))
 
     def _create_conanfile(self, ref, paths, content="default_content"):
-        origin_reg = paths.export(ref)
+        origin_reg = paths.package_layout(ref).export()
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
-        save(os.path.join(paths.base_folder(ref), "metadata.json"), PackageMetadata().dumps())
-        mkdir(paths.export_sources(ref))
+        save(paths.package_layout(ref).package_metadata(), PackageMetadata().dumps())
+        mkdir(paths.package_layout(ref).export_sources())
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
         pref = PackageReference(ref, package_id)
