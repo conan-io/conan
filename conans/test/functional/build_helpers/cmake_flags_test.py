@@ -6,7 +6,6 @@ from textwrap import dedent
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans import load
 from conans.client.build.cmake import CMake
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient

@@ -68,7 +68,7 @@ class PackageCopierTest(unittest.TestCase):
         conanfile_content = load(paths.package_layout(new_ref).conanfile())
         self.assertEqual(conanfile_content, "new content")
         pref = PackageReference(new_ref, "0101001")
-        package_content = load(os.path.join(paths.package_layout(ref).package(pref),
+        package_content = load(os.path.join(paths.package_layout(new_ref).package(pref),
                                             "package.lib"))
         self.assertEqual(package_content, "new lib content")
 
@@ -115,7 +115,7 @@ class PackageCopierTest(unittest.TestCase):
 
     def _assert_package_exists(self, ref, package_id, paths):
         pref = PackageReference(ref, package_id)
-        self.assertTrue(os.path.exists(os.path.join(paths.package_layout(ref).pref(pref),
+        self.assertTrue(os.path.exists(os.path.join(paths.package_layout(ref).package(pref),
                                                     "package.lib")))
 
     def _assert_package_doesnt_exists(self, ref, package_id, paths):
@@ -132,6 +132,6 @@ class PackageCopierTest(unittest.TestCase):
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
         pref = PackageReference(ref, package_id)
-        package1_dir = paths.package_layout(ref).pref(pref)
+        package1_dir = paths.package_layout(ref).package(pref)
         mkdir(package1_dir)
         save(os.path.join(package1_dir, "package.lib"), content)
