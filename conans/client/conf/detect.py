@@ -87,7 +87,6 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
 
 
 def _get_default_compiler(output):
-    print('_get_default_compiler')
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
     if cc or cxx:  # Env defined, use them
