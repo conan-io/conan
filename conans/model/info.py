@@ -256,7 +256,7 @@ class ConanInfo(object):
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
         result.discard_build_settings()
-        result._default_std_matching(raise_for_compiler_cppstd=False)
+        result.default_std_matching()
 
         return result
 
@@ -339,7 +339,7 @@ class ConanInfo(object):
         options and settings
         """
         result = []
-        result.append(self._settings_sha())
+        result.append(self.settings.sha)
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
@@ -396,10 +396,6 @@ class ConanInfo(object):
         self.settings.arch_build = self.full_settings.arch_build
 
     def default_std_matching(self):
-        self._default_std_matching(raise_for_compiler_cppstd=True)
-        warnings.warn("Function 'default_std_matching' is deprecated")
-
-    def _default_std_matching(self, raise_for_compiler_cppstd):
         """
         If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
@@ -413,30 +409,12 @@ class ConanInfo(object):
             if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None
 
-            if self.full_settings.compiler.cppstd and raise_for_compiler_cppstd:
-                raise ConanException("Function 'default_std_matching' is not supported if using"
-                                     " subsetting 'compiler.cppstd'")
+            if str(self.full_settings.compiler.cppstd) == default:
+                self.settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
-        if self.full_settings.compiler.cppstd:
-            raise ConanException("Function 'default_std_non_matching' is not supported if using"
-                                 " subsetting 'compiler.cppstd'")
-
-        warnings.warn("Function 'default_std_non_matching' is deprecated")
-
         if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
 
-    def _settings_sha(self):
-        # Remove compiler.cppstd if its value is equal to the standard
-        try:
-            if self.full_settings.compiler.cppstd:
-                default = cppstd_default(str(self.full_settings.compiler),
-                                     str(self.full_settings.compiler.version))
-                if str(self.full_settings.compiler.cppstd) == default:
-                    settings = self.settings.copy()
-                    settings.compiler.cppstd = None
-                    return settings.sha
-        except AttributeError:
-            pass
-        return self.settings.sha
+        if self.full_settings.compiler.cppstd:
+            self.settings.compiler.cppstd = self.full_settings.compiler.cppstd

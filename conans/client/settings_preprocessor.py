@@ -23,7 +23,8 @@ def _fill_compiler_cppstd(settings):
         default_cppstd = cppstd_default(compiler, compiler_version)
         if default_cppstd:
             try:
-                settings.compiler.cppstd = default_cppstd
+                #settings.compiler.cppstd = default_cppstd
+                pass
             except Exception:
                 # Settings structure does not have cppstd
                 pass

@@ -54,7 +54,7 @@ class DefaultCppTestCase(unittest.TestCase):
         self.assertEqual(target_id, self.id_default)
         self.assertIn(">>>> settings: ['compiler', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
-        self.assertIn(">>>> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
 
     def _get_id(self, with_cppstd, settings_values=None):
         # Create the conanfile with corresponding settings
@@ -91,7 +91,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
         id_with, output = self._get_id(with_cppstd=True)  # TODO: Should raise?
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
-        self.assertIn(">>>> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_none(self):
@@ -99,7 +99,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
         id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
-        self.assertIn(">>>> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
@@ -139,7 +139,7 @@ class SettingsCompilerCppStdTests(DefaultCppTestCase):
         id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})
         self.assertIn(">>>> settings: ['compiler', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
-        self.assertIn(">>>> compiler.cppstd: gnu14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
