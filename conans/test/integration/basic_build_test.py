@@ -20,7 +20,7 @@ class BasicBuildTest(unittest.TestCase):
                                            False, False)]:
             build(self, cmd, static, pure_c, use_cmake=True, lang=lang)
 
-    def test_build_default_test(self):
+    def build_default_test(self):
         """ build default (gcc in nix, VS in win) """
         if platform.system() == "SunOS":
             return  # If is using sun-cc the gcc generator doesn't work
@@ -40,7 +40,6 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
     client.save(files)
     client.run(cmd)
     client.run('build .')
-    print(client.out)
     ld_path = ("LD_LIBRARY_PATH=`pwd`"
                if not static and not platform.system() == "Windows" else "")
     if platform.system() == "Darwin":

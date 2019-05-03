@@ -122,7 +122,7 @@ class JsonOutputTest(unittest.TestCase):
         self.assertTrue(my_json["error"])
         self.assertEqual(my_json["installed"][0]["packages"][0]["error"]["type"], "building")
         self.assertIsNone(my_json["installed"][0]["packages"][0]["error"]["remote"])
-        self.assertIn("CC/1.0@private_user/channel: Error in build() method, line 37",
+        self.assertIn("CC/1.0@private_user/channel: Error in build() method, line 36",
                       my_json["installed"][0]["packages"][0]["error"]["description"])
 
     def test_json_generation(self):

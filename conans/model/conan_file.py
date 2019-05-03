@@ -3,7 +3,6 @@ from contextlib import contextmanager
 
 from conans.client import tools
 from conans.client.output import Color, ScopedOutput
-from conans.client.settings_preprocessor import preprocess
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
