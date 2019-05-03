@@ -43,7 +43,7 @@ Hello/0.1@lasote/stable
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
-        folders = [client.cache.package(ref), client.current_folder]
+        folders = [client.cache.package_layout(ref.ref).package(ref), client.current_folder]
         if build:
             folders.append(client.cache.package_layout(ref.ref).build(ref))
         for base in folders:
@@ -223,10 +223,10 @@ class ConanSymlink(ConanFile):
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_file = os.path.join(client.cache.package(pref), "another_directory",
+        package_file = os.path.join(client.cache.package_layout(pref.ref).package(pref), "another_directory",
                                     "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))
-        package_other_dir = os.path.join(client.cache.package(pref),
+        package_other_dir = os.path.join(client.cache.package_layout(pref.ref).package(pref),
                                          "another_other_directory")
         self.assertFalse(os.path.exists(package_other_dir))
         client.save({"conanfile.py": conanfile % "True"})

@@ -98,7 +98,7 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(ref))
         # Check compilation ok
-        package_ids = self.client.cache.conan_packages(ref)
+        package_ids = self.client.cache.package_layout(ref).conan_packages()
         self.assertEqual(len(package_ids), 1)
         pref = PackageReference(ref, package_ids[0])
         self._assert_package_exists(pref, self.client.cache, files_without_conanfile)
@@ -143,7 +143,7 @@ class GoCompleteTest(unittest.TestCase):
         self.assertIn("Hello, Go!", reuse_conan.user_io.out)
 
     def _assert_package_exists(self, pref, paths, files):
-        package_path = paths.package(pref)
+        package_path = paths.package_layout(pref.ref).package(pref)
         self.assertTrue(os.path.exists(os.path.join(package_path)))
         real_files = scan_folder(package_path)
         for f in files:

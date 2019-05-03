@@ -85,7 +85,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         # Check if the metadata travels through the Conan commands
         pref = PackageReference.loads(
             "lib/version@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        pkg_folder = t.cache.package(pref)
+        pkg_folder = t.cache.package_layout(pref.ref).package(pref)
 
         # 1) When copied to the package folder, the metadata is lost
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=False)

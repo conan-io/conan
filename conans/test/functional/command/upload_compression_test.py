@@ -80,7 +80,7 @@ class UploadCompressionTest(unittest.TestCase):
         server_paths = self.servers["default"].server_store
         conan_path = server_paths.conan_revisions_root(ref)
         self.assertTrue(os.path.exists(conan_path))
-        package_ids = self.client.cache.conan_packages(ref)
+        package_ids = self.client.cache.package_layout(ref).conan_packages()
         pref = PackageReference(ref, package_ids[0])
 
         # Upload package

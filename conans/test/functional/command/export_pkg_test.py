@@ -225,13 +225,15 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(win_pref, short_paths=short_paths)
+        package_folder = client.cache.package_layout(win_pref.ref,
+                                                     short_paths=short_paths).package(win_pref)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.cache.package(win_pref),
+            self.assertEqual(load(os.path.join(client.cache.package_layout(win_pref.ref, False).package(win_pref),
                                                ".conan_link")),
                              package_folder)
         else:
-            self.assertEqual(client.cache.package(win_pref), package_folder)
+            self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
+                             package_folder)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header")
         self._consume(client, ". -s os=Windows")
@@ -336,7 +338,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -359,7 +361,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -386,7 +388,7 @@ class TestConan(ConanFile):
                    "--source-folder=src")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")

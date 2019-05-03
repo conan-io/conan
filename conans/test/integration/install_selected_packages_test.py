@@ -54,8 +54,8 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
     def download_packages_twice_test(self):
         expected_header_contents = self.files["helloHello0.h"]
-        package_folder = self.new_client.cache.package(PackageReference(self.ref,
-                                                                        self.package_ids[0]))
+        pref = PackageReference(self.ref, self.package_ids[0])
+        package_folder = self.new_client.cache.package_layout(self.ref).package(pref)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))

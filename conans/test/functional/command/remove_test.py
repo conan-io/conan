@@ -165,7 +165,7 @@ class RemoveTest(unittest.TestCase):
 
         # Create the manifests to be able to upload
         for pref in prefs:
-            pkg_folder = client.cache.package(pref)
+            pkg_folder = client.cache.package_layout(pref.ref).package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,

@@ -162,13 +162,13 @@ class MyPkg(ConanFile):
         client.run("create . pkg/0.1@danimtb/testing")
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_files = os.listdir(client.cache.package(pref))
+        package_files = os.listdir(client.cache.package_layout(pref.ref).package(pref))
         self.assertIn("header.h", package_files)
         self.assertNotIn("source.cpp", package_files)
         client.save({"conanfile.py": conanfile.replace("self.copy(\"*.h\")",
                                                        "self.copy(\"*.cpp\")")})
         client.run("create . pkg/0.1@danimtb/testing -kb")
-        package_files = os.listdir(client.cache.package(pref))
+        package_files = os.listdir(client.cache.package_layout(pref.ref).package(pref))
         self.assertNotIn("header.h", package_files)
         self.assertIn("source.cpp", package_files)
 
@@ -510,5 +510,5 @@ class TestConanLib(ConanFile):
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         client.run("create . %s" % ref.full_repr(), assert_error=True)
         self.assertIn("Build error", client.out)
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))
