@@ -373,7 +373,7 @@ class CmdUpload(object):
         self._remote_manager.check_credentials(remote)
         remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
 
-        if remote_snapshot:
+        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
             if not is_package_snapshot_complete(remote_snapshot):
                 return the_files, set([])
             remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
