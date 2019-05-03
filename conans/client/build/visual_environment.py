@@ -3,7 +3,7 @@ import os
 
 from conans.client.build.compiler_flags import build_type_define, build_type_flags, format_defines, \
     include_path_option, parallel_compiler_cl_flag, visual_runtime
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 
 
 class VisualStudioBuildEnvironment(object):
@@ -141,11 +141,11 @@ def vs_build_type_flags(settings, with_flags=True):
 
 
 def vs_std_cpp(settings):
-    if settings.get_safe("compiler") == "Visual Studio" and \
-       settings.get_safe("cppstd"):
+    cppstd = cppstd_from_settings(settings)
+    if settings.get_safe("compiler") == "Visual Studio" and cppstd:
         flag = cppstd_flag(settings.get_safe("compiler"),
                            settings.get_safe("compiler.version"),
-                           settings.get_safe("cppstd"))
+                           cppstd)
         return flag
     return None
 

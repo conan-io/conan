@@ -5,6 +5,7 @@ from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
 from conans.model.settings import bad_value_msg, undefined_value
 from conans.paths import CONANFILE, CONANINFO
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
@@ -46,7 +47,8 @@ class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing")
+        with catch_deprecation_warning(self):
+            client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("""Configuration:
 [settings]
 compiler=mycomp

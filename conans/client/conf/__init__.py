@@ -63,6 +63,7 @@ compiler:
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
+        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15", "16"]
@@ -70,17 +71,20 @@ compiler:
                   v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                   LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                   LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142]
+        cppstd: [None, 14, 17, 20]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0",
                   "8"]
         libcxx: [libstdc++, libstdc++11, libc++]
+        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
+        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
-cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
 """
 
 default_client_conf = """

@@ -1175,7 +1175,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                                  % install_folder)
         graph_info = None
 
-    if profile_names or settings or options or profile_names or env or not graph_info:
+    if profile_names or settings or options or env or not graph_info:
         if graph_info:
             # FIXME: Convert to Exception in Conan 2.0
             output.warn("Settings, options, env or profile specified. "
