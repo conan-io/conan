@@ -1,6 +1,5 @@
 import warnings
 
-from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
 from conans.util.log import logger
@@ -8,26 +7,7 @@ from conans.util.log import logger
 
 def preprocess(settings):
     _fill_runtime(settings)
-    _fill_compiler_cppstd(settings)
     _check_cppstd(settings)
-
-
-def _fill_compiler_cppstd(settings):
-    compiler = settings.get_safe("compiler")
-    compiler_version = settings.get_safe("compiler.version")
-    cppstd = settings.get_safe("cppstd")
-    compiler_cppstd = settings.get_safe("compiler.cppstd")
-
-    # Assign the explicit default value to compiler.cppstd (only if not given cppstd)
-    if not cppstd and not compiler_cppstd and compiler and compiler_version:
-        default_cppstd = cppstd_default(compiler, compiler_version)
-        if default_cppstd:
-            try:
-                #settings.compiler.cppstd = default_cppstd
-                pass
-            except Exception:
-                # Settings structure does not have cppstd
-                pass
 
 
 def _check_cppstd(settings):
