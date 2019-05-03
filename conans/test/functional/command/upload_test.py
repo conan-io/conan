@@ -1,22 +1,23 @@
-import itertools
 import os
+import platform
+import stat
 import unittest
 from collections import OrderedDict
 
+import itertools
 from mock import mock, patch
+from nose.plugins.attrib import attr
 
-
+from conans.client.cmd.uploader import CmdUpload
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer,\
-    TurboTestClient
-from conans.util.files import gzopen_without_timestamps, is_dirty, save
 from conans.test.utils.conanfile import TestConanFile
-from conans.client.cmd.uploader import CmdUpload
-
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    TurboTestClient, GenConanfile
+from conans.util.files import gzopen_without_timestamps, is_dirty, save
 
 conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -41,6 +42,39 @@ class MyPkg(ConanFile):
 
 
 class UploadTest(unittest.TestCase):
+
+    @attr("artifactory_ready")
+    def test_upload_force(self):
+        ref = ConanFileReference.loads("Hello/0.1@conan/testing")
+        client = TurboTestClient(servers={"default": TestServer()})
+        pref = client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
+        client.run("upload * --all --confirm")
+        self.assertIn("Uploading conan_package.tgz", client.out)
+        client.run("upload * --all --confirm")
+        self.assertNotIn("Uploading conan_package.tgz", client.out)
+
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_file_path = os.path.join(package_folder, "myfile.sh")
+
+        if platform.system() == "Linux":
+            client.run("remove '*' -f")
+            client.create(ref, conanfile=GenConanfile().with_package_file("myfile.sh", "foo"))
+            os.system('chmod +x "{}"'.format(package_file_path))
+            self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
+            client.run("upload * --all --confirm")
+            self.assertNotIn("Uploading conan_package.tgz", client.out)
+            self.assertIn("Package is up to date, upload skipped", client.out)
+            self.assertIn("Compressing package...", client.out)
+
+        client.run("upload * --all --confirm --force")
+        self.assertIn("Uploading conanfile.py", client.out)
+        self.assertIn("Uploading conan_package.tgz", client.out)
+
+        if platform.system() == "Linux":
+            client.run("remove '*' -f")
+            client.run("install {}".format(ref))
+            # Owner with execute permissions
+            self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
     def test_upload_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
