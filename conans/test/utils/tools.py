@@ -296,15 +296,13 @@ class ArtifactoryServerStore(object):
 
 class ArtifactoryServer(object):
 
-    def __init__(self, url=None, user=None, password=None, server_capabilities=None):
-        self._user = user or ARTIFACTORY_DEFAULT_USER
-        self._password = password or ARTIFACTORY_DEFAULT_PASSWORD
-        self._url = url or ARTIFACTORY_DEFAULT_URL
+    def __init__(self, *args, **kwargs):
+        self._user = ARTIFACTORY_DEFAULT_USER
+        self._password = ARTIFACTORY_DEFAULT_PASSWORD
+        self._url = ARTIFACTORY_DEFAULT_URL
         self._repo_name = "conan_{}".format(str(uuid.uuid4()).replace("-", ""))
         self.create_repository()
         self.server_store = ArtifactoryServerStore(self.repo_url, self._user, self._password)
-        if server_capabilities is not None:
-            raise nose.SkipTest("The Artifactory Server can't adjust capabilities")
 
     @property
     def _auth(self):
