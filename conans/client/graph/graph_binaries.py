@@ -60,18 +60,18 @@ class GraphBinariesAnalyzer(object):
             node.prev = None
             return
 
-        package_folder = self._cache.package_layout(pref.ref,
-                                                    short_paths=conanfile.short_paths).package(pref)
+        layout = self._cache.package_layout(pref.ref, short_paths=conanfile.short_paths)
+        package_folder = layout.package(pref)
 
         # Check if dirty, to remove it
-        with self._cache.package_layout(pref.ref).package_lock(pref):
+        with layout.package_lock(pref):
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)
                 rmdir(package_folder)  # Do not remove if it is EDITABLE
 
             if self._cache.config.revisions_enabled:
-                metadata = self._cache.package_layout(pref.ref).load_metadata()
+                metadata = layout.load_metadata()
                 rec_rev = metadata.packages[pref.id].recipe_revision
                 if rec_rev and rec_rev != node.ref.revision:
                     output.warn("The package {} doesn't belong "
@@ -83,7 +83,7 @@ class GraphBinariesAnalyzer(object):
             # If the remote_name is not given, follow the binary remote, or
             # the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            metadata = self._cache.package_layout(pref.ref).load_metadata()
+            metadata = layout.load_metadata()
             remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
             remote = remotes.get(remote_name)
 
@@ -110,7 +110,7 @@ class GraphBinariesAnalyzer(object):
                     output.warn("Can't update, no remote defined")
             if not node.binary:
                 node.binary = BINARY_CACHE
-                metadata = self._cache.package_layout(pref.ref).load_metadata()
+                metadata = layout.load_metadata()
                 node.prev = metadata.packages[pref.id].revision
                 assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
                 package_hash = ConanInfo.load_from_package(package_folder).recipe_hash
@@ -153,7 +153,7 @@ class GraphBinariesAnalyzer(object):
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                local_recipe_hash = self._cache.package_layout(ref).recipe_manifest().summary_hash
+                local_recipe_hash = layout.recipe_manifest().summary_hash
                 if local_recipe_hash != package_hash:
                     output.info("Outdated package!")
                     node.binary = BINARY_BUILD

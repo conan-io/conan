@@ -99,6 +99,14 @@ class PackageCacheLayout(object):
     def packages(self):
         return os.path.join(self._base_folder, PACKAGES_FOLDER)
 
+    def packages_ids(self):
+        packages_folder = self.packages()
+        if os.path.exists(packages_folder):
+            pkg_ids = [d for d in os.listdir(packages_folder) if os.path.isdir(d)]
+        else:
+            pkg_ids = []
+        return pkg_ids
+
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
