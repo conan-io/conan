@@ -1,8 +1,9 @@
 import unittest
 
-from conans.paths import CONANFILE, is_case_insensitive_os
+from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
+from conans.client.cache.cache import is_case_insensitive_os
 
 conanfile = '''
 from conans import ConanFile

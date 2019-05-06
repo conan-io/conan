@@ -13,7 +13,7 @@ from six.moves.configparser import ConfigParser, NoSectionError
 from conans.client import tools
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
-from conans.server.conf.default_server_conf import default_server_conf, default_server_conf
+from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
 from conans.util.env_reader import get_env
@@ -28,7 +28,7 @@ class ConanServerConfigParser(ConfigParser):
     values from environment variables or from file.
     Environment variables have PRECEDENCE over file values
     """
-    def __init__(self, base_folder, storage_folder=None, environment=None):
+    def __init__(self, base_folder, environment=None):
         environment = environment or os.environ
 
         ConfigParser.__init__(self)
@@ -39,7 +39,7 @@ class ConanServerConfigParser(ConfigParser):
         self._loaded = False
         self.env_config = {"updown_secret": get_env("CONAN_UPDOWN_SECRET", None, environment),
                            "authorize_timeout": get_env("CONAN_AUTHORIZE_TIMEOUT", None, environment),
-                           "disk_storage_path": get_env("CONAN_STORAGE_PATH", storage_folder, environment),
+                           "disk_storage_path": get_env("CONAN_STORAGE_PATH", None, environment),
                            "jwt_secret": get_env("CONAN_JWT_SECRET", None, environment),
                            "jwt_expire_minutes": get_env("CONAN_JWT_EXPIRE_MINUTES", None, environment),
                            "write_permissions": [],
@@ -130,7 +130,11 @@ class ConanServerConfigParser(ConfigParser):
     def disk_storage_path(self):
         """If adapter is disk, means the directory for storage"""
         try:
-            ret = conan_expand_user(self._get_conf_server_string("disk_storage_path"))
+            disk_path = self._get_conf_server_string("disk_storage_path")
+            if disk_path.startswith("."):
+                disk_path = os.path.join(os.path.dirname(self.config_filename), disk_path)
+                disk_path = os.path.abspath(disk_path)
+            ret = conan_expand_user(disk_path)
         except ConanException:
             # If storage_path is not defined, use the current dir
             # So tests use test folder instead of user/.conan_server

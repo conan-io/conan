@@ -39,8 +39,9 @@ class LocalPackage(object):
 
 
 class Workspace(object):
+    default_filename = "conanws.yml"
 
-    def generate(self, cwd, graph, output):
+    def generate(self, install_folder, graph, output):
         if self._ws_generator == "cmake":
             cmake = ""
             add_subdirs = ""
@@ -83,13 +84,17 @@ class Workspace(object):
                 cmake += "macro(conan_workspace_subdirectories)\n"
                 cmake += add_subdirs
                 cmake += "endmacro()"
-            cmake_path = os.path.join(cwd, "conanworkspace.cmake")
+            cmake_path = os.path.join(install_folder, "conanworkspace.cmake")
             save(cmake_path, cmake)
 
     def __init__(self, path, cache):
         self._cache = cache
         self._ws_generator = None
         self._workspace_packages = OrderedDict()  # {reference: LocalPackage}
+
+        if not os.path.isfile(path):
+            path = os.path.join(path, self.default_filename)
+
         self._base_folder = os.path.dirname(path)
         try:
             content = load(path)

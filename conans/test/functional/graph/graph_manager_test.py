@@ -1,6 +1,7 @@
 import six
 from parameterized import parameterized
 
+
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference

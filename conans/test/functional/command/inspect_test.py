@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, TestServer
@@ -32,6 +33,25 @@ class Pkg(base.Pkg):
         client.run("search")
         self.assertIn("Base/0.1@lasote/testing", client.out)
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
+
+    def python_requires_not_found_test(self):
+        server = TestServer()
+        client = TestClient(servers={"default": server}, users={"default": [("user", "channel")]})
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+
+            base = python_requires("name/version@user/channel")
+
+            class MyLib(ConanFile):
+                pass
+            """)
+
+        client.save({'conanfile.py': conanfile})
+        client.run("inspect . -a options", assert_error=True)
+        self.assertIn("Error loading conanfile at ", client.out)
+        self.assertIn('Unable to find python_requires("name/version@user/channel")'
+                      ' in remotes', client.out)
+        self.assertEqual(3, len(str(client.out).splitlines()))
 
     def name_version_test(self):
         server = TestServer()
@@ -318,3 +338,84 @@ default_options:
     bar: True
     foo: True
 """, client.out)
+
+
+class InspectRawTest(unittest.TestCase):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        
+        class Pkg(ConanFile):
+            name = "MyPkg"
+            version = "1.2.3"
+            author = "John Doe"
+            url = "https://john.doe.com"
+            settings = "os", "arch", "build_type", "compiler"
+            options = {"foo": [True, False], "bar": [True, False]}
+            default_options = "foo=True", "bar=True"
+            
+            _private = "Nothing"
+
+            def build(self):
+                pass
+        """)
+
+    def test_no_field_or_multiple(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw", assert_error=True)
+        client.run("inspect . --raw=name --raw=version", assert_error=True)
+
+    def test_incompatible_commands(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+
+        client.run("inspect . --raw=name -a=version", assert_error=True)
+        self.assertIn("ERROR: Argument '--raw' is incompatible with '-a'", client.out)
+
+        client.run("inspect . --raw=name --json=tmp.json", assert_error=True)
+        self.assertIn("ERROR: Argument '--raw' is incompatible with '--json'", client.out)
+
+    def test_invalid_field(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=not_exists", assert_error=True)
+        self.assertIn("ERROR: 'Pkg' object has no attribute 'not_exists'", client.out)
+
+    def test_private_field(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=_private")
+        self.assertEqual("Nothing", client.out)
+
+    def test_settings(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=settings")
+        self.assertEqual("('os', 'arch', 'build_type', 'compiler')", client.out)
+
+    def test_options_dict(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=options")
+        # The output is a dictionary, no order guaranteed, we need to compare as dict
+        import ast
+        output = ast.literal_eval(str(client.out))
+        self.assertDictEqual(output, {'bar': [True, False], 'foo': [True, False]})
+
+    def test_default_options_list(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("inspect . --raw=default_options")
+        self.assertEqual("bar=True\nfoo=True", client.out)
+
+    def test_default_options_dict(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class Lib(ConanFile):
+                default_options = {"dict": True, "list": False}
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("inspect . --raw=default_options")
+        self.assertEqual("dict=True\nlist=False", client.out)

@@ -7,7 +7,6 @@ from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans.util.files import mkdir
 
 
 @attr('slow')
@@ -26,30 +25,28 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
         # Create packages for hello and bye
         for p in ("hello", "bye"):
-            with c.chdir(p):
-                for bt in ("Debug", "Release"):
-                    c.run("create . user/channel -s build_type={}".format(bt))
+            for bt in ("Debug", "Release"):
+                c.run("create {} user/channel -s build_type={}".format(p, bt))
 
         with c.chdir(project_folder_name):
             # Save conanfile and example
             conanfile = textwrap.dedent("""
                 [requires]
                 bye/1.0@user/channel
-                
+
                 [generators]
                 cmake_find_package_multi
                 """)
             example_cpp = textwrap.dedent("""
                 #include <iostream>
                 #include "bye.h"
-                
+
                 int main() {
                     bye();
                 }
                 """)
             c.save({"conanfile.txt": conanfile, "example.cpp": example_cpp})
 
-            mkdir("./build")
             with c.chdir("build"):
                 for bt in ("Debug", "Release"):
                     c.run("install .. user/channel -s build_type={}".format(bt))

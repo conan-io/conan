@@ -54,7 +54,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     """
     Unzip a zipped file
     :param filename: Path to the zip file
-    :param destination: Destination folder
+    :param destination: Destination folder (or file for .gz files)
     :param keep_permissions: Keep the zip permissions. WARNING: Can be
     dangerous if the zip was not created in a NIX system, the bits could
     produce undefined permission schema. Use this option only if you are sure
@@ -70,6 +70,13 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
+    if filename.endswith(".gz"):
+        import gzip
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
+        return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
@@ -314,7 +321,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib"):
+            if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:

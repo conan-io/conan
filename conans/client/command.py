@@ -208,10 +208,21 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json output file')
+        parser.add_argument('--raw', default=None, action=OnceArgument,
+                            help='Print just the value of the requested attribute')
 
         args = parser.parse_args(*args)
-        result = self._conan.inspect(args.path_or_reference, args.attribute, args.remote)
-        Printer(self._user_io.out).print_inspect(result)
+
+        if args.raw and args.attribute:
+            raise ConanException("Argument '--raw' is incompatible with '-a'")
+
+        if args.raw and args.json:
+            raise ConanException("Argument '--raw' is incompatible with '--json'")
+
+        attributes = [args.raw, ] if args.raw else args.attribute
+
+        result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
+        Printer(self._user_io.out).print_inspect(result, raw=args.raw)
         if args.json:
             json_output = json.dumps(result)
             if not os.path.isabs(args.json):
@@ -419,6 +430,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
+
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
@@ -746,12 +759,12 @@ class Command(object):
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports a recipe, then creates a package from local source and build folders.
+        """
+        Exports a recipe and create a binary package from local files.
 
-        The package is created by calling the package() method applied to the
-        local folders '--source-folder' and '--build-folder' It's created in
-        the local cache for the specified 'reference' and for the specified
-        '--settings', '--options' and or '--profile'.
+        If '--package-folder' is provided it will copy the files from there, otherwise it
+        will execute package() method over '--source-folder' and '--build-folder' to create
+        the binary package.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg")
@@ -890,7 +903,7 @@ class Command(object):
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
             try:
-                self._cache.remove_package_system_reqs(ref)
+                self._cache.package_layout(ref).remove_system_reqs()
                 self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
                 return
             except Exception as error:
@@ -1192,6 +1205,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
 
         # create the parser for the "a" command
         parser_list = subparsers.add_parser('list', help='List current remotes')
@@ -1307,6 +1321,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
         subparsers = parser.add_subparsers(dest='subcommand')
+        subparsers.required = True
 
         # create the parser for the "profile" command
         subparsers.add_parser('list', help='List current profiles')
@@ -1319,6 +1334,8 @@ class Command(object):
                                                 "folder or path and name for a profile file")
         parser_new.add_argument("--detect", action='store_true', default=False,
                                 help='Autodetect settings and fill [settings] section')
+        parser_new.add_argument("--force", action='store_true', default=False,
+                                help='Overwrite existing profile if existing')
 
         parser_update = subparsers.add_parser('update', help='Update a profile with desired value')
         parser_update.add_argument('item',
@@ -1347,7 +1364,7 @@ class Command(object):
             profile_text = self._conan.read_profile(profile)
             self._outputer.print_profile(profile, profile_text)
         elif args.subcommand == "new":
-            self._conan.create_profile(profile, args.detect)
+            self._conan.create_profile(profile, args.detect, args.force)
         elif args.subcommand == "update":
             try:
                 key, value = args.item.split("=", 1)
@@ -1429,18 +1446,28 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.workspace.__doc__,
                                          prog="conan workspace")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
 
-        install_parser = subparsers.add_parser('install', help='same as a "conan install" command '
-                                               'but using the workspace data from the file')
-        install_parser.add_argument('path', help='path to workspace definition file')
+        install_parser = subparsers.add_parser('install',
+                                               help='same as a "conan install" command'
+                                                    ' but using the workspace data from the file. If'
+                                                    ' no file is provided, it will look for a file'
+                                                    ' named "conanws.yml"')
+        install_parser.add_argument('path', help='path to workspace definition file (it will look'
+                                                 ' for a "conanws.yml" inside if a directory is'
+                                                 ' given)')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                                    help="Folder where the workspace files will be created"
+                                         " (default to current working directory)")
 
         args = parser.parse_args(*args)
 
         if args.subcommand == "install":
             self._conan.workspace_install(args.path, args.settings, args.options, args.env,
                                           args.remote, args.build,
-                                          args.profile, args.update)
+                                          args.profile, args.update,
+                                          install_folder=args.install_folder)
 
     def editable(self, *args):
         """ Manage editable packages
@@ -1448,6 +1475,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.editable.__doc__,
                                          prog="conan editable")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
 
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
         add_parser.add_argument('path', help='Path to the package folder in the user workspace')

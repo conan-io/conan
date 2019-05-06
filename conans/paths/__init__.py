@@ -22,11 +22,6 @@ def get_conan_user_home():
     return os.path.abspath(tmp)
 
 
-def is_case_insensitive_os():
-    system = platform.system()
-    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
-
-
 # Files
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"
@@ -41,6 +36,7 @@ BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
 BUILD_INFO_MAKE = 'conanbuildinfo.mak'
+BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
