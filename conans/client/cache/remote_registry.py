@@ -63,15 +63,17 @@ def migrate_registry_file(cache, out):
 
     def add_ref_remote(reference, remotes, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
-        remote = remotes[remote_name]
-        with cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote.name
+        remote = remotes.get(remote_name)
+        if remote:
+            with cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.remote = remote.name
 
     def add_pref_remote(pkg_ref, remotes, remote_name):
         pref = PackageReference.loads(pkg_ref, validate=True)
-        remote = remotes[remote_name]
-        with cache.package_layout(pref.ref).update_metadata() as metadata:
-            metadata.packages[pref.id].remote = remote.name
+        remote = remotes.get(remote_name)
+        if remote:
+            with cache.package_layout(pref.ref).update_metadata() as metadata:
+                metadata.packages[pref.id].remote = remote.name
 
     try:
         if os.path.exists(reg_json_path):
