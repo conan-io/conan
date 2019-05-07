@@ -117,7 +117,6 @@ class CmdUpload(object):
             layout = self._cache.package_layout(ref)
             metadata = layout.load_metadata()
             ref = ref.copy_with_rev(metadata.recipe.revision)
-            layout._ref = ref
             remote = remotes.selected
             if remote:
                 ref_remote = remote
@@ -312,7 +311,7 @@ class CmdUpload(object):
 
         t1 = time.time()
         # existing package, will use short paths if defined
-        package_folder = layout.package(pref)
+        package_folder = layout.package_folder(pref.id)
 
         if is_dirty(package_folder):
             raise ConanException("Package %s is corrupted, aborting upload.\n"

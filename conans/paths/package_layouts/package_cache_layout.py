@@ -102,7 +102,7 @@ class PackageCacheLayout(object):
     def packages_ids(self):
         packages_folder = self.packages()
         if os.path.exists(packages_folder):
-            pkg_ids = [d for d in os.listdir(packages_folder) if os.path.isdir(d)]
+            pkg_ids = [d for d in os.listdir(packages_folder)]
         else:
             pkg_ids = []
         return pkg_ids
@@ -112,6 +112,10 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+
+    @short_path
+    def package_folder(self, package_id):
+        return os.path.join(self._base_folder, PACKAGES_FOLDER, package_id)
 
     def scm_folder(self):
         return os.path.join(self._base_folder, SCM_FOLDER)
