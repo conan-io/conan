@@ -265,6 +265,9 @@ class HelloConan(ConanFile):
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
         client.run("remote update r2 https://r2 --insert=0")
+        client.run("remote list")
+        self.assertLess(str(client.out).find("r2"), str(client.out).find("r1"))
+        self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
 
     def verify_ssl_test(self):
         client = TestClient()
