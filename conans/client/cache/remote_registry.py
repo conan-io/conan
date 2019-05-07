@@ -230,7 +230,7 @@ class Remotes(object):
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
         prev_remote = self._get_by_url(url)
-        if prev_remote and verify_ssl == prev_remote.verify_ssl:
+        if prev_remote and verify_ssl == prev_remote.verify_ssl and insert is None:
             raise ConanException("Remote '%s' already exists with same URL" % prev_remote.name)
         updated_remote = Remote(remote_name, url, verify_ssl)
         if insert is not None:
