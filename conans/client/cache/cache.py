@@ -88,43 +88,9 @@ class ClientCache(object):
     def store(self):
         return self._store_folder
 
-    def base_folder(self, ref):
-        """ the base folder for this package reference, for each ConanFileReference
-        """
-        return self.package_layout(ref).base_folder()
-
-    def export(self, ref):
-        return self.package_layout(ref).export()
-
-    def export_sources(self, ref, short_paths=False):
-        return self.package_layout(ref, short_paths).export_sources()
-
-    def source(self, ref, short_paths=False):
-        return self.package_layout(ref, short_paths).source()
-
-    def conanfile(self, ref):
-        return self.package_layout(ref).conanfile()
-
-    def builds(self, ref):
-        return self.package_layout(ref).builds()
-
-    def build(self, pref, short_paths=False):
-        return self.package_layout(pref.ref, short_paths).build(pref)
-
-    def system_reqs(self, ref):
-        return self.package_layout(ref).system_reqs()
-
-    def system_reqs_package(self, pref):
-        return self.package_layout(pref.ref).system_reqs_package(pref)
-
-    def packages(self, ref):
-        return self.package_layout(ref).packages()
-
     def package(self, pref, short_paths=False):
+        # TODO: This is deprecated, only used in testing
         return self.package_layout(pref.ref, short_paths).package(pref)
-
-    def scm_folder(self, ref):
-        return self.package_layout(ref).scm_folder()
 
     def installed_as_editable(self, ref):
         return isinstance(self.package_layout(ref), PackageEditableLayout)
@@ -170,14 +136,6 @@ class ClientCache(object):
         if self._no_lock is None:
             self._no_lock = self.config.cache_no_locks
         return self._no_lock
-
-    def conanfile_write_lock(self, ref):
-        layout = self.package_layout(ref)
-        return layout.conanfile_write_lock(self._output)
-
-    def package_lock(self, pref):
-        layout = self.package_layout(pref.ref)
-        return layout.package_lock(pref)
 
     @property
     def put_headers_path(self):
@@ -295,19 +253,9 @@ class ClientCache(object):
                 hooks.append(hook_name[:-3])
         return hooks
 
-    def conan_packages(self, ref):
-        """ Returns a list of package_id from a local cache package folder """
-        layout = self.package_layout(ref)
-        return layout.conan_packages()
-
-    def conan_builds(self, ref):
-        """ Returns a list of package ids from a local cache build folder """
-        layout = self.package_layout(ref)
-        return layout.conan_builds()
-
     def delete_empty_dirs(self, deleted_refs):
         for ref in deleted_refs:
-            ref_path = self.base_folder(ref)
+            ref_path = self.package_layout(ref).base_folder()
             for _ in range(4):
                 if os.path.exists(ref_path):
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
@@ -316,30 +264,12 @@ class ClientCache(object):
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
 
-    def remove_package_system_reqs(self, reference):
-        assert isinstance(reference, ConanFileReference)
-        conan_folder = self.base_folder(reference)
-        system_reqs_folder = os.path.join(conan_folder, SYSTEM_REQS_FOLDER)
-        if not os.path.exists(conan_folder):
-            raise ValueError("%s does not exist" % repr(reference))
-        if not os.path.exists(system_reqs_folder):
-            return
-        try:
-            rmdir(system_reqs_folder)
-        except Exception as e:
-            raise ConanException("Unable to remove system requirements at %s: %s"
-                                 % (system_reqs_folder, str(e)))
-
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)
         for folder in folders:
             conan_folder = os.path.join(self._store_folder, folder)
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
-
-    def remove_package_locks(self, ref):
-        package_layout = self.package_layout(ref=ref)
-        package_layout.remove_package_locks()
 
     def invalidate(self):
         self._config = None

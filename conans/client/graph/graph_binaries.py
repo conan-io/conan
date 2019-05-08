@@ -60,10 +60,11 @@ class GraphBinariesAnalyzer(object):
             node.prev = None
             return
 
-        package_folder = self._cache.package(pref, short_paths=conanfile.short_paths)
+        package_folder = self._cache.package_layout(pref.ref,
+                                                    short_paths=conanfile.short_paths).package(pref)
 
         # Check if dirty, to remove it
-        with self._cache.package_lock(pref):
+        with self._cache.package_layout(pref.ref).package_lock(pref):
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
             if is_dirty(package_folder):
                 output.warn("Package is corrupted, removing folder: %s" % package_folder)

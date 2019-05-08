@@ -11,9 +11,8 @@ env:
 linux: &linux
    os: linux
    dist: xenial
-   sudo: required
    language: python
-   python: "3.6"
+   python: "3.7"
    services:
      - docker
 osx: &osx

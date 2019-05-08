@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -130,7 +130,7 @@ class CMakeDefinitionsBuilder(object):
         return self._conanfile.settings.get_safe(setname)
 
     def _get_cpp_standard_vars(self):
-        cppstd = self._ss("cppstd")
+        cppstd = cppstd_from_settings(self._conanfile.settings)
         compiler = self._ss("compiler")
         compiler_version = self._ss("compiler.version")
 
@@ -325,13 +325,15 @@ class CMakeDefinitionsBuilder(object):
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
+        install_folder = self._conanfile.install_folder.replace("\\", "/")
         if "cmake_find_package" in self._conanfile.generators:
-            ret["CMAKE_MODULE_PATH"] = self._conanfile.install_folder.replace("\\", "/")
+            ret["CMAKE_MODULE_PATH"] = install_folder
 
         if "cmake_find_package_multi" in self._conanfile.generators:
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
-            # that require the prefix path, not the module path
-            ret["CMAKE_PREFIX_PATH"] = self._conanfile.install_folder.replace("\\", "/")
+            # that require the prefix path and the module path
+            ret["CMAKE_PREFIX_PATH"] = install_folder
+            ret["CMAKE_MODULE_PATH"] = install_folder
 
         ret.update(self._get_make_program_definition())
 

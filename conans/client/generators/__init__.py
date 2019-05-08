@@ -13,6 +13,7 @@ from .boostbuild import BoostBuildGenerator
 from .cmake import CMakeGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
+from .deploy import DeployGenerator
 from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
@@ -77,6 +78,7 @@ registered_generators.add("json", JsonGenerator)
 registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
+registered_generators.add("deploy", DeployGenerator)
 
 
 def write_generators(conanfile, path, output):

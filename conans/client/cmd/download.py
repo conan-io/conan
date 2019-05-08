@@ -15,7 +15,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.remote = remote.name
 
-    conan_file_path = cache.conanfile(ref)
+    conan_file_path = cache.package_layout(ref).conanfile()
     conanfile = loader.load_class(conan_file_path)
 
     if not recipe:  # Not only the recipe
@@ -41,6 +41,6 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
 
     for package_id in package_ids:
         pref = PackageReference(ref, package_id)
-        package_folder = cache.package(pref, short_paths=short_paths)
+        package_folder = cache.package_layout(pref.ref, short_paths=short_paths).package(pref)
         output.info("Downloading %s" % str(pref))
         remote_manager.get_package(pref, package_folder, remote, output, recorder)

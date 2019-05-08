@@ -477,7 +477,7 @@ class ConanAPIV1(object):
     @api_method
     def workspace_install(self, path, settings=None, options=None, env=None,
                           remote_name=None, build=None, profile_name=None,
-                          update=False, cwd=None):
+                          update=False, cwd=None, install_folder=None):
         cwd = cwd or get_cwd()
         abs_path = os.path.normpath(os.path.join(cwd, path))
 
@@ -512,7 +512,9 @@ class ConanAPIV1(object):
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=recorder, hook_manager=self._hook_manager)
         installer.install(deps_graph, remotes, keep_build=False, graph_info=graph_info)
-        workspace.generate(cwd, deps_graph, self._user_io.out)
+
+        install_folder = install_folder or cwd
+        workspace.generate(install_folder, deps_graph, self._user_io.out)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -1175,7 +1177,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                                  % install_folder)
         graph_info = None
 
-    if profile_names or settings or options or profile_names or env or not graph_info:
+    if profile_names or settings or options or env or not graph_info:
         if graph_info:
             # FIXME: Convert to Exception in Conan 2.0
             output.warn("Settings, options, env or profile specified. "

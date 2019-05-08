@@ -6,6 +6,7 @@ from parameterized.parameterized import parameterized
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+from conans.test.utils.conanfile import TestConanFile
 
 tool_conanfile = """from conans import ConanFile
 
@@ -50,6 +51,20 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 
 class BuildRequiresTest(unittest.TestCase):
+    def test_build_requires_diamond(self):
+        t = TestClient()
+        t.save({"conanfile.py": str(TestConanFile("libA", "0.1"))})
+        t.run("create . libA/0.1@user/testing")
+
+        t.save({"conanfile.py": str(TestConanFile("libB", "0.1",
+                                                  requires=["libA/0.1@user/testing"]))})
+        t.run("create . libB/0.1@user/testing")
+
+        t.save({"conanfile.py": str(TestConanFile("libC", "0.1",
+                                                  build_requires=["libB/0.1@user/testing",
+                                                                  "libA/0.1@user/testing"]))})
+        t.run("create . libC/0.1@user/testing")
+        self.assertIn("libC/0.1@user/testing: Created package", t.out)
 
     def create_with_tests_and_build_requires_test(self):
         client = TestClient()

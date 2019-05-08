@@ -903,7 +903,7 @@ class Command(object):
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
             try:
-                self._cache.remove_package_system_reqs(ref)
+                self._cache.package_layout(ref).remove_system_reqs()
                 self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
                 return
             except Exception as error:
@@ -1460,13 +1460,17 @@ class Command(object):
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                                    help="Folder where the workspace files will be created"
+                                         " (default to current working directory)")
 
         args = parser.parse_args(*args)
 
         if args.subcommand == "install":
             self._conan.workspace_install(args.path, args.settings, args.options, args.env,
                                           args.remote, args.build,
-                                          args.profile, args.update)
+                                          args.profile, args.update,
+                                          install_folder=args.install_folder)
 
     def editable(self, *args):
         """ Manage editable packages
