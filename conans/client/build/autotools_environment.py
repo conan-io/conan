@@ -8,7 +8,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 format_include_paths, format_libraries,
                                                 format_library_paths, libcxx_define, libcxx_flag,
                                                 pic_flag, rpath_flags, sysroot_flag)
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
     detected_architecture, detected_os, get_gnu_triplet
@@ -41,7 +41,7 @@ class AutoToolsBuildEnvironment(object):
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
-        self._cppstd = conanfile.settings.get_safe("cppstd")
+        self._cppstd = cppstd_from_settings(conanfile.settings)
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value

@@ -148,8 +148,8 @@ class NullTool(BaseTool):
         pass
 
     def install(self, package_name):
-        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or "
-                            "FreeBSD with pkg or Solaris with pkgutil")
+        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or"
+                          " FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False

@@ -10,6 +10,7 @@ from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class MSBuildTest(unittest.TestCase):
@@ -41,10 +42,12 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         client.save(files)
-        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
-                   'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
-        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
-                   '-s compiler="Visual Studio" -s compiler.version=14')
+        with catch_deprecation_warning(self):
+            client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
+                       'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
+        with catch_deprecation_warning(self):
+            client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
+                       '-s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         files = get_vs_project_files()

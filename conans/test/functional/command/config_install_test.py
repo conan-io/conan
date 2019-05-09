@@ -16,6 +16,7 @@ from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
+import textwrap
 
 win_profile = """[settings]
     os: Windows
@@ -100,6 +101,33 @@ class ConfigInstallTest(unittest.TestCase):
                             "python/__init__.py": ""
                             })
         return folder
+
+    def config_hooks_test(self):
+        # Make sure the conan.conf hooks information is appended
+        folder = temp_folder(path_with_spaces=False)
+        conan_conf = textwrap.dedent("""
+            [hooks]
+            foo
+            custom/custom
+            """)
+        save_files(folder, {"config/conan.conf": conan_conf})
+        client = TestClient()
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("foo"))
+        self.assertEqual(1, content.count("custom/custom"))
+
+        config = ConanClientConfigParser(client.cache.conan_conf_path)
+        hooks = config.get_item("hooks")
+        self.assertIn("foo", hooks)
+        self.assertIn("custom/custom", hooks)
+        self.assertIn("attribute_checker", hooks)
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("foo"))
+        self.assertEqual(1, content.count("custom/custom"))
 
     def _create_zip(self, zippath=None):
         folder = self._create_profile_folder()

@@ -88,7 +88,7 @@ class UploadTest(unittest.TestCase):
         fake_metadata.recipe.revision = DEFAULT_REVISION_V1
         fake_metadata.packages[self.pref.id].revision = DEFAULT_REVISION_V1
         self.client.save({"metadata.json": fake_metadata.dumps()},
-                         path=self.client.cache.base_folder(self.ref))
+                         path=self.client.cache.package_layout(self.ref).base_folder())
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: myconan1,
                           "include/math/lib1.h": "//copy",
@@ -224,8 +224,8 @@ class UploadTest(unittest.TestCase):
 
     def upload_same_package_dont_compress_test(self):
         # Create a manifest for the faked package
-        pack_path = self.client.cache.package(self.pref)
-        package_path = self.client.cache.package(self.pref)
+        pack_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
+        package_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
         expected_manifest = FileTreeManifest.create(package_path)
         expected_manifest.save(pack_path)
 

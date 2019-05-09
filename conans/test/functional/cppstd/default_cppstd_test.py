@@ -7,13 +7,12 @@ import unittest
 
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.tools import environment_append, save, load
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
 class DefaultCppTestCase(unittest.TestCase):
-    # Validate package ID computed taking into account different cppstd scenarios
-
     compiler = "gcc"
     compiler_version = "7"
 
@@ -34,14 +33,15 @@ class DefaultCppTestCase(unittest.TestCase):
 
             def configure(self):
                 cppstd = self.settings.get_safe("cppstd")
+                compiler_cppstd = self.settings.get_safe("compiler.cppstd")
                 self.output.info(">>>> settings: {{}}".format(self.settings.fields))
                 self.output.info(">>>> cppstd: {{}}".format(cppstd))
+                self.output.info(">>>> compiler.cppstd: {{}}".format(compiler_cppstd))
         """)
 
     id_default = "d17189cfe7b11efbc5d701339a32d203745f8b81"
 
     def run(self, *args, **kwargs):
-        # Create and use a different default profile
         default_profile_path = os.path.join(temp_folder(), "default.profile")
         save(default_profile_path, self.default_profile)
         with environment_append({"CONAN_DEFAULT_PROFILE_PATH": default_profile_path}):
@@ -54,6 +54,7 @@ class DefaultCppTestCase(unittest.TestCase):
         self.assertEqual(target_id, self.id_default)
         self.assertIn(">>>> settings: ['compiler', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
 
     def _get_id(self, with_cppstd, settings_values=None):
         # Create the conanfile with corresponding settings
@@ -75,14 +76,22 @@ class DefaultCppTestCase(unittest.TestCase):
         data = json.loads(load(json_file))
         self.assertEqual(len(data), 1)
 
-        # Return: ID, output
+        # Return ID, output
         return data[0]["id"], info_output
+
+
+class SettingsCppStdTests(DefaultCppTestCase):
+    """
+    Validate package ID computed taking into account different scenarios for 'cppstd'. The ID
+    should be the same if the setting is not provided and if it has the default value.
+    """
 
     def test_no_value(self):
         # No value passed for setting 'cppstd'
         id_with, output = self._get_id(with_cppstd=True)  # TODO: Should raise?
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_none(self):
@@ -90,20 +99,84 @@ class DefaultCppTestCase(unittest.TestCase):
         id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "None"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
         cppstd = cppstd_default(self.compiler, self.compiler_version)
-        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
+        with catch_deprecation_warning(self):
+            id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: gnu14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
+        self.assertEqual(self.id_default, id_with)
+
+    def test_value_non_default(self):
+        # Explicit value (not the default) passed to setting 'cppstd'
+        with catch_deprecation_warning(self):
+            id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
+        self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
+        self.assertIn(">>>> cppstd: 14", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
+        self.assertNotEqual(self.id_default, id_with)
+
+
+class SettingsCompilerCppStdTests(DefaultCppTestCase):
+    """
+    Validate package ID computed taking into account different scenarios for 'compiler.cppstd'. The
+    ID has to be the same if the setting is not informed and if it has the default value, also
+    these values should be the same as the ones using the 'cppstd' approach.
+    """
+
+    def _get_id(self, with_cppstd=False, settings_values=None):
+        assert not with_cppstd
+        return super(SettingsCompilerCppStdTests, self)._get_id(with_cppstd=False,
+                                                                settings_values=settings_values)
+
+    def test_value_none(self):
+        # Explicit value 'None' passed to setting 'cppstd'
+        id_with, output = self._get_id(settings_values={"compiler.cppstd": "None"})
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: None", output)
+        self.assertEqual(self.id_default, id_with)
+
+    def test_value_default(self):
+        # Explicit value (equals to default) passed to setting 'compiler.cppstd'
+        cppstd = cppstd_default(self.compiler, self.compiler_version)
+        id_with, output = self._get_id(settings_values={"compiler.cppstd": cppstd})
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: gnu14", output)
         self.assertEqual(self.id_default, id_with)
 
     def test_value_other(self):
         # Explicit value (not the default) passed to setting 'cppstd'
-        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
-        self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
-        self.assertIn(">>>> cppstd: 14", output)
+        id_with, output = self._get_id(settings_values={"compiler.cppstd": "14"})
+        self.assertIn(">>>> settings: ['compiler', 'os']", output)
+        self.assertIn(">>>> cppstd: None", output)
+        self.assertIn(">>>> compiler.cppstd: 14", output)
         self.assertNotEqual(self.id_default, id_with)
 
+
+class SettingsCompareCppStdApproaches(DefaultCppTestCase):
+    """
+    Check scenario using 'cppstd' and 'compiler.cppstd', if those are given the same value
+    (but different from the default one) then the ID for the packages is not required to be
+    the same.
+    """
+
+    def test_cppstd_non_defaults(self):
+        cppstd_value = "14"  # Not the default
+        with catch_deprecation_warning(self):
+            id_with_old, _ = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd_value})
+        id_with_new, _ = self._get_id(with_cppstd=False,
+                                      settings_values={'compiler.cppstd': cppstd_value})
+
+        # Those are different from the target one (ID using default value or None)
+        self.assertNotEqual(self.id_default, id_with_old)
+        self.assertNotEqual(self.id_default, id_with_new)
+
+        # They are different between them
+        self.assertNotEqual(id_with_new, id_with_old)
