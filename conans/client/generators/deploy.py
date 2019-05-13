@@ -42,6 +42,6 @@ class DeployGenerator(Generator):
                                        os.path.relpath(root, rootpath), f)
                     dst = os.path.normpath(dst)
                     mkdir(os.path.dirname(dst))
-                    shutil.copyfile(src, dst)
+                    shutil.copy(src, dst)
                     copied_files.append(dst)
         return self.deploy_manifest_content(copied_files)
