@@ -1137,6 +1137,9 @@ class ConanAPIV1(object):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
+
         # Check the conanfile is there, and name/version matches
         ref = ConanFileReference.loads(reference, validate=True)
         target_conanfile = self._graph_manager._loader.load_class(target_path)
