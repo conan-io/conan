@@ -15,7 +15,6 @@ from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
 import bottle
-import nose
 import requests
 import six
 import time
@@ -25,15 +24,12 @@ from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import tools, load
-from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
+from conans.client.conan_api import Conan, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
-from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
-from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
@@ -645,16 +641,11 @@ class TestClient(object):
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
-        self.cache = ClientCache(self.base_folder, TestBufferConanOutput())
-        self.storage_folder = self.cache.store
-
         self.requester_class = requester_class
         self.conan_runner = runner
 
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
-
-        self.tune_conan_conf(base_folder, cpu_count, revisions_enabled)
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -663,11 +654,15 @@ servers["r1"] = server
 servers["r2"] = TestServer()
 """)
 
+        output = TestBufferConanOutput()
+        self.user_io = MockedUserIO(self.users, out=output)
+        self.cache = migrate_and_get_cache(self.base_folder, output)
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
-
-        self.init_dynamic_vars()
+        self.tune_conan_conf(base_folder, cpu_count, revisions_enabled)
+        self.storage_folder = self.cache.store
+        self.runner = TestRunner(output, runner=self.conan_runner)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def _set_revisions(self, value):
@@ -754,58 +749,29 @@ servers["r2"] = TestServer()
         finally:
             self.current_folder = old_dir
 
-    def _init_collaborators(self, user_io=None):
+    def run(self, command_line, assert_error=False):
+        """ run a single command as in the command line.
+            If user or password is filled, user_io will be mocked to return this
+            tuple if required
+        """
+        # Reset output
+        self.user_io.out = TestBufferConanOutput()
 
-        output = TestBufferConanOutput()
-        self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, output)
-        self.runner = TestRunner(output, runner=self.conan_runner)
-
-        # Check if servers are real
+        requester = None
         real_servers = False
         for server in self.servers.values():
             if isinstance(server, str) or isinstance(server, ArtifactoryServer):  # Just URI
                 real_servers = True
                 break
-
-        with tools.environment_append(self.cache.config.env_vars):
-            if real_servers:
-                requester = requests.Session()
+        if not real_servers:
+            if self.requester_class:
+                requester = self.requester_class(self.servers)
             else:
-                if self.requester_class:
-                    requester = self.requester_class(self.servers)
-                else:
-                    requester = TestRequester(self.servers)
+                requester = TestRequester(self.servers)
 
-            self.requester = ConanRequester(requester, self.cache,
-                                            get_request_timeout())
-
-            self.hook_manager = HookManager(self.cache.hooks_path,
-                                            get_env("CONAN_HOOKS", list()), self.user_io.out)
-
-            self.localdb, self.rest_api_client, self.remote_manager = \
-                Conan.instance_remote_manager(self.requester, self.cache,
-                                              self.user_io, self.hook_manager)
-            return output, self.requester
-
-    def init_dynamic_vars(self, user_io=None):
-        # Migration system
-        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput())
-
-        # Maybe something have changed with migrations
-        return self._init_collaborators(user_io)
-
-    def run(self, command_line, user_io=None, assert_error=False):
-        """ run a single command as in the command line.
-            If user or password is filled, user_io will be mocked to return this
-            tuple if required
-        """
-        output, requester = self.init_dynamic_vars(user_io)
         with tools.environment_append(self.cache.config.env_vars):
-            # Settings preprocessor
-            interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
-                          self.hook_manager, requester, interactive=interactive)
+            conan = Conan(self.cache, self.user_io, self.runner, requester)
+
         outputer = CommandOutputer(self.user_io, self.cache)
         command = Command(conan, self.cache, self.user_io, outputer)
         args = shlex.split(command_line)
@@ -815,7 +781,7 @@ servers["r2"] = TestServer()
         sys.path.append(os.path.join(self.cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
 
-        old_output, old_requester = set_global_instances(output, requester)
+        old_output, old_requester = set_global_instances(self.user_io.out, requester)
         try:
             error = command.run(args)
         finally:
@@ -846,7 +812,7 @@ servers["r2"] = TestServer()
 
     def run_command(self, command):
         self.all_output += str(self.out)
-        self.init_dynamic_vars()  # Resets the output
+        self.user_io.out = TestBufferConanOutput()
         return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):

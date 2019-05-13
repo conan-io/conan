@@ -2,8 +2,6 @@ import os
 import sys
 from collections import OrderedDict
 
-import requests
-
 import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
@@ -63,21 +61,6 @@ from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 
 default_manifest_folder = '.conan_manifests'
-
-
-def get_request_timeout():
-    timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
-    try:
-        return float(timeout) if timeout is not None else None
-    except ValueError:
-        raise ConanException("Specify a numeric parameter for 'request_timeout'")
-
-
-def get_basic_requester(cache):
-    requester = requests.Session()
-    # Manage the verify and the client certificates and setup proxies
-
-    return ConanRequester(requester, cache, get_request_timeout())
 
 
 def api_method(f):
@@ -153,22 +136,6 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     @staticmethod
-    def instance_remote_manager(requester, cache, user_io, hook_manager):
-
-        # To handle remote connections
-        put_headers = cache.read_put_headers()
-        rest_api_client = RestApiClient(user_io.out, requester,
-                                        revisions_enabled=cache.config.revisions_enabled,
-                                        put_headers=put_headers)
-        # To store user and token
-        localdb = LocalDB.create(cache.localdb)
-        # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
-        # Handle remote connections
-        remote_manager = RemoteManager(cache, auth_manager, user_io.out, hook_manager)
-        return localdb, rest_api_client, remote_manager
-
-    @staticmethod
     def factory(interactive=None):
         """Factory"""
         # Respect color env setting or check tty if unset
@@ -200,38 +167,48 @@ class ConanAPIV1(object):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
             conans.util.log.logger = configure_logger()
             conans.util.log.logger.debug("INIT: Using config '%s'" % cache.conan_conf_path)
-
-            # Create Hook Manager
-            hook_manager = HookManager(cache.hooks_path, get_env("CONAN_HOOKS", list()),
-                                       user_io.out)
-
-            # Get the new command instance after migrations have been done
-            requester = get_basic_requester(cache)
-            _, _, remote_manager = ConanAPIV1.instance_remote_manager(requester, cache, user_io,
-                                                                      hook_manager)
-
-            # Adjust global tool variables
-            set_global_instances(out, requester)
-
-            # Settings preprocessor
-            if interactive is None:
-                interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = ConanAPIV1(cache, user_io, get_conan_runner(), remote_manager,
-                               hook_manager, requester, interactive=interactive)
+            conan = ConanAPIV1(cache, user_io, interactive=interactive)
 
         return conan, cache, user_io
 
-    def __init__(self, cache, user_io, runner, remote_manager, hook_manager, requester,
-                 interactive=True):
+    def __init__(self, cache, user_io, runner=None, requester=None, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(cache, ClientCache)
+
         self._cache = cache
+
         self._user_io = user_io
-        self._runner = runner
-        self._remote_manager = remote_manager
-        self._requester = requester
+        if interactive is None:
+            interactive = not get_env("CONAN_NON_INTERACTIVE", False)
         if not interactive:
             self._user_io.disable_input()
+
+        if runner is None:
+            print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS", False)
+            generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE", False)
+            log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT", True)
+            runner = ConanRunner(print_commands_to_output, generate_run_log_file, log_run_to_output)
+        self._runner = runner
+
+        # Create Hook Manager
+        self._hook_manager = HookManager(cache.hooks_path, get_env("CONAN_HOOKS", list()),
+                                         user_io.out)
+
+        self._requester = ConanRequester(cache, requester=requester)
+        # Adjust global tool variables
+        set_global_instances(user_io.out, self._requester)
+
+        put_headers = cache.read_put_headers()
+        rest_api_client = RestApiClient(user_io.out, self._requester,
+                                        revisions_enabled=cache.config.revisions_enabled,
+                                        put_headers=put_headers)
+        # To store user and token
+        localdb = LocalDB.create(cache.localdb)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
+        # Handle remote connections
+        remote_manager = RemoteManager(cache, auth_manager, user_io.out, self._hook_manager)
+        self._remote_manager = remote_manager
 
         self._proxy = ConanProxy(cache, self._user_io.out, remote_manager)
         resolver = RangeResolver(cache, remote_manager)
@@ -241,7 +218,6 @@ class ConanAPIV1(object):
         self._graph_manager = GraphManager(self._user_io.out, self._cache,
                                            self._remote_manager, self._loader, self._proxy,
                                            resolver)
-        self._hook_manager = hook_manager
 
     def invalidate_caches(self):
         self._loader.invalidate_caches()
@@ -1216,14 +1192,6 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
 def existing_info_files(folder):
     return os.path.exists(os.path.join(folder, CONANINFO)) and  \
            os.path.exists(os.path.join(folder, BUILD_INFO))
-
-
-def get_conan_runner():
-    print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS", False)
-    generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE", False)
-    log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT", True)
-    runner = ConanRunner(print_commands_to_output, generate_run_log_file, log_run_to_output)
-    return runner
 
 
 def migrate_and_get_cache(base_folder, out):
