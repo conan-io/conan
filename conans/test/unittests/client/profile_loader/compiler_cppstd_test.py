@@ -55,8 +55,8 @@ class SettingsCppStdTests(unittest.TestCase):
         save(self.cache.settings_path, settings_1_14_0)
         save(fullpath, t)
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with self.assertRaisesRegexp(ConanException,
-                                     "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
+        with six.assertRaisesRegex(self, ConanException,
+                                   "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
             r.process_settings(self.cache)
 
     def test_no_value(self):
