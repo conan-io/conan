@@ -8,6 +8,7 @@ import six
 from jinja2 import Template
 
 from conans.client.cache.cache import ClientCache
+from conans.client.migrations_settings import settings_1_14_0
 from conans.client.profile_loader import profile_from_args
 from conans.errors import ConanException
 from conans.test.utils.deprecation import catch_deprecation_warning
@@ -38,6 +39,25 @@ class SettingsCppStdTests(unittest.TestCase):
 
         save(fullpath, t.render(cppstd=cppstd, compiler_cppstd=compiler_cppstd))
         return filename
+
+    def test_no_compiler_cppstd(self):
+        # https://github.com/conan-io/conan/issues/5128
+        fullpath = os.path.join(self.cache.profiles_path, "default")
+        t = textwrap.dedent("""
+            [settings]
+            os=Macos
+            arch=x86_64
+            compiler=apple-clang
+            compiler.libcxx=libc++
+            compiler.version=10.0
+            compiler.cppstd = 14
+            """)
+        save(self.cache.settings_path, settings_1_14_0)
+        save(fullpath, t)
+        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        with self.assertRaisesRegexp(ConanException,
+                                     "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
+            r.process_settings(self.cache)
 
     def test_no_value(self):
         self._save_profile()
@@ -110,4 +130,3 @@ class SettingsCppStdTests(unittest.TestCase):
             r.process_settings(self.cache)
         self.assertNotIn('compiler.cppstd', r.settings)
         self.assertEqual(r.settings["cppstd"], "11")
-
