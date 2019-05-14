@@ -1677,20 +1677,48 @@ def _add_common_install_arguments(parser, build_help):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
-    parser.add_argument("-e", "--env", nargs=1, action=Extender,
-                        help='Environment variables that will be set during the package build, '
-                             '-e CXX=/usr/bin/clang++')
-    parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                        help='Define options values, e.g., -o Pkg:with_qt=true')
-    parser.add_argument("-pr", "--profile", default=None, action=Extender,
-                        help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
-    parser.add_argument("-s", "--settings", nargs=1, action=Extender,
-                        help='Settings to build the package, overwriting the defaults. e.g., '
-                             '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
+
+    # Arguments that can apply to the build or host machines (easily extend to target machine)
+    def environment_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-e{}".format(short_suffix),
+                            "--env{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="env_{}".format(machine),
+                            help='Environment variables that will be set during the'
+                                 ' package build ({} machine).'
+                                 ' e.g.: -e CXX=/usr/bin/clang++'.format(machine))
+
+    def options_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-o{}".format(short_suffix),
+                            "--options{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="options_{}".format(machine),
+                            help='Define options values ({} machine), e.g.:'
+                                 ' -o Pkg:with_qt=true'.format(machine))
+
+    def profile_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-pr{}".format(short_suffix),
+                            "--profile{}".format(long_suffix),
+                            default=None, action=Extender,
+                            dest='profile_{}'.format(machine),
+                            help='Apply the specified profile to the {} machine'.format(machine))
+
+    def settings_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-s{}".format(short_suffix),
+                            "--settings{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest='settings_{}'.format(machine),
+                            help='Settings to build the package, overwriting the defaults'
+                                 ' ({} machine). e.g.: -s compiler=gcc'.format(machine))
+
+    for item in [environment_args, options_args, profile_args, settings_args]:
+        item("build", "", "")  # By default, it is the build machine
+        item("build", ":b", ":build")
+        item("host", ":h", ":host")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
