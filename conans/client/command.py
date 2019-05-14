@@ -252,8 +252,8 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
         args = parser.parse_args(*args)
         self._warn_python2()
-        return self._conan.test(args.path, args.reference, args.profile, args.settings,
-                                args.options, args.env, args.remote, args.update,
+        return self._conan.test(args.path, args.reference, args.profile_build, args.settings_build,
+                                args.options_build, args.env_build, args.remote, args.update,
                                 build_modes=args.build, test_build_folder=args.test_build_folder)
 
     def create(self, *args):
@@ -302,8 +302,8 @@ class Command(object):
         info = None
         try:
             info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile, args.settings, args.options,
-                                      args.env, args.test_folder, args.not_export,
+                                      args.profile_build, args.settings_build, args.options_build,
+                                      args.env_build, args.test_folder, args.not_export,
                                       args.build, args.keep_source, args.keep_build, args.verify,
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
@@ -390,12 +390,12 @@ class Command(object):
                 name, version, user, channel = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
-                                           settings=args.settings, options=args.options,
-                                           env=args.env,
+                                           settings=args.settings_build, options=args.options_build,
+                                           env=args.env_build,
                                            remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
-                                           build=args.build, profile_names=args.profile,
+                                           build=args.build, profile_names=args.profile_build,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
@@ -405,13 +405,14 @@ class Command(object):
                                          "argument not allowed")
 
                 manifest_interactive = args.manifests_interactive
-                info = self._conan.install_reference(ref, settings=args.settings,
-                                                     options=args.options,
-                                                     env=args.env,
+                info = self._conan.install_reference(ref, settings=args.settings_build,
+                                                     options=args.options_build,
+                                                     env=args.env_build,
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=manifest_interactive,
-                                                     build=args.build, profile_names=args.profile,
+                                                     build=args.build,
+                                                     profile_names=args.profile_build,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder)
@@ -527,17 +528,18 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
 
-        if args.install_folder and (args.profile or args.settings or args.options or args.env):
+        if args.install_folder and (args.profile_build or args.settings_build or
+                                    args.options_build or args.env_build):
             raise ArgumentError(None,
                                 "--install-folder cannot be used together with -s, -o, -e or -pr")
 
         # BUILD ORDER ONLY
         if args.build_order:
             ret = self._conan.info_build_order(args.path_or_reference,
-                                               settings=args.settings,
-                                               options=args.options,
-                                               env=args.env,
-                                               profile_names=args.profile,
+                                               settings=args.settings_build,
+                                               options=args.options_build,
+                                               env=args.env_build,
+                                               profile_names=args.profile_build,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
@@ -552,10 +554,10 @@ class Command(object):
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
                                                        build_modes=args.build,
-                                                       settings=args.settings,
-                                                       options=args.options,
-                                                       env=args.env,
-                                                       profile_names=args.profile,
+                                                       settings=args.settings_build,
+                                                       options=args.options_build,
+                                                       env=args.env_build,
+                                                       profile_names=args.profile_build,
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
@@ -569,10 +571,10 @@ class Command(object):
         else:
             data = self._conan.info(args.path_or_reference,
                                     remote_name=args.remote,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    profile_names=args.profile,
+                                    settings=args.settings_build,
+                                    options=args.options_build,
+                                    env=args.env_build,
+                                    profile_names=args.profile_build,
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build)
@@ -1464,9 +1466,10 @@ class Command(object):
         args = parser.parse_args(*args)
 
         if args.subcommand == "install":
-            self._conan.workspace_install(args.path, args.settings, args.options, args.env,
+            self._conan.workspace_install(args.path, args.settings_build, args.options_build,
+                                          args.env_build,
                                           args.remote, args.build,
-                                          args.profile, args.update,
+                                          args.profile_build, args.update,
                                           install_folder=args.install_folder)
 
     def editable(self, *args):
