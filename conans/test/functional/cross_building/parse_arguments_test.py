@@ -1,14 +1,11 @@
 # coding=utf-8
 
-import unittest
 import argparse
-from conans.client.command import _add_common_install_arguments
+import unittest
+
 from parameterized.parameterized import parameterized_class
 
-from conans.client.tools import environment_append, save
-from conans.test.utils.deprecation import catch_deprecation_warning
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.client.command import _add_common_install_arguments
 
 
 @parameterized_class([{"argument": ["env", "-e", "--env"]},
