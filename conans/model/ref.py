@@ -7,6 +7,10 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
+DEFAULT_USER = "default"
+DEFAULT_CHANNEL = "default"
+
+
 def check_valid_ref(ref, allow_pattern):
     try:
         if not isinstance(ref, ConanFileReference):
@@ -80,7 +84,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """
     sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
-    def __new__(cls, name, version, user, channel, revision=None, validate=True):
+    def __new__(cls, name, version, user=None, channel=None, revision=None, validate=True):
         """Simple name creation.
         @param name:        string containing the desired name
         @param version:     string containing the desired version
@@ -88,6 +92,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
+        user = user or DEFAULT_USER
+        channel = channel or DEFAULT_CHANNEL
+
         version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
@@ -106,21 +113,37 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        try:
-            # Split returns empty start and end groups
-            _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
-        except ValueError:
-            raise ConanException("Wrong package recipe reference %s\nWrite something like "
-                                 "OpenCV/1.0.6@user/stable" % text)
+        if "@" not in text:
+            try:
+                # Split returns empty start and end groups
+                name, version = text.split("/")
+                user, channel = DEFAULT_USER, DEFAULT_CHANNEL
+                revision = None
+            except ValueError:
+                raise ConanException("Wrong package recipe reference %s\nWrite something like "
+                                     "OpenCV/1.0.6@user/stable" % text)
+        else:
+            try:
+                # Split returns empty start and end groups
+                _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
+            except ValueError:
+                raise ConanException("Wrong package recipe reference %s\nWrite something like "
+                                     "OpenCV/1.0.6@user/stable" % text)
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
     def __repr__(self):
+        if self.user == DEFAULT_USER and self.channel == DEFAULT_CHANNEL:
+            return "%s/%s" % (self.name, self.version)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
     def full_repr(self):
+        if self.user == DEFAULT_USER and self.channel == DEFAULT_CHANNEL:
+            tmp = "%s/%s" % (self.name, self.version)
+        else:
+            tmp = str(self)
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s%s" % (str(self), str_rev)
+        return "%s%s" % (tmp, str_rev)
 
     def dir_repr(self):
         return "/".join(self[:-1])

@@ -37,7 +37,7 @@ class Pkg(ConanFile):
 
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . llasote/stable")
             expected_output = textwrap.dedent(
                 """\
                 [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'url'. It is recommended to add it as attribute

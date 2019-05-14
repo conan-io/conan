@@ -124,6 +124,7 @@ class CMake(object):
 
         if self.toolset:
             args.append('-T "%s"' % self.toolset)
+        # args.append("--trace")
         return join_arguments(args)
 
     @property
