@@ -2,7 +2,6 @@ import json
 import os
 import unittest
 
-from nose.plugins.skip import Skip
 from six import StringIO
 
 from conans import __version__
