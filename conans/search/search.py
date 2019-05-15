@@ -93,7 +93,7 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
         if isinstance(pattern, ConanFileReference):
-            pattern = str(pattern)
+            pattern = pattern.dir_repr()
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
@@ -101,7 +101,6 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     refs = [ConanFileReference(*folder.split("/")) for folder in subdirs]
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        print(pattern)
         refs = [r for r in refs if _partial_match(pattern, r)]
     refs = sorted(refs)
     return refs

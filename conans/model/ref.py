@@ -7,8 +7,7 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
-DEFAULT_USER = "default"
-DEFAULT_CHANNEL = "default"
+NONE_FOLDER_VALUE = "default"
 
 
 def check_valid_ref(ref, allow_pattern):
@@ -92,9 +91,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
-        user = user or DEFAULT_USER
-        channel = channel or DEFAULT_CHANNEL
-
         version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
@@ -104,8 +100,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def _validate(self):
         ConanName.validate_name(self.name, reference_token="package name")
         ConanName.validate_name(self.version, True, reference_token="package version")
-        ConanName.validate_name(self.user, reference_token="user name")
-        ConanName.validate_name(self.channel, reference_token="channel")
+        if self.user is not None:
+            ConanName.validate_name(self.user, reference_token="user name")
+        if self.channel is not None:
+            ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
 
@@ -113,40 +111,32 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        if "@" not in text:
-            try:
-                # Split returns empty start and end groups
-                name, version = text.split("/")
-                user, channel = DEFAULT_USER, DEFAULT_CHANNEL
-                revision = None
-            except ValueError:
-                raise ConanException("Wrong package recipe reference %s\nWrite something like "
-                                     "OpenCV/1.0.6@user/stable" % text)
-        else:
-            try:
-                # Split returns empty start and end groups
-                _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
-            except ValueError:
-                raise ConanException("Wrong package recipe reference %s\nWrite something like "
-                                     "OpenCV/1.0.6@user/stable" % text)
+        try:
+            # Split returns empty start and end groups
+            _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
+        except ValueError:
+            raise ConanException("Wrong package recipe reference %s\nWrite something like "
+                                 "OpenCV/1.0.6@user/stable" % text)
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
     def __repr__(self):
-        if self.user == DEFAULT_USER and self.channel == DEFAULT_CHANNEL:
+        if self.user is None and self.channel is None:
             return "%s/%s" % (self.name, self.version)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
+    def full_str(self):
+        return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
+
     def full_repr(self):
-        if self.user == DEFAULT_USER and self.channel == DEFAULT_CHANNEL:
-            tmp = "%s/%s" % (self.name, self.version)
-        else:
-            tmp = str(self)
+        tmp = str(self)
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s%s" % (tmp, str_rev)
 
     def dir_repr(self):
-        return "/".join(self[:-1])
+        channel = self.channel or NONE_FOLDER_VALUE
+        user = self.user or NONE_FOLDER_VALUE
+        return "/".join([self.name, self.version, user, channel])
 
     def copy_with_rev(self, revision):
         return ConanFileReference(self.name, self.version, self.user, self.channel, revision)

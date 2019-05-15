@@ -17,9 +17,9 @@ class InfoOptionsTest(unittest.TestCase):
 
         # Check that I can pass options to info
         client.run("info . -o shared=True")
-        self.assertIn("conanfile.py (My-Package/1.3@None/None)", client.user_io.out)
+        self.assertIn("conanfile.py (My-Package/1.3)", client.user_io.out)
         client.run("info . -o My-Package:shared=True")
-        self.assertIn("conanfile.py (My-Package/1.3@None/None)", client.user_io.out)
+        self.assertIn("conanfile.py (My-Package/1.3)", client.user_io.out)
 
         # errors
         client.run("info . -o shared2=True", assert_error=True)

@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 
 from mock import Mock
@@ -77,7 +78,8 @@ class GraphManagerTest(unittest.TestCase):
 
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):
         conanfile = node.conanfile
-        ref = ConanFileReference.loads(str(ref))
+        ref = ref.replace("@", "/").replace("#", "/")
+        ref = ConanFileReference(*ref.split("/"))
         self.assertEqual(node.ref.full_repr(), ref.full_repr())
         self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))

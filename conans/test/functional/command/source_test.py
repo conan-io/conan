@@ -142,8 +142,8 @@ class ConanLib(ConanFile):
         os.mkdir(subdir)
         client.run("install . --install-folder subdir")
         client.run("source . --install-folder subdir --source-folder subdir")
-        self.assertIn("conanfile.py (Hello/0.1@None/None): Configuring sources", client.user_io.out)
-        self.assertIn("conanfile.py (Hello/0.1@None/None): cwd=>%s" % subdir, client.user_io.out)
+        self.assertIn("conanfile.py (Hello/0.1): Configuring sources", client.user_io.out)
+        self.assertIn("conanfile.py (Hello/0.1): cwd=>%s" % subdir, client.user_io.out)
 
     def local_source_src_not_exist_test(self):
         conanfile = '''
