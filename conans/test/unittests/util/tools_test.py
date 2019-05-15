@@ -28,13 +28,13 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import StoppableThreadBottle, \
     TestBufferConanOutput, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
+from conans.client.runner import ConanRunner
 
 
 class RunnerMock(object):
@@ -413,20 +413,20 @@ class HelloConan(ConanFile):
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings, output=self.output)
         output = TestBufferConanOutput()
-        runner = TestRunner(output)
+        cmd = tools.vcvars_command(settings, output=output)
+        self.assertIn("vcvarsall.bat", cmd)
+        runner = ConanRunner(output=output)
         runner(cmd + " && set vs140comntools")
-        self.assertIn("vcvarsall.bat", str(output))
-        self.assertIn("VS140COMNTOOLS=", str(output))
+        self.assertIn("VS140COMNTOOLS=", output)
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
-            runner = TestRunner(output)
-            cmd = tools.vcvars_command(settings, output=self.output)
+            runner = ConanRunner(output=output)
+            cmd = tools.vcvars_command(settings, output=output)
+            self.assertNotIn("vcvarsall.bat", cmd)
             runner(cmd + " && set vs140comntools")
-            self.assertNotIn("vcvarsall.bat", str(output))
-            self.assertIn("Conan:vcvars already set", str(output))
-            self.assertIn("VS140COMNTOOLS=", str(output))
+            self.assertIn("Conan:vcvars already set", output)
+            self.assertIn("VS140COMNTOOLS=", output)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_env_not_duplicated_path_test(self):
@@ -975,6 +975,7 @@ class HelloConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
+
 
 class CollectLibTestCase(unittest.TestCase):
 

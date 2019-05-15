@@ -31,6 +31,7 @@ from conans.client.conan_command_output import CommandOutputer
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -44,7 +45,6 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
@@ -52,6 +52,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -450,15 +451,18 @@ class TestBufferConanOutput(ConanOutput):
     """
 
     def __init__(self):
-        self._buffer = StringIO()
-        ConanOutput.__init__(self, self._buffer, color=False)
+        self._stream = StringIO()
+        self._color = False
+
+    def reset(self):
+        self._stream = StringIO()
 
     def __repr__(self):
         # FIXME: I'm sure there is a better approach. Look at six docs.
         if six.PY2:
-            return str(self._buffer.getvalue().encode("ascii", "ignore"))
+            return str(self._stream.getvalue().encode("ascii", "ignore"))
         else:
-            return self._buffer.getvalue()
+            return self._stream.getvalue()
 
     def __str__(self, *args, **kwargs):
         return self.__repr__()
@@ -592,6 +596,10 @@ class MockedUserIO(UserIO):
         self.login_index = Counter()
         UserIO.__init__(self, ins, out)
 
+    def reset(self):
+        self.out.reset()
+        self.login_index = Counter()
+
     def get_username(self, remote_name):
         username_env = self._get_env_username(remote_name)
         if username_env:
@@ -642,7 +650,6 @@ class TestClient(object):
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
         self.requester_class = requester_class
-        self.conan_runner = runner
 
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
@@ -655,6 +662,7 @@ servers["r2"] = TestServer()
 """)
 
         output = TestBufferConanOutput()
+        self.runner = runner or ConanRunner(output=output)
         self.user_io = MockedUserIO(self.users, out=output)
         self.cache = migrate_and_get_cache(self.base_folder, output)
         self.servers = servers or {}
@@ -662,7 +670,6 @@ servers["r2"] = TestServer()
             self.update_servers()
         self.tune_conan_conf(base_folder, cpu_count, revisions_enabled)
         self.storage_folder = self.cache.store
-        self.runner = TestRunner(output, runner=self.conan_runner)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     def _set_revisions(self, value):
@@ -755,7 +762,7 @@ servers["r2"] = TestServer()
             tuple if required
         """
         # Reset output
-        self.user_io.out = TestBufferConanOutput()
+        self.user_io.reset()
 
         requester = None
         real_servers = False
@@ -812,7 +819,7 @@ servers["r2"] = TestServer()
 
     def run_command(self, command):
         self.all_output += str(self.out)
-        self.user_io.out = TestBufferConanOutput()
+        self.user_io.reset()
         return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):

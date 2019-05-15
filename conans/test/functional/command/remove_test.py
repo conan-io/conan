@@ -257,9 +257,8 @@ class RemoveTest(unittest.TestCase):
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def basic_mocked_test(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=True)
-        self.client.run("remove hello/*", user_io=mocked_user_io)
+        self.client.user_io.request_boolean = Mock(return_value=True)
+        self.client.run("remove hello/*")
         self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
@@ -285,9 +284,8 @@ class RemoveTest(unittest.TestCase):
                                                      "Hello/2.4.11/myuser/testing")))
 
     def builds_test(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=True)
-        self.client.run("remove hello/* -b", user_io=mocked_user_io)
+        self.client.user_io.request_boolean = Mock(return_value=True)
+        self.client.run("remove hello/* -b")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
@@ -304,9 +302,8 @@ class RemoveTest(unittest.TestCase):
                                                      "Hello/2.4.11/myuser/testing")))
 
     def src_test(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=True)
-        self.client.run("remove hello/* -s", user_io=mocked_user_io)
+        self.client.user_io.request_boolean = Mock(return_value=True)
+        self.client.run("remove hello/* -s")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -323,9 +320,8 @@ class RemoveTest(unittest.TestCase):
                                                      "Hello/2.4.11/myuser/testing")))
 
     def reject_removal_test(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=False)
-        self.client.run("remove hello/* -s -b -p", user_io=mocked_user_io)
+        self.client.user_io.request_boolean = Mock(return_value=False)
+        self.client.run("remove hello/* -s -b -p")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},

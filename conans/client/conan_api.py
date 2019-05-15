@@ -30,7 +30,7 @@ from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput
+from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.client.recorder.search_recorder import SearchRecorder
@@ -138,20 +138,7 @@ class ConanAPIV1(object):
     @staticmethod
     def factory(interactive=None):
         """Factory"""
-        # Respect color env setting or check tty if unset
-        color_set = "CONAN_COLOR_DISPLAY" in os.environ
-        if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
-                or (not color_set
-                    and hasattr(sys.stdout, "isatty")
-                    and sys.stdout.isatty())):
-            import colorama
-            if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
-                colorama.init(convert=False, strip=False)
-            else:
-                colorama.init()
-            color = True
-        else:
-            color = False
+        color = colorama_initialize()
         out = ConanOutput(sys.stdout, color)
         user_io = UserIO(out=out)
 

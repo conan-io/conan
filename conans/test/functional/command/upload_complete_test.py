@@ -205,21 +205,20 @@ class UploadTest(unittest.TestCase):
                       self.client.user_io.out)
 
     def check_upload_confirm_question_test(self):
-        user_io = self.client.user_io
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
-        user_io.request_string = lambda _: "y"
-        self.client.run("upload Hello*", user_io=user_io)
+        self.client.user_io.request_string = lambda _: "y"
+        self.client.run("upload Hello*")
         self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.user_io.out)
 
         files = hello_conan_files("Hello2", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
-        user_io.request_string = lambda _: "n"
-        self.client.run("upload Hello*", user_io=user_io)
+        self.client.user_io.request_string = lambda _: "n"
+        self.client.run("upload Hello*")
         self.assertNotIn("Uploading Hello2/1.2.1@frodo/stable", self.client.user_io.out)
 
     def upload_same_package_dont_compress_test(self):

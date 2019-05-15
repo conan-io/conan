@@ -180,9 +180,7 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO DEBUG!", client.user_io.out)
             self.assertNotIn("FIND HELLO RELEASE!", client.user_io.out)
 
-            client.init_dynamic_vars()  # to reset output
-            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator,
-                          cwd=client.current_folder)
+            client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator)
             self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
             self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
 
@@ -213,20 +211,20 @@ class HelloConan(ConanFile):
             client.run('install . -s build_type=Debug %s --build=missing' % debug_install)
             client.run('install . -s build_type=Release %s --build=missing' % release_install)
 
-            client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
+            client.run_command('cmake . -G "%s"' % generator)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
             self.assertNotIn("', skipping the version check...", client.user_io.out)
             client.runner('cmake --build . --config Debug', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "Debug", "say_hello"])
-            client.runner(hello_comand, cwd=client.current_folder)
+            client.run_command(hello_comand)
 
             self.assertIn("Hello0:Debug Hello1:Debug", client.user_io.out)
             self.assertIn("Hello0Def:Debug Hello1Def:Debug", client.user_io.out)
             self.assertIn("Hello Debug Hello1", client.user_io.out)
             self.assertIn("Hello Debug Hello0", client.user_io.out)
-            client.runner('cmake --build . --config Release', cwd=client.current_folder)
+            client.run_command('cmake --build . --config Release')
             hello_comand = os.sep.join([".", "Release", "say_hello"])
-            client.runner(hello_comand, cwd=client.current_folder)
+            client.run_command(hello_comand)
 
             self.assertIn("Hello0:Release Hello1:Release", client.user_io.out)
             self.assertIn("Hello0Def:Release Hello1Def:Release", client.user_io.out)

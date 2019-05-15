@@ -42,7 +42,8 @@ request_timeout=2
 request_timeout=any_string
 """
         save(client.cache.conan_conf_path, conf)
-        with six.assertRaisesRegex(self, Exception, "Specify a numeric parameter for 'request_timeout'"):
+        with six.assertRaisesRegex(self, Exception,
+                                   "Specify a numeric parameter for 'request_timeout'"):
             client.run("install Lib/1.0@conan/stable")
 
     def no_request_timeout_test(self):
@@ -52,8 +53,4 @@ request_timeout=any_string
 [general]
 """
         save(client.cache.conan_conf_path, conf)
-        client.init_dynamic_vars()
         self.assertEqual(client.requester.get("MyUrl"), "NOT SPECIFIED")
-
-
-
