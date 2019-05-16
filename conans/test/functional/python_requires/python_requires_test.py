@@ -13,6 +13,28 @@ from conans.test.utils.conanfile import TestConanFile
 
 
 class PythonExtendTest(unittest.TestCase):
+    def test_with_python_requires(self):
+        # https://github.com/conan-io/conan/issues/5140
+        client = TestClient()
+        client.save({"conanfile.py": TestConanFile("dep", "0.1")})
+        client.run("export . user/testing")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+            p = python_requires("dep/0.1@user/testing")
+            class APck(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run('editable add . pkg/0.1@user/testing')
+        self.assertIn("Reference 'pkg/0.1@user/testing' in editable mode", client.out)
+        client.run("editable remove pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
+        client.run("copy pkg/0.1@user/testing company/stable")
+        self.assertIn("Copied pkg/0.1@user/testing to pkg/0.1@company/stable", client.out)
+        # imports should raise either
+        client.run("install .")
+        client.run("imports .")
+
     def _define_base(self, client):
         conanfile = """from conans import ConanFile
 class MyConanfileBase(ConanFile):
@@ -505,6 +527,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("ERROR: Error loading conanfile", t.out)
         self.assertIn("Same python_requires with different versions not allowed for a conanfile",
                       t.out)
+
 
 class PythonRequiresNestedTest(unittest.TestCase):
 
