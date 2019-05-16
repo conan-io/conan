@@ -158,7 +158,7 @@ class ConanAPIV1(object):
 
         return conan, cache, user_io
 
-    def __init__(self, cache, user_io, runner=None, requester=None, interactive=True):
+    def __init__(self, cache, user_io, runner=None, requester=None, interactive=None):
         assert isinstance(user_io, UserIO)
         assert isinstance(cache, ClientCache)
 

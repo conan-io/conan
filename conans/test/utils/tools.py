@@ -817,10 +817,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
-    def run_command(self, command):
-        self.all_output += str(self.out)
-        self.user_io.reset()
-        return self.runner(command, cwd=self.current_folder)
+    def run_command(self, command, cwd=None):
+        with self.chdir(cwd or self.current_folder):
+            self.all_output += str(self.out)
+            self.user_io.reset()
+            return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder

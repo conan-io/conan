@@ -26,8 +26,6 @@ class RequesterTest(unittest.TestCase):
 request_timeout=2
 """
         save(client.cache.conan_conf_path, conf)
-        client.init_dynamic_vars()
-
         self.assertEqual(client.requester.get("MyUrl"), 2.0)
 
         with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):

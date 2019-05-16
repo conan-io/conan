@@ -9,6 +9,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.test_files import hello_source_files
 from conans.test.utils.tools import TestBufferConanOutput, TestClient, test_processed_profile
+from mock import Mock
 
 
 myconan1 = """
@@ -81,7 +82,7 @@ class ExporterTest(unittest.TestCase):
         conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       client.hook_manager, conanfile_path, ref, copy_info=True)
+                       Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

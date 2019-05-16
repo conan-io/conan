@@ -196,8 +196,9 @@ class HelloConan(ConanFile):
 
         if platform.system() == "Windows":
             generator = "Visual Studio 14 Win64"
-            debug_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MDd'
-            release_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MD'
+            install = '-s compiler="Visual Studio" -s compiler.version=14'
+            debug_install = install + ' -s compiler.runtime=MDd'
+            release_install = install + ' -s compiler.runtime=MD'
         elif platform.system() == "Darwin":
             generator = "Xcode"
             debug_install = ''
@@ -214,6 +215,10 @@ class HelloConan(ConanFile):
             client.run_command('cmake . -G "%s"' % generator)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
             self.assertNotIn("', skipping the version check...", client.user_io.out)
+            if cmake_file == cmake_targets:
+                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
+            else:
+                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
             client.runner('cmake --build . --config Debug', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "Debug", "say_hello"])
             client.run_command(hello_comand)
@@ -223,6 +228,7 @@ class HelloConan(ConanFile):
             self.assertIn("Hello Debug Hello1", client.user_io.out)
             self.assertIn("Hello Debug Hello0", client.user_io.out)
             client.run_command('cmake --build . --config Release')
+
             hello_comand = os.sep.join([".", "Release", "say_hello"])
             client.run_command(hello_comand)
 
@@ -230,10 +236,6 @@ class HelloConan(ConanFile):
             self.assertIn("Hello0Def:Release Hello1Def:Release", client.user_io.out)
             self.assertIn("Hello Release Hello1", client.user_io.out)
             self.assertIn("Hello Release Hello0", client.user_io.out)
-            if cmake_file == cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
-            else:
-                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
 
 
 class CMakeMultiSyntaxTest(unittest.TestCase):

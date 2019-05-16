@@ -365,7 +365,7 @@ class WorkspaceTest(unittest.TestCase):
         cmd_release = os.path.normpath("./A/build/Release/bin/app")
         cmd_debug = os.path.normpath("./A/build/Debug/bin/app")
 
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command(cmd_release)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -375,7 +375,7 @@ class WorkspaceTest(unittest.TestCase):
         client.run("build B -bf=B/build/%s" % build_type)
         client.run("build A -bf=A/build/%s" % build_type)
 
-        client.runner(cmd_debug, cwd=client.current_folder)
+        client.run_command(cmd_debug)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -438,7 +438,7 @@ class WorkspaceTest(unittest.TestCase):
         cmd_release = os.path.normpath("./build/HelloA/Release/bin/app")
         cmd_debug = os.path.normpath("./build/HelloA/Debug/bin/app")
 
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command(cmd_release)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -448,7 +448,7 @@ class WorkspaceTest(unittest.TestCase):
         client.run("build HelloB -bf=build/HelloB/%s" % build_type)
         client.run("build HelloA -bf=build/HelloA/%s" % build_type)
 
-        client.runner(cmd_debug, cwd=client.current_folder)
+        client.run_command(cmd_debug)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -515,16 +515,16 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
         with client.chdir("build_debug"):
             client.run("workspace install ../conanws.yml -s build_type=Debug")
-        client.init_dynamic_vars()
 
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
-        client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
-        client.runner('cmake --build . --config Release', cwd=base_release)
+        client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator,
+                           cwd=base_release)
+        client.run_command('cmake --build . --config Release', cwd=base_release)
 
         cmd_release = os.path.normpath("./A/build/Release/bin/app")
         cmd_debug = os.path.normpath("./A/build/Debug/bin/app")
 
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command(cmd_release)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -533,8 +533,8 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
         time.sleep(1)
-        client.runner('cmake --build . --config Release', cwd=base_release)
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command('cmake --build . --config Release', cwd=base_release)
+        client.run_command(cmd_release)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -543,18 +543,17 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
         time.sleep(1)
-        client.runner('cmake --build . --config Release', cwd=base_release)
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command('cmake --build . --config Release', cwd=base_release)
+        client.run_command(cmd_release)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
         self.assertNotIn("Debug", client.out)
-        client.init_dynamic_vars()
 
-        client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
-        client.runner('cmake --build . --config Debug', cwd=base_debug)
-        client.runner(cmd_debug, cwd=client.current_folder)
+        client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
+        client.run_command('cmake --build . --config Debug', cwd=base_debug)
+        client.run_command(cmd_debug)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -564,8 +563,8 @@ class WorkspaceTest(unittest.TestCase):
                               "Bye Moon", "Hello World", output=client.out)
 
         time.sleep(1)
-        client.runner('cmake --build . --config Debug', cwd=base_debug)
-        client.runner(cmd_debug, cwd=client.current_folder)
+        client.run_command('cmake --build . --config Debug', cwd=base_debug)
+        client.run_command(cmd_debug)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -632,15 +631,15 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
             client.run("workspace install ../conanws.yml -s build_type=Debug")
 
-        client.init_dynamic_vars()
         generator = "Visual Studio 15 Win64"
-        client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=build)
-        client.runner('cmake --build . --config Release', cwd=build)
+        with client.chdir(build):
+            client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator)
+            client.run_command('cmake --build . --config Release')
 
         cmd_release = os.path.normpath("./A/build/Release/app")
         cmd_debug = os.path.normpath("./A/build/Debug/app")
 
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command(cmd_release)
         self.assertIn("Hello World C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -648,8 +647,9 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
 
-        client.runner('cmake --build . --config Release', cwd=build)
-        client.runner(cmd_release, cwd=client.current_folder)
+        with client.chdir(build):
+            client.run_command('cmake --build . --config Release')
+        client.run_command(cmd_release)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
@@ -657,20 +657,19 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
 
-        client.runner('cmake --build . --config Release', cwd=build)
-        client.runner(cmd_release, cwd=client.current_folder)
+        client.run_command('cmake --build build --config Release')
+        client.run_command(cmd_release)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
         self.assertIn("Hello World A Release!", client.out)
 
         self.assertNotIn("Debug", client.out)
 
-        client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=build)
+        client.run_command('cd build && cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator)
         # CMake configure will find the Release libraries, as we are in cmake-multi mode
         # Need to reset the output after that
-        client.init_dynamic_vars()  # Reset output
-        client.runner('cmake --build . --config Debug', cwd=build)
-        client.runner(cmd_debug, cwd=client.current_folder)
+        client.run_command('cmake --build build --config Debug')
+        client.run_command(cmd_debug)
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -678,8 +677,8 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Bye Moon", "Hello World", output=client.out)
 
-        client.runner('cmake --build . --config Debug', cwd=build)
-        client.runner(cmd_debug, cwd=client.current_folder)
+        client.run_command('cmake --build build --config Debug')
+        client.run_command(cmd_debug)
         self.assertIn("Hello World C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
@@ -1013,4 +1012,3 @@ class Pkg(ConanFile):
         client = TestClient()
         client.run("workspace", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
-
