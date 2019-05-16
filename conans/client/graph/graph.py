@@ -21,7 +21,7 @@ BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, recipe=None):
+    def __init__(self, ref, conanfile, build_context, recipe=None):
         self.ref = ref
         self._package_id = None
         self.prev = None
@@ -36,8 +36,12 @@ class Node(object):
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
 
+        assert build_context in ["build", "host"], "Invalid build context: '{}'" \
+                                                   " for node '{}'".format(build_context, self.ref)
+        self._build_context = build_context
+
         # The dependencies that can conflict to downstream consumers
-        self.public_deps = None  # {ref.name: Node}
+        self.public_deps = None  # {(ref.name, build_context): Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
         self.public_closure = None  # {ref.name: Node}
@@ -49,6 +53,11 @@ class Node(object):
         self.ancestors.update(ancestors)
         for n in self.neighbors():
             n.update_ancestors(ancestors)
+
+    @property
+    def build_context(self):
+        assert self._build_context, "build_context not initialized for node '{}'".format(self.ref)
+        return self._build_context
 
     @property
     def package_id(self):
@@ -69,7 +78,7 @@ class Node(object):
 
     def partial_copy(self):
         # Used for collapse_graph
-        result = Node(self.ref, self.conanfile)
+        result = Node(self.ref, self.conanfile, build_context=self.build_context)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
@@ -103,13 +112,14 @@ class Node(object):
 
     def __eq__(self, other):
         return (self.ref == other.ref and
+                self.build_context == other.build_context and
                 self.conanfile == other.conanfile)
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash((self.ref, self.conanfile))
+        return hash((self.ref, self.build_context, self.conanfile))
 
     def __repr__(self):
         return repr(self.conanfile)

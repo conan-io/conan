@@ -29,8 +29,8 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
         name = root_node.name
-        root_node.public_closure = OrderedDict([(name, root_node)])
-        root_node.public_deps = {name: root_node}
+        root_node.public_closure = OrderedDict([((name, root_node.build_context), root_node)])
+        root_node.public_deps = {(name, root_node.build_context): root_node}
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -43,7 +43,7 @@ class DepsGraphBuilder(object):
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
-                              remotes, processed_profile):
+                              remotes, processed_profile_build, processed_profile_host):
 
         # The options that will be defined in the node will be the real options values that have
         # been already propagated downstream from the dependency graph. This will override any
@@ -55,15 +55,20 @@ class DepsGraphBuilder(object):
 
         conanfile = node.conanfile
         scope = conanfile.display_name
-        requires = [Requirement(ref) for ref in build_requires_refs]
+        requires = []
+        for ref, context in build_requires_refs:
+            r = Requirement(ref)
+            r.build_context = context
+            requires.append(r)
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
         for require in requires:
             name = require.ref.name
-            require.build_require = True
+            require.set_build_require(True, require.build_context)
             self._handle_require(name, node, require, graph, check_updates, update,
-                                 remotes, processed_profile, processed_profile,
-                                 new_reqs, new_options)
+                                 remotes, processed_profile_build=processed_profile_build,
+                                 processed_profile_host=processed_profile_host,
+                                 new_reqs=new_reqs, new_options=new_options)
 
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
         # This is to make sure that build_requires have precedence over the normal requires
@@ -139,21 +144,22 @@ class DepsGraphBuilder(object):
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
-        previous = node.public_deps.get(name)
-        previous_closure = node.public_closure.get(name)
+        build_context = require.build_context if node.build_context == "host" else node.build_context
+        previous = node.public_deps.get((name, build_context))
+        previous_closure = node.public_closure.get((name, build_context))
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
             # node -> new_node
-            processed_profile = processed_profile_host if not require.build_require else processed_profile_build
+            processed_profile_host = processed_profile_host if require.build_context == "host" else processed_profile_build
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remotes,
-                                             processed_profile)
+                                             processed_profile_host)
 
             # The closure of a new node starts with just itself
-            new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
-            node.public_closure[name] = new_node
+            new_node.public_closure = OrderedDict([((new_node.ref.name, new_node.build_context), new_node)])
+            node.public_closure[(name, new_node.build_context)] = new_node
             new_node.inverse_closure.add(node)
-            node.public_deps[new_node.name] = new_node
+            node.public_deps[(new_node.name, new_node.build_context)] = new_node
 
             # If the parent node is a build-require, this new node will be a build-require
             # If the requirement is a build-require, this node will also be a build-require
@@ -163,16 +169,16 @@ class DepsGraphBuilder(object):
             if require.private or require.build_require:
                 # If the requirement is private (or build_require), a new public scope is defined
                 new_node.public_deps = node.public_closure.copy()
-                new_node.public_deps[name] = new_node
+                new_node.public_deps[(name, new_node.build_context)] = new_node
             else:
                 new_node.public_deps = node.public_deps.copy()
-                new_node.public_deps[name] = new_node
+                new_node.public_deps[(name, new_node.build_context)] = new_node
 
                 # Update the closure of each dependent
                 for dep_node in node.inverse_closure:
-                    dep_node.public_closure[new_node.name] = new_node
+                    dep_node.public_closure[(new_node.name, new_node.build_context)] = new_node
                     new_node.inverse_closure.add(dep_node)
-                    dep_node.public_deps[new_node.name] = new_node
+                    dep_node.public_deps[(new_node.name, new_node.build_context)] = new_node
 
             # RECURSION!
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
@@ -200,23 +206,24 @@ class DepsGraphBuilder(object):
             if previous.private and not require.private:
                 previous.make_public()
 
-            node.public_closure[name] = previous
+            node.public_closure[(name, build_context)] = previous
             previous.inverse_closure.add(node)
-            node.public_deps[name] = previous
+            node.public_deps[(name, previous.build_context)] = previous
             dep_graph.add_edge(node, previous, require.private, require.build_require)
             # Update the closure of each dependent
-            for name, n in previous.public_closure.items():
+            for (name, build_context), n in previous.public_closure.items():
                 if n.build_require or n.private:
                     continue
-                node.public_closure[name] = n
+                node.public_closure[(name, build_context)] = n
                 n.inverse_closure.add(node)
                 for dep_node in node.inverse_closure:
-                    dep_node.public_closure[name] = n
-                    dep_node.public_deps[name] = n
+                    dep_node.public_closure[(name, build_context)] = n
+                    dep_node.public_deps[(name, n.build_context)] = n
                     n.inverse_closure.add(dep_node)
 
             # RECURSION!
-            if self._recurse(previous.public_closure, new_reqs, new_options):
+            if self._recurse(previous.public_closure, new_reqs, new_options,
+                             build_context=previous.build_context):  # TODO: Options forced to same context
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
                                 new_options, check_updates, update,
                                 remotes, processed_profile_host, processed_profile_build)
@@ -232,16 +239,16 @@ class DepsGraphBuilder(object):
             return REVISION_CONFLICT
         return False
 
-    def _recurse(self, closure, new_reqs, new_options):
+    def _recurse(self, closure, new_reqs, new_options, build_context):
         """ For a given closure, if some requirements or options coming from downstream
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
-            n = closure.get(req.ref.name)
+            n = closure.get((req.ref.name, build_context))
             if n and self._conflicting_references(n.ref, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
-            n = closure.get(pkg_name)
+            n = closure.get((pkg_name, build_context))
             if n:
                 options = n.conanfile.options
                 for option, value in options_values.items():
@@ -340,7 +347,8 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
-        new_node = Node(new_ref, dep_conanfile)
+        build_context = requirement.build_context if current_node.build_context == "host" else current_node.build_context
+        new_node = Node(new_ref, dep_conanfile, build_context=build_context)
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote

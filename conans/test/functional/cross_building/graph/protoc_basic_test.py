@@ -60,7 +60,9 @@ class ClassicProtocExample(GraphManagerTest):
             
             settings = "os"
             requires = "protobuf/testing@user/channel"
-            build_requires = "protoc/testing@user/channel"
+            
+            def build_requirements(self):
+                self.build_requires("protoc/testing@user/channel")
             
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -112,19 +114,23 @@ class ClassicProtocExample(GraphManagerTest):
         # Check HOST packages
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(application.conanfile.name, "application")
+        self.assertEqual(application.build_context, "host")
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
+        self.assertEqual(protobuf_host.build_context, "host")
         self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
         print(id(protobuf_host))
 
         # Check BUILD packages
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
+        self.assertEqual(protoc_build.build_context, "build")
         self.assertEqual(protoc_build.conanfile.settings.os, profile_build.settings['os'])
 
         protobuf_build = protoc_build.dependencies[0].dst
-        self.assertEqual(protobuf_build.conanfile.name, "protobuf")
-        self.assertEqual(protobuf_build.conanfile.settings.os, profile_build.settings['os'])
         print(id(protobuf_build))
+        self.assertEqual(protobuf_build.conanfile.name, "protobuf")
+        self.assertEqual(protoc_build.build_context, "build")
+        self.assertEqual(protobuf_build.conanfile.settings.os, profile_build.settings['os'])

@@ -20,7 +20,16 @@ class Requirement(object):
         self.range_ref = ref
         self.override = override
         self.private = private
-        self.build_require = False
+        self._build_require = False
+        self.build_context = "host"
+
+    @property
+    def build_require(self):
+        return self._build_require
+
+    def set_build_require(self, value, build_context="build"):
+        self._build_require = value
+        self.build_context = build_context
 
     @property
     def version_range(self):

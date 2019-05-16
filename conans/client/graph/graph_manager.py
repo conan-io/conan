@@ -24,22 +24,22 @@ class _RecipeBuildRequires(OrderedDict):
         if not isinstance(build_requires, (list, tuple)):
             build_requires = [build_requires]
         for build_require in build_requires:
-            self.add(build_require)
+            self.add(build_require, context="build")
+        self._conanfile = conanfile
 
-    def add(self, build_require):
+    def add(self, build_require, context):
         if not isinstance(build_require, ConanFileReference):
             build_require = ConanFileReference.loads(build_require)
-        self[build_require.name] = build_require
+        self[(build_require.name, context)] = build_require
 
-    def __call__(self, build_require):
-        self.add(build_require)
-
-    def update(self, build_requires):
-        for build_require in build_requires:
-            self.add(build_require)
+    def __call__(self, build_require, context="build"):
+        assert context in ["build", "host"], "Invalid context for build_require: '{}' in conanfile" \
+                                             " '{}'".format(context, self._conanfile)
+        self.add(build_require, context)
 
     def __str__(self):
-        return ", ".join(str(r) for r in self.values())
+        items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
+        return ", ".join(items)
 
 
 class GraphManager(object):
@@ -112,14 +112,14 @@ class GraphManager(object):
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile_host,
                                                   scope_options=False)
-            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, build_context="host", recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             if not self._cache.config.revisions_enabled and reference.revision is not None:
                 raise ConanException("Revisions not enabled in the client, specify a "
                                      "reference without revision")
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile_host)
-            root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, build_context="host", recipe=RECIPE_VIRTUAL)
         else:
             path = reference
             if path.endswith(".py"):
@@ -139,14 +139,15 @@ class GraphManager(object):
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile_host,
                                                             ref=graph_info.root)
 
-            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
+            root_node = Node(ref, conanfile, build_context="host", recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
                                       profile_build_requires=graph_info.profile_host.build_requires,
                                       recorder=recorder,
-                                      processed_profile=processed_profile_host,
+                                      processed_profile_host=processed_profile_host,
+                                      processed_profile_build=processed_profile_build,
                                       apply_build_requires=apply_build_requires)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
@@ -199,44 +200,50 @@ class GraphManager(object):
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
-                                if build_require.name in package_build_requires:  # Override existing
+                                if (build_require.name, "build") in package_build_requires:
+                                    # Override existing
                                     # this is a way to have only one package Name for all versions
                                     # (no conflicts)
                                     # but the dict key is not used at all
-                                    package_build_requires[build_require.name] = build_require
+                                    package_build_requires[(build_require.name, "build")] = build_require
                                 elif build_require.name != node.name:  # Profile one
-                                    new_profile_build_requires.append(build_require)
+                                    new_profile_build_requires.append((build_require, "build"))
+                                else:
+                                    # We are recursing build_requires, we can arrive here with a
+                                    #  build_require from the profile (itself will be the 'node')
+                                    pass
 
             if package_build_requires:
+                build_requires_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
                 subgraph = builder.extend_build_requires(graph, node,
-                                                         package_build_requires.values(),
+                                                         build_requires_list,
                                                          check_updates, update, remotes,
-                                                         processed_profile_build)
+                                                         processed_profile_build,
+                                                         processed_profile_host)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, profile_build_requires, recorder,
                                              processed_profile_build=processed_profile_build,
-                                             processed_profile_host=processed_profile_build)
+                                             processed_profile_host=processed_profile_host)
                 graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
-                                                         processed_profile_build)
+                                                         processed_profile_build,
+                                                         processed_profile_host)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, {}, recorder,
                                              processed_profile_build=processed_profile_build,
-                                             processed_profile_host=processed_profile_build)
+                                             processed_profile_host=processed_profile_host)
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    profile_build_requires, recorder, processed_profile, apply_build_requires):
+                    profile_build_requires, recorder, processed_profile_host,
+                    processed_profile_build, apply_build_requires):
 
         assert isinstance(build_mode, BuildMode)
-
-        processed_profile_build = processed_profile
-        processed_profile_host = processed_profile
 
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver, recorder)
         graph = builder.load_graph(root_node, check_updates, update, remotes,
@@ -254,11 +261,11 @@ class GraphManager(object):
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
         for node in graph.nodes:
             closure = node.public_closure
-            closure.pop(node.name)
+            closure.pop((node.name, node.build_context))
             node_order = list(closure.values())
             # List sort is stable, will keep the original order of the closure, but prioritize levels
             node_order.sort(key=lambda n: inverse_levels[n])
-            node.public_closure = node_order
+            node.public_closure = node_order  # TODO: We went from a dict to a list :S
 
         return graph
 
