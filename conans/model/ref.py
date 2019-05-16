@@ -108,15 +108,20 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             ConanName.validate_revision(self.revision)
 
     @staticmethod
-    def loads(text, validate=True):
+    def loads(text, validate=True, user_channel_needed=False):
         """ Parses a text string to generate a ConanFileReference object
         """
         err_msg = 'Wrong package recipe reference %s\nWrite something like ' \
                   '"OpenCV/1.0.6@user/stable"' % text
+
+        # FIXME: At Conan 2.0 we can force "lib/1.0@" to specify without user channel
+        # FIXME: and "@user/channel" to not mess with patterns etc
+
+        if "@" not in text and user_channel_needed:
+            raise ConanException("Specify a complete reference like "
+                                 "OpenCV/1.0.6@user/stable")
+
         if "@" not in text:
-            if "*" in text:
-                # FIXME: This is becoming insane, why we can get here a "*"?
-                raise ConanException(err_msg)
             try:
                 # Split returns empty start and end groups
                 name, version = text.split("/")

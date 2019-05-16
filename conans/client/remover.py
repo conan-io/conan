@@ -144,7 +144,7 @@ class ConanRemover(object):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         try:
-            input_ref = ConanFileReference.loads(pattern)
+            input_ref = ConanFileReference.loads(pattern, user_channel_needed=True)
         except (ConanException, TypeError):
             input_ref = None
 

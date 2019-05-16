@@ -92,7 +92,7 @@ class HelloReuseConan(ConanFile):
         self.assertNotIn("lasote/stable", self.client.user_io.out)
 
     def test_local_commands(self):
-        self.client.run("install .", assert_error=False)
+        self.client.run("install .")
         self.assertNotIn("ERROR: conanfile.py (Hello/0.1): "
                          "Error in requirements() method, line 10", self.client.out)
         self.assertNotIn("ConanException: CONAN_USERNAME environment "

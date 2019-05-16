@@ -385,9 +385,7 @@ class Command(object):
         info = None
         try:
             try:
-                if "@" not in args.path_or_reference:
-                    raise ConanException()
-                ref = ConanFileReference.loads(args.path_or_reference)
+                ref = ConanFileReference.loads(args.path_or_reference, user_channel_needed=True)
             except ConanException:
                 name, version, user, channel = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
@@ -1056,7 +1054,7 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
-            ref = ConanFileReference.loads(args.pattern_or_reference)
+            ref = ConanFileReference.loads(args.pattern_or_reference, user_channel_needed=True)
             if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.g.: conan search lib/*@lasote/stable
@@ -1576,7 +1574,7 @@ class Command(object):
         ref = None
         if pattern:
             try:
-                ref = ConanFileReference.loads(pattern)
+                ref = ConanFileReference.loads(pattern, user_channel_needed=True)
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
