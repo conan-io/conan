@@ -49,7 +49,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         with catch_deprecation_warning(self):
             client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("""Configuration:
+        self.assertIn("""Configuration (host machine):
 [settings]
 compiler=mycomp
 compiler.version=2.3
