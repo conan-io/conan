@@ -258,7 +258,7 @@ class Pkg(ConanFile):
                                    "3eeab577a3134fa3afdcd82881751789ec48e08f")]:
 
             self.client.run("install . -o language=%d %s --build missing" % (lang, self.settings))
-            self.assertIn("Configuration:[settings]", "".join(str(self.client.out).splitlines()))
+            self.assertIn("Configuration (host machine):[settings]", "".join(str(self.client.out).splitlines()))
             info_path = os.path.join(self.client.current_folder, CONANINFO)
             conan_info = ConanInfo.load_file(info_path)
             self.assertEqual("arch=x86\n"
