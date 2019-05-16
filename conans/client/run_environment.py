@@ -20,8 +20,13 @@ class RunEnvironment(object):
             lib_paths.extend(self.conanfile.deps_cpp_info[dep].lib_paths)
             bin_paths.extend(self.conanfile.deps_cpp_info[dep].bin_paths)
 
+        python_paths = []
+        for dep in self.conanfile.deps_env_info.deps:
+            python_paths.extend(self.conanfile.deps_env_info[dep].vars.get('PYTHONPATH',[]))
+
         ret = {"DYLD_LIBRARY_PATH": lib_paths,
                "LD_LIBRARY_PATH": lib_paths,
-               "PATH": bin_paths}
+               "PATH": bin_paths,
+               "PYTHONPATH": python_paths}
 
         return ret
