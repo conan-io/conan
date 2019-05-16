@@ -334,8 +334,8 @@ class ConanAPIV1(object):
                                   test_build_folder=test_build_folder)
 
     @api_method
-    def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
-               profile_build=None, profile_host=None,
+    def create(self, conanfile_path, name, version, user, channel,
+               profile_build, profile_host,
                test_folder=None, not_export=False,
                build_modes=None,
                keep_source=False, keep_build=False, verify=None,
@@ -372,7 +372,8 @@ class ConanAPIV1(object):
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
-            graph_info = get_graph_info(profile_build=profile_build, profile_host=profile_host,
+            graph_info = get_graph_info(profile_build=profile_build,
+                                        profile_host=profile_host,
                                         cwd=cwd, install_folder=None, cache=self._cache,
                                         output=self._user_io.out)
 
