@@ -812,6 +812,11 @@ class Command(object):
         info = None
 
         try:
+            profile_build = ProfileInfo(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+            profile_host = ProfileInfo(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
                                           version=version,
@@ -819,10 +824,8 @@ class Command(object):
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
                                           install_folder=args.install_folder,
-                                          profile_names=args.profile_build,
-                                          env=args.env_build,
-                                          settings=args.settings_build,
-                                          options=args.options_build,
+                                          profile_build=profile_build,
+                                          profile_host=profile_host,
                                           force=args.force,
                                           user=user,
                                           channel=channel)
