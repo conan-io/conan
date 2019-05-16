@@ -490,7 +490,7 @@ class ConanAPIV1(object):
                                     self._cache, self._user_io.out)
 
         self._user_io.out.info("Configuration:")
-        self._user_io.out.writeln(graph_info.profile.dumps())
+        self._user_io.out.writeln(graph_info.profile_host.dumps())
 
         self._cache.editable_packages.override(workspace.get_editable_dict())
 
@@ -1168,7 +1168,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                    name=None, version=None, user=None, channel=None):
     try:
         graph_info = GraphInfo.load(install_folder)
-        graph_info.profile.process_settings(cache, preprocess=False)
+        graph_info.profile_host.process_settings(cache, preprocess=False)
     except IOError:  # Only if file is missing
         if install_folder:
             raise ConanException("Failed to load graphinfo file in install-folder: %s"
@@ -1187,7 +1187,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
         profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile.process_settings(cache)
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
-        graph_info = GraphInfo(profile=profile, root_ref=root_ref)
+        graph_info = GraphInfo(profile_build=profile, profile_host=profile, root_ref=root_ref)
         # Preprocess settings and convert to real settings
     return graph_info
 

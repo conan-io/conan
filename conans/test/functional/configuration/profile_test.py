@@ -547,7 +547,7 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.save({"profile1": profile1, "profile2": profile2})
         self.client.run("create . lib/1.0@user/channel --profile profile2 -p profile1")
         self.assertIn(dedent("""
-                             Configuration:
+                             Configuration (host machine):
                              [settings]
                              arch=x86_64
                              compiler=Visual Studio

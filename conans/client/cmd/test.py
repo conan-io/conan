@@ -23,7 +23,7 @@ class PackageTester(object):
         """
         base_folder = os.path.dirname(conanfile_abs_path)
         test_build_folder, delete_after_build = self._build_folder(test_build_folder,
-                                                                   graph_info.profile,
+                                                                   graph_info.profile_host,
                                                                    base_folder)
         rmdir(test_build_folder)
         if build_modes is None:
