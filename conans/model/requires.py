@@ -67,8 +67,13 @@ class Requirements(OrderedDict):
                         private = True
                     else:
                         raise ConanException("Unknown requirement config %s" % elem)
+                assert(isinstance(ref, ConanFileReference), "Add reference (tuple) to the "
+                                                            "requirements must be a "
+                                                            "ConanFileReference")
                 self.add(ref, private=private, override=override)
             else:
+                assert (isinstance(v, ConanFileReference), "Add reference to the requirements "
+                                                           "must be a ConanFileReference")
                 self.add(v)
 
     def copy(self):
@@ -88,8 +93,10 @@ class Requirements(OrderedDict):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
-
         ref = ConanFileReference.loads(reference)
+        self.add_ref(ref, private, override)
+
+    def add_ref(self, ref, private=False, override=False):
         name = ref.name
 
         new_requirement = Requirement(ref, private, override)

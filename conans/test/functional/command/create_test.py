@@ -512,3 +512,16 @@ class TestConanLib(ConanFile):
         self.assertIn("Build error", client.out)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))
+
+    def create_without_ref_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    name = "lib"
+                    version = "1.0"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create .')
+        self.assertIn("lib/1.0: Created package revision", client.out)

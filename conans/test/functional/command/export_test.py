@@ -286,9 +286,8 @@ class ExportTest(unittest.TestCase):
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_case_sensitive(self):
-        self.files = cpp_hello_conan_files("hello0", "0.1")
-        self.ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
-        self.conan.save(self.files)
+        files = cpp_hello_conan_files("hello0", "0.1")
+        self.conan.save(files)
         self.conan.run("export . lasote/stable", assert_error=True)
         self.assertIn("ERROR: Cannot export package with same name but different case",
                       self.conan.user_io.out)

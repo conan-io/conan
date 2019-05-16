@@ -189,7 +189,7 @@ class ConanFileLoader(object):
         conanfile.settings = processed_profile._settings.copy_values()
 
         for reference in references:
-            conanfile.requires.add(reference.full_repr())  # Convert to string necessary
+            conanfile.requires.add_ref(reference)
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
         if scope_options:

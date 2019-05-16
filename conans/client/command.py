@@ -267,7 +267,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.create.__doc__, prog="conan create")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference",
+        parser.add_argument("reference", nargs='?', default=None,
                             help='user/channel, version@user/channel or pkg/version@user/channel '
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -385,6 +385,8 @@ class Command(object):
         info = None
         try:
             try:
+                if "@" not in args.path_or_reference:
+                    raise ConanException()
                 ref = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
                 name, version, user, channel = get_reference_fields(args.reference)
@@ -1645,8 +1647,12 @@ def get_reference_fields(arg_reference):
             name, version = name_version
         except ValueError:
             name, version = None, name_version[0]
-        user, channel = user_channel.split("/")
+        if user_channel:
+            user, channel = user_channel.split("/")
+        else:
+            user, channel = None, None
     except ValueError:
+        # FIXME: To indicate user/channel it should be "@user/channel"
         name, version = None, None
         try:
             user, channel = arg_reference.split("/")

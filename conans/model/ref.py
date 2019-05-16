@@ -111,12 +111,34 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        try:
-            # Split returns empty start and end groups
-            _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
-        except ValueError:
-            raise ConanException("Wrong package recipe reference %s\nWrite something like "
-                                 "OpenCV/1.0.6@user/stable" % text)
+        err_msg = 'Wrong package recipe reference %s\nWrite something like ' \
+                  '"OpenCV/1.0.6@user/stable"' % text
+        if "@" not in text:
+            if "*" in text:
+                # FIXME: This is becoming insane, why we can get here a "*"?
+                raise ConanException(err_msg)
+            try:
+                # Split returns empty start and end groups
+                name, version = text.split("/")
+                user, channel, revision = None, None, None
+            except ValueError:
+                raise ConanException(err_msg)
+        else:
+            try:
+                # Split returns empty start and end groups
+                _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
+            except ValueError:
+                raise ConanException("Wrong package recipe reference %s\nWrite something like "
+                                     "OpenCV/1.0.6@user/stable" % text)
+
+        # FIXME: Hack in case someone is doing:
+        # self.requires("Say/0.1@%s/%s" % (self.user, self.channel))
+        # being self.user and self.channel None
+        if user == "None":
+            user = None
+        if channel == "None":
+            channel = None
+
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
