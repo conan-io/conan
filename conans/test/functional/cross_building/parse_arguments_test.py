@@ -5,7 +5,7 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conans.client.command import _add_common_install_arguments
+from conans.client.command import _add_profile_arguments
 
 
 @parameterized_class([{"argument": ["env", "-e", "--env"]},
@@ -22,7 +22,7 @@ class ArgsParseProfileTest(unittest.TestCase):
 
     def _run_parse(self, *args):
         parser = argparse.ArgumentParser()
-        _add_common_install_arguments(parser, build_help=False)
+        _add_profile_arguments(parser)
         parsed_args = parser.parse_args(*args)
         build = getattr(parsed_args, self.args_dest_build)
         host = getattr(parsed_args, self.args_dest_host)

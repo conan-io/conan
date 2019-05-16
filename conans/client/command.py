@@ -775,29 +775,21 @@ class Command(object):
                                               "(if name and version are not declared in the "
                                               "conanfile.py)")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-e", "--env", nargs=1, action=Extender,
-                            help='Environment variables that will be set during the package build, '
-                                 '-e CXX=/usr/bin/clang++')
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Overwrite existing package if existing')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP + " If these files are found in the specified"
                             " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
                             "will raise an error.")
-        parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                            help='Define options values, e.g., -o pkg:with_qt=true')
-        parser.add_argument("-pr", "--profile", action=Extender,
-                            help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
                                  " it won't call the recipe 'package()' method, and will run a copy"
                                  " of the provided folder.")
-        parser.add_argument("-s", "--settings", nargs=1, action=Extender,
-                            help='Define settings values, e.g., -s compiler=gcc')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
+        _add_profile_arguments(parser)
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -1684,7 +1676,10 @@ def _add_common_install_arguments(parser, build_help):
                         help='Look in the specified remote server')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
+    _add_profile_arguments(parser)
 
+
+def _add_profile_arguments(parser):
     # Arguments that can apply to the build or host machines (easily extend to target machine)
     def environment_args(machine, short_suffix="", long_suffix=""):
         parser.add_argument("-e{}".format(short_suffix),
