@@ -1851,7 +1851,8 @@ class ChatConan(ConanFile):
         processed_profile = test_processed_profile(profile=profile)
         root_conan = self.retriever.root(chat_content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             processed_profile=processed_profile)
+                                             processed_profile_build=processed_profile,
+                                             processed_profile_host=processed_profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
