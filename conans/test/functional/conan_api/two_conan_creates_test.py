@@ -6,7 +6,7 @@ import unittest
 from six import StringIO
 from textwrap import dedent
 
-from conans.client.conan_api import ConanAPIV1
+from conans.client.conan_api import ConanAPIV1, ProfileInfo
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import chdir
 from conans.model.ref import PackageReference
@@ -61,10 +61,14 @@ class ConanCreateTest(unittest.TestCase):
                                 self.output.info("NUMBER 42!!")
                         """)
                     save("conanfile.py", conanfile)
-                    api.create(".", "pkg", "version", "user", "channel")
+                    api.create(".", "pkg", "version", "user", "channel",
+                               profile_build=ProfileInfo(None, None, None, None),
+                               profile_host=ProfileInfo(None, None, None, None))
                     self.assertIn("pkg/version@user/channel: NUMBER 42!!", result.getvalue())
                     save("conanfile.py", conanfile.replace("42", "123"))
-                    api.create(".", "pkg", "version", "user", "channel")
+                    api.create(".", "pkg", "version", "user", "channel",
+                               profile_build=ProfileInfo(None, None, None, None),
+                               profile_host=ProfileInfo(None, None, None, None))
                     self.assertIn("pkg/version@user/channel: NUMBER 123!!", result.getvalue())
                 finally:
                     sys.stdout = old_stdout

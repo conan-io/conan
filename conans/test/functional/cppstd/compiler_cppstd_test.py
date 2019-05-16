@@ -137,7 +137,7 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
                       " please update your recipe.", self.t.out)
 
     def test_only_cppstd(self):
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             self.t.run("info . -s cppstd=14")
         self.assertNotIn(">>> compiler.cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: 14", self.t.out)

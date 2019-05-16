@@ -105,7 +105,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
         cppstd = cppstd_default(self.compiler, self.compiler_version)
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: gnu14", output)
@@ -114,7 +114,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
 
     def test_value_non_default(self):
         # Explicit value (not the default) passed to setting 'cppstd'
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: 14", output)
@@ -169,7 +169,7 @@ class SettingsCompareCppStdApproaches(DefaultCppTestCase):
 
     def test_cppstd_non_defaults(self):
         cppstd_value = "14"  # Not the default
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             id_with_old, _ = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd_value})
         id_with_new, _ = self._get_id(with_cppstd=False,
                                       settings_values={'compiler.cppstd': cppstd_value})
