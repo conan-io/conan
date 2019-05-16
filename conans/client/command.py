@@ -1736,7 +1736,7 @@ def _add_profile_arguments(parser):
                                  ' ({} machine). e.g.: -s compiler=gcc'.format(machine))
 
     for item in [environment_args, options_args, profile_args, settings_args]:
-        item("build", "", "")  # By default, it is the build machine
+        item("host", "", "")  # By default it is the HOST, the one we are building binaries for
         item("build", ":b", ":build")
         item("host", ":h", ":host")
 
