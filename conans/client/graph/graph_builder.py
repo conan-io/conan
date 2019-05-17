@@ -56,9 +56,8 @@ class DepsGraphBuilder(object):
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
         for require in requires:
-            name = require.ref.name
             require.build_require = True
-            self._handle_require(name, node, require, graph, check_updates, update,
+            self._handle_require(node, require, graph, check_updates, update,
                                  remotes, processed_profile, new_reqs, new_options)
 
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
@@ -118,15 +117,16 @@ class DepsGraphBuilder(object):
         self._resolve_deps(dep_graph, node, update, remotes)
 
         # Expand each one of the current requirements
-        for name, require in node.conanfile.requires.items():
+        for require in node.conanfile.requires.values():
             if require.override:
                 continue
-            self._handle_require(name, node, require, dep_graph, check_updates, update,
+            self._handle_require(node, require, dep_graph, check_updates, update,
                                  remotes, processed_profile, new_reqs, new_options)
 
-    def _handle_require(self, name, node, require, dep_graph, check_updates, update,
+    def _handle_require(self, node, require, dep_graph, check_updates, update,
                         remotes, processed_profile, new_reqs, new_options):
 
+        name = require.ref.name
         if name in node.ancestors or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
@@ -136,7 +136,7 @@ class DepsGraphBuilder(object):
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
             # node -> new_node
-            new_node = self._create_new_node(node, dep_graph, require, name,
+            new_node = self._create_new_node(node, dep_graph, require,
                                              check_updates, update, remotes,
                                              processed_profile)
 
@@ -299,7 +299,7 @@ class DepsGraphBuilder(object):
 
         return new_down_reqs, new_options
 
-    def _create_new_node(self, current_node, dep_graph, requirement, name_req,
+    def _create_new_node(self, current_node, dep_graph, requirement,
                          check_updates, update, remotes, processed_profile, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
@@ -326,7 +326,7 @@ class DepsGraphBuilder(object):
             requirement.ref = ConanFileReference.loads(dep_conanfile.alias)
             dep_graph.aliased[alias_ref] = requirement.ref
             return self._create_new_node(current_node, dep_graph, requirement,
-                                         name_req, check_updates, update,
+                                         check_updates, update,
                                          remotes, processed_profile,
                                          alias_ref=alias_ref)
 
