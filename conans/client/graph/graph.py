@@ -23,20 +23,21 @@ BINARY_EDITABLE = "Editable"
 
 
 class _NodeOrderedDict(object):
-    def __init__(self):
+    def __init__(self, key=lambda n: n.name):
         self._nodes = OrderedDict()
+        self._key = key
 
     def add(self, node):
-        assert isinstance(node, Node), "Not a node: ({}) {}".format(type(node), node)
-        inserted = node.name not in self._nodes
-        self._nodes[node.name] = node
+        key = self._key(node)
+        inserted = key not in self._nodes
+        self._nodes[key] = node
         return inserted
 
-    def get(self, name):
-        return self._nodes.get(name)
+    def get(self, key):
+        return self._nodes.get(key)
 
-    def pop(self, name):
-        return self._nodes.pop(name)
+    def pop(self, key):
+        return self._nodes.pop(key)
 
     def sort(self, key_fn):
         """ It will sort the nodes according to the value returned from key_fn """
@@ -49,7 +50,6 @@ class _NodeOrderedDict(object):
         return ret
 
     def prepend(self, other):
-        assert isinstance(other, _NodeOrderedDict), "Can assign only from same type"
         items = other._nodes.copy()
         items.update(self._nodes)
         self._nodes = items
