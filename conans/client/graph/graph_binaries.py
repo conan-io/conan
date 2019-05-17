@@ -205,7 +205,7 @@ class GraphBinariesAnalyzer(object):
                 if not neigh.private:
                     continue
                 # Current closure contains own node to be skipped
-                for n in neigh.public_closure.values():
+                for n in neigh.public_closure:
                     if n.private:
                         n.binary = BINARY_SKIP
                         self._handle_private(n)

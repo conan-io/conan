@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -20,7 +22,39 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 
 
+class _NodeOrderedDict(object):
+    def __init__(self):
+        self._nodes = OrderedDict()
+
+    def add(self, node):
+        assert isinstance(node, Node), "Not a node: ({}) {}".format(type(node), node)
+        inserted = node.name not in self._nodes
+        self._nodes[node.name] = node
+        return inserted
+
+    def get(self, name):
+        return self._nodes.get(name)
+
+    def pop(self, name):
+        return self._nodes.pop(name)
+
+    def sort(self, key_fn):
+        """ It will sort the nodes according to the value returned from key_fn """
+        sorted_d = sorted(self._nodes.items(), key=lambda x: key_fn(x[1]))
+        self._nodes = OrderedDict(sorted_d)
+
+    def copy(self):
+        ret = _NodeOrderedDict()
+        ret._nodes = self._nodes.copy()
+        return ret
+
+    def __iter__(self):
+        for _, item in self._nodes.items():
+            yield item
+
+
 class Node(object):
+
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
         self._package_id = None
@@ -37,10 +71,10 @@ class Node(object):
         self.revision_pinned = False  # The revision has been specified by the user
 
         # The dependencies that can conflict to downstream consumers
-        self.public_deps = None  # {ref.name: Node}
+        self._public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
-        self.public_closure = None  # {ref.name: Node}
+        self._public_closure = None  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
 
@@ -49,6 +83,36 @@ class Node(object):
         self.ancestors.update(ancestors)
         for n in self.neighbors():
             n.update_ancestors(ancestors)
+
+    @property
+    def public_deps(self):
+        return self._public_deps
+
+    @public_deps.setter
+    def public_deps(self, values):
+        if isinstance(values, _NodeOrderedDict):
+            self._public_deps = values
+        elif isinstance(values, Node):
+            self._public_deps = _NodeOrderedDict()
+            self._public_deps.add(values)
+        else:
+            t = type(values)
+            raise RuntimeError("Unexpected type ({}) to initialize public_deps".format(t))
+
+    @property
+    def public_closure(self):
+        return self._public_closure
+
+    @public_closure.setter
+    def public_closure(self, values):
+        if isinstance(values, _NodeOrderedDict):
+            self._public_closure = values
+        elif isinstance(values, Node):
+            self._public_closure = _NodeOrderedDict()
+            self._public_closure.add(values)
+        else:
+            t = type(values)
+            raise RuntimeError("Unexpected type ({}) to initialize public_closure".format(t))
 
     @property
     def package_id(self):
