@@ -317,9 +317,6 @@ class DepsGraphBuilder(object):
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
                                                     ref=requirement.ref)
-        if recipe_status == RECIPE_EDITABLE:
-            dep_conanfile.in_local_cache = False
-            dep_conanfile.develop = True
 
         if getattr(dep_conanfile, "alias", None):
             alias_ref = alias_ref or new_ref.copy_clear_rev()
@@ -329,6 +326,10 @@ class DepsGraphBuilder(object):
                                          check_updates, update,
                                          remotes, processed_profile,
                                          alias_ref=alias_ref)
+
+        if recipe_status == RECIPE_EDITABLE:
+            dep_conanfile.in_local_cache = False
+            dep_conanfile.develop = True
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile)
