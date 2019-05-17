@@ -27,8 +27,6 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node.public_closure = root_node
-        root_node.public_deps = root_node
         dep_graph.add_node(root_node)
 
         # enter recursive computation
@@ -140,7 +138,6 @@ class DepsGraphBuilder(object):
                                              processed_profile)
 
             # The closure of a new node starts with just itself
-            new_node.public_closure = new_node
             node.public_closure.add(new_node)
             new_node.inverse_closure.add(node)
             node.public_deps.add(new_node)
@@ -152,11 +149,9 @@ class DepsGraphBuilder(object):
             new_node.private = node.private or require.private
             if require.private or require.build_require:
                 # If the requirement is private (or build_require), a new public scope is defined
-                new_node.public_deps = node.public_closure.copy()
-                new_node.public_deps.add(new_node)
+                new_node.public_deps.prepend(node.public_closure)
             else:
-                new_node.public_deps = node.public_deps.copy()
-                new_node.public_deps.add(new_node)
+                new_node.public_deps.prepend(node.public_deps)
 
                 # Update the closure of each dependent
                 for dep_node in node.inverse_closure:

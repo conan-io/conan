@@ -48,6 +48,12 @@ class _NodeOrderedDict(object):
         ret._nodes = self._nodes.copy()
         return ret
 
+    def prepend(self, other):
+        assert isinstance(other, _NodeOrderedDict), "Can assign only from same type"
+        items = other._nodes.copy()
+        items.update(self._nodes)
+        self._nodes = items
+
     def __iter__(self):
         for _, item in self._nodes.items():
             yield item
@@ -71,41 +77,25 @@ class Node(object):
         self.revision_pinned = False  # The revision has been specified by the user
 
         # The dependencies that can conflict to downstream consumers
-        self._public_deps = None  # {ref.name: Node}
+        self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
-        self._public_closure = None  # {ref.name: Node}
+        self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
+
+        # Node itself is its public closure and deps
+        self._public_deps.add(self)
+        self._public_closure.add(self)
 
     @property
     def public_deps(self):
+        # Hide it as an attribute so it cannot be set
         return self._public_deps
-
-    @public_deps.setter
-    def public_deps(self, values):
-        if isinstance(values, _NodeOrderedDict):
-            self._public_deps = values
-        elif isinstance(values, Node):
-            self._public_deps = _NodeOrderedDict()
-            self._public_deps.add(values)
-        else:
-            t = type(values)
-            raise RuntimeError("Unexpected type ({}) to initialize public_deps".format(t))
 
     @property
     def public_closure(self):
+        # Hide it as an attribute so it cannot be set
         return self._public_closure
-
-    @public_closure.setter
-    def public_closure(self, values):
-        if isinstance(values, _NodeOrderedDict):
-            self._public_closure = values
-        elif isinstance(values, Node):
-            self._public_closure = _NodeOrderedDict()
-            self._public_closure.add(values)
-        else:
-            t = type(values)
-            raise RuntimeError("Unexpected type ({}) to initialize public_closure".format(t))
 
     @property
     def package_id(self):
