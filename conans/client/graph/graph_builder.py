@@ -143,9 +143,9 @@ class DepsGraphBuilder(object):
             new_node.private = node.private or require.private  # TODO: needed?
             if require.private or require.build_require:
                 # If the requirement is private (or build_require), a new public scope is defined
-                new_node.public_deps.prepend(node.public_closure)
+                new_node.public_deps.prepend(node.public_closure)  # TODO: ??
             else:
-                new_node.public_deps.prepend(node.public_deps)
+                new_node.public_deps.prepend(node.public_deps)  # TODO: ??
 
                 # Update the closure of each dependent
                 for dep_node in node.inverse_closure:
