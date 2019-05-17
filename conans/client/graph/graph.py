@@ -76,13 +76,6 @@ class Node(object):
         # The dependencies that will be part of deps_cpp_info, can't conflict
         self._public_closure = None  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
-        self.ancestors = None  # set{ref.name}
-
-    def update_ancestors(self, ancestors):
-        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
-        self.ancestors.update(ancestors)
-        for n in self.neighbors():
-            n.update_ancestors(ancestors)
 
     @property
     def public_deps(self):

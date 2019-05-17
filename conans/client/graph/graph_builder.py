@@ -29,7 +29,6 @@ class DepsGraphBuilder(object):
         # compute the conanfile entry point for this dependency graph
         root_node.public_closure = root_node
         root_node.public_deps = root_node
-        root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
         # enter recursive computation
@@ -127,7 +126,7 @@ class DepsGraphBuilder(object):
                         remotes, processed_profile, new_reqs, new_options):
 
         name = require.ref.name
-        if name in node.ancestors or name == node.name:
+        if name in [it.name for it in node.inverse_closure] or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
@@ -187,7 +186,6 @@ class DepsGraphBuilder(object):
                                      % (node.ref, require.ref, previous.ref))
 
             # Add current ancestors to the previous node
-            previous.update_ancestors(node.ancestors.union([node.name]))
             if previous.private and not require.private:
                 previous.make_public()
 
@@ -336,8 +334,6 @@ class DepsGraphBuilder(object):
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
-        new_node.ancestors = current_node.ancestors.copy()
-        new_node.ancestors.add(current_node.name)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private, requirement.build_require)
         return new_node

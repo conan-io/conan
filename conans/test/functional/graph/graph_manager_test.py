@@ -37,7 +37,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(len(libb.dependencies), 0)
         self.assertEqual(len(libb.dependants), 1)
         self.assertListEqual(libb.inverse_neighbors(), [app])
-        self.assertEqual(libb.ancestors, set([app.ref.name]))
         self.assertEqual(libb.recipe, RECIPE_INCACHE)
 
         self.assertListEqual(list(app.public_closure), [libb])
