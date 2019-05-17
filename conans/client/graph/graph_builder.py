@@ -133,20 +133,14 @@ class DepsGraphBuilder(object):
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
             # node -> new_node
-            new_node = self._create_new_node(node, dep_graph, require,
-                                             check_updates, update, remotes,
-                                             processed_profile)
-
-            # The closure of a new node starts with just itself
-            node.public_closure.add(new_node)
-            new_node.inverse_closure.add(node)
-            node.public_deps.add(new_node)
+            new_node = self._create_new_node(node, dep_graph, require, check_updates, update,
+                                             remotes, processed_profile)
 
             # If the parent node is a build-require, this new node will be a build-require
             # If the requirement is a build-require, this node will also be a build-require
-            new_node.build_require = node.build_require or require.build_require
+            new_node.build_require = node.build_require or require.build_require  # TODO: needed?
             # New nodes will inherit the private property of its ancestor
-            new_node.private = node.private or require.private
+            new_node.private = node.private or require.private  # TODO: needed?
             if require.private or require.build_require:
                 # If the requirement is private (or build_require), a new public scope is defined
                 new_node.public_deps.prepend(node.public_closure)
@@ -184,9 +178,6 @@ class DepsGraphBuilder(object):
             if previous.private and not require.private:
                 previous.make_public()
 
-            node.public_closure.add(previous)
-            previous.inverse_closure.add(node)
-            node.public_deps.add(previous)
             dep_graph.add_edge(node, previous, require.private, require.build_require)
             # Update the closure of each dependent
             for n in previous.public_closure:

@@ -130,8 +130,11 @@ class Node(object):
         if edge.src == self:
             if edge not in self.dependencies:
                 self.dependencies.append(edge)
+                self.public_closure.add(edge.dst)
+                self.public_deps.add(edge.dst)
         else:
             self.dependants.add(edge)
+            self.inverse_closure.add(edge.src)
 
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
