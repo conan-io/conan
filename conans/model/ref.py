@@ -92,9 +92,17 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param revision:    string containing the revision (optional)
         """
         version = Version(version) if version is not None else None
+
+        # Convert "default" from a search or remote to None
+        if user == NONE_FOLDER_VALUE:
+            user = None
+        if channel == NONE_FOLDER_VALUE:
+            channel = None
+
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj._validate()
+
         return obj
 
     def _validate(self):
@@ -150,6 +158,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def __repr__(self):
         if self.user is None and self.channel is None:
             return "%s/%s" % (self.name, self.version)
+        if self.user is not None and self.channel is None:
+            return "%s/%s@%s" % (self.name, self.version, self.user)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
     def full_str(self):

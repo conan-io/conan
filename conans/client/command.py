@@ -293,6 +293,12 @@ class Command(object):
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
 
+        # The two first conditions is to allow "conan create ." and "conan create lib/1.0@"
+        # FIXME: In Conan 2.0 all should be valid
+        if args.reference and not args.reference.endswith("@") and (not user or not channel):
+            raise ConanException("Invalid parameter '%s', "
+                                 "specify the full reference or user/channel" % args.reference)
+
         if args.test_folder == "None":
             # Now if parameter --test-folder=None (string None) we have to skip tests
             args.test_folder = False
@@ -385,7 +391,8 @@ class Command(object):
         info = None
         try:
             try:
-                ref = ConanFileReference.loads(args.path_or_reference, user_channel_needed=True)
+                name, version, user, channel = get_reference_fields(args.path_or_reference)
+                ref = ConanFileReference(name, version, user, channel)
             except ConanException:
                 name, version, user, channel = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
@@ -769,9 +776,11 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", help="user/channel or pkg/version@user/channel "
-                                              "(if name and version are not declared in the "
-                                              "conanfile.py)")
+        parser.add_argument("reference",
+                            help="user/channel or pkg/version@user/channel "
+                                 "(if name and version are not declared in the "
+                                 "conanfile.py)")
+
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("-e", "--env", nargs=1, action=Extender,
                             help='Environment variables that will be set during the package build, '
@@ -834,14 +843,22 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", help="user/channel, or Pkg/version@user/channel (if name "
-                                              "and version are not declared in the conanfile.py")
+        parser.add_argument("reference",   nargs='?', default=None,
+                            help="user/channel, or Pkg/version@user/channel (if name "
+                                 "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
 
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
+
+        # The two first conditions is to allow "conan export ." and "conan export lib/1.0@"
+        # FIXME: In Conan 2.0 all should be valid
+        if args.reference and not args.reference.endswith("@") and (not user or not channel):
+            raise ConanException("Invalid parameter '%s', "
+                                 "specify the full reference or user/channel" % args.reference)
+
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
                                   keep_source=args.keep_source)
@@ -882,6 +899,8 @@ class Command(object):
         # that the query parameter wasn't abused
         ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
 
+        str_ref = str(ref) if ref else args.pattern_or_reference
+
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
@@ -912,7 +931,7 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
+        return self._conan.remove(pattern=str_ref, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
@@ -1054,11 +1073,16 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
-            ref = ConanFileReference.loads(args.pattern_or_reference, user_channel_needed=True)
+            name, version, user, channel = get_reference_fields(args.pattern_or_reference,
+                                                                pattern_is_user_channel=False)
+            ref = ConanFileReference(name, version, user, channel)
             if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.g.: conan search lib/*@lasote/stable
                 ref = None
+            # FIXME: Remove this check in Conan 2.0, so we accept partial references as valid ones
+            if ref and (not ref.name or not ref.version or not ref.user or not ref.channel):
+                raise ConanException("")
         except (TypeError, ConanException):
             ref = None
             if args.query:
@@ -1574,7 +1598,9 @@ class Command(object):
         ref = None
         if pattern:
             try:
-                ref = ConanFileReference.loads(pattern, user_channel_needed=True)
+                name, version, user, channel = get_reference_fields(pattern,
+                                                                    pattern_is_user_channel=False)
+                ref = ConanFileReference(name, version, user, channel)
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
@@ -1629,36 +1655,41 @@ class Command(object):
         return ret_code
 
 
-def get_reference_fields(arg_reference):
+def get_reference_fields(arg_reference, pattern_is_user_channel=True):
     """
-    :param arg_reference: String with a complete reference, or only user/channel
+    :param arg_reference: String with a complete reference, or
+        only user/channel (if pattern_is_user_channel)
+        only name/version (if not pattern_is_user_channel)
+    :param pattern_is_user_channel: Two items means user/channel or not.
     :return: name, version, user and channel, in a tuple
     """
+
+    def split_pair(pair, priority_first=True):
+        if not pair:
+            return None, None
+        if "/" in pair:
+            tmp = pair.split("/")
+            if len(tmp) != 2:
+                raise ConanException("Invalid ref")
+            else:
+                return tmp[0], tmp[1]
+        else:
+            return (pair, None) if priority_first else (None, pair)
 
     if not arg_reference:
         return None, None, None, None
 
-    try:
+    if "@" in arg_reference:
         name_version, user_channel = arg_reference.split("@")
-        name_version = name_version.split("/")
-        try:
-            name, version = name_version
-        except ValueError:
-            name, version = None, name_version[0]
-        if user_channel:
-            user, channel = user_channel.split("/")
+        name, version = split_pair(name_version, priority_first=False)
+        user, channel = split_pair(user_channel)
+        return name, version, user, channel
+    else:
+        el1, el2 = split_pair(arg_reference)
+        if pattern_is_user_channel:
+            return None, None, el1, el2
         else:
-            user, channel = None, None
-    except ValueError:
-        # FIXME: To indicate user/channel it should be "@user/channel"
-        name, version = None, None
-        try:
-            user, channel = arg_reference.split("/")
-        except ValueError:
-            raise ConanException("Invalid parameter '%s', specify the full reference or "
-                                 "user/channel" % arg_reference)
-
-    return name, version, user, channel
+            return el1, el2, None, None
 
 
 def _add_manifests_arguments(parser):

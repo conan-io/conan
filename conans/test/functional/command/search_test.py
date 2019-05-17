@@ -285,26 +285,32 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                          "Hello/1.4.11@myuser/testing\n"
                          "Hello/1.4.12@myuser/testing\n", self.client.out)
 
+        # FIXME: This will be a valid reference in Conan 2.0
         self.client.run("search Hello/1.4.10")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n", self.client.out)
 
+        # FIXME: This will be a valid reference in Conan 2.0
         self.client.run("search Hello/1.4")
         self.assertEqual("There are no packages matching the 'Hello/1.4' pattern\n",
                          self.client.out)
 
+        # FIXME: This will be a valid reference in Conan 2.0
         self.client.run("search Hello/1.4.10@")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n", self.client.out)
 
+        # FIXME: This will be a valid reference in Conan 2.0
         self.client.run("search Hello/1.4.10@myuser")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n", self.client.out)
 
+        # FIXME: This will be a valid reference in Conan 2.0
         self.client.run("search Hello/1.4.10@fen")
         self.assertEqual("There are no packages matching the 'Hello/1.4.10@fen' pattern\n",
                          self.client.out)
 
+        # FIXME: This will be a valid reference in Conan 2.0
         self.client.run("search Hello/1.4.10@myuser/")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n", self.client.out)

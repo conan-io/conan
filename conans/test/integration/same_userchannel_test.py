@@ -92,18 +92,17 @@ class HelloReuseConan(ConanFile):
         self.assertNotIn("lasote/stable", self.client.user_io.out)
 
     def test_local_commands(self):
-        self.client.run("install .")
-        self.assertNotIn("ERROR: conanfile.py (Hello/0.1): "
-                         "Error in requirements() method, line 10", self.client.out)
+        self.client.run("install .", assert_error=True)
+        self.assertNotIn("Error in requirements() method, line 10", self.client.out)
         self.assertNotIn("ConanException: CONAN_USERNAME environment "
                          "variable not defined, but self.user is used", self.client.out)
+        self.assertIn("Say/0.1: Not found in local cache, looking in remotes...",
+                      self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_CHANNEL environment "
-                      "variable not defined, but self.channel is used", self.client.out)
+        self.assertIn("Say/0.1@lasote: Not found in local cache, looking in remotes...",
+                      self.client.out)
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install .")
