@@ -6,7 +6,7 @@ from six import string_types
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
-NONE_FOLDER_VALUE = "DEFAULT"
+NONE_FOLDER_VALUE = "none"
 
 
 def get_reference_fields(arg_reference, user_channel_allowed=False):
