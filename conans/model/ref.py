@@ -205,7 +205,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
 
     def __lt__(self, other):
         # To compare (sort) refs with None user channel with others having it
-        return str(self) < str(other)
+        def de_noneize(ref):
+            return ref.name, ref.version, ref.user or "", ref.channel or "", ref.revision or ""
+
+        return de_noneize(self) < de_noneize(other)
 
 
 class PackageReference(namedtuple("PackageReference", "ref id revision")):
