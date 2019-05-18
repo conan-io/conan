@@ -102,7 +102,7 @@ class ConanFileLoader(object):
         conanfile_class.name = name or conanfile_class.name
         conanfile_class.version = version or conanfile_class.version
         if test:
-            display_name = "%s (test package)" % test
+            display_name = "%s (test package)" % str(test)
         else:
             ref = ConanFileReference(conanfile_class.name, conanfile_class.version, user, channel,
                                      validate=False)
@@ -162,8 +162,8 @@ class ConanFileLoader(object):
         except Exception as e:
             raise ConanException("%s:\n%s" % (path, str(e)))
         for reference in parser.requirements:
-            ConanFileReference.loads(reference)  # Raise if invalid
-            conanfile.requires.add(reference)
+            ref = ConanFileReference.loads(reference)  # Raise if invalid
+            conanfile.requires.add_ref(ref)
         for build_reference in parser.build_requirements:
             ConanFileReference.loads(build_reference)
             if not hasattr(conanfile, "build_requires"):

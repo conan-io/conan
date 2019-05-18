@@ -103,6 +103,12 @@ class ConanLib(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
 
+        # Without the reference
+        client.run('remove "Hello*" -f')
+        client.run("create .")
+        self.assertIn("Hello/0.1: Configuring sources", client.user_io.out)
+        self.assertIn("Hello/0.1: Generated conaninfo.txt", client.user_io.out)
+
     def test_with_path_errors_test(self):
         client = TestClient()
         client.save({"conanfile.txt": "contents"}, clean_first=True)

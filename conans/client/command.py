@@ -16,7 +16,7 @@ from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
     ConanMigrationError
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
@@ -291,7 +291,8 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python2()
-        name, version, user, channel = get_reference_fields(args.reference)
+        name, version, user, channel = get_reference_fields(args.reference,
+                                                            user_channel_allowed=True)
 
         # The two first conditions is to allow "conan create ." and "conan create lib/1.0@"
         # FIXME: In Conan 2.0 all should be valid
@@ -391,10 +392,10 @@ class Command(object):
         info = None
         try:
             try:
-                name, version, user, channel = get_reference_fields(args.path_or_reference)
-                ref = ConanFileReference(name, version, user, channel)
+                ref = ConanFileReference.loads(args.path_or_reference)
             except ConanException:
-                name, version, user, channel = get_reference_fields(args.reference)
+                name, version, user, channel = get_reference_fields(args.reference,
+                                                                    user_channel_allowed=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
@@ -776,7 +777,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference",
+        parser.add_argument("reference", nargs='?', default=None,
                             help="user/channel or pkg/version@user/channel "
                                  "(if name and version are not declared in the "
                                  "conanfile.py)")
@@ -808,7 +809,8 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python2()
-        name, version, user, channel = get_reference_fields(args.reference)
+        name, version, user, channel = get_reference_fields(args.reference,
+                                                            user_channel_allowed=True)
         cwd = os.getcwd()
         info = None
 
@@ -843,7 +845,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference",   nargs='?', default=None,
+        parser.add_argument("reference", nargs='?', default=None,
                             help="user/channel, or Pkg/version@user/channel (if name "
                                  "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
@@ -851,7 +853,8 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python2()
-        name, version, user, channel = get_reference_fields(args.reference)
+        name, version, user, channel = get_reference_fields(args.reference,
+                                                            user_channel_allowed=True)
 
         # The two first conditions is to allow "conan export ." and "conan export lib/1.0@"
         # FIXME: In Conan 2.0 all should be valid
@@ -1074,7 +1077,7 @@ class Command(object):
 
         try:
             name, version, user, channel = get_reference_fields(args.pattern_or_reference,
-                                                                pattern_is_user_channel=False)
+                                                                user_channel_allowed=False)
             ref = ConanFileReference(name, version, user, channel)
             if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
@@ -1598,8 +1601,7 @@ class Command(object):
         ref = None
         if pattern:
             try:
-                name, version, user, channel = get_reference_fields(pattern,
-                                                                    pattern_is_user_channel=False)
+                name, version, user, channel = get_reference_fields(pattern)
                 ref = ConanFileReference(name, version, user, channel)
             except ConanException:
                 if query is not None:
@@ -1653,43 +1655,6 @@ class Command(object):
             self._user_io.out.error(msg)
 
         return ret_code
-
-
-def get_reference_fields(arg_reference, pattern_is_user_channel=True):
-    """
-    :param arg_reference: String with a complete reference, or
-        only user/channel (if pattern_is_user_channel)
-        only name/version (if not pattern_is_user_channel)
-    :param pattern_is_user_channel: Two items means user/channel or not.
-    :return: name, version, user and channel, in a tuple
-    """
-
-    def split_pair(pair, priority_first=True):
-        if not pair:
-            return None, None
-        if "/" in pair:
-            tmp = pair.split("/")
-            if len(tmp) != 2:
-                raise ConanException("Invalid ref")
-            else:
-                return tmp[0], tmp[1]
-        else:
-            return (pair, None) if priority_first else (None, pair)
-
-    if not arg_reference:
-        return None, None, None, None
-
-    if "@" in arg_reference:
-        name_version, user_channel = arg_reference.split("@")
-        name, version = split_pair(name_version, priority_first=False)
-        user, channel = split_pair(user_channel)
-        return name, version, user, channel
-    else:
-        el1, el2 = split_pair(arg_reference)
-        if pattern_is_user_channel:
-            return None, None, el1, el2
-        else:
-            return el1, el2, None, None
 
 
 def _add_manifests_arguments(parser):

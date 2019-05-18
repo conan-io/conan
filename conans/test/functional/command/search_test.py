@@ -14,7 +14,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
@@ -205,6 +205,25 @@ class SearchTest(unittest.TestCase):
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder11, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder12, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder_tool, EXPORT_FOLDER))
+
+    def test_search_with_none_user_channel(self):
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        
+        class Test(ConanFile):
+            name = "lib"
+            version = "1.0"
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+        client.run("create . user/channel")
+        client.run("create . foo/bar")
+        client.run("search lib*")
+        self.assertIn(textwrap.dedent("""
+                        lib/1.0
+                        lib/1.0@foo/bar
+                        lib/1.0@user/channel"""), client.out)
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)

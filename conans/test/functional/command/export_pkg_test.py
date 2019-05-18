@@ -5,7 +5,7 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, NONE_FOLDER_VALUE
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
@@ -562,3 +562,23 @@ class MyConan(ConanFile):
         self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json",
                         assert_error=True)
         _check_json_output(with_error=True)
+
+    def test_export_pkg_no_ref(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def package(self):
+        self.copy("*.h", src="src", dst="include")
+"""
+        client.save({CONANFILE: conanfile,
+                     "src/header.h": "contents"})
+        client.run("export-pkg . -s os=Windows")
+        ref = ConanFileReference.loads("Hello/0.1@")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        self.assertIn(NONE_FOLDER_VALUE, package_folder)
+        header = os.path.join(package_folder, "include/header.h")
+        self.assertTrue(os.path.exists(header))

@@ -101,8 +101,8 @@ class HelloReuseConan(ConanFile):
 
         os.environ["CONAN_USERNAME"] = "lasote"
         self.client.run("install .", assert_error=True)
-        self.assertIn("Say/0.1@lasote: Not found in local cache, looking in remotes...",
-                      self.client.out)
+        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
+                      "Error in requirements() method, line 10", self.client.out)
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install .")

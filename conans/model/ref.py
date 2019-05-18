@@ -6,8 +6,52 @@ from six import string_types
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
+NONE_FOLDER_VALUE = "DEFAULT"
 
-NONE_FOLDER_VALUE = "default"
+
+def get_reference_fields(arg_reference, user_channel_allowed=False):
+    """
+    :param arg_reference: String with a complete reference, or
+        only user/channel (if user_channel_allowed)
+        only name/version (if not pattern_is_user_channel)
+    :param user_channel_allowed: Two items means user/channel or not.
+    :return: name, version, user and channel, in a tuple
+    """
+
+    def convert_to_none(field):
+        if field == "None" or field == NONE_FOLDER_VALUE:
+            return None
+        return field
+
+    def split_pair(pair, split_char, priority_first=True):
+        if not pair:
+            return None, None
+        if "/" in pair:
+            tmp = pair.split(split_char)
+            if len(tmp) != 2:
+                raise ConanException("The reference has too many '%s'".format(split_char))
+            else:
+                return convert_to_none(tmp[0]), convert_to_none(tmp[1])
+        else:
+            return (convert_to_none(pair), None) \
+                if priority_first else (None, convert_to_none(pair))
+
+    if not arg_reference:
+        return None, None, None, None
+
+    if "@" in arg_reference:
+        name_version, user_channel = split_pair(arg_reference, "@")
+        name, version = split_pair(name_version, "/", priority_first=False)
+        user, channel = split_pair(user_channel, "/")
+
+        return name, version, user, channel
+    else:
+        if user_channel_allowed:
+            el1, el2 = split_pair(arg_reference, "/")
+            return None, None, el1, el2
+        else:
+            raise ConanException("Invalid reference, specify something like zlib/1.2.11@ "
+                                 "if you want to avoid the 'user/channel'")
 
 
 def check_valid_ref(ref, allow_pattern):
@@ -116,41 +160,19 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             ConanName.validate_revision(self.revision)
 
     @staticmethod
-    def loads(text, validate=True, user_channel_needed=False):
+    def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        err_msg = 'Wrong package recipe reference %s\nWrite something like ' \
-                  '"OpenCV/1.0.6@user/stable"' % text
-
-        # FIXME: At Conan 2.0 we can force "lib/1.0@" to specify without user channel
-        # FIXME: and "@user/channel" to not mess with patterns etc
-
-        if "@" not in text and user_channel_needed:
-            raise ConanException("Specify a complete reference like "
-                                 "OpenCV/1.0.6@user/stable")
-
-        if "@" not in text:
-            try:
-                # Split returns empty start and end groups
-                name, version = text.split("/")
-                user, channel, revision = None, None, None
-            except ValueError:
-                raise ConanException(err_msg)
-        else:
-            try:
-                # Split returns empty start and end groups
-                _, name, version, user, channel, revision, _ = ConanFileReference.sep_pattern.split(text)
-            except ValueError:
-                raise ConanException("Wrong package recipe reference %s\nWrite something like "
-                                     "OpenCV/1.0.6@user/stable" % text)
-
-        # FIXME: Hack in case someone is doing:
-        # self.requires("Say/0.1@%s/%s" % (self.user, self.channel))
-        # being self.user and self.channel None
-        if user == "None":
-            user = None
-        if channel == "None":
-            channel = None
+        try:
+            name, version, user, channel = get_reference_fields(text)
+            if user and not channel:
+                # TODO: or want we to allow lib/1.0@user ? Conan 2.0?
+                raise ConanException("Only default channel not allowed")
+        except ConanException as e:
+            raise ConanException("Wrong package recipe reference '%s': %s" % (text, str(e)))
+        revision = None
+        if channel and "#" in channel:
+            channel, revision = channel.split("#")
 
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
@@ -181,6 +203,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def copy_clear_rev(self):
         return ConanFileReference(self.name, self.version, self.user, self.channel, None)
 
+    def __lt__(self, other):
+        # To compare (sort) refs with None user channel with others having it
+        return str(self) < str(other)
+
 
 class PackageReference(namedtuple("PackageReference", "ref id revision")):
     """ Full package reference, e.g.:
@@ -207,7 +233,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
             ref = ConanFileReference.loads(tmp[0].strip(), validate=validate)
             package_id = tmp[1].strip()
         except IndexError:
-            raise ConanException("Wrong package reference  %s" % text)
+            raise ConanException("Wrong package reference %s" % text)
         return PackageReference(ref, package_id, validate=validate)
 
     def __repr__(self):
