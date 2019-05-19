@@ -1147,10 +1147,9 @@ class Command(object):
                             help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('-c', '--confirm', default=False, action='store_true',
                             help='Upload all matching recipes without confirmation')
-        parser.add_argument('--retry', default=2, type=int, action=OnceArgument,
-                            help="In case of fail retries to upload again the specified times. "
-                                 "Defaulted to 2")
-        parser.add_argument('--retry-wait', default=5, type=int, action=OnceArgument,
+        parser.add_argument('--retry', default=None, type=int, action=OnceArgument,
+                            help="In case of fail retries to upload again the specified times.")
+        parser.add_argument('--retry-wait', default=None, type=int, action=OnceArgument,
                             help='Waits specified seconds before retry again')
         parser.add_argument("-no", "--no-overwrite", nargs="?", type=str, choices=["all", "recipe"],
                             action=OnceArgument, const="all",

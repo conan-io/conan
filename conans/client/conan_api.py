@@ -881,7 +881,7 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
-               retry=2, retry_wait=5, integrity_check=False, policy=None, query=None):
+               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
 

@@ -8,6 +8,7 @@ from conans.errors import AuthenticationException, ConanConnectionError, ConanEx
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
+from conans.util.env_reader import get_env
 
 
 class Uploader(object):
@@ -18,7 +19,7 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None, headers=None):
         # Send always the header with the Sha1
         headers = headers or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
@@ -133,7 +134,7 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False,
+    def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
 
         if file_path and not os.path.isabs(file_path):
@@ -254,6 +255,8 @@ def print_progress(output, units, progress=""):
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
+    if retry is None:
+        retry = get_env("CONAN_RETRY", 1)
     for counter in range(retry):
         try:
             return method(*args, **kwargs)
@@ -263,6 +266,8 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
             if counter == (retry - 1):
                 raise
             else:
+                if retry_wait is None:
+                    retry_wait = get_env("CONAN_RETRY_WAIT", 0)
                 if out:
                     out.error(exc)
                     out.info("Waiting %d seconds to retry..." % retry_wait)
