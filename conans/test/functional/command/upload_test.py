@@ -16,7 +16,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
-    TurboTestClient, GenConanfile
+    TurboTestClient, GenConanfile, MockedUserIO
 from conans.util.files import gzopen_without_timestamps, is_dirty, save
 
 conanfile = """from conans import ConanFile
@@ -535,7 +535,8 @@ class Pkg(ConanFile):
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                              users={"lasote": "mypass"})
-        client2.users = {"server2": [("lasote", "mypass")]}
+        client2.user_io = MockedUserIO({"server2": [("lasote", "mypass")]},
+                                       out=client2.out)
         client2.servers = {"server2": server2}
         client2.update_servers()
         client2.run("upload * --all --confirm -r=server2")

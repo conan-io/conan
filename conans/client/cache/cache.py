@@ -68,16 +68,18 @@ class ClientCache(object):
     """
 
     def __init__(self, base_folder, output):
-        self.conan_folder = join(base_folder, ".conan")
-        self._config = None
         self._output = output
         # Remove this self.conan_folder in Conan 2.0
-        self._store_folder = self.config.storage_path or self.conan_folder
+        self.conan_folder = join(base_folder, ".conan")
+
+        # Caching
         self._no_lock = None
+        self._config = None
+        self.editable_packages = EditablePackages(self.conan_folder)
+        # paths
+        self._store_folder = self.config.storage_path or self.conan_folder
         self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
-
-        self.editable_packages = EditablePackages(self.conan_folder)
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
@@ -265,6 +267,7 @@ class ClientCache(object):
     def invalidate(self):
         self._config = None
         self._no_lock = None
+        self.editable_packages = EditablePackages(self.conan_folder)
 
 
 def _mix_settings_with_env(settings):

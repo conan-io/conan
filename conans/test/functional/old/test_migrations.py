@@ -58,6 +58,7 @@ class TestMigrations(unittest.TestCase):
         version_file = os.path.join(client.cache.conan_folder, CONAN_VERSION)
         save(version_file, "1.14.1")
         client = TestClient(client.base_folder)
+        client.run("search")
         metadata_ref1 = client.cache.package_layout(ref).load_metadata()
         self.assertEqual(metadata_ref1.recipe.revision, "2e48797069e65568befd81854aa8aaf0")
         pkg_metadata = metadata_ref1.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]
@@ -75,6 +76,7 @@ class TestMigrations(unittest.TestCase):
         version_file = os.path.join(client.cache.conan_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client = TestClient(client.base_folder)
+        client.run("search")
         self.assertEqual(load(version_file), __version__)
         conf = load(client.cache.conan_conf_path)
         self.assertNotIn("http:/fake.url", conf)

@@ -2,34 +2,32 @@ import os
 import unittest
 
 from conans.client import tools
-from conans.test.utils.tools import TestClient
+from conans.client.cache.cache import ClientCache
+from conans.client.rest.conan_requester import ConanRequester
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 class ClientCertsTest(unittest.TestCase):
 
     def pic_client_certs_test(self):
-
         class MyRequester(object):
-
-            def __init__(*args, **kwargs):
-                pass
-
             def get(self, _, **kwargs):
                 return kwargs.get("cert", None)
 
-        client = TestClient(requester_class=MyRequester)
-        self.assertIsNone(client.requester.get("url"))
+        cache = ClientCache(temp_folder(), TestBufferConanOutput())
+        requester = ConanRequester(cache, requester=MyRequester())
+        self.assertIsNone(requester.get("url"))
 
-        tools.save(client.cache.client_cert_path, "Fake cert")
-        client.init_dynamic_vars()
+        tools.save(cache.client_cert_path, "Fake cert")
+        requester = ConanRequester(cache, requester=MyRequester())
+        self.assertEqual(requester.get("url"), cache.client_cert_path)
 
-        self.assertEqual(client.requester.get("url"), client.cache.client_cert_path)
-
-        tools.save(client.cache.client_cert_path, "Fake cert")
-        tools.save(client.cache.client_cert_key_path, "Fake key")
-        client.init_dynamic_vars()
-        self.assertEqual(client.requester.get("url"), (client.cache.client_cert_path,
-                                                       client.cache.client_cert_key_path))
+        tools.save(cache.client_cert_path, "Fake cert")
+        tools.save(cache.client_cert_key_path, "Fake key")
+        requester = ConanRequester(cache, requester=MyRequester())
+        self.assertEqual(requester.get("url"), (cache.client_cert_path,
+                                                cache.client_cert_key_path))
 
         # assert that the cacert file is created
-        self.assertTrue(os.path.exists(client.cache.cacert_path))
+        self.assertTrue(os.path.exists(cache.cacert_path))

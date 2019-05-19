@@ -144,7 +144,7 @@ class ConanAPIV1(object):
 
         try:
             user_home = get_conan_user_home()
-            cache = migrate_and_get_cache(user_home, out)
+            cache = ClientCache(user_home, out)
             sys.path.append(os.path.join(user_home, "python"))
         except Exception as e:
             out.error(str(e))
@@ -162,6 +162,8 @@ class ConanAPIV1(object):
         assert isinstance(user_io, UserIO)
         assert isinstance(cache, ClientCache)
 
+        migrator = ClientMigrator(cache, Version(client_version), user_io.out)
+        migrator.migrate()
         self._cache = cache
 
         self._user_io = user_io
@@ -1184,14 +1186,3 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
 def existing_info_files(folder):
     return os.path.exists(os.path.join(folder, CONANINFO)) and  \
            os.path.exists(os.path.join(folder, BUILD_INFO))
-
-
-def migrate_and_get_cache(base_folder, out):
-    # Init paths
-    cache = ClientCache(base_folder, out)
-
-    # Migration system
-    migrator = ClientMigrator(cache, Version(client_version), out)
-    migrator.migrate()
-
-    return cache

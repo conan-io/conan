@@ -1,28 +1,20 @@
 import unittest
 
+from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import Remotes
+from conans.client.conan_api import Conan
 from conans.client.graph.proxy import ConanProxy
 from conans.client.recorder.action_recorder import ActionRecorder
+from conans.client.runner import ConanRunner
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer
-from conans.client.cache.remote_registry import Remotes
-
-myconan1 = """
-from conans import ConanFile
-import platform
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2.1"
-"""
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput, MockedUserIO
 
 
 class DownloadTest(unittest.TestCase):
 
     def test_returns_on_failures(self):
-        test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
-        servers = {"default": test_server}
-
         class Response(object):
             ok = None
             status_code = None
@@ -35,16 +27,17 @@ class DownloadTest(unittest.TestCase):
                 self.status_code = status_code
 
         class BuggyRequester(object):
-
-            def __init__(self, *args, **kwargs):
-                pass
-
             def get(self, *args, **kwargs):
                 return Response(False, 404)
 
-        client2 = TestClient(servers=servers, requester_class=BuggyRequester)
+        output = TestBufferConanOutput()
+        runner = ConanRunner(output=output)
+        user_io = MockedUserIO({}, out=output)
+        cache = ClientCache(temp_folder(), output)
+        conan = Conan(cache, user_io, runner, BuggyRequester())
+
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
+        installer = ConanProxy(cache, user_io.out, conan._remote_manager)
 
         remotes = Remotes()
         remotes.add("remotename", "url")
@@ -55,8 +48,8 @@ class DownloadTest(unittest.TestCase):
             def get(self, *args, **kwargs):
                 return Response(False, 500)
 
-        client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
+        conan = Conan(cache, user_io, runner, BuggyRequester2())
+        installer = ConanProxy(cache, user_io.out, conan._remote_manager)
 
         try:
             installer.get_recipe(ref, False, False, remotes, ActionRecorder())

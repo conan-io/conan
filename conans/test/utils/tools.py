@@ -26,7 +26,7 @@ from webtest.app import TestApp
 from conans import tools, load
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan, migrate_and_get_cache
+from conans.client.conan_api import Conan
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
@@ -52,6 +52,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
+from conans.client.cache.cache import ClientCache
 
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
@@ -664,7 +665,7 @@ servers["r2"] = TestServer()
         output = TestBufferConanOutput()
         self.runner = runner or ConanRunner(output=output)
         self.user_io = MockedUserIO(self.users, out=output)
-        self.cache = migrate_and_get_cache(self.base_folder, output)
+        self.cache = ClientCache(self.base_folder, output)
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
@@ -756,14 +757,8 @@ servers["r2"] = TestServer()
         finally:
             self.current_folder = old_dir
 
-    def run(self, command_line, assert_error=False):
-        """ run a single command as in the command line.
-            If user or password is filled, user_io will be mocked to return this
-            tuple if required
-        """
-        # Reset output
-        self.user_io.reset()
-
+    @property
+    def requester(self):
         requester = None
         real_servers = False
         for server in self.servers.values():
@@ -775,7 +770,16 @@ servers["r2"] = TestServer()
                 requester = self.requester_class(self.servers)
             else:
                 requester = TestRequester(self.servers)
+        return requester
 
+    def run(self, command_line, assert_error=False):
+        """ run a single command as in the command line.
+            If user or password is filled, user_io will be mocked to return this
+            tuple if required
+        """
+        # Reset output
+        self.user_io.reset()
+        requester = self.requester
         with tools.environment_append(self.cache.config.env_vars):
             conan = Conan(self.cache, self.user_io, self.runner, requester)
 
