@@ -177,11 +177,44 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("*+Running system requirements+*", client.user_io.out)
         self.assertTrue(os.path.exists(system_reqs_path))
 
+        # Wildcard system_reqs removal
+        ref_other = ConanFileReference.loads("Test/0.1@user/channel_other")
+        system_reqs_path_other = os.path.dirname(client.cache.package_layout(ref_other).system_reqs())
+
+        client.run("create . user/channel_other")
+        client.run("remove --system-reqs '*'")
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
+                      client.user_io.out)
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel_other has been removed",
+                      client.user_io.out)
+        self.assertFalse(os.path.exists(system_reqs_path))
+        self.assertFalse(os.path.exists(system_reqs_path_other))
+
+        # Check that wildcard isn't triggered randomly
+        client.run("create . user/channel_other")
+        client.run("remove --system-reqs Test/0.1@user/channel")
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
+                      client.user_io.out)
+        self.assertNotIn("Cache system_reqs from Test/0.1@user/channel_other has been removed",
+                      client.user_io.out)
+        self.assertFalse(os.path.exists(system_reqs_path))
+        self.assertTrue(os.path.exists(system_reqs_path_other))
+
+        # Check partial wildcard
+        client.run("create . user/channel")
+        client.run("remove --system-reqs Test/0.1@user/channel_*")
+        self.assertNotIn("Cache system_reqs from Test/0.1@user/channel has been removed",
+                      client.user_io.out)
+        self.assertIn("Cache system_reqs from Test/0.1@user/channel_other has been removed",
+                      client.user_io.out)
+        self.assertTrue(os.path.exists(system_reqs_path))
+        self.assertFalse(os.path.exists(system_reqs_path_other))
+
     def invalid_remove_reqs_test(self):
         client = TestClient()
 
         with six.assertRaisesRegex(self, Exception,
-                                   "ERROR: Please specify a valid package reference to be cleaned"):
+                                   "ERROR: Please specify a valid pattern or reference to be cleaned"):
             client.run("remove --system-reqs")
 
         # wrong file reference should be treated as error
