@@ -878,10 +878,6 @@ class Command(object):
 
         self._warn_python2()
 
-        # NOTE: returns the expanded pattern (if a pattern was given), and checks
-        # that the query parameter wasn't abused
-        ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
-
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
@@ -898,13 +894,13 @@ class Command(object):
             self._user_io.out.info("Cache locks removed")
             return
         elif args.system_reqs:
-            if not ref:
-                raise ConanException("Please specify a valid package reference to be cleaned")
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
+            if not args.pattern_or_reference:
+                raise ConanException("Please specify a valid pattern or reference to be cleaned")
+
             try:
-                self._cache.package_layout(ref).remove_system_reqs()
-                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                self._cache.remove_package_system_reqs(args.pattern_or_reference)
                 return
             except Exception as error:
                 raise ConanException("Unable to remove system_reqs: %s" % error)
