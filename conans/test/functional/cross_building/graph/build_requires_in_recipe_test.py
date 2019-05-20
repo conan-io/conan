@@ -14,56 +14,68 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
-class ClassicProtocExample(GraphManagerTest):
-    """ There is an application that requires the protobuf library, and also
-        build_requires the protoc executable to generate some files, but protoc
-        also requires the protobuf library to build.
+class BuildRequiresInRecipeExample(GraphManagerTest):
+    """ There is an application with a requirement 'lib', both of them build_requires
+        a tool called 'breq_lib' (build_machine) and this tool requires a 'breq_lib'.
 
-        Expected packages:
-            * host_machine: application, protobuf
-            * build_machine: protoc, protobuf
+        All these requirements are declared in the profiles
     """
 
-    protobuf = textwrap.dedent("""
+    breq_lib = textwrap.dedent("""
         from conans import ConanFile
-        
-        class Protobuf(ConanFile):
-            name = "protobuf"
+
+        class BuildRequiresLibrary(ConanFile):
+            name = "breq_lib"
             version = "testing"
-            
-            settings = "os"  # , "arch", "compiler", "build_type"
-            
+
+            settings = "os"
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
-    protoc = textwrap.dedent("""
+    breq = textwrap.dedent("""
         from conans import ConanFile
-        
-        class Protoc(ConanFile):
-            name = "protoc"
+
+        class BuildRequires(ConanFile):
+            name = "breq"
             version = "testing"
-            
+
             settings = "os"
-            requires = "protobuf/testing@user/channel"
-            
+            requires = "breq_lib/testing@user/channel"
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+    """)
+
+    lib = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Library(ConanFile):
+            name = "protobuf"
+            version = "testing"
+
+            settings = "os"  # , "arch", "compiler", "build_type"
+
+            build_requires = "breq/testing@user/channel"
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
     application = textwrap.dedent("""
         from conans import ConanFile
-        
-        class Protoc(ConanFile):
+
+        class Application(ConanFile):
             name = "application"
             version = "testing"
-            
+
             settings = "os"
-            requires = "protobuf/testing@user/channel"
-            
+            requires = "lib/testing@user/channel"
+
             def build_requirements(self):
-                self.build_requires("protoc/testing@user/channel")
-            
+                self.build_requires("breq/testing@user/channel")
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
@@ -75,9 +87,10 @@ class ClassicProtocExample(GraphManagerTest):
     """)
 
     def setUp(self):
-        super(ClassicProtocExample, self).setUp()
-        self._cache_recipe("protobuf/testing@user/channel", self.protobuf)
-        self._cache_recipe("protoc/testing@user/channel", self.protoc)
+        super(BuildRequiresInRecipeExample, self).setUp()
+        self._cache_recipe("breq_lib/testing@user/channel", self.breq_lib)
+        self._cache_recipe("breq/testing@user/channel", self.breq)
+        self._cache_recipe("lib/testing@user/channel", self.lib)
         self._cache_recipe("application/testing@user/channel", self.application)
 
         save(self.cache.settings_path, self.settings_yml)
@@ -118,18 +131,25 @@ class ClassicProtocExample(GraphManagerTest):
         self.assertEqual(application.build_context, "host")
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
-        protobuf_host = application.dependencies[0].dst
-        self.assertEqual(protobuf_host.conanfile.name, "protobuf")
-        self.assertEqual(protobuf_host.build_context, "host")
-        self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
+        lib_host = application.dependencies[0].dst
+        self.assertEqual(lib_host.conanfile.name, "lib")
+        self.assertEqual(lib_host.build_context, "host")
+        self.assertEqual(lib_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages
-        protoc_build = application.dependencies[1].dst
-        self.assertEqual(protoc_build.conanfile.name, "protoc")
-        self.assertEqual(protoc_build.build_context, "build")
-        self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
+        breq_application_build = application.dependencies[1].dst
+        self.assertEqual(breq_application_build.conanfile.name, "breq")
+        self.assertEqual(breq_application_build.build_context, "build")
+        self.assertEqual(str(breq_application_build.conanfile.settings.os),
+                         profile_build.settings['os'])
 
-        protobuf_build = protoc_build.dependencies[0].dst
-        self.assertEqual(protobuf_build.conanfile.name, "protobuf")
-        self.assertEqual(protoc_build.build_context, "build")
-        self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
+        breq_lib_build = lib_host.dependencies[0].dst
+        self.assertNotEqual(breq_application_build, breq_lib_build)  # TODO: bug or feature?
+        self.assertEqual(breq_lib_build.conanfile.name, "breq")
+        self.assertEqual(breq_lib_build.build_context, "build")
+        self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])
+
+        breq_lib_build = breq_application_build.dependencies[0].dst
+        self.assertEqual(breq_lib_build.conanfile.name, "breq_lib")
+        self.assertEqual(breq_lib_build.build_context, "build")
+        self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])

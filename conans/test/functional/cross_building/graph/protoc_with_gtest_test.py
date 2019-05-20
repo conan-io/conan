@@ -7,6 +7,10 @@ from conans.model.profile import Profile
 
 
 class ProtocWithGTestExample(ClassicProtocExample):
+    """ Built on top of the ClassicProtocExample, in this use case we are adding a testing library
+        to the project: we add gtest as a build_require and also the protoc executable, BUT
+        both of them should be compiled for the host platform, we are running tests in the host!
+    """
 
     gtest = textwrap.dedent("""
         from conans import ConanFile
