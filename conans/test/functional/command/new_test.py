@@ -3,9 +3,46 @@ import unittest
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+from conans.tools import save
+import textwrap
 
 
 class NewTest(unittest.TestCase):
+
+    def template_test(self):
+        client = TestClient()
+        template1 = textwrap.dedent("""
+            class {package_name}Conan(ConanFile):
+                name = "{name}"
+                version = "{version}"
+        """)
+        save(os.path.join(client.base_folder, ".conan", "mytemplate.py"), template1)
+        client.run("new hello/0.1 --template=mytemplate.py")
+        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('name = "hello"', conanfile)
+        self.assertIn('version = "0.1"', conanfile)
+
+    def template_test_package_test(self):
+        client = TestClient()
+        template2 = textwrap.dedent("""
+            class {package_name}Conan(ConanFile):
+                version = "fixed"
+        """)
+        save(os.path.join(client.base_folder, ".conan", "subfolder", "mytemplate.py"), template2)
+        client.run("new hello/0.1 --template=subfolder/mytemplate.py")
+        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('version = "fixed"', conanfile)
+
+    def template_errors_test(self):
+        client = TestClient()
+        client.run("new hello/0.1 --template=mytemplate.py", assert_error=True)
+        self.assertIn("ERROR: Template doesn't exist", client.out)
+        client.run("new hello/0.1 --template=mytemplate.py --bare", assert_error=True)
+        self.assertIn("ERROR: 'template' argument incompatible", client.out)
+        client.run("new hello/0.1 --template", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
 
     def new_test(self):
         client = TestClient()
