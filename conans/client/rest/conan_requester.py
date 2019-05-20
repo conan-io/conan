@@ -1,29 +1,19 @@
 import fnmatch
 import os
 import platform
-
 import requests
 import time
 
 from conans import __version__ as client_version
-from conans.errors import ConanException
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
 
-def get_request_timeout():
-    timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
-    try:
-        return float(timeout) if timeout is not None else None
-    except ValueError:
-        raise ConanException("Specify a numeric parameter for 'request_timeout'")
-
-
 class ConanRequester(object):
 
-    def __init__(self, cache, requester=None, timeout=None):
+    def __init__(self, cache, requester=None):
         requester = requester if requester is not None else requests.Session()
-        timeout = timeout if timeout is not None else get_request_timeout()
+        timeout = cache.config.request_timeout
         self.proxies = cache.config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]

@@ -355,9 +355,16 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def request_timeout(self):
         try:
-            return self.get_item("general.request_timeout")
+            timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
+            if timeout is None:
+                timeout = self.get_item("general.request_timeout")
         except ConanException:
             return None
+
+        try:
+            return float(timeout) if timeout is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'request_timeout'")
 
     @property
     def revisions_enabled(self):
@@ -431,7 +438,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 return urllib.request.getproxies()
             result = {k: (None if v == "None" else v) for k, v in proxies}
             return result
-        except:
+        except Exception:
             return None
 
     @property
