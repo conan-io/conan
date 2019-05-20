@@ -233,6 +233,10 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                         comments = [line.strip('\n') for line in replace
                                     if line.strip().startswith("#") or not line.strip()]
                         break
+
+    if len(to_replace) == 0:
+        # SCM exists, but not found in the conanfile, probably inherited from superclass
+        return
     if len(to_replace) != 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 

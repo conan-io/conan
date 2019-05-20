@@ -9,7 +9,7 @@ from conans.client.tools import chdir
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, TurboTestClient
 from conans.util.files import load, save
 
 
@@ -81,6 +81,41 @@ class ConanLib(ConanFile):
         after_scm = ''
         after_recipe = ''
         self._do_actual_test(scm_data=scm_data, after_scm=after_scm, after_recipe=after_recipe)
+
+    def scm_from_superclass_test(self):
+        client = TurboTestClient()
+        conanfile = '''from conans import ConanFile
+
+def get_conanfile():
+    
+    class BaseConanFile(ConanFile):
+        scm = {
+            "type": "git", 
+            "url": "auto",
+            "revision": "auto"
+        }
+    
+    return BaseConanFile
+
+class Baseline(ConanFile):
+    name = "Base"
+    version = "1.0.0"
+'''
+        client.init_git_repo({"conanfile.py": conanfile}, origin_url="http://whatever.com/c.git")
+        client.run("export . conan/stable")
+        conanfile = """from conans import ConanFile, python_requires, tools
+
+baseline = "Base/1.0.0@conan/stable"
+
+# recipe inherits properties from the conanfile defined in the baseline
+class ModuleConan(python_requires(baseline).get_conanfile()):
+    name = "module_name"
+    version = "1.0.0"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . conan/stable")
+        self.assertIn("module_name/1.0.0@conan/stable: "
+                      "A new conanfile.py version was exported", client.out)
 
 
 class SCMUpload(unittest.TestCase):
