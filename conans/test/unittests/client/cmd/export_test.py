@@ -103,7 +103,7 @@ class Baseline(ConanFile):
 '''
         client.init_git_repo({"conanfile.py": conanfile}, origin_url="http://whatever.com/c.git")
         client.run("export . conan/stable")
-        conanfile = """from conans import ConanFile, python_requires, tools
+        conanfile1 = """from conans import ConanFile, python_requires, tools
 
 baseline = "Base/1.0.0@conan/stable"
 
@@ -112,10 +112,25 @@ class ModuleConan(python_requires(baseline).get_conanfile()):
     name = "module_name"
     version = "1.0.0"
 """
-        client.save({"conanfile.py": conanfile})
-        client.run("export . conan/stable")
-        self.assertIn("module_name/1.0.0@conan/stable: "
-                      "A new conanfile.py version was exported", client.out)
+        conanfile2 = """from conans import ConanFile, python_requires, tools
+
+baseline = "Base/1.0.0@conan/stable"
+
+# recipe inherits properties from the conanfile defined in the baseline
+class ModuleConan(python_requires(baseline).get_conanfile()):
+    pass
+"""
+
+        for conanfile in [conanfile1, conanfile2]:
+            client.save({"conanfile.py": conanfile})
+            client.run("export . module_name/1.0.0@conan/stable")
+            self.assertIn("module_name/1.0.0@conan/stable: "
+                          "A new conanfile.py version was exported", client.out)
+            ref = ConanFileReference.loads("module_name/1.0.0@conan/stable")
+            contents = load(os.path.join(client.cache.package_layout(ref).export(),
+                                         "conanfile.py"))
+            class_str = 'class ModuleConan(python_requires(baseline).get_conanfile()):\n'
+            self.assertIn('%s    scm = {"revision":' % class_str, contents)
 
 
 class SCMUpload(unittest.TestCase):
