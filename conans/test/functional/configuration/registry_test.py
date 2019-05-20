@@ -1,15 +1,16 @@
 import os
+import textwrap
 import unittest
 
+from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import RemoteRegistry, Remote, Remotes,\
     migrate_registry_file
 from conans.errors import ConanException
+from conans.migrations import CONAN_VERSION
+from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
-from conans.client.cache.cache import ClientCache
-from conans.migrations import CONAN_VERSION
-from conans.model.ref import ConanFileReference
 
 
 class RegistryTest(unittest.TestCase):
@@ -17,7 +18,10 @@ class RegistryTest(unittest.TestCase):
     def retro_compatibility_test(self):
         folder = temp_folder()
         f = os.path.join(folder, ".conan", "registry.txt")
-        save(f, "conan.io https://server.conan.io")  # Without SSL parameter
+        save(f, textwrap.dedent("""conan.io https://server.conan.io
+
+            pkg/0.1@user/testing some_remote
+            """))
         cache = ClientCache(folder, TestBufferConanOutput())
         migrate_registry_file(cache, TestBufferConanOutput())
         registry = RemoteRegistry(cache)

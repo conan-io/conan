@@ -63,15 +63,17 @@ def migrate_registry_file(cache, out):
 
     def add_ref_remote(reference, remotes, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
-        remote = remotes[remote_name]
-        with cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote.name
+        remote = remotes.get(remote_name)
+        if remote:
+            with cache.package_layout(ref).update_metadata() as metadata:
+                metadata.recipe.remote = remote.name
 
     def add_pref_remote(pkg_ref, remotes, remote_name):
         pref = PackageReference.loads(pkg_ref, validate=True)
-        remote = remotes[remote_name]
-        with cache.package_layout(pref.ref).update_metadata() as metadata:
-            metadata.packages[pref.id].remote = remote.name
+        remote = remotes.get(remote_name)
+        if remote:
+            with cache.package_layout(pref.ref).update_metadata() as metadata:
+                metadata.packages[pref.id].remote = remote.name
 
     try:
         if os.path.exists(reg_json_path):
@@ -228,7 +230,7 @@ class Remotes(object):
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
         prev_remote = self._get_by_url(url)
-        if prev_remote and verify_ssl == prev_remote.verify_ssl:
+        if prev_remote and verify_ssl == prev_remote.verify_ssl and insert is None:
             raise ConanException("Remote '%s' already exists with same URL" % prev_remote.name)
         updated_remote = Remote(remote_name, url, verify_ssl)
         if insert is not None:

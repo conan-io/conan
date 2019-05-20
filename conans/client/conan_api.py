@@ -762,6 +762,8 @@ class ConanAPIV1(object):
         info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
 
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         mkdir(dest)
         conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_abs_path, info_folder,
@@ -798,6 +800,7 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         # FIXME: conan copy does not support short-paths in Windows
         ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self._cache,
@@ -1130,6 +1133,8 @@ class ConanAPIV1(object):
 
     @api_method
     def editable_add(self, path, reference, layout, cwd):
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
