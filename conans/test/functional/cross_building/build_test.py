@@ -21,7 +21,7 @@ class CrossBuilding(ClassicProtocExample):
             settings = "os"  # , "arch", "compiler", "build_type"
 
             def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info(">> settings.os: {}".format(self.settings.os))
     """)
 
     protoc = textwrap.dedent("""
@@ -35,7 +35,7 @@ class CrossBuilding(ClassicProtocExample):
             requires = "protobuf/testing@user/channel"
 
             def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info(">> settings.os: {}".format(self.settings.os))
     """)
 
     gtest = textwrap.dedent("""
@@ -48,7 +48,7 @@ class CrossBuilding(ClassicProtocExample):
             settings = "os"  # , "arch", "compiler", "build_type"
 
             def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info(">> settings.os: {}".format(self.settings.os))
     """)
 
     application = textwrap.dedent("""
@@ -70,7 +70,7 @@ class CrossBuilding(ClassicProtocExample):
                 self.build_requires("gtest/testing@user/channel", context="host")
 
             def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info(">> settings.os: {}".format(self.settings.os))
     """)
 
     settings_yml = textwrap.dedent("""
@@ -97,18 +97,24 @@ class CrossBuilding(ClassicProtocExample):
                      'protoc.py': self.protoc,
                      'gtest.py': self.gtest,
                      'application.py': self.application})
-        self.t.run("export protobuf.py protobuf/testing@user/version")
-        self.t.run("export protoc.py protoc/testing@user/version")
-        self.t.run("export gtest.py gtest/testing@user/version")
-        self.t.run("export application.py application/testing@user/version")
+        self.t.run("export protobuf.py protobuf/testing@user/channel")
+        self.t.run("export protoc.py protoc/testing@user/channel")
+        self.t.run("export gtest.py gtest/testing@user/channel")
+        self.t.run("export application.py application/testing@user/channel")
 
     def test_crossbuilding(self):
         self.t.save(files={"conanfile.txt": textwrap.dedent("""
                                                 [requires]
-                                                application/testing@user/version
+                                                application/testing@user/channel
                                             """),
                            "profile_host": self.profile_host,
                            "profile_build": self.profile_build}, clean_first=True)
 
-        self.t.run("create . pr/all --profile:host=profile_host --profile:build=profile_build")
-        print(self.t.out)
+        self.t.run("install . -pr:h profile_host -pr:b profile_build --build=missing")
+        # Check host packages
+        self.assertIn("application/testing@user/channel: >> settings.os: Host", self.t.out)
+        self.assertIn("protoc/testing@user/channel: >> settings.os: Host", self.t.out)
+        self.assertIn("protobuf/testing@user/channel: >> settings.os: Host", self.t.out)
+        # Check build packages
+        self.assertIn("protoc/testing@user/channel: >> settings.os: Build", self.t.out)
+        self.assertIn("protobuf/testing@user/channel: >> settings.os: Build", self.t.out)
