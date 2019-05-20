@@ -1001,13 +1001,12 @@ class Command(object):
                                                                         remote_name=remote_name,
                                                                         password=password)
 
-                self._outputer.print_user_set(remote_name, self._outputer.r, user)
+                self._outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
             info = exc.info
             raise
         finally:
             if args.json and info:
-
                 self._outputer.json_output(info, args.json, cwd)
 
     def search(self, *args):
@@ -1115,7 +1114,6 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-
                 self._outputer.json_output(info, args.json, cwd)
 
     def upload(self, *args):
