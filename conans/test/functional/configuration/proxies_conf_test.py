@@ -27,8 +27,8 @@ no_proxy=http://someurl,http://otherurl.com
 http=http:/conan.url
         """
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
-        requester = ConanRequester(client.cache)
+        cache = ClientCache(client.base_folder, TestBufferConanOutput())
+        requester = ConanRequester(cache)
 
         def verify_proxies(url, **kwargs):
             self.assertEqual(kwargs["proxies"], {"https": None, "http": "http:/conan.url"})
@@ -51,7 +51,7 @@ http=http:/conan.url
             http=http://conan.url
             """)
         save(cache.conan_conf_path, conf)
-        cache.invalidate()
+        cache = ClientCache(cache.cache_folder, TestBufferConanOutput())
         requester = ConanRequester(cache, requester=MyRequester())
         self.assertEqual(requester.get("MyUrl"), "not excluded!")
         self.assertEqual(requester.get("**otherexcluded_one***"), "excluded!")
@@ -64,7 +64,6 @@ http=http:/conan.url
 [proxies]
         """
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
         requester = ConanRequester(client.cache)
 
         def verify_env(url, **kwargs):
@@ -75,15 +74,14 @@ http=http:/conan.url
             requester.get("MyUrl")
 
     def test_environ_removed(self):
-
         client = TestClient()
         conf = """
 [proxies]
 no_proxy_match=MyExcludedUrl*
 """
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
-        requester = ConanRequester(client.cache)
+        cache = ClientCache(client.base_folder, TestBufferConanOutput())
+        requester = ConanRequester(cache)
 
         def verify_env(url, **kwargs):
             self.assertFalse("HTTP_PROXY" in os.environ)

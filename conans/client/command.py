@@ -97,12 +97,10 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, cache, user_io, outputer):
+    def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._cache = cache
-        self._user_io = user_io
-        self._outputer = outputer
+        self._user_io = conan_api._user_io
 
     def help(self, *args):
         """Show help of a specific command.
@@ -313,7 +311,8 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.json_output(info, args.json, cwd)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -420,7 +419,8 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.json_output(info, args.json, cwd)
 
     def config(self, *args):
         """Manages Conan configuration.
@@ -542,11 +542,12 @@ class Command(object):
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_build_order(ret, json_arg, get_cwd())
+                outputer.json_build_order(ret, json_arg, get_cwd())
             else:
-                self._outputer.build_order(ret)
+                outputer.build_order(ret)
 
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
@@ -559,11 +560,12 @@ class Command(object):
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_nodes_to_build(nodes, json_arg, get_cwd())
+                outputer.json_nodes_to_build(nodes, json_arg, get_cwd())
             else:
-                self._outputer.nodes_to_build(nodes)
+                outputer.nodes_to_build(nodes)
 
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
@@ -588,14 +590,15 @@ class Command(object):
                                      "Use --only=None to show only the references."
                                      % (only, str_only_options))
 
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
+                outputer.info_graph(args.graph, deps_graph, get_cwd())
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
+                outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
 
             if not args.graph and not args.json:
-                self._outputer.info(deps_graph, only, args.package_filter, args.paths)
+                outputer.info(deps_graph, only, args.package_filter, args.paths)
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method.
@@ -823,7 +826,8 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.json_output(info, args.json, cwd)
 
     def export(self, *args):
         """Copies the recipe (conanfile.py & associated files) to your local cache.
@@ -880,7 +884,8 @@ class Command(object):
 
         # NOTE: returns the expanded pattern (if a pattern was given), and checks
         # that the query parameter wasn't abused
-        ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
+        reference = self._check_query_parameter_and_get_reference(args.pattern_or_reference,
+                                                                  args.query)
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -894,17 +899,17 @@ class Command(object):
         if args.locks:
             if args.pattern_or_reference:
                 raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._cache.remove_locks()
+            self._conan.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
         elif args.system_reqs:
-            if not ref:
+            if not reference:
                 raise ConanException("Please specify a valid package reference to be cleaned")
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
             try:
-                self._cache.package_layout(ref).remove_system_reqs()
-                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                self._conan.remove_system_reqs(reference)
+                self._user_io.out.info("Cache system_reqs from %s has been removed" % reference)
                 return
             except Exception as error:
                 raise ConanException("Unable to remove system_reqs: %s" % error)
@@ -986,27 +991,28 @@ class Command(object):
                 self._conan.users_clean()
             elif not args.name and args.password is None:  # list users
                 info = self._conan.users_list(args.remote)
-                self._outputer.print_user_list(info)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.print_user_list(info)
             elif args.password is None:  # set user for remote (no password indicated)
                 remote_name, prev_user, user = self._conan.user_set(args.name, args.remote)
-                self._outputer.print_user_set(remote_name, prev_user, user)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.print_user_set(remote_name, prev_user, user)
             else:  # login a remote
                 remote_name = args.remote or self._conan.get_default_remote().name
                 name = args.name
                 password = args.password
-                if not password:
-                    name, password = self._user_io.request_login(remote_name=remote_name,
-                                                                 username=name)
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
                                                                         password=password)
-                self._outputer.print_user_set(remote_name, prev_user, user)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
             info = exc.info
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.json_output(info, args.json, cwd)
 
     def search(self, *args):
         """Searches package recipes and binaries in the local cache or in a remote.
@@ -1043,12 +1049,6 @@ class Command(object):
                                  'package reference.')
 
         args = parser.parse_args(*args)
-
-        if args.revisions and not self._cache.config.revisions_enabled:
-            raise ConanException("The client doesn't have the revisions feature enabled."
-                                 " Enable this feature setting to '1' the environment variable"
-                                 " 'CONAN_REVISIONS_ENABLED' or the config value"
-                                 " 'general.revisions_enabled' in your conan.conf file")
 
         if args.table and args.json:
             raise ConanException("'--table' argument cannot be used together with '--json'")
@@ -1087,7 +1087,8 @@ class Command(object):
                         raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(ref.full_repr(),
                                                             remote_name=args.remote)
-                self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
@@ -1095,8 +1096,9 @@ class Command(object):
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
-                self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, outdated=args.outdated)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.print_search_packages(info["results"], ref, args.query,
+                                               args.table, outdated=args.outdated)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
@@ -1113,14 +1115,16 @@ class Command(object):
                     remote_all = None
                 all_remotes_search = (remote_all is None and args.remote == "all")
 
-                self._outputer.print_search_references(info["results"], args.pattern_or_reference,
-                                                       args.raw, all_remotes_search)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.print_search_references(info["results"], args.pattern_or_reference,
+                                                 args.raw, all_remotes_search)
         except ConanException as exc:
             info = exc.info
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.json_output(info, args.json, cwd)
 
     def upload(self, *args):
         """Uploads a recipe and binary packages to a remote.
@@ -1198,7 +1202,8 @@ class Command(object):
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                outputer = CommandOutputer(self._conan.output, self._conan.cache)
+                outputer.json_output(info, args.json, cwd)
 
     def remote(self, *args):
         """Manages the remote list and the package recipes associated to a remote.
@@ -1283,7 +1288,8 @@ class Command(object):
 
         if args.subcommand == "list":
             remotes = self._conan.remote_list()
-            self._outputer.remote_list(remotes, args.raw)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
+            outputer.remote_list(remotes, args.raw)
         elif args.subcommand == "add":
             return self._conan.remote_add(remote_name, url, verify_ssl, args.insert, args.force)
         elif args.subcommand == "remove":
@@ -1294,7 +1300,8 @@ class Command(object):
             return self._conan.remote_update(remote_name, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":
             refs = self._conan.remote_list_ref()
-            self._outputer.remote_ref_list(refs)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
+            outputer.remote_ref_list(refs)
         elif args.subcommand == "add_ref":
             return self._conan.remote_add_ref(reference, remote_name)
         elif args.subcommand == "remove_ref":
@@ -1303,7 +1310,8 @@ class Command(object):
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
             refs = self._conan.remote_list_pref(reference)
-            self._outputer.remote_pref_list(refs)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
+            outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)
         elif args.subcommand == "remove_pref":
@@ -1359,10 +1367,12 @@ class Command(object):
 
         if args.subcommand == "list":
             profiles = self._conan.profile_list()
-            self._outputer.profile_list(profiles)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
+            outputer.profile_list(profiles)
         elif args.subcommand == "show":
             profile_text = self._conan.read_profile(profile)
-            self._outputer.print_profile(profile, profile_text)
+            outputer = CommandOutputer(self._conan.output, self._conan.cache)
+            outputer.print_profile(profile, profile_text)
         elif args.subcommand == "new":
             self._conan.create_profile(profile, args.detect, args.force)
         elif args.subcommand == "update":
@@ -1373,7 +1383,7 @@ class Command(object):
             self._conan.update_profile(profile, key, value)
         elif args.subcommand == "get":
             key = args.item
-            self._outputer.writeln(self._conan.get_profile_key(profile, key))
+            self._conan.output.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 
@@ -1415,12 +1425,11 @@ class Command(object):
                                      " command argument, but not both.")
 
         ret, path = self._conan.get_path(reference, package_id, args.path, args.remote)
+        outputer = CommandOutputer(self._conan.output, self._conan.cache)
         if isinstance(ret, list):
-            self._outputer.print_dir_list(ret, path, args.raw)
+            outputer.print_dir_list(ret, path, args.raw)
         else:
-            self._outputer.print_file_contents(ret, path, args.raw)
-
-        return
+            outputer.print_file_contents(ret, path, args.raw)
 
     def alias(self, *args):
         """Creates and exports an 'alias package recipe'.
@@ -1571,16 +1580,15 @@ class Command(object):
 
     @staticmethod
     def _check_query_parameter_and_get_reference(pattern, query):
-        ref = None
         if pattern:
             try:
-                ref = ConanFileReference.loads(pattern)
+                ConanFileReference.loads(pattern)
+                return pattern
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
                                          "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
-        return ref
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1724,15 +1732,14 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, cache, user_io = Conan.factory()
+        conan_api, _, _ = Conan.factory()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
         sys.stderr.write("Error in Conan initialization: {}".format(e))
         sys.exit(ERROR_GENERAL)
 
-    outputer = CommandOutputer(user_io, cache)
-    command = Command(conan_api, cache, user_io, outputer)
+    command = Command(conan_api)
     current_dir = get_cwd()
     try:
         import signal

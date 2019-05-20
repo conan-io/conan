@@ -4,58 +4,48 @@ import textwrap
 import six
 
 from conans.client import tools
-from conans.client.cache.cache import ClientCache
-from conans.client.rest.conan_requester import ConanRequester
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput,\
-    TestRequester, TestServer
+from conans.test.utils.tools import TestClient, TestServer, TestRequester
 from conans.util.files import save
-import mock
-from mock import Mock
-
-
-class MyRequester(object):
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def get(self, _, **kwargs):
-        return kwargs.get("timeout", "NOT SPECIFIED")
 
 
 class RequesterTest(unittest.TestCase):
 
     def requester_timeout_test(self):
-        cache = ClientCache(temp_folder(), TestBufferConanOutput())
-        conf = """
-[general]
-request_timeout=2
-"""
-        save(cache.conan_conf_path, conf)
-        cache.invalidate()
-        requester = ConanRequester(cache, requester=MyRequester())
-        self.assertEqual(requester.get("MyUrl"), 2.0)
+        calls = []
 
-        with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
-            ConanRequester(cache, requester=MyRequester())
-            self.assertEqual(requester.get("MyUrl"), 4.3)
+        class MyTestRequester(TestRequester):
+            def get(self, url, **kwargs):
+                calls.append(kwargs)
+                return super(MyTestRequester, self).get(url, **kwargs)
 
-    @mock.patch("conans.client.rest.conan_requester.ConanRequester")
-    def requester_timeout_test_mock(self, requester):
-        requester.get = Mock(return_value=404)
-        client = TestClient(servers={"default": TestServer()})
+        client = TestClient(servers={"default": TestServer()}, requester_class=MyTestRequester)
         conf = textwrap.dedent("""
             [general]
             request_timeout=2
             """)
         save(client.cache.conan_conf_path, conf)
         client.run("search * -r=default")
-        print client.out
-        
+        self.assertEqual(2, len(calls))
+        self.assertEqual(2.0, calls[0]["timeout"])
+        self.assertEqual(2.0, calls[1]["timeout"])
+
+        conf = textwrap.dedent("""
+            [general]
+            """)
+        save(client.cache.conan_conf_path, conf)
+        client.run("search * -r=default")
+        self.assertEqual(4, len(calls))
+        self.assertIsNone(calls[2].get("timeout"))
+        self.assertIsNone(calls[3].get("timeout"))
+
         with tools.environment_append({"CONAN_REQUEST_TIMEOUT": "4.3"}):
-            self.assertEqual(requester.get("MyUrl"), 4.3)
+            client.run("search * -r=default")
+            self.assertEqual(6, len(calls))
+            self.assertEqual(4.3, calls[4]["timeout"])
+            self.assertEqual(4.3, calls[5]["timeout"])
 
     def requester_timeout_errors_test(self):
-        client = TestClient(requester_class=MyRequester)
+        client = TestClient()
         conf = """
 [general]
 request_timeout=any_string
@@ -64,14 +54,3 @@ request_timeout=any_string
         with six.assertRaisesRegex(self, Exception,
                                    "Specify a numeric parameter for 'request_timeout'"):
             client.run("install Lib/1.0@conan/stable")
-
-    def no_request_timeout_test(self):
-        # Test that not having timeout works
-        cache = ClientCache(temp_folder(), TestBufferConanOutput())
-        conf = textwrap.dedent("""
-            [general]
-            """)
-        save(cache.conan_conf_path, conf)
-        cache.invalidate()
-        requester = ConanRequester(cache, requester=MyRequester())
-        self.assertEqual(requester.get("MyUrl"), "NOT SPECIFIED")

@@ -1,15 +1,6 @@
 import unittest
 
-from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import Remotes
-from conans.client.conan_api import Conan
-from conans.client.graph.proxy import ConanProxy
-from conans.client.recorder.action_recorder import ActionRecorder
-from conans.client.runner import ConanRunner
-from conans.errors import ConanException, NotFoundException
-from conans.model.ref import ConanFileReference
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput, MockedUserIO
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class DownloadTest(unittest.TestCase):
@@ -22,38 +13,19 @@ class DownloadTest(unittest.TestCase):
             text = ""
             headers = {}
 
-            def __init__(self, ok, status_code):
+            def __init__(self, ok, status_code, text):
                 self.ok = ok
                 self.status_code = status_code
+                self.text = text
 
         class BuggyRequester(object):
+            def __init__(self, *args, **kwargs):
+                pass
+
             def get(self, *args, **kwargs):
-                return Response(False, 404)
+                return Response(False, 500, "VERY BAD ERROR!")
 
-        output = TestBufferConanOutput()
-        runner = ConanRunner(output=output)
-        user_io = MockedUserIO({}, out=output)
-        cache = ClientCache(temp_folder(), output)
-        conan = Conan(cache, user_io, runner, BuggyRequester())
-
-        ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        installer = ConanProxy(cache, user_io.out, conan._remote_manager)
-
-        remotes = Remotes()
-        remotes.add("remotename", "url")
-        with self.assertRaises(NotFoundException):
-            installer.get_recipe(ref, False, False, remotes, ActionRecorder())
-
-        class BuggyRequester2(BuggyRequester):
-            def get(self, *args, **kwargs):
-                return Response(False, 500)
-
-        conan = Conan(cache, user_io, runner, BuggyRequester2())
-        installer = ConanProxy(cache, user_io.out, conan._remote_manager)
-
-        try:
-            installer.get_recipe(ref, False, False, remotes, ActionRecorder())
-        except NotFoundException:
-            self.assertFalse(True)  # Shouldn't capture here
-        except ConanException:
-            pass
+        client = TestClient(servers={"default": TestServer()},
+                            requester_class=BuggyRequester)
+        client.run("install Hello/1.2.1@frodo/stable -r=default", assert_error=True)
+        self.assertIn("ERROR: VERY BAD ERROR!. [Remote: default]", client.out)

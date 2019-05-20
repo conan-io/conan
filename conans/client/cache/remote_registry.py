@@ -56,7 +56,7 @@ def load_old_registry_json(contents):
 
 
 def migrate_registry_file(cache, out):
-    folder = cache.conan_folder
+    folder = cache.cache_folder
     reg_json_path = os.path.join(folder, "registry.json")
     reg_txt_path = os.path.join(folder, "registry.txt")
     remotes_path = cache.registry_path

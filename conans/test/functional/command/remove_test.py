@@ -6,7 +6,6 @@ import six
 from mock import Mock
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
@@ -15,8 +14,7 @@ from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXP
 from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient, \
-    TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load
 

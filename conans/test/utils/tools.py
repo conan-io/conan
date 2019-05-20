@@ -23,11 +23,10 @@ from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import tools, load
+from conans import load
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
-from conans.client.conan_command_output import CommandOutputer
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -682,8 +681,6 @@ servers["r2"] = TestServer()
         replace_in_file(self.cache.conan_conf_path,
                         "[general]", "[general]\nrevisions_enabled = %s" % value,
                         output=TestBufferConanOutput())
-        # Invalidate the cached config
-        self.cache.invalidate()
 
     def enable_revisions(self):
         self._set_revisions("1")
@@ -710,9 +707,6 @@ servers["r2"] = TestServer()
             replace_in_file(self.cache.conan_conf_path,
                             "[general]", "[general]\nrevisions_enabled = 1",
                             output=TestBufferConanOutput())
-
-        # Invalidate the cached config
-        self.cache.invalidate()
 
     def update_servers(self):
         Remotes().save(self.cache.registry_path)
@@ -758,7 +752,7 @@ servers["r2"] = TestServer()
             self.current_folder = old_dir
 
     @property
-    def requester(self):
+    def http_requester(self):
         requester = None
         real_servers = False
         for server in self.servers.values():
@@ -779,22 +773,21 @@ servers["r2"] = TestServer()
         """
         # Reset output
         self.user_io.reset()
-        requester = self.requester
-        with tools.environment_append(self.cache.config.env_vars):
-            conan = Conan(self.cache, self.user_io, self.runner, requester)
-
-        outputer = CommandOutputer(self.user_io, self.cache)
-        command = Command(conan, self.cache, self.user_io, outputer)
+        requester = self.http_requester
+        conan_api = Conan(cache_folder=self.base_folder, user_io=self.user_io,
+                          output=self.user_io.out, runner=self.runner, http_requester=requester)
+        command = Command(conan_api)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.cache.conan_folder, "python"))
+        sys.path.append(os.path.join(self.cache.cache_folder, "python"))
         old_modules = list(sys.modules.keys())
 
         old_output, old_requester = set_global_instances(self.user_io.out, requester)
         try:
             error = command.run(args)
+            self.cache = conan_api.cache
         finally:
             set_global_instances(old_output, old_requester)
             sys.path = old_path

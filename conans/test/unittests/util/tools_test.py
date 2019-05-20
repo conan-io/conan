@@ -247,10 +247,8 @@ class HelloConan(ConanFile):
         # Not test the real commmand get_command if it's setting the module global vars
         tmp = temp_folder()
         conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
-        os.mkdir(os.path.join(tmp, ".conan"))
-        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
-        with tools.environment_append({"CONAN_USER_HOME": tmp}):
-            conan_api, _, _ = ConanAPIV1.factory()
+        save(os.path.join(tmp, CONAN_CONF), conf)
+        conan_api = ConanAPIV1(tmp)
         conan_api.remote_list()
         global_output, global_requester = get_global_instances()
         self.assertEqual(global_requester.proxies, {"http": "http://myproxy.com"})

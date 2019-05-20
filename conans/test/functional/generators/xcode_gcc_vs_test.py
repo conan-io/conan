@@ -53,13 +53,13 @@ xcode
 
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
-        self.assertIn(".conan/data/Hello/0.1/lasote/stable/package", cmake)
+        self.assertIn("/data/Hello/0.1/lasote/stable/package", cmake)
 
         self.assertIn("-L", gcc)
         self.assertIn("-l", gcc)
         self.assertIn("-I", gcc)
 
-        self.assertIn(".conan/data/Hello/0.1/lasote/stable/package", gcc)
+        self.assertIn("/data/Hello/0.1/lasote/stable/package", gcc)
 
         # CHECK VISUAL STUDIO GENERATOR
 
