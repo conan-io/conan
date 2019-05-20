@@ -94,7 +94,7 @@ class GraphManagerTest(unittest.TestCase):
             self.assertEqual(conanfile.requires[dep.name].ref,
                              dep.ref)
 
-        self.assertEqual(closure, node.public_closure)
+        self.assertListEqual(closure, list(node.public_closure))
         libs = []
         envs = []
         for n in closure:

@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -20,6 +22,43 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 
 
+class _NodeOrderedDict(object):
+    def __init__(self, key=lambda n: n.name):
+        self._nodes = OrderedDict()
+        self._key = key
+
+    def add(self, node):
+        key = self._key(node)
+        inserted = key not in self._nodes
+        self._nodes[key] = node
+        return inserted
+
+    def get(self, key):
+        return self._nodes.get(key)
+
+    def pop(self, key):
+        return self._nodes.pop(key)
+
+    def sort(self, key_fn):
+        """ It will sort the nodes according to the value returned from key_fn """
+        sorted_d = sorted(self._nodes.items(), key=lambda x: key_fn(x[1]))
+        self._nodes = OrderedDict(sorted_d)
+
+    def copy(self):
+        ret = _NodeOrderedDict()
+        ret._nodes = self._nodes.copy()
+        return ret
+
+    def prepend(self, other):
+        items = other._nodes.copy()
+        items.update(self._nodes)
+        self._nodes = items
+
+    def __iter__(self):
+        for _, item in self._nodes.items():
+            yield item
+
+
 class Node(object):
     def __init__(self, ref, conanfile, recipe=None):
         self.ref = ref
@@ -37,10 +76,10 @@ class Node(object):
         self.revision_pinned = False  # The revision has been specified by the user
 
         # The dependencies that can conflict to downstream consumers
-        self.public_deps = None  # {ref.name: Node}
+        self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
-        self.public_closure = None  # {ref.name: Node}
+        self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
 
@@ -49,6 +88,16 @@ class Node(object):
         self.ancestors.update(ancestors)
         for n in self.neighbors():
             n.update_ancestors(ancestors)
+
+    @property
+    def public_deps(self):
+        # Hide it as an attribute so it cannot be set
+        return self._public_deps
+
+    @property
+    def public_closure(self):
+        # Hide it as an attribute so it cannot be set
+        return self._public_closure
 
     @property
     def package_id(self):
