@@ -4,6 +4,7 @@ import os
 import textwrap
 
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
@@ -109,23 +110,23 @@ class BuildRequiresInProfileExample(GraphManagerTest):
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 2)
         self.assertEqual(application.conanfile.name, "application")
-        self.assertEqual(application.build_context, "host")
+        self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
         lib_host = application.dependencies[0].dst
         self.assertEqual(lib_host.conanfile.name, "lib")
-        self.assertEqual(lib_host.build_context, "host")
+        self.assertEqual(lib_host.build_context, CONTEXT_HOST)
         self.assertEqual(lib_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages
         cmake_application_build = application.dependencies[1].dst
         self.assertEqual(cmake_application_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_application_build.build_context, "build")
+        self.assertEqual(cmake_application_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_application_build.conanfile.settings.os),
                          profile_build.settings['os'])
 
         cmake_lib_build = lib_host.dependencies[0].dst
         self.assertNotEqual(cmake_application_build, cmake_lib_build)  # TODO: bug or feature?
         self.assertEqual(cmake_lib_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_lib_build.build_context, "build")
+        self.assertEqual(cmake_lib_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_lib_build.conanfile.settings.os), profile_build.settings['os'])

@@ -1,6 +1,7 @@
 import os
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph import Node
 from conans.client.tools.files import save
 from conans.model.ref import ConanFileReference
@@ -17,7 +18,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, ".conan", "data", "root.py")
         save(conan_path, content)
         conanfile = self.loader.load_consumer(conan_path, processed_profile)
-        return Node(None, conanfile, "host", "rootpath")
+        return Node(None, conanfile, CONTEXT_HOST, "rootpath")
 
     def save_recipe(self, ref, content):
         content = str(content)

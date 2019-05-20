@@ -1,5 +1,6 @@
 import unittest
 
+from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph_builder import DepsGraph, Node
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
@@ -18,8 +19,8 @@ class DepsGraphTest(unittest.TestCase):
 
         conanfile1 = ConanFile(TestBufferConanOutput(), None)
         conanfile2 = ConanFile(TestBufferConanOutput(), None)
-        n1 = Node(ref1, conanfile1, "host")
-        n2 = Node(ref2, conanfile2, "host")
+        n1 = Node(ref1, conanfile1, CONTEXT_HOST)
+        n2 = Node(ref2, conanfile2, CONTEXT_HOST)
 
         self.assertNotEqual(n1, n2)
 
@@ -29,9 +30,9 @@ class DepsGraphTest(unittest.TestCase):
         ref3 = ConanFileReference.loads("Hello/3.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1, "host")
-        n2 = Node(ref2, 2, "host")
-        n3 = Node(ref3, 3, "host")
+        n1 = Node(ref1, 1, CONTEXT_HOST)
+        n2 = Node(ref2, 2, CONTEXT_HOST)
+        n3 = Node(ref3, 3, CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n2)
         deps.add_node(n3)
@@ -46,10 +47,10 @@ class DepsGraphTest(unittest.TestCase):
         ref32 = ConanFileReference.loads("Hello/32.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1, "host")
-        n2 = Node(ref2, 2, "host")
-        n31 = Node(ref31, 31, "host")
-        n32 = Node(ref32, 32, "host")
+        n1 = Node(ref1, 1, CONTEXT_HOST)
+        n2 = Node(ref2, 2, CONTEXT_HOST)
+        n31 = Node(ref31, 31, CONTEXT_HOST)
+        n32 = Node(ref32, 32, CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n2)
         deps.add_node(n32)
@@ -68,11 +69,11 @@ class DepsGraphTest(unittest.TestCase):
         ref32 = ConanFileReference.loads("Hello/32.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1, "host")
-        n2 = Node(ref2, 2, "host")
-        n5 = Node(ref5, 5, "host")
-        n31 = Node(ref31, 31, "host")
-        n32 = Node(ref32, 32, "host")
+        n1 = Node(ref1, 1, CONTEXT_HOST)
+        n2 = Node(ref2, 2, CONTEXT_HOST)
+        n5 = Node(ref5, 5, CONTEXT_HOST)
+        n31 = Node(ref31, 31, CONTEXT_HOST)
+        n32 = Node(ref32, 32, CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n5)
         deps.add_node(n2)
@@ -93,11 +94,11 @@ class DepsGraphTest(unittest.TestCase):
         ref32 = ConanFileReference.loads("Hello/32.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1, "host")
-        n2 = Node(ref2, 2, "host")
-        n5 = Node(ref5, 5, "host")
-        n31 = Node(ref31, 31, "host")
-        n32 = Node(ref32, 32, "host")
+        n1 = Node(ref1, 1, CONTEXT_HOST)
+        n2 = Node(ref2, 2, CONTEXT_HOST)
+        n5 = Node(ref5, 5, CONTEXT_HOST)
+        n31 = Node(ref31, 31, CONTEXT_HOST)
+        n32 = Node(ref32, 32, CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n5)
         deps.add_node(n2)

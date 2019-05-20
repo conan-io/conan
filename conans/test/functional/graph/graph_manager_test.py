@@ -1,8 +1,7 @@
 import six
 from parameterized import parameterized
 
-
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, CONTEXT_HOST
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
@@ -368,7 +367,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                                    requires=[zlib_ref2]))
         self._cache_recipe("lib/0.1@user/testing",
                            TestConanFile("lib", "0.1", requires=[zlib_ref],
-                                         build_requires=[("gtest/0.1@user/testing", "host")]))
+                                         build_requires=[("gtest/0.1@user/testing", CONTEXT_HOST)]))
 
         with six.assertRaisesRegex(self, ConanException,
                                    "Requirement zlib/0.2@user/testing conflicts"):
@@ -416,7 +415,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                          default_options='zlib:shared=True'))
         self._cache_recipe("lib/0.1@user/testing",
                            TestConanFile("lib", "0.1", requires=[zlib_ref],
-                                         build_requires=[("gtest/0.1@user/testing", "host")]))
+                                         build_requires=[("gtest/0.1@user/testing", CONTEXT_HOST)]))
 
         graph = self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
 
@@ -451,7 +450,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe("gtest/0.1@user/testing", gtest)
         self._cache_recipe("lib/0.1@user/testing",
                            TestConanFile("lib", "0.1", requires=[zlib_ref],
-                                         build_requires=[("gtest/0.1@user/testing", "host")]))
+                                         build_requires=[("gtest/0.1@user/testing", CONTEXT_HOST)]))
 
         with six.assertRaisesRegex(self, ConanException,
                                    "tried to change zlib/0.1@user/testing option shared to True"):
@@ -470,11 +469,11 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(libb_ref, TestConanFile("libb", "0.1", requires=[liba_ref]))
         self._cache_recipe(libc_ref, TestConanFile("libc", "0.1", requires=[liba_ref]))
         self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[libb_ref],
-                                                   build_requires=[(libc_ref, "host")]))
+                                                   build_requires=[(libc_ref, CONTEXT_HOST)]))
         self._cache_recipe(libe_ref, TestConanFile("libe", "0.1", requires=[libd_ref]))
         self._cache_recipe(libf_ref, TestConanFile("libf", "0.1", requires=[libd_ref]))
         deps_graph = self.build_graph(TestConanFile("app", "0.1", requires=[libe_ref],
-                                                    build_requires=[(libf_ref, "host")]))
+                                                    build_requires=[(libf_ref, CONTEXT_HOST)]))
 
         self.assertEqual(7, len(deps_graph.nodes))
         app = deps_graph.root
@@ -662,7 +661,7 @@ class TransitiveGraphTest(GraphManagerTest):
         with six.assertRaisesRegex(self, ConanException,
                                    "Requirement grass/0.2@user/testing conflicts"):
             self.build_graph(TestConanFile("cheetah", "0.1", requires=["gazelle/0.1@user/testing"],
-                                           build_requires=[("grass/0.2@user/testing", "host")]))
+                                           build_requires=[("grass/0.2@user/testing",CONTEXT_HOST)]))
 
     def test_build_require_link_order(self):
         # https://github.com/conan-io/conan/issues/4931
@@ -675,7 +674,8 @@ class TransitiveGraphTest(GraphManagerTest):
 
         deps_graph = self.build_graph(TestConanFile("cheetah", "0.1",
                                                     requires=["gazelle/0.1@user/testing"],
-                                                    build_requires=[("grass/0.1@user/testing", "host")]))
+                                                    build_requires=[("grass/0.1@user/testing",
+                                                                     CONTEXT_HOST)]))
 
         self.assertEqual(3, len(deps_graph.nodes))
         cheetah = deps_graph.root

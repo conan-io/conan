@@ -4,6 +4,7 @@ import os
 import textwrap
 
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
@@ -128,28 +129,28 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 2)
         self.assertEqual(application.conanfile.name, "application")
-        self.assertEqual(application.build_context, "host")
+        self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
         lib_host = application.dependencies[0].dst
         self.assertEqual(lib_host.conanfile.name, "lib")
-        self.assertEqual(lib_host.build_context, "host")
+        self.assertEqual(lib_host.build_context, CONTEXT_HOST)
         self.assertEqual(lib_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages
         breq_application_build = application.dependencies[1].dst
         self.assertEqual(breq_application_build.conanfile.name, "breq")
-        self.assertEqual(breq_application_build.build_context, "build")
+        self.assertEqual(breq_application_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(breq_application_build.conanfile.settings.os),
                          profile_build.settings['os'])
 
         breq_lib_build = lib_host.dependencies[0].dst
         self.assertNotEqual(breq_application_build, breq_lib_build)  # TODO: bug or feature?
         self.assertEqual(breq_lib_build.conanfile.name, "breq")
-        self.assertEqual(breq_lib_build.build_context, "build")
+        self.assertEqual(breq_lib_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])
 
         breq_lib_build = breq_application_build.dependencies[0].dst
         self.assertEqual(breq_lib_build.conanfile.name, "breq_lib")
-        self.assertEqual(breq_lib_build.build_context, "build")
+        self.assertEqual(breq_lib_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])
