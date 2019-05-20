@@ -142,8 +142,8 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         build_context = require.build_context if node.build_context == "host" else node.build_context
-        previous = node.public_deps.get((name, build_context))
-        previous_closure = node.public_closure.get((name, build_context))
+        previous = node.public_deps.get(name, build_context)
+        previous_closure = node.public_closure.get(name, build_context)
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
             # node -> new_node
@@ -241,11 +241,11 @@ class DepsGraphBuilder(object):
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
-            n = closure.get((req.ref.name, build_context))
+            n = closure.get(req.ref.name, build_context)
             if n and self._conflicting_references(n.ref, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
-            n = closure.get((pkg_name, build_context))
+            n = closure.get(pkg_name, build_context)
             if n:
                 options = n.conanfile.options
                 for option, value in options_values.items():

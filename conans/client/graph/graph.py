@@ -33,11 +33,11 @@ class _NodeOrderedDict(object):
         self._nodes[key] = node
         return inserted
 
-    def get(self, key):
-        return self._nodes.get(key)
+    def get(self, key, build_context):
+        return self._nodes.get((key, build_context))
 
-    def pop(self, key):
-        return self._nodes.pop(key)
+    def pop(self, key, build_context):
+        return self._nodes.pop((key, build_context))
 
     def sort(self, key_fn):
         """ It will sort the nodes according to the value returned from key_fn """

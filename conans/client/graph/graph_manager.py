@@ -260,7 +260,7 @@ class GraphManager(object):
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
         for node in graph.nodes:
-            node.public_closure.pop(node.name)
+            node.public_closure.pop(node.name, node.build_context)
             node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
 
         return graph
