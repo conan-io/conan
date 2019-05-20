@@ -246,6 +246,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
 
     if len(to_replace) == 0:
         # SCM exists, but not found in the conanfile, probably inherited from superclass
+        # FIXME: This will inject the lines only the latest class declared in the conanfile
         tmp = lines[0:class_line]
         tmp.append("{}{}".format(" " * tab_size, new_text))
         tmp.extend(lines[class_line:])
