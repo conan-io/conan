@@ -231,6 +231,50 @@ class WorkspaceTest(unittest.TestCase):
         b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
 
+    def root_as_yaml_list_test(self):
+        # https://github.com/conan-io/conan/issues/5155
+        client = TestClient()
+
+        def files(name, depend=None):
+            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
+            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
+
+        client.save(files("D"), path=os.path.join(client.current_folder, "D"))
+        client.save(files("C", "D"), path=os.path.join(client.current_folder, "C"))
+        client.save(files("A", "C"), path=os.path.join(client.current_folder, "A"))
+        client.save(files("B", "D"), path=os.path.join(client.current_folder, "B"))
+
+        project = dedent("""
+            editables:
+                HelloD/0.1@lasote/stable:
+                    path: D
+                HelloB/0.1@lasote/stable:
+                    path: B
+                HelloC/0.1@lasote/stable:
+                    path: C
+                HelloA/0.1@lasote/stable:
+                    path: A
+            layout: layout
+            root:
+                - HelloA/0.1@lasote/stable
+                - HelloB/0.1@lasote/stable
+            """)
+        layout = dedent("""
+            [build_folder]
+            """)
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+        client.run("workspace install conanws.yml")
+        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
+        self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
+
+        a_cmake = load(os.path.join(client.current_folder, "A", "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS helloC helloD ${CONAN_LIBS})", a_cmake)
+        b_cmake = load(os.path.join(client.current_folder, "B", "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS helloD ${CONAN_LIBS})", b_cmake)
+
     def transitivity_test(self):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
