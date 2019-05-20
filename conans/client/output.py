@@ -7,6 +7,24 @@ from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 
 
+def colorama_initialize():
+    # Respect color env setting or check tty if unset
+    color_set = "CONAN_COLOR_DISPLAY" in os.environ
+    if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+            or (not color_set
+                and hasattr(sys.stdout, "isatty")
+                and sys.stdout.isatty())):
+        import colorama
+        if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
+            colorama.init(convert=False, strip=False)
+        else:
+            colorama.init()
+        color = True
+    else:
+        color = False
+    return color
+
+
 class Color(object):
     """ Wrapper around colorama colors that are undefined in importing
     """

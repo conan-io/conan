@@ -26,6 +26,7 @@ from webtest.app import TestApp
 from conans import load
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
+
 from conans.client.conan_api import Conan
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
@@ -777,6 +778,7 @@ servers["r2"] = TestServer()
         conan_api = Conan(cache_folder=self.base_folder, user_io=self.user_io,
                           output=self.user_io.out, runner=self.runner, http_requester=requester)
         command = Command(conan_api)
+
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -947,7 +949,7 @@ class TurboTestClient(TestClient):
     def init_svn_repo(self, subpath, files=None, repo_url=None):
         if not repo_url:
             repo_url = create_remote_svn_repo(temp_folder())
-        url, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
+        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
                                              rel_project_path=subpath, delete_checkout=False)
         return rev
 

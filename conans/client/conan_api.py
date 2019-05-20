@@ -213,6 +213,8 @@ class ConanAPIV1(object):
         self._proxy = proxy
         self._loader = loader
         self._python_requires = python_requires
+        self._runner = runner
+        self._remote_manager = remote_manager
         self._hook_manager = hook_manager
         self._requester = requester
         self._graph_manager = graph_manager
@@ -961,6 +963,15 @@ class ConanAPIV1(object):
         return self._cache.registry.clear()
 
     @api_method
+    def remove_locks(self):
+        self._cache.remove_locks()
+
+    @api_method
+    def remove_system_reqs(self, reference):
+        ref = ConanFileReference.loads(reference)
+        self._cache.package_layout(ref).remove_system_reqs()
+
+    @api_method
     def profile_list(self):
         return cmd_profile_list(self._cache.profiles_path, self._user_io.out)
 
@@ -1036,15 +1047,6 @@ class ConanAPIV1(object):
     @api_method
     def get_remote_by_name(self, remote_name):
         return self._cache.registry.load_remotes()[remote_name]
-
-    @api_method
-    def remove_locks(self):
-        self._cache.remove_locks()
-
-    @api_method
-    def remove_system_reqs(self, reference):
-        ref = ConanFileReference.loads(reference)
-        self._cache.package_layout(ref).remove_system_reqs()
 
     @api_method
     def get_recipe_revisions(self, reference, remote_name=None):

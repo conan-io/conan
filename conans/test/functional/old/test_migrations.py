@@ -153,6 +153,7 @@ the old general
             save(old_attribute_checker_plugin, "")
             # Do not adjust cpu_count, it is reusing a cache
             cache = TestClient(base_folder=old_user_home, cpu_count=False).cache
+
             assert old_user_home == cache.cache_folder
             return old_user_home, old_user_home, old_conf_path, \
                 old_attribute_checker_plugin, cache
