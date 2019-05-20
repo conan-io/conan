@@ -31,12 +31,12 @@ class ArgsParseProfileTest(unittest.TestCase):
     def test_default(self):
         """ The old '--settings', '--profile',... refers to the build machine """
         build, host = self._run_parse([self.long_arg, "it1"])
-        self.assertListEqual(build, ["it1"])
-        self.assertIsNone(host)
+        self.assertListEqual(host, ["it1"])
+        self.assertIsNone(build)
 
         build, host = self._run_parse([self.long_arg, "it1", self.short_arg, "it2"])
-        self.assertListEqual(build, ["it1", "it2"])
-        self.assertIsNone(host)
+        self.assertListEqual(host, ["it1", "it2"])
+        self.assertIsNone(build)
 
     def test_build_machine(self):
         """ If provided with build suffix (':b', ':build'), those correspond to the build machine """
@@ -51,15 +51,15 @@ class ArgsParseProfileTest(unittest.TestCase):
         self.assertListEqual(build, ["it1", "it2"])
         self.assertIsNone(host)
 
-    def test_mix_old_and_build_machine(self):
-        """ Old arguments and new ':build' ones are composable """
-        new_long_arg = "{}:build".format(self.long_arg)
-        new_short_arg = "{}:b".format(self.short_arg)
+    def test_mix_old_and_host_machine(self):
+        """ Old arguments and new ':host' ones are composable """
+        new_long_arg = "{}:host".format(self.long_arg)
+        new_short_arg = "{}:h".format(self.short_arg)
 
         build, host = self._run_parse([new_long_arg, "it1", self.long_arg, "it2",
                                        new_short_arg, "it3", self.short_arg, "it4"])
-        self.assertListEqual(build, ["it1", "it2", "it3", "it4"])
-        self.assertIsNone(host)
+        self.assertListEqual(host, ["it1", "it2", "it3", "it4"])
+        self.assertIsNone(build)
 
     def test_host_machine(self):
         """ If provided with host suffix (':h', ':host'), those correspond to the host machine """
