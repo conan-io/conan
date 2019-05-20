@@ -244,12 +244,8 @@ class GraphManager(object):
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
         for node in graph.nodes:
-            closure = node.public_closure
-            closure.pop(node.name)
-            node_order = list(closure.values())
-            # List sort is stable, will keep the original order of the closure, but prioritize levels
-            node_order.sort(key=lambda n: inverse_levels[n])
-            node.public_closure = node_order
+            node.public_closure.pop(node.name)
+            node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
 
         return graph
 

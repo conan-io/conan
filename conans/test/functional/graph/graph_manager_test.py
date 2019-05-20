@@ -36,14 +36,14 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(libb.conanfile.name, "libb")
         self.assertEqual(len(libb.dependencies), 0)
         self.assertEqual(len(libb.dependants), 1)
-        self.assertEqual(libb.inverse_neighbors(), [app])
+        self.assertListEqual(libb.inverse_neighbors(), [app])
         self.assertEqual(libb.ancestors, set([app.ref.name]))
         self.assertEqual(libb.recipe, RECIPE_INCACHE)
 
-        self.assertEqual(app.public_closure, [libb])
-        self.assertEqual(libb.public_closure, [])
-        self.assertEqual(app.public_deps, {"app": app, "libb": libb})
-        self.assertEqual(libb.public_deps, app.public_deps)
+        self.assertListEqual(list(app.public_closure), [libb])
+        self.assertListEqual(list(libb.public_closure), [])
+        self.assertListEqual(list(app.public_deps), [app, libb])
+        self.assertListEqual(list(libb.public_deps), list(app.public_deps))
 
     def test_transitive_two_levels(self):
         # app -> libb0.1 -> liba0.1

@@ -27,9 +27,8 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        name = root_node.name
-        root_node.public_closure = OrderedDict([(name, root_node)])
-        root_node.public_deps = {name: root_node}
+        root_node.public_closure.add(root_node)
+        root_node.public_deps.add(root_node)
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -65,9 +64,7 @@ class DepsGraphBuilder(object):
 
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
         # This is to make sure that build_requires have precedence over the normal requires
-        ordered_closure = list(node.public_closure.items())
-        ordered_closure.sort(key=lambda x: x[1] not in new_nodes)
-        node.public_closure = OrderedDict(ordered_closure)
+        node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
 
         subgraph = DepsGraph()
         subgraph.aliased = graph.aliased
@@ -145,10 +142,10 @@ class DepsGraphBuilder(object):
                                              processed_profile)
 
             # The closure of a new node starts with just itself
-            new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
-            node.public_closure[name] = new_node
+            new_node.public_closure.add(new_node)
+            node.public_closure.add(new_node)
             new_node.inverse_closure.add(node)
-            node.public_deps[new_node.name] = new_node
+            node.public_deps.add(new_node)
 
             # If the parent node is a build-require, this new node will be a build-require
             # If the requirement is a build-require, this node will also be a build-require
@@ -157,17 +154,17 @@ class DepsGraphBuilder(object):
             new_node.private = node.private or require.private
             if require.private or require.build_require:
                 # If the requirement is private (or build_require), a new public scope is defined
-                new_node.public_deps = node.public_closure.copy()
-                new_node.public_deps[name] = new_node
+                new_node.public_deps.add(new_node)
+                new_node.public_deps.prepend(node.public_closure)
             else:
-                new_node.public_deps = node.public_deps.copy()
-                new_node.public_deps[name] = new_node
+                new_node.public_deps.add(new_node)
+                new_node.public_deps.prepend(node.public_deps)
 
                 # Update the closure of each dependent
                 for dep_node in node.inverse_closure:
-                    dep_node.public_closure[new_node.name] = new_node
+                    dep_node.public_closure.add(new_node)
                     new_node.inverse_closure.add(dep_node)
-                    dep_node.public_deps[new_node.name] = new_node
+                    dep_node.public_deps.add(new_node)
 
             # RECURSION!
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
@@ -195,19 +192,19 @@ class DepsGraphBuilder(object):
             if previous.private and not require.private:
                 previous.make_public()
 
-            node.public_closure[name] = previous
+            node.public_closure.add(previous)
             previous.inverse_closure.add(node)
-            node.public_deps[name] = previous
+            node.public_deps.add(previous)
             dep_graph.add_edge(node, previous, require.private, require.build_require)
             # Update the closure of each dependent
-            for name, n in previous.public_closure.items():
+            for n in previous.public_closure:
                 if n.build_require or n.private:
                     continue
-                node.public_closure[name] = n
+                node.public_closure.add(n)
                 n.inverse_closure.add(node)
                 for dep_node in node.inverse_closure:
-                    dep_node.public_closure[name] = n
-                    dep_node.public_deps[name] = n
+                    dep_node.public_closure.add(n)
+                    dep_node.public_deps.add(n)
                     n.inverse_closure.add(dep_node)
 
             # RECURSION!
