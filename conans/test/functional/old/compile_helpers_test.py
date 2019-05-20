@@ -156,7 +156,7 @@ class ProfilesEnvironmentTest(unittest.TestCase):
         self.client.run("export . lasote/testing")
 
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        self.client.run("install . --build=missing --pr scopes_env")
+        self.client.run("install . --build=missing -pr scopes_env")
         self.client.run("build .")
         six.assertRegex(self, str(self.client.user_io.out), "PATH=['\"]*/path/to/my/folder")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
