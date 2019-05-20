@@ -127,10 +127,10 @@ class ClassicProtocExample(GraphManagerTest):
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.build_context, "build")
-        self.assertEqual(protoc_build.conanfile.settings.os, profile_build.settings['os'])
+        self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
 
         protobuf_build = protoc_build.dependencies[0].dst
         print(id(protobuf_build))
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
         self.assertEqual(protoc_build.build_context, "build")
-        self.assertEqual(protobuf_build.conanfile.settings.os, profile_build.settings['os'])
+        self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
