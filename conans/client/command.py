@@ -97,12 +97,14 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, cache, user_io, outputer):
+    def __init__(self, conan_api, user_io):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._cache = cache
         self._user_io = user_io
-        self._outputer = outputer
+
+    @property
+    def _outputer(self):
+        return CommandOutputer(self._user_io.out, self._conan._cache)
 
     def help(self, *args):
         """Show help of a specific command.
@@ -894,7 +896,7 @@ class Command(object):
         if args.locks:
             if args.pattern_or_reference:
                 raise ConanException("Specifying a pattern is not supported when removing locks")
-            self._cache.remove_locks()
+            self._conan.remove_locks()
             self._user_io.out.info("Cache locks removed")
             return
         elif args.system_reqs:
@@ -903,7 +905,7 @@ class Command(object):
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
             try:
-                self._cache.package_layout(ref).remove_system_reqs()
+                self._conan.remove_system_reqs(str(ref))
                 self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
                 return
             except Exception as error:
@@ -1043,12 +1045,6 @@ class Command(object):
                                  'package reference.')
 
         args = parser.parse_args(*args)
-
-        if args.revisions and not self._cache.config.revisions_enabled:
-            raise ConanException("The client doesn't have the revisions feature enabled."
-                                 " Enable this feature setting to '1' the environment variable"
-                                 " 'CONAN_REVISIONS_ENABLED' or the config value"
-                                 " 'general.revisions_enabled' in your conan.conf file")
 
         if args.table and args.json:
             raise ConanException("'--table' argument cannot be used together with '--json'")
@@ -1724,15 +1720,14 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, cache, user_io = Conan.factory()
+        conan_api, _, user_io = Conan.factory()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
         sys.stderr.write("Error in Conan initialization: {}".format(e))
         sys.exit(ERROR_GENERAL)
 
-    outputer = CommandOutputer(user_io, cache)
-    command = Command(conan_api, cache, user_io, outputer)
+    command = Command(conan_api, user_io)
     current_dir = get_cwd()
     try:
         import signal

@@ -16,46 +16,46 @@ from conans.util.files import save
 
 class CommandOutputer(object):
 
-    def __init__(self, user_io, cache):
-        self.user_io = user_io
-        self.cache = cache
+    def __init__(self, output, cache):
+        self._output = output
+        self._cache = cache
 
     def writeln(self, value):
-        self.user_io.out.writeln(value)
+        self._output.out.writeln(value)
 
     def print_profile(self, profile, profile_text):
-        Printer(self.user_io.out).print_profile(profile, profile_text)
+        Printer(self._output.out).print_profile(profile, profile_text)
 
     def profile_list(self, profiles):
         for p in sorted(profiles):
-            self.user_io.out.info(p)
+            self._output.out.info(p)
 
     def remote_list(self, remotes, raw):
         for r in remotes:
             if raw:
-                self.user_io.out.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+                self._output.out.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
             else:
-                self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+                self._output.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
         for reference, remote_name in refs.items():
             ref = ConanFileReference.loads(reference)
-            self.user_io.out.info("%s: %s" % (ref.full_repr(), remote_name))
+            self._output.out.info("%s: %s" % (ref.full_repr(), remote_name))
 
     def remote_pref_list(self, package_references):
         for package_reference, remote_name in package_references.items():
             pref = PackageReference.loads(package_reference)
-            self.user_io.out.info("%s: %s" % (pref.full_repr(), remote_name))
+            self._output.out.info("%s: %s" % (pref.full_repr(), remote_name))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
-        self.user_io.out.info(msg)
+        self._output.out.info(msg)
 
     def json_build_order(self, info, json_output, cwd):
         data = {"groups": [[str(ref) for ref in group] for group in info]}
         json_str = json.dumps(data)
         if json_output is True:  # To the output
-            self.user_io.out.write(json_str)
+            self._output.out.write(json_str)
         else:  # Path to a file
             cwd = os.path.abspath(cwd or get_cwd())
             if not os.path.isabs(json_output):
@@ -74,32 +74,32 @@ class CommandOutputer(object):
                 raise TypeError("Unserializable object {} of type {}".format(obj, type(obj)))
 
         save(json_output, json.dumps(info, default=date_handler))
-        self.user_io.out.writeln("")
-        self.user_io.out.info("JSON file created at '%s'" % json_output)
+        self._output.out.writeln("")
+        self._output.out.info("JSON file created at '%s'" % json_output)
 
     def _read_dates(self, deps_graph):
         ret = {}
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self.cache.package_layout(ref).recipe_manifest()
+                manifest = self._cache.package_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
     def nodes_to_build(self, nodes_to_build):
-        self.user_io.out.info(", ".join(str(n) for n in nodes_to_build))
+        self._output.out.info(", ".join(str(n) for n in nodes_to_build))
 
     def _handle_json_output(self, data, json_output, cwd):
         json_str = json.dumps(data)
 
         if json_output is True:
-            self.user_io.out.write(json_str)
+            self._output.out.write(json_str)
         else:
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json.dumps(data))
-            self.user_io.out.writeln("")
-            self.user_io.out.info("JSON file created at '%s'" % json_output)
+            self._output.out.writeln("")
+            self._output.out.info("JSON file created at '%s'" % json_output)
 
     def json_nodes_to_build(self, nodes_to_build, json_output, cwd):
         data = [str(n) for n in nodes_to_build]
@@ -111,7 +111,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             compact_nodes.setdefault((node.ref, node.package_id), []).append(node)
 
-        remotes = self.cache.registry.load_remotes()
+        remotes = self._cache.registry.load_remotes()
         ret = []
         for (ref, package_id), list_nodes in compact_nodes.items():
             node = list_nodes[0]
@@ -133,7 +133,7 @@ class CommandOutputer(object):
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
-                package_layout = self.cache.package_layout(ref, conanfile.short_paths)
+                package_layout = self._cache.package_layout(ref, conanfile.short_paths)
                 item_data["export_folder"] = package_layout.export()
                 item_data["source_folder"] = package_layout.source()
                 # @todo: check if this is correct or if it must always be package_id
@@ -145,11 +145,11 @@ class CommandOutputer(object):
                 item_data["package_folder"] = package_layout.package(pref)
 
             try:
-                reg_remote = self.cache.package_layout(ref).load_metadata().recipe.remote
+                reg_remote = self._cache.package_layout(ref).load_metadata().recipe.remote
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}
-            except:
+            except Exception:
                 pass
 
             def _add_if_exists(attrib, as_list=False):
@@ -203,14 +203,14 @@ class CommandOutputer(object):
 
     def info(self, deps_graph, only, package_filter, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
-        Printer(self.user_io.out).print_info(data, only,  package_filter=package_filter,
+        Printer(self._output.out).print_info(data, only,  package_filter=package_filter,
                                              show_paths=show_paths,
-                                             show_revisions=self.cache.config.revisions_enabled)
+                                             show_revisions=self._cache.config.revisions_enabled)
 
     def info_graph(self, graph_filename, deps_graph, cwd):
         if graph_filename.endswith(".html"):
             from conans.client.graph.grapher import ConanHTMLGrapher
-            grapher = ConanHTMLGrapher(deps_graph, self.cache.conan_folder)
+            grapher = ConanHTMLGrapher(deps_graph, self._cache.cache_folder)
         else:
             from conans.client.graph.grapher import ConanGrapher
             grapher = ConanGrapher(deps_graph)
@@ -225,7 +225,7 @@ class CommandOutputer(object):
         self._handle_json_output(data, json_output, cwd)
 
     def print_search_references(self, search_info, pattern, raw, all_remotes_search):
-        printer = Printer(self.user_io.out)
+        printer = Printer(self._output.out)
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table,
@@ -233,28 +233,28 @@ class CommandOutputer(object):
         if table:
             html_binary_graph(search_info, reference, table)
         else:
-            printer = Printer(self.user_io.out)
+            printer = Printer(self._output.out)
             printer.print_search_packages(search_info, reference, packages_query,
                                           outdated=outdated)
 
     def print_revisions(self, reference, revisions, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""
-        self.user_io.out.info("Revisions for '%s'%s:" % (reference, remote_test))
+        self._output.out.info("Revisions for '%s'%s:" % (reference, remote_test))
         lines = ["%s (%s)" % (r["revision"],
                               iso8601_to_str(r["time"]) if r["time"] else "No time")
                  for r in revisions]
-        self.user_io.out.writeln("\n".join(lines))
+        self._output.out.writeln("\n".join(lines))
 
     def print_dir_list(self, list_files, path, raw):
         if not raw:
-            self.user_io.out.info("Listing directory '%s':" % path)
-            self.user_io.out.writeln("\n".join([" %s" % i for i in list_files]))
+            self._output.out.info("Listing directory '%s':" % path)
+            self._output.out.writeln("\n".join([" %s" % i for i in list_files]))
         else:
-            self.user_io.out.writeln("\n".join(list_files))
+            self._output.out.writeln("\n".join(list_files))
 
     def print_file_contents(self, contents, file_name, raw):
-        if raw or not self.user_io.out.is_terminal:
-            self.user_io.out.writeln(contents)
+        if raw or not self._output.out.is_terminal:
+            self._output.out.writeln(contents)
             return
 
         from pygments import highlight
@@ -268,13 +268,13 @@ class CommandOutputer(object):
         else:
             lexer = TextLexer()
 
-        self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))
+        self._output.out.write(highlight(contents, lexer, TerminalFormatter()))
 
     def print_user_list(self, info):
         for remote in info["remotes"]:
             authenticated = " [Authenticated]" if remote["authenticated"] else ""
             anonymous = " (anonymous)" if not remote["user_name"] else ""
-            self.user_io.out.info("Current user of remote '%s' set to: '%s'%s%s" %
+            self._output.out.info("Current user of remote '%s' set to: '%s'%s%s" %
                                   (remote["name"], str(remote["user_name"]), anonymous,
                                    authenticated))
 
@@ -285,9 +285,9 @@ class CommandOutputer(object):
         anonymous = " (anonymous)" if not user else ""
 
         if prev_user == user:
-            self.user_io.out.info("User of remote '%s' is already '%s'%s" %
+            self._output.out.info("User of remote '%s' is already '%s'%s" %
                                   (remote_name, previous_username, previous_anonymous))
         else:
-            self.user_io.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
+            self._output.out.info("Changed user of remote '%s' from '%s'%s to '%s'%s" %
                                   (remote_name, previous_username, previous_anonymous, username,
                                    anonymous))

@@ -15,7 +15,6 @@ from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
 import bottle
-import nose
 import requests
 import six
 import time
@@ -29,7 +28,6 @@ from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
-from conans.client.conan_command_output import CommandOutputer
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
@@ -806,13 +804,12 @@ servers["r2"] = TestServer()
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
                           self.hook_manager, requester, interactive=interactive)
-        outputer = CommandOutputer(self.user_io, self.cache)
-        command = Command(conan, self.cache, self.user_io, outputer)
+        command = Command(conan, self.user_io)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.cache.conan_folder, "python"))
+        sys.path.append(os.path.join(self.cache.cache_folder, "python"))
         old_modules = list(sys.modules.keys())
 
         old_output, old_requester = set_global_instances(output, requester)
