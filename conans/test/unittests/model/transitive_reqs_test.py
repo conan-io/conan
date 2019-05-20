@@ -24,6 +24,7 @@ from conans.test.unittests.model.fake_retriever import Retriever
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
                                      test_processed_profile)
+from conans.client.cache.remote_registry import Remotes
 
 say_content = TestConanFile("Say", "0.1")
 say_content2 = TestConanFile("Say", "0.2")
@@ -63,12 +64,12 @@ def _clear_revs(requires):
     return requires
 
 
-class MockSearchRemote(object):
+class MockRemoteManager(object):
     def __init__(self, packages=None):
         self.packages = packages or []
         self.count = Counter()
 
-    def search_remotes(self, pattern, ignorecase):  # @UnusedVariable
+    def search_recipes(self, remote, pattern, ignorecase):  # @UnusedVariable
         self.count[pattern] += 1
         return self.packages
 
@@ -80,14 +81,14 @@ class GraphTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
         self.retriever = Retriever(self.loader)
         paths = ClientCache(self.retriever.folder, self.output)
-        self.remote_search = MockSearchRemote()
-        self.resolver = RangeResolver(paths, self.remote_search)
+        self.remote_manager = MockRemoteManager()
+        self.remotes = Remotes()
+        self.resolver = RangeResolver(paths, self.remote_manager)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         self.resolver, None)
         cache = Mock()
         cache.config.default_package_id_mode = "semver_direct_mode"
-        remote_manager = None
-        self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, remote_manager)
+        self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
 
     def build_graph(self, content, options="", settings=""):
         self.loader.cached_conanfiles = {}
@@ -98,11 +99,12 @@ class GraphTest(unittest.TestCase):
         profile.options = OptionsValues.loads(options)
         processed_profile = test_processed_profile(profile=profile)
         root_conan = self.retriever.root(str(content), processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
+                                             processed_profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                              update=False, remote_name=None)
+                                              update=False, remotes=self.remotes)
         return deps_graph
 
 
@@ -1711,8 +1713,8 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.build_graph(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'Arduino', 'FreeBSD', 'Macos',
-                                     'SunOS', 'Windows', 'WindowsStore',
+                                    ['Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Macos',
+                                     'SunOS', 'Windows', 'WindowsCE', 'WindowsStore',
                                      'iOS', 'tvOS', 'watchOS']),
                       str(cm.exception))
 
@@ -1852,7 +1854,7 @@ class ChatConan(ConanFile):
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
-                                              update=False, remote_name=None)
+                                              update=False, remotes=None)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]

@@ -32,8 +32,8 @@ class ConanCreateTest(unittest.TestCase):
 
                 def get_conaninfo(info):
                     package_id = info["installed"][0]["packages"][0]["id"]
-                    folder = cache.package(PackageReference.loads("lib/1.0@conan/stable:%s"
-                                                                  % package_id))
+                    pref = PackageReference.loads("lib/1.0@conan/stable:%s" % package_id)
+                    folder = cache.package_layout(pref.ref).package(pref)
                     return load(os.path.join(folder, "conaninfo.txt"))
 
                 settings = ["compiler=Visual Studio", "compiler.version=15", "build_type=Release"]

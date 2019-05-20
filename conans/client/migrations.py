@@ -2,6 +2,7 @@ import os
 import shutil
 
 from conans import DEFAULT_REVISION_V1
+from conans.client import migrations_settings
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
@@ -15,6 +16,7 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
+from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
@@ -24,7 +26,8 @@ class ClientMigrator(Migrator):
         super(ClientMigrator, self).__init__(cache.conan_folder, cache.store,
                                              current_version, out)
 
-    def _update_settings_yml(self, old_settings):
+    def _update_settings_yml(self, old_version):
+
         from conans.client.conf import default_settings_yml
         settings_path = self.cache.settings_path
         if not os.path.exists(settings_path):
@@ -32,18 +35,30 @@ class ClientMigrator(Migrator):
             self.out.warn("Nothing to migrate here, settings will be generated automatically")
             return
 
-        current_settings = load(self.cache.settings_path)
-        if current_settings != default_settings_yml:
-            self.out.warn("Migration: Updating settings.yml")
-            if current_settings != old_settings:
-                new_path = self.cache.settings_path + ".new"
-                save(new_path, default_settings_yml)
-                self.out.warn("*" * 40)
-                self.out.warn("settings.yml is locally modified, can't be updated")
-                self.out.warn("The new settings.yml has been stored in: %s" % new_path)
-                self.out.warn("*" * 40)
+        var_name = "settings_{}".format(old_version.replace(".", "_"))
+
+        def save_new():
+            new_path = self.cache.settings_path + ".new"
+            save(new_path, default_settings_yml)
+            self.out.warn("*" * 40)
+            self.out.warn("settings.yml is locally modified, can't be updated")
+            self.out.warn("The new settings.yml has been stored in: %s" % new_path)
+            self.out.warn("*" * 40)
+
+        self.out.warn("Migration: Updating settings.yml")
+        if hasattr(migrations_settings, var_name):
+            version_default_contents = getattr(migrations_settings, var_name)
+            if version_default_contents != default_settings_yml:
+                current_settings = load(self.cache.settings_path)
+                if current_settings != version_default_contents:
+                    save_new()
+                else:
+                    save(self.cache.settings_path, default_settings_yml)
             else:
-                save(self.cache.settings_path, default_settings_yml)
+                self.out.info("Migration: Settings already up to date")
+        else:
+            # We don't have the value for that version, so don't override
+            save_new()
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
@@ -51,87 +66,8 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("1.14.0"):
-            migrate_config_install(self.cache)
-
-        if old_version < Version("1.13.0"):
-            old_settings = """
-# Only for cross building, 'os_build/arch_build' is the system that runs Conan
-os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
-
-# Only for building cross compilation tools, 'os_target/arch_target' is the system for
-# which the tools generate code
-os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
-
-# Rest of the settings are "host" settings:
-# - For native building/cross building: Where the library/program will run.
-# - For building cross compilation tools: Where the cross compiler will run.
-os:
-    Windows:
-        subsystem: [None, cygwin, msys, msys2, wsl]
-    WindowsStore:
-        version: ["8.1", "10.0"]
-    Linux:
-    Macos:
-        version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14"]
-    Android:
-        api_level: ANY
-    iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
-    watchOS:
-        version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1"]
-    tvOS:
-        version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
-    FreeBSD:
-    SunOS:
-    Arduino:
-        board: ANY
-arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr]
-compiler:
-    sun-cc:
-        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
-        threads: [None, posix]
-        libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
-    gcc:
-        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
-                  "5", "5.1", "5.2", "5.3", "5.4", "5.5",
-                  "6", "6.1", "6.2", "6.3", "6.4",
-                  "7", "7.1", "7.2", "7.3",
-                  "8", "8.1", "8.2"]
-        libcxx: [libstdc++, libstdc++11]
-        threads: [None, posix, win32] #  Windows MinGW
-        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
-    Visual Studio:
-        runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14", "15"]
-        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
-                  v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
-                  LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
-                  LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2]
-    clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
-                  "5.0", "6.0", "7.0",
-                  "8"]
-        libcxx: [libstdc++, libstdc++11, libc++]
-    apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
-        libcxx: [libstdc++, libc++]
-
-build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
-cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-"""
-            self._update_settings_yml(old_settings)
-
-            # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
-            _migrate_create_metadata(self.cache, self.out)
-
-        if old_version < Version("1.12.0"):
-            migrate_plugins_to_hooks(self.cache)
-
-        if old_version < Version("1.0"):
-            _migrate_lock_files(self.cache, self.out)
+        # Migrate the settings if they were the default for that version
+        self._update_settings_yml(old_version)
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
@@ -147,6 +83,25 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.cache, self.out)
 
+        if old_version < Version("1.0"):
+            _migrate_lock_files(self.cache, self.out)
+
+        if old_version < Version("1.12.0"):
+            migrate_plugins_to_hooks(self.cache)
+
+        if old_version < Version("1.13.0"):
+            # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
+            _migrate_create_metadata(self.cache, self.out)
+
+        if old_version < Version("1.14.0"):
+            migrate_config_install(self.cache)
+
+        if old_version < Version("1.14.2"):
+            _migrate_full_metadata(self.cache, self.out)
+
+        if old_version < Version("1.15.0"):
+            migrate_registry_file(self.cache, self.out)
+
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
@@ -157,6 +112,50 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def _migrate_full_metadata(cache, out):
+    # Fix for https://github.com/conan-io/conan/issues/4898
+    out.warn("Running a full revision metadata migration")
+    refs = _get_refs(cache)
+    for ref in refs:
+        try:
+            base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
+            layout = PackageCacheLayout(base_folder=base_folder, ref=ref, short_paths=None,
+                                        no_lock=True)
+            with layout.update_metadata() as metadata:
+                # Updating the RREV
+                if metadata.recipe.revision is None:
+                    out.warn("Package %s metadata had recipe revision None, migrating" % str(ref))
+                    folder = layout.export()
+                    try:
+                        manifest = FileTreeManifest.load(folder)
+                        rrev = manifest.summary_hash
+                    except Exception:
+                        rrev = DEFAULT_REVISION_V1
+                    metadata.recipe.revision = rrev
+
+                prefs = _get_prefs(layout)
+                existing_ids = [pref.id for pref in prefs]
+                for pkg_id in list(metadata.packages.keys()):
+                    if pkg_id not in existing_ids:
+                        out.warn("Package %s metadata had stalled package information %s, removing"
+                                 % (str(ref), pkg_id))
+                        del metadata.packages[pkg_id]
+                # UPDATING PREVS
+                for pref in prefs:
+                    try:
+                        pmanifest = FileTreeManifest.load(layout.package(pref))
+                        prev = pmanifest.summary_hash
+                    except Exception:
+                        prev = DEFAULT_REVISION_V1
+                    metadata.packages[pref.id].revision = prev
+                    metadata.packages[pref.id].recipe_revision = metadata.recipe.revision
+
+        except Exception as e:
+            raise ConanException("Something went wrong while migrating metadata.json files "
+                                 "in the cache, please try to fix the issue or wipe the cache: {}"
+                                 ":{}".format(ref, e))
 
 
 def _migrate_create_metadata(cache, out):
@@ -174,7 +173,7 @@ def _migrate_create_metadata(cache, out):
             try:
                 manifest = FileTreeManifest.load(folder)
                 rrev = manifest.summary_hash
-            except:
+            except Exception:
                 rrev = DEFAULT_REVISION_V1
             metadata_path = layout.package_metadata()
             if not os.path.exists(metadata_path):
@@ -186,7 +185,7 @@ def _migrate_create_metadata(cache, out):
                     try:
                         pmanifest = FileTreeManifest.load(layout.package(pref))
                         prev = pmanifest.summary_hash
-                    except:
+                    except Exception:
                         prev = DEFAULT_REVISION_V1
                     metadata.packages[pref.id].revision = prev
                     metadata.packages[pref.id].recipe_revision = metadata.recipe.revision

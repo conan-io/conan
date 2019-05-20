@@ -41,7 +41,7 @@ class MyPkg(ConanFile):
         self.assertEqual(os.listdir(folder), ["myfile.txt"])
         # Now install again
         client.run("install Pkg/0.1@lasote/testing --build=missing")
-        export = client.cache.export(ref)
+        export = client.cache.package_layout(ref).export()
         self.assertNotIn(EXPORT_SOURCES_DIR_OLD, os.listdir(export))
-        export_sources = client.cache.export_sources(ref)
+        export_sources = client.cache.package_layout(ref).export_sources()
         self.assertEqual(os.listdir(export_sources), ["myfile.txt"])

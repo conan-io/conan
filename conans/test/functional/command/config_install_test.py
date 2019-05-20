@@ -16,6 +16,7 @@ from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
+import textwrap
 
 win_profile = """[settings]
     os: Windows
@@ -48,6 +49,7 @@ level = 10                  # environment CONAN_LOGGING_LEVEL
 [general]
 compression_level = 6                 # environment CONAN_COMPRESSION_LEVEL
 cpu_count = 1             # environment CONAN_CPU_COUNT
+default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 
 [proxies]
 # Empty section will try to use system proxies.
@@ -79,37 +81,8 @@ def zipdir(path, zipfilename):
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
-        # Save to the old registry, it has to be migrated
-        registry_path = self.client.cache.registry_path
-
-        save(registry_path, """
-{
- "remotes": [
-  {
-   "url": "https://myrepo2.com",
-   "verify_ssl": true,
-   "name": "my-repo-2"
-  },
-  {
-   "url": "https://conan-center.com",
-   "verify_ssl": true,
-   "name": "conan-center"
-  }
- ],
- "references": {
-  "MyPkg/0.1@user/channel": "my-repo-2",
-  "Other/1.2@user/channel": "conan-center"
- }
-}
-""")
         save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
-
-        self.old_env = dict(os.environ)
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.old_env)
 
     def _create_profile_folder(self, folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
@@ -129,6 +102,33 @@ class ConfigInstallTest(unittest.TestCase):
                             })
         return folder
 
+    def config_hooks_test(self):
+        # Make sure the conan.conf hooks information is appended
+        folder = temp_folder(path_with_spaces=False)
+        conan_conf = textwrap.dedent("""
+            [hooks]
+            foo
+            custom/custom
+            """)
+        save_files(folder, {"config/conan.conf": conan_conf})
+        client = TestClient()
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("foo"))
+        self.assertEqual(1, content.count("custom/custom"))
+
+        config = ConanClientConfigParser(client.cache.conan_conf_path)
+        hooks = config.get_item("hooks")
+        self.assertIn("foo", hooks)
+        self.assertIn("custom/custom", hooks)
+        self.assertIn("attribute_checker", hooks)
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("foo"))
+        self.assertEqual(1, content.count("custom/custom"))
+
     def _create_zip(self, zippath=None):
         folder = self._create_profile_folder()
         zippath = zippath or os.path.join(folder, "myconfig.zip")
@@ -145,11 +145,10 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(str(config.args), args)
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        registry = self.client.cache.registry
-        self.assertEqual(registry.remotes.list, [Remote("myrepo1", "https://myrepourl.net", False),
-                                                 Remote("my-repo-2", "https://myrepo2.com", True),
-                                                 ])
-        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
+        remotes = self.client.cache.registry.load_remotes()
+        self.assertEqual(list(remotes.values()), [Remote("myrepo1", "https://myrepourl.net", False),
+                                                  Remote("my-repo-2", "https://myrepo2.com", True),
+                                                  ])
         self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
@@ -161,6 +160,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
         self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
+        self.assertEqual(conan_conf.get_item("general.default_package_id_mode"), "full_package_mode")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
@@ -244,7 +244,7 @@ class Pkg(ConanFile):
         content = load(file2)
         self.assertEqual(content, "BYE!!")
 
-    def dont_duplicate_configs(self):
+    def test_dont_duplicate_configs(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello"})
         self.client.run('config install "%s" -sf=subf' % folder)
@@ -255,6 +255,35 @@ class Pkg(ConanFile):
         content = load(self.client.cache.config_install_file)
         self.assertEqual(1, content.count("subf"))
         self.assertEqual(1, content.count("other"))
+
+    def test_install_registry_txt_error(self):
+        folder = temp_folder()
+        save_files(folder, {"registry.txt": "myrepo1 https://myrepourl.net False"})
+        self.client.run('config install "%s"' % folder)
+        self.assertIn("WARN: registry.txt has been deprecated. Migrating to remotes.json",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertEqual("myrepo1: https://myrepourl.net [Verify SSL: False]\n", self.client.out)
+
+    def test_install_registry_json_error(self):
+        folder = temp_folder()
+        registry_json = {"remotes": [{"url": "https://server.conan.io",
+                                      "verify_ssl": True,
+                                      "name": "conan.io"
+                                      }]}
+        save_files(folder, {"registry.json": json.dumps(registry_json)})
+        self.client.run('config install "%s"' % folder)
+        self.assertIn("WARN: registry.json has been deprecated. Migrating to remotes.json",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
+
+    def test_install_remotes_json_error(self):
+        folder = temp_folder()
+        save_files(folder, {"remotes.json": ""})
+        self.client.run('config install "%s"' % folder, assert_error=True)
+        self.assertIn("ERROR: remotes.json install is not supported yet. Use 'remotes.txt'",
+                      self.client.out)
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)

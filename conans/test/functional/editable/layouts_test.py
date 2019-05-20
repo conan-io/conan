@@ -6,12 +6,31 @@ import textwrap
 import unittest
 
 from conans.model.editable_layout import LAYOUTS_FOLDER
+from conans.model.ref import ConanFileReference
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_files, save
 
 
 class LayoutTest(unittest.TestCase):
+
+    def test_editable_crash(self):
+        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        client = TestClient()
+        layout = textwrap.dedent("""
+                    [build_folder]
+                    build
+                    """)
+        client.save({"conanfile.py": TestConanFile("lib", "1.0"),
+                     "mylayout": layout})
+        client.run("editable add . {} --layout mylayout".format(ref))
+        client2 = TestClient(base_folder=client.base_folder)
+        client2.save({"conanfile.py": TestConanFile("app", "1.0",
+                                                    requires=["lib/1.0@conan/stable"])})
+        client2.run("create . user/testing")
+        graph_info = os.path.join(client.current_folder, "build", "graph_info.json")
+        self.assertTrue(os.path.exists(graph_info))
 
     def test_missing_wrong_layouts(self):
         client = TestClient()
@@ -202,7 +221,8 @@ class LayoutTest(unittest.TestCase):
         client2.run("install . -g cmake -s build_type=Debug", assert_error=True)
         self.assertIn("ERROR: Error parsing layout file '{}' (for reference "
                       "'mytool/0.1@user/testing')\n'settings.build_type' doesn't exist".format(
-            os.path.join(client.current_folder, 'layout')), client2.out)
+                          os.path.join(client.current_folder, 'layout')),
+                      client2.out)
 
         # Now add settings to conanfile
         client.save({"conanfile.py": conanfile.replace("pass", 'settings = "build_type"')})

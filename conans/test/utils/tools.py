@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import unittest
 import uuid
 from collections import Counter, OrderedDict
@@ -19,6 +18,7 @@ import bottle
 import nose
 import requests
 import six
+import time
 from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
@@ -26,7 +26,7 @@ from webtest.app import TestApp
 
 from conans import tools, load
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import dump_registry
+from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
 from conans.client.conan_command_output import CommandOutputer
@@ -38,6 +38,7 @@ from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
+from conans.client.tools.oss import check_output
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
 from conans.client.userio import UserIO
@@ -54,18 +55,18 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
-from conans.util.files import mkdir, save, save_files
-from conans.util.log import logger
+from conans.util.files import mkdir, save_files
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-ARTIFACTORY_DEFAULT_USER = "admin"
-ARTIFACTORY_DEFAULT_PASSWORD = "password"
-ARTIFACTORY_DEFAULT_URL = "http://localhost:8090/artifactory"
+
+ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
+ARTIFACTORY_DEFAULT_PASSWORD = os.getenv("ARTIFACTORY_DEFAULT_PASSWORD", "password")
+ARTIFACTORY_DEFAULT_URL = os.getenv("ARTIFACTORY_DEFAULT_URL", "http://localhost:8090/artifactory")
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(reference)
-    path = cache.export(ref)
+    path = cache.package_layout(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -73,7 +74,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     pref = PackageReference.loads(package_reference)
-    path = cache.package(pref)
+    path = cache.package_layout(pref.ref).package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -211,7 +212,6 @@ class TestRequester(object):
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
                 # translate it to data and content_type
-                import json
                 kwargs["params"] = json.dumps(kwargs["json"])
                 kwargs["content_type"] = "application/json"
             kwargs.pop("json", None)
@@ -296,15 +296,13 @@ class ArtifactoryServerStore(object):
 
 class ArtifactoryServer(object):
 
-    def __init__(self, url=None, user=None, password=None, server_capabilities=None):
-        self._user = user or ARTIFACTORY_DEFAULT_USER
-        self._password = password or ARTIFACTORY_DEFAULT_PASSWORD
-        self._url = url or ARTIFACTORY_DEFAULT_URL
+    def __init__(self, *args, **kwargs):
+        self._user = ARTIFACTORY_DEFAULT_USER
+        self._password = ARTIFACTORY_DEFAULT_PASSWORD
+        self._url = ARTIFACTORY_DEFAULT_URL
         self._repo_name = "conan_{}".format(str(uuid.uuid4()).replace("-", ""))
         self.create_repository()
         self.server_store = ArtifactoryServerStore(self.repo_url, self._user, self._password)
-        if server_capabilities is not None:
-            raise nose.SkipTest("The Artifactory Server can't adjust capabilities")
 
     @property
     def _auth(self):
@@ -520,11 +518,10 @@ def create_local_svn_checkout(files, repo_url, rel_project_path=None,
             subprocess.check_output("svn add .", shell=True)
             subprocess.check_output('svn commit -m "{}"'.format(commit_msg), shell=True)
             if SVN.get_version() >= SVN.API_CHANGE_VERSION:
-                rev = subprocess.check_output("svn info --show-item revision",
-                                              shell=True).decode().strip()
+                rev = check_output("svn info --show-item revision").strip()
             else:
                 import xml.etree.ElementTree as ET
-                output = subprocess.check_output("svn info --xml", shell=True).decode().strip()
+                output = check_output("svn info --xml").strip()
                 root = ET.fromstring(output)
                 rev = root.findall("./entry")[0].get("revision")
         project_url = repo_url + "/" + quote(rel_project_path.replace("\\", "/"))
@@ -715,18 +712,18 @@ servers["r2"] = TestServer()
         self.cache.invalidate()
 
     def update_servers(self):
-        save(self.cache.registry_path, dump_registry({}, {}, {}))
+        Remotes().save(self.cache.registry_path)
         registry = self.cache.registry
 
         def add_server_to_registry(name, server):
             if isinstance(server, ArtifactoryServer):
-                registry.remotes.add(name, server.repo_api_url)
+                registry.add(name, server.repo_api_url)
                 self.users.update({name: [(ARTIFACTORY_DEFAULT_USER,
                                            ARTIFACTORY_DEFAULT_PASSWORD)]})
             elif isinstance(server, TestServer):
-                registry.remotes.add(name, server.fake_url)
+                registry.add(name, server.fake_url)
             else:
-                registry.remotes.add(name, server)
+                registry.add(name, server)
 
         for name, server in self.servers.items():
             if name == "default":
@@ -849,7 +846,7 @@ servers["r2"] = TestServer()
 
     def run_command(self, command):
         self.all_output += str(self.out)
-        self.init_dynamic_vars() # Resets the output
+        self.init_dynamic_vars()  # Resets the output
         return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
@@ -859,6 +856,7 @@ servers["r2"] = TestServer()
         path = path or self.current_folder
         if clean_first:
             shutil.rmtree(self.current_folder, ignore_errors=True)
+        files = {f: str(content) for f, content in files.items()}
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
@@ -993,8 +991,8 @@ class GenConanfile(object):
         with_default_option("shared", True).\
         with_build_msg("holaaa").\
         with_build_msg("adiooos").\
-        with_package_file("file.txt", "hola"). \
-        with_package_file("file2.txt", "hola").gen()
+        with_package_file("file.txt", "hola").\
+        with_package_file("file2.txt", "hola")
     """
 
     def __init__(self):
@@ -1041,11 +1039,11 @@ class GenConanfile(object):
     def with_package_file(self, file_name, contents=None, env_var=None):
         if not contents and not env_var:
             raise Exception("Specify contents or env_var")
+        self.with_import("import os")
         self.with_import("from conans import tools")
         if contents:
             self._package_files[file_name] = contents
         if env_var:
-            self.with_import("import os")
             self._package_files_env[file_name] = env_var
         return self
 

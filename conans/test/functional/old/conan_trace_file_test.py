@@ -50,8 +50,8 @@ class HelloConan(ConanFile):
             client.run("user lasote -p mypass -r default")
             client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(ref))
-            package_dir = client.cache.packages(
-                ConanFileReference.loads("Hello0/0.1@lasote/stable"))
+            package_dir = client.cache.package_layout(
+                ConanFileReference.loads("Hello0/0.1@lasote/stable")).packages()
             package_dir = os.path.join(package_dir, os.listdir(package_dir)[0])
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
             return log_file_packaged_, client.user_io.out
