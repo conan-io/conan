@@ -14,35 +14,21 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
-class BuildRequiresInRecipeExample(GraphManagerTest):
-    """ There is an application with a requirement 'lib', both of them build_requires
-        a tool called 'breq' (build_machine) and this tool requires a 'breq_lib'.
+class BuildRequiresInProfileExample(GraphManagerTest):
+    """ There is an application with a requirement 'lib', both of them need
+        a tool called 'cmake' to build. This tool is defined in profile.
 
         All these requirements are declared in the profiles
     """
 
-    breq_lib = textwrap.dedent("""
+    cmake = textwrap.dedent("""
         from conans import ConanFile
 
-        class BuildRequiresLibrary(ConanFile):
-            name = "breq_lib"
+        class CMake(ConanFile):
+            name = "cmake"
             version = "testing"
 
             settings = "os"
-
-            def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
-    """)
-
-    breq = textwrap.dedent("""
-        from conans import ConanFile
-
-        class BuildRequires(ConanFile):
-            name = "breq"
-            version = "testing"
-
-            settings = "os"
-            requires = "breq_lib/testing@user/channel"
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -56,8 +42,6 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
             version = "testing"
 
             settings = "os"  # , "arch", "compiler", "build_type"
-
-            build_requires = "breq/testing@user/channel"
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -73,9 +57,6 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
             settings = "os"
             requires = "lib/testing@user/channel"
 
-            def build_requirements(self):
-                self.build_requires("breq/testing@user/channel")
-
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
@@ -87,9 +68,8 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
     """)
 
     def setUp(self):
-        super(BuildRequiresInRecipeExample, self).setUp()
-        self._cache_recipe("breq_lib/testing@user/channel", self.breq_lib)
-        self._cache_recipe("breq/testing@user/channel", self.breq)
+        super(BuildRequiresInProfileExample, self).setUp()
+        self._cache_recipe("cmake/testing@user/channel", self.cmake)
         self._cache_recipe("lib/testing@user/channel", self.lib)
         self._cache_recipe("application/testing@user/channel", self.application)
 
@@ -116,6 +96,7 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
     def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"
+        profile_host.build_requires["*"] = [ConanFileReference.loads("cmake/testing@user/channel"), ]
         profile_host.process_settings(self.cache)
 
         profile_build = Profile()
@@ -137,19 +118,14 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
         self.assertEqual(lib_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages
-        breq_application_build = application.dependencies[1].dst
-        self.assertEqual(breq_application_build.conanfile.name, "breq")
-        self.assertEqual(breq_application_build.build_context, "build")
-        self.assertEqual(str(breq_application_build.conanfile.settings.os),
+        cmake_application_build = application.dependencies[1].dst
+        self.assertEqual(cmake_application_build.conanfile.name, "cmake")
+        self.assertEqual(cmake_application_build.build_context, "build")
+        self.assertEqual(str(cmake_application_build.conanfile.settings.os),
                          profile_build.settings['os'])
 
-        breq_lib_build = lib_host.dependencies[0].dst
-        self.assertNotEqual(breq_application_build, breq_lib_build)  # TODO: bug or feature?
-        self.assertEqual(breq_lib_build.conanfile.name, "breq")
-        self.assertEqual(breq_lib_build.build_context, "build")
-        self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])
-
-        breq_lib_build = breq_application_build.dependencies[0].dst
-        self.assertEqual(breq_lib_build.conanfile.name, "breq_lib")
-        self.assertEqual(breq_lib_build.build_context, "build")
-        self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])
+        cmake_lib_build = lib_host.dependencies[0].dst
+        self.assertNotEqual(cmake_application_build, cmake_lib_build)  # TODO: bug or feature?
+        self.assertEqual(cmake_lib_build.conanfile.name, "cmake")
+        self.assertEqual(cmake_lib_build.build_context, "build")
+        self.assertEqual(str(cmake_lib_build.conanfile.settings.os), profile_build.settings['os'])
