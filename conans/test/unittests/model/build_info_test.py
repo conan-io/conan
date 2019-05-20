@@ -3,7 +3,8 @@ import unittest
 from collections import defaultdict, namedtuple
 
 from conans.client.generators import TXTGenerator
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.errors import ConanException
+from conans.model.build_info import CppInfo, DepsCppInfo, Component
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
@@ -173,3 +174,41 @@ VAR2=23
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
         self.assertEqual(info.bin_paths, [abs_bin,
                                           os.path.join(folder, "local_bindir")])
+
+    def cpp_info_components_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        self.assertIsNone(info.name)
+        self.assertEquals(info.exes, [])
+        self.assertEquals(info.system_deps, [])
+        info.libs
+
+    def basic_components_test(self):
+        component = Component("my_component")
+        self.assertIn(component.name, "my_component")
+        component.deps["hola"]
+        component.deps["hola"].lib = "libhola"
+        self.assertEquals(component.deps["hola"].lib, "libhola")
+        with self.assertRaisesRegexp(ConanException, "lib is already set"):
+            component.deps["hola"].exe = "hola.exe"
+        component.deps["hola"].lib = None
+        self.assertEquals(component.deps["hola"].lib, None)
+        component.deps["hola"].exe = "hola.exe"
+        self.assertEquals(component.deps["hola"].lib, None)
+        with self.assertRaisesRegexp(ConanException, "exe is already set"):
+            component.deps["hola"].lib = "libhola"
+
+    def nested_components_test(self):
+        component = Component("Greetings")
+        self.assertIn(component.name, "Greetings")
+        component.deps["greet"].exe = "greet.exe"
+        component.deps["greet"].deps["hola"].lib = "libhola"
+        component.deps["greet"].deps["adios"].lib = "libadios"
+        component.deps["greet"].deps["hola"].deps["say"].lib = "libsay"
+        component.deps["greet"].deps["adios"].deps["say"].lib = "libsay"
+        component.deps["greet"].deps["hru"].lib = "libhru"
+        self.assertEquals(component.libs, ["libsay", "libhola", "libadios", "libhru"])
+        self.assertEquals(component.deps["greet"].deps["hru"].libs, [])
+        self.assertEquals(component.deps["greet"].deps["hola"].libs, ["libsay"])
+        self.assertEquals(component.deps["greet"].deps["adios"].libs, ["libsay"])
+        self.assertEquals(component.deps["greet"].deps["adios"].deps["say"].libs, [])

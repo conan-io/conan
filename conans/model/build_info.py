@@ -3,6 +3,8 @@ from collections import OrderedDict
 
 import deprecation
 
+from conans.errors import ConanException
+
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
 DEFAULT_BIN = "bin"
@@ -16,6 +18,9 @@ class _CppInfo(object):
     specific systems will be produced from this info
     """
     def __init__(self):
+        self.name = None
+        self.exes = []
+        self.system_deps = []
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
@@ -130,6 +135,70 @@ class CppInfo(_CppInfo):
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
+
+
+class Component(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.deps = OrderedComponentsDict()
+        self._lib = None
+        self._exe = None
+        self.system_deps = []
+
+    @property
+    def libs(self):
+        return self.deps.items()
+
+    @property
+    def lib(self):
+        return self._lib
+
+    @lib.setter
+    def lib(self, name):
+        if self._exe:
+            raise ConanException("exe is already set")
+        self._lib = name
+
+    @property
+    def exe(self):
+        return self._exe
+
+    @exe.setter
+    def exe(self, name):
+        if self._lib:
+            raise ConanException("lib is already set")
+        self._exe = name
+
+
+class OrderedComponentsDict(object):
+
+    def __init__(self):
+        self._components = OrderedDict()
+
+    def __setitem__(self, key, value):
+        self._components[key] = value
+
+    def __getitem__(self, key):
+        if key not in self._components:
+            self._components[key] = Component(key)
+        return self._components[key]
+
+    def items(self):
+        values = []
+        for k, v in self._components.items():
+            items = self._components[k].deps.items()
+            if items:
+                values.extend(items)
+                if self._components[k].lib is not None:
+                    values.append(self._components[k].lib)
+            else:
+                values.append(self._components[k].lib)
+        ret = []
+        for v in values:
+            if v not in ret:
+                ret.append(v)
+        return ret
 
 
 class _BaseDepsCppInfo(_CppInfo):
