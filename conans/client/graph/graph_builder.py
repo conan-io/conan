@@ -1,6 +1,6 @@
 import time
-from collections import OrderedDict
 
+from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
@@ -8,7 +8,6 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
-
 
 REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
 
@@ -141,13 +140,13 @@ class DepsGraphBuilder(object):
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
-        build_context = require.build_context if node.build_context == "host" else node.build_context
+        build_context = require.build_context if node.build_context == CONTEXT_HOST else node.build_context
         previous = node.public_deps.get(name, build_context)
         previous_closure = node.public_closure.get(name, build_context)
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded
             # node -> new_node
-            processed_profile_host = processed_profile_host if require.build_context == "host" else processed_profile_build
+            processed_profile_host = processed_profile_host if require.build_context == CONTEXT_HOST else processed_profile_build
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remotes,
                                              processed_profile_host)
@@ -344,7 +343,7 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
-        build_context = requirement.build_context if current_node.build_context == "host" else current_node.build_context
+        build_context = requirement.build_context if current_node.build_context == CONTEXT_HOST else current_node.build_context
         new_node = Node(new_ref, dep_conanfile, build_context=build_context)
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status

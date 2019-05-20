@@ -4,8 +4,8 @@ from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, Node,\
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
+from conans.client.graph.graph import BINARY_BUILD, Node, \
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
@@ -24,7 +24,7 @@ class _RecipeBuildRequires(OrderedDict):
         if not isinstance(build_requires, (list, tuple)):
             build_requires = [build_requires]
         for build_require in build_requires:
-            self.add(build_require, context="build")
+            self.add(build_require, context=CONTEXT_BUILD)
         self._conanfile = conanfile
 
     def add(self, build_require, context):
@@ -32,9 +32,10 @@ class _RecipeBuildRequires(OrderedDict):
             build_require = ConanFileReference.loads(build_require)
         self[(build_require.name, context)] = build_require
 
-    def __call__(self, build_require, context="build"):
-        assert context in ["build", "host"], "Invalid context for build_require: '{}' in conanfile" \
-                                             " '{}'".format(context, self._conanfile)
+    def __call__(self, build_require, context=CONTEXT_BUILD):
+        assert context in [CONTEXT_BUILD, CONTEXT_HOST],\
+            "Invalid context for build_require: '{}' in" \
+            " conanfile '{}'".format(context, self._conanfile)
         self.add(build_require, context)
 
     def __str__(self):
@@ -112,14 +113,14 @@ class GraphManager(object):
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile_host,
                                                   scope_options=False)
-            root_node = Node(ref, conanfile, build_context="host", recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, build_context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             if not self._cache.config.revisions_enabled and reference.revision is not None:
                 raise ConanException("Revisions not enabled in the client, specify a "
                                      "reference without revision")
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile_host)
-            root_node = Node(ref, conanfile, build_context="host", recipe=RECIPE_VIRTUAL)
+            root_node = Node(ref, conanfile, build_context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         else:
             path = reference
             if path.endswith(".py"):
@@ -139,7 +140,7 @@ class GraphManager(object):
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile_host,
                                                             ref=graph_info.root)
 
-            root_node = Node(ref, conanfile, build_context="host", recipe=RECIPE_CONSUMER)
+            root_node = Node(ref, conanfile, build_context=CONTEXT_HOST, recipe=RECIPE_CONSUMER)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
@@ -200,14 +201,15 @@ class GraphManager(object):
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
-                                if (build_require.name, "build") in package_build_requires:
+                                if (build_require.name, CONTEXT_BUILD) in package_build_requires:
                                     # Override existing
                                     # this is a way to have only one package Name for all versions
                                     # (no conflicts)
                                     # but the dict key is not used at all
-                                    package_build_requires[(build_require.name, "build")] = build_require
+                                    package_build_requires[(build_require.name, CONTEXT_BUILD)] = \
+                                        build_require
                                 elif build_require.name != node.name:  # Profile one
-                                    new_profile_build_requires.append((build_require, "build"))
+                                    new_profile_build_requires.append((build_require, CONTEXT_BUILD))
                                 else:
                                     # We are recursing build_requires, we can arrive here with a
                                     #  build_require from the profile (itself will be the 'node')

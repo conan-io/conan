@@ -4,6 +4,7 @@ import os
 import textwrap
 
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
@@ -115,21 +116,21 @@ class ClassicProtocExample(GraphManagerTest):
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 2)
         self.assertEqual(application.conanfile.name, "application")
-        self.assertEqual(application.build_context, "host")
+        self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
-        self.assertEqual(protobuf_host.build_context, "host")
+        self.assertEqual(protobuf_host.build_context, CONTEXT_HOST)
         self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
-        self.assertEqual(protoc_build.build_context, "build")
+        self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
 
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
-        self.assertEqual(protoc_build.build_context, "build")
+        self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])

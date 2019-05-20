@@ -21,6 +21,9 @@ BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 
+CONTEXT_HOST = "host"
+CONTEXT_BUILD = "build"
+
 
 class _NodeOrderedDict(object):
     def __init__(self, key=lambda n: (n.name, n._build_context)):
@@ -75,8 +78,8 @@ class Node(object):
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
 
-        assert build_context in ["build", "host"], "Invalid build context: '{}'" \
-                                                   " for node '{}'".format(build_context, self.ref)
+        assert build_context in [CONTEXT_BUILD, CONTEXT_HOST],\
+            "Invalid build context: '{}' for node '{}'".format(build_context, self.ref)
         self._build_context = build_context
 
         # The dependencies that can conflict to downstream consumers

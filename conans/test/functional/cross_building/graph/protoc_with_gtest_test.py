@@ -1,9 +1,11 @@
 # coding=utf-8
 
 import textwrap
+
+from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
+from conans.model.profile import Profile
 from conans.test.functional.cross_building.graph.protoc_basic_test import ClassicProtocExample
 from conans.util.files import save
-from conans.model.profile import Profile
 
 
 class ProtocWithGTestExample(ClassicProtocExample):
@@ -69,17 +71,17 @@ class ProtocWithGTestExample(ClassicProtocExample):
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 4)
         self.assertEqual(application.conanfile.name, "application")
-        self.assertEqual(application.build_context, "host")
+        self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
 
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
-        self.assertEqual(protobuf_host.build_context, "host")
+        self.assertEqual(protobuf_host.build_context, CONTEXT_HOST)
         self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
 
         protoc_host = application.dependencies[2].dst
         self.assertEqual(protoc_host.conanfile.name, "protoc")
-        self.assertEqual(protoc_host.build_context, "host")
+        self.assertEqual(protoc_host.build_context, CONTEXT_HOST)
         self.assertEqual(protoc_host.conanfile.settings.os, profile_host.settings['os'])
 
         protoc_protobuf_host = protoc_host.dependencies[0].dst
@@ -87,17 +89,17 @@ class ProtocWithGTestExample(ClassicProtocExample):
 
         gtest_host = application.dependencies[3].dst
         self.assertEqual(gtest_host.conanfile.name, "gtest")
-        self.assertEqual(gtest_host.build_context, "host")
+        self.assertEqual(gtest_host.build_context, CONTEXT_HOST)
         self.assertEqual(gtest_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
-        self.assertEqual(protoc_build.build_context, "build")
+        self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
 
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
-        self.assertEqual(protoc_build.build_context, "build")
+        self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
 
