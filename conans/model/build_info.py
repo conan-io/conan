@@ -120,6 +120,19 @@ class CppInfo(_CppInfo):
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
+        self._deps = OrderedDict()
+
+    @property
+    def deps(self):
+        return self._deps.keys()
+
+    def __setitem__(self, key, value):
+        self._deps[key] = value
+
+    def __getitem__(self, key):
+        if key not in self.deps:
+            self._deps[key] = Component(key)
+        return self._deps[key]
 
     def __getattr__(self, config):
 
@@ -141,14 +154,50 @@ class Component(object):
 
     def __init__(self, name):
         self.name = name
-        self.deps = OrderedComponentsDict()
+        self._deps = OrderedDict()
         self._lib = None
         self._exe = None
         self.system_deps = []
+        self.includedirs = []
+        self.libdirs = []
+        self.resdirs = []
+        self.bindirs = []
+        self.builddirs = []
+        self.defines = []
+        self.cflags = []
+        self.cppflags = []
+        self.cxxflags = []
+        self.sharedlinkflags = []
+        self.exelinkflags = []
+
+    @property
+    def deps(self):
+        return self._deps.keys()
+
+    def __setitem__(self, key, value):
+        self._deps[key] = value
+
+    def __getitem__(self, key):
+        if key not in self._deps:
+            self._deps[key] = Component(key)
+        return self._deps[key]
 
     @property
     def libs(self):
-        return self.deps.items()
+        values = []
+        for k, v in self._deps.items():
+            items = self._deps[k]._deps.items()
+            if items:
+                values.extend(self._deps[k].libs)
+                if self._deps[k].lib is not None:
+                    values.append(self._deps[k].lib)
+            else:
+                values.append(self._deps[k].lib)
+        ret = []
+        for v in values:
+            if v not in ret:
+                ret.append(v)
+        return ret
 
     @property
     def lib(self):
@@ -169,36 +218,6 @@ class Component(object):
         if self._lib:
             raise ConanException("lib is already set")
         self._exe = name
-
-
-class OrderedComponentsDict(object):
-
-    def __init__(self):
-        self._components = OrderedDict()
-
-    def __setitem__(self, key, value):
-        self._components[key] = value
-
-    def __getitem__(self, key):
-        if key not in self._components:
-            self._components[key] = Component(key)
-        return self._components[key]
-
-    def items(self):
-        values = []
-        for k, v in self._components.items():
-            items = self._components[k].deps.items()
-            if items:
-                values.extend(items)
-                if self._components[k].lib is not None:
-                    values.append(self._components[k].lib)
-            else:
-                values.append(self._components[k].lib)
-        ret = []
-        for v in values:
-            if v not in ret:
-                ret.append(v)
-        return ret
 
 
 class _BaseDepsCppInfo(_CppInfo):
