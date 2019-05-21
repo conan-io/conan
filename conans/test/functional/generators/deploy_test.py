@@ -1,10 +1,11 @@
 import os
+import stat
 import unittest
 
 from conans import load
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import GenConanfile, TurboTestClient
+from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
 
 
 class DeployGeneratorTest(unittest.TestCase):
@@ -106,3 +107,34 @@ class DeployGeneratorGraphTest(unittest.TestCase):
     def file_paths_test(self):
         for path in self.get_expected_paths():
             self.assertTrue(os.path.exists(path))
+
+
+class DeployGeneratorPermissionsTest(unittest.TestCase):
+    """
+    Test files deployed by the deploy generator are copied with same permissions
+    """
+
+    def setUp(self):
+        conanfile1 = GenConanfile()
+        conanfile1.with_package_file("include/header1.h", "whatever")
+        ref1 = ConanFileReference("name1", "version", "user", "channel")
+
+        self.client = TurboTestClient()
+        self.client.create(ref1, conanfile1)
+        layout = self.client.cache.package_layout(ref1)
+        package_folder = layout.package(PackageReference(ref1, NO_SETTINGS_PACKAGE_ID))
+        header_path = os.path.join(package_folder, "include", "header1.h")
+        self.assertTrue(os.path.exists(header_path))
+        os.chmod(header_path, stat.S_IEXEC)
+        os.chmod(header_path, stat.S_IXUSR)
+        os.chmod(header_path, stat.S_IXGRP)
+        os.chmod(header_path, stat.S_IXOTH)
+        self.cache_statinfo = os.stat(header_path)
+        self.client.current_folder = temp_folder()
+        self.client.run("install %s -g deploy" % ref1.full_repr())
+
+    def same_permissions_test(self):
+        base1_path = os.path.join(self.client.current_folder, "name1")
+        header1_path = os.path.join(base1_path, "include", "header1.h")
+        stat_info = os.stat(header1_path)
+        self.assertEqual(stat_info, self.cache_statinfo)
