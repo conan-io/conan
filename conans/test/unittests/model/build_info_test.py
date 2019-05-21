@@ -176,16 +176,17 @@ VAR2=23
                                           os.path.join(folder, "local_bindir")])
 
     def basic_components_test(self):
-        component = Component("my_component")
+        cpp_info = CppInfo(None)
+        component = cpp_info["my_component"]
         self.assertIn(component.name, "my_component")
         component.lib = "libhola"
         self.assertEquals(component.lib, "libhola")
-        with self.assertRaisesRegexp(ConanException, "lib is already set"):
+        with self.assertRaisesRegexp(ConanException, "'.lib' is already set for this Component"):
             component.exe = "hola.exe"
         component.lib = None
         component.exe = "hola.exe"
         self.assertEquals(component.lib, None)
-        with self.assertRaisesRegexp(ConanException, "exe is already set"):
+        with self.assertRaisesRegexp(ConanException, "'.exe' is already set for this Component"):
             component.lib = "libhola"
 
     def cpp_info_libs_components_fail_test(self):
@@ -206,11 +207,23 @@ VAR2=23
                                                      "when Components are already in use"):
             info.libs = ["libgreet"]
 
-    def cppinfo_components_test(self):
+    def cppinfo_includedirs_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
         info.name = "OpenSSL"
         info["OpenSSL"].includedirs = ["include"]
         info["Crypto"].includedirs = ["headers"]
-        self.assertEqual(info["OpenSSL"].includedirs, ["include"])
-        self.assertEqual(info["Crypto"].includedirs, ["headers"])
+        self.assertEqual(["include"], info["OpenSSL"].includedirs)
+        self.assertEqual(["include", "headers"], info["Crypto"].includedirs)
+
+        info.includedirs = ["my_headers"]
+        self.assertEqual(["my_headers", "include"], info["OpenSSL"].includedirs)
+        self.assertEqual(["my_headers", "headers"], info["Crypto"].includedirs)
+
+        info["Crypto"].includedirs = ["different_include"]
+        self.assertEqual(["my_headers", "different_include"], info["Crypto"].includedirs)
+
+        info["Crypto"].includedirs.extend(["another_include"])
+        # FIXME:
+        # self.assertEqual(["my_headers", "different_include", "another_include"],
+        #                 info["Crypto"].includedirs)

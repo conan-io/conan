@@ -141,7 +141,7 @@ class CppInfo(_CppInfo):
         if self._libs:
             raise ConanException("Usage of Components with '.libs' values is not allowed")
         if key not in self._deps.keys():
-            self._deps[key] = Component(key)
+            self._deps[key] = Component(self, key)
         return self._deps[key]
 
     def __getattr__(self, config):
@@ -162,13 +162,14 @@ class CppInfo(_CppInfo):
 
 class Component(object):
 
-    def __init__(self, name):
+    def __init__(self, parent, name):
+        self._parent = parent
         self.name = name
         self.deps = []
         self._lib = None
         self._exe = None
         self.system_deps = []
-        self.includedirs = []
+        self._includedirs = []
         self.libdirs = []
         self.resdirs = []
         self.bindirs = []
@@ -187,7 +188,7 @@ class Component(object):
     @lib.setter
     def lib(self, name):
         if self._exe:
-            raise ConanException("exe is already set")
+            raise ConanException("'.exe' is already set for this Component")
         self._lib = name
 
     @property
@@ -197,8 +198,17 @@ class Component(object):
     @exe.setter
     def exe(self, name):
         if self._lib:
-            raise ConanException("lib is already set")
+            raise ConanException("'.lib' is already set for this Component")
         self._exe = name
+
+    @property
+    def includedirs(self):
+        includedirs = self._parent.includedirs + self._includedirs
+        return list(OrderedDict.fromkeys(includedirs))
+
+    @includedirs.setter
+    def includedirs(self, value):
+        self._includedirs = value
 
 
 class _BaseDepsCppInfo(_CppInfo):
