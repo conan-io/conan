@@ -22,9 +22,10 @@ class RegistryTest(unittest.TestCase):
 
             pkg/0.1@user/testing some_remote
             """))
-        cache = ClientCache(folder, TestBufferConanOutput())
-        migrate_registry_file(cache, TestBufferConanOutput())
-        registry = RemoteRegistry(cache)
+        output = TestBufferConanOutput()
+        cache = ClientCache(folder, output)
+        migrate_registry_file(cache, output)
+        registry = RemoteRegistry(cache, output)
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan.io", "https://server.conan.io", True)])
 
@@ -112,8 +113,9 @@ other/1.0@lasote/testing conan.io
  ]
 }
 """)
-        cache = ClientCache(tmp_folder, TestBufferConanOutput())
-        registry = RemoteRegistry(cache)
+        output = TestBufferConanOutput()
+        cache = ClientCache(tmp_folder, output)
+        registry = RemoteRegistry(cache, output)
         registry.add("repo1", "url1", True, insert=0)
         self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
                          Remote("conan.io", "https://server.conan.io", True)])

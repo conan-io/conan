@@ -5,7 +5,7 @@ from collections import OrderedDict
 from os.path import join, normpath
 
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import RemoteRegistry, Remotes
+from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
@@ -69,16 +69,16 @@ class ClientCache(object):
 
     def __init__(self, base_folder, output):
         self.cache_folder = join(base_folder, ".conan")
-        self._config = None
         self._output = output
-        # Remove this self.cache_folder in Conan 2.0
-        self._store_folder = self.config.storage_path or self.cache_folder
+
+        # Caching
         self._no_lock = None
+        self._config = None
+        self.editable_packages = EditablePackages(self.cache_folder)
+        # paths
+        self._store_folder = self.config.storage_path or self.cache_folder
         self.client_cert_path = normpath(join(self.cache_folder, CLIENT_CERT))
         self.client_cert_key_path = normpath(join(self.cache_folder, CLIENT_KEY))
-        self._registry = None
-
-        self.editable_packages = EditablePackages(self.cache_folder)
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
@@ -118,15 +118,7 @@ class ClientCache(object):
 
     @property
     def registry(self):
-        if not self._registry:
-            remotes_path = self.registry_path
-            if not os.path.exists(remotes_path):
-                self._output.warn("Remotes registry file missing, "
-                                  "creating default one in %s" % remotes_path)
-                remotes = Remotes.defaults()
-                remotes.save(remotes_path)
-            self._registry = RemoteRegistry(self)
-        return self._registry
+        return RemoteRegistry(self, self._output)
 
     @property
     def cacert_path(self):
