@@ -17,7 +17,7 @@ class RegistryTest(unittest.TestCase):
 
     def retro_compatibility_test(self):
         folder = temp_folder()
-        f = os.path.join(folder, ".conan", "registry.txt")
+        f = os.path.join(folder, "registry.txt")
         save(f, textwrap.dedent("""conan.io https://server.conan.io
 
             pkg/0.1@user/testing some_remote
@@ -31,8 +31,7 @@ class RegistryTest(unittest.TestCase):
 
     def to_json_migration_test(self):
         tmp = temp_folder()
-        conf_dir = os.path.join(tmp, ".conan")
-        f = os.path.join(conf_dir, "registry.txt")
+        f = os.path.join(tmp, "registry.txt")
         save(f, """conan.io https://server.conan.io True
 
 lib/1.0@conan/stable conan.io
@@ -101,7 +100,7 @@ other/1.0@lasote/testing conan.io
 
     def insert_test(self):
         tmp_folder = temp_folder()
-        f = os.path.join(tmp_folder, ".conan", "remotes.json")
+        f = os.path.join(tmp_folder, "remotes.json")
         save(f, """
 {
  "remotes": [

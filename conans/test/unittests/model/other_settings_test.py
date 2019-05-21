@@ -190,7 +190,7 @@ class Test(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        default_profile = os.path.join(client.base_folder, ".conan/profiles/default")
+        default_profile = os.path.join(client.base_folder, "profiles/default")
         save(default_profile, "[settings]\ncompiler=gcc\ncompiler.version=6.3")
         client.run("create . user/channel", assert_error=True)
         self.assertIn("Invalid setting '6.3' is not a valid 'settings.compiler.version'",

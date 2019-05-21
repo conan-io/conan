@@ -177,8 +177,9 @@ class ConanAPIV1(object):
         user_io = UserIO(out=out)
 
         user_home = get_conan_user_home()
-        cache = migrate_and_get_cache(user_home, out)
-        sys.path.append(os.path.join(user_home, "python"))
+        base_folder = os.path.join(user_home, ".conan")
+        cache = migrate_and_get_cache(base_folder, out)
+        sys.path.append(os.path.join(base_folder, "python"))
 
         with tools.environment_append(cache.config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
