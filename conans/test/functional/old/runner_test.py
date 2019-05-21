@@ -123,6 +123,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("cmake version", output)
         self.assertNotIn("Logging command output to file ", output)
 
+        output = TestBufferConanOutput()
         runner = ConanRunner(print_commands_to_output=False,
                              generate_run_log_file=True,
                              log_run_to_output=False,

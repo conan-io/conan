@@ -22,11 +22,11 @@ from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
+from requests.exceptions import HTTPError
 
 from conans import load
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-
 from conans.client.conan_api import Conan
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
@@ -106,6 +106,18 @@ class TestingResponse(object):
     @property
     def ok(self):
         return self.test_response.status_code == 200
+
+    def raise_for_status(self):
+        """Raises stored :class:`HTTPError`, if one occurred."""
+        http_error_msg = ''
+        if 400 <= self.status_code < 500:
+            http_error_msg = u'%s Client Error: %s' % (self.status_code, self.content)
+
+        elif 500 <= self.status_code < 600:
+            http_error_msg = u'%s Server Error: %s' % (self.status_code, self.content)
+
+        if http_error_msg:
+            raise HTTPError(http_error_msg, response=self)
 
     @property
     def content(self):
@@ -950,7 +962,7 @@ class TurboTestClient(TestClient):
         if not repo_url:
             repo_url = create_remote_svn_repo(temp_folder())
         _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                             rel_project_path=subpath, delete_checkout=False)
+                                           rel_project_path=subpath, delete_checkout=False)
         return rev
 
 

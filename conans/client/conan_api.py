@@ -191,6 +191,7 @@ class ConanAPIV1(object):
             # Create Hook Manager
             hook_manager = HookManager(cache.hooks_path, get_env("CONAN_HOOKS", list()), output)
             requester = ConanRequester(cache, requester=self._http_requester)
+
             # Adjust global tool variables
             set_global_instances(output, requester)
             put_headers = cache.read_put_headers()
@@ -1130,10 +1131,11 @@ class ConanAPIV1(object):
 
     @api_method
     def editable_add(self, path, reference, layout, cwd):
-        remotes = self._cache.registry.load_remotes()
-        self._python_requires.enable_remotes(remotes=remotes)
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
+
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
 
         # Check the conanfile is there, and name/version matches
         ref = ConanFileReference.loads(reference, validate=True)

@@ -354,12 +354,12 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def request_timeout(self):
-        try:
-            timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
-            if timeout is None:
+        timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
+        if not timeout:
+            try:
                 timeout = self.get_item("general.request_timeout")
-        except ConanException:
-            return None
+            except ConanException:
+                return None
 
         try:
             return float(timeout) if timeout is not None else None
@@ -423,21 +423,9 @@ class ConanClientConfigParser(ConfigParser, object):
         try:
             proxies = self.get_conf("proxies")
             # If there is proxies section, but empty, it will try to use system proxy
-            if not proxies:
-                # We don't have evidences that this following line is necessary.
-                # If the proxies has been
-                # configured at system level, conan will use it, and shouldn't be necessary
-                # to return here the proxies read from the system.
-                # Furthermore, the urls excluded for use proxies at system level do not work in
-                # this case, then the only way is to remove the [proxies] section with
-                # conan config remote proxies, then this method will return None and the proxies
-                # dict passed to requests will be empty.
-                # We don't remove this line because we are afraid to break something, but maybe
-                # until now is working because no one is using system-wide proxies or those proxies
-                # rules don't contain excluded urls.c #1777
-                return urllib.request.getproxies()
-            result = {k: (None if v == "None" else v) for k, v in proxies}
-            return result
+            if proxies:
+                return {k: (None if v == "None" else v) for k, v in proxies}
+            return {}
         except Exception:
             return None
 

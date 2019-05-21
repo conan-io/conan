@@ -3,6 +3,7 @@ import os
 import unittest
 from collections import OrderedDict
 
+from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 from conans.client.store.localdb import LocalDB
@@ -73,8 +74,8 @@ class UserTest(unittest.TestCase):
         client.run('user None')
         self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
                       client.out)
-        self.assertEqual((None, None), LocalDB(client.cache.localdb).get_login(test_server.fake_url))
 
+        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 

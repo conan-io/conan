@@ -21,6 +21,7 @@ from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
+from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import check_output, OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
@@ -34,7 +35,6 @@ from conans.test.utils.tools import StoppableThreadBottle, \
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
-from conans.client.runner import ConanRunner
 
 
 class RunnerMock(object):
@@ -414,12 +414,12 @@ class HelloConan(ConanFile):
         output = TestBufferConanOutput()
         cmd = tools.vcvars_command(settings, output=output)
         self.assertIn("vcvarsall.bat", cmd)
-        runner = ConanRunner(output=output)
+        runner = ConanRunner(print_commands_to_output=True, output=output)
         runner(cmd + " && set vs140comntools")
         self.assertIn("VS140COMNTOOLS=", output)
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
-            runner = ConanRunner(output=output)
+            runner = ConanRunner(print_commands_to_output=True, output=output)
             cmd = tools.vcvars_command(settings, output=output)
             self.assertNotIn("vcvarsall.bat", cmd)
             runner(cmd + " && set vs140comntools")

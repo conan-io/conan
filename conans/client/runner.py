@@ -41,7 +41,7 @@ class ConanRunner(object):
             print("*** WARN: Invalid output parameter of type io.StringIO(), "
                   "use six.StringIO() instead ***")
 
-        stream_output = output if output and hasattr(output, "write") else self._output
+        stream_output = output if output and hasattr(output, "write") else self._output or sys.stdout
         if hasattr(output, "flush"):
             # We do not want output from different streams to get mixed (sys.stdout, os.system)
             stream_output = _UnbufferedWrite(stream_output)
@@ -56,7 +56,8 @@ class ConanRunner(object):
 
         with pyinstaller_bundle_env_cleaned():
             # No output has to be redirected to logs or buffer or omitted
-            if output is True and not self._output and not log_filepath and self._log_run_to_output and not subprocess:
+            if (output is True and not self._output and not log_filepath and self._log_run_to_output
+                    and not subprocess):
                 return self._simple_os_call(command, cwd)
             elif log_filepath:
                 if stream_output:
