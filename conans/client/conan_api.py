@@ -190,7 +190,7 @@ class ConanAPIV1(object):
 
             # Create Hook Manager
             hook_manager = HookManager(cache.hooks_path, get_env("CONAN_HOOKS", list()), output)
-            requester = ConanRequester(cache, requester=self._http_requester)
+            requester = ConanRequester(cache, http_requester=self._http_requester)
 
             # Adjust global tool variables
             set_global_instances(output, requester)

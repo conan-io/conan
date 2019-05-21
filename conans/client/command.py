@@ -1439,7 +1439,7 @@ class Command(object):
             self._conan.update_profile(profile, key, value)
         elif args.subcommand == "get":
             key = args.item
-            self._conan.output.writeln(self._conan.get_profile_key(profile, key))
+            self._user_io.out.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 
