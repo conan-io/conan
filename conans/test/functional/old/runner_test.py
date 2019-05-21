@@ -63,7 +63,6 @@ class ConanFileToolsTest(ConanFile):
 from conans import ConanFile
 
 class ConanFileToolsTest(ConanFile):
-
     def build(self):
         self.run("cmake --version")
 '''

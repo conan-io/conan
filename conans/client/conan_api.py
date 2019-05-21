@@ -65,12 +65,12 @@ default_manifest_folder = '.conan_manifests'
 
 def api_method(f):
     def wrapper(*args, **kwargs):
-        the_self = args[0]
-        the_self.invalidate_caches()
+        api = args[0]
+        api.invalidate_caches()
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
-            with tools.environment_append(the_self._cache.config.env_vars):
+            with tools.environment_append(api._cache.config.env_vars):
                 # Patch the globals in tools
                 return f(*args, **kwargs)
         except Exception as exc:

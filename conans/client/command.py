@@ -1060,6 +1060,7 @@ class Command(object):
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
                                                                         password=password)
+
                 self._outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
             info = exc.info
@@ -1169,7 +1170,6 @@ class Command(object):
                 except NoRemoteAvailable:
                     remote_all = None
                 all_remotes_search = (remote_all is None and args.remote == "all")
-
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
                                                        args.raw, all_remotes_search)
         except ConanException as exc:
@@ -1439,7 +1439,7 @@ class Command(object):
             self._conan.update_profile(profile, key, value)
         elif args.subcommand == "get":
             key = args.item
-            self._outputer.writeln(self._conan.get_profile_key(profile, key))
+            self._user_io.out.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 
@@ -1487,8 +1487,6 @@ class Command(object):
             self._outputer.print_dir_list(ret, path, args.raw)
         else:
             self._outputer.print_file_contents(ret, path, args.raw)
-
-        return
 
     def alias(self, *args):
         """

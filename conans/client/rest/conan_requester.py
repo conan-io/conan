@@ -1,7 +1,6 @@
 import fnmatch
 import os
 import platform
-
 import requests
 import time
 

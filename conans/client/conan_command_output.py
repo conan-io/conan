@@ -20,9 +20,6 @@ class CommandOutputer(object):
         self._output = output
         self._cache = cache
 
-    def writeln(self, value):
-        self._output.writeln(value)
-
     def print_profile(self, profile, profile_text):
         Printer(self._output).print_profile(profile, profile_text)
 

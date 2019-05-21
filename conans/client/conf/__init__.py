@@ -426,7 +426,7 @@ class ConanClientConfigParser(ConfigParser, object):
             if proxies:
                 return {k: (None if v == "None" else v) for k, v in proxies}
             return {}
-        except:
+        except Exception:
             return None
 
     @property
