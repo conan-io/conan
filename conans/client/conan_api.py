@@ -2,8 +2,6 @@ import os
 import sys
 from collections import OrderedDict
 
-import requests
-
 import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
@@ -63,21 +61,6 @@ from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 
 default_manifest_folder = '.conan_manifests'
-
-
-def get_request_timeout():
-    timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
-    try:
-        return float(timeout) if timeout is not None else None
-    except ValueError:
-        raise ConanException("Specify a numeric parameter for 'request_timeout'")
-
-
-def get_basic_requester(cache):
-    requester = requests.Session()
-    # Manage the verify and the client certificates and setup proxies
-
-    return ConanRequester(requester, cache, get_request_timeout())
 
 
 def api_method(f):
@@ -191,7 +174,7 @@ class ConanAPIV1(object):
                                        user_io.out)
 
             # Get the new command instance after migrations have been done
-            requester = get_basic_requester(cache)
+            requester = ConanRequester(cache)
             _, _, remote_manager = ConanAPIV1.instance_remote_manager(requester, cache, user_io,
                                                                       hook_manager)
 
@@ -797,6 +780,8 @@ class ConanAPIV1(object):
 
     @api_method
     def authenticate(self, name, password, remote_name):
+        if not password:
+            name, password = self._user_io.request_login(remote_name=remote_name, username=name)
         remote = self.get_remote_by_name(remote_name)
         _, remote_name, prev_user, user = self._remote_manager.authenticate(remote, name, password)
         return remote_name, prev_user, user

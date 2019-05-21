@@ -354,10 +354,17 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def request_timeout(self):
+        timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
+        if not timeout:
+            try:
+                timeout = self.get_item("general.request_timeout")
+            except ConanException:
+                return None
+
         try:
-            return self.get_item("general.request_timeout")
-        except ConanException:
-            return None
+            return float(timeout) if timeout is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'request_timeout'")
 
     @property
     def revisions_enabled(self):

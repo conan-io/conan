@@ -27,7 +27,7 @@ from conans import tools, load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
+from conans.client.conan_api import Conan, migrate_and_get_cache
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
@@ -775,8 +775,7 @@ servers["r2"] = TestServer()
                 else:
                     requester = TestRequester(self.servers)
 
-            self.requester = ConanRequester(requester, self.cache,
-                                            get_request_timeout())
+            self.requester = ConanRequester(self.cache, requester)
 
             self.hook_manager = HookManager(self.cache.hooks_path,
                                             get_env("CONAN_HOOKS", list()), self.user_io.out)
@@ -804,7 +803,7 @@ servers["r2"] = TestServer()
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
                           self.hook_manager, requester, interactive=interactive)
-        command = Command(conan, self.user_io)
+        command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

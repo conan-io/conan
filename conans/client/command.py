@@ -97,10 +97,10 @@ class Command(object):
     parsing of parameters and delegates functionality in collaborators. It can also show help of the
     tool.
     """
-    def __init__(self, conan_api, user_io):
+    def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._user_io = user_io
+        self._user_io = conan_api._user_io
 
     @property
     def _outputer(self):
@@ -882,7 +882,7 @@ class Command(object):
 
         # NOTE: returns the expanded pattern (if a pattern was given), and checks
         # that the query parameter wasn't abused
-        ref = self._check_query_parameter_and_get_reference(args.pattern_or_reference, args.query)
+        reference = self._check_query_parameter(args.pattern_or_reference, args.query)
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -900,13 +900,13 @@ class Command(object):
             self._user_io.out.info("Cache locks removed")
             return
         elif args.system_reqs:
-            if not ref:
+            if not reference:
                 raise ConanException("Please specify a valid package reference to be cleaned")
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
             try:
-                self._conan.remove_system_reqs(str(ref))
-                self._user_io.out.info("Cache system_reqs from %s has been removed" % repr(ref))
+                self._conan.remove_system_reqs(reference)
+                self._user_io.out.info("Cache system_reqs from %s has been removed" % reference)
                 return
             except Exception as error:
                 raise ConanException("Unable to remove system_reqs: %s" % error)
@@ -996,9 +996,6 @@ class Command(object):
                 remote_name = args.remote or self._conan.get_default_remote().name
                 name = args.name
                 password = args.password
-                if not password:
-                    name, password = self._user_io.request_login(remote_name=remote_name,
-                                                                 username=name)
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
                                                                         password=password)
@@ -1566,17 +1563,16 @@ class Command(object):
             self._user_io.out.writeln("")
 
     @staticmethod
-    def _check_query_parameter_and_get_reference(pattern, query):
-        ref = None
+    def _check_query_parameter(pattern, query):
         if pattern:
             try:
-                ref = ConanFileReference.loads(pattern)
+                ConanFileReference.loads(pattern)
+                return pattern
             except ConanException:
                 if query is not None:
                     raise ConanException("-q parameter only allowed with a valid recipe "
                                          "reference as search pattern. e.g. conan search "
                                          "MyPackage/1.2@user/channel -q \"os=Windows\"")
-        return ref
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
@@ -1720,14 +1716,14 @@ def main(args):
         6: Invalid configuration (done)
     """
     try:
-        conan_api, _, user_io = Conan.factory()
+        conan_api, _, _ = Conan.factory()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:
         sys.stderr.write("Error in Conan initialization: {}".format(e))
         sys.exit(ERROR_GENERAL)
 
-    command = Command(conan_api, user_io)
+    command = Command(conan_api)
     current_dir = get_cwd()
     try:
         import signal
