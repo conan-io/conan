@@ -20,6 +20,24 @@ class OptionsSpecifiedInProfiles(GraphManagerTest):
         are some options declared in the profiles for this tool
     """
 
+    gtest = textwrap.dedent("""
+        from conans import ConanFile
+
+        class GTest(ConanFile):
+            name = "gtest"
+            version = "testing"
+
+            settings = "os"
+            options = {"option": ["opt_host", "opt_build", "none"]}
+            default_options = {"option": "none"}
+
+            def configure(self):
+                self.output.info(">> option: {}".format(self.options.option))
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+    """)
+
     protobuf = textwrap.dedent("""
         from conans import ConanFile
 
@@ -30,6 +48,9 @@ class OptionsSpecifiedInProfiles(GraphManagerTest):
             settings = "os"  # , "arch", "compiler", "build_type"
             options = {"option": ["opt_host", "opt_build", "none"]}
             default_options = {"option": "none"}
+
+            def build_requirements(self):
+                self.build_requires("gtest/testing@user/channel", context="host")
 
             def configure(self):
                 self.output.info(">> option: {}".format(self.options.option))
@@ -82,6 +103,7 @@ class OptionsSpecifiedInProfiles(GraphManagerTest):
 
     def setUp(self):
         super(OptionsSpecifiedInProfiles, self).setUp()
+        self._cache_recipe("gtest/testing@user/channel", self.gtest)
         self._cache_recipe("protobuf/testing@user/channel", self.protobuf)
         self._cache_recipe("protoc/testing@user/channel", self.protoc)
         self._cache_recipe("application/testing@user/channel", self.application)
@@ -138,6 +160,12 @@ class OptionsSpecifiedInProfiles(GraphManagerTest):
         self.assertEqual(str(protobuf_host.conanfile.settings.os), profile_host.settings['os'])
         self.assertEqual(str(protobuf_host.conanfile.options.option), "opt_host")
 
+        gtest_host = protobuf_host.dependencies[0].dst
+        self.assertEqual(gtest_host.conanfile.name, "gtest")
+        self.assertEqual(gtest_host.build_context, CONTEXT_HOST)
+        self.assertEqual(str(gtest_host.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(gtest_host.conanfile.options.option), "opt_host")
+
         # Check BUILD packages
         protoc_build = application.dependencies[0].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
@@ -150,3 +178,9 @@ class OptionsSpecifiedInProfiles(GraphManagerTest):
         self.assertEqual(protobuf_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
         self.assertEqual(str(protobuf_build.conanfile.options.option), "opt_build")
+
+        gtest_build = protobuf_build.dependencies[0].dst
+        self.assertEqual(gtest_build.conanfile.name, "gtest")
+        self.assertEqual(gtest_build.build_context, CONTEXT_BUILD)
+        self.assertEqual(str(gtest_build.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(gtest_build.conanfile.options.option), "opt_build")
