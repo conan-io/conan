@@ -417,9 +417,8 @@ class ConanClientConfigParser(ConfigParser, object):
             proxies = self.get_conf("proxies")
             # If there is proxies section, but empty, it will try to use system proxy
             if proxies:
-                result = {k: (None if v == "None" else v) for k, v in proxies}
-                return result
-            return None
+                return {k: (None if v == "None" else v) for k, v in proxies}
+            return {}
         except:
             return None
 
