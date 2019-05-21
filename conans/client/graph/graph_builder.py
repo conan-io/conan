@@ -5,6 +5,7 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
+from conans.model.options import OptionsValues, Options, PackageOptions
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
@@ -42,32 +43,51 @@ class DepsGraphBuilder(object):
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
                               remotes, processed_profile_build, processed_profile_host):
-
-        # The options that will be defined in the node will be the real options values that have
-        # been already propagated downstream from the dependency graph. This will override any
-        # other possible option in the build_requires dependency graph. This means that in theory
-        # an option conflict while expanding the build_requires is impossible
-        node.conanfile.build_requires_options.clear_unscoped_options()
-        new_options = node.conanfile.build_requires_options._reqs_options
-        new_reqs = Requirements()
-
         conanfile = node.conanfile
         scope = conanfile.display_name
-        requires = []
+
+        # Group requires by context
+        requires_host = []
+        requires_build = []
         for ref, context in build_requires_refs:
             r = Requirement(ref)
             r.build_context = context
-            requires.append(r)
-        self._resolve_ranges(graph, requires, scope, update, remotes)
+            if context == CONTEXT_HOST:
+                requires_host.append(r)
+            else:
+                requires_build.append(r)
+        self._resolve_ranges(graph, requires_host, scope, update, remotes)
+        self._resolve_ranges(graph, requires_build, scope, update, remotes)
 
-        for require in requires:
-            name = require.ref.name
-            require.set_build_require(True, require.build_context)
-            self._handle_require(name, node, require, graph, check_updates, update,
-                                 remotes, processed_profile_build=processed_profile_build,
-                                 processed_profile_host=processed_profile_host,
-                                 new_reqs=new_reqs, new_options=new_options)
+        # Define a function to work on requires
+        def work_on_build_requires(requires, new_reqs, new_options):
+            for require in requires:
+                name = require.ref.name
+                require.set_build_require(True, require.build_context)
+                self._handle_require(name, node, require, graph, check_updates, update,
+                                     remotes, processed_profile_build=processed_profile_build,
+                                     processed_profile_host=processed_profile_host,
+                                     new_reqs=new_reqs, new_options=new_options)
 
+        all_reqs = Requirements()
+
+        # Work related to BUILD build_requires
+        build_package_options = PackageOptions(definition={})
+        build_options = Options(options=build_package_options)
+        build_options.initialize_upstream(processed_profile_build._user_options)
+        build_options = build_options.values._reqs_options
+        work_on_build_requires(requires_build, all_reqs, build_options)
+
+        # Work related to HOST build_requires
+        #   The options that will be defined in the node will be the real options values that have
+        #   been already propagated downstream from the dependency graph. This will override any
+        #   other possible option in the build_requires dependency graph. This means that in theory
+        #   an option conflict while expanding the build_requires is impossible
+        node.conanfile.build_requires_options.clear_unscoped_options()
+        host_options = node.conanfile.build_requires_options._reqs_options
+        work_on_build_requires(requires_host, all_reqs, host_options)
+
+        # Gather all build_requires into the same graph
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
         # This is to make sure that build_requires have precedence over the normal requires
         node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
