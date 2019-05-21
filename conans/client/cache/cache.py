@@ -68,9 +68,8 @@ class ClientCache(object):
     """
 
     def __init__(self, base_folder, output):
-        self._output = output
-        # Remove this self.cache_folder in Conan 2.0
         self.cache_folder = base_folder
+        self._output = output
 
         # Caching
         self._no_lock = None

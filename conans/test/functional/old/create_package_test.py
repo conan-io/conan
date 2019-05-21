@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+from mock import Mock
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
