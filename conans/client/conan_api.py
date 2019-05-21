@@ -1189,10 +1189,18 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                         "the installed graph-info file."
                         % install_folder)
 
-        profile_host = profile_from_args(profile_names, settings, options, env, cwd, cache)
-        profile_host.process_settings(cache)
-        profile_build = profile_from_args(profile_names, None, None, None, cwd, cache)
-        profile_build.process_settings(cache)
+        try:
+            profile_host = profile_from_args(profile_names, settings, options, env, cwd, cache)
+            profile_host.process_settings(cache)
+        except ConanException as e:
+            raise ConanException("Host profile: {}".format(e))
+
+        try:
+            profile_build = profile_from_args(profile_names, None, None, None, cwd, cache)
+            profile_build.process_settings(cache)
+        except ConanException as e:
+            raise ConanException("Build profile: {}".format(e))
+
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         graph_info = GraphInfo(profile_build=profile_build, profile_host=profile_host,
                                root_ref=root_ref)

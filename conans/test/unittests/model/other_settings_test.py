@@ -47,7 +47,7 @@ class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
         client.save({"conanfile.py": conanfile})
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("""Configuration (host machine):
 [settings]
@@ -132,16 +132,21 @@ compiler:
         libcxx: [libstdc++, libc++]
 
 """
+
+        default_profile = """
+[settings]
+os=Linux
+arch=sparcv9
+compiler=sun-cc
+compiler.version=5.14
+"""
+
         files = {"conanfile.py": file_content}
         client = TestClient()
         client.save(files)
         client.run("export . lasote/testing")
         save(client.cache.settings_path, prev_settings)
-        client.cache.default_profile  # Generate the default
-        conf = load(client.cache.default_profile_path)
-        conf = conf.replace("build_type=Release", "")
-        self.assertNotIn("build_type", conf)
-        save(client.cache.default_profile_path, conf)
+        save(client.cache.default_profile_path, default_profile)
 
         client.run("install test/1.9@lasote/testing --build -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s compiler.libcxx=libstdc++")
