@@ -88,8 +88,8 @@ class ConanRequester(object):
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
             for var_name in ("http_proxy", "https_proxy", "no_proxy"):
-                popped = popped or os.environ.pop(var_name, None)
-                popped = popped or os.environ.pop(var_name.upper(), None)
+                popped = True if os.environ.pop(var_name, None) else popped
+                popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             t1 = time.time()
             all_kwargs = self._add_kwargs(url, kwargs)
