@@ -120,91 +120,27 @@ class CppInfo(_CppInfo):
         self.public_deps = []
         self.configs = {}
         self._deps = OrderedDict()
-        self._lib = None
-        self._exe = None
-
-    @property
-    def deps(self):
-        return self._deps.keys()
-
-    @property
-    def lib(self):
-        return self._lib
-
-    @lib.setter
-    def lib(self, name):
-        if self._exe:
-            raise ConanException("exe is already set")
-        if self._deps:
-            raise ConanException("Setting a first level lib is not supported when Components are "
-                                 "already in use")
-        self._lib = name
 
     @property
     def libs(self):
         if self._deps:
-            values = []
-            for k, v in self._deps.items():
-                if self._deps[k]._deps.items():
-                    values.extend(self._deps[k].libs)
-                    if self._deps[k].lib is not None:
-                        values.append(self._deps[k].lib)
-                else:
-                    values.append(self._deps[k].lib)
-            ret = []
-            for v in values:
-                if v not in ret:
-                    ret.append(v)
-            return ret
+            deps = [v for v in self._deps.values()]
+            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
+            return [dep.lib for dep in deps_sorted if dep.lib is not None]
         else:
             return self._libs
 
     @libs.setter
     def libs(self, libs):
         if self._deps:
-            raise ConanException("Setting a first level libs is not supported when Components are "
+            raise ConanException("Setting first level libs is not supported when Components are "
                                  "already in use")
         self._libs = libs
 
-    @property
-    def exe(self):
-        return self._exe
-
-    @exe.setter
-    def exe(self, name):
-        if self._lib:
-            raise ConanException("lib is already set")
-        if self._deps:
-            raise ConanException("Setting a first level exe is not supported when Components are "
-                                 "already in use")
-        self._exe = name
-
-    @property
-    def exes(self):
-        if self._deps:
-            values = []
-            for k, v in self._deps.items():
-                if self._deps[k]._deps.items():
-                    if self._deps[k].exe is not None:
-                        values.append(self._deps[k].exe)
-                    values.extend(self._deps[k].exes)
-                else:
-                    values.append(self._deps[k].exe)
-            return values
-        else:
-            return [self.exe]
-
-    def __setitem__(self, key, value):
-        if self._exe or self._lib:
-            raise ConanException("Usage of Components with 'exe' or 'lib' values is no allowed")
-        if self._libs or self._lib:
-            raise ConanException("Usage of Components with 'libs' values is no allowed")
-        self._deps[key] = value
-
     def __getitem__(self, key):
-        if self._exe or self._lib:
-            raise ConanException("Usage of Components with 'exe' or 'lib' values is no allowed")
-        if key not in self.deps:
+        if self._libs:
+            raise ConanException("Usage of Components with '.libs' values is not allowed")
+        if key not in self._deps.keys():
             self._deps[key] = Component(key)
         return self._deps[key]
 
@@ -228,7 +164,7 @@ class Component(object):
 
     def __init__(self, name):
         self.name = name
-        self._deps = OrderedDict()
+        self.deps = []
         self._lib = None
         self._exe = None
         self.system_deps = []
@@ -245,34 +181,6 @@ class Component(object):
         self.exelinkflags = []
 
     @property
-    def deps(self):
-        return self._deps.keys()
-
-    def __setitem__(self, key, value):
-        self._deps[key] = value
-
-    def __getitem__(self, key):
-        if key not in self._deps:
-            self._deps[key] = Component(key)
-        return self._deps[key]
-
-    @property
-    def libs(self):
-        values = []
-        for k, v in self._deps.items():
-            if self._deps[k]._deps.items():
-                values.extend(self._deps[k].libs)
-                if self._deps[k].lib is not None:
-                    values.append(self._deps[k].lib)
-            else:
-                values.append(self._deps[k].lib)
-        ret = []
-        for v in values:
-            if v not in ret:
-                ret.append(v)
-        return ret
-
-    @property
     def lib(self):
         return self._lib
 
@@ -281,18 +189,6 @@ class Component(object):
         if self._exe:
             raise ConanException("exe is already set")
         self._lib = name
-
-    @property
-    def exes(self):
-        values = []
-        for k, v in self._deps.items():
-            if self._deps[k]._deps.items():
-                if self._deps[k].exe is not None:
-                    values.append(self._deps[k].exe)
-                values.extend(self._deps[k].exes)
-            else:
-                values.append(self._deps[k].exe)
-        return values
 
     @property
     def exe(self):

@@ -178,105 +178,39 @@ VAR2=23
     def basic_components_test(self):
         component = Component("my_component")
         self.assertIn(component.name, "my_component")
-        component["hola"]
-        component["hola"].lib = "libhola"
-        self.assertEquals(component["hola"].lib, "libhola")
+        component.lib = "libhola"
+        self.assertEquals(component.lib, "libhola")
         with self.assertRaisesRegexp(ConanException, "lib is already set"):
-            component["hola"].exe = "hola.exe"
-        component["hola"].lib = None
-        self.assertEquals(component["hola"].lib, None)
-        component["hola"].exe = "hola.exe"
-        self.assertEquals(component["hola"].lib, None)
+            component.exe = "hola.exe"
+        component.lib = None
+        component.exe = "hola.exe"
+        self.assertEquals(component.lib, None)
         with self.assertRaisesRegexp(ConanException, "exe is already set"):
-            component["hola"].lib = "libhola"
+            component.lib = "libhola"
 
-    def nested_components_libs_order_test(self):
-        component = Component("Greetings")
-        self.assertIn(component.name, "Greetings")
-        component["greet"].exe = "greet.exe"
-        component["greet"]["hola"].lib = "libhola"
-        component["greet"]["adios"].lib = "libadios"
-        component["greet"]["hola"]["say"].lib = "libsay"
-        component["greet"]["adios"]["say"].lib = "libsay"
-        component["greet"]["hru"].lib = "libhru"
-        self.assertEquals(component.libs, ["libsay", "libhola", "libadios", "libhru"])
-        self.assertEquals(component["greet"]["hru"].libs, [])
-        self.assertEquals(component["greet"]["hola"].libs, ["libsay"])
-        self.assertEquals(component["greet"]["adios"].libs, ["libsay"])
-        self.assertEquals(component["greet"]["adios"]["say"].libs, [])
-
-    def cpp_info_nested_components_libs_order_test(self):
-        info = CppInfo(None)
-        info.name = "Greetings"
-        self.assertIn(info.name, "Greetings")
-        info["greet"].exe = "greet.exe"
-        info["greet"]["hola"].lib = "libhola"
-        info["greet"]["adios"].lib = "libadios"
-        info["greet"]["hola"]["say"].lib = "libsay"
-        info["greet"]["adios"]["say"].lib = "libsay"
-        info["greet"]["hru"].lib = "libhru"
-        self.assertEquals(info.libs, ["libsay", "libhola", "libadios", "libhru"])
-        self.assertEquals(info["greet"]["hru"].libs, [])
-        self.assertEquals(info["greet"]["hola"].libs, ["libsay"])
-        self.assertEquals(info["greet"]["adios"].libs, ["libsay"])
-        self.assertEquals(info["greet"]["adios"]["say"].libs, [])
-
-    def cpp_info_exes_test(self):
-        info = CppInfo(None)
-        info.name = "Greetings"
-        self.assertIn(info.name, "Greetings")
-        info["greet"].exe = "greet.exe"
-        info["hola"].exe = "hola.exe"
-        info["adios"].exe = "adios.exe"
-        info["say"].exe = "say.exe"
-        info["hru"].exe = "hru.exe"
-        self.assertEqual(["greet.exe", "hola.exe", "adios.exe", "say.exe", "hru.exe"], info.exes)
-
-    def cpp_info_nested_exes_test(self):
-        info = CppInfo(None)
-        info.name = "Greetings"
-        self.assertIn(info.name, "Greetings")
-        info["greet"].exe = "greet.exe"
-        info["greet"]["hola"].exe = "hola.exe"
-        info["greet"]["hola"]["say"].exe = "say.exe"
-        info["greet"]["adios"].exe = "adios.exe"
-        info["hru"].exe = "hru.exe"
-        self.assertEqual(["greet.exe", "hola.exe", "say.exe", "adios.exe", "hru.exe"], info.exes)
-
-    def cpp_info_exes_components_fail_test(self):
+    def cpp_info_libs_components_fail_test(self):
         """
-        Usage of .lib or .exe is not allowed in cpp_info when using components
+        Usage of .libs is not allowed in cpp_info when using Components
         """
         info = CppInfo(None)
         info.name = "Greetings"
         self.assertIn(info.name, "Greetings")
-        info.exe = "greet.exe"
-        with self.assertRaisesRegexp(ConanException, "Usage of Components with 'exe' or 'lib' "
-                                                     "values is no allowed"):
+        info.libs = ["libgreet"]
+        with self.assertRaisesRegexp(ConanException, "Usage of Components with '.libs' values is "
+                                                     "not allowed"):
             info["hola"].exe = "hola.exe"
-        info.exe = None
-        info["hola"].exe = "hola.exe"
-        with self.assertRaisesRegexp(ConanException, "Setting a first level exe is not supported "
-                                                     "when Components are already in use"):
-            info.exe = "greet.exe"
 
-    def components_deps_test(self):
-        component = Component("OpenSSL")
-        component["OpenSSL"]["Crypto"]["SSL"]
-        component["OpenSSL"]["Other"]
-        component["Another"]
-        self.assertEqual(component.deps, ["OpenSSL", "Another"])
-        self.assertEqual(component["OpenSSL"].deps, ["Crypto", "Other"])
-        self.assertEqual(component["OpenSSL"]["Crypto"].deps, ["SSL"])
-        self.assertEqual(component["Another"].deps, [])
-        self.assertEqual(component["OpenSSL"]["Other"].deps, [])
-        self.assertEqual(component["OpenSSL"]["Crypto"]["SSL"].deps, [])
+        info.libs = []
+        info["greet"].exe = "libgreet"
+        with self.assertRaisesRegexp(ConanException, "Setting first level libs is not supported "
+                                                     "when Components are already in use"):
+            info.libs = ["libgreet"]
 
     def cppinfo_components_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
         info.name = "OpenSSL"
         info["OpenSSL"].includedirs = ["include"]
-        info["OpenSSL"]["Crypto"].includedirs = ["headers"]
+        info["Crypto"].includedirs = ["headers"]
         self.assertEqual(info["OpenSSL"].includedirs, ["include"])
-        self.assertEqual(info["OpenSSL"]["Crypto"].includedirs, ["headers"])
+        self.assertEqual(info["Crypto"].includedirs, ["headers"])
