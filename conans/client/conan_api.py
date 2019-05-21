@@ -303,7 +303,7 @@ class ConanAPIV1(object):
             attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
                           'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
-                          'options', 'default_options']
+                          'options', 'default_options', 'default_build_options']
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)

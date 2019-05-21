@@ -87,6 +87,7 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
 
             settings = "os"
             default_options = {"*:option": "opt_host"}
+            default_build_options = {"*:option": "opt_build"}
 
             def build_requirements(self):
                 self.build_requires("protoc/testing@user/channel", context="host")
