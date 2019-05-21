@@ -215,18 +215,20 @@ class GraphManager(object):
                                     #  build_require from the profile (itself will be the 'node')
                                     pass
 
+            pr_host = processed_profile_host if node.build_context == CONTEXT_HOST else processed_profile_build
+            pr_build = processed_profile_build
             if package_build_requires:
                 build_requires_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
                 subgraph = builder.extend_build_requires(graph, node,
                                                          build_requires_list,
                                                          check_updates, update, remotes,
                                                          processed_profile_build,
-                                                         processed_profile_host)
+                                                         pr_host)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, profile_build_requires, recorder,
-                                             processed_profile_build=processed_profile_build,
-                                             processed_profile_host=processed_profile_host)
+                                             processed_profile_build=pr_build,
+                                             processed_profile_host=pr_host)
                 graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
@@ -237,8 +239,8 @@ class GraphManager(object):
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, {}, recorder,
-                                             processed_profile_build=processed_profile_build,
-                                             processed_profile_host=processed_profile_host)
+                                             processed_profile_build=pr_build,
+                                             processed_profile_host=pr_host)
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,

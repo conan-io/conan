@@ -129,4 +129,4 @@ class NoWayBackToHost(GraphManagerTest):
         host_tool = build_tool.dependencies[0].dst
         self.assertEqual(host_tool.conanfile.name, "host_tool")
         self.assertEqual(host_tool.build_context, CONTEXT_BUILD)
-        self.assertEqual(str(host_tool.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(host_tool.conanfile.settings.os), profile_build.settings['os'])

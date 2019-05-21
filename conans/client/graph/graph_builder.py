@@ -60,13 +60,13 @@ class DepsGraphBuilder(object):
         self._resolve_ranges(graph, requires_build, scope, update, remotes)
 
         # Define a function to work on requires
-        def work_on_build_requires(requires, new_reqs, new_options):
+        def work_on_build_requires(requires, new_reqs, new_options, pr_build, pr_host):
             for require in requires:
                 name = require.ref.name
                 require.set_build_require(True, require.build_context)
-                self._handle_require(name, node, require, graph, check_updates, update,
-                                     remotes, processed_profile_build=processed_profile_build,
-                                     processed_profile_host=processed_profile_host,
+                self._handle_require(name, node, require, graph, check_updates, update, remotes,
+                                     processed_profile_build=pr_build,
+                                     processed_profile_host=pr_host,
                                      new_reqs=new_reqs, new_options=new_options)
 
         all_reqs = Requirements()
@@ -76,7 +76,8 @@ class DepsGraphBuilder(object):
         build_options = Options(options=build_package_options)
         build_options.initialize_upstream(processed_profile_build._user_options)
         build_options = build_options.values._reqs_options
-        work_on_build_requires(requires_build, all_reqs, build_options)
+        work_on_build_requires(requires_build, all_reqs, build_options,
+                               pr_build=processed_profile_build, pr_host=processed_profile_build)
 
         # Work related to HOST build_requires
         #   The options that will be defined in the node will be the real options values that have
@@ -85,7 +86,8 @@ class DepsGraphBuilder(object):
         #   an option conflict while expanding the build_requires is impossible
         node.conanfile.build_requires_options.clear_unscoped_options()
         host_options = node.conanfile.build_requires_options._reqs_options
-        work_on_build_requires(requires_host, all_reqs, host_options)
+        work_on_build_requires(requires_host, all_reqs, host_options,
+                               pr_build=processed_profile_build, pr_host=processed_profile_host)
 
         # Gather all build_requires into the same graph
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
