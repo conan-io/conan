@@ -8,7 +8,6 @@ from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.graph_info import GraphInfo
 from conans.model.options import OptionsValues
-from conans.model.options import PackageOptionValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.functional.graph.graph_manager_base import GraphManagerTest
