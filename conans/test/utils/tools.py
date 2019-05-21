@@ -33,6 +33,7 @@ from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -46,7 +47,6 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
@@ -54,6 +54,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -757,7 +758,7 @@ servers["r2"] = TestServer()
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
         self.cache = ClientCache(self.base_folder, output)
-        self.runner = TestRunner(output, runner=self.conan_runner)
+        self.runner = self.conan_runner or ConanRunner(output=output)
 
         # Check if servers are real
         real_servers = False
