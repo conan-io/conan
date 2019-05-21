@@ -205,6 +205,61 @@ VAR2=23
         self.assertEquals(component["greet"]["adios"].libs, ["libsay"])
         self.assertEquals(component["greet"]["adios"]["say"].libs, [])
 
+    def cpp_info_nested_components_libs_order_test(self):
+        info = CppInfo(None)
+        info.name = "Greetings"
+        self.assertIn(info.name, "Greetings")
+        info["greet"].exe = "greet.exe"
+        info["greet"]["hola"].lib = "libhola"
+        info["greet"]["adios"].lib = "libadios"
+        info["greet"]["hola"]["say"].lib = "libsay"
+        info["greet"]["adios"]["say"].lib = "libsay"
+        info["greet"]["hru"].lib = "libhru"
+        self.assertEquals(info.libs, ["libsay", "libhola", "libadios", "libhru"])
+        self.assertEquals(info["greet"]["hru"].libs, [])
+        self.assertEquals(info["greet"]["hola"].libs, ["libsay"])
+        self.assertEquals(info["greet"]["adios"].libs, ["libsay"])
+        self.assertEquals(info["greet"]["adios"]["say"].libs, [])
+
+    def cpp_info_exes_test(self):
+        info = CppInfo(None)
+        info.name = "Greetings"
+        self.assertIn(info.name, "Greetings")
+        info["greet"].exe = "greet.exe"
+        info["hola"].exe = "hola.exe"
+        info["adios"].exe = "adios.exe"
+        info["say"].exe = "say.exe"
+        info["hru"].exe = "hru.exe"
+        self.assertEqual(["greet.exe", "hola.exe", "adios.exe", "say.exe", "hru.exe"], info.exes)
+
+    def cpp_info_nested_exes_test(self):
+        info = CppInfo(None)
+        info.name = "Greetings"
+        self.assertIn(info.name, "Greetings")
+        info["greet"].exe = "greet.exe"
+        info["greet"]["hola"].exe = "hola.exe"
+        info["greet"]["hola"]["say"].exe = "say.exe"
+        info["greet"]["adios"].exe = "adios.exe"
+        info["hru"].exe = "hru.exe"
+        self.assertEqual(["greet.exe", "hola.exe", "say.exe", "adios.exe", "hru.exe"], info.exes)
+
+    def cpp_info_exes_components_fail_test(self):
+        """
+        Usage of .lib or .exe is not allowed in cpp_info when using components
+        """
+        info = CppInfo(None)
+        info.name = "Greetings"
+        self.assertIn(info.name, "Greetings")
+        info.exe = "greet.exe"
+        with self.assertRaisesRegexp(ConanException, "Usage of Components with 'exe' or 'lib' "
+                                                     "values is no allowed"):
+            info["hola"].exe = "hola.exe"
+        info.exe = None
+        info["hola"].exe = "hola.exe"
+        with self.assertRaisesRegexp(ConanException, "Setting a first level exe is not supported "
+                                                     "when Components are already in use"):
+            info.exe = "greet.exe"
+
     def components_deps_test(self):
         component = Component("OpenSSL")
         component["OpenSSL"]["Crypto"]["SSL"]
