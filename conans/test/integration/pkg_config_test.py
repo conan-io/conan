@@ -1,7 +1,7 @@
-import platform
 import subprocess
 import unittest
 
+from conans.client.tools.oss import which
 from conans.test.utils.tools import TestClient
 
 hello_cpp = """
@@ -27,7 +27,7 @@ int main() {
 """
 
 
-
+@unittest.skipUnless(which("pkg-config") and which("g++"), "requires pkg-config and g++")
 class PkgConfigTest(unittest.TestCase):
 
     def test_reuse_pc_approach1(self):
@@ -92,9 +92,6 @@ class LibAConan(ConanFile):
            self.run('g++ main.cpp $(pkg-config libB --libs --cflags) -o main')
 
 """
-
-        if platform.system() == "Windows":
-            return
 
         self._run_reuse(libb_conanfile, liba_conanfile)
 
@@ -161,9 +158,6 @@ class LibAConan(ConanFile):
            self.run('g++ main.cpp $(pkg-config %s libB --libs --cflags) -o main' % args)
 
 """
-
-        if platform.system() == "Windows":
-            return
 
         self._run_reuse(libb_conanfile, liba_conanfile)
 

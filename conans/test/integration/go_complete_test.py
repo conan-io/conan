@@ -8,6 +8,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import scan_folder, uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.client.tools.env import environment_append
+from conans.client.tools.oss import which
 
 stringutil_conanfile = '''
 from conans import ConanFile
@@ -79,6 +80,7 @@ func main() {
 
 
 @attr('golang')
+@unittest.skipUnless(which("golang"), "requires golang")
 class GoCompleteTest(unittest.TestCase):
 
     def setUp(self):

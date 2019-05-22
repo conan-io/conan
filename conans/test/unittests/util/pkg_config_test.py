@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
-import platform
 import unittest
 
 from nose.plugins.attrib import attr
 
 from conans.client.tools.env import environment_append
+from conans.client.tools.oss import which
 from conans.client.tools.pkg_config import PkgConfig
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
@@ -29,17 +29,14 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 
 @attr("unix")
+@unittest.skipUnless(which("pkg-config"), "requires pkg-config")
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):
-        if platform.system() == "Windows":
-            return
         pc = PkgConfig('libsomething_that_does_not_exist_in_the_world')
         with self.assertRaises(ConanException):
             pc.libs()
 
     def test_pc(self):
-        if platform.system() == "Windows":
-            return
         tmp_dir = temp_folder()
         filename = os.path.join(tmp_dir, 'libastral.pc')
         with open(filename, 'w') as f:
@@ -60,8 +57,6 @@ class PkgConfigTest(unittest.TestCase):
         os.unlink(filename)
 
     def test_define_prefix(self):
-        if platform.system() == "Windows":
-            return
         tmp_dir = temp_folder()
         filename = os.path.join(tmp_dir, 'libastral.pc')
         with open(filename, 'w') as f:
@@ -84,8 +79,6 @@ class PkgConfigTest(unittest.TestCase):
         os.unlink(filename)
 
     def rpaths_libs_test(self):
-        if platform.system() == "Windows":
-            return
         pc_content = """prefix=/my_prefix/path
 libdir=/my_absoulte_path/fake/mylib/lib
 libdir3=${prefix}/lib2

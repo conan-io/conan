@@ -8,9 +8,11 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.client.tools.env import environment_append
+from conans.client.tools.oss import which
 
 
 @attr('golang')
+@unittest.skipUnless(which("golang"), "requires golang")
 class GoDiamondTest(unittest.TestCase):
 
     def setUp(self):
