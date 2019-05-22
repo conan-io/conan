@@ -60,19 +60,31 @@ class GraphManager(object):
             graph_info = GraphInfo.load(info_folder)
         except IOError:  # Only if file is missing
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile = self._cache.default_profile
-            profile.process_settings(self._cache)
+            profile_host = self._cache.default_profile
+            profile_host.process_settings(self._cache)
+            profile_build = self._cache.default_profile
+            profile_build.process_settings(self._cache)
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
-            profile = graph_info.profile_host
-            profile.process_settings(self._cache, preprocess=False)
+
+            profile_host = graph_info.profile_host
+            profile_host.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
-            profile.options.update(graph_info.options)
-        processed_profile = ProcessedProfile(profile, None)
+            profile_host.options.update(graph_info.options)
+
+            profile_build = graph_info.profile_build
+            profile_build.process_settings(self._cache, preprocess=False)
+            # This is the hack of recovering the options from the graph_info
+            profile_build.options.update(graph_info.build_options)
+
+        processed_profile_host = ProcessedProfile(profile_host, None)
+        processed_profile_build = ProcessedProfile(profile_build, None)
         if conanfile_path.endswith(".py"):
             conanfile = self._loader.load_consumer(conanfile_path,
-                                                   processed_profile=processed_profile, test=test,
+                                                   processed_profile_host=processed_profile_host,
+                                                   processed_profile_build=processed_profile_build,
+                                                   test=test,
                                                    name=name, version=version,
                                                    user=user, channel=channel)
             with get_env_context_manager(conanfile, without_python=True):
@@ -84,7 +96,8 @@ class GraphManager(object):
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
         else:
-            conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile)
+            conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile_host,
+                                                        processed_profile_build)
 
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
@@ -112,20 +125,23 @@ class GraphManager(object):
         ref = None
         if isinstance(reference, list):  # Install workspace with multiple root nodes
             conanfile = self._loader.load_virtual(reference, processed_profile_host,
-                                                  scope_options=False)
+                                                  processed_profile_build, scope_options=False)
             root_node = Node(ref, conanfile, build_context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
             if not self._cache.config.revisions_enabled and reference.revision is not None:
                 raise ConanException("Revisions not enabled in the client, specify a "
                                      "reference without revision")
             # create without test_package and install <ref>
-            conanfile = self._loader.load_virtual([reference], processed_profile_host)
+            conanfile = self._loader.load_virtual([reference], processed_profile_host,
+                                                  processed_profile_build)
             root_node = Node(ref, conanfile, build_context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         else:
             path = reference
             if path.endswith(".py"):
                 test = str(create_reference) if create_reference else None
-                conanfile = self._loader.load_consumer(path, processed_profile_host, test=test,
+                conanfile = self._loader.load_consumer(path, processed_profile_host,
+                                                       processed_profile_build,
+                                                       test=test,
                                                        name=graph_info.root.name,
                                                        version=graph_info.root.version,
                                                        user=graph_info.root.user,
@@ -138,6 +154,7 @@ class GraphManager(object):
                                          validate=False)
             else:
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile_host,
+                                                            processed_profile_build,
                                                             ref=graph_info.root)
 
             root_node = Node(ref, conanfile, build_context=CONTEXT_HOST, recipe=RECIPE_CONSUMER)
@@ -154,6 +171,7 @@ class GraphManager(object):
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
         graph_info.options = root_node.conanfile.options.values
+        graph_info.build_options = root_node.conanfile.build_options.values
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -222,7 +240,7 @@ class GraphManager(object):
                 subgraph = builder.extend_build_requires(graph, node,
                                                          build_requires_list,
                                                          check_updates, update, remotes,
-                                                         processed_profile_build,
+                                                         pr_build,
                                                          pr_host)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
@@ -234,8 +252,8 @@ class GraphManager(object):
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
-                                                         processed_profile_build,
-                                                         processed_profile_host)
+                                                         pr_build,
+                                                         pr_host)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, {}, recorder,

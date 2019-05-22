@@ -83,6 +83,9 @@ class ConanGetTest(unittest.TestCase):
             [options]
 
 
+            [build_options]
+            
+            
             [full_settings]
 
 
@@ -92,6 +95,9 @@ class ConanGetTest(unittest.TestCase):
             [full_options]
 
 
+            [full_build_options]
+            
+            
             [recipe_hash]
                 07e4bf611af374672215a94d84146e2d
 

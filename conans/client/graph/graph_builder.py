@@ -172,6 +172,7 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         build_context = require.build_context if node.build_context == CONTEXT_HOST else node.build_context
+        new_options = new_options if node.build_context == CONTEXT_HOST else new_build_options
         previous = node.public_deps.get(name, build_context)
         previous_closure = node.public_closure.get(name, build_context)
         if not previous or ((require.build_require or require.private) and not previous_closure):
@@ -249,8 +250,8 @@ class DepsGraphBuilder(object):
                     n.inverse_closure.add(dep_node)
 
             # RECURSION!
-            if self._recurse(previous.public_closure, new_reqs, new_options, new_build_options,
-                             build_context=previous.build_context):  # TODO: Options forced to same context
+            if self._recurse(previous.public_closure, new_reqs, new_options,
+                             build_context=previous.build_context):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
                                 new_options, new_build_options, check_updates, update,
                                 remotes, processed_profile_host, processed_profile_build)

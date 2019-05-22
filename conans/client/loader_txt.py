@@ -8,7 +8,8 @@ class ConanFileTextLoader(object):
     def __init__(self, input_text):
         # Prefer composition over inheritance, the __getattr__ was breaking things
         self._config_parser = ConfigParser(input_text,  ["requires", "generators", "options",
-                                                         "imports", "build_requires"],
+                                                         "build_options", "imports",
+                                                         "build_requires"],
                                            parse_lines=True)
 
     @property
@@ -28,6 +29,10 @@ class ConanFileTextLoader(object):
     @property
     def options(self):
         return self._config_parser.options
+
+    @property
+    def build_options(self):
+        return self._config_parser.build_options
 
     @property
     def _import_parameters(self):

@@ -302,7 +302,7 @@ class ConanInfo(object):
         result.append(indent(self.requires.dumps()))
         result.append("\n[options]")
         result.append(indent(self.options.dumps()))
-        result.appedn("\n[build_options]")
+        result.append("\n[build_options]")
         result.append(indent(self.build_options.dumps()))
         result.append("\n[full_settings]")
         result.append(indent(self.full_settings.dumps()))
@@ -364,7 +364,7 @@ class ConanInfo(object):
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize()["options"]),
-                           "build_options": dict(self.build_options.serialize()["build_options"]),
+                           "build_options": dict(self.build_options.serialize()["options"]),
                            "full_requires": self.full_requires.serialize(),
                            "recipe_hash": self.recipe_hash}
         return conan_info_json
@@ -372,7 +372,7 @@ class ConanInfo(object):
     def header_only(self):
         self.settings.clear()
         self.options.clear()
-        # No need to clear build_options
+        # No need to clear build_options (and we don't want to)
         self.requires.clear()
 
     def vs_toolset_compatible(self):

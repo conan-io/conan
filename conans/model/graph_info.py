@@ -41,16 +41,18 @@ class GraphInfo(object):
         # FIXME: Reading private very ugly
         profile_build, _ = _load_profile(profile_build, None, None)
         profile_host, _ = _load_profile(profile_host, None, None)
+
         try:
             options = graph_json["options"]
         except KeyError:
             options = None
         else:
             options = OptionsValues(options)
+
         try:
             build_options = graph_json["build_options"]
         except KeyError:
-            build_options = None
+            build_options = OptionsValues()  # TODO: If None it fails
         else:
             build_options = OptionsValues(build_options)
 
