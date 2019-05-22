@@ -280,7 +280,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}
     elif template:
-        path_template = os.path.join(cache.conan_folder, template)
+        path_template = os.path.join(cache.cache_folder, template)
         if not os.path.isfile(path_template):
             raise ConanException("Template doesn't exist: %s" % path_template)
         conanfile_template = load(path_template)
