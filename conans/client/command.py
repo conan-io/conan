@@ -548,8 +548,8 @@ class Command(object):
         profile_host = ProfileInfo(profiles=args.profile_host, settings=args.settings_host,
                                    options=args.options_host, env=args.env_host)
 
-        if args.install_folder and (args.profile_build or args.settings_build or
-                                    args.options_build or args.env_build):
+        if args.install_folder and (args.profile_host or args.settings_host or
+                                    args.options_host or args.env_host):
             raise ArgumentError(None,
                                 "--install-folder cannot be used together with -s, -o, -e or -pr")
 
