@@ -158,14 +158,14 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
             files["%s/metadata.json" % folder] = fake_metadata.dumps()
-            exports_sources_dir = client.cache.export_sources(ref)
+            exports_sources_dir = client.cache.package_layout(ref).export_sources()
             os.makedirs(exports_sources_dir)
 
         client.save(files, client.cache.store)
 
         # Create the manifests to be able to upload
         for pref in prefs:
-            pkg_folder = client.cache.package(pref)
+            pkg_folder = client.cache.package_layout(pref.ref).package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,

@@ -39,7 +39,10 @@ def gather_files(folder):
             else:
                 if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
                     raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'"
+                                         "you are packaging the needed destination files: '%s'."
+                                         "You can skip this check adjusting the "
+                                         "'general.skip_broken_symlinks_check' at the conan.conf "
+                                         "file."
                                          % abs_path)
 
     return file_dict, symlinks

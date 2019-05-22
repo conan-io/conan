@@ -7,7 +7,7 @@ if(causeClass == "jenkins.branch.BranchIndexingCause"){
 
 
 // ########## CONFIGURATION ##################
-def full_py_vers = true
+def full_py_vers = false
 def test_revisions = true
 // ###########################################
 def is_pr = false

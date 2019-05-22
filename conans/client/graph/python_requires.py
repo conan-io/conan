@@ -7,7 +7,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.errors import ConanException, NotFoundException
 
-PythonRequire = namedtuple("PythonRequire", "ref module conanfile")
+PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
+                                             "exports_folder", "exports_sources_folder"])
 
 
 class ConanPythonRequire(object):
@@ -39,8 +40,8 @@ class ConanPythonRequire(object):
         yield self._requires
         self._requires = old_requires
 
-    def _look_for_require(self, require):
-        ref = ConanFileReference.loads(require)
+    def _look_for_require(self, reference):
+        ref = ConanFileReference.loads(reference)
         ref = self.locked_versions[ref.name] if self.locked_versions is not None else ref
         try:
             python_require = self._cached_requires[ref]
@@ -60,17 +61,21 @@ class ConanPythonRequire(object):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
-                python_require = PythonRequire(new_ref, module, conanfile)
+                package_layout = self._proxy._cache.package_layout(new_ref, conanfile.short_paths)
+                exports_sources_folder = package_layout.export_sources()
+                exports_folder = package_layout.export()
+                python_require = PythonRequire(new_ref, module, conanfile,
+                                               exports_folder, exports_sources_folder)
             self._cached_requires[ref] = python_require
 
         return python_require
 
-    def __call__(self, require):
+    def __call__(self, reference):
         if not self.valid:
-            raise ConanException("Invalid use of python_requires(%s)" % require)
+            raise ConanException("Invalid use of python_requires(%s)" % reference)
         try:
-            python_req = self._look_for_require(require)
+            python_req = self._look_for_require(reference)
             self._requires.append(python_req)
             return python_req.module
         except NotFoundException:
-            raise ConanException('Unable to find python_requires("{}") in remotes'.format(require))
+            raise ConanException('Unable to find python_requires("{}") in remotes'.format(reference))

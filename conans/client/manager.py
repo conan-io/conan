@@ -77,7 +77,8 @@ class ConanManager(object):
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=self._recorder,
                                     hook_manager=self._hook_manager)
-        installer.install(deps_graph, remotes, keep_build=keep_build)
+
+        installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
         if graph_info.graph_lock:
             graph_info.graph_lock.update_check_graph(deps_graph, self._user_io.out)
 

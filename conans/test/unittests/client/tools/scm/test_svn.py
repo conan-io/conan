@@ -58,6 +58,21 @@ class SVNToolTestsBasic(SVNLocalRepoTestCase):
         svn.checkout(url=project_url)
         self.assertTrue(os.path.exists(os.path.join(tmp_folder, 'myfile')))
 
+    def svn_revision_message_test(self):
+        tmp_folder = self.gimme_tmp()
+        svn = SVN(folder=tmp_folder)
+        svn.checkout(url=self.repo_url)
+        self.assertIsNone(svn.get_revision_message())
+
+        new_file = os.path.join(tmp_folder, "new_file")
+        with open(new_file, "w") as f:
+            f.write("content")
+
+        svn.run('add new_file')
+        svn.run('commit -m "add to file"')
+        svn.run('update')
+        self.assertEqual("add to file", svn.get_revision_message())
+
     def test_revision_number(self):
         svn = SVN(folder=self.gimme_tmp())
         svn.checkout(url=self.repo_url)

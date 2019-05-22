@@ -323,13 +323,14 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-r")
-            if output.startswith("2"):
-                return MSYS2
-            elif output.startswith("1"):
-                return MSYS
-            else:
-                return None
+            version = OSInfo.uname("-r").split('.')
+            if version and version[0].isdigit():
+                major = int(version[0])
+                if major == 1:
+                    return MSYS
+                elif major >= 2:
+                    return MSYS2
+            return None
         elif "linux" in output:
             return WSL
         else:
@@ -375,7 +376,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
-               "armv8.3": "aarch64"
+               "armv8.3": "aarch64",
+               "asm.js": "asmjs",
+               "wasm": "wasm32",
                }.get(arch, None)
 
     if not machine:
@@ -421,7 +424,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "Macos": "apple-darwin",
                  "iOS": "apple-darwin",
                  "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin"}.get(os_, os_.lower())
+                 "tvOS": "apple-darwin",
+                 # NOTE: it technically must be "asmjs-unknown-emscripten" or
+                 # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
+                 "Emscripten": "local-emscripten"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:

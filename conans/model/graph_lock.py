@@ -19,8 +19,8 @@ class GraphLock(object):
                     dependencies.append(edge.dst.id)
                 self._nodes[node.id] = node.pref if node.ref else None
                 self._edges[node.id] = dependencies
-                self._python_requires[node.id] = [r.ref for r in getattr(node.conanfile,
-                                                                         "python_requires", [])]
+                self._python_requires[node.id] = [r.ref for _, r in getattr(node.conanfile,
+                                                                            "python_requires", {}).items()]
 
     def update_check_graph(self, deps_graph, output):
         for node in deps_graph.nodes:

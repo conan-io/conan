@@ -223,11 +223,16 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     tree = ast.parse(content)
     to_replace = []
     comments = []
+    class_line = None
+    tab_size = 4
     for i_body, item in enumerate(tree.body):
         if isinstance(item, ast.ClassDef):
             statements = item.body
+            class_line = item.lineno
             for i, stmt in enumerate(item.body):
                 if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+                    line = lines[stmt.lineno - 1]
+                    tab_size = len(line) - len(line.lstrip())
                     if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
                         try:
                             if i + 1 == len(statements):  # Last statement in my ClassDef
@@ -248,14 +253,24 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                         comments = [line.strip('\n') for line in replace
                                     if line.strip().startswith("#") or not line.strip()]
                         break
-    if len(to_replace) != 1:
+
+    if len(to_replace) > 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
-    if comments:
-        new_text += '\n'.join(comments) + "\n"
-    content = content.replace(to_replace[0], new_text)
-    content = content if not headers else ''.join(headers) + content
+
+    if len(to_replace) == 0:
+        # SCM exists, but not found in the conanfile, probably inherited from superclass
+        # FIXME: This will inject the lines only the latest class declared in the conanfile
+        tmp = lines[0:class_line]
+        tmp.append("{}{}".format(" " * tab_size, new_text))
+        tmp.extend(lines[class_line:])
+        content = ''.join(tmp)
+    else:
+        if comments:
+            new_text += '\n'.join(comments) + "\n"
+        content = content.replace(to_replace[0], new_text)
+        content = content if not headers else ''.join(headers) + content
 
     remove(conanfile_path)
     save(conanfile_path, content)

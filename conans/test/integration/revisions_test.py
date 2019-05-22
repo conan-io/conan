@@ -14,6 +14,7 @@ from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 
 
+@attr("artifactory_ready")
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 

@@ -63,6 +63,9 @@ class Uploader(object):
                 if auth.token is None:
                     raise AuthenticationException(response.content)
                 raise ForbiddenException(response.content)
+
+            response.raise_for_status()  # Raise HTTPError for bad http response status
+
         except ConanException:
             raise
         except Exception as exc:
