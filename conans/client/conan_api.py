@@ -1174,6 +1174,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
     try:
         graph_info = GraphInfo.load(install_folder)
         graph_info.profile_host.process_settings(cache, preprocess=False)
+        graph_info.profile_build.process_settings(cache, preprocess=False)
     except IOError:  # Only if file is missing
         if install_folder:
             raise ConanException("Failed to load graphinfo file in install-folder: %s"

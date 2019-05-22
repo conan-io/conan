@@ -214,7 +214,7 @@ class ConanFileLoader(object):
         if build_requires_options:
             conanfile.options.initialize_upstream(build_requires_options)
         else:
-            conanfile.options.initialize_upstream(processed_profile_build._user_options)
+            conanfile.options.initialize_upstream(processed_profile_host._user_options)
 
         if build_requires_build_options:
             conanfile.build_options.initialize_upstream(build_requires_build_options)

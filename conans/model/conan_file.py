@@ -150,43 +150,8 @@ class ConanFile(object):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
-
-        class DebugWrapper:
-            def __init__(self, w):
-                self._w = w
-
-            def __getattr__(self, name):
-                func = getattr(self._w, name)
-                if callable(func):
-                    def my_wrapper(*args, **kwargs):
-                        ret = func(*args, **kwargs)
-                        return ret
-                    return my_wrapper
-                else:
-                    return func
-
-            def __getitem__(self, item):
-                return self._w[item]
-
-            def __delitem__(self, key):
-                del self._w[key]
-
-            def __delattr__(self, field):
-                self._w.__delattr__(field)
-
-            def __hash__(self):
-                return hash(self._w)
-
-            @property
-            def values(self):
-                return self._w.values
-
-            @values.setter
-            def values(self, v):
-                self._w.values = v
-
-        self.options = DebugWrapper(create_options(self))
-        self.build_options = DebugWrapper(create_build_options(self))
+        self.options = create_options(self)
+        self.build_options = create_build_options(self)
 
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
