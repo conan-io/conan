@@ -127,10 +127,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.header_path))
 
     def same_permissions_test(self):
-        os.chmod(self.header_path, stat.S_IEXEC)
         os.chmod(self.header_path, stat.S_IXUSR)
-        os.chmod(self.header_path, stat.S_IXGRP)
-        os.chmod(self.header_path, stat.S_IXOTH)
         cache_statinfo = os.stat(self.header_path)
         self.client.current_folder = temp_folder()
         self.client.run("install %s -g deploy" % self.ref1.full_repr())
