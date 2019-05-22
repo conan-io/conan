@@ -127,8 +127,13 @@ class Workspace(object):
         generators = yml.pop("generators", None)
         if isinstance(generators, str):
             generators = [generators]
+
+        root_list = yml.pop("root", [])
+        if isinstance(root_list, str):
+            root_list = root_list.split(",")
+
         self._root = [ConanFileReference.loads(s.strip())
-                      for s in yml.pop("root", "").split(",") if s.strip()]
+                      for s in root_list if s.strip()]
         if not self._root:
             raise ConanException("Conan workspace needs at least 1 root conanfile")
 
