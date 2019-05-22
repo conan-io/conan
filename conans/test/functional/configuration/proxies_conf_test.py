@@ -2,7 +2,7 @@ import os
 import unittest
 
 from conans.client import tools
-from conans.client.conan_api import get_basic_requester
+from conans.client.rest.conan_requester import ConanRequester
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -25,13 +25,13 @@ http=http:/conan.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = get_basic_requester(client.cache)
+        requester = ConanRequester(client.cache)
 
         def verify_proxies(url, **kwargs):
             self.assertEqual(kwargs["proxies"], {"https": None, "http": "http:/conan.url"})
             return "mocked ok!"
 
-        requester._requester.get = verify_proxies
+        requester._http_requester.get = verify_proxies
         self.assertEqual(os.environ["NO_PROXY"], "http://someurl,http://otherurl.com")
 
         self.assertEqual(requester.get("MyUrl"), "mocked ok!")
@@ -68,13 +68,13 @@ http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = get_basic_requester(client.cache)
+        requester = ConanRequester(client.cache)
 
         def verify_env(url, **kwargs):
             self.assertTrue("HTTP_PROXY" in os.environ)
 
         with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
-            requester._requester.get = verify_env
+            requester._http_requester.get = verify_env
             requester.get("MyUrl")
 
     def test_environ_removed(self):
@@ -86,18 +86,18 @@ no_proxy_match=MyExcludedUrl*
 """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = get_basic_requester(client.cache)
+        requester = ConanRequester(client.cache)
 
         def verify_env(url, **kwargs):
             self.assertFalse("HTTP_PROXY" in os.environ)
             self.assertFalse("http_proxy" in os.environ)
 
         with tools.environment_append({"http_proxy": "my_system_proxy"}):
-            requester._requester.get = verify_env
+            requester._http_requester.get = verify_env
             requester.get("MyUrl")
             self.assertEqual(os.environ["http_proxy"], "my_system_proxy")
 
         with tools.environment_append({"HTTP_PROXY": "my_system_proxy"}):
-            requester._requester.get = verify_env
+            requester._http_requester.get = verify_env
             requester.get("MyUrl")
             self.assertEqual(os.environ["HTTP_PROXY"], "my_system_proxy")

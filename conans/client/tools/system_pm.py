@@ -18,7 +18,7 @@ class SystemPackageTool(object):
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info, output=self._output)
         self._tool._sudo_str = self._get_sudo_str()
-        self._tool._runner = runner or ConanRunner()
+        self._tool._runner = runner or ConanRunner(output=self._output)
         self._tool._recommends = recommends
 
     @staticmethod
