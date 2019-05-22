@@ -258,7 +258,8 @@ class ConanAPIV1(object):
             cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
-            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None):
+            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
+            template=None):
         from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or get_cwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
@@ -272,7 +273,8 @@ class ConanAPIV1(object):
                         gitlab_clang_versions=gitlab_clang_versions,
                         circleci_gcc_versions=circleci_gcc_versions,
                         circleci_clang_versions=circleci_clang_versions,
-                        circleci_osx_versions=circleci_osx_versions)
+                        circleci_osx_versions=circleci_osx_versions,
+                        template=template, cache=self._cache)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -766,6 +768,8 @@ class ConanAPIV1(object):
         info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
 
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         mkdir(dest)
         conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_abs_path, info_folder,
@@ -802,6 +806,7 @@ class ConanAPIV1(object):
         """
         from conans.client.cmd.copy import cmd_copy
         remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
         # FIXME: conan copy does not support short-paths in Windows
         ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self._cache,
@@ -1136,6 +1141,9 @@ class ConanAPIV1(object):
     def editable_add(self, path, reference, layout, cwd):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
+
+        remotes = self._cache.registry.load_remotes()
+        self.python_requires.enable_remotes(remotes=remotes)
 
         # Check the conanfile is there, and name/version matches
         ref = ConanFileReference.loads(reference, validate=True)
