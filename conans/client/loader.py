@@ -175,6 +175,7 @@ class ConanFileLoader(object):
         options = OptionsValues.loads(parser.options)
         conanfile.options.values = options
         conanfile.options.initialize_upstream(processed_profile._user_options)
+        # No need to do the same for build_options (conanfile.txt doesn't have those... yet)
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)

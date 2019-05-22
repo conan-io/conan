@@ -237,16 +237,20 @@ class ConanInfo(object):
         result = ConanInfo()
         result.settings = self.settings.copy()
         result.options = self.options.copy()
+        result.build_options = self.build_options.copy()
         result.requires = self.requires.copy()
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode):
+    def create(settings, options, build_options, prefs_direct, prefs_indirect,
+               default_package_id_mode):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
         result.options = options.copy()
+        result.full_build_options = build_options
+        result.build_options = build_options.copy()
         result.options.clear_indirect()
         result.full_requires = _PackageReferenceList(prefs_direct)
         result.requires = RequirementsInfo(prefs_direct, default_package_id_mode)
@@ -266,6 +270,7 @@ class ConanInfo(object):
         # Other use is from the BinariesAnalyzer, to get the recipe_hash and know
         # if package is outdated
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
+                                     "build_options", "full_build_options",
                                      "requires", "full_requires", "scope", "recipe_hash", "env"],
                               raise_unexpected_field=False)
         result = ConanInfo()
@@ -273,6 +278,8 @@ class ConanInfo(object):
         result.full_settings = Values.loads(parser.full_settings)
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
+        result.build_options = OptionsValues.loads(parser.build_options)
+        result.full_build_options = OptionsValues.loads(parser.full_build_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         result.requires = RequirementsInfo(result.full_requires, "semver_direct_mode")
@@ -295,12 +302,16 @@ class ConanInfo(object):
         result.append(indent(self.requires.dumps()))
         result.append("\n[options]")
         result.append(indent(self.options.dumps()))
+        result.appedn("\n[build_options]")
+        result.append(indent(self.build_options.dumps()))
         result.append("\n[full_settings]")
         result.append(indent(self.full_settings.dumps()))
         result.append("\n[full_requires]")
         result.append(indent(self.full_requires.dumps()))
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
+        result.append("\n[full_build_options]")
+        result.append(indent(self.full_build_options.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
         result.append("\n[env]")
         result.append(indent(self.env_values.dumps()))
@@ -340,6 +351,7 @@ class ConanInfo(object):
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
+        # Build options are not considered here
         requires_sha = self.requires.sha
         result.append(requires_sha)
 
@@ -352,6 +364,7 @@ class ConanInfo(object):
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize()["options"]),
+                           "build_options": dict(self.build_options.serialize()["build_options"]),
                            "full_requires": self.full_requires.serialize(),
                            "recipe_hash": self.recipe_hash}
         return conan_info_json
@@ -359,6 +372,7 @@ class ConanInfo(object):
     def header_only(self):
         self.settings.clear()
         self.options.clear()
+        # No need to clear build_options
         self.requires.clear()
 
     def vs_toolset_compatible(self):

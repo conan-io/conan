@@ -171,16 +171,16 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
-        self.assertEqual(str(protoc_build.conanfile.options.option), "none")
+        self.assertEqual(str(protoc_build.conanfile.options.option), "opt_build")
 
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
         self.assertEqual(protobuf_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
-        self.assertEqual(str(protobuf_build.conanfile.options.option), "none")
+        self.assertEqual(str(protobuf_build.conanfile.options.option), "opt_build")
 
         gtest_build = protobuf_build.dependencies[0].dst
         self.assertEqual(gtest_build.conanfile.name, "gtest")
         self.assertEqual(gtest_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(gtest_build.conanfile.settings.os), profile_build.settings['os'])
-        self.assertEqual(str(gtest_build.conanfile.options.option), "none")
+        self.assertEqual(str(gtest_build.conanfile.options.option), "opt_build")
