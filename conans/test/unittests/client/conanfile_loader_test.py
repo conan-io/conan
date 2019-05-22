@@ -10,8 +10,7 @@ from mock.mock import call
 from parameterized import parameterized
 
 from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.loader import ConanFileLoader, ConanFileTextLoader,\
-    _parse_conanfile
+from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.options import OptionsValues
@@ -19,8 +18,7 @@ from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import test_processed_profile,\
-    TestBufferConanOutput
+from conans.test.utils.tools import test_processed_profile, TestBufferConanOutput
 from conans.util.files import save
 
 
@@ -174,7 +172,7 @@ OpenCV/bin/* - ./bin
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
         with six.assertRaisesRegex(self, ConanException, "is too long. Valid names must contain"):
-            loader.load_conanfile_txt(file_path, test_processed_profile())
+            loader.load_conanfile_txt(file_path, processed_profile, processed_profile)
 
     def load_imports_arguments_test(self):
         file_content = '''
@@ -221,17 +219,19 @@ class MyTest(ConanFile):
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
 
-        processed_profile = test_processed_profile()
+        processed_profile = test_processed_profile(profile)
         recipe = loader.load_consumer(conanfile_path, processed_profile, processed_profile)
         self.assertEqual(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
+        processed_profile = test_processed_profile(profile)
         recipe = loader.load_consumer(conanfile_path, processed_profile, processed_profile)
         self.assertEqual(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
+        processed_profile = test_processed_profile(profile)
         recipe = loader.load_consumer(conanfile_path, processed_profile, processed_profile)
         self.assertIsNone(recipe.settings.os.value)
 
