@@ -8,6 +8,7 @@ from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
+import logging
 
 
 default_settings_yml = """
@@ -443,3 +444,85 @@ class ConanClientConfigParser(ConfigParser, object):
                 raise ConanException("Configured file for 'cacert_path'"
                                      " doesn't exists: '{}'".format(cacert_path))
         return cacert_path
+
+    @property
+    def client_cert_path(self):
+        # TODO: Really parameterize the client cert location
+        folder = os.path.dirname(self.filename)
+        CLIENT_CERT = "client.crt"
+        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+
+    @property
+    def client_cert_key_path(self):
+        CLIENT_KEY = "client.key"
+        folder = os.path.dirname(self.filename)
+        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+
+    @property
+    def hooks(self):
+        hooks = get_env("CONAN_HOOKS", list())
+        if not hooks:
+            try:
+                hooks = self.get_conf("hooks")
+                hooks = [k for k, _ in hooks]
+            except Exception:
+                hooks = []
+        return hooks
+
+    @property
+    def non_interactive(self):
+        try:
+            non_interactive = get_env("CONAN_NON_INTERACTIVE")
+            if non_interactive is None:
+                non_interactive = self.get_item("general.non_interactive")
+            return non_interactive.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def logging_level(self):
+        try:
+            level = get_env("CONAN_LOGGING_LEVEL")
+            if level is None:
+                level = self.get_item("log.level")
+            try:
+                level = int(level)
+            except Exception:
+                level = logging.CRITICAL
+            return level
+        except ConanException:
+            return logging.CRITICAL
+
+    @property
+    def logging_file(self):
+        return get_env('CONAN_LOGGING_FILE', None)
+
+    @property
+    def print_commands_to_output(self):
+        try:
+            print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS")
+            if print_commands_to_output is None:
+                print_commands_to_output = self.get_item("log.print_run_commands")
+            return print_commands_to_output.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def generate_run_log_file(self):
+        try:
+            generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE")
+            if generate_run_log_file is None:
+                generate_run_log_file = self.get_item("log.run_to_file")
+            return generate_run_log_file.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def log_run_to_output(self):
+        try:
+            log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT")
+            if log_run_to_output is None:
+                log_run_to_output = self.get_item("log.run_to_output")
+            return log_run_to_output.lower() in ("1", "true")
+        except ConanException:
+            return True
