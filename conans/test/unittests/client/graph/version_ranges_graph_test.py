@@ -10,7 +10,6 @@ from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import test_processed_profile
-from conans.client.cache.remote_registry import Remotes
 
 
 def _get_nodes(graph, name):

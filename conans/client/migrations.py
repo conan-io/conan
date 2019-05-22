@@ -23,7 +23,7 @@ class ClientMigrator(Migrator):
 
     def __init__(self, cache, current_version, out):
         self.cache = cache
-        super(ClientMigrator, self).__init__(cache.conan_folder, cache.store,
+        super(ClientMigrator, self).__init__(cache.cache_folder, cache.store,
                                              current_version, out)
 
     def _update_settings_yml(self, old_version):
@@ -71,12 +71,12 @@ class ClientMigrator(Migrator):
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
-            default_profile_path = os.path.join(self.cache.conan_folder, PROFILES_FOLDER,
+            default_profile_path = os.path.join(self.cache.cache_folder, PROFILES_FOLDER,
                                                 DEFAULT_PROFILE_NAME)
             if not os.path.exists(default_profile_path):
                 self.out.warn("Migration: Moving default settings from %s file to %s"
                               % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-                conf_path = os.path.join(self.cache.conan_folder, CONAN_CONF)
+                conf_path = os.path.join(self.cache.cache_folder, CONAN_CONF)
 
                 migrate_to_default_profile(conf_path, default_profile_path)
 
@@ -279,7 +279,7 @@ def migrate_c_src_export_source(cache, out):
 
 
 def migrate_plugins_to_hooks(cache, output=None):
-    plugins_path = os.path.join(cache.conan_folder, "plugins")
+    plugins_path = os.path.join(cache.cache_folder, "plugins")
     if os.path.exists(plugins_path) and not os.path.exists(cache.hooks_path):
         os.rename(plugins_path, cache.hooks_path)
     conf_path = cache.conan_conf_path
