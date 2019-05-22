@@ -456,7 +456,8 @@ class PackageOptions(object):
     def freeze(self):
         self._freeze = True
 
-    def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
+    def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options,
+                           raise_if_not_exists=True):
         """
         :param: package_values: PackageOptionValues({"shared": "True"}
         :param: pattern_options: Keys from the "package_values" e.g. ["shared"] that shouldn't raise
@@ -486,9 +487,13 @@ class PackageOptions(object):
                         self._data[name].value = value
                         self._modified[name] = (value, down_ref)
                 else:
-                    self._ensure_exists(name)
-                    self._data[name].value = value
-                    self._modified[name] = (value, down_ref)
+                    try:
+                        self._ensure_exists(name)
+                        self._data[name].value = value
+                        self._modified[name] = (value, down_ref)
+                    except ConanException:
+                        if raise_if_not_exists:
+                            raise
 
 
 class Options(object):
@@ -551,7 +556,7 @@ class Options(object):
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def propagate_upstream(self, down_package_values, down_ref, own_ref):
+    def propagate_upstream(self, down_package_values, down_ref, own_ref, raise_if_not_exists=True):
         """ used to propagate from downstream the options to the upper requirements
         :param: down_package_values => {"*": PackageOptionValues({"shared": "True"})}
         :param: down_ref
@@ -576,7 +581,8 @@ class Options(object):
             option_values.update(down_options)
 
         self._package_options.propagate_upstream(option_values, down_ref, own_ref,
-                                                 pattern_options=pattern_options)
+                                                 pattern_options=pattern_options,
+                                                 raise_if_not_exists=raise_if_not_exists)
 
         # Upstream propagation to deps
         for name, option_values in sorted(list(down_package_values.items())):

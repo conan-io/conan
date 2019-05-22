@@ -302,7 +302,8 @@ class DepsGraphBuilder(object):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
                 conanfile.options.propagate_upstream(down_options, down_ref, ref)
-                conanfile.build_options.propagate_upstream(down_build_options, down_ref, ref)
+                conanfile.build_options.propagate_upstream(down_build_options, down_ref, ref,
+                                                           raise_if_not_exists=False)
                 if hasattr(conanfile, "config"):
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()

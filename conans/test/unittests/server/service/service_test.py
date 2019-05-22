@@ -232,7 +232,8 @@ class ConanServiceTest(unittest.TestCase):
                                                 'recipe_hash': None}})
 
         info = self.search_service.search_packages(ref3, None)
-        self.assertEqual(info, {'77777777777': {'full_requires': [],
+        self.assertEqual(info, {'77777777777': {'build_options': {},
+                                                'full_requires': [],
                                                 'options': {'use_Qt': 'True'},
                                                 'settings': {},
                                                 'recipe_hash': None}})

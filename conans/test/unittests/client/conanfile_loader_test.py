@@ -129,7 +129,8 @@ OpenCV2:other_option=Cosa
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        ret = loader.load_conanfile_txt(file_path, test_processed_profile())
+        processed_profile = test_processed_profile()
+        ret = loader.load_conanfile_txt(file_path, processed_profile, processed_profile)
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
 OpenCV2:use_python2=1
@@ -160,7 +161,8 @@ OpenCV/2.4.104phil/stable
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
         with six.assertRaisesRegex(self, ConanException, "Wrong package recipe reference(.*)"):
-            loader.load_conanfile_txt(file_path, test_processed_profile())
+            processed_profile = test_processed_profile()
+            loader.load_conanfile_txt(file_path, processed_profile, processed_profile)
 
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable111111111111111111111111111111111111111111111111111111111111111
@@ -187,7 +189,8 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, exc
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        ret = loader.load_conanfile_txt(file_path, test_processed_profile())
+        processed_profile = test_processed_profile()
+        ret = loader.load_conanfile_txt(file_path, processed_profile, processed_profile)
 
         ret.copy = Mock()
         ret.imports()
@@ -218,20 +221,18 @@ class MyTest(ConanFile):
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
 
-        recipe = loader.load_consumer(conanfile_path,
-                                      test_processed_profile(profile))
+        processed_profile = test_processed_profile()
+        recipe = loader.load_consumer(conanfile_path, processed_profile, processed_profile)
         self.assertEqual(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path,
-                                      test_processed_profile(profile))
+        recipe = loader.load_consumer(conanfile_path, processed_profile, processed_profile)
         self.assertEqual(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path,
-                                      test_processed_profile(profile))
+        recipe = loader.load_consumer(conanfile_path, processed_profile, processed_profile)
         self.assertIsNone(recipe.settings.os.value)
 
 

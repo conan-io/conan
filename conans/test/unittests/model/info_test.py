@@ -19,6 +19,9 @@ info_text = '''[settings]
     header_only=False
     shared=False
 
+[build_options]
+
+
 [full_settings]
     arch=x86_64
     build_type=Debug
@@ -38,6 +41,9 @@ info_text = '''[settings]
     bzip2:fPIC=True
     bzip2:shared=False
     zlib:shared=False
+
+[full_build_options]
+
 
 [recipe_hash]
     asdasdasd
