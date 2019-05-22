@@ -14,7 +14,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": str(TestConanFile("PkgA", "0.1"))})
         client.run("install . --lock", assert_error=True)
-        self.assertIn("ERROR: Failed to load graphinfo file in install-folder", client.out)
+        self.assertIn("ERROR: Missing conan.lock file", client.out)
 
 
 class GraphLockVersionRangeTest(unittest.TestCase):
