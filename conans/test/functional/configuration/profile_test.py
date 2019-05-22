@@ -64,7 +64,7 @@ class ProfileTest(unittest.TestCase):
         self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})
         self.client.current_folder = os.path.join(self.client.current_folder, "sub")
         self.client.run("install .. -pr=sub/profile2", assert_error=True)
-        self.assertIn("ERROR: Profile not found: sub/profile2", self.client.out)
+        self.assertIn("ERROR: Host profile: Profile not found: sub/profile2", self.client.out)
         self.client.run("install .. -pr=sub/profile")
         self.assertIn("conanfile.txt: Installing package", self.client.out)
 
@@ -153,7 +153,7 @@ class ProfileTest(unittest.TestCase):
     def install_with_missing_profile_test(self, path):
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run('install . -pr "%sscopes_env"' % path, assert_error=True)
-        self.assertIn("ERROR: Profile not found:", self.client.out)
+        self.assertIn("ERROR: Host profile: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)
 
     def install_profile_env_test(self):
