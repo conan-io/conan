@@ -38,6 +38,24 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
+    cmake = textwrap.dedent("""
+        from conans import ConanFile
+
+        class CMake(ConanFile):
+            name = "cmake"
+            version = "testing"
+
+            settings = "os"
+            options = {"option": ["opt_host", "opt_build", "none"]}
+            default_options = {"option": "none"}
+
+            def configure(self):
+                self.output.info(">> option: {}".format(self.options.option))
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+    """)
+
     protobuf = textwrap.dedent("""
         from conans import ConanFile
 
@@ -51,6 +69,7 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
 
             def build_requirements(self):
                 self.build_requires("gtest/testing@user/channel", context="host")
+                self.build_requires("cmake/testing@user/channel", context="build")
 
             def configure(self):
                 self.output.info(">> option: {}".format(self.options.option))
@@ -106,6 +125,7 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
     def setUp(self):
         super(OptionsSpecifiedInRecipes, self).setUp()
         self._cache_recipe("gtest/testing@user/channel", self.gtest)
+        self._cache_recipe("cmake/testing@user/channel", self.cmake)
         self._cache_recipe("protobuf/testing@user/channel", self.protobuf)
         self._cache_recipe("protoc/testing@user/channel", self.protoc)
         self._cache_recipe("application/testing@user/channel", self.application)
@@ -159,13 +179,19 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
         self.assertEqual(str(protobuf_host.conanfile.settings.os), profile_host.settings['os'])
         self.assertEqual(str(protobuf_host.conanfile.options.option), "opt_host")
 
-        gtest_host = protobuf_host.dependencies[0].dst
+        gtest_host = protobuf_host.dependencies[1].dst
         self.assertEqual(gtest_host.conanfile.name, "gtest")
         self.assertEqual(gtest_host.build_context, CONTEXT_HOST)
         self.assertEqual(str(gtest_host.conanfile.settings.os), profile_host.settings['os'])
         self.assertEqual(str(gtest_host.conanfile.options.option), "opt_host")
 
         # Check BUILD packages
+        cmake_build1 = protobuf_host.dependencies[0].dst
+        self.assertEqual(cmake_build1.conanfile.name, "cmake")
+        self.assertEqual(cmake_build1.build_context, CONTEXT_BUILD)
+        self.assertEqual(str(cmake_build1.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(cmake_build1.conanfile.options.option), "opt_build")
+
         protoc_build = application.dependencies[0].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
@@ -178,8 +204,14 @@ class OptionsSpecifiedInRecipes(GraphManagerTest):
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
         self.assertEqual(str(protobuf_build.conanfile.options.option), "opt_build")
 
-        gtest_build = protobuf_build.dependencies[0].dst
+        gtest_build = protobuf_build.dependencies[1].dst
         self.assertEqual(gtest_build.conanfile.name, "gtest")
         self.assertEqual(gtest_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(gtest_build.conanfile.settings.os), profile_build.settings['os'])
         self.assertEqual(str(gtest_build.conanfile.options.option), "opt_build")
+
+        cmake_build2 = protobuf_build.dependencies[0].dst
+        self.assertEqual(cmake_build2.conanfile.name, "cmake")
+        self.assertEqual(cmake_build2.build_context, CONTEXT_BUILD)
+        self.assertEqual(str(cmake_build2.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(cmake_build2.conanfile.options.option), "opt_build")
