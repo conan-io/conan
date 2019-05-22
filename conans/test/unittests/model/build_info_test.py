@@ -223,7 +223,7 @@ VAR2=23
         info["Crypto"].includedirs = ["different_include"]
         self.assertEqual(["my_headers", "different_include"], info["Crypto"].includedirs)
 
-        info["Crypto"].includedirs.extend(["another_include"])
         # FIXME:
+        # info["Crypto"].includedirs.extend(["another_include"])
         # self.assertEqual(["my_headers", "different_include", "another_include"],
         #                 info["Crypto"].includedirs)
