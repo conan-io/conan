@@ -113,6 +113,10 @@ class ClientCache(object):
     def registry(self):
         return RemoteRegistry(self, self._output)
 
+    @property
+    def cacert_path(self):
+        return self.config.cacert_path
+
     def _no_locks(self):
         if self._no_lock is None:
             self._no_lock = self.config.cache_no_locks

@@ -63,6 +63,7 @@ from conans.client.migrations import ClientMigrator
 from conans.model.version import Version
 
 
+
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
@@ -785,6 +786,7 @@ servers["r2"] = TestServer()
             if self.requester_class:
                 http_requester = self.requester_class(self.servers)
             else:
+
                 http_requester = TestRequester(self.servers)
         return http_requester
 

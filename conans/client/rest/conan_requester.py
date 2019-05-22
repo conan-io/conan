@@ -18,6 +18,7 @@ class ConanRequester(object):
         self._cacert_path = config.cacert_path
         self._client_cert_path = config.client_cert_path
         self._client_cert_key_path = config.client_cert_key_path
+
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
 
