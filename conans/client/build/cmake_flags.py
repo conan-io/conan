@@ -93,6 +93,20 @@ def is_multi_configuration(generator):
     return "Visual" in generator or "Xcode" in generator
 
 
+def is_toolset_supported(generator):
+    # https://cmake.org/cmake/help/v3.14/variable/CMAKE_GENERATOR_TOOLSET.html
+    if not generator:
+        return False
+    return "Visual" in generator or "Xcode" in generator or "Green Hills MULTI" in generator
+
+
+def is_generator_platform_supported(generator):
+    # https://cmake.org/cmake/help/v3.14/variable/CMAKE_GENERATOR_PLATFORM.html
+    if not generator:
+        return False
+    return "Visual" in generator or "Green Hills MULTI" in generator
+
+
 def verbose_definition(value):
     return {verbose_definition_name: "ON" if value else "OFF"}
 
