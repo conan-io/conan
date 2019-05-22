@@ -63,7 +63,7 @@ class TestMigrations(unittest.TestCase):
         self.assertEqual(metadata_ref1.recipe.revision, "2e48797069e65568befd81854aa8aaf0")
         pkg_metadata = metadata_ref1.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]
         self.assertEqual(pkg_metadata.recipe_revision, "2e48797069e65568befd81854aa8aaf0")
-        self.assertEqual(pkg_metadata.revision, "38d05b42210ca2becb43a05f9265abbe")
+        self.assertEqual(pkg_metadata.revision, "7a7c34601d2d200b90d6626f82bf88cb")
         self.assertEqual(list(metadata_ref1.packages.keys()),
                          ["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"])
 

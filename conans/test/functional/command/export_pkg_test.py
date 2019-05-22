@@ -115,7 +115,7 @@ class HelloPythonConan(ConanFile):
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
         manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
-        self.assertIn("conaninfo.txt: f395060da1ffdeb934be8b62e4bd8a3a", manifest)
+        self.assertIn("conaninfo.txt: d5fc27fb8ecb98697c94f6209b44531f", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
     def test_develop(self):
