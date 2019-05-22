@@ -22,6 +22,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     pkg_b_revision = "180919b324d7823f2683af9381d11431"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
     pkg_b_package_revision = "#2913f67cea630aee496fe70fd38b5b0f"
+    graph_lock_command = "install ."
 
     def setUp(self):
         client = TestClient()
@@ -31,7 +32,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
         # Use a consumer with a version range
         client.save({"conanfile.py": str(self.consumer)})
-        client.run("install .")
+        client.run(self.graph_lock_command)
 
         self._check_lock("PkgB/0.1@None/None")
 
@@ -112,6 +113,10 @@ class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
     pkg_b_revision = "4e4df18e796d2a1bfc7bbce7f8865ecd"
     pkg_b_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
     pkg_b_package_revision = "#4d2f336ae4c2979e2e56d28aed4c2ebb"
+
+
+class GraphLockVersionRangeInfoTest(GraphLockVersionRangeTest):
+    graph_lock_command = "info . --output-folder=."
 
 
 class GraphLockRevisionTest(unittest.TestCase):

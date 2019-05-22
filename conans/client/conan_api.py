@@ -58,7 +58,8 @@ from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
-from conans.util.files import exception_message_safe, mkdir, save_files
+from conans.util.files import exception_message_safe, mkdir, save_files, save,\
+    normalize
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.graph_lock import GraphLockFile
@@ -696,7 +697,8 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-             profile_names=None, update=False, install_folder=None, build=None, lock=False):
+             profile_names=None, update=False, install_folder=None, build=None, lock=False,
+             output_folder=None):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env, lock)
         recorder = ActionRecorder()
@@ -707,6 +709,16 @@ class ConanAPIV1(object):
         deps_graph, conanfile = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                                update, False, remotes,
                                                                recorder)
+
+        if output_folder:
+            output_folder = _make_abs_path(output_folder)
+            # Write conaninfo
+            content = normalize(conanfile.info.dumps())
+            save(os.path.join(output_folder, CONANINFO), content)
+            self._user_io.out.info("Generated %s" % CONANINFO)
+            graph_info.save(output_folder)
+            self._user_io.out.info("Generated graphinfo")
+
         return deps_graph, conanfile
 
     @api_method
