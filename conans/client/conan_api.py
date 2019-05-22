@@ -61,6 +61,8 @@ from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.model.graph_lock import GraphLockFile
+
 
 default_manifest_folder = '.conan_manifests'
 
@@ -722,14 +724,10 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        graph_info = get_graph_info(None, None, None, None, cwd, install_folder,
-                                    self._cache, self._user_io.out, lock="if-exists")
-
         build(self._graph_manager, self._hook_manager, conanfile_path,
               source_folder, build_folder, package_folder, install_folder,
               should_configure=should_configure, should_build=should_build,
-              should_install=should_install, should_test=should_test,
-              graph_lock=graph_info.graph_lock)
+              should_install=should_install, should_test=should_test)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
@@ -748,11 +746,8 @@ class ConanAPIV1(object):
         if package_folder == build_folder:
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build-folder and package folder can't be the same")
-        graph_info = get_graph_info(None, None, None, None, cwd, install_folder,
-                                    self._cache, self._user_io.out, lock="if-exists")
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                                deps_info_required=True,
-                                                                graph_lock=graph_info.graph_lock)
+                                                                deps_info_required=True)
         with get_env_context_manager(conanfile):
             packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                     install_folder, self._hook_manager, conanfile_path, None,
@@ -1210,23 +1205,12 @@ Conan = ConanAPIV1
 
 def get_graph_info(profile_names, settings, options, env, cwd, install_folder, cache, output,
                    name=None, version=None, user=None, channel=None, lock=False):
-    try:
-        graph_info = GraphInfo.load(install_folder)
-        graph_info.profile.process_settings(cache, preprocess=False)
-        if lock and graph_info.graph_lock is None:
-            raise ConanException("GraphInfo file does not contain lock info: %s" % install_folder)
-        if not lock:  # Invalidate existing information
-            graph_info.graph_lock = None
-    except IOError:  # Only if file is missing
-        if install_folder or lock:
-            if lock == "if-exists":
-                return GraphInfo()
-            raise ConanException("Failed to load graphinfo file in install-folder: %s"
-                                 % install_folder)
-        graph_info = None
 
-    if profile_names or settings or options or env or not graph_info:
-        if graph_info:
+    root_ref = ConanFileReference(name, version, user, channel, validate=False)
+    if profile_names or settings or options or env or not install_folder:
+        if lock:
+            raise ConanException("If using lockfiles, do not provide profiles, settings, or options")
+        if install_folder and os.path.isfile(os.path.join(install_folder, GRAPH_INFO_FILE)):
             # FIXME: Convert to Exception in Conan 2.0
             output.warn("Settings, options, env or profile specified. "
                         "GraphInfo found from previous install won't be used: %s\n"
@@ -1236,10 +1220,20 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
 
         profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile.process_settings(cache)
-        root_ref = ConanFileReference(name, version, user, channel, validate=False)
         graph_info = GraphInfo(profile=profile, root_ref=root_ref)
-        # Preprocess settings and convert to real settings
+        return graph_info
 
+    # conan.lock should be in install folder, and maybe graph_info.json
+    try:
+        graph_info = GraphInfo.load(install_folder)
+    except IOError:
+        graph_info = GraphInfo()
+        graph_info.root = root_ref
+    graph_lock_file = GraphLockFile.load(install_folder)
+    if lock:
+        graph_info.graph_lock = graph_lock_file.graph_lock
+    graph_info.profile = graph_lock_file.profile
+    graph_info.profile.process_settings(cache, preprocess=False)
     return graph_info
 
 

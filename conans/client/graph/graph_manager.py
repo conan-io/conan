@@ -15,7 +15,7 @@ from conans.model.graph_info import GraphInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from conans.model.graph_lock import GraphLock
+from conans.model.graph_lock import GraphLock, GraphLockFile
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -53,19 +53,22 @@ class GraphManager(object):
         self._loader = loader
 
     def load_consumer_conanfile(self, conanfile_path, info_folder,
-                                deps_info_required=False, test=None, graph_lock=None):
+                                deps_info_required=False, test=None):
         """loads a conanfile for local flow: source, imports, package, build
         """
         try:
             graph_info = GraphInfo.load(info_folder)
+            graph_lock_file = GraphLockFile.load(info_folder)
+            graph_lock = graph_lock_file.graph_lock
+            profile = graph_lock_file.profile
         except IOError:  # Only if file is missing
+            graph_lock = None
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
             profile = self._cache.default_profile
             profile.process_settings(self._cache)
             name, version, user, channel = None, None, None, None
         else:
             name, version, user, channel, _ = graph_info.root
-            profile = graph_info.profile
             profile.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)

@@ -6,6 +6,7 @@ import unittest
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 from conans.test.utils.conanfile import TestConanFile
+from conans.model.graph_lock import LOCKFILE
 
 
 class GraphLockErrorsTest(unittest.TestCase):
@@ -40,7 +41,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.save({"conanfile.py": str(self.consumer)})
 
     def _check_lock(self, ref_b, rev_b=""):
-        lock_file = load(os.path.join(self.client.current_folder, "graph_info.json"))
+        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
         lock_file_json = json.loads(lock_file)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
@@ -152,7 +153,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.save({"conanfile.py": str(consumer)})
 
     def _check_lock(self, ref_b, rev_b=""):
-        lock_file = load(os.path.join(self.client.current_folder, "graph_info.json"))
+        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
         lock_file_json = json.loads(lock_file)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
@@ -242,7 +243,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.save({"conanfile.py": consumer})
 
     def _check_lock(self, ref_b):
-        lock_file = load(os.path.join(self.client.current_folder, "graph_info.json"))
+        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
         self.assertIn("Tool/0.1@user/channel", lock_file)
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
         lock_file_json = json.loads(lock_file)
