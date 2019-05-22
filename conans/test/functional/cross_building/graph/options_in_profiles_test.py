@@ -15,56 +15,82 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
-class ClassicProtocExample(GraphManagerTest):
-    """ There is an application that requires the protobuf library, and also
-        build_requires the protoc executable to generate some files, but protoc
-        also requires the protobuf library to build.
-
-        Expected packages:
-            * host_machine: application, protobuf
-            * build_machine: protoc, protobuf
+class OptionsSpecifiedInProfiles(GraphManagerTest):
+    """ An application that build_requires the same tool for different build context, and there
+        are some options declared in the profiles for this tool
     """
+
+    gtest = textwrap.dedent("""
+        from conans import ConanFile
+
+        class GTest(ConanFile):
+            name = "gtest"
+            version = "testing"
+
+            settings = "os"
+            options = {"option": ["opt_host", "opt_build", "none"]}
+            default_options = {"option": "none"}
+
+            def configure(self):
+                self.output.info(">> option: {}".format(self.options.option))
+
+            def build(self):
+                self.output.info(">> settings.os:".format(self.settings.os))
+    """)
 
     protobuf = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protobuf(ConanFile):
             name = "protobuf"
             version = "testing"
-            
+
             settings = "os"  # , "arch", "compiler", "build_type"
-            
+            options = {"option": ["opt_host", "opt_build", "none"]}
+            default_options = {"option": "none"}
+
+            def build_requirements(self):
+                self.build_requires("gtest/testing@user/channel", context="host")
+
+            def configure(self):
+                self.output.info(">> option: {}".format(self.options.option))
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
     protoc = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protoc(ConanFile):
             name = "protoc"
             version = "testing"
-            
+
             settings = "os"
+            options = {"option": ["opt_host", "opt_build", "none"]}
+            default_options = {"option": "none"}
             requires = "protobuf/testing@user/channel"
-            
+
+            def configure(self):
+                self.output.info(">> option: {}".format(self.options.option))
+                
             def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info(">> settings.os: {}".format(self.settings.os))
     """)
 
     application = textwrap.dedent("""
         from conans import ConanFile
-        
-        class Protoc(ConanFile):
+
+        class Application(ConanFile):
             name = "application"
             version = "testing"
-            
+
             settings = "os"
-            requires = "protobuf/testing@user/channel"
-            
+
             def build_requirements(self):
-                self.build_requires("protoc/testing@user/channel")
-            
+                self.build_requires("protoc/testing@user/channel", context="host")
+                self.build_requires("protoc/testing@user/channel", context="build")
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
@@ -76,7 +102,8 @@ class ClassicProtocExample(GraphManagerTest):
     """)
 
     def setUp(self):
-        super(ClassicProtocExample, self).setUp()
+        super(OptionsSpecifiedInProfiles, self).setUp()
+        self._cache_recipe("gtest/testing@user/channel", self.gtest)
         self._cache_recipe("protobuf/testing@user/channel", self.protobuf)
         self._cache_recipe("protoc/testing@user/channel", self.protoc)
         self._cache_recipe("application/testing@user/channel", self.application)
@@ -103,10 +130,12 @@ class ClassicProtocExample(GraphManagerTest):
     def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"
+        profile_host.options.update(OptionsValues.loads("*:option=opt_host"))
         profile_host.process_settings(self.cache)
 
         profile_build = Profile()
         profile_build.settings["os"] = "Build"
+        profile_build.options.update(OptionsValues.loads("*:option=opt_build"))
         profile_build.process_settings(self.cache)
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
@@ -116,20 +145,41 @@ class ClassicProtocExample(GraphManagerTest):
         self.assertEqual(len(application.dependencies), 2)
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.build_context, CONTEXT_HOST)
-        self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
+        self.assertEqual(str(application.conanfile.settings.os), profile_host.settings['os'])
 
-        protobuf_host = application.dependencies[0].dst
+        protoc_host = application.dependencies[1].dst
+        self.assertEqual(protoc_host.conanfile.name, "protoc")
+        self.assertEqual(protoc_host.build_context, CONTEXT_HOST)
+        self.assertEqual(str(protoc_host.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(protoc_host.conanfile.options.option), "opt_host")
+
+        protobuf_host = protoc_host.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
         self.assertEqual(protobuf_host.build_context, CONTEXT_HOST)
-        self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
+        self.assertEqual(str(protobuf_host.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(protobuf_host.conanfile.options.option), "opt_host")
+
+        gtest_host = protobuf_host.dependencies[0].dst
+        self.assertEqual(gtest_host.conanfile.name, "gtest")
+        self.assertEqual(gtest_host.build_context, CONTEXT_HOST)
+        self.assertEqual(str(gtest_host.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(gtest_host.conanfile.options.option), "opt_host")
 
         # Check BUILD packages
-        protoc_build = application.dependencies[1].dst
+        protoc_build = application.dependencies[0].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(protoc_build.conanfile.options.option), "opt_build")
 
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
-        self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
+        self.assertEqual(protobuf_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(protobuf_build.conanfile.options.option), "opt_build")
+
+        gtest_build = protobuf_build.dependencies[0].dst
+        self.assertEqual(gtest_build.conanfile.name, "gtest")
+        self.assertEqual(gtest_build.build_context, CONTEXT_BUILD)
+        self.assertEqual(str(gtest_build.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(gtest_build.conanfile.options.option), "opt_build")

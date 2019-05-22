@@ -14,11 +14,12 @@ GRAPH_INFO_FILE = "graph_info.json"
 
 class GraphInfo(object):
 
-    def __init__(self, profile_build, profile_host, options=None, root_ref=None):
+    def __init__(self, profile_build, profile_host, options=None, build_options=None, root_ref=None):
         self.profile_build = profile_build
         self.profile_host = profile_host
         # This field is a temporary hack, to store dependencies options for the local flow
         self.options = options
+        self.build_options = build_options
         self.root = root_ref
 
     @staticmethod
@@ -40,17 +41,26 @@ class GraphInfo(object):
         # FIXME: Reading private very ugly
         profile_build, _ = _load_profile(profile_build, None, None)
         profile_host, _ = _load_profile(profile_host, None, None)
+
         try:
             options = graph_json["options"]
         except KeyError:
             options = None
         else:
             options = OptionsValues(options)
+
+        try:
+            build_options = graph_json["build_options"]
+        except KeyError:
+            build_options = OptionsValues()  # TODO: If None it fails
+        else:
+            build_options = OptionsValues(build_options)
+
         root = graph_json.get("root", {"name": None, "version": None, "user": None, "channel": None})
         root_ref = ConanFileReference(root["name"], root["version"], root["user"], root["channel"],
                                       validate=False)
         return GraphInfo(profile_build=profile_build, profile_host=profile_host,
-                         options=options, root_ref=root_ref)
+                         options=options, build_options=build_options, root_ref=root_ref)
 
     def save(self, folder, filename=None):
         filename = filename or GRAPH_INFO_FILE
@@ -63,6 +73,8 @@ class GraphInfo(object):
                   "profile_host": self.profile_host.dumps()}
         if self.options is not None:
             result["options"] = self.options.as_list()
+        if self.build_options is not None:
+            result["build_options"] = self.build_options.as_list()
         result["root"] = {"name": self.root.name,
                           "version": self.root.version,
                           "user": self.root.user,

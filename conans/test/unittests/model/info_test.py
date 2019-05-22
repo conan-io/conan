@@ -19,6 +19,9 @@ info_text = '''[settings]
     header_only=False
     shared=False
 
+[build_options]
+
+
 [full_settings]
     arch=x86_64
     build_type=Debug
@@ -39,6 +42,9 @@ info_text = '''[settings]
     bzip2:shared=False
     zlib:shared=False
 
+[full_build_options]
+
+
 [recipe_hash]
     asdasdasd
 
@@ -55,7 +61,8 @@ class ConanInfoTest(unittest.TestCase):
     def test_serialize(self):
         info = ConanInfo.loads(info_text)
         min_serial = info.serialize_min()
-        expected = {'full_requires':
+        expected = {'build_options': {},
+                    'full_requires':
                     ['bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641',
                      'zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3'],
                     'options': {'shared': 'False', 'fPIC': 'True', 'header_only': 'False'},

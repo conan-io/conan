@@ -159,7 +159,8 @@ class ToolsFilesPatchTest(unittest.TestCase):
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
-        ret = loader.load_consumer(file_path, test_processed_profile())
+        processed_profile = test_processed_profile()
+        ret = loader.load_consumer(file_path, processed_profile, processed_profile)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:

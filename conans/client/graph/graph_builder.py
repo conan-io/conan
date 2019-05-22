@@ -5,6 +5,7 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
+from conans.model.options import OptionsValues, Options, PackageOptions
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
@@ -34,7 +35,7 @@ class DepsGraphBuilder(object):
 
         # enter recursive computation
         t1 = time.time()
-        self._load_deps(dep_graph, root_node, Requirements(), None, None,
+        self._load_deps(dep_graph, root_node, Requirements(), None, None, None,
                         check_updates, update, remotes,
                         processed_profile_host, processed_profile_build)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
@@ -42,32 +43,60 @@ class DepsGraphBuilder(object):
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
                               remotes, processed_profile_build, processed_profile_host):
-
-        # The options that will be defined in the node will be the real options values that have
-        # been already propagated downstream from the dependency graph. This will override any
-        # other possible option in the build_requires dependency graph. This means that in theory
-        # an option conflict while expanding the build_requires is impossible
-        node.conanfile.build_requires_options.clear_unscoped_options()
-        new_options = node.conanfile.build_requires_options._reqs_options
-        new_reqs = Requirements()
-
         conanfile = node.conanfile
         scope = conanfile.display_name
-        requires = []
+
+        # Group requires by context
+        requires_host = []
+        requires_build = []
         for ref, context in build_requires_refs:
             r = Requirement(ref)
             r.build_context = context
-            requires.append(r)
-        self._resolve_ranges(graph, requires, scope, update, remotes)
+            if context == CONTEXT_HOST:
+                requires_host.append(r)
+            else:
+                requires_build.append(r)
+        self._resolve_ranges(graph, requires_host, scope, update, remotes)
+        self._resolve_ranges(graph, requires_build, scope, update, remotes)
 
-        for require in requires:
-            name = require.ref.name
-            require.set_build_require(True, require.build_context)
-            self._handle_require(name, node, require, graph, check_updates, update,
-                                 remotes, processed_profile_build=processed_profile_build,
-                                 processed_profile_host=processed_profile_host,
-                                 new_reqs=new_reqs, new_options=new_options)
+        # Define a function to work on requires
+        def work_on_build_requires(requires, new_reqs, new_options, new_build_options,
+                                   pr_build, pr_host):
+            for require in requires:
+                name = require.ref.name
+                require.set_build_require(True, require.build_context)
+                self._handle_require(name, node, require, graph, check_updates, update, remotes,
+                                     processed_profile_build=pr_build,
+                                     processed_profile_host=pr_host,
+                                     new_reqs=new_reqs, new_options=new_options,
+                                     new_build_options=new_build_options)
 
+        all_reqs = Requirements()
+
+        # Work related to BUILD build_requires
+        node.conanfile.build_requires_build_options.clear_unscoped_options()
+        build_options = node.conanfile.build_requires_build_options._reqs_options
+        work_on_build_requires(requires_build, all_reqs, build_options, build_options,
+                               pr_build=processed_profile_build, pr_host=processed_profile_build)
+
+        # build_package_options = PackageOptions(definition={})
+        # build_options = Options(options=build_package_options)
+        # build_options.initialize_upstream(processed_profile_build._user_options)
+        # build_options = build_options.values._reqs_options
+        # work_on_build_requires(requires_build, all_reqs, build_options,
+        #                       pr_build=processed_profile_build, pr_host=processed_profile_build)
+
+        # Work related to HOST build_requires
+        #   The options that will be defined in the node will be the real options values that have
+        #   been already propagated downstream from the dependency graph. This will override any
+        #   other possible option in the build_requires dependency graph. This means that in theory
+        #   an option conflict while expanding the build_requires is impossible
+        node.conanfile.build_requires_options.clear_unscoped_options()
+        host_options = node.conanfile.build_requires_options._reqs_options
+        work_on_build_requires(requires_host, all_reqs, host_options, build_options,
+                               pr_build=processed_profile_build, pr_host=processed_profile_host)
+
+        # Gather all build_requires into the same graph
         new_nodes = set([n for n in graph.nodes if n.package_id is None])
         # This is to make sure that build_requires have precedence over the normal requires
         node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
@@ -109,7 +138,7 @@ class DepsGraphBuilder(object):
                                  % (scope, list(conanfile._conan_evaluated_requires.values()),
                                     list(conanfile.requires.values())))
 
-    def _load_deps(self, dep_graph, node, down_reqs, down_ref, down_options,
+    def _load_deps(self, dep_graph, node, down_reqs, down_ref, down_options, down_build_options,
                    check_updates, update, remotes, processed_profile_host, processed_profile_build):
         """ expands the dependencies of the node, recursively
 
@@ -119,7 +148,9 @@ class DepsGraphBuilder(object):
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration: calling configure() and requirements()
-        new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref, down_options)
+        new_reqs, new_options, new_build_options = self._config_node(dep_graph, node, down_reqs,
+                                                                     down_ref, down_options,
+                                                                     down_build_options)
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         self._resolve_deps(dep_graph, node, update, remotes)
@@ -130,17 +161,18 @@ class DepsGraphBuilder(object):
                 continue
             self._handle_require(name, node, require, dep_graph, check_updates, update,
                                  remotes, processed_profile_host, processed_profile_build,
-                                 new_reqs, new_options)
+                                 new_reqs, new_options, new_build_options)
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
                         remotes, processed_profile_host, processed_profile_build,
-                        new_reqs, new_options):
+                        new_reqs, new_options, new_build_options):
 
         if name in node.ancestors or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
         build_context = require.build_context if node.build_context == CONTEXT_HOST else node.build_context
+        new_options = new_options if node.build_context == CONTEXT_HOST else new_build_options
         previous = node.public_deps.get(name, build_context)
         previous_closure = node.public_closure.get(name, build_context)
         if not previous or ((require.build_require or require.private) and not previous_closure):
@@ -178,7 +210,7 @@ class DepsGraphBuilder(object):
 
             # RECURSION!
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
-                            new_options, check_updates, update,
+                            new_options, new_build_options, check_updates, update,
                             remotes, processed_profile_host, processed_profile_build)
         else:  # a public node already exist with this name
             # This is closing a diamond, the node is existing in the scope
@@ -219,9 +251,9 @@ class DepsGraphBuilder(object):
 
             # RECURSION!
             if self._recurse(previous.public_closure, new_reqs, new_options,
-                             build_context=previous.build_context):  # TODO: Options forced to same context
+                             build_context=previous.build_context):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
-                                new_options, check_updates, update,
+                                new_options, new_build_options, check_updates, update,
                                 remotes, processed_profile_host, processed_profile_build)
 
     @staticmethod
@@ -252,7 +284,7 @@ class DepsGraphBuilder(object):
                         return True
         return False
 
-    def _config_node(self, graph, node, down_reqs, down_ref, down_options):
+    def _config_node(self, graph, node, down_reqs, down_ref, down_options, down_build_options):
         """ update settings and option in the current ConanFile, computing actual
         requirement values, cause they can be overridden by downstream requires
         param settings: dict of settings values => {"os": "windows"}
@@ -270,6 +302,8 @@ class DepsGraphBuilder(object):
                 with conanfile_exception_formatter(str(conanfile), "config_options"):
                     conanfile.config_options()
                 conanfile.options.propagate_upstream(down_options, down_ref, ref)
+                conanfile.build_options.propagate_upstream(down_build_options, down_ref, ref,
+                                                           raise_if_not_exists=False)
                 if hasattr(conanfile, "config"):
                     with conanfile_exception_formatter(str(conanfile), "config"):
                         conanfile.config()
@@ -279,6 +313,7 @@ class DepsGraphBuilder(object):
 
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
+                conanfile.build_options.validate()
 
                 # Update requirements (overwrites), computing new upstream
                 if hasattr(conanfile, "requirements"):
@@ -298,6 +333,7 @@ class DepsGraphBuilder(object):
                         conanfile.requirements()
 
                 new_options = conanfile.options.deps_package_values
+                new_build_options = conanfile.build_options.deps_package_values
                 if graph.aliased:
                     for req in conanfile.requires.values():
                         req.ref = graph.aliased.get(req.ref, req.ref)
@@ -309,7 +345,7 @@ class DepsGraphBuilder(object):
         except Exception as e:
             raise ConanException(e)
 
-        return new_down_reqs, new_options
+        return new_down_reqs, new_options, new_build_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, name_req,
                          check_updates, update, remotes, processed_profile, alias_ref=None):

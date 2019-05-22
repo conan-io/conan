@@ -34,6 +34,26 @@ def create_options(conanfile):
         raise ConanException("Error while initializing options. %s" % str(e))
 
 
+def create_build_options(conanfile):
+    try:
+        package_options = PackageOptions(None)
+        build_options = Options(package_options)
+
+        default_build_options = getattr(conanfile, "default_build_options", None)
+        if default_build_options:
+            if isinstance(default_build_options, (list, tuple, dict)):
+                default_values = OptionsValues(default_build_options)
+            elif isinstance(default_build_options, str):
+                default_values = OptionsValues.loads(default_build_options)
+            else:
+                raise ConanException("Please define your default_options as list, "
+                                     "multiline string or dictionary")
+            build_options.values = default_values
+        return build_options
+    except Exception as e:
+        raise ConanException("Error while initializing options. %s" % str(e))
+
+
 def create_requirements(conanfile):
     try:
         # Actual requirements of this package
@@ -115,6 +135,7 @@ class ConanFile(object):
     settings = None
     options = None
     default_options = None
+    default_build_options = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -130,6 +151,8 @@ class ConanFile(object):
             self.generators = [self.generators]
         # User defined options
         self.options = create_options(self)
+        self.build_options = create_build_options(self)
+
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 

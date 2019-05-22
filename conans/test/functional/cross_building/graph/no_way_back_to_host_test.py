@@ -92,9 +92,8 @@ class NoWayBackToHost(GraphManagerTest):
         """))
 
         ref = ConanFileReference(None, None, None, None, validate=False)
-        options = OptionsValues()
         graph_info = GraphInfo(profile_build=profile_build, profile_host=profile_host,
-                               options=options, root_ref=ref)
+                               options=OptionsValues(), build_options=OptionsValues(), root_ref=ref)
 
         deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
                                                 build_mode=[], check_updates=False, update=False,
@@ -129,4 +128,4 @@ class NoWayBackToHost(GraphManagerTest):
         host_tool = build_tool.dependencies[0].dst
         self.assertEqual(host_tool.conanfile.name, "host_tool")
         self.assertEqual(host_tool.build_context, CONTEXT_BUILD)
-        self.assertEqual(str(host_tool.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(host_tool.conanfile.settings.os), profile_build.settings['os'])

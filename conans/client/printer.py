@@ -22,7 +22,7 @@ class Printer(object):
 
     def print_inspect(self, inspect, raw=False):
         for k, v in inspect.items():
-            if k == "default_options":
+            if k in ["default_options", "default_build_options"]:
                 if isinstance(v, str):
                     v = OptionsValues.loads(v)
                 elif isinstance(v, tuple):

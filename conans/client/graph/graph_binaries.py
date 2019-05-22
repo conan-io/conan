@@ -174,6 +174,7 @@ class GraphBinariesAnalyzer(object):
             direct_reqs.append(neighbor.pref)
             indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
+            conanfile.build_options.propagate_downstream(ref, nconan.info.full_build_options)
             # Might be never used, but update original requirement, just in case
             conanfile.requires[ref.name].ref = ref
 
@@ -185,8 +186,13 @@ class GraphBinariesAnalyzer(object):
         conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
         conanfile.options.freeze()
 
+        conanfile.build_requires_build_options = conanfile.build_options.values
+        conanfile.build_options.clear_unused(indirect_reqs.union(direct_reqs))
+        conanfile.build_options.freeze()
+
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
+                                          conanfile.build_options.values,
                                           direct_reqs,
                                           indirect_reqs,
                                           default_package_id_mode=default_package_id_mode)
