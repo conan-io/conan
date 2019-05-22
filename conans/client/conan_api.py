@@ -1193,13 +1193,19 @@ def get_graph_info(profile_build, profile_host, cwd, install_folder, cache, outp
                         "the installed graph-info file."
                         % install_folder)
 
-        pb = profile_from_args(profile_build.profiles, profile_build.settings, profile_build.options,
-                               profile_build.env, cwd, cache)
-        pb.process_settings(cache)
+        try:
+            ph = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
+                                   profile_host.env, cwd, cache)
+            ph.process_settings(cache)
+        except ConanException as e:
+            raise ConanException("Host profile: {}".format(e))
 
-        ph = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
-                               profile_host.env, cwd, cache)
-        ph.process_settings(cache)
+        try:
+            pb = profile_from_args(profile_build.profiles, profile_build.settings, profile_build.options,
+                                   profile_build.env, cwd, cache)
+            pb.process_settings(cache)
+        except ConanException as e:
+            raise ConanException("Build profile: {}".format(e))
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         graph_info = GraphInfo(profile_build=pb, profile_host=ph, root_ref=root_ref)
