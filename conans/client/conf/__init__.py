@@ -12,12 +12,12 @@ from conans.util.files import load
 
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
+os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
 arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
-os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
+os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino]
 arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm]
 
 # Rest of the settings are "host" settings:
@@ -44,6 +44,7 @@ os:
         version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
+    AIX:
     Arduino:
         board: ANY
     Emscripten:

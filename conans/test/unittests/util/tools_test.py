@@ -790,7 +790,9 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["tvOS", "armv8", None, "aarch64-apple-darwin"],
         ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
         ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
-        ["Emscripten", "wasm", None, "wasm32-local-emscripten"]
+        ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
+        ["AIX", "ppc32", None, "rs6000-ibm-aix"],
+        ["AIX", "ppc64", None, "powerpc-ibm-aix"]
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
