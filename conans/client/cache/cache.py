@@ -12,12 +12,11 @@ from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference, check_valid_ref
+from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import PUT_HEADERS, SYSTEM_REQS_FOLDER
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.search.search import search_recipes
 from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, rmdir
 from conans.util.locks import Lock
@@ -100,18 +99,13 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.conan_folder, "config_install.json")
 
-    def remove_reference_system_reqs(self, ref):
-        self.package_layout(ref).remove_system_reqs()
-        self._output.info("Cache system_reqs from %s has been removed" % repr(ref))
-
-    def remove_package_system_reqs(self, pattern_or_reference):
-        if check_valid_ref(pattern_or_reference, allow_pattern=False):
-            ref = ConanFileReference.loads(pattern_or_reference)
-            self.remove_reference_system_reqs(ref)
-            return
-
-        for ref in search_recipes(self, pattern=pattern_or_reference):
-            self.remove_reference_system_reqs(ref)
+    def remove_system_reqs(self, ref):
+        try:
+            self.package_layout(ref).remove_system_reqs()
+            self._output.info(
+                "Cache system_reqs from %s has been removed" % repr(ref))
+        except Exception as error:
+            raise ConanException("Unable to remove system_reqs: %s" % error)
 
     def package_layout(self, ref, short_paths=None, *args, **kwargs):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))

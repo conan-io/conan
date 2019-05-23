@@ -16,7 +16,7 @@ from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
     ConanMigrationError
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
@@ -899,11 +899,11 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException("Please specify a valid pattern or reference to be cleaned")
 
-            try:
-                self._cache.remove_package_system_reqs(args.pattern_or_reference)
-                return
-            except Exception as error:
-                raise ConanException("Unable to remove system_reqs: %s" % error)
+            if check_valid_ref(args.pattern_or_reference, allow_pattern=False):
+                ref = ConanFileReference.loads(args.pattern_or_reference)
+                return self._conan.remove_system_reqs(ref)
+
+            return self._conan.remove_system_reqs_by_pattern(args.pattern_or_reference)
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')

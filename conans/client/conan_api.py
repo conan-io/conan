@@ -55,6 +55,7 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
@@ -984,6 +985,15 @@ class ConanAPIV1(object):
 
     def remote_clean(self):
         return self._cache.registry.clear()
+
+    @api_method
+    def remove_system_reqs(self, ref):
+        self._cache.remove_system_reqs(ref)
+
+    @api_method
+    def remove_system_reqs_by_pattern(self, pattern):
+        for ref in search_recipes(self._cache, pattern=pattern):
+            self.remove_system_reqs(ref)
 
     @api_method
     def profile_list(self):
