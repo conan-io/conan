@@ -58,13 +58,13 @@ class HelloTestConan(ConanFile):
 '''
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("create . lasote/testing")
-        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+        self.assertIn("HelloBar/0.1@lasote/testing: INFO: Forced build from source",
                       client.user_io.out)
         client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
                      "    requires='HelloBar/0.1@lasote/testing'",
                      "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
         client.run("create . lasote/stable")
-        self.assertNotIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+        self.assertNotIn("HelloBar/0.1@lasote/testing: INFO: Forced build from source",
                          client.user_io.out)
 
     @parameterized.expand([(True, ), (False, )])
@@ -433,13 +433,13 @@ class HelloTestConan(ConanFile):
 '''
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("create . lasote/testing")
-        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+        self.assertIn("HelloBar/0.1@lasote/testing: INFO: Forced build from source",
                       client.out)
         client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
                      "    requires='HelloBar/0.1@lasote/testing'",
                      "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
         client.run("create . lasote/stable")
-        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+        self.assertIn("HelloBar/0.1@lasote/testing: INFO: Forced build from source",
                       client.out)
 
     def test_build_folder_handling_test(self):
