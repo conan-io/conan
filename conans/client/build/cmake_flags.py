@@ -61,7 +61,7 @@ def get_generator(settings):
         return base
 
     # The generator depends on the build machine, not the target
-    if os_build == "Windows":
+    if os_build == "Windows" and compiler != "qcc":
         return "MinGW Makefiles"  # it is valid only under Windows
 
     return "Unix Makefiles"
