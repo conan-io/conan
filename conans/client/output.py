@@ -88,9 +88,9 @@ class ConanOutput(object):
         for _ in range(3):
             try:
                 if error:
-                    self._stream.write(data)
-                else:
                     self._stream_err.write(data)
+                else:
+                    self._stream.write(data)
                 break
             except IOError:
                 import time
