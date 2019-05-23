@@ -398,7 +398,7 @@ class CmdUpload(object):
         self._user_io.out.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
-        read_manifest, expected_manifest = layout.package_manifests(pref)
+        read_manifest, expected_manifest = layout.package_manifests(pref.copy_clear_revs())
 
         if read_manifest != expected_manifest:
             self._user_io.out.writeln("")
