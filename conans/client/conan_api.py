@@ -156,7 +156,7 @@ class ConanAPIV1(object):
         """Factory"""
         # Respect color env setting or check tty if unset
         color = colorama_initialize()
-        out = ConanOutput(sys.stdout, color)
+        out = ConanOutput(sys.stdout, sys.stderr, color)
         user_io = UserIO(out=out)
 
         user_home = get_conan_user_home()
