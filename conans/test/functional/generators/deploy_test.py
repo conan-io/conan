@@ -127,11 +127,12 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.header_path))
 
     def same_permissions_test(self):
-        os.chmod(self.header_path, stat.S_IXUSR)
-        cache_statinfo = os.stat(self.header_path)
+        stat_info = os.stat(self.header_path)
+        self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
+        os.chmod(self.header_path, stat_info.st_mode | stat.S_IXUSR)
         self.client.current_folder = temp_folder()
         self.client.run("install %s -g deploy" % self.ref1.full_repr())
         base1_path = os.path.join(self.client.current_folder, "name1")
         header1_path = os.path.join(base1_path, "include", "header1.h")
         stat_info = os.stat(header1_path)
-        self.assertEqual(stat_info, cache_statinfo)
+        self.assertTrue(stat_info.st_mode & stat.S_IXUSR)
