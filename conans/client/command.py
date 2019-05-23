@@ -1711,19 +1711,23 @@ class Command(object):
             if exc.code != 0:
                 logger.error(exc)
                 self._user_io.out.error("Exiting with code: %d" % exc.code)
+                sys.stderr.write("Exiting with code: %d" % exc.code)
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
             self._user_io.out.error(exc)
+            sys.stderr.write(str(exc))
         except ConanException as exc:
             ret_code = ERROR_GENERAL
             self._user_io.out.error(exc)
+            sys.stderr.write(str(exc))
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
+            sys.stderr.write(msg)
 
         return ret_code
 
