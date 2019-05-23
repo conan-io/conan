@@ -5,6 +5,7 @@ from conans.client import tools
 from conans.client.rest.conan_requester import ConanRequester
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
+import textwrap
 
 
 class ProxiesConfTest(unittest.TestCase):
@@ -21,14 +22,14 @@ class ProxiesConfTest(unittest.TestCase):
 [proxies]
 https=None
 no_proxy=http://someurl,http://otherurl.com
-http=http:/conan.url
+http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
         requester = ConanRequester(client.cache)
 
         def verify_proxies(url, **kwargs):
-            self.assertEqual(kwargs["proxies"], {"https": None, "http": "http:/conan.url"})
+            self.assertEqual(kwargs["proxies"], {"https": None, "http": "http://conan.url"})
             return "mocked ok!"
 
         requester._http_requester.get = verify_proxies
@@ -36,11 +37,39 @@ http=http:/conan.url
 
         self.assertEqual(requester.get("MyUrl"), "mocked ok!")
 
+    def test_requester_with_host_specific_proxies(self):
+        client = TestClient()
+        conf = textwrap.dedent("""
+            [proxies]
+            https=http://conan.url
+              only.for.this.conan.url = http://special.url
+              only.for.that.conan.url = http://user:pass@extra.special.url
+            http=
+              only.for.the.other.conan.url = http://other.special.url
+                    """)
+        save(client.cache.conan_conf_path, conf)
+        client.cache.invalidate()
+        requester = ConanRequester(client.cache)
+
+        def verify_proxies(url, **kwargs):
+            self.assertEqual(kwargs["proxies"],
+                             {"http://only.for.the.other.conan.url": "http://other.special.url",
+                              "https": "http://conan.url",
+                              "https://only.for.this.conan.url": "http://special.url",
+                              "https://only.for.that.conan.url":
+                              "http://user:pass@extra.special.url"})
+            return "mocked ok!"
+
+        requester._http_requester.get = verify_proxies
+        self.assertFalse("NO_PROXY" in os.environ)
+
+        self.assertEqual(requester.get("MyUrl"), "mocked ok!")
+
     def new_proxy_exclude_test(self):
 
         class MyRequester(object):
 
-            def __init__(*args, **kwargs):
+            def __init__(self, *args, **kwargs):
                 pass
 
             def get(self, _, **kwargs):

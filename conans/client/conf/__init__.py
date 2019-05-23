@@ -150,10 +150,14 @@ path = ./data
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
+# http =
+#   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
@@ -418,16 +422,26 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def proxies(self):
-        """ optional field, might not exist
-        """
-        try:
+        try:  # optional field, might not exist
             proxies = self.get_conf("proxies")
-            # If there is proxies section, but empty, it will try to use system proxy
-            if proxies:
-                return {k: (None if v == "None" else v) for k, v in proxies}
-            return {}
         except Exception:
             return None
+        result = {}
+        # Handle proxy specifications of the form:
+        # http = http://proxy.xyz.com
+        #   special-host.xyz.com = http://special-proxy.xyz.com
+        # (where special-proxy.xyz.com is only used as a proxy when special-host.xyz.com)
+        for scheme, proxy_string in proxies or []:
+            if proxy_string is None or proxy_string == "None":
+                result[scheme] = None
+            else:
+                for line in proxy_string.splitlines():
+                    proxy_value = [t.strip() for t in line.split("=", 1)]
+                    if len(proxy_value) == 2:
+                        result[scheme+"://"+proxy_value[0]] = proxy_value[1]
+                    elif proxy_value[0]:
+                        result[scheme] = proxy_value[0]
+        return result
 
     @property
     def cacert_path(self):
