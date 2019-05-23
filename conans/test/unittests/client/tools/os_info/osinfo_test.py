@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import mock
 import unittest
-
-from mock import mock
 
 from conans.client.tools import OSInfo, environment_append, CYGWIN, MSYS2, MSYS, WSL, \
     remove_from_path
@@ -21,6 +20,8 @@ class OSInfoTest(unittest.TestCase):
             return self._uname
         elif cmd.endswith('"uname -r"'):
             return self._version
+        elif cmd.endswith('oslevel'):
+            return self._version
         raise ValueError("don't know how to respond to %s" % cmd)
 
     def test_windows(self):
@@ -37,6 +38,7 @@ class OSInfoTest(unittest.TestCase):
                         self.assertFalse(OSInfo().is_freebsd)
                         self.assertFalse(OSInfo().is_macos)
                         self.assertFalse(OSInfo().is_solaris)
+                        self.assertFalse(OSInfo().is_aix)
 
                         with self.assertRaises(ConanException):
                             OSInfo.uname()
@@ -53,6 +55,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_freebsd)
             self.assertFalse(OSInfo().is_macos)
             self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
                 with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
@@ -70,6 +73,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_freebsd)
             self.assertFalse(OSInfo().is_macos)
             self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
                 with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
@@ -104,6 +108,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_freebsd)
             self.assertFalse(OSInfo().is_macos)
             self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
                 with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
@@ -121,6 +126,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_freebsd)
             self.assertFalse(OSInfo().is_macos)
             self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with environment_append({"CONAN_BASH_PATH": "/fake/bash.exe"}):
                 with mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
@@ -137,6 +143,7 @@ class OSInfoTest(unittest.TestCase):
                 self.assertFalse(OSInfo().is_freebsd)
                 self.assertFalse(OSInfo().is_macos)
                 self.assertFalse(OSInfo().is_solaris)
+                self.assertFalse(OSInfo().is_aix)
 
                 with self.assertRaises(ConanException):
                     OSInfo.uname()
@@ -151,6 +158,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_freebsd)
             self.assertTrue(OSInfo().is_macos)
             self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with self.assertRaises(ConanException):
                 OSInfo.uname()
@@ -165,6 +173,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertTrue(OSInfo().is_freebsd)
             self.assertFalse(OSInfo().is_macos)
             self.assertFalse(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with self.assertRaises(ConanException):
                 OSInfo.uname()
@@ -179,6 +188,7 @@ class OSInfoTest(unittest.TestCase):
             self.assertFalse(OSInfo().is_freebsd)
             self.assertFalse(OSInfo().is_macos)
             self.assertTrue(OSInfo().is_solaris)
+            self.assertFalse(OSInfo().is_aix)
 
             with self.assertRaises(ConanException):
                 OSInfo.uname()
@@ -202,3 +212,24 @@ class OSInfoTest(unittest.TestCase):
                 with mock.patch.object(builtins, "open",
                                        mock.mock_open(read_data="4.4.0-43-Microsoft")):
                     self.assertEqual(OSInfo.detect_windows_subsystem(), WSL)
+
+    def test_aix(self):
+        self._uname = 'AIX'
+        self._version = '7.1.0.0'
+
+        with mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
+                mock.patch('conans.client.tools.oss.check_output', new=self.subprocess_check_output_mock):
+            self.assertFalse(OSInfo().is_windows)
+            self.assertFalse(OSInfo().is_cygwin)
+            self.assertFalse(OSInfo().is_msys)
+            self.assertFalse(OSInfo().is_linux)
+            self.assertFalse(OSInfo().is_freebsd)
+            self.assertFalse(OSInfo().is_macos)
+            self.assertFalse(OSInfo().is_solaris)
+            self.assertTrue(OSInfo().is_aix)
+
+            self.assertEqual(OSInfo().os_version_name, 'AIX 7.1')
+
+            with self.assertRaises(ConanException):
+                OSInfo.uname()
+            self.assertIsNone(OSInfo.detect_windows_subsystem())

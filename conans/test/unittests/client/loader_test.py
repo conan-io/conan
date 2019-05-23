@@ -8,8 +8,6 @@ from conans.client.loader import ConanFileLoader
 from conans.model.env_info import EnvValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.utils.conanfile import MockSettings
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
@@ -25,7 +23,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         self.profile._env_values = None
         self.conanfile_txt_path = os.path.join(temp_folder(), "conanfile.txt")
         output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(TestRunner(output), output, None)
+        self.loader = ConanFileLoader(None, output, None)
 
     def env_test(self):
         env_values = EnvValues()
@@ -49,7 +47,7 @@ class LoadConanfileTest(unittest.TestCase):
         self.profile._package_settings = None
         self.conanfile_path = os.path.join(temp_folder(), "conanfile.py")
         output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(TestRunner(output), output, ConanPythonRequire(None, None))
+        self.loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
 
     def env_test(self):
         env_values = EnvValues()
@@ -59,7 +57,7 @@ class LoadConanfileTest(unittest.TestCase):
         save(self.conanfile_path,
              textwrap.dedent("""
                 from conans import ConanFile
-                
+
                 class TestConan(ConanFile):
                     name = "hello"
                     version = "1.0"
