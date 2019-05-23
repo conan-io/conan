@@ -1,4 +1,5 @@
 import os
+import platform
 import stat
 import unittest
 
@@ -126,6 +127,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.header_path = os.path.join(package_folder, "include", "header1.h")
         self.assertTrue(os.path.exists(self.header_path))
 
+    @unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
     def same_permissions_test(self):
         stat_info = os.stat(self.header_path)
         self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
