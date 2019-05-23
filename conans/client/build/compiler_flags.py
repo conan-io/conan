@@ -23,7 +23,7 @@ def rpath_flags(os_build, compiler, lib_paths):
     return []
 
 
-def architecture_flag(compiler, arch):
+def architecture_flag(compiler, arch, os=None):
     """
     returns flags specific to the target architecture and compiler
     """
@@ -31,12 +31,18 @@ def architecture_flag(compiler, arch):
         return ""
 
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(arch) in ['x86_64', 'sparcv9']:
+        if str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
             return '-m32'
+        elif str(arch) in ['s390']:
+            return '-m31'
+        elif os == 'AIX':
+            if str(arch) in ['ppc32']:
+                return '-maix32'
+            elif str(arch) in ['ppc64']:
+                return '-maix64'
     return ""
-
 
 def libcxx_define(compiler, libcxx):
 

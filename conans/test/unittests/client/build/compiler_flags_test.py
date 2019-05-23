@@ -16,157 +16,172 @@ class CompilerFlagsTest(unittest.TestCase):
     def test_arch_flag(self):
         for compiler in ("gcc", "clang", "sun-cc"):
             arch_flag = architecture_flag(arch='x86', compiler=compiler)
-            self.assertEquals(arch_flag, '-m32')
+            self.assertEqual(arch_flag, '-m32')
 
         arch_flag = architecture_flag(arch='sparc', compiler='sun-cc')
-        self.assertEquals(arch_flag, '-m32')
+        self.assertEqual(arch_flag, '-m32')
 
         for compiler in ("gcc", "clang", "sun-cc"):
             arch_flag = architecture_flag(arch='x86_64', compiler=compiler)
-            self.assertEquals(arch_flag, '-m64')
+            self.assertEqual(arch_flag, '-m64')
 
         arch_flag = architecture_flag(arch='sparcv9', compiler='sun-cc')
-        self.assertEquals(arch_flag, '-m64')
+        self.assertEqual(arch_flag, '-m64')
 
         for compiler in ("gcc", "clang", "sun-cc"):
             arch_flag = architecture_flag(arch='armv7', compiler=compiler)
-            self.assertEquals(arch_flag, '')
+            self.assertEqual(arch_flag, '')
+
+        for compiler in ("gcc", "clang", "sun-cc"):
+            arch_flag = architecture_flag(arch='s390', compiler=compiler)
+            self.assertEqual(arch_flag, '-m31')
+
+        for compiler in ("gcc", "clang", "sun-cc"):
+            arch_flag = architecture_flag(arch='s390x', compiler=compiler)
+            self.assertEqual(arch_flag, '-m64')
 
         arch_flag = architecture_flag(arch='x86', compiler='Visual Studio')
-        self.assertEquals(arch_flag, '')
+        self.assertEqual(arch_flag, '')
 
         arch_flag = architecture_flag(arch='x86_64', compiler='Visual Studio')
-        self.assertEquals(arch_flag, '')
+        self.assertEqual(arch_flag, '')
+
+
+        arch_flag = architecture_flag(os='AIX', arch='ppc32', compiler='gcc')
+        self.assertEqual(arch_flag, '-maix32')
+
+        arch_flag = architecture_flag(os='AIX', arch='ppc64', compiler='gcc')
+        self.assertEqual(arch_flag, '-maix64')
 
     def test_libcxx_flags(self):
         arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++')
-        self.assertEquals(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
+        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
 
         arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++11')
-        self.assertEquals(arch_define, '_GLIBCXX_USE_CXX11_ABI=1')
+        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=1')
 
         arch_flags = libcxx_flag(compiler='clang', libcxx='libc++')
-        self.assertEquals(arch_flags, '-stdlib=libc++')
+        self.assertEqual(arch_flags, '-stdlib=libc++')
 
         arch_flags = libcxx_flag(compiler='clang', libcxx='libstdc++')
-        self.assertEquals(arch_flags, '-stdlib=libstdc++')
+        self.assertEqual(arch_flags, '-stdlib=libstdc++')
 
         arch_define = libcxx_define(compiler='clang', libcxx='libstdc++')
-        self.assertEquals(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
+        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
 
         arch_flags = libcxx_flag(compiler='clang', libcxx='libstdc++')
-        self.assertEquals(arch_flags, '-stdlib=libstdc++')
+        self.assertEqual(arch_flags, '-stdlib=libstdc++')
         arch_define = libcxx_define(compiler='clang', libcxx='libstdc++')
-        self.assertEquals(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
+        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
 
         arch_flags = libcxx_flag(compiler='apple-clang', libcxx='libc++')
-        self.assertEquals(arch_flags, '-stdlib=libc++')
+        self.assertEqual(arch_flags, '-stdlib=libc++')
 
         arch_flags = libcxx_flag(compiler='Visual Studio', libcxx=None)
-        self.assertEquals(arch_flags, "")
+        self.assertEqual(arch_flags, "")
 
         arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libCstd')
-        self.assertEquals(arch_flags, '-library=Cstd')
+        self.assertEqual(arch_flags, '-library=Cstd')
 
         arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstdcxx')
-        self.assertEquals(arch_flags, '-library=stdcxx4')
+        self.assertEqual(arch_flags, '-library=stdcxx4')
 
         arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstlport')
-        self.assertEquals(arch_flags, '-library=stlport4')
+        self.assertEqual(arch_flags, '-library=stlport4')
 
         arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstdc++')
-        self.assertEquals(arch_flags, '-library=stdcpp')
+        self.assertEqual(arch_flags, '-library=stdcpp')
 
     def test_pic_flags(self):
         flag = pic_flag()
-        self.assertEquals(flag, '')
+        self.assertEqual(flag, '')
 
         flags = pic_flag(compiler='gcc')
-        self.assertEquals(flags, '-fPIC')
+        self.assertEqual(flags, '-fPIC')
 
         flags = pic_flag(compiler='Visual Studio')
-        self.assertEquals(flags, "")
+        self.assertEqual(flags, "")
 
     def test_build_type_flags(self):
         flags = build_type_flags(compiler='Visual Studio', build_type='Debug')
-        self.assertEquals(" ".join(flags), '-Zi -Ob0 -Od')
+        self.assertEqual(" ".join(flags), '-Zi -Ob0 -Od')
 
         flags = build_type_flags(compiler='Visual Studio', build_type='Release')
-        self.assertEquals(" ".join(flags), "-O2 -Ob2")
+        self.assertEqual(" ".join(flags), "-O2 -Ob2")
 
         flags = build_type_flags(compiler='Visual Studio', build_type='RelWithDebInfo')
-        self.assertEquals(" ".join(flags), '-Zi -O2 -Ob1')
+        self.assertEqual(" ".join(flags), '-Zi -O2 -Ob1')
 
         flags = build_type_flags(compiler='Visual Studio', build_type='MinSizeRel')
-        self.assertEquals(" ".join(flags), '-O1 -Ob1')
+        self.assertEqual(" ".join(flags), '-O1 -Ob1')
 
         # With clang toolset
         flags = build_type_flags(compiler='Visual Studio', build_type='Debug',
                                  vs_toolset="v140_clang_c2")
-        self.assertEquals(" ".join(flags), '-gline-tables-only -fno-inline -O0')
+        self.assertEqual(" ".join(flags), '-gline-tables-only -fno-inline -O0')
 
         flags = build_type_flags(compiler='Visual Studio', build_type='Release',
                                  vs_toolset="v140_clang_c2")
-        self.assertEquals(" ".join(flags), "-O2")
+        self.assertEqual(" ".join(flags), "-O2")
 
         flags = build_type_flags(compiler='Visual Studio', build_type='RelWithDebInfo',
                                  vs_toolset="v140_clang_c2")
-        self.assertEquals(" ".join(flags), '-gline-tables-only -O2 -fno-inline')
+        self.assertEqual(" ".join(flags), '-gline-tables-only -O2 -fno-inline')
 
         flags = build_type_flags(compiler='Visual Studio', build_type='MinSizeRel',
                                  vs_toolset="v140_clang_c2")
-        self.assertEquals(" ".join(flags), '')
+        self.assertEqual(" ".join(flags), '')
 
         # GCC
 
         flags = build_type_flags(compiler='gcc', build_type='Debug')
-        self.assertEquals(" ".join(flags), '-g')
+        self.assertEqual(" ".join(flags), '-g')
 
         flags = build_type_flags(compiler='gcc', build_type='Release')
-        self.assertEquals(" ".join(flags), '-O3 -s')
+        self.assertEqual(" ".join(flags), '-O3 -s')
 
         flags = build_type_flags(compiler='gcc', build_type='RelWithDebInfo')
-        self.assertEquals(" ".join(flags), '-O2 -g')
+        self.assertEqual(" ".join(flags), '-O2 -g')
 
         flags = build_type_flags(compiler='gcc', build_type='MinSizeRel')
-        self.assertEquals(" ".join(flags), '-Os')
+        self.assertEqual(" ".join(flags), '-Os')
 
         flags = build_type_flags(compiler='clang', build_type='Debug')
-        self.assertEquals(" ".join(flags), '-g')
+        self.assertEqual(" ".join(flags), '-g')
 
         flags = build_type_flags(compiler='clang', build_type='Release')
-        self.assertEquals(" ".join(flags), '-O3')
+        self.assertEqual(" ".join(flags), '-O3')
 
         flags = build_type_flags(compiler='clang', build_type='RelWithDebInfo')
-        self.assertEquals(" ".join(flags), '-O2 -g')
+        self.assertEqual(" ".join(flags), '-O2 -g')
 
         flags = build_type_flags(compiler='clang', build_type='MinSizeRel')
-        self.assertEquals(" ".join(flags), '-Os')
+        self.assertEqual(" ".join(flags), '-Os')
 
         # SUN CC
 
         flags = build_type_flags(compiler='sun-cc', build_type='Debug')
-        self.assertEquals(" ".join(flags), '-g')
+        self.assertEqual(" ".join(flags), '-g')
 
         flags = build_type_flags(compiler='sun-cc', build_type='Release')
-        self.assertEquals(" ".join(flags), '-xO3')
+        self.assertEqual(" ".join(flags), '-xO3')
 
         flags = build_type_flags(compiler='sun-cc', build_type='RelWithDebInfo')
-        self.assertEquals(" ".join(flags), '-xO2 -g')
+        self.assertEqual(" ".join(flags), '-xO2 -g')
 
         flags = build_type_flags(compiler='sun-cc', build_type='MinSizeRel')
-        self.assertEquals(" ".join(flags), '-xO2 -xspace')
+        self.assertEqual(" ".join(flags), '-xO2 -xspace')
 
         # Define
         define = build_type_define(build_type='Release')
-        self.assertEquals(define, 'NDEBUG')
+        self.assertEqual(define, 'NDEBUG')
 
     def test_adjust_path(self):
-        self.assertEquals('home/www', adjust_path('home\\www'))
-        self.assertEquals('home/www', adjust_path('home\\www', compiler='gcc'))
+        self.assertEqual('home/www', adjust_path('home\\www'))
+        self.assertEqual('home/www', adjust_path('home\\www', compiler='gcc'))
 
-        self.assertEquals('"home/www root"', adjust_path('home\\www root'))
-        self.assertEquals('"home/www root"', adjust_path('home\\www root', compiler='gcc'))
+        self.assertEqual('"home/www root"', adjust_path('home\\www root'))
+        self.assertEqual('"home/www root"', adjust_path('home\\www root', compiler='gcc'))
 
     @attr('visual_studio')
     def test_adjust_path_visual_studio(self):
@@ -174,40 +189,40 @@ class CompilerFlagsTest(unittest.TestCase):
         # tools.unix_path which is Windows-only
         if platform.system() != "Windows":
             return
-        self.assertEquals('home\\www', adjust_path('home/www', compiler='Visual Studio'))
-        self.assertEquals('"home\\www root"',
+        self.assertEqual('home\\www', adjust_path('home/www', compiler='Visual Studio'))
+        self.assertEqual('"home\\www root"',
                           adjust_path('home/www root', compiler='Visual Studio'))
-        self.assertEquals('home/www',
+        self.assertEqual('home/www',
                           adjust_path('home\\www', compiler='Visual Studio', win_bash=True))
-        self.assertEquals('home/www',
+        self.assertEqual('home/www',
                           adjust_path('home/www', compiler='Visual Studio', win_bash=True))
-        self.assertEquals('"home/www root"',
+        self.assertEqual('"home/www root"',
                           adjust_path('home\\www root', compiler='Visual Studio', win_bash=True))
-        self.assertEquals('"home/www root"',
+        self.assertEqual('"home/www root"',
                           adjust_path('home/www root', compiler='Visual Studio', win_bash=True))
 
     def test_sysroot_flag(self):
         sysroot = sysroot_flag(sysroot=None)
-        self.assertEquals(sysroot, "")
+        self.assertEqual(sysroot, "")
 
         sysroot = sysroot_flag(sysroot='sys/root', compiler='Visual Studio')
-        self.assertEquals(sysroot, "")
+        self.assertEqual(sysroot, "")
 
         sysroot = sysroot_flag(sysroot='sys/root')
-        self.assertEquals(sysroot, "--sysroot=sys/root")
+        self.assertEqual(sysroot, "--sysroot=sys/root")
 
     def test_format_defines(self):
-        self.assertEquals(['-DFOO', '-DBAR=1'], format_defines(['FOO', 'BAR=1']))
+        self.assertEqual(['-DFOO', '-DBAR=1'], format_defines(['FOO', 'BAR=1']))
 
     def test_format_include_paths(self):
-        self.assertEquals(['-Ipath1', '-I"with spaces"'], format_include_paths(['path1', 'with spaces']))
+        self.assertEqual(['-Ipath1', '-I"with spaces"'], format_include_paths(['path1', 'with spaces']))
 
     def test_format_library_paths(self):
-        self.assertEquals(['-Lpath1', '-L"with spaces"'], format_library_paths(['path1', 'with spaces']))
-        self.assertEquals(['-LIBPATH:path1', '-LIBPATH:"with spaces"'],
+        self.assertEqual(['-Lpath1', '-L"with spaces"'], format_library_paths(['path1', 'with spaces']))
+        self.assertEqual(['-LIBPATH:path1', '-LIBPATH:"with spaces"'],
                           format_library_paths(['path1', 'with spaces'], compiler='Visual Studio'))
 
     def test_format_libraries(self):
-        self.assertEquals(['-llib1', '-llib2'], format_libraries(['lib1', 'lib2']))
-        self.assertEquals(['lib1.lib', 'lib2.lib'], format_libraries(['lib1', 'lib2'],
+        self.assertEqual(['-llib1', '-llib2'], format_libraries(['lib1', 'lib2']))
+        self.assertEqual(['lib1.lib', 'lib2.lib'], format_libraries(['lib1', 'lib2'],
                                                                      compiler='Visual Studio'))

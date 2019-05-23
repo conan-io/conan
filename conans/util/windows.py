@@ -15,6 +15,8 @@ def conan_expand_user(path):
     """ wrapper to the original expanduser function, to workaround python returning
     verbatim %USERPROFILE% when some other app (git for windows) sets HOME envvar
     """
+    if path[:1] != '~':
+        return path
     # In win these variables should exist and point to user directory, which
     # must exist. Using context to avoid permanent modification of os.environ
     old_env = dict(os.environ)
@@ -74,7 +76,7 @@ def path_shortener(path, short_paths):
 
     redirect = hashed_redirect(short_home, path)
     if not redirect:
-        logger.warn("Failed to create a deterministic short path in %s", short_home)
+        logger.warning("Failed to create a deterministic short path in %s", short_home)
         redirect = tempfile.mkdtemp(dir=short_home, prefix="")
 
     # Save the full path of the local cache directory where the redirect is from.
@@ -87,23 +89,6 @@ def path_shortener(path, short_paths):
     redirect = os.path.join(redirect, "1")
     save(link, redirect)
     return redirect
-
-
-def ignore_long_path_files(src_folder, build_folder, output):
-    def _filter(src, files):
-        filtered_files = []
-        for the_file in files:
-            source_path = os.path.join(src, the_file)
-            # Without storage path, just relative
-            rel_path = os.path.relpath(source_path, src_folder)
-            dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-            # it is NOT that "/" is counted as "\\" so it counts double
-            # seems a bug in python, overflows paths near the limit of 260,
-            if len(dest_path) >= 249:
-                filtered_files.append(the_file)
-                output.warn("Filename too long, file excluded: %s" % dest_path)
-        return filtered_files
-    return _filter
 
 
 def rm_conandir(path):

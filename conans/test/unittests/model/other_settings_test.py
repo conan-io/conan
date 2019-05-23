@@ -5,6 +5,7 @@ from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
 from conans.model.settings import bad_value_msg, undefined_value
 from conans.paths import CONANFILE, CONANINFO
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
@@ -46,7 +47,8 @@ class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/0.1@lasote/testing")
+        with catch_deprecation_warning(self):
+            client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("""Configuration:
 [settings]
 compiler=mycomp
@@ -78,7 +80,7 @@ class Pkg(ConanFile):
         self.assertNotIn("os: None", client.out)
         pref = PackageReference.loads("Pkg/0.1@lasote/testing:"
                                                    "544c1d8c53e9d269737e68e00ec66716171d2704")
-        info_path = os.path.join(client.cache.package(pref), CONANINFO)
+        info_path = os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO)
         info = load(info_path)
         self.assertNotIn("os", info)
         # Explicitly specifying None, put it in the conaninfo.txt, but does not affect the hash
@@ -188,7 +190,7 @@ class Test(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        default_profile = os.path.join(client.base_folder, ".conan/profiles/default")
+        default_profile = os.path.join(client.base_folder, "profiles/default")
         save(default_profile, "[settings]\ncompiler=gcc\ncompiler.version=6.3")
         client.run("create . user/channel", assert_error=True)
         self.assertIn("Invalid setting '6.3' is not a valid 'settings.compiler.version'",
@@ -211,12 +213,12 @@ class SayConan(ConanFile):
         client.run("install . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os, "Windows")
+        self.assertEqual(conan_info.settings.os, "Windows")
 
         client.run("install . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os, "Linux")
+        self.assertEqual(conan_info.settings.os, "Linux")
 
     def settings_as_a_list_conanfile_test(self):
         # Now with conanfile as a list
@@ -232,8 +234,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=Windows --build missing")
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os,  "Windows")
-        self.assertEquals(conan_info.settings.fields, ["arch", "os"])
+        self.assertEqual(conan_info.settings.os,  "Windows")
+        self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
     def settings_as_a_dict_conanfile_test(self):
         # Now with conanfile as a dict
@@ -250,8 +252,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=Windows --build missing")
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.os,  "Windows")
-        self.assertEquals(conan_info.settings.fields, ["arch", "os"])
+        self.assertEqual(conan_info.settings.os,  "Windows")
+        self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
     def invalid_settings_test(self):
         '''Test wrong values and wrong constraints'''
@@ -338,8 +340,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['Android', 'Arduino', 'FreeBSD', 'Linux', 'Macos', 'SunOS',
-                                     'Windows', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
+                                    ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'SunOS',
+                                     'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
                       str(client.user_io.out))
 
         # Now add new settings to config and try again
@@ -364,7 +366,7 @@ class SayConan(ConanFile):
         client.run("install . --build missing")
         self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.dumps(), "")
+        self.assertEqual(conan_info.settings.dumps(), "")
 
         # Settings is {}
         content = """
@@ -379,4 +381,4 @@ class SayConan(ConanFile):
         client.run("install . --build missing")
         self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(conan_info.settings.dumps(), "")
+        self.assertEqual(conan_info.settings.dumps(), "")

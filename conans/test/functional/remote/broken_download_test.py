@@ -17,10 +17,10 @@ class BrokenDownloadTest(unittest.TestCase):
         client.save(files)
         client.run("export . lasote/stable")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(client.cache.export(ref)))
+        self.assertTrue(os.path.exists(client.cache.package_layout(ref).export()))
         client.run("upload Hello/0.1@lasote/stable")
         client.run("remove Hello/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.export(ref)))
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
 
         rev = server.server_store.get_last_revision(ref).revision
         ref = ref.copy_with_rev(rev)
@@ -29,7 +29,7 @@ class BrokenDownloadTest(unittest.TestCase):
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
         client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("ERROR: Error while downloading/extracting files to", client.user_io.out)
-        self.assertFalse(os.path.exists(client.cache.export(ref)))
+        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
 
     def client_retries_test(self):
         server = TestServer()

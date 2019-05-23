@@ -1,12 +1,15 @@
-import mock
 import os
 import platform
 import re
 import unittest
+
+import mock
+import six
 from parameterized import parameterized
 
-from conans.client.build.msbuild import MSBuild
 from conans.client import tools
+from conans.client.tools.files import chdir
+from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.test.utils.conanfile import MockConanfile, MockSettings
@@ -21,7 +24,7 @@ class MSBuildTest(unittest.TestCase):
                                  "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         msbuild = MSBuild(conanfile)
-        self.assertEquals(msbuild.build_env.flags, [])
+        self.assertEqual(msbuild.build_env.flags, [])
         template = msbuild._get_props_file_contents()
 
         self.assertNotIn("-Ob0", template)
@@ -129,10 +132,11 @@ class MSBuildTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
         version = MSBuild.get_version(settings)
-        self.assertRegexpMatches(version, "(\d+\.){2,3}\d+")
+        six.assertRegex(self, version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
-    @parameterized.expand([("15", "v141"),
+    @parameterized.expand([("16", "v142"),
+                           ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
                            ("11", "v110"),
@@ -149,7 +153,38 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
-    @parameterized.expand([("v141",),
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def skip_toolset_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "arch": "x86_64"})
+
+        class Runner(object):
+
+            def __init__(self):
+                self.commands = []
+
+            def __call__(self, *args, **kwargs):
+                self.commands.append(args[0])
+
+        with chdir(tools.mkdir_tmp()):
+            runner = Runner()
+            conanfile = MockConanfile(settings, runner=runner)
+            msbuild = MSBuild(conanfile)
+            msbuild.build("myproject", toolset=False)
+            self.assertEqual(len(runner.commands), 1)
+            self.assertNotIn("PlatformToolset", runner.commands[0])
+
+            runner = Runner()
+            conanfile = MockConanfile(settings, runner=runner)
+            msbuild = MSBuild(conanfile)
+            msbuild.build("myproject", toolset="mytoolset")
+            self.assertEqual(len(runner.commands), 1)
+            self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
+
+    @parameterized.expand([("v142",),
+                           ("v141",),
                            ("v140",),
                            ("v120",),
                            ("v110",),
@@ -251,4 +286,16 @@ class MSBuildTest(unittest.TestCase):
 
         props_file_path = match.group(1)
         self.assertTrue(os.path.isabs(props_file_path))
-        self.assertEquals(os.path.basename(props_file_path), "conan_build.props")
+        self.assertEqual(os.path.basename(props_file_path), "conan_build.props")
+
+    def windows_ce_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "9",
+                                 "os": "WindowsCE",
+                                 "os.platform": "YOUR PLATFORM SDK (ARMV4)",
+                                 "arch": "armv4"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("test.sln")
+        self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)

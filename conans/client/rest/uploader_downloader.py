@@ -4,7 +4,7 @@ import traceback
 
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException
+    NotFoundException, ForbiddenException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
@@ -28,6 +28,9 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 401:
+                raise AuthenticationException(response.content)
+
             if response.status_code == 403:
                 if auth.token is None:
                     raise AuthenticationException(response.content)
@@ -53,10 +56,16 @@ class Uploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+            if response.status_code == 401:
+                raise AuthenticationException(response.content)
+
             if response.status_code == 403:
                 if auth.token is None:
                     raise AuthenticationException(response.content)
                 raise ForbiddenException(response.content)
+
+            response.raise_for_status()  # Raise HTTPError for bad http response status
+
         except ConanException:
             raise
         except Exception as exc:

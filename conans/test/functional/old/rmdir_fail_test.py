@@ -21,7 +21,7 @@ class MyPkg(ConanFile):
         client.run("export . lasote/testing")
         client.run("install MyPkg/0.1@lasote/testing --build")
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/testing")
-        builds = client.cache.builds(ref)
+        builds = client.cache.package_layout(ref).builds()
         build_folder = os.listdir(builds)[0]
         build_folder = os.path.join(builds, build_folder)
         f = open(os.path.join(build_folder, "myfile"), "wb")

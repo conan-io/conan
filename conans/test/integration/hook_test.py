@@ -170,8 +170,8 @@ class HookTest(unittest.TestCase):
                                  "complete_hook.py")
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
-        conanfile_cache_path = client.cache.conanfile(
-            ConanFileReference("basic", "0.1", "danimtb", "testing"))
+        conanfile_cache_path = client.cache.package_layout(
+            ConanFileReference("basic", "0.1", "danimtb", "testing")).conanfile()
         client.run("config set hooks.complete_hook/complete_hook.py")
 
         client.run("source .")

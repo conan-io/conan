@@ -19,6 +19,6 @@ class LocalStoreTest(unittest.TestCase):
 
         localdb.set_login(("pepe", "token"), "myurl1")
         user, token = localdb.get_login("myurl1")
-        self.assertEquals("pepe", user)
-        self.assertEquals("token", token)
-        self.assertEquals("pepe", localdb.get_username("myurl1"))
+        self.assertEqual("pepe", user)
+        self.assertEqual("token", token)
+        self.assertEqual("pepe", localdb.get_username("myurl1"))

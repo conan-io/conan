@@ -1,4 +1,3 @@
-
 import os
 import platform
 import re
@@ -8,6 +7,7 @@ from subprocess import CalledProcessError, PIPE, STDOUT
 
 from six.moves.urllib.parse import quote_plus, unquote, urlparse
 
+from conans.client.tools import check_output
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
@@ -53,7 +53,7 @@ class SCMBase(object):
         with chdir(self.folder) if self.folder else no_op():
             with environment_append({"LC_ALL": "en_US.UTF-8"}) if self._force_eng else no_op():
                 if not self._runner:
-                    return decode_text(subprocess.check_output(command, shell=True).strip())
+                    return check_output(command).strip()
                 else:
                     return self._runner(command)
 
@@ -175,6 +175,14 @@ class Git(SCMBase):
 
     get_revision = get_commit
 
+    def get_commit_message(self):
+        self.check_repo()
+        try:
+            message = self.run("log -1 --format=%s%n%b")
+            return message.strip()
+        except Exception:
+            return None
+
     def is_pristine(self):
         self.check_repo()
         status = self.run("status --porcelain").strip()
@@ -218,7 +226,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return decode_text(subprocess.check_output(command, shell=True))
+            return check_output(command)
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
@@ -310,7 +318,7 @@ class SVN(SCMBase):
     def get_qualified_remote_url(self, remove_credentials=False):
         # Return url with peg revision
         url = self.get_remote_url(remove_credentials=remove_credentials)
-        revision = self.get_last_changed_revision()
+        revision = self.get_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
 
     def is_local_repository(self):
@@ -343,14 +351,19 @@ class SVN(SCMBase):
                         return False
                 return True
         else:
-            import warnings
-            warnings.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented, it is"
-                          " returning not-pristine always because it cannot compare with"
-                          " checked out version.".format(self.version, SVN.API_CHANGE_VERSION))
+            if self._output:
+                self._output.warn("SVN::is_pristine for SVN v{} (less than {}) is not implemented,"
+                                  " it is returning not-pristine always because it cannot compare"
+                                  " with checked out version.".format(self.version,
+                                                                      SVN.API_CHANGE_VERSION))
             return False
 
     def get_revision(self):
         return self._show_item('revision')
+
+    def get_revision_message(self):
+        output = self.run("log -r COMMITTED").splitlines()
+        return output[3] if len(output) > 2 else None
 
     def get_repo_root(self):
         return self._show_item('wc-root')

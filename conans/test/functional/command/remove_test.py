@@ -158,14 +158,14 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
             files["%s/metadata.json" % folder] = fake_metadata.dumps()
-            exports_sources_dir = client.cache.export_sources(ref)
+            exports_sources_dir = client.cache.package_layout(ref).export_sources()
             os.makedirs(exports_sources_dir)
 
         client.save(files, client.cache.store)
 
         # Create the manifests to be able to upload
         for pref in prefs:
-            pkg_folder = client.cache.package(pref)
+            pkg_folder = client.cache.package_layout(pref.ref).package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
@@ -275,10 +275,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
@@ -293,11 +295,11 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["package", "source", "export", "export_source",
-                                    "metadata.json"],
+                                    "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
         six.assertCountEqual(self, ["package", "source", "export", "export_source",
-                                    "metadata.json"],
+                                    "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
@@ -311,10 +313,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
@@ -395,11 +399,11 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def try_remove_using_query_and_packages_or_builds_test(self):
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -p=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-p' parameters can't be used at the same time", self.client.out)
 
-        with self.assertRaisesRegexp(Exception, "Command failed"):
+        with six.assertRaisesRegex(self, Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 

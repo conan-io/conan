@@ -92,6 +92,15 @@ class ConanException(Exception):
         return exception_message_safe(msg)
 
 
+class OnlyV2Available(ConanException):
+
+    def __init__(self, remote_url):
+        msg = "The remote at '%s' only works with revisions enabled. " \
+              "Set CONAN_REVISIONS_ENABLED=1 " \
+              "or set 'general.revisions_enabled = 1' at the 'conan.conf'" % remote_url
+        super(OnlyV2Available, self).__init__(msg)
+
+
 class NoRestV2Available(ConanException):
     pass
 
@@ -119,6 +128,10 @@ class ConanExceptionInUserConanfileMethod(ConanException):
 
 
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
+    pass
+
+
+class ConanMigrationError(ConanException):
     pass
 
 

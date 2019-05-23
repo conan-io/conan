@@ -4,7 +4,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 format_library_paths, libcxx_define, libcxx_flag,
                                                 rpath_flags, sysroot_flag,
                                                 visual_linker_option_separator, visual_runtime)
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.model import Generator
 from conans.paths import BUILD_INFO_COMPILER_ARGS
 
@@ -31,10 +31,11 @@ class CompilerArgsGenerator(Generator):
         flags.extend(format_include_paths(self._deps_build_info.include_paths,
                                           compiler=self.compiler))
 
-        flags.extend(self._deps_build_info.cppflags)
+        flags.extend(self._deps_build_info.cxxflags)
         flags.extend(self._deps_build_info.cflags)
 
         arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"),
+                                      os=self.conanfile.settings.get_safe("os"),
                                       compiler=self.compiler)
         if arch_flag:
             flags.append(arch_flag)
@@ -63,9 +64,10 @@ class CompilerArgsGenerator(Generator):
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
+        cppstd = cppstd_from_settings(self.conanfile.settings)
         flags.append(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
                                  self.conanfile.settings.get_safe("compiler.version"),
-                                 self.conanfile.settings.get_safe("cppstd")))
+                                 cppstd))
         sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
         if sysrf:
             flags.append(sysrf)

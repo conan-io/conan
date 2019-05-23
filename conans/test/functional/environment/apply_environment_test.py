@@ -386,7 +386,7 @@ CXXFLAGS=-fPIC -DPIC
                 ret = os.system("chmod +x activate.sh && ./activate.sh")
             else:
                 ret = os.system("activate.bat")
-        self.assertEquals(ret, 0)
+        self.assertEqual(ret, 0)
 
     def conan_env_deps_test(self):
         client = TestClient()
@@ -735,19 +735,19 @@ class LibConan(ConanFile):
         # With no overrides, B takes dependency D and the value should be ValueByLibD
         client.run("install libB/1.0@foo/bar --build")
         self.assertTrue("Value of MYVAR: ValueByLibD")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
 
         # B takes dependency C and the value should be ValueByLibC
         client.run("install libB/1.0@foo/bar --build -e DEP=C")
         self.assertTrue("Value of MYVAR: ValueByLibC")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
 
         # Consumer overrides MYVAR, so his conaninfo should have it
         client.run("install libB/1.0@foo/bar --build -e MYVAR=ValueByConsumer")
         self.assertTrue("Value of MYVAR: ValueByConsumer")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n    MYVAR=ValueByConsumer\n"))
 
         # Consumer overrides MYVAR, so his conaninfo should have it, but not the libC, because
@@ -755,14 +755,14 @@ class LibConan(ConanFile):
         client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
                    "-e libC:MYVAR=OtherValue")
         self.assertTrue("Value of MYVAR: ValueByConsumer")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"))
 
         # Consumer overrides MYVAR, so his conaninfo should have it, both libB and libD
         client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
                    "-e libD:MYVAR=OtherValue")
         self.assertTrue("Value of MYVAR: ValueByConsumer")
-        conaninfo = load(os.path.join(client.cache.package(pref), CONANINFO))
+        conaninfo = load(os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO))
         self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"
                                            "    libD:MYVAR=OtherValue\n"))  # Not user input env
 
@@ -776,7 +776,7 @@ class LibConan(ConanFile):
 
         def load_conaninfo(lib):
             # Read the LIB_A conaninfo
-            packages_path = client.cache.packages(ConanFileReference.loads("LIB_%s/1.0@lasote/stable" % lib))
+            packages_path = client.cache.package_layout(ConanFileReference.loads("LIB_%s/1.0@lasote/stable" % lib)).packages()
             package_path = os.path.join(packages_path, os.listdir(packages_path)[0])
             info = ConanInfo.loads(load(os.path.join(package_path, CONANINFO)))
             return info
@@ -788,38 +788,38 @@ class LibConan(ConanFile):
                    "-e LIB_B2:NEWVAR=VALUE -e VAR3=[newappend]")
 
         info = load_conaninfo("A")
-        self.assertEquals(info.env_values.env_dicts("LIB_A"),
+        self.assertEqual(info.env_values.env_dicts("LIB_A"),
                           ({"VAR3": "override", "GLOBAL": "99"}, {}))
-        self.assertEquals(info.env_values.env_dicts(""),
+        self.assertEqual(info.env_values.env_dicts(""),
                           ({'GLOBAL': '99'}, {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B")
-        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': "override"},
+        self.assertEqual(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': "override"},
                                                                {}))
 
-        self.assertEquals(info.env_values.env_dicts("LIB_B"), ({'GLOBAL': '99', "VAR2": "222"},
+        self.assertEqual(info.env_values.env_dicts("LIB_B"), ({'GLOBAL': '99', "VAR2": "222"},
                                                                {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B2")
-        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': 'override'},
+        self.assertEqual(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': 'override'},
                                                                {}))
 
-        self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
+        self.assertEqual(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
                                                                 {'VAR3': ['newappend']}))
 
         info = load_conaninfo("C")
-        self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
+        self.assertEqual(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
                                                                 {'VAR3': ['newappend']}))
-        self.assertEquals(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
+        self.assertEqual(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
                                                                {'VAR3': ['newappend']}))
 
         # Now check the info for the project
         info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
+        self.assertEqual(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
                                                                  {'VAR3': ['newappend']}))
 
         _, _, buildinfo = TXTGenerator.loads(load(os.path.join(client.current_folder, BUILD_INFO)))
-        self.assertEquals(buildinfo["LIB_A"].VAR1, ["900"])
+        self.assertEqual(buildinfo["LIB_A"].VAR1, ["900"])
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """

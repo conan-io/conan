@@ -9,14 +9,15 @@ from conans.paths import (BUILD_FOLDER, CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDE
 from conans.search.search import search_packages, search_recipes
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.util.files import save
+from conans.util.files import save, mkdir
 
 
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
         folder = temp_folder()
-        self.cache = ClientCache(folder, store_folder=folder, output=TestBufferConanOutput())
+        self.cache = ClientCache(folder, output=TestBufferConanOutput())
+        mkdir(self.cache.store)
 
     def basic_test2(self):
         with chdir(self.cache.store):

@@ -2,9 +2,10 @@ import os
 import subprocess
 
 from conans.client import defs_to_string, join_arguments, tools
+from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
-from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
+from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
 from conans.util.files import decode_text, get_abs_path, mkdir
 
@@ -38,7 +39,7 @@ class Meson(object):
         self.options['includedir'] = DEFAULT_INCLUDE
 
         # C++ standard
-        cppstd = self._ss("cppstd")
+        cppstd = cppstd_from_settings(self._conanfile.settings)
         cppstd_conan2meson = {
             None: 'none',
             '98': 'c++03', 'gnu98': 'gnu++03',
@@ -156,7 +157,8 @@ class Meson(object):
 
     def _append_vs_if_needed(self, command):
         if self._compiler == "Visual Studio" and self.backend == "ninja":
-            command = "%s && %s" % (tools.vcvars_command(self._conanfile.settings), command)
+            vcvars = tools.vcvars_command(self._conanfile.settings, output=self._conanfile.output)
+            command = "%s && %s" % (vcvars, command)
         return command
 
     def build(self, args=None, build_dir=None, targets=None):
