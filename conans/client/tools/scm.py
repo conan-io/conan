@@ -175,6 +175,14 @@ class Git(SCMBase):
 
     get_revision = get_commit
 
+    def get_commit_message(self):
+        self.check_repo()
+        try:
+            message = self.run("log -1 --format=%s%n%b")
+            return message.strip()
+        except Exception:
+            return None
+
     def is_pristine(self):
         self.check_repo()
         status = self.run("status --porcelain").strip()
@@ -218,7 +226,7 @@ class SVN(SCMBase):
 
     def __init__(self, folder=None, runner=None, *args, **kwargs):
         def runner_no_strip(command):
-            return decode_text(subprocess.check_output(command, shell=True))
+            return check_output(command)
         runner = runner or runner_no_strip
         super(SVN, self).__init__(folder=folder, runner=runner, *args, **kwargs)
 
@@ -310,7 +318,7 @@ class SVN(SCMBase):
     def get_qualified_remote_url(self, remove_credentials=False):
         # Return url with peg revision
         url = self.get_remote_url(remove_credentials=remove_credentials)
-        revision = self.get_last_changed_revision()
+        revision = self.get_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
 
     def is_local_repository(self):
@@ -352,6 +360,10 @@ class SVN(SCMBase):
 
     def get_revision(self):
         return self._show_item('revision')
+
+    def get_revision_message(self):
+        output = self.run("log -r COMMITTED").splitlines()
+        return output[3] if len(output) > 2 else None
 
     def get_repo_root(self):
         return self._show_item('wc-root')

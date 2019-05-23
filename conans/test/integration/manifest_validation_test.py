@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 from parameterized.parameterized import parameterized
@@ -117,6 +118,21 @@ class ConsumerFileTest(ConanFile):
         self.client.run("install %s --build missing --verify %s" % (str(self.ref), folder))
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
         self.assertIn("Manifest for '%s': OK" % str(pref), self.client.user_io.out)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Only Windows with shortpaths")
+    def capture_verify_short_paths_manifest_test(self):
+        conanfile = """from conans import ConanFile
+
+class ConanFileTest(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports = "*"
+    short_paths = True
+"""
+        self.files = {CONANFILE: conanfile, "data.txt": "MyData"}
+        self.client.save(self.files)
+        self.client.run("export . lasote/stable")
+        self._capture_verify_manifest("Hello/0.1@lasote/stable")
 
     def capture_verify_manifest_test(self):
         self._capture_verify_manifest("Hello/0.1@lasote/stable")
@@ -239,11 +255,11 @@ class ConanFileTest(ConanFile):
         client.save(self.files)
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build=missing")
-        info = os.path.join(client.cache.package(pref), "conaninfo.txt")
+        package_folder_path = client.cache.package_layout(pref.ref).package(pref)
+        info = os.path.join(package_folder_path, "conaninfo.txt")
         info_content = load(info)
         info_content += "# Dummy string"
         save(info, info_content)
-        package_folder_path = client.cache.package(pref)
         manifest = FileTreeManifest.load(package_folder_path)
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
         manifest.save(package_folder_path)
@@ -284,7 +300,7 @@ class ConanFileTest(ConanFile):
         self.assertIn("ERROR: Do not specify both", self.client.user_io.out)
 
     def test_corrupted_recipe(self):
-        export_path = self.client.cache.export(self.ref)
+        export_path = self.client.cache.package_layout(self.ref).export()
         file_path = os.path.join(export_path, "data.txt")
         save(file_path, "BAD CONTENT")
 
@@ -296,7 +312,7 @@ class ConanFileTest(ConanFile):
     def test_corrupted_package(self):
         self.client.run("install %s --build missing" % str(self.ref))
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_path = self.client.cache.package(pref)
+        package_path = self.client.cache.package_layout(pref.ref).package(pref)
         file_path = os.path.join(package_path, "conaninfo.txt")
         save(file_path, load(file_path) + "  ")
 

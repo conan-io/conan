@@ -6,6 +6,8 @@ from textwrap import dedent
 import six
 import time
 
+from parameterized.parameterized import parameterized
+
 from conans.client import tools
 from conans.errors import ConanException
 from conans.model.workspace import Workspace
@@ -188,7 +190,8 @@ class WorkspaceTest(unittest.TestCase):
             for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
-    def multiple_roots_test(self):
+    @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])
+    def multiple_roots_test(self, root_attribute_format):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
 
@@ -201,6 +204,14 @@ class WorkspaceTest(unittest.TestCase):
         client.save(files("A", "C"), path=os.path.join(client.current_folder, "A"))
         client.save(files("B", "D"), path=os.path.join(client.current_folder, "B"))
 
+        # https://github.com/conan-io/conan/issues/5155
+        roots = ["HelloA/0.1@lasote/stable", "HelloB/0.1@lasote/stable"]
+        root_attribute = {
+            "csv": ", ".join(roots),
+            "list": "".join(["\n    - %s" % r for r in roots]),
+            "abbreviated_list": str(roots),
+        }[root_attribute_format]
+
         project = dedent("""
             editables:
                 HelloD/0.1@lasote/stable:
@@ -212,11 +223,11 @@ class WorkspaceTest(unittest.TestCase):
                 HelloA/0.1@lasote/stable:
                     path: A
             layout: layout
-            root: HelloA/0.1@lasote/stable, HelloB/0.1@lasote/stable
-            """)
+            root: {root_attribute}
+            """).format(root_attribute=root_attribute)
+
         layout = dedent("""
             [build_folder]
-
             """)
         client.save({"conanws.yml": project,
                      "layout": layout})
@@ -924,3 +935,93 @@ class Pkg(ConanFile):
         for p in ("HelloC", "HelloB", "HelloA"):
             self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
                           conanws_cmake)
+
+    def test_default_filename(self):
+        client = TestClient()
+        path_to_editable = os.path.join(client.current_folder, "A")
+
+        project = dedent("""
+            editables:
+                HelloA/0.1@lasote/stable:
+                    path: {path_to_editable}
+            layout: layout
+            workspace_generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """.format(path_to_editable=path_to_editable))
+
+        conanfile = dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+                pass
+            """)
+
+        layout = dedent("""
+            [build_folder]
+            [source_folder]
+            """)
+
+        client.save({"conanfile.py": conanfile}, path=path_to_editable)
+        ws_folder = temp_folder()
+        client.save({os.path.join(ws_folder, Workspace.default_filename): project,
+                     os.path.join(ws_folder, "layout"): layout})
+
+        # For the right folder, it works
+        client.run('workspace install "{}"'.format(ws_folder))
+        conanws_cmake = load(os.path.join(client.current_folder, "conanworkspace.cmake"))
+        self.assertIn("macro(conan_workspace_subdirectories)", conanws_cmake)
+
+        # For a non existing folder, it will try to load the default filename (it fails)
+        non_existing = temp_folder()
+        client.run('workspace install "{}"'.format(non_existing), assert_error=True)
+        trial_path = os.path.join(non_existing, Workspace.default_filename)
+        self.assertIn("ERROR: Couldn't load workspace file in {}".format(trial_path), client.out)
+
+        # For an existing file, it will try to use it (will fail because of the format)
+        invalid_file = os.path.join(ws_folder, "layout")
+        client.run('workspace install "{}"'.format(invalid_file), assert_error=True)
+        self.assertIn("ERROR: There was an error parsing", client.out)
+
+        # For an existing folder, without the default file (it will fail looking for it)
+        no_default_file = os.path.join(client.current_folder)
+        client.run('workspace install "{}"'.format(no_default_file), assert_error=True)
+        trial_path = os.path.join(no_default_file, Workspace.default_filename)
+        self.assertIn("ERROR: Couldn't load workspace file in {}".format(trial_path), client.out)
+
+    def test_install_folder(self):
+        project = dedent("""
+            editables:
+                HelloA/0.1@lasote/stable:
+                    path: A
+            layout: layout
+            workspace_generator: cmake
+            root: HelloA/0.1@lasote/stable
+            """)
+
+        conanfile = dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+                pass
+            """)
+
+        layout = dedent("""
+            [build_folder]
+            [source_folder]
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile},
+                    path=os.path.join(client.current_folder, "A"))
+
+        client.save({"conanws.yml": project,
+                     "layout": layout})
+        client.run("workspace install conanws.yml --install-folder=ws_install")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "ws_install",
+                                                    "conanworkspace.cmake")))
+
+    def missing_subarguments_test(self):
+        client = TestClient()
+        client.run("workspace", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
+

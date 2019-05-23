@@ -86,7 +86,8 @@ set_property(TARGET {name}::{name}
     def _find_for_dep(self, name, cpp_info):
         lines = []
         if cpp_info.public_deps:
-            lines = find_dependency_lines(name, cpp_info)
+            # Here we are generating only Config files, so do not search for FindXXX modules
+            lines = find_dependency_lines(name, cpp_info, find_modules=False)
 
         targets_props = self.target_properties.format(name=name)
 

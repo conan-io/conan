@@ -26,6 +26,7 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
     rmdir, save as files_save, save_append, sha1sum, sha256sum, touch, sha1sum, sha256sum, \
     to_file_bytes, touch
 from conans.util.log import logger
+from conans.client.tools.version import Version
 
 
 # This global variables are intended to store the configuration of the running Conan application
@@ -110,6 +111,7 @@ def replace_path_in_file(*args, **kwargs):
 # from conans.client.tools.oss
 args_to_string = tools_oss.args_to_string
 detected_architecture = tools_oss.detected_architecture
+detected_os = tools_oss.detected_os
 OSInfo = tools_oss.OSInfo
 cross_building = tools_oss.cross_building
 get_cross_building_settings = tools_oss.get_cross_building_settings

@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 from subprocess import CalledProcessError, PIPE
-
+import six
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException
@@ -155,7 +155,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = subprocess.check_output(['uname.exe', '-s']).decode()
+            uname = check_output(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -299,7 +299,7 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
+                ret = check_output(command).strip().lower()
                 return ret
         except Exception:
             return None
@@ -323,13 +323,14 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-r")
-            if output.startswith("2"):
-                return MSYS2
-            elif output.startswith("1"):
-                return MSYS
-            else:
-                return None
+            version = OSInfo.uname("-r").split('.')
+            if version and version[0].isdigit():
+                major = int(version[0])
+                if major == 1:
+                    return MSYS
+                elif major >= 2:
+                    return MSYS2
+            return None
         elif "linux" in output:
             return WSL
         else:
@@ -375,7 +376,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
-               "armv8.3": "aarch64"
+               "armv8.3": "aarch64",
+               "asm.js": "asmjs",
+               "wasm": "wasm32",
                }.get(arch, None)
 
     if not machine:
@@ -421,7 +424,10 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "Macos": "apple-darwin",
                  "iOS": "apple-darwin",
                  "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin"}.get(os_, os_.lower())
+                 "tvOS": "apple-darwin",
+                 # NOTE: it technically must be "asmjs-unknown-emscripten" or
+                 # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
+                 "Emscripten": "local-emscripten"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:
@@ -436,10 +442,13 @@ def get_gnu_triplet(os_, arch, compiler=None):
     return "%s-%s" % (machine, op_system)
 
 
-def check_output(cmd, folder=None, return_code=False):
+def check_output(cmd, folder=None, return_code=False, stderr=None):
     tmp_file = tempfile.mktemp()
     try:
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE, cwd=folder)
+        stderr = stderr or PIPE
+        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
+                                   stderr=stderr, cwd=folder)
         process.communicate()
 
         if return_code:
@@ -453,5 +462,5 @@ def check_output(cmd, folder=None, return_code=False):
     finally:
         try:
             os.unlink(tmp_file)
-        except:
+        except Exception:
             pass

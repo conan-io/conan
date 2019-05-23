@@ -8,6 +8,7 @@ import six
 from parameterized import parameterized
 
 from conans.client import tools
+from conans.client.tools.files import chdir
 from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -152,6 +153,36 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def skip_toolset_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "arch": "x86_64"})
+
+        class Runner(object):
+
+            def __init__(self):
+                self.commands = []
+
+            def __call__(self, *args, **kwargs):
+                self.commands.append(args[0])
+
+        with chdir(tools.mkdir_tmp()):
+            runner = Runner()
+            conanfile = MockConanfile(settings, runner=runner)
+            msbuild = MSBuild(conanfile)
+            msbuild.build("myproject", toolset=False)
+            self.assertEqual(len(runner.commands), 1)
+            self.assertNotIn("PlatformToolset", runner.commands[0])
+
+            runner = Runner()
+            conanfile = MockConanfile(settings, runner=runner)
+            msbuild = MSBuild(conanfile)
+            msbuild.build("myproject", toolset="mytoolset")
+            self.assertEqual(len(runner.commands), 1)
+            self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
+
     @parameterized.expand([("v142",),
                            ("v141",),
                            ("v140",),
@@ -256,3 +287,15 @@ class MSBuildTest(unittest.TestCase):
         props_file_path = match.group(1)
         self.assertTrue(os.path.isabs(props_file_path))
         self.assertEqual(os.path.basename(props_file_path), "conan_build.props")
+
+    def windows_ce_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "9",
+                                 "os": "WindowsCE",
+                                 "os.platform": "YOUR PLATFORM SDK (ARMV4)",
+                                 "arch": "armv4"})
+        conanfile = MockConanfile(settings)
+        msbuild = MSBuild(conanfile)
+        command = msbuild.get_command("test.sln")
+        self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)

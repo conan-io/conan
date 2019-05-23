@@ -7,7 +7,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.errors import ConanException, NotFoundException
 
-PythonRequire = namedtuple("PythonRequire", "ref module conanfile")
+PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
+                                             "exports_folder", "exports_sources_folder"])
 
 
 class ConanPythonRequire(object):
@@ -21,10 +22,10 @@ class ConanPythonRequire(object):
         self._update = False
         self._remote_name = None
 
-    def enable_remotes(self, check_updates=False, update=False, remote_name=None):
+    def enable_remotes(self, check_updates=False, update=False, remotes=None):
         self._check_updates = check_updates
         self._update = update
-        self._remote_name = remote_name
+        self._remotes = remotes
 
     def invalidate_caches(self):
         self._cached_requires = {}
@@ -45,10 +46,10 @@ class ConanPythonRequire(object):
             ref = ConanFileReference.loads(require)
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=False,
-                                         remote_name=None)
+                                         remotes=self._remotes)
             ref = requirement.ref
             result = self._proxy.get_recipe(ref, self._check_updates, self._update,
-                                            remote_name=self._remote_name,
+                                            remotes=self._remotes,
                                             recorder=ActionRecorder())
             path, _, _, new_ref = result
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
@@ -58,7 +59,11 @@ class ConanPythonRequire(object):
                 # Will register also the aliased
                 python_require = self._look_for_require(conanfile.alias)
             else:
-                python_require = PythonRequire(new_ref, module, conanfile)
+                package_layout = self._proxy._cache.package_layout(new_ref, conanfile.short_paths)
+                exports_sources_folder = package_layout.export_sources()
+                exports_folder = package_layout.export()
+                python_require = PythonRequire(new_ref, module, conanfile,
+                                               exports_folder, exports_sources_folder)
             self._cached_requires[require] = python_require
 
         return python_require
