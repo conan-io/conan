@@ -1,4 +1,5 @@
 import json
+import os
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
@@ -50,6 +51,8 @@ class SCMData(object):
 
 
 class SCM(object):
+    availables = {'git': Git, 'svn': SVN}
+
     def __init__(self, data, repo_folder, output):
         self._data = data
         self._output = output
@@ -57,8 +60,18 @@ class SCM(object):
         # Finally instance a repo
         self.repo = self._get_repo()
 
+    @classmethod
+    def detect_scm(cls, folder):
+        for name, candidate in cls.availables.items():
+            try:
+                candidate(folder).check_repo()
+                return name
+            except ConanException:
+                pass
+        return None
+
     def _get_repo(self):
-        repo_class = {"git": Git, "svn": SVN}.get(self._data.type)
+        repo_class = self.availables.get(self._data.type)
         if not repo_class:
             raise ConanException("SCM not supported: %s" % self._data.type)
 
@@ -71,16 +84,17 @@ class SCM(object):
         return self.repo.excluded_files()
 
     def checkout(self):
-        output= ""
+        output = ""
         if self._data.type == "git":
             output += self.repo.clone(url=self._data.url)
-            output += self.repo.checkout(element=self._data.revision, submodule=self._data.submodule)
+            output += self.repo.checkout(element=self._data.revision,
+                                         submodule=self._data.submodule)
         else:
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output
 
-    def get_remote_url(self):
-        return self.repo.get_remote_url()
+    def get_remote_url(self, remove_credentials):
+        return self.repo.get_remote_url(remove_credentials=remove_credentials)
 
     def get_revision(self):
         return self.repo.get_revision()
@@ -91,12 +105,35 @@ class SCM(object):
     def get_repo_root(self):
         return self.repo.get_repo_root()
 
-    def get_qualified_remote_url(self):
+    def get_qualified_remote_url(self, remove_credentials):
         if self._data.type == "git":
-            return self.repo.get_remote_url()
+            return self.repo.get_remote_url(remove_credentials=remove_credentials)
         else:
-            return self.repo.get_qualified_remote_url()
+            return self.repo.get_qualified_remote_url(remove_credentials=remove_credentials)
 
     def is_local_repository(self):
         return self.repo.is_local_repository()
 
+    @staticmethod
+    def clean_url(url):
+        _, last_chunk = url.rsplit('/', 1)
+        if '@' in last_chunk:  # Remove peg_revision
+            url, peg_revision = url.rsplit('@', 1)
+            return url
+        return url
+
+    def get_local_path_to_url(self, url):
+        """ Compute the local path to the directory where the URL is pointing to (only make sense
+            for CVS where chunks of the repository can be checked out isolated). The argument
+            'url' should be contained inside the root url.
+        """
+        src_root = self.get_repo_root()
+
+        if self._data.type == "git":
+            return src_root
+
+        url_root = SCM(self._data, src_root, self._output).get_remote_url(remove_credentials=True)
+        if url_root:
+            url = self.clean_url(url)
+            src_path = os.path.join(src_root, os.path.relpath(url, url_root))
+            return src_path

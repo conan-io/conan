@@ -115,6 +115,9 @@ class PackageOptionValues(object):
     def remove(self, option_name):
         del self._dict[option_name]
 
+    def freeze(self):
+        self._freeze = True
+
     def propagate_upstream(self, down_package_values, down_ref, own_ref, package_name):
         if not down_package_values:
             return
@@ -123,6 +126,11 @@ class PackageOptionValues(object):
         for (name, value) in down_package_values.items():
             if name in self._dict and self._dict.get(name) == value:
                 continue
+
+            if self._freeze:
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already defined as %s"
+                                     % (down_ref, own_ref, name, value, self._dict.get(name)))
 
             modified = self._modified.get(name)
             if modified is not None:
@@ -176,7 +184,8 @@ class OptionsValues(object):
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens
-                package_values = self._reqs_options.setdefault(package.strip(), PackageOptionValues())
+                package_values = self._reqs_options.setdefault(package.strip(),
+                                                               PackageOptionValues())
                 package_values.add_option(option, v)
             else:
                 self._package_values.add_option(k, v)
@@ -361,13 +370,14 @@ class PackageOptions(object):
         self._data = {str(k): PackageOption(v, str(k))
                       for k, v in definition.items()}
         self._modified = {}
+        self._freeze = False
 
     def __contains__(self, option):
         return str(option) in self._data
 
     @staticmethod
     def loads(text):
-        return PackageOptions(yaml.load(text) or {})
+        return PackageOptions(yaml.safe_load(text) or {})
 
     def get_safe(self, field):
         return self._data.get(field)
@@ -443,6 +453,9 @@ class PackageOptions(object):
             if option in self._data:
                 self._data[option].value = value
 
+    def freeze(self):
+        self._freeze = True
+
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
         """
         :param: package_values: PackageOptionValues({"shared": "True"}
@@ -456,12 +469,17 @@ class PackageOptions(object):
             if name in self._data and self._data.get(name) == value:
                 continue
 
+            if self._freeze:
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already defined as %s"
+                                     % (down_ref, own_ref, name, value, self._data.get(name)))
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
                 raise ConanException("%s tried to change %s option %s to %s\n"
                                      "but it was already assigned to %s by %s"
-                                     % (down_ref, own_ref, name, value, modified_value, modified_ref))
+                                     % (down_ref, own_ref, name, value,
+                                        modified_value, modified_ref))
             else:
                 if name in pattern_options:  # If it is a pattern-matched option, should check field
                     if name in self._data:
@@ -484,6 +502,11 @@ class Options(object):
         # if more than 1 is present, 1 should be "private" requirement and its options
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
+
+    def freeze(self):
+        self._package_options.freeze()
+        for v in self._deps_package_values.values():
+            v.freeze()
 
     @property
     def deps_package_values(self):
@@ -591,6 +614,6 @@ class Options(object):
         """ remove all options not related to the passed references,
         that should be the upstream requirements
         """
-        existing_names = [r.conan.name for r in references]
+        existing_names = [r.ref.name for r in references]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}

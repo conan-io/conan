@@ -9,8 +9,9 @@ Replace this module with other that keeps the interface or super class.
 
 '''
 
-
 from abc import ABCMeta, abstractmethod
+
+import six
 
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.model.ref import ConanFileReference
@@ -20,57 +21,55 @@ from conans.model.ref import ConanFileReference
 #  ############ ABSTRACT CLASSES ##############
 #  ############################################
 
-
+@six.add_metaclass(ABCMeta)
 class Authorizer(object):
     """
     Handles the access permissions to conans and packages
     """
-    __metaclass__ = ABCMeta
 
     @abstractmethod
-    def check_read_conan(self, username, conan_reference):
+    def check_read_conan(self, username, ref):
         """
         username: User that request to read the conans
-        conan_reference: ConanFileReference
+        ref: ConanFileReference
         """
         raise NotImplemented()
 
     @abstractmethod
-    def check_write_conan(self, username, conan_reference):
+    def check_write_conan(self, username, ref):
         """
         username: User that request to write the conans
-        conan_reference: ConanFileReference
+        ref: ConanFileReference
         """
         raise NotImplemented()
 
     @abstractmethod
-    def check_read_package(self, username, package_reference):
+    def check_read_package(self, username, pref):
         """
         username: User that request to read the package
-        package_reference: PackageReference
+        pref: PackageReference
         """
         raise NotImplemented()
 
     @abstractmethod
-    def check_write_package(self, username, package_reference):
+    def check_write_package(self, username, pref):
         """
         username: User that request to write the package
-        package_reference: PackageReference
+        pref: PackageReference
         """
         raise NotImplemented()
 
 
+@six.add_metaclass(ABCMeta)
 class Authenticator(object):
     """
     Handles the user authentication
     """
-    __metaclass__ = ABCMeta
-
     @abstractmethod
     def valid_user(self, username, plain_password):
         """
         username: User that request to read the conans
-        conan_reference: ConanFileReference
+        plain_password:
         """
         raise NotImplemented()
 
@@ -91,7 +90,7 @@ class BasicAuthenticator(Authenticator):
     def valid_user(self, username, plain_password):
         """
         username: User that request to read the conans
-        conan_reference: ConanFileReference
+        plain_password:
         return: True if match False if don't
         """
         return username in self.users and self.users[username] == plain_password
@@ -103,61 +102,61 @@ class BasicAuthorizer(Authorizer):
     """
 
     def __init__(self, read_permissions, write_permissions):
-        """List of tuples with conanrefernce and users:
+        """List of tuples with refs and users:
 
-        [(conan_reference, "user, user, user"),
-         (conan_reference2, "user3, user, user")] """
+        [(ref, "user, user, user"),
+         (ref, "user3, user, user")] """
 
         self.read_permissions = read_permissions
         self.write_permissions = write_permissions
 
-    def check_read_conan(self, username, conan_reference):
+    def check_read_conan(self, username, ref):
         """
         username: User that request to read the conans
-        conan_reference: ConanFileReference
+        ref: ConanFileReference
         """
-        if conan_reference.user == username:
+        if ref.user == username:
             return
 
-        self._check_any_rule_ok(username, self.read_permissions, conan_reference)
+        self._check_any_rule_ok(username, self.read_permissions, ref)
 
-    def check_write_conan(self, username, conan_reference):
+    def check_write_conan(self, username, ref):
         """
         username: User that request to write the conans
-        conan_reference: ConanFileReference
+        ref: ConanFileReference
         """
-        if conan_reference.user == username:
+        if ref.user == username:
             return True
 
-        self._check_any_rule_ok(username, self.write_permissions, conan_reference)
+        self._check_any_rule_ok(username, self.write_permissions, ref)
 
-    def check_delete_conan(self, username, conan_reference):
+    def check_delete_conan(self, username, ref):
         """
         username: User that request to write the conans
-        conan_reference: ConanFileReference
+        ref: ConanFileReference
         """
-        self.check_write_conan(username, conan_reference)
+        self.check_write_conan(username, ref)
 
-    def check_read_package(self, username, package_reference):
+    def check_read_package(self, username, pref):
         """
         username: User that request to read the package
-        package_reference: PackageReference
+        pref: PackageReference
         """
-        self.check_read_conan(username, package_reference.conan)
+        self.check_read_conan(username, pref.ref)
 
-    def check_write_package(self, username, package_reference):
+    def check_write_package(self, username, pref):
         """
         username: User that request to write the package
-        package_reference: PackageReference
+        pref: PackageReference
         """
-        self.check_write_conan(username, package_reference.conan)
+        self.check_write_conan(username, pref.ref)
 
-    def check_delete_package(self, username, package_reference):
+    def check_delete_package(self, username, pref):
         """
         username: User that request to write the package
-        package_reference: PackageReference
+        pref: PackageReference
         """
-        self.check_write_package(username, package_reference)
+        self.check_write_package(username, pref)
 
     def _check_any_rule_ok(self, username, rules, *args, **kwargs):
         for rule in rules:
@@ -170,7 +169,7 @@ class BasicAuthorizer(Authorizer):
         else:
             raise AuthenticationException()
 
-    def _check_rule_ok(self, username, rule, conan_reference):
+    def _check_rule_ok(self, username, rule, ref):
         """Checks if a rule specified in config file applies to current conans
         reference and current user"""
         try:
@@ -184,14 +183,14 @@ class BasicAuthorizer(Authorizer):
             raise InternalErrorException("Invalid server configuration. "
                                          "Contact the administrator.")
 
-        # Check if rule apply conan_reference
-        if self._check_ref_apply_for_rule(rule_ref, conan_reference):
+        # Check if rule apply ref
+        if self._check_ref_apply_for_rule(rule_ref, ref):
             if authorized_users[0] == "*" or username in authorized_users:
                 return True  # Ok, applies and match username
             else:
                 if username:
                     if authorized_users[0] == "?":
-                        return True #Ok, applies and match any authenticated username
+                        return True  # Ok, applies and match any authenticated username
                     else:
                         raise ForbiddenException("Permission denied")
                 else:
@@ -199,11 +198,11 @@ class BasicAuthorizer(Authorizer):
 
         return False
 
-    def _check_ref_apply_for_rule(self, rule_ref, conan_reference):
+    def _check_ref_apply_for_rule(self, rule_ref, ref):
         """Checks if a conans reference specified in config file applies to current conans
         reference"""
         name, version, user, channel, _ = rule_ref
-        return not((name != "*" and name != conan_reference.name) or
-                   (version != "*" and version != conan_reference.version) or
-                   (user != "*" and user != conan_reference.user) or
-                   (channel != "*" and channel != conan_reference.channel))
+        return not((name != "*" and name != ref.name) or
+                   (version != "*" and version != ref.version) or
+                   (user != "*" and user != ref.user) or
+                   (channel != "*" and channel != ref.channel))

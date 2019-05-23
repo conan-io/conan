@@ -1,7 +1,3 @@
-from collections import OrderedDict
-
-from conans.errors import conanfile_exception_formatter
-from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -9,9 +5,11 @@ RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being us
 RECIPE_UPDATED = "Updated"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
-RECIPE_UPDATEABLE = "Update available"  # The update of the recipe is available (only in conan info)
+RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
 RECIPE_NO_REMOTE = "No remote"
-RECIPE_WORKSPACE = "Workspace"
+RECIPE_EDITABLE = "Editable"
+RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
+RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -19,24 +17,59 @@ BINARY_UPDATE = "Update"
 BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
-BINARY_WORKSPACE = "Workspace"
+BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
-    def __init__(self, conan_ref, conanfile):
-        self.conan_ref = conan_ref
+    def __init__(self, ref, conanfile, recipe=None):
+        self.ref = ref
+        self._package_id = None
+        self.prev = None
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
         self.binary = None
-        self.recipe = None
+        self.recipe = recipe
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
 
+        # The dependencies that can conflict to downstream consumers
+        self.public_deps = None  # {ref.name: Node}
+        # all the public deps only in the closure of this node
+        # The dependencies that will be part of deps_cpp_info, can't conflict
+        self.public_closure = None  # {ref.name: Node}
+        self.inverse_closure = set()  # set of nodes that have this one in their public
+        self.ancestors = None  # set{ref.name}
+
+    def update_ancestors(self, ancestors):
+        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
+        self.ancestors.update(ancestors)
+        for n in self.neighbors():
+            n.update_ancestors(ancestors)
+
+    @property
+    def package_id(self):
+        return self._package_id
+
+    @package_id.setter
+    def package_id(self, pkg_id):
+        assert self._package_id is None, "Trying to override an existing package_id"
+        self._package_id = pkg_id
+
+    @property
+    def name(self):
+        return self.ref.name if self.ref else None
+
+    @property
+    def pref(self):
+        return PackageReference(self.ref, self.package_id, self.prev)
+
     def partial_copy(self):
-        result = Node(self.conan_ref, self.conanfile)
+        # Used for collapse_graph
+        result = Node(self.ref, self.conanfile)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
@@ -56,25 +89,27 @@ class Node(object):
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
 
-    def public_neighbors(self):
-        return [edge.dst for edge in self.dependencies
-                if not edge.private and not edge.build_require]
-
     def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private or edge.build_require]
+        return [edge.dst for edge in self.dependencies if edge.private]
+
+    def make_public(self):
+        self.private = False
+        for edge in self.dependencies:
+            if not edge.private:
+                edge.dst.make_public()
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
 
     def __eq__(self, other):
-        return (self.conan_ref == other.conan_ref and
+        return (self.ref == other.ref and
                 self.conanfile == other.conanfile)
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash((self.conan_ref, self.conanfile))
+        return hash((self.ref, self.conanfile))
 
     def __repr__(self):
         return repr(self.conanfile)
@@ -82,22 +117,26 @@ class Node(object):
     def __cmp__(self, other):
         if other is None:
             return -1
-        elif self.conan_ref is None:
-            return 0 if other.conan_ref is None else -1
-        elif other.conan_ref is None:
+        elif self.ref is None:
+            return 0 if other.ref is None else -1
+        elif other.ref is None:
             return 1
 
-        if self.conan_ref == other.conan_ref:
+        if self.ref == other.ref:
             return 0
 
         # Cannot compare None with str
-        if self.conan_ref.revision is None and other.conan_ref.revision is not None:
+        if self.ref.revision is None and other.ref.revision is not None:
             return 1
 
-        if self.conan_ref.revision is not None and other.conan_ref.revision is None:
+        if self.ref.revision is not None and other.ref.revision is None:
             return -1
 
-        if self.conan_ref < other.conan_ref:
+        if self.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            return 1
+        if other.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+            return -1
+        if self.ref < other.ref:
             return -1
 
         return 1
@@ -136,18 +175,9 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = set()
         self.root = None
-
-    def add_graph(self, node, graph, build_require=False):
-        for n in graph.nodes:
-            if n != graph.root:
-                n.build_require = build_require
-                self.add_node(n)
-
-        for e in graph.root.dependencies:
-            e.src = node
-            e.build_require = build_require
-
-        node.dependencies = graph.root.dependencies + node.dependencies
+        self.aliased = {}
+        # These are the nodes with pref (not including PREV) that have been evaluated
+        self.evaluated = {}  # {pref: [nodes]}
 
     def add_node(self, node):
         if not self.nodes:
@@ -160,75 +190,15 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def compute_package_ids(self):
+    def ordered_iterate(self):
         ordered = self.by_levels()
         for level in ordered:
             for node in level:
-                conanfile = node.conanfile
-                neighbors = node.neighbors()
-                direct_reqs = []  # of PackageReference
-                indirect_reqs = set()   # of PackageReference, avoid duplicates
-                for neighbor in neighbors:
-                    nref, nconan = neighbor.conan_ref, neighbor.conanfile
-                    package_id = nconan.info.package_id()
-                    package_reference = PackageReference(nref, package_id)
-                    direct_reqs.append(package_reference)
-                    indirect_reqs.update(nconan.info.requires.refs())
-                    conanfile.options.propagate_downstream(nref, nconan.info.full_options)
-                    # Might be never used, but update original requirement, just in case
-                    conanfile.requires[nref.name].conan_reference = nref
-
-                # Make sure not duplicated
-                indirect_reqs.difference_update(direct_reqs)
-                # There might be options that are not upstream, backup them, might be
-                # for build-requires
-                conanfile.build_requires_options = conanfile.options.values
-                conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
-
-                conanfile.info = ConanInfo.create(conanfile.settings.values,
-                                                  conanfile.options.values,
-                                                  direct_reqs,
-                                                  indirect_reqs)
-
-                # Once we are done, call package_id() to narrow and change possible values
-                with conanfile_exception_formatter(str(conanfile), "package_id"):
-                    conanfile.package_id()
-        return ordered
-
-    def full_closure(self, node, private=False):
-        # Needed to propagate correctly the cpp_info even with privates
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n] = n
-            for n in current:
-                neighbors = n.public_neighbors() if not private else n.neighbors()
-                for neigh in neighbors:
-                    if neigh not in new_current and neigh not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
-
-    def closure(self, node):
-        closure = OrderedDict()
-        current = node.neighbors()
-        while current:
-            new_current = []
-            for n in current:
-                closure[n.conan_ref.name] = n
-            for n in current:
-                neighs = n.public_neighbors()
-                for neigh in neighs:
-                    if neigh not in new_current and neigh.conan_ref.name not in closure:
-                        new_current.append(neigh)
-            current = new_current
-        return closure
+                yield node
 
     def _inverse_closure(self, references):
         closure = set()
-        current = [n for n in self.nodes if str(n.conan_ref) in references or "ALL" in references]
+        current = [n for n in self.nodes if str(n.ref) in references or "ALL" in references]
         closure.update(current)
         while current:
             new_current = set()
@@ -251,15 +221,15 @@ class DepsGraph(object):
         # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
         # without Edges
         for node in self.nodes:
-            if not node.conan_ref:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            package_ref = PackageReference(node.conan_ref, node.conanfile.info.package_id())
-            if package_ref not in unique_nodes:
+            pref = PackageReference(node.ref, node.package_id)
+            if pref not in unique_nodes:
                 result_node = node.partial_copy()
                 result.add_node(result_node)
-                unique_nodes[package_ref] = result_node
+                unique_nodes[pref] = result_node
             else:
-                result_node = unique_nodes[package_ref]
+                result_node = unique_nodes[pref]
             nodes_map[node] = result_node
 
         # Compute the new edges of the graph
@@ -282,18 +252,18 @@ class DepsGraph(object):
         closure = new_graph._inverse_closure(references)
         result = []
         for level in reversed(levels):
-            new_level = [n.conan_ref for n in level if (n in closure and n.conan_ref)]
+            new_level = [n.ref for n in level
+                         if (n in closure and n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL))]
             if new_level:
                 result.append(new_level)
         return result
 
     def nodes_to_build(self):
         ret = []
-        for level in self.by_levels():
-            for node in level:
-                if node.binary == BINARY_BUILD:
-                    if node.conan_ref.copy_clear_rev() not in ret:
-                        ret.append(node.conan_ref.copy_clear_rev())
+        for node in self.ordered_iterate():
+            if node.binary == BINARY_BUILD:
+                if node.ref.copy_clear_rev() not in ret:
+                    ret.append(node.ref.copy_clear_rev())
         return ret
 
     def by_levels(self):

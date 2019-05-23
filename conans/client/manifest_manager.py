@@ -1,52 +1,50 @@
 import os
 
-from conans.client.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
-from conans.paths import SimplePaths
+from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
 
 
 class ManifestManager(object):
 
-    def __init__(self, folder, user_io, client_cache):
-        self._paths = SimplePaths(folder)
+    def __init__(self, folder, user_io, cache):
+        self._target_folder = folder
         self._user_io = user_io
-        self._client_cache = client_cache
+        self._cache = cache
         self._log = []
 
     def check_graph(self, graph, verify, interactive):
-        if verify and not os.path.exists(self._paths.store):
-            raise ConanException("Manifest folder does not exist: %s"
-                                 % self._paths.store)
-        levels = graph.by_levels()
-        for level in levels:
-            for node in level:
-                ref = node.conan_ref
-                if not ref:
-                    continue
-                self._handle_recipe(node, verify, interactive)
-                self._handle_package(node, verify, interactive)
+        if verify and not os.path.exists(self._target_folder):
+            raise ConanException("Manifest folder does not exist: %s" % self._target_folder)
+        for node in graph.ordered_iterate():
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+                continue
+            self._handle_recipe(node, verify, interactive)
+            self._handle_package(node, verify, interactive)
 
     def _handle_recipe(self, node, verify, interactive):
-        ref = node.conan_ref
-        export = self._client_cache.export(ref)
-        exports_sources_folder = self._client_cache.export_sources(ref)
+        ref = node.ref
+        layout = self._cache.package_layout(ref)
+        export = layout.export()
+        exports_sources_folder = layout.export_sources()
         read_manifest = FileTreeManifest.load(export)
         expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)
-        folder = self._paths.export(ref)
+        folder = os.path.join(self._target_folder, ref.dir_repr(), EXPORT_FOLDER)
         self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
 
     def _handle_package(self, node, verify, interactive):
-        ref = node.conan_ref
-        ref = PackageReference(ref, node.conanfile.info.package_id())
-        package_folder = self._client_cache.package(ref)
+        ref = node.ref
+        pref = PackageReference(ref, node.package_id)
+        package_folder = self._cache.package_layout(pref.ref).package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
-        self._check_not_corrupted(ref, read_manifest, expected_manifest)
-        folder = self._paths.package(ref)
-        self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
+        self._check_not_corrupted(pref, read_manifest, expected_manifest)
+        folder = os.path.join(self._target_folder, ref.dir_repr(), PACKAGES_FOLDER, pref.id)
+        self._handle_folder(folder, pref, read_manifest, interactive, node.remote, verify)
 
     def _handle_folder(self, folder, ref, read_manifest, interactive, remote, verify):
         assert(isinstance(remote, Remote) or remote is None)
@@ -96,6 +94,6 @@ class ManifestManager(object):
             read_manifest.save(folder)
 
     def print_log(self):
-        self._user_io.out.success("\nManifests : %s" % self._paths.store)
+        self._user_io.out.success("\nManifests : %s" % self._target_folder)
         for log_entry in self._log:
             self._user_io.out.info(log_entry)

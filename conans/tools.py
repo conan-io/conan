@@ -26,6 +26,7 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
     rmdir, save as files_save, save_append, sha1sum, sha256sum, touch, sha1sum, sha256sum, \
     to_file_bytes, touch
 from conans.util.log import logger
+from conans.client.tools.version import Version
 
 
 # This global variables are intended to store the configuration of the running Conan application
@@ -110,6 +111,7 @@ def replace_path_in_file(*args, **kwargs):
 # from conans.client.tools.oss
 args_to_string = tools_oss.args_to_string
 detected_architecture = tools_oss.detected_architecture
+detected_os = tools_oss.detected_os
 OSInfo = tools_oss.OSInfo
 cross_building = tools_oss.cross_building
 get_cross_building_settings = tools_oss.get_cross_building_settings
@@ -172,13 +174,10 @@ class ZypperTool(tools_system_pm.ZypperTool):
 
 
 # from conans.client.tools.win
-msvc_build_command = tools_win.msvc_build_command
 vs_installation_path = tools_win.vs_installation_path
 vswhere = tools_win.vswhere
 vs_comntools = tools_win.vs_comntools
 find_windows_10_sdk = tools_win.find_windows_10_sdk
-vcvars_dict = tools_win.vcvars_dict
-vcvars = tools_win.vcvars
 escape_windows_cmd = tools_win.escape_windows_cmd
 get_cased_path = tools_win.get_cased_path
 MSYS2 = tools_win.MSYS2
@@ -190,12 +189,26 @@ unix_path = tools_win.unix_path
 run_in_windows_bash = tools_win.run_in_windows_bash
 
 
+@contextmanager
+def vcvars(*args, **kwargs):
+    with tools_win.vcvars(output=_global_output, *args, **kwargs):
+        yield
+
+
+def msvc_build_command(*args, **kwargs):
+    return tools_win.msvc_build_command(output=_global_output, *args, **kwargs)
+
+
 def build_sln_command(*args, **kwargs):
     return tools_win.build_sln_command(output=_global_output, *args, **kwargs)
 
 
 def vcvars_command(*args, **kwargs):
     return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
+
+
+def vcvars_dict(*args, **kwargs):
+    return tools_win.vcvars_dict(output=_global_output, *args, **kwargs)
 
 
 def latest_vs_version_installed(*args, **kwargs):

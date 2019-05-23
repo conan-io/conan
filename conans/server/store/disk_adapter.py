@@ -4,7 +4,6 @@ import fasteners
 
 from conans.client.tools.env import no_op
 from conans.errors import NotFoundException
-from conans.paths import SimplePaths
 from conans.server.store.server_store import REVISIONS_FILE
 from conans.util.files import decode_text, md5sum, path_exists, relative_dirs, rmdir
 
@@ -87,22 +86,6 @@ class ServerDiskAdapter(object):
         if not path_exists(path, self._store_folder):
             raise NotFoundException("")
         os.remove(path)
-
-    def delete_empty_dirs(self, deleted_refs):
-        paths = SimplePaths(self._store_folder)
-        lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
-        for ref in deleted_refs:
-            ref_path = paths.conan(ref)
-            for _ in range(4 if not ref.revision else 5):
-                if os.path.exists(ref_path):
-                    if set(os.listdir(ref_path)) == lock_files:
-                        for lock_file in lock_files:
-                            os.unlink(os.path.join(ref_path, lock_file))
-                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
-                        os.rmdir(ref_path)
-                    except OSError:
-                        break  # not empty
-                ref_path = os.path.dirname(ref_path)
 
     def path_exists(self, path):
         return os.path.exists(path)

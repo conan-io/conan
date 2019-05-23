@@ -3,62 +3,74 @@ import platform
 import subprocess
 from itertools import chain
 
+from six import StringIO  # Python 2 and 3 compatible
+
 from conans.client import defs_to_string, join_arguments, tools
-from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, build_type_definition, \
-    cmake_in_local_cache_var_name, cmake_install_prefix_var_name, get_generator, get_toolset, \
-    is_multi_configuration, runtime_definition_var_name, verbose_definition, verbose_definition_name
-from conans.client.tools.oss import args_to_string, cpu_count
+from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
+    get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
+    cmake_install_prefix_var_name, get_toolset, build_type_definition, \
+    cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform
+from conans.client.output import ConanOutput
+from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
 from conans.util.config_parser import get_bool_from_text
-from conans.util.files import decode_text, get_abs_path, mkdir, walk
+from conans.util.files import mkdir, get_abs_path, walk, decode_text
 
 
 class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
-                 set_cmake_flags=False):
+                 set_cmake_flags=False, msbuild_verbosity=None, cmake_program=None,
+                 generator_platform=None):
         """
-        :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
+        :param conanfile: Conanfile instance
         :param generator: Generator name to use or none to autodetect
         :param cmake_system_name: False to not use CMAKE_SYSTEM_NAME variable,
                True for auto-detect or directly a string with the system name
         :param parallel: Try to build with multiple cores if available
-        :param build_type: Overrides default build type comming from settings
+        :param build_type: Overrides default build type coming from settings
         :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
                 applies only to certain generators (e.g. Visual Studio)
-        :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS, CMAKE_C_FLAGS, etc.
-               it's vital to set for certain projects (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
+        :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS,
+                CMAKE_C_FLAGS, etc. it's vital to set for certain projects
+                (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
+        :param msbuild_verbosity: verbosity level for MSBuild (in case of Visual Studio generator)
+        :param cmake_program: Path to the custom cmake executable
+        :param generator_platform: Generator platform name or none to autodetect (-A cmake option)
         """
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
-        self._settings = conanfile.settings
         self._conanfile = conanfile
+        self._settings = conanfile.settings
+        self._build_type = build_type or conanfile.settings.get_safe("build_type")
+        self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
-        self.generator = generator or get_generator(self._settings)
+        self.generator = generator or get_generator(conanfile.settings)
+        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings,
+                                                                               self.generator)
+        if not self.generator:
+            self._conanfile.output.warn("CMake generator could not be deduced from settings")
+        self.parallel = parallel
+        # Initialize definitions (won't be updated if conanfile or any of these variables change)
+        builder = CMakeDefinitionsBuilder(self._conanfile,
+                                          cmake_system_name=cmake_system_name,
+                                          make_program=make_program, parallel=parallel,
+                                          generator=self.generator,
+                                          set_cmake_flags=set_cmake_flags,
+                                          forced_build_type=build_type,
+                                          output=self._conanfile.output)
+        # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
+        # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
+
+        self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
-        self.parallel = parallel
-
-        self._set_cmake_flags = set_cmake_flags
-        self._cmake_system_name = cmake_system_name
-        self._make_program = make_program
-
-        # Initialize definitions (won't be updated if conanfile or any of these variables change)
-        builder = CMakeDefinitionsBuilder(self._conanfile, cmake_system_name=self._cmake_system_name,
-                                          make_program=self._make_program, parallel=self.parallel,
-                                          generator=self.generator,
-                                          set_cmake_flags=self._set_cmake_flags,
-                                          output=self._conanfile.output)
-        self.definitions = builder.get_definitions()
-
-        if build_type is None:
-            self.build_type = self._settings.get_safe("build_type")
-        else:
-            self.build_type = build_type
+        self.msbuild_verbosity = (os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity or
+                                  "minimal")
 
     @property
     def build_folder(self):
@@ -76,11 +88,23 @@ class CMake(object):
     def build_type(self, build_type):
         settings_build_type = self._settings.get_safe("build_type")
         if build_type != settings_build_type:
-            self._conanfile.output.warn(
-                'Set CMake build type "%s" is different than the settings build_type "%s"'
-                % (build_type, settings_build_type))
+            self._conanfile.output.warn("Forced CMake build type ('%s') different from the settings"
+                                        " build type ('%s')" % (build_type, settings_build_type))
+        self.definitions.pop("CMAKE_BUILD_TYPE", None)
+        self.definitions.update(build_type_definition(build_type, self.generator))
         self._build_type = build_type
-        self.definitions.update(build_type_definition(self._build_type, self.generator))
+
+    @property
+    def in_local_cache(self):
+        try:
+            in_local_cache = self.definitions[cmake_in_local_cache_var_name]
+            return get_bool_from_text(str(in_local_cache))
+        except KeyError:
+            return False
+
+    @property
+    def runtime(self):
+        return defs_to_string(self.definitions.get(runtime_definition_var_name))
 
     @property
     def flags(self):
@@ -93,16 +117,14 @@ class CMake(object):
     @property
     def command_line(self):
         args = ['-G "%s"' % self.generator] if self.generator else []
+        if self.generator_platform:
+            args.append('-A "%s"' % self.generator_platform)
         args.append(self.flags)
         args.append('-Wno-dev')
 
         if self.toolset:
             args.append('-T "%s"' % self.toolset)
         return join_arguments(args)
-
-    @property
-    def runtime(self):
-        return defs_to_string(self.definitions.get(runtime_definition_var_name))
 
     @property
     def build_config(self):
@@ -138,10 +160,12 @@ class CMake(object):
     def _run(self, command):
         compiler = self._settings.get_safe("compiler")
         the_os = self._settings.get_safe("os")
-        is_clangcl = the_os == 'Windows' and compiler == 'clang'
-        is_msvc = compiler == 'Visual Studio'
-        if (is_msvc or is_clangcl) and self.generator in ['Ninja', 'NMake Makefiles', 'NMake Makefiles JOM']:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False):
+        is_clangcl = the_os == "Windows" and compiler == "clang"
+        is_msvc = compiler == "Visual Studio"
+        if (is_msvc or is_clangcl) and self.generator in ["Ninja", "NMake Makefiles",
+                                                          "NMake Makefiles JOM"]:
+            with tools.vcvars(self._settings, force=True, filter_known_paths=False,
+                              output=self._conanfile.output):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
@@ -178,7 +202,8 @@ class CMake(object):
             pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else {}
 
         with tools.environment_append(pkg_env):
-            command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
+            command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
+                                          arg_list)
             if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
                 with tools.remove_from_path("sh"):
                     self._run(command)
@@ -196,8 +221,8 @@ class CMake(object):
         if target is not None:
             args = ["--target", target] + args
 
+        compiler_version = self._settings.get_safe("compiler.version")
         if self.generator and self.parallel:
-            compiler_version = self._settings.get_safe("compiler.version")
             if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
@@ -209,12 +234,19 @@ class CMake(object):
                 # Parallel for building projects in the solution
                 args.append("/m:%i" % cpu_count(output=self._conanfile.output))
 
+        if self.generator and self.msbuild_verbosity:
+            if "Visual Studio" in self.generator and \
+                    compiler_version and Version(compiler_version) >= "10":
+                if "--" not in args:
+                    args.append("--")
+                args.append("/verbosity:%s" % self.msbuild_verbosity)
+
         arg_list = join_arguments([
             args_to_string([build_dir]),
             self.build_config,
             args_to_string(args)
         ])
-        command = "cmake --build %s" % arg_list
+        command = "%s --build %s" % (self._cmake_program, arg_list)
         self._run(command)
 
     def install(self, args=None, build_dir=None):
@@ -227,12 +259,17 @@ class CMake(object):
                                  "defined" % cmake_install_prefix_var_name)
         self._build(args=args, build_dir=build_dir, target="install")
 
-    def test(self, args=None, build_dir=None, target=None):
+    def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
-        self._build(args=args, build_dir=build_dir, target=target)
+
+        env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
+        if self.parallel:
+            env['CTEST_PARALLEL_LEVEL'] = str(cpu_count(self._conanfile.output))
+        with tools.environment_append(env):
+            self._build(args=args, build_dir=build_dir, target=target)
 
     @property
     def verbose(self):
@@ -245,14 +282,6 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions.update(verbose_definition(value))
-
-    @property
-    def in_local_cache(self):
-        try:
-            in_local_cache = self.definitions[cmake_in_local_cache_var_name]
-            return get_bool_from_text(str(in_local_cache))
-        except KeyError:
-            return False
 
     def patch_config_paths(self):
         """
@@ -311,12 +340,18 @@ class CMake(object):
         pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
         allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
+
+        # We don't want warnings printed because there is no replacement of the abs path.
+        # there could be MANY cmake files in the package and the normal thing is to not find
+        # the abs paths
+        _null_out = ConanOutput(StringIO())
         for root, _, files in allwalk:
             for f in files:
-                if f.endswith(".cmake"):
+                if f.endswith(".cmake") and not f.startswith("conan"):
                     path = os.path.join(root, f)
+
                     tools.replace_path_in_file(path, pf, replstr, strict=False,
-                                               output=self._conanfile.output)
+                                               output=_null_out)
 
                     # patch paths of dependent packages that are found in any cmake files of the
                     # current package
@@ -324,7 +359,7 @@ class CMake(object):
                         from_str = self._conanfile.deps_cpp_info[dep].rootpath
                         dep_str = "${CONAN_%s_ROOT}" % dep.upper()
                         ret = tools.replace_path_in_file(path, from_str, dep_str, strict=False,
-                                                         output=self._conanfile.output)
+                                                         output=_null_out)
                         if ret:
                             self._conanfile.output.info("Patched paths for %s: %s to %s"
                                                         % (dep, from_str, dep_str))

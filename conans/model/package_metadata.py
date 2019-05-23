@@ -7,9 +7,9 @@ from conans import DEFAULT_REVISION_V1
 class _RecipeMetadata(object):
 
     def __init__(self):
-        self._revision = DEFAULT_REVISION_V1
-        self.time = None
+        self._revision = None
         self.properties = {}
+        self.remote = None
 
     @property
     def revision(self):
@@ -17,30 +17,31 @@ class _RecipeMetadata(object):
 
     @revision.setter
     def revision(self, r):
-        self._revision = DEFAULT_REVISION_V1 if r is None else r
+        self._revision = r
 
     def to_dict(self):
         ret = {"revision": self.revision,
-               "properties": self.properties,
-               "time": self.time}
+               "remote": self.remote,
+               "properties": self.properties}
         return ret
 
     @staticmethod
     def loads(data):
         ret = _RecipeMetadata()
         ret.revision = data["revision"]
+        ret.remote = data.get("remote")
         ret.properties = data["properties"]
-        ret.time = data["time"]
+        ret.time = data.get("time")
         return ret
 
 
 class _BinaryPackageMetadata(object):
 
     def __init__(self):
-        self._revision = DEFAULT_REVISION_V1
-        self._recipe_revision = DEFAULT_REVISION_V1
-        self.time = None
+        self._revision = None
+        self._recipe_revision = None
         self.properties = {}
+        self.remote = None
 
     @property
     def revision(self):
@@ -61,8 +62,8 @@ class _BinaryPackageMetadata(object):
     def to_dict(self):
         ret = {"revision": self.revision,
                "recipe_revision": self.recipe_revision,
-               "properties": self.properties,
-               "time": self.time}
+               "remote": self.remote,
+               "properties": self.properties}
         return ret
 
     @staticmethod
@@ -71,15 +72,16 @@ class _BinaryPackageMetadata(object):
         ret.revision = data.get("revision")
         ret.recipe_revision = data.get("recipe_revision")
         ret.properties = data.get("properties")
-        ret.time = data.get("time")
+        ret.remote = data.get("remote")
         return ret
 
 
 class PackageMetadata(object):
 
     def __init__(self):
-        self.recipe = _RecipeMetadata()
-        self.packages = defaultdict(_BinaryPackageMetadata)
+        self.recipe = None
+        self.packages = None
+        self.clear()
 
     @staticmethod
     def loads(content):
@@ -100,3 +102,11 @@ class PackageMetadata(object):
 
     def __eq__(self, other):
         return self.dumps() == other.dumps()
+
+    def clear(self):
+        self.recipe = _RecipeMetadata()
+        self.packages = defaultdict(_BinaryPackageMetadata)
+
+    def clear_package(self, package_id):
+        if package_id in self.packages:
+            del self.packages[package_id]

@@ -153,25 +153,26 @@ class HookTest(unittest.TestCase):
 
     def default_hook_test(self):
         client = TestClient()
-        self.assertTrue(client.client_cache.hooks_path.endswith("hooks"))
+        self.assertTrue(client.cache.hooks_path.endswith("hooks"))
         client.save({"conanfile.py": conanfile_basic})
         client.run("export . danimtb/testing")
-        self.assertIn("[HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have 'url'",
-                      client.out)
-        self.assertIn("[HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have "
-                      "'description'", client.out)
-        self.assertIn("[HOOK - attribute_checker] pre_export(): WARN: Conanfile doesn't have "
-                      "'license'", client.out)
+        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
+                      "WARN: Conanfile doesn't have 'url'", client.out)
+        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
+                      "WARN: Conanfile doesn't have 'description'", client.out)
+        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
+                      "WARN: Conanfile doesn't have 'license'", client.out)
 
     def complete_hook_test(self):
         server = TestServer([], users={"danimtb": "pass"})
         client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
-        hook_path = os.path.join(client.client_cache.hooks_path, "complete_hook.py")
+        hook_path = os.path.join(client.cache.hooks_path, "complete_hook",
+                                 "complete_hook.py")
         client.save({hook_path: complete_hook, "conanfile.py": conanfile_basic})
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
-        conanfile_cache_path = client.client_cache.conanfile(
-            ConanFileReference("basic", "0.1", "danimtb", "testing"))
-        client.run("config set hooks.complete_hook")
+        conanfile_cache_path = client.cache.package_layout(
+            ConanFileReference("basic", "0.1", "danimtb", "testing")).conanfile()
+        client.run("config set hooks.complete_hook/complete_hook.py")
 
         client.run("source .")
         self._check_source(conanfile_path, client.out)
@@ -197,7 +198,7 @@ class HookTest(unittest.TestCase):
 
         client.run("remove * --force")
         client.run("create . danimtb/testing")
-        self._check_export(conanfile_path, conanfile_cache_path, client.out) # Export gets
+        self._check_export(conanfile_path, conanfile_cache_path, client.out)  # Export gets
         self._check_source(conanfile_cache_path, client.out, in_cache=True)
         self._check_build(conanfile_cache_path, client.out, in_cache=True)
         self._check_package(conanfile_cache_path, client.out, in_cache=True)
@@ -227,111 +228,173 @@ class HookTest(unittest.TestCase):
 
     def _check_source(self, conanfile_path, out, in_cache=False):
         reference = REFERENCE_CACHE if in_cache else REFERENCE_LOCAL
-        self.assertIn("[HOOK - complete_hook] pre_source(): conanfile_path=%s" % conanfile_path, out)
-        self.assertIn("[HOOK - complete_hook] post_source(): conanfile_path=%s" % conanfile_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_source(): "
+                      "conanfile_path=%s" % conanfile_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_source(): "
+                      "conanfile_path=%s" % conanfile_path, out)
         if in_cache:
-            self.assertIn("[HOOK - complete_hook] pre_source(): reference=%s" % reference, out)
-            self.assertIn("[HOOK - complete_hook] post_source(): reference=%s" % reference, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_source(): "
+                          "reference=%s" % reference, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] post_source(): "
+                          "reference=%s" % reference, out)
 
     def _check_build(self, conanfile_path,  out, in_cache=False):
         reference = REFERENCE_CACHE if in_cache else REFERENCE_LOCAL
         if in_cache:
-            self.assertIn("[HOOK - complete_hook] pre_build(): reference=%s" % reference, out)
-            self.assertIn("[HOOK - complete_hook] pre_build(): package_id=%s" % PACKAGE_ID, out)
-            self.assertIn("[HOOK - complete_hook] post_build(): reference=%s" % reference, out)
-            self.assertIn("[HOOK - complete_hook] post_build(): package_id=%s" % PACKAGE_ID, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_build(): "
+                          "reference=%s" % reference, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_build(): "
+                          "package_id=%s" % PACKAGE_ID, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] post_build(): "
+                          "reference=%s" % reference, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] post_build(): "
+                          "package_id=%s" % PACKAGE_ID, out)
         else:
-            self.assertIn("[HOOK - complete_hook] pre_build(): conanfile_path=%s" % conanfile_path,
-                          out)
-            self.assertIn("[HOOK - complete_hook] post_build(): conanfile_path=%s" % conanfile_path,
-                          out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_build(): "
+                          "conanfile_path=%s" % conanfile_path, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] post_build(): "
+                          "conanfile_path=%s" % conanfile_path, out)
 
     def _check_package(self, conanfile_path, out, in_cache=False):
         reference = REFERENCE_CACHE if in_cache else REFERENCE_LOCAL
-        self.assertIn("[HOOK - complete_hook] pre_package(): conanfile_path=%s" % conanfile_path,
-                      out)
-        self.assertIn("[HOOK - complete_hook] post_package(): conanfile_path=%s" % conanfile_path,
-                      out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_package(): "
+                      "conanfile_path=%s" % conanfile_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package(): "
+                      "conanfile_path=%s" % conanfile_path, out)
         if in_cache:
-            self.assertIn("[HOOK - complete_hook] pre_package(): reference=%s" % reference, out)
-            self.assertIn("[HOOK - complete_hook] pre_package(): package_id=%s" % PACKAGE_ID, out)
-            self.assertIn("[HOOK - complete_hook] post_package(): reference=%s" % reference, out)
-            self.assertIn("[HOOK - complete_hook] post_package(): package_id=%s" % PACKAGE_ID, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_package(): "
+                          "reference=%s" % reference, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_package(): "
+                          "package_id=%s" % PACKAGE_ID, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package(): "
+                          "reference=%s" % reference, out)
+            self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package(): "
+                          "package_id=%s" % PACKAGE_ID, out)
 
     def _check_export(self, conanfile_path, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_export(): conanfile_path=%s" % conanfile_path, out)
-        self.assertIn("[HOOK - complete_hook] pre_export(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_export(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_export(): reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_export(): "
+                      "conanfile_path=%s" % conanfile_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_export(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_export(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_export(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
 
     def _check_export_pkg(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_package(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] pre_package(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_package(): package_id=%s" % PACKAGE_ID, out)
-        self.assertIn("[HOOK - complete_hook] post_package(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_package(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_package(): package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_package(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_package(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_package(): "
+                      "package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_package(): "
+                      "package_id=%s" % PACKAGE_ID, out)
 
     def _check_upload(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_upload(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload(): remote.name=default", out)
-        self.assertIn("[HOOK - complete_hook] post_upload(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_upload(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_upload(): remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload(): "
+                      "remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload(): "
+                      "remote.name=default", out)
 
     def _check_upload_recipe(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_upload_recipe(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload_recipe(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload_recipe(): remote.name=default", out)
-        self.assertIn("[HOOK - complete_hook] post_upload_recipe(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_upload_recipe(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_upload_recipe(): remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_recipe(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_recipe(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_recipe(): "
+                      "remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_recipe(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_recipe(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_recipe(): "
+                      "remote.name=default", out)
 
     def _check_upload_package(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_upload_package(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload_package(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload_package(): package_id=%s" % PACKAGE_ID, out)
-        self.assertIn("[HOOK - complete_hook] pre_upload_package(): remote.name=default", out)
-        self.assertIn("[HOOK - complete_hook] post_upload_package(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_upload_package(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_upload_package(): package_id=%s" % PACKAGE_ID, out)
-        self.assertIn("[HOOK - complete_hook] post_upload_package(): remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_package(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_package(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_package(): "
+                      "package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_upload_package(): "
+                      "remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_package(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_package(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_package(): "
+                      "package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_upload_package(): "
+                      "remote.name=default", out)
 
     def _check_download(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_download(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_download(): remote.name=default", out)
-        self.assertIn("[HOOK - complete_hook] post_download(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_download(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_download(): remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download(): "
+                      "remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download(): "
+                      "remote.name=default", out)
 
     def _check_download_recipe(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_download_recipe(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_download_recipe(): remote.name=default", out)
-        self.assertIn("[HOOK - complete_hook] post_download_recipe(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_download_recipe(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_download_recipe(): remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download_recipe(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download_recipe(): "
+                      "remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_recipe(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_recipe(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_recipe(): "
+                      "remote.name=default", out)
 
     def _check_download_package(self, conanfile_cache_path, out):
-        self.assertIn("[HOOK - complete_hook] pre_download_package(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] pre_download_package(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] pre_download_package(): package_id=%s" % PACKAGE_ID, out)
-        self.assertIn("[HOOK - complete_hook] pre_download_package(): remote.name=default", out)
-        self.assertIn("[HOOK - complete_hook] post_download_package(): conanfile_path=%s" % conanfile_cache_path, out)
-        self.assertIn("[HOOK - complete_hook] post_download_package(): reference=%s" % REFERENCE_CACHE, out)
-        self.assertIn("[HOOK - complete_hook] post_download_package(): package_id=%s" % PACKAGE_ID, out)
-        self.assertIn("[HOOK - complete_hook] post_download_package(): remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download_package(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download_package(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download_package(): "
+                      "package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] pre_download_package(): "
+                      "remote.name=default", out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_package(): "
+                      "conanfile_path=%s" % conanfile_cache_path, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_package(): "
+                      "reference=%s" % REFERENCE_CACHE, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_package(): "
+                      "package_id=%s" % PACKAGE_ID, out)
+        self.assertIn("[HOOK - complete_hook/complete_hook.py] post_download_package(): "
+                      "remote.name=default", out)
 
     def import_hook_test(self):
         client = TestClient()
-        hook_path = os.path.join(client.client_cache.hooks_path, "my_hook.py")
-        init_path = os.path.join(client.client_cache.hooks_path, "custom_module", "__init__.py")
-        custom_path = os.path.join(client.client_cache.hooks_path, "custom_module", "custom.py")
-        client.save({hook_path: complete_hook,
-                     init_path: "",
+        hook_path = os.path.join(client.cache.hooks_path, "my_hook", "my_hook.py")
+        init_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module",
+                                 "__init__.py")
+        custom_path = os.path.join(client.cache.hooks_path, "my_hook", "custom_module",
+                                   "custom.py")
+        client.save({init_path: "",
                      custom_path: custom_module,
                      hook_path: my_hook,
                      "conanfile.py": conanfile_basic})
-        client.run("config set hooks.my_hook")
+        client.run("config set hooks.my_hook/my_hook.py")
         client.run("export . danimtb/testing")
-        self.assertIn("[HOOK - my_hook] pre_export(): my_printer(): CUSTOM MODULE", client.out)
+        self.assertIn("[HOOK - my_hook/my_hook.py] pre_export(): my_printer(): CUSTOM MODULE",
+                      client.out)

@@ -63,7 +63,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        cache_package_folder = client.client_cache.packages(ref)
+        cache_package_folder = client.cache.package_layout(ref).packages()
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
@@ -86,7 +86,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s' -if=." % package_folder)
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        cache_package_folder = client.client_cache.packages(ref)
+        cache_package_folder = client.cache.package_layout(ref).packages()
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
@@ -114,7 +114,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export-pkg .. Pkg/0.1@lasote/testing --source-folder=.. ")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        cache_package_folder = client.client_cache.packages(ref)
+        cache_package_folder = client.cache.package_layout(ref).packages()
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
@@ -177,7 +177,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build/package")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        cache_package_folder = client.client_cache.packages(ref)
+        cache_package_folder = client.cache.package_layout(ref).packages()
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
@@ -200,7 +200,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        cache_package_folder = client.client_cache.packages(ref)
+        cache_package_folder = client.cache.package_layout(ref).packages()
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
@@ -227,7 +227,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-        cache_package_folder = client.client_cache.packages(ref)
+        cache_package_folder = client.cache.package_layout(ref).packages()
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
@@ -237,13 +237,14 @@ class DevOutSourceFlowTest(unittest.TestCase):
         # cmake finds it, using an install_folder different from build_folder
         client = TestClient()
         client.run("new lib/1.0")
+        # FIXME: this test, so it doesn't need to clone from github
         client.run("source . --source-folder src")
 
         # Patch the CMakeLists to include the generator file from a different folder
         install_dir = os.path.join(client.current_folder, "install_x86_64")
         tools.replace_in_file(os.path.join(client.current_folder, "src", "hello", "CMakeLists.txt"),
                               "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake",
-                              '"%s/conanbuildinfo.cmake"' % install_dir,
+                              '"%s/conanbuildinfo.cmake"' % install_dir.replace("\\", "/"),
                               output=client.out)
 
         client.run("install . --install-folder install_x86_64 -s arch=x86_64")

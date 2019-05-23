@@ -1,3 +1,4 @@
+import errno
 import hashlib
 import os
 import platform
@@ -7,8 +8,7 @@ import stat
 import sys
 import tarfile
 import tempfile
-from contextlib import contextmanager
-from errno import ENOENT
+
 from os.path import abspath, join as joinpath, realpath
 
 import six
@@ -62,7 +62,7 @@ def decode_text(text):
             return text.decode(decoder)
         except UnicodeDecodeError:
             continue
-    logger.warn("can't decode %s" % str(text))
+    logger.warning("can't decode %s" % str(text))
     return text.decode("utf-8", "ignore")  # Ignore not compatible characters
 
 
@@ -73,7 +73,10 @@ def touch(fname, times=None):
 def touch_folder(folder):
     for dirname, _, filenames in walk(folder):
         for fname in filenames:
-            os.utime(os.path.join(dirname, fname), None)
+            try:
+                os.utime(os.path.join(dirname, fname), None)
+            except Exception:
+                pass
 
 
 def normalize(text):
@@ -170,14 +173,14 @@ def save_files(path, files, only_if_modified=False):
 
 
 def load(path, binary=False):
-    '''Loads a file content'''
+    """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
         return tmp if binary else decode_text(tmp)
 
 
 def relative_dirs(path):
-    ''' Walks a dir and return a list with the relative paths '''
+    """ Walks a dir and return a list with the relative paths """
     ret = []
     for dirpath, _, fnames in walk(path):
         for filename in fnames:
@@ -207,7 +210,19 @@ def rmdir(path):
     try:
         shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
-        if err.errno == ENOENT:
+        if err.errno == errno.ENOENT:
+            return
+        raise
+
+
+def remove(path):
+    try:
+        assert os.path.isfile(path)
+        os.remove(path)
+    except (IOError, OSError) as e:  # for py3, handle just PermissionError
+        if e.errno == errno.EPERM or e.errno == errno.EACCES:
+            os.chmod(path, stat.S_IRWXU)
+            os.remove(path)
             return
         raise
 
@@ -286,7 +301,7 @@ def tar_extract(fileobj, destination_dir):
         return not realpath(abspath(joinpath(base, path))).startswith(base)
 
     def safemembers(members):
-        base = realpath(abspath("."))
+        base = realpath(abspath(destination_dir))
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():

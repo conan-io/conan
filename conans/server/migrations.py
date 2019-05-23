@@ -5,10 +5,17 @@ from conans import DEFAULT_REVISION_V1
 from conans.migrations import Migrator
 from conans.model.version import Version
 from conans.paths import PACKAGES_FOLDER
-from conans.util.files import list_folder_subdirs, mkdir, rmdir
+from conans.server.revision_list import RevisionList
+from conans.server.store.server_store import REVISIONS_FILE
+from conans.util.files import list_folder_subdirs, mkdir, rmdir, save
+from conans.util.log import logger
 
 
 class ServerMigrator(Migrator):
+
+    def __init__(self, conf_path, store_path, current_version, out, force_migrations):
+        self.force_migrations = force_migrations
+        super(ServerMigrator, self).__init__(conf_path, store_path, current_version, out)
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
@@ -45,19 +52,17 @@ class ServerMigrator(Migrator):
 
         # .conan/data/lib/1.0/user/channel/package/XXX/*
         # .conan/data/lib/1.0/user/channel/0/package/XXX/0/*
-        from six.moves import input as raw_input
-        print("**********************************************")
-        print("*                                            *")
-        print("*       STORAGE MIGRATION NEEDED!            *")
-        print("*                                            *")
-        print("**********************************************")
-        a = raw_input("A migration of your storage is needed, please backup first the storage "
-                      "directory before continue: \n\n'%s' \n\nContinue? Y/N " % self.store_path)
-        print("**********************************************")
-
-        if a.lower() != "y":
-            print("Exiting...")
-            exit(1)
+        if not self.force_migrations:
+            print("**********************************************")
+            print("*                                            *")
+            print("*      ERROR: STORAGE MIGRATION NEEDED!      *")
+            print("*                                            *")
+            print("**********************************************")
+            msg = "A migration of your storage is needed, please backup first the storage " \
+                  "directory and run:\n\n$ conan_server --migrate\n\n"
+            logger.error(msg)
+            print(msg)
+            exit(3)  # Gunicorn expects error code 3 to stop retrying booting the worker
 
         print("**********************************************")
         print("*                                            *")
@@ -71,12 +76,18 @@ class ServerMigrator(Migrator):
                 the_dir = os.path.join(base_dir, export_or_package)
                 dest_dir = os.path.join(base_dir, DEFAULT_REVISION_V1)
                 mkdir(dest_dir)
-                shutil.move(the_dir, dest_dir)
                 print("Moving '%s': %s" % (subdir, export_or_package))
+                shutil.move(the_dir, dest_dir)
 
-            packages_dir = os.path.join(self.store_path, subdir, DEFAULT_REVISION_V1, PACKAGES_FOLDER)
+            rev_list = RevisionList()
+            rev_list.add_revision(DEFAULT_REVISION_V1)
+            save(os.path.join(base_dir, REVISIONS_FILE), rev_list.dumps())
+
+            packages_dir = os.path.join(self.store_path, subdir, DEFAULT_REVISION_V1,
+                                        PACKAGES_FOLDER)
 
             if not os.path.exists(packages_dir):
+                print("NO PACKAGES")
                 continue
             for pid in os.listdir(packages_dir):
                 package_dir = os.path.join(packages_dir, pid)
@@ -89,6 +100,9 @@ class ServerMigrator(Migrator):
                     dest_path = os.path.join(package_dir, DEFAULT_REVISION_V1, item)
                     mkdir(dest_dir)
                     shutil.move(origin_path, dest_path)
+                rev_list = RevisionList()
+                rev_list.add_revision(DEFAULT_REVISION_V1)
+                save(os.path.join(package_dir, REVISIONS_FILE), rev_list.dumps())
         print("**********************************************")
         print("*                                            *")
         print("*       MIGRATION COMPLETED!                 *")

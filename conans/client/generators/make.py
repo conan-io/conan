@@ -47,15 +47,15 @@ class MakeGenerator(Generator):
 
         vars_info = [("ROOT", self.assignment_if_absent, [cpp_info.rootpath]),
                      ("SYSROOT", self.assignment_if_absent, [cpp_info.sysroot]),
-                     ("INCLUDE_PATHS", self.assignment_append, cpp_info.include_paths),
-                     ("LIB_PATHS", self.assignment_append, cpp_info.lib_paths),
-                     ("BIN_PATHS", self.assignment_append, cpp_info.bin_paths),
-                     ("BUILD_PATHS", self.assignment_append, cpp_info.build_paths),
-                     ("RES_PATHS", self.assignment_append, cpp_info.res_paths),
+                     ("INCLUDE_DIRS", self.assignment_append, cpp_info.include_paths),
+                     ("LIB_DIRS", self.assignment_append, cpp_info.lib_paths),
+                     ("BIN_DIRS", self.assignment_append, cpp_info.bin_paths),
+                     ("BUILD_DIRS", self.assignment_append, cpp_info.build_paths),
+                     ("RES_DIRS", self.assignment_append, cpp_info.res_paths),
                      ("LIBS", self.assignment_append, cpp_info.libs),
                      ("DEFINES", self.assignment_append, cpp_info.defines),
                      ("CFLAGS", self.assignment_append, cpp_info.cflags),
-                     ("CPPFLAGS", self.assignment_append, cpp_info.cppflags),
+                     ("CXXFLAGS", self.assignment_append, cpp_info.cxxflags),
                      ("SHAREDLINKFLAGS", self.assignment_append, cpp_info.sharedlinkflags),
                      ("EXELINKFLAGS", self.assignment_append, cpp_info.exelinkflags)]
 
@@ -104,6 +104,6 @@ class MakeGenerator(Generator):
 
     @staticmethod
     def all_dep_vars():
-        return ["rootpath", "sysroot", "include_paths", "lib_paths", "bin_paths", "build_paths",
-                "res_paths", "libs", "defines", "cflags", "cppflags", "sharedlinkflags",
+        return ["rootpath", "sysroot", "include_dirs", "lib_dirs", "bin_dirs", "build_dirs",
+                "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
                 "exelinkflags"]

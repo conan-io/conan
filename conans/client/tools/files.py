@@ -54,7 +54,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     """
     Unzip a zipped file
     :param filename: Path to the zip file
-    :param destination: Destination folder
+    :param destination: Destination folder (or file for .gz files)
     :param keep_permissions: Keep the zip permissions. WARNING: Can be
     dangerous if the zip was not created in a NIX system, the bits could
     produce undefined permission schema. Use this option only if you are sure
@@ -70,6 +70,13 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
+    if filename.endswith(".gz"):
+        import gzip
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
+        return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
@@ -194,24 +201,30 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
+    def decode_clean(path, prefix):
+        path = path.decode("utf-8").replace("\\", "/")
+        if path.startswith(prefix):
+            path = path[2:]
+        return path
+
+    def strip_path(path):
+        tokens = path.split("/")[strip:]
+        path = "/".join(tokens)
+        if base_path:
+            path = os.path.join(base_path, path)
+        return path
     # account for new and deleted files, upstream dep won't fix them
     items = []
     for p in patchset:
-        source = p.source.decode("utf-8")
-        if source.startswith("a/"):
-            source = source[2:]
-        target = p.target.decode("utf-8")
-        if target.startswith("b/"):
-            target = target[2:]
+        source = decode_clean(p.source, "a/")
+        target = decode_clean(p.target, "b/")
         if "dev/null" in source:
-            if base_path:
-                target = os.path.join(base_path, target)
+            target = strip_path(target)
             hunks = [s.decode("utf-8") for s in p.hunks[0].text]
             new_file = "".join(hunk[1:] for hunk in hunks)
             save(target, new_file)
         elif "dev/null" in target:
-            if base_path:
-                source = os.path.join(base_path, source)
+            source = strip_path(source)
             os.unlink(source)
         else:
             items.append(p)
@@ -256,7 +269,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
     normalized_search = normalized_text(search)
     index = normalized_content.find(normalized_search)
     if index == -1:
-        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file", output=output)
+        return _manage_text_not_found(search, file_path, strict, "replace_path_in_file",
+                                      output=output)
 
     while index != -1:
         content = content[:index] + replace + content[index + len(search):]
@@ -307,7 +321,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib"):
+            if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
@@ -316,6 +330,7 @@ def collect_libs(conanfile, folder=None):
                                           "times with a different file extension" % name)
                 else:
                     result.append(name)
+    result.sort()
     return result
 
 
@@ -327,7 +342,8 @@ def which(filename):
         return None
 
     def _get_possible_filenames(filename):
-        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if "." not in filename else []
+        extensions_win = (os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";")
+                          if "." not in filename else [])
         extensions = [".sh"] if platform.system() != "Windows" else extensions_win
         extensions.insert(1, "")  # No extension
         return ["%s%s" % (filename, entry.lower()) for entry in extensions]

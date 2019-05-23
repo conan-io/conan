@@ -7,8 +7,9 @@ from contextlib import contextmanager
 
 import deprecation
 
+from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture
+from conans.client.tools.oss import OSInfo, detected_architecture, check_output
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
@@ -59,13 +60,13 @@ def _visual_compiler(output, version):
     if platform.system().startswith("CYGWIN"):
         return _visual_compiler_cygwin(output, version)
 
-    if version == "15":
-        vs_path = os.getenv('vs150comntools')
-        path = vs_path or vs_installation_path("15")
+    if Version(version) >= "15":
+        vs_path = os.getenv('vs%s0comntools' % version)
+        path = vs_path or vs_installation_path(version)
         if path:
             compiler = "Visual Studio"
-            output.success("Found %s %s" % (compiler, "15"))
-            return compiler, "15"
+            output.success("Found %s %s" % (compiler, version))
+            return compiler, version
         return None
 
     version = "%s.0" % version
@@ -93,8 +94,37 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
+MSVS_DEFAULT_TOOLSETS = {"16": "v142",
+                         "15": "v141",
+                         "14": "v140",
+                         "12": "v120",
+                         "11": "v110",
+                         "10": "v100",
+                         "9": "v90",
+                         "8": "v80"}
+
+# inverse version of the above MSVS_DEFAULT_TOOLSETS (keys and values are swapped)
+MSVS_DEFAULT_TOOLSETS_INVERSE = {"v142": "16",
+                                 "v141": "15",
+                                 "v140": "14",
+                                 "v120": "12",
+                                 "v110": "11",
+                                 "v100": "10",
+                                 "v90": "9",
+                                 "v80": "8"}
+
+
+def msvs_toolset(settings):
+    toolset = settings.get_safe("compiler.toolset")
+    if not toolset:
+        vs_version = settings.get_safe("compiler.version")
+        toolset = MSVS_DEFAULT_TOOLSETS.get(vs_version)
+    return toolset
+
+
 def latest_visual_studio_version_installed(output):
-    for version in reversed(["8", "9", "10", "11", "12", "14", "15"]):
+    msvc_sersions = reversed(sorted(list(MSVS_DEFAULT_TOOLSETS.keys()), key=int))
+    for version in msvc_sersions:
         vs = _visual_compiler(output, version)
         if vs:
             return vs[1]
@@ -104,15 +134,13 @@ def latest_visual_studio_version_installed(output):
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
+                       output=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    import warnings
-    warnings.warn("deprecated", DeprecationWarning)
-
-    vcvars = vcvars_command(settings, force=force_vcvars)
+    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms)
+                              parallel, toolset=toolset, platforms=platforms, output=output)
     command = "%s && %s" % (vcvars, build)
     return command
 
@@ -120,7 +148,8 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 @deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
                         details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None, output=None):
+                      arch=None, parallel=True, toolset=None, platforms=None, output=None,
+                      verbosity=None, definitions=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -133,7 +162,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     tmp._output = output
 
     # Generate the properties file
-    props_file_contents = tmp._get_props_file_contents()
+    props_file_contents = tmp._get_props_file_contents(definitions)
     tmp_path = os.path.join(mkdir_tmp(), ".conan_properties")
     save(tmp_path, props_file_contents)
 
@@ -141,7 +170,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     command = tmp.get_command(sln_path, tmp_path,
                               targets=targets, upgrade_project=upgrade_project,
                               build_type=build_type, arch=arch, parallel=parallel,
-                              toolset=toolset, platforms=platforms, use_env=False)
+                              toolset=toolset, platforms=platforms, use_env=False,
+                              verbosity=verbosity)
 
     return command
 
@@ -221,15 +251,18 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         raise ConanException("The 'legacy' parameter cannot be specified with either the "
                              "'products' or 'requires' parameter")
 
-    program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
-
+    installer_path = None
+    program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
     if program_files:
-        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
-                                    "vswhere.exe")
-        if not os.path.isfile(vswhere_path):
-            raise ConanException("Cannot locate 'vswhere'")
-    else:
-        raise ConanException("Cannot locate 'Program Files'/'Program Files (x86)' directory")
+        expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                     "vswhere.exe")
+        if os.path.isfile(expected_path):
+            installer_path = expected_path
+    vswhere_path = installer_path or which("vswhere")
+
+    if not vswhere_path:
+        raise ConanException("Cannot locate vswhere in 'Program Files'/'Program Files (x86)' "
+                             "directory nor in PATH")
 
     arguments = list()
     arguments.append(vswhere_path)
@@ -270,8 +303,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = subprocess.check_output(arguments)
-        output = decode_text(output).strip()
+        output = check_output(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -338,7 +370,9 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
-    if arch_build == 'x86_64':
+    if os_setting == 'WindowsCE':
+        vcvars_arch = "x86"
+    elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
@@ -409,21 +443,16 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
-                vcvars_ver=None, winsdk_version=None, only_diff=True):
+                vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
     known_path_lists = ("include", "lib", "libpath", "path")
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version)
-    cmd += " && echo __BEGINS__ && set"
-    ret = decode_text(subprocess.check_output(cmd, shell=True))
+                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
+    cmd += " && set"
+    ret = check_output(cmd)
     new_env = {}
-    start_reached = False
     for line in ret.splitlines():
         line = line.strip()
-        if not start_reached:
-            if "__BEGINS__" in line:
-                start_reached = True
-            continue
 
         if line == "\n" or not line:
             continue
@@ -546,7 +575,8 @@ def unix_path(path, path_flavor=None):
     return None
 
 
-def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
+def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None,
+                        with_login=True):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
@@ -574,12 +604,14 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         if subsystem != WSL:
 
             def get_path_value(container, subsystem_name):
-                """Gets the path from the container dict and returns a string with the path for the subsystem_name"""
+                """Gets the path from the container dict and returns a
+                string with the path for the subsystem_name"""
                 _path_key = next((name for name in container.keys() if "path" == name.lower()), None)
                 if _path_key:
                     _path_value = container.get(_path_key)
                     if isinstance(_path_value, list):
-                        return ":".join([unix_path(path, path_flavor=subsystem_name) for path in _path_value])
+                        return ":".join([unix_path(path, path_flavor=subsystem_name)
+                                         for path in _path_value])
                     else:
                         return unix_path(_path_value, path_flavor=subsystem_name)
 
@@ -606,7 +638,8 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
-        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
+        login = "--login" if with_login else ""
+        wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
 
         # If is there any other env var that we know it contains paths, convert it to unix_path

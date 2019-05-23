@@ -29,6 +29,7 @@ class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
     - "ANY", as string to accept any value
+    - List ["None", "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name):
@@ -85,13 +86,16 @@ class SettingsItem(object):
         return self.__bool__()
 
     def __str__(self):
-        return self._value
+        return str(self._value)
+
+    def _not_any(self):
+        return self._definition != "ANY" and "ANY" not in self._definition
 
     def __eq__(self, other):
         if other is None:
             return self._value is None
         other = str(other)
-        if self._definition != "ANY" and other not in self.values_range:
+        if self._not_any() and other not in self.values_range:
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
 
@@ -114,10 +118,13 @@ class SettingsItem(object):
             v = str(v)
             if isinstance(self._definition, dict):
                 self._definition.pop(v, None)
-            elif self._definition != "ANY":
-                if v in self._definition:
-                    self._definition.remove(v)
-        if self._value is not None and self._value not in self._definition:
+            elif self._definition == "ANY":
+                if v == "ANY":
+                    self._definition = []
+            elif v in self._definition:
+                self._definition.remove(v)
+
+        if self._value is not None and self._value not in self._definition and self._not_any():
             raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
 
     def _get_child(self, item):
@@ -154,7 +161,7 @@ class SettingsItem(object):
     @value.setter
     def value(self, v):
         v = str(v)
-        if self._definition != "ANY" and v not in self._definition:
+        if self._not_any() and v not in self.values_range:
             raise ConanException(bad_value_msg(self._name, v, self.values_range))
         self._value = v
 
@@ -180,7 +187,6 @@ class SettingsItem(object):
     def validate(self):
         if self._value is None and "None" not in self._definition:
             raise undefined_value(self._name)
-
         if isinstance(self._definition, dict):
             key = "None" if self._value is None else self._value
             self._definition[key].validate()
@@ -227,7 +233,7 @@ class Settings(object):
 
     @staticmethod
     def loads(text):
-        return Settings(yaml.load(text) or {})
+        return Settings(yaml.safe_load(text) or {})
 
     def validate(self):
         for field in self.fields:

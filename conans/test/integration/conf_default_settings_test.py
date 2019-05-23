@@ -4,7 +4,7 @@ import unittest
 from collections import OrderedDict
 
 from conans.client import tools
-from conans.client.client_cache import ClientCache
+from conans.client.cache.cache import ClientCache
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import CONANFILE_TXT
 from conans.test.utils.test_files import temp_folder
@@ -20,6 +20,9 @@ class MockOut(object):
     def error(self, *args, **kwargs):
         pass
 
+    def warn(self, *args, **kwargs):
+        pass
+
 
 class ConfDefaultSettingsTest(unittest.TestCase):
 
@@ -33,7 +36,7 @@ os=Windows
 
 """
         client = TestClient()
-        save(client.client_cache.default_profile_path, default_profile)
+        save(client.cache.default_profile_path, default_profile)
         client.save({CONANFILE_TXT: ""})
         client.run("install Any/0.2@user/channel", assert_error=True)
         self.assertIn("'42' is not a valid 'settings.compiler.version' value", client.user_io.out)
@@ -48,30 +51,30 @@ os=Windows
     def env_setting_override_test(self):
         tmp_dir = temp_folder()
         out = MockOut()
-        cache = ClientCache(tmp_dir, None, out)
+        cache = ClientCache(tmp_dir, out)
 
-        base_settings = OrderedDict(detect_defaults_settings(out))
+        base_settings = OrderedDict(detect_defaults_settings(out, profile_path="~/.conan/profiles/default"))
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "4.6"}):
             expected = copy.copy(base_settings)
             expected["compiler.version"] = "4.6"
-            self.assertEquals(cache.default_profile.settings, expected)
+            self.assertEqual(cache.default_profile.settings, expected)
 
         tmp_dir = temp_folder()
-        cache = ClientCache(tmp_dir, None, out)
+        cache = ClientCache(tmp_dir, out)
         with tools.environment_append({}):
-            self.assertEquals(cache.default_profile.settings, base_settings)
+            self.assertEqual(cache.default_profile.settings, base_settings)
 
         tmp_dir = temp_folder()
-        cache = ClientCache(tmp_dir, None, out)
+        cache = ClientCache(tmp_dir, out)
         # If compiler is overwritten compiler subsettings are not assigned
         with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio"}):
             expected = copy.copy(base_settings)
             expected["compiler"] = "Visual Studio"
-            self.assertEquals(cache.default_profile.settings, expected)
+            self.assertEqual(cache.default_profile.settings, expected)
 
         tmp_dir = temp_folder()
-        cache = ClientCache(tmp_dir, None, out)
+        cache = ClientCache(tmp_dir, out)
         with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio",
                                        "CONAN_ENV_COMPILER_VERSION": "14",
                                        "CONAN_ENV_COMPILER_RUNTIME": "MDd"}):
@@ -80,4 +83,4 @@ os=Windows
             expected["compiler.runtime"] = "MDd"
             expected["compiler.version"] = "14"
 
-            self.assertEquals(cache.default_profile.settings, expected)
+            self.assertEqual(cache.default_profile.settings, expected)

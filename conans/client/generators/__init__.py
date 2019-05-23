@@ -2,6 +2,7 @@ import traceback
 from os.path import join
 
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
+from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
@@ -12,6 +13,7 @@ from .boostbuild import BoostBuildGenerator
 from .cmake import CMakeGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
+from .deploy import DeployGenerator
 from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
@@ -34,8 +36,8 @@ class _GeneratorManager(object):
     def __init__(self):
         self._generators = {}
 
-    def add(self, name, generator_class):
-        if name not in self._generators:
+    def add(self, name, generator_class, custom=False):
+        if name not in self._generators or custom:
             self._generators[name] = generator_class
 
     @property
@@ -58,6 +60,7 @@ registered_generators.add("cmake", CMakeGenerator)
 registered_generators.add("cmake_multi", CMakeMultiGenerator)
 registered_generators.add("cmake_paths", CMakePathsGenerator)
 registered_generators.add("cmake_find_package", CMakeFindPackageGenerator)
+registered_generators.add("cmake_find_package_multi", CMakeFindPackageMultiGenerator)
 registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
@@ -75,6 +78,7 @@ registered_generators.add("json", JsonGenerator)
 registered_generators.add("b2", B2Generator)
 registered_generators.add("premake", PremakeGenerator)
 registered_generators.add("make", MakeGenerator)
+registered_generators.add("deploy", DeployGenerator)
 
 
 def write_generators(conanfile, path, output):

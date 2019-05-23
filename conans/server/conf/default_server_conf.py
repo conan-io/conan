@@ -16,7 +16,7 @@ authorize_timeout: 1800
 
 # Just for disk storage adapter
 # updown_secret is the key used to generate the upload/download authorization token
-disk_storage_path: ~/.conan_server/data
+disk_storage_path: ./data
 disk_authorize_timeout: 1800
 updown_secret: {updown_secret}
 

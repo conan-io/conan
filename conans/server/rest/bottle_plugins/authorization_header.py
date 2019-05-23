@@ -1,15 +1,16 @@
 import inspect
 from abc import ABCMeta, abstractmethod
 
+import six
 from bottle import PluginError, request
 
 from conans.util.log import logger
 
 
+@six.add_metaclass(ABCMeta)
 class AuthorizationHeader(object):
-    ''' Generic plugin to handle Authorization header. Must be extended and implement
-    some abstract methods in subclasses'''
-    __metaclass__ = ABCMeta
+    """ Generic plugin to handle Authorization header. Must be extended and implement
+    some abstract methods in subclasses """
 
     name = 'authorizationheader'
     api = 2
@@ -19,8 +20,8 @@ class AuthorizationHeader(object):
         self.keyword = keyword
 
     def setup(self, app):
-        ''' Make sure that other installed plugins don't affect the same
-            keyword argument.'''
+        """ Make sure that other installed plugins don't affect the same
+            keyword argument. """
         for other in app.plugins:
             if not isinstance(other, self.__class__):
                 continue
@@ -29,14 +30,15 @@ class AuthorizationHeader(object):
                                   "conflicting settings (non-unique keyword).")
 
     def apply(self, callback, context):
-        '''Test if the original callback accepts a 'self.keyword' keyword.'''
-        args = inspect.getargspec(context.callback)[0]
+        """ Test if the original callback accepts a 'self.keyword' keyword. """
+        args = inspect.getfullargspec(context.callback)[0] if six.PY3 \
+            else inspect.getargspec(context.callback)[0]
         logger.debug("Call: %s" % str(callback))
         if self.keyword not in args:
             return callback
 
         def wrapper(*args, **kwargs):
-            '''Check for user credentials in http header'''
+            """ Check for user credentials in http header """
             # Get Authorization
             header_value = self.get_authorization_header_value()
             new_kwargs = self.parse_authorization_value(header_value)
@@ -49,8 +51,8 @@ class AuthorizationHeader(object):
         return wrapper
 
     def get_authorization_header_value(self):
-        '''Get from the request the header of http basic auth:
-         http://en.wikipedia.org/wiki/Basic_access_authentication'''
+        """ Get from the request the header of http basic auth:
+         http://en.wikipedia.org/wiki/Basic_access_authentication """
         auth_type = self.get_authorization_type()
         if request.headers.get("Authorization", None) is not None:
             auth_line = request.headers.get("Authorization", None)

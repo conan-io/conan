@@ -11,14 +11,25 @@ from conans.unicode import get_cwd
 from conans.util.files import decode_text
 
 
+class _UnbufferedWrite(object):
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, *args, **kwargs):
+        self._stream.write(*args, **kwargs)
+        self._stream.flush()
+
+
 class ConanRunner(object):
 
-    def __init__(self, print_commands_to_output=False, generate_run_log_file=False, log_run_to_output=True):
+    def __init__(self, print_commands_to_output=False, generate_run_log_file=False,
+                 log_run_to_output=True, output=None):
         self._print_commands_to_output = print_commands_to_output
         self._generate_run_log_file = generate_run_log_file
         self._log_run_to_output = log_run_to_output
+        self._output = output
 
-    def __call__(self, command, output, log_filepath=None, cwd=None, subprocess=False):
+    def __call__(self, command, output=True, log_filepath=None, cwd=None, subprocess=False):
         """
         @param command: Command to execute
         @param output: Instead of print to sys.stdout print to that stream. Could be None
@@ -30,7 +41,10 @@ class ConanRunner(object):
             print("*** WARN: Invalid output parameter of type io.StringIO(), "
                   "use six.StringIO() instead ***")
 
-        stream_output = output if output and hasattr(output, "write") else sys.stdout
+        stream_output = output if output and hasattr(output, "write") else self._output or sys.stdout
+        if hasattr(output, "flush"):
+            # We do not want output from different streams to get mixed (sys.stdout, os.system)
+            stream_output = _UnbufferedWrite(stream_output)
 
         if not self._generate_run_log_file:
             log_filepath = None
@@ -42,7 +56,8 @@ class ConanRunner(object):
 
         with pyinstaller_bundle_env_cleaned():
             # No output has to be redirected to logs or buffer or omitted
-            if output is True and not log_filepath and self._log_run_to_output and not subprocess:
+            if (output is True and not self._output and not log_filepath and self._log_run_to_output
+                    and not subprocess):
                 return self._simple_os_call(command, cwd)
             elif log_filepath:
                 if stream_output:
@@ -120,7 +135,8 @@ if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
         :return: None
         """
         ld_library_path = os.environ['LD_LIBRARY_PATH']
-        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir, '').strip(';:')
+        os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir,
+                                                                '').strip(';:')
         yield
         os.environ['LD_LIBRARY_PATH'] = ld_library_path
 

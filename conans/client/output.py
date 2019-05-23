@@ -1,8 +1,28 @@
+import os
 import six
+import sys
 from colorama import Fore, Style
 
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text
+
+
+def colorama_initialize():
+    # Respect color env setting or check tty if unset
+    color_set = "CONAN_COLOR_DISPLAY" in os.environ
+    if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
+            or (not color_set
+                and hasattr(sys.stdout, "isatty")
+                and sys.stdout.isatty())):
+        import colorama
+        if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
+            colorama.init(convert=False, strip=False)
+        else:
+            colorama.init()
+        color = True
+    else:
+        color = False
+    return color
 
 
 class Color(object):
@@ -58,18 +78,22 @@ class ConanOutput(object):
                 data = decode_text(data)  # Keep python 2 compatibility
 
         if self._color and (front or back):
-            color = "%s%s" % (front or '', back or '')
-            end = (Style.RESET_ALL + "\n") if newline else Style.RESET_ALL  # @UndefinedVariable
-            data = "%s%s%s" % (color, data, end)
-        else:
-            if newline:
-                data = "%s\n" % data
+            data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
+        if newline:
+            data = "%s\n" % data
 
-        try:
-            self._stream.write(data)
-        except UnicodeError:
-            data = data.encode("utf8").decode("ascii", "ignore")
-            self._stream.write(data)
+        # https://github.com/conan-io/conan/issues/4277
+        # Windows output locks produce IOErrors
+        for _ in range(3):
+            try:
+                self._stream.write(data)
+                break
+            except IOError:
+                import time
+                time.sleep(0.02)
+            except UnicodeError:
+                data = data.encode("utf8").decode("ascii", "ignore")
+
         self._stream.flush()
 
     def info(self, data):
@@ -82,10 +106,10 @@ class ConanOutput(object):
         self.writeln(data, Color.BRIGHT_GREEN)
 
     def warn(self, data):
-        self.writeln("WARN: " + data, Color.BRIGHT_YELLOW)
+        self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW)
 
     def error(self, data):
-        self.writeln("ERROR: " + data, Color.BRIGHT_RED)
+        self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED)
 
     def input_text(self, data):
         self.write(data, Color.GREEN)
@@ -112,5 +136,6 @@ class ScopedOutput(ConanOutput):
         self._color = output._color
 
     def write(self, data, front=None, back=None, newline=False):
+        assert self.scope != "virtual", "printing with scope==virtual"
         super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
         super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)

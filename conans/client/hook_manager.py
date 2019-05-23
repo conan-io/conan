@@ -38,13 +38,13 @@ class HookManager(object):
         self._hook_names = hook_names
         self.hooks = defaultdict(list)
         self.output = output
+        self._attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker.py")
 
     def create_default_hooks(self):
-        attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker.py")
-        save(attribute_checker_path, attribute_checker_hook)
+        save(self._attribute_checker_path, attribute_checker_hook)
 
     def execute(self, method_name, **kwargs):
-        if not os.path.exists(os.path.join(self._hooks_folder, "attribute_checker.py")):
+        if not os.path.exists(self._attribute_checker_path):
             self.create_default_hooks()
         if not self.hooks:
             self.load_hooks()
@@ -53,7 +53,7 @@ class HookManager(object):
         for name, method in self.hooks[method_name]:
             try:
                 output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)
-                method(output, **kwargs)
+                method(output=output, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s\n%s" % (name, method_name, str(e),
                                                                    traceback.format_exc()))
@@ -63,8 +63,9 @@ class HookManager(object):
             self.load_hook(name)
 
     def load_hook(self, hook_name):
-        filename = "%s.py" % hook_name
-        hook_path = os.path.join(self._hooks_folder, filename)
+        if not hook_name.endswith(".py"):
+            hook_name = "%s.py" % hook_name
+        hook_path = os.path.normpath(os.path.join(self._hooks_folder, hook_name))
         try:
             hook = HookManager._load_module_from_file(hook_path)
             for method in valid_hook_methods:
@@ -72,9 +73,9 @@ class HookManager(object):
                 if hook_method:
                     self.hooks[method].append((hook_name, hook_method))
         except NotFoundException:
-            self.output.warn("Hook '%s' not found in %s folder. Please remove hook "
-                             "from conan.conf or include it inside the hooks folder."
-                             % (filename, self._hooks_folder))
+            self.output.warn("Hook '%s' not found in %s folder. Please remove hook from conan.conf "
+                             "or include it inside the hooks folder." % (hook_name,
+                                                                         self._hooks_folder))
         except Exception as e:
             raise ConanException("Error loading hook '%s': %s" % (hook_path, str(e)))
 
@@ -100,8 +101,14 @@ class HookManager(object):
                 module = sys.modules[added]
                 if module:
                     try:
-                        folder = os.path.dirname(module.__file__)
-                    except AttributeError:  # some module doesn't have __file__
+                        try:
+                            # Most modules will have __file__ != None
+                            folder = os.path.dirname(module.__file__)
+                        except (AttributeError, TypeError):
+                            # But __file__ might not exist or equal None
+                            # Like some builtins and Namespace packages py3
+                            folder = module.__path__._path[0]
+                    except AttributeError:  # In case the module.__path__ doesn't exist
                         pass
                     else:
                         if folder.startswith(current_dir):
@@ -110,9 +117,8 @@ class HookManager(object):
         except Exception:
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to load Hook in %s\n%s" % (hook_path,
-                                                                      '\n'.join(trace[3:])))
+                                                                    '\n'.join(trace[3:])))
         finally:
             sys.dont_write_bytecode = False
             sys.path.pop()
-
         return loaded

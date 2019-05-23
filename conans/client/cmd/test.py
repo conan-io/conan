@@ -14,7 +14,7 @@ class PackageTester(object):
         self._user_io = user_io
 
     def install_build_and_test(self, conanfile_abs_path, reference, graph_info,
-                               remote_name, update, build_modes=None, manifest_folder=None,
+                               remotes, update, build_modes=None, manifest_folder=None,
                                manifest_verify=False, manifest_interactive=False, keep_build=False,
                                test_build_folder=None):
         """
@@ -30,9 +30,9 @@ class PackageTester(object):
             build_modes = ["never"]
         try:
             self._manager.install(create_reference=reference,
-                                  reference=conanfile_abs_path,
+                                  ref_or_path=conanfile_abs_path,
                                   install_folder=test_build_folder,
-                                  remote_name=remote_name,
+                                  remotes=remotes,
                                   graph_info=graph_info,
                                   update=update,
                                   build_modes=build_modes,
@@ -42,7 +42,6 @@ class PackageTester(object):
                                   keep_build=keep_build)
             # FIXME: This is ugly access to graph_manager and hook_manager. Will be cleaned in 2.0
             build(self._manager._graph_manager, self._manager._hook_manager, conanfile_abs_path,
-                  self._user_io.out,
                   base_folder, test_build_folder, package_folder=None,
                   install_folder=test_build_folder, test=str(reference))
         finally:
