@@ -7,7 +7,7 @@ import uuid
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
@@ -139,6 +139,8 @@ class ConanFileLoader(object):
         try:
             self._initialize_conanfile(conanfile, processed_profile)
             return conanfile
+        except ConanInvalidConfiguration:
+            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 

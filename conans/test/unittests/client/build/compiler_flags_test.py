@@ -47,6 +47,12 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(arch_flag, '')
 
 
+        arch_flag = architecture_flag(os='AIX', arch='ppc32', compiler='gcc')
+        self.assertEqual(arch_flag, '-maix32')
+
+        arch_flag = architecture_flag(os='AIX', arch='ppc64', compiler='gcc')
+        self.assertEqual(arch_flag, '-maix64')
+
     def test_libcxx_flags(self):
         arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++')
         self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')

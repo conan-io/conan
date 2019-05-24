@@ -283,7 +283,7 @@ class CMakeDefinitionsBuilder(object):
                 ret['CONAN_CXX_FLAGS'] = flag
                 ret['CONAN_C_FLAGS'] = flag
         else:  # arch_flag is only set for non Visual Studio
-            arch_flag = architecture_flag(compiler=compiler, arch=arch)
+            arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
             if arch_flag:
                 ret['CONAN_CXX_FLAGS'] = arch_flag
                 ret['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
