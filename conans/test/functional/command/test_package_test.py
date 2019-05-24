@@ -46,9 +46,9 @@ class TestConanLib(ConanFile):
         client.run("test test_package Hello/0.1@lasote/stable")
 
         self.assertNotIn("Exporting package recipe", client.out)
-        self.assertNotIn("INFO: Forced build from source", client.out)
+        self.assertNotIn("Forced build from source", client.out)
         self.assertNotIn("Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertNotIn("INFO: Forced build from source", client.out)
+        self.assertNotIn("Forced build from source", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)

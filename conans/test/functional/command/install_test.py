@@ -218,7 +218,7 @@ class Pkg(ConanFile):
         self.client.run("install . %s --build=missing --build Hello1" % (self.settings))
         self.assertIn("Hello0/0.1@lasote/stable: Already installed!",
                       self.client.user_io.out)
-        self.assertIn("Hello1/0.1@lasote/stable: INFO: Forced build from source",
+        self.assertIn("Hello1/0.1@lasote/stable: Forced build from source",
                       self.client.user_io.out)
 
     def install_transitive_cache_test(self):
