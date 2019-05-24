@@ -117,8 +117,6 @@ class CmdUpload(object):
             layout = self._cache.package_layout(ref)
             metadata = layout.load_metadata()
             ref = ref.copy_with_rev(metadata.recipe.revision)
-            # TODO: Improve this definition of ref with revisions for the layout
-            layout._ref = ref
 
             remote = remotes.selected
             if remote:
@@ -173,6 +171,9 @@ class CmdUpload(object):
                     package_revision = metadata.packages[package_id].revision
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
+
+                # TODO: Improve this definition of ref with revisions for the layout
+                layout._ref = ref
                 refs_by_remote[ref_remote].append((ref, conanfile, layout, metadata, prefs))
 
         return refs_by_remote
@@ -402,7 +403,7 @@ class CmdUpload(object):
         self._user_io.out.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
-        read_manifest, expected_manifest = layout.package_manifests(pref.copy_clear_revs())
+        read_manifest, expected_manifest = layout.package_manifests(pref)
 
         if read_manifest != expected_manifest:
             self._user_io.out.writeln("")
