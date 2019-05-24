@@ -117,6 +117,9 @@ class CmdUpload(object):
             layout = self._cache.package_layout(ref)
             metadata = layout.load_metadata()
             ref = ref.copy_with_rev(metadata.recipe.revision)
+            # TODO: Improve this definition of ref with revisions for the layout
+            layout._ref = ref
+
             remote = remotes.selected
             if remote:
                 ref_remote = remote

@@ -17,6 +17,8 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     layout = cache.package_layout(ref)
     src_metadata = layout.load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
+    # TODO: Improve this definition of ref with revisions for the layout
+    layout._ref = ref
 
     conan_file_path = layout.conanfile()
     conanfile = loader.load_class(conan_file_path)
