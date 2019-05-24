@@ -340,8 +340,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'SunOS',
-                                     'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
+                                    ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
+                                     'SunOS', 'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
                       str(client.user_io.out))
 
         # Now add new settings to config and try again
