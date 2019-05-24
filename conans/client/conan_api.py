@@ -988,7 +988,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remove_system_reqs(self, ref):
-        self._cache.remove_system_reqs(ref)
+        self._cache.package_layout(ref).remove_system_reqs()
 
     @api_method
     def remove_system_reqs_by_pattern(self, pattern):
