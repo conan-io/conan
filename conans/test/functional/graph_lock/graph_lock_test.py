@@ -116,7 +116,7 @@ class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
 
 
 class GraphLockVersionRangeInfoTest(GraphLockVersionRangeTest):
-    graph_lock_command = "info . --output-folder=."
+    graph_lock_command = "info . --install-folder=."
 
 
 class GraphLockRevisionTest(unittest.TestCase):
