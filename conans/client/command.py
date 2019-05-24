@@ -336,7 +336,7 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      lock=args.lock)
+                                      install_folder=args.install_folder)
         except ConanException as exc:
             info = exc.info
             raise
@@ -400,9 +400,8 @@ class Command(object):
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help='Use this directory as the directory where to put the generator'
-                                 'files. e.g., conaninfo/conanbuildinfo.txt')
+        parser.add_argument("-l", "--use-lock", action='store_true', default=False,
+                            help="Use lock dependencies in lockfile")
 
         _add_manifests_arguments(parser)
 
@@ -434,7 +433,7 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           lock=args.lock)
+                                           use_lock=args.use_lock)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -450,8 +449,7 @@ class Command(object):
                                                      build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder,
-                                                     lock=args.lock)
+                                                     install_folder=args.install_folder)
         except ConanException as exc:
             info = exc.info
             raise
@@ -545,12 +543,6 @@ class Command(object):
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
-                            "files (from a previous conan install execution). Defaulted to "
-                            "current folder, unless --profile, -s or -o is specified. If you "
-                            "specify both install-folder and any setting/option "
-                            "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
@@ -618,8 +610,7 @@ class Command(object):
                                     profile_names=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
-                                    build=args.dry_build,
-                                    lock=args.lock)
+                                    build=args.dry_build)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -854,8 +845,6 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
-        parser.add_argument("-l", "--lock", nargs="?", const=".",
-                            help="Use lock dependencies in graph_info.json")
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -877,8 +866,7 @@ class Command(object):
                                           options=args.options,
                                           force=args.force,
                                           user=user,
-                                          channel=channel,
-                                          lock=args.lock)
+                                          channel=channel)
         except ConanException as exc:
             info = exc.info
             raise
@@ -902,15 +890,15 @@ class Command(object):
                                               "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
-        parser.add_argument("-l", "--lock", nargs="?", const=".",
-                            help="Use lock dependencies in graph_info.json")
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                            help='Use files from a previous conan installation')
 
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, lock=args.lock)
+                                  keep_source=args.keep_source, install_folder=args.install_folder)
 
     def remove(self, *args):
         """
@@ -1799,8 +1787,8 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
-    parser.add_argument("-l", "--lock", nargs="?", const=".",
-                        help="Use lock dependencies in graph_info.json")
+    parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                        help='Origin and destination of conan generated files')
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

@@ -13,7 +13,7 @@ class GraphLockErrorsTest(unittest.TestCase):
     def missing_lock_error_test(self):
         client = TestClient()
         client.save({"conanfile.py": str(TestConanFile("PkgA", "0.1"))})
-        client.run("install . --lock", assert_error=True)
+        client.run("install . --install-folder=. --use-lock", assert_error=True)
         self.assertIn("ERROR: Missing conan.lock file", client.out)
 
 
@@ -59,7 +59,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # To use the stored graph_info.json, it has to be explicit in "--install-folder"
-        client.run("install . -g=cmake --lock")
+        client.run("install . -g=cmake --install-folder=. --use-lock")
         self._check_lock("PkgB/0.1@None/None")
 
         self.assertIn("PkgA/0.1@user/channel", client.out)
@@ -69,7 +69,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertNotIn("PkgA/0.2/user/channel", cmake)
 
         # Info also works
-        client.run("info . --lock")
+        client.run("info . --install-folder=.")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
@@ -79,23 +79,23 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.2@user/channel: Already installed!", client.out)
         self.assertNotIn("PkgA/0.1@user/channel", client.out)
         # Explicit one
-        client.run("install PkgA/0.1@user/channel --lock")
+        client.run("install PkgA/0.1@user/channel --install-folder=.")
         self.assertIn("PkgA/0.1@user/channel: Already installed!", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
         # Range locked one
-        client.run("install PkgA/[>=0.1]@user/channel --lock")
+        client.run("install PkgA/[>=0.1]@user/channel --install-folder=.")
         self.assertIn("PkgA/0.1@user/channel: Already installed!", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . user/channel --lock")
+        self.client.run("export . user/channel --install-folder=.")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@user/channel --lock")
+        client.run("create . PkgB/0.1@user/channel --install-folder=.")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
@@ -103,7 +103,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        client.run("export-pkg . PkgB/0.1@user/channel --lock")
+        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=.")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -176,24 +176,24 @@ class GraphLockRevisionTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # This is a bit weird, that is necessary to force the --update the get the rigth revision
-        client.run("install . -g=cmake --lock --update")
+        client.run("install . -g=cmake --install-folder=. --use-lock --update")
         self._check_lock("PkgB/0.1@None/None")
         client.run("build .")
         self.assertIn("conanfile.py (PkgB/0.1@None/None): BUILD DEP LIBS: !!", client.out)
 
         # Info also works
-        client.run("info . --lock")
+        client.run("info . --install-folder=.")
         self.assertIn("Revision: b55538d56afb03f068a054f11310ce5a", client.out)
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . user/channel --lock")
+        self.client.run("export . user/channel --install-folder=.")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@user/channel --lock --update")
+        client.run("create . PkgB/0.1@user/channel --install-folder=. --update")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -201,7 +201,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client = self.client
         # Necessary to clean previous revision
         client.run("remove * -f")
-        client.run("export-pkg . PkgB/0.1@user/channel --lock")
+        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=.")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -266,7 +266,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=111", client.out)
         self.assertIn("conanfile.py (Pkg/None@None/None): BUILD VAR=111", client.out)
 
-        client.run("install . --lock")
+        client.run("install . --install-folder=. --use-lock")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
         self._check_lock("Pkg/None@None/None")
@@ -277,12 +277,12 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("package .")
         self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
 
-        client.run("info . --lock")
+        client.run("info . --install-folder=.")
         self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
 
     def create_test(self):
         client = self.client
-        client.run("create . Pkg/0.1@user/channel --lock")
+        client.run("create . Pkg/0.1@user/channel --install-folder=.")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
@@ -291,6 +291,6 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        client.run("export-pkg . Pkg/0.1@user/channel --lock")
+        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
