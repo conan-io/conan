@@ -12,12 +12,12 @@ from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXP
 from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty, walk)
 
 
-def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
+def complete_recipe_sources(remote_manager, layout, conanfile, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    sources_folder = cache.package_layout(ref, conanfile.short_paths).export_sources()
+    sources_folder = layout.export_sources()
     if os.path.exists(sources_folder):
         return None
 
@@ -27,15 +27,15 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
 
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = cache.package_layout(ref).load_metadata().recipe.remote
+    current_remote = layout.load_metadata().recipe.remote
     if current_remote:
         current_remote = remotes[current_remote]
     if not current_remote:
         raise ConanException("Error while trying to get recipe sources for %s. "
-                             "No remote defined" % str(ref))
+                             "No remote defined" % str(layout.ref))
 
-    export_path = cache.package_layout(ref).export()
-    remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+    export_path = layout.export()
+    remote_manager.get_recipe_sources(layout.ref, export_path, sources_folder, current_remote)
 
 
 def merge_directories(src, dst, excluded=None, symlinks=True):

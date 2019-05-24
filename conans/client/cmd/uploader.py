@@ -132,6 +132,7 @@ class CmdUpload(object):
                 try:
                     conanfile_path = layout.conanfile()
                     conanfile = self._loader.load_class(conanfile_path)
+                    layout.short_paths = conanfile.short_paths
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
                                              str(ref)))
@@ -211,7 +212,7 @@ class CmdUpload(object):
         current_remote_name = metadata.recipe.remote
 
         if remote.name != current_remote_name:
-            complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
+            complete_recipe_sources(self._remote_manager, layout, conanfile, remotes)
 
         conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,

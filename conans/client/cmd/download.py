@@ -12,14 +12,17 @@ def download(ref, package_ids, remote, recipe, remote_manager,
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
     ref = remote_manager.get_recipe(ref, remote)
-    with cache.package_layout(ref).update_metadata() as metadata:
+    layout = cache.package_layout(ref)
+    with layout.update_metadata() as metadata:
         metadata.recipe.remote = remote.name
 
-    conan_file_path = cache.package_layout(ref).conanfile()
+    conan_file_path = layout.conanfile()
     conanfile = loader.load_class(conan_file_path)
+    # TODO: Improve this, the cache layout might store short_paths without reading conanfile
+    layout.short_paths = conanfile.short_paths
 
     # Download the sources too, don't be lazy
-    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
+    complete_recipe_sources(remote_manager, layout, conanfile, remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary

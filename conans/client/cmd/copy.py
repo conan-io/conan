@@ -7,13 +7,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
 
 
-def _prepare_sources(cache, layout, ref, remote_manager, loader, remotes):
-    conan_file_path = layout.conanfile()
-    conanfile = loader.load_class(conan_file_path)
-    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
-    return conanfile.short_paths
-
-
 def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loader, remotes,
              force=False):
     """
@@ -24,10 +17,16 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     layout = cache.package_layout(ref)
     src_metadata = layout.load_metadata()
     ref = ref.copy_with_rev(src_metadata.recipe.revision)
-    short_paths = _prepare_sources(cache, layout, ref, remote_manager, loader, remotes)
+
+    conan_file_path = layout.conanfile()
+    conanfile = loader.load_class(conan_file_path)
+    # TODO: Improve this, the cache layout might store short_paths without reading conanfile
+    layout.short_paths = conanfile.short_paths
+    complete_recipe_sources(remote_manager, layout, conanfile, remotes)
+
     # package_ids = True means get all
     package_ids = layout.packages_ids() if package_ids is True else (package_ids or [])
-    package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
+    package_copy(ref, user_channel, package_ids, cache, user_io, conanfile.short_paths, force)
 
 
 def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths=False, force=False):
