@@ -61,7 +61,7 @@ def get_generator(settings):
         return base
 
     # The generator depends on the build machine, not the target
-    if os_build == "Windows":
+    if os_build == "Windows" and compiler != "qcc":
         return "MinGW Makefiles"  # it is valid only under Windows
 
     return "Unix Makefiles"
@@ -180,8 +180,10 @@ class CMakeDefinitionsBuilder(object):
             if cross_building(self._conanfile.settings):  # We are cross building
                 if os_ != os_build:
                     if os_:  # the_os is the host (regular setting)
-                        ret["CMAKE_SYSTEM_NAME"] = ("Darwin" if os_ in ["iOS", "tvOS", "watchOS"]
-                                                    else os_)
+                        ret["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
+                                                    "tvOS": "Darwin",
+                                                    "watchOS": "Darwin",
+                                                    "Neutrino": "QNX"}.get(os_, os_)
                     else:
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:

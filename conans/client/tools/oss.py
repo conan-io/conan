@@ -423,6 +423,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
                 machine = "powerpc"
         elif "arm" in arch:
             machine = "arm"
+        elif "ppc32be" in arch:
+            machine = "powerpcbe"
         elif "ppc64le" in arch:
             machine = "powerpc64le"
         elif "ppc64" in arch:
@@ -441,6 +443,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "s390x-ibm"
         elif "s390" in arch:
             machine = "s390-ibm"
+        elif "sh4" in arch:
+            machine = "sh4"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -466,8 +470,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
                  "Emscripten": "local-emscripten",
-                 "AIX": "ibm-aix"}.get(os_, os_.lower())
-
+                 "AIX": "ibm-aix",
+                 "Neutrino": "nto-qnx"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:

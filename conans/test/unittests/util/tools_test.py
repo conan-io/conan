@@ -792,7 +792,11 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
         ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
         ["AIX", "ppc32", None, "rs6000-ibm-aix"],
-        ["AIX", "ppc64", None, "powerpc-ibm-aix"]
+        ["AIX", "ppc64", None, "powerpc-ibm-aix"],
+        ["Neutrino", "armv7", None, "arm-nto-qnx"],
+        ["Neutrino", "armv8", None, "aarch64-nto-qnx"],
+        ["Neutrino", "sh4le", None, "sh4-nto-qnx"],
+        ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"]
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)

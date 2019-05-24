@@ -73,6 +73,8 @@ def libcxx_flag(compiler, libcxx):
                             "libstdcxx": "-library=stdcxx4",
                             "libstlport": "-library=stlport4",
                             "libstdc++": "-library=stdcpp"}.get(libcxx, ""))
+    elif str(compiler) == "qcc":
+        return "-Y _%s" % str(libcxx)
     return ""
 
 
@@ -114,7 +116,7 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang"]:
+        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.
@@ -133,7 +135,6 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
                      "MinSizeRel": ["-xO2", "-xspace"],
                      }.get(build_type, [])
             return flags
-
     return ""
 
 

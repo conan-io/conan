@@ -1714,7 +1714,7 @@ class SayConan(ConanFile):
             self.build_graph(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Macos',
-                                     'SunOS', 'Windows', 'WindowsCE', 'WindowsStore',
+                                     'Neutrino', 'SunOS', 'Windows', 'WindowsCE', 'WindowsStore',
                                      'iOS', 'tvOS', 'watchOS']),
                       str(cm.exception))
 
