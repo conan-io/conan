@@ -99,14 +99,6 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.conan_folder, "config_install.json")
 
-    def remove_system_reqs(self, ref):
-        try:
-            self.package_layout(ref).remove_system_reqs()
-            self._output.info(
-                "Cache system_reqs from %s has been removed" % repr(ref))
-        except Exception as error:
-            raise ConanException("Unable to remove system_reqs: %s" % error)
-
     def package_layout(self, ref, short_paths=None, *args, **kwargs):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
