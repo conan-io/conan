@@ -704,14 +704,31 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
 
         # Connection error
+        # Default behaviour
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests)
+        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 1)
+
+        # Retry arguments override defaults
         with six.assertRaisesRegex(self, ConanException, "Error downloading"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
-                           retry=3, retry_wait=0)
+                           retry=3, retry_wait=1)
+        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
+
+        # Retry default values from the config
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            with tools.environment_append({"CONAN_RETRY": "10"}):
+                with tools.environment_append({"CONAN_RETRY_WAIT": "0"}):
+                    tools.download("http://fakeurl3.es/nonexists",
+                                   os.path.join(temp_folder(), "file.txt"), out=out,
+                                   requester=requests)
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 9)
 
         # Not found error
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
         with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
