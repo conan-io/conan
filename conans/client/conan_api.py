@@ -379,7 +379,8 @@ class ConanAPIV1(object):
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
-                   options=None, env=None, force=False, user=None, version=None, cwd=None):
+                   options=None, env=None, force=False, user=None, version=None, cwd=None,
+                   use_lock=False):
 
         remotes = self._cache.registry.load_remotes()
         self._python_requires.enable_remotes(remotes=remotes)
@@ -410,7 +411,7 @@ class ConanAPIV1(object):
 
             # Checks that no both settings and info files are specified
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                        self._cache, self._user_io.out)
+                                        self._cache, self._user_io.out, use_lock=use_lock)
 
             new_ref = cmd_export(conanfile_path, name, version, user, channel, True,
                                  self._cache.config.revisions_enabled, self._user_io.out,
@@ -504,7 +505,8 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
-                          update=False, generators=None, install_folder=None, cwd=None):
+                          update=False, generators=None, install_folder=None, cwd=None,
+                          use_lock=False):
 
         try:
             recorder = ActionRecorder()
@@ -514,9 +516,8 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                        self._cache, self._user_io.out)
+                                        self._cache, self._user_io.out, use_lock=use_lock)
 
             if not generators:  # We don't want the default txt
                 generators = False
@@ -610,9 +611,11 @@ class ConanAPIV1(object):
 
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env):
         cwd = get_cwd()
+        use_lock = True
         try:
             ref = ConanFileReference.loads(reference_or_path)
-            install_folder = None
+            if install_folder:
+                install_folder = _make_abs_path(install_folder, cwd)
         except ConanException:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
@@ -622,9 +625,10 @@ class ConanAPIV1(object):
                 # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
                 if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
                     install_folder = cwd
+                    use_lock = False
 
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                    self._cache, self._user_io.out)
+                                    self._cache, self._user_io.out, use_lock=use_lock)
 
         return ref, graph_info
 
@@ -1207,7 +1211,12 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
 
     try:
         graph_info = GraphInfo.load(install_folder)
+        ref = graph_info.root
+        graph_info.root = ref
     except IOError:
+        if install_folder:
+            raise ConanException("Failed to load graphinfo file in install-folder: %s"
+                                 % install_folder)
         graph_info = GraphInfo()
         graph_info.root = root_ref
 

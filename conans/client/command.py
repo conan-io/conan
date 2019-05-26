@@ -449,7 +449,8 @@ class Command(object):
                                                      build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder)
+                                                     install_folder=args.install_folder,
+                                                     use_lock=args.use_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -845,6 +846,9 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
+        parser.add_argument("-l", "--use-lock", action='store_true', default=False,
+                            help="Use lock dependencies in lockfile")
+
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -866,7 +870,8 @@ class Command(object):
                                           options=args.options,
                                           force=args.force,
                                           user=user,
-                                          channel=channel)
+                                          channel=channel,
+                                          use_lock=args.use_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -1531,9 +1536,6 @@ class Command(object):
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
-        install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                                    help="Folder where the workspace files will be created"
-                                         " (default to current working directory)")
 
         args = parser.parse_args(*args)
 

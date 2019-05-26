@@ -559,9 +559,9 @@ class TestConan(ConanFile):
         client.run("install -o boost:shared=True --build missing .")
         output_3 = "%s" % client.out
         self.assertNotIn("ERROR", output_3)
-        self.assertEqual(output_0, output_1)
-        self.assertEqual(output_1, output_2)
-        self.assertEqual(output_2, output_3)
+        self.assertIn(output_0, output_1)
+        self.assertIn(output_0, output_2)
+        self.assertIn(output_0, output_3)
 
         client.run("install -o boost:shared=True --build boost . --build missing")
         output_4 = "%s" % client.out
