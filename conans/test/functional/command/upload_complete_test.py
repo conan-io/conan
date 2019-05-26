@@ -157,6 +157,15 @@ class UploadTest(unittest.TestCase):
     def upload_error_test(self):
         """Cause an error in the transfer and see some message"""
 
+        # Check for the default behaviour
+        client = self._get_client(BadConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm")
+        self.assertIn("Can't connect because of the evil mock", client.user_io.out)
+        self.assertIn("Waiting 5 seconds to retry...", client.user_io.out)
+
         # This will fail in the first put file, so, as we need to
         # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
         client = self._get_client(BadConnectionUploader)
