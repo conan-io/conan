@@ -83,7 +83,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel: Already installed!", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
         # Range locked one
-        client.run("install PkgA/[>=0.1]@user/channel --install-folder=.")
+        client.run("install PkgA/[>=0.1]@user/channel --install-folder=. --use-lock")
         self.assertIn("PkgA/0.1@user/channel: Already installed!", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
 
@@ -103,7 +103,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=.")
+        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=. --use-lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -291,6 +291,6 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
 
     def export_pkg_test(self):
         client = self.client
-        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.")
+        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --use-lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")

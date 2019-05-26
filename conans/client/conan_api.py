@@ -379,7 +379,8 @@ class ConanAPIV1(object):
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
-                   options=None, env=None, force=False, user=None, version=None, cwd=None):
+                   options=None, env=None, force=False, user=None, version=None, cwd=None,
+                   use_lock=False):
 
         remotes = self._cache.registry.load_remotes()
         self._python_requires.enable_remotes(remotes=remotes)
@@ -410,7 +411,7 @@ class ConanAPIV1(object):
 
             # Checks that no both settings and info files are specified
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                        self._cache, self._user_io.out)
+                                        self._cache, self._user_io.out, use_lock=use_lock)
 
             new_ref = cmd_export(conanfile_path, name, version, user, channel, True,
                                  self._cache.config.revisions_enabled, self._user_io.out,
@@ -504,22 +505,30 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
-                          update=False, generators=None, install_folder=None, cwd=None):
+                          update=False, generators=None, install_folder=None, cwd=None,
+                          use_lock=False):
 
         try:
             recorder = ActionRecorder()
             cwd = cwd or os.getcwd()
-            install_folder = _make_abs_path(install_folder, cwd)
 
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
             install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
+            if use_lock:
+                if not install_folder:
+                    raise ConanException("Please specify install-folder")
+                lock_folder = install_folder
+            else:
+                lock_folder = False
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                        self._cache, self._user_io.out)
+                                        self._cache, self._user_io.out, lock_folder=lock_folder)
 
             if not generators:  # We don't want the default txt
                 generators = False
+
+            install_folder = _make_abs_path(install_folder, cwd)
 
             mkdir(install_folder)
             remotes = self._cache.registry.load_remotes()
@@ -552,12 +561,20 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
 
-            install_folder = _make_abs_path(install_folder, cwd)
+            install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
+            if use_lock:
+                if not install_folder:
+                    raise ConanException("Please specify install-folder")
+                lock_folder = install_folder
+            else:
+                lock_folder = False
 
             graph_info = get_graph_info(profile_names, settings, options, env, cwd,
                                         install_folder, self._cache, self._user_io.out,
                                         name=name, version=version, user=user, channel=channel,
-                                        use_lock=use_lock)
+                                        lock_folder=lock_folder)
+
+            install_folder = _make_abs_path(install_folder, cwd)
 
             conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
@@ -608,7 +625,8 @@ class ConanAPIV1(object):
                                      requester=self._requester, config_type=config_type, args=args,
                                      source_folder=source_folder, target_folder=target_folder)
 
-    def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env):
+    def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env,
+                   use_lock=False):
         cwd = get_cwd()
         try:
             ref = ConanFileReference.loads(reference_or_path)
@@ -623,8 +641,14 @@ class ConanAPIV1(object):
                 if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
                     install_folder = cwd
 
+        if use_lock:
+            if not install_folder:
+                raise ConanException("Please specify install-folder")
+            lock_folder = install_folder
+        else:
+            lock_folder = False
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
-                                    self._cache, self._user_io.out)
+                                    self._cache, self._user_io.out, lock_folder=lock_folder)
 
         return ref, graph_info
 
@@ -661,9 +685,9 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-             profile_names=None, update=False, install_folder=None, build=None):
+             profile_names=None, update=False, install_folder=None, build=None, use_lock=False):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
-                                                settings, options, env)
+                                                settings, options, env, use_lock=use_lock)
         recorder = ActionRecorder()
         remotes = self._cache.registry.load_remotes()
         remotes.select(remote_name)
@@ -1201,26 +1225,33 @@ Conan = ConanAPIV1
 
 
 def get_graph_info(profile_names, settings, options, env, cwd, install_folder, cache, output,
-                   name=None, version=None, user=None, channel=None, use_lock=True):
-
+                   name=None, version=None, user=None, channel=None, lock_folder=None):
+    """ lock_folder=PATH => Lock must exist, and graph_info (source, build, package, imports)
+        lock_folder=False => Do not use lock (install, info)
+        lock_folder=None => Lock can exist, use it if existing (defined by install_folder)
+    """
     root_ref = ConanFileReference(name, version, user, channel, validate=False)
 
     try:
         graph_info = GraphInfo.load(install_folder)
     except IOError:
+        if install_folder:
+            raise ConanException("Failed to load graphinfo file in install-folder: %s"
+                                 % install_folder)
         graph_info = GraphInfo()
         graph_info.root = root_ref
 
-    if install_folder and os.path.isfile(os.path.join(install_folder, LOCKFILE)) and use_lock:
+    if lock_folder or (lock_folder is None and install_folder):
+        # load, must exist
         if profile_names or settings or options or env:
             raise ConanException("If using lockfiles, do not provide profiles, settings, or options")
-        graph_lock_file = GraphLockFile.load(install_folder)
+        graph_lock_file = GraphLockFile.load(lock_folder or install_folder)
         graph_info.graph_lock = graph_lock_file.graph_lock
         graph_info.profile = graph_lock_file.profile
         graph_info.profile.process_settings(cache, preprocess=False)
         return graph_info
 
-    if install_folder and os.path.isfile(os.path.join(install_folder, LOCKFILE)) and not use_lock:
+    if (lock_folder is None and install_folder and os.path.isfile(os.path.join(install_folder, LOCKFILE))):
         # FIXME: Convert to Exception in Conan 2.0
         output.warn("Ignoring information from lockfile in %s.\n"
                     "If you want to use it, apply --use-lock." % install_folder)
