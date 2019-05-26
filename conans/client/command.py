@@ -22,6 +22,7 @@ from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
 from conans.util.log import logger
+from conans.util.env_reader import get_env
 
 # Exit codes for conan command:
 SUCCESS = 0                         # 0: Success (done)

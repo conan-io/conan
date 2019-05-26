@@ -884,6 +884,10 @@ class ConanAPIV1(object):
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
+        if retry is None:
+            retry = get_env("CONAN_RETRY", 2)
+        if retry_wait is None:
+            retry_wait = get_env("CONAN_RETRY_WAIT", 5)
 
         upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,

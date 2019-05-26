@@ -20,6 +20,11 @@ class Uploader(object):
         self.verify = verify
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None, headers=None):
+        if retry is None:
+            retry = get_env("CONAN_RETRY", 1)
+        if retry_wait is None:
+            retry_wait = get_env("CONAN_RETRY_WAIT", 0)
+
         # Send always the header with the Sha1
         headers = headers or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
@@ -136,6 +141,10 @@ class Downloader(object):
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
+        if retry is None:
+            retry = get_env("CONAN_RETRY", 3)
+        if retry_wait is None:
+            retry_wait = get_env("CONAN_RETRY_WAIT", 0)
 
         if file_path and not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
@@ -255,8 +264,6 @@ def print_progress(output, units, progress=""):
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
-    if retry is None:
-        retry = get_env("CONAN_RETRY", 1)
     for counter in range(retry):
         try:
             return method(*args, **kwargs)
@@ -266,8 +273,6 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
             if counter == (retry - 1):
                 raise
             else:
-                if retry_wait is None:
-                    retry_wait = get_env("CONAN_RETRY_WAIT", 0)
                 if out:
                     out.error(exc)
                     out.info("Waiting %d seconds to retry..." % retry_wait)
