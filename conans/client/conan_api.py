@@ -976,6 +976,7 @@ class ConanAPIV1(object):
         for ref in search_recipes(self._cache, pattern=pattern):
             self.remove_system_reqs(ref)
 
+    @api_method
     def remove_locks(self):
         self._cache.remove_locks()
 
