@@ -23,7 +23,7 @@ class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
-                 set_cmake_flags=False, msbuild_verbosity=None, cmake_program=None,
+                 set_cmake_flags=False, msbuild_verbosity="minimal", cmake_program=None,
                  generator_platform=None):
         """
         :param conanfile: Conanfile instance
@@ -69,8 +69,7 @@ class CMake(object):
         self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
-        self.msbuild_verbosity = (os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity or
-                                  "minimal")
+        self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
 
     @property
     def build_folder(self):
