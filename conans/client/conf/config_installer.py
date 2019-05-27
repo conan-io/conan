@@ -90,9 +90,13 @@ def _process_folder(config, folder, cache, output):
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
             elif f in ("registry.txt", "registry.json"):
-                os.remove(cache.registry_path)
-                shutil.copy(os.path.join(root, f), cache.cache_folder)
-                migrate_registry_file(cache, output)
+                try:
+                    os.remove(cache.registry_path)
+                except OSError:
+                    pass
+                finally:
+                    shutil.copy(os.path.join(root, f), cache.cache_folder)
+                    migrate_registry_file(cache, output)
             elif f == "remotes.json":
                 # Fix for Conan 2.0
                 raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
