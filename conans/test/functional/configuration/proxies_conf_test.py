@@ -49,7 +49,7 @@ http=http://conan.url
                     """)
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = ConanRequester(client.cache)
+        requester = ConanRequester(client.cache.config)
 
         def verify_proxies(url, **kwargs):
             self.assertEqual(kwargs["proxies"],
