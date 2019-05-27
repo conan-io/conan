@@ -5,8 +5,6 @@ import platform
 import unittest
 from parameterized.parameterized import parameterized
 
-from nose.plugins.attrib import attr
-
 from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
     build_type_flags, format_defines, format_include_paths, format_libraries, \
     format_library_paths, libcxx_define, libcxx_flag, pic_flag, sysroot_flag
@@ -14,84 +12,57 @@ from conans.client.build.compiler_flags import adjust_path, architecture_flag, b
 
 class CompilerFlagsTest(unittest.TestCase):
 
-    def test_arch_flag(self):
-        for compiler in ("gcc", "clang", "sun-cc"):
-            arch_flag = architecture_flag(arch='x86', compiler=compiler)
-            self.assertEqual(arch_flag, '-m32')
+    @parameterized.expand([("gcc", "x86", None, "-m32"),
+                           ("clang", "x86", None, "-m32"),
+                           ("sun-cc", "x86", None, "-m32"),
+                           ("gcc", "x86_64", None, "-m64"),
+                           ("clang", "x86_64", None, "-m64"),
+                           ("sun-cc", "x86_64", None, "-m64"),
+                           ("sun-cc", "sparc", None, "-m32"),
+                           ("sun-cc", "sparcv9", None, "-m64"),
+                           ("gcc", "armv7", None, ""),
+                           ("clang", "armv7", None, ""),
+                           ("sun-cc", "armv7", None, ""),
+                           ("gcc", "s390", None, "-m31"),
+                           ("clang", "s390", None, "-m31"),
+                           ("sun-cc", "s390", None, "-m31"),
+                           ("gcc", "s390x", None, "-m64"),
+                           ("clang", "s390x", None, "-m64"),
+                           ("sun-cc", "s390x", None, "-m64"),
+                           ("Visual Studio", "x86", None, ""),
+                           ("Visual Studio", "x86_64", None, ""),
+                           ("gcc", "ppc32", "AIX", "-maix32"),
+                           ("gcc", "ppc64", "AIX", "-maix64"),
+                           ])
+    def test_arch_flag(self, compiler, arch, os, flag):
+        self.assertEqual(architecture_flag(compiler=compiler, arch=arch, os=os), flag)
 
-        arch_flag = architecture_flag(arch='sparc', compiler='sun-cc')
-        self.assertEqual(arch_flag, '-m32')
+    @parameterized.expand([("gcc", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
+                           ("gcc", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
+                           ("clang", "libstdc++", "_GLIBCXX_USE_CXX11_ABI=0"),
+                           ("clang", "libstdc++11", "_GLIBCXX_USE_CXX11_ABI=1"),
+                           ("clang", "libc++", ""),
+                           ("Visual Studio", None, ""),
+                           ])
+    def test_libcxx_define(self, compiler, libcxx, define):
+        self.assertEqual(libcxx_define(compiler=compiler, libcxx=libcxx), define)
 
-        for compiler in ("gcc", "clang", "sun-cc"):
-            arch_flag = architecture_flag(arch='x86_64', compiler=compiler)
-            self.assertEqual(arch_flag, '-m64')
-
-        arch_flag = architecture_flag(arch='sparcv9', compiler='sun-cc')
-        self.assertEqual(arch_flag, '-m64')
-
-        for compiler in ("gcc", "clang", "sun-cc"):
-            arch_flag = architecture_flag(arch='armv7', compiler=compiler)
-            self.assertEqual(arch_flag, '')
-
-        for compiler in ("gcc", "clang", "sun-cc"):
-            arch_flag = architecture_flag(arch='s390', compiler=compiler)
-            self.assertEqual(arch_flag, '-m31')
-
-        for compiler in ("gcc", "clang", "sun-cc"):
-            arch_flag = architecture_flag(arch='s390x', compiler=compiler)
-            self.assertEqual(arch_flag, '-m64')
-
-        arch_flag = architecture_flag(arch='x86', compiler='Visual Studio')
-        self.assertEqual(arch_flag, '')
-
-        arch_flag = architecture_flag(arch='x86_64', compiler='Visual Studio')
-        self.assertEqual(arch_flag, '')
-
-
-        arch_flag = architecture_flag(os='AIX', arch='ppc32', compiler='gcc')
-        self.assertEqual(arch_flag, '-maix32')
-
-        arch_flag = architecture_flag(os='AIX', arch='ppc64', compiler='gcc')
-        self.assertEqual(arch_flag, '-maix64')
-
-    def test_libcxx_flags(self):
-        arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++')
-        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
-
-        arch_define = libcxx_define(compiler='gcc', libcxx='libstdc++11')
-        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=1')
-
-        arch_flags = libcxx_flag(compiler='clang', libcxx='libc++')
-        self.assertEqual(arch_flags, '-stdlib=libc++')
-
-        arch_flags = libcxx_flag(compiler='clang', libcxx='libstdc++')
-        self.assertEqual(arch_flags, '-stdlib=libstdc++')
-
-        arch_define = libcxx_define(compiler='clang', libcxx='libstdc++')
-        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
-
-        arch_flags = libcxx_flag(compiler='clang', libcxx='libstdc++')
-        self.assertEqual(arch_flags, '-stdlib=libstdc++')
-        arch_define = libcxx_define(compiler='clang', libcxx='libstdc++')
-        self.assertEqual(arch_define, '_GLIBCXX_USE_CXX11_ABI=0')
-
-        arch_flags = libcxx_flag(compiler='apple-clang', libcxx='libc++')
-        self.assertEqual(arch_flags, '-stdlib=libc++')
-
-        arch_flags = libcxx_flag(compiler='Visual Studio', libcxx=None)
-        self.assertEqual(arch_flags, "")
-
-        arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libCstd')
-        self.assertEqual(arch_flags, '-library=Cstd')
-
-        arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstdcxx')
-        self.assertEqual(arch_flags, '-library=stdcxx4')
-
-        arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstlport')
-        self.assertEqual(arch_flags, '-library=stlport4')
-
-        arch_flags = libcxx_flag(compiler='sun-cc', libcxx='libstdc++')
-        self.assertEqual(arch_flags, '-library=stdcpp')
+    @parameterized.expand([("gcc", "libstdc++", ""),
+                           ("gcc", "libstdc++11", ""),
+                           ("clang", "libstdc++", "-stdlib=libstdc++"),
+                           ("clang", "libstdc++11", "-stdlib=libstdc++"),
+                           ("clang", "libc++", "-stdlib=libc++"),
+                           ("apple-clang", "libstdc++", "-stdlib=libstdc++"),
+                           ("apple-clang", "libstdc++11", "-stdlib=libstdc++"),
+                           ("apple-clang", "libc++", "-stdlib=libc++"),
+                           ("Visual Studio", None, ""),
+                           ("sun-cc", "libCstd", "-library=Cstd"),
+                           ("sun-cc", "libstdcxx", "-library=stdcxx4"),
+                           ("sun-cc", "libstlport", "-library=stlport4"),
+                           ("sun-cc", "libstdc++", "-library=stdcpp")
+                           ])
+    def test_libcxx_flags(self, compiler, libcxx, flag):
+        self.assertEqual(libcxx_flag(compiler=compiler, libcxx=libcxx), flag)
 
     @parameterized.expand([("cxx",),
                            ("gpp",),
@@ -115,77 +86,36 @@ class CompilerFlagsTest(unittest.TestCase):
         flags = pic_flag(compiler='Visual Studio')
         self.assertEqual(flags, "")
 
-    def test_build_type_flags(self):
-        flags = build_type_flags(compiler='Visual Studio', build_type='Debug')
-        self.assertEqual(" ".join(flags), '-Zi -Ob0 -Od')
+    @parameterized.expand([("Visual Studio", "Debug", None, "-Zi -Ob0 -Od"),
+                           ("Visual Studio", "Release", None, "-O2 -Ob2"),
+                           ("Visual Studio", "RelWithDebInfo", None, "-Zi -O2 -Ob1"),
+                           ("Visual Studio", "MinSizeRel", None, "-O1 -Ob1"),
+                           ("Visual Studio", "Debug", "v140_clang_c2", "-gline-tables-only -fno-inline -O0"),
+                           ("Visual Studio", "Release", "v140_clang_c2", "-O2"),
+                           ("Visual Studio", "RelWithDebInfo", "v140_clang_c2", "-gline-tables-only -O2 -fno-inline"),
+                           ("Visual Studio", "MinSizeRel", "v140_clang_c2", ""),
+                           ("gcc", "Debug", None, "-g"),
+                           ("gcc", "Release", None, "-O3 -s"),
+                           ("gcc", "RelWithDebInfo", None, "-O2 -g"),
+                           ("gcc", "MinSizeRel", None, "-Os"),
+                           ("clang", "Debug", None, "-g"),
+                           ("clang", "Release", None, "-O3"),
+                           ("clang", "RelWithDebInfo", None, "-O2 -g"),
+                           ("clang", "MinSizeRel", None, "-Os"),
+                           ("apple-clang", "Debug", None, "-g"),
+                           ("apple-clang", "Release", None, "-O3"),
+                           ("apple-clang", "RelWithDebInfo", None, "-O2 -g"),
+                           ("apple-clang", "MinSizeRel", None, "-Os"),
+                           ("sun-cc", "Debug", None, "-g"),
+                           ("sun-cc", "Release", None, "-xO3"),
+                           ("sun-cc", "RelWithDebInfo", None, "-xO2 -g"),
+                           ("sun-cc", "MinSizeRel", None, "-xO2 -xspace"),
+                           ])
+    def test_build_type_flags(self, compiler, build_type, vs_toolset, flags):
+        self.assertEqual(' '.join(build_type_flags(compiler=compiler, build_type=build_type, vs_toolset=vs_toolset)),
+                         flags)
 
-        flags = build_type_flags(compiler='Visual Studio', build_type='Release')
-        self.assertEqual(" ".join(flags), "-O2 -Ob2")
-
-        flags = build_type_flags(compiler='Visual Studio', build_type='RelWithDebInfo')
-        self.assertEqual(" ".join(flags), '-Zi -O2 -Ob1')
-
-        flags = build_type_flags(compiler='Visual Studio', build_type='MinSizeRel')
-        self.assertEqual(" ".join(flags), '-O1 -Ob1')
-
-        # With clang toolset
-        flags = build_type_flags(compiler='Visual Studio', build_type='Debug',
-                                 vs_toolset="v140_clang_c2")
-        self.assertEqual(" ".join(flags), '-gline-tables-only -fno-inline -O0')
-
-        flags = build_type_flags(compiler='Visual Studio', build_type='Release',
-                                 vs_toolset="v140_clang_c2")
-        self.assertEqual(" ".join(flags), "-O2")
-
-        flags = build_type_flags(compiler='Visual Studio', build_type='RelWithDebInfo',
-                                 vs_toolset="v140_clang_c2")
-        self.assertEqual(" ".join(flags), '-gline-tables-only -O2 -fno-inline')
-
-        flags = build_type_flags(compiler='Visual Studio', build_type='MinSizeRel',
-                                 vs_toolset="v140_clang_c2")
-        self.assertEqual(" ".join(flags), '')
-
-        # GCC
-
-        flags = build_type_flags(compiler='gcc', build_type='Debug')
-        self.assertEqual(" ".join(flags), '-g')
-
-        flags = build_type_flags(compiler='gcc', build_type='Release')
-        self.assertEqual(" ".join(flags), '-O3 -s')
-
-        flags = build_type_flags(compiler='gcc', build_type='RelWithDebInfo')
-        self.assertEqual(" ".join(flags), '-O2 -g')
-
-        flags = build_type_flags(compiler='gcc', build_type='MinSizeRel')
-        self.assertEqual(" ".join(flags), '-Os')
-
-        flags = build_type_flags(compiler='clang', build_type='Debug')
-        self.assertEqual(" ".join(flags), '-g')
-
-        flags = build_type_flags(compiler='clang', build_type='Release')
-        self.assertEqual(" ".join(flags), '-O3')
-
-        flags = build_type_flags(compiler='clang', build_type='RelWithDebInfo')
-        self.assertEqual(" ".join(flags), '-O2 -g')
-
-        flags = build_type_flags(compiler='clang', build_type='MinSizeRel')
-        self.assertEqual(" ".join(flags), '-Os')
-
-        # SUN CC
-
-        flags = build_type_flags(compiler='sun-cc', build_type='Debug')
-        self.assertEqual(" ".join(flags), '-g')
-
-        flags = build_type_flags(compiler='sun-cc', build_type='Release')
-        self.assertEqual(" ".join(flags), '-xO3')
-
-        flags = build_type_flags(compiler='sun-cc', build_type='RelWithDebInfo')
-        self.assertEqual(" ".join(flags), '-xO2 -g')
-
-        flags = build_type_flags(compiler='sun-cc', build_type='MinSizeRel')
-        self.assertEqual(" ".join(flags), '-xO2 -xspace')
-
-        # Define
+    def test_build_type_define(self):
         define = build_type_define(build_type='Release')
         self.assertEqual(define, 'NDEBUG')
 
@@ -196,12 +126,10 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual('"home/www root"', adjust_path('home\\www root'))
         self.assertEqual('"home/www root"', adjust_path('home\\www root', compiler='gcc'))
 
-    @attr('visual_studio')
+    @unittest.skipUnless(platform.system() == "Windows", "requires Windows")
     def test_adjust_path_visual_studio(self):
         #  NOTE : test cannot be run on *nix systems, as adjust_path uses
         # tools.unix_path which is Windows-only
-        if platform.system() != "Windows":
-            return
         self.assertEqual('home\\www', adjust_path('home/www', compiler='Visual Studio'))
         self.assertEqual('"home\\www root"',
                           adjust_path('home/www root', compiler='Visual Studio'))
