@@ -12,13 +12,13 @@ from conans.util.files import load
 
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
+os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
+arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
-os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm]
+os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
+arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -44,10 +44,13 @@ os:
         version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
+    AIX:
     Arduino:
         board: ANY
     Emscripten:
-arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm]
+    Neutrino:
+        version: ["6.4", "6.5", "6.6", "7.0"]
+arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -58,8 +61,8 @@ compiler:
                   "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
                   "7", "7.1", "7.2", "7.3",
-                  "8", "8.1", "8.2",
-                  "9"]
+                  "8", "8.1", "8.2", "8.3",
+                  "9", "9.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -82,6 +85,9 @@ compiler:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+    qcc:
+        version: ["4.4", "5.4"]
+        libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
 
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
@@ -152,10 +158,14 @@ path = ./data
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
+# http =
+#   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
@@ -358,11 +368,18 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def request_timeout(self):
+        timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
+        if not timeout:
+            try:
+                timeout = self.get_item("general.request_timeout")
+            except ConanException:
+                return None
+
         try:
-            return self.get_item("general.request_timeout")
-        except ConanException:
-            return None
-    
+            return float(timeout) if timeout is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'request_timeout'")
+              
     @property
     def retry(self):
         try:
@@ -429,28 +446,26 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def proxies(self):
-        """ optional field, might not exist
-        """
-        try:
+        try:  # optional field, might not exist
             proxies = self.get_conf("proxies")
-            # If there is proxies section, but empty, it will try to use system proxy
-            if not proxies:
-                # We don't have evidences that this following line is necessary.
-                # If the proxies has been
-                # configured at system level, conan will use it, and shouldn't be necessary
-                # to return here the proxies read from the system.
-                # Furthermore, the urls excluded for use proxies at system level do not work in
-                # this case, then the only way is to remove the [proxies] section with
-                # conan config remote proxies, then this method will return None and the proxies
-                # dict passed to requests will be empty.
-                # We don't remove this line because we are afraid to break something, but maybe
-                # until now is working because no one is using system-wide proxies or those proxies
-                # rules don't contain excluded urls.c #1777
-                return urllib.request.getproxies()
-            result = {k: (None if v == "None" else v) for k, v in proxies}
-            return result
-        except:
+        except Exception:
             return None
+        result = {}
+        # Handle proxy specifications of the form:
+        # http = http://proxy.xyz.com
+        #   special-host.xyz.com = http://special-proxy.xyz.com
+        # (where special-proxy.xyz.com is only used as a proxy when special-host.xyz.com)
+        for scheme, proxy_string in proxies or []:
+            if proxy_string is None or proxy_string == "None":
+                result[scheme] = None
+            else:
+                for line in proxy_string.splitlines():
+                    proxy_value = [t.strip() for t in line.split("=", 1)]
+                    if len(proxy_value) == 2:
+                        result[scheme+"://"+proxy_value[0]] = proxy_value[1]
+                    elif proxy_value[0]:
+                        result[scheme] = proxy_value[0]
+        return result
 
     @property
     def cacert_path(self):

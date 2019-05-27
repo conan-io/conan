@@ -323,7 +323,7 @@ class FooConan(ConanFile):
 """
         client.save({CONANFILE: conanfile})
         client.run("create --build foo/1.0@user/stable . user/stable")
-        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
+        self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
 
     def build_multiple_full_reference_test(self):
         client = TestClient()
@@ -347,8 +347,8 @@ class BarConan(ConanFile):
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("create --build foo/1.0@user/stable --build bar/1.0@user/testing . user/testing")
-        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
-        self.assertIn("bar/1.0@user/testing: WARN: Forced build from source", client.out)
+        self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
+        self.assertIn("bar/1.0@user/testing: Forced build from source", client.out)
 
     def debug_build_release_deps_test(self):
         # https://github.com/conan-io/conan/issues/2899

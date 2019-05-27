@@ -1,10 +1,12 @@
 import os
+import platform
+import stat
 import unittest
 
 from conans import load
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import GenConanfile, TurboTestClient
+from conans.test.utils.tools import GenConanfile, TurboTestClient, NO_SETTINGS_PACKAGE_ID
 
 
 class DeployGeneratorTest(unittest.TestCase):
@@ -106,3 +108,33 @@ class DeployGeneratorGraphTest(unittest.TestCase):
     def file_paths_test(self):
         for path in self.get_expected_paths():
             self.assertTrue(os.path.exists(path))
+
+
+class DeployGeneratorPermissionsTest(unittest.TestCase):
+    """
+    Test files deployed by the deploy generator are copied with same permissions
+    """
+
+    def setUp(self):
+        conanfile1 = GenConanfile()
+        conanfile1.with_package_file("include/header1.h", "whatever")
+        self.ref1 = ConanFileReference("name1", "version", "user", "channel")
+
+        self.client = TurboTestClient()
+        self.client.create(self.ref1, conanfile1)
+        layout = self.client.cache.package_layout(self.ref1)
+        package_folder = layout.package(PackageReference(self.ref1, NO_SETTINGS_PACKAGE_ID))
+        self.header_path = os.path.join(package_folder, "include", "header1.h")
+        self.assertTrue(os.path.exists(self.header_path))
+
+    @unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+    def same_permissions_test(self):
+        stat_info = os.stat(self.header_path)
+        self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
+        os.chmod(self.header_path, stat_info.st_mode | stat.S_IXUSR)
+        self.client.current_folder = temp_folder()
+        self.client.run("install %s -g deploy" % self.ref1.full_repr())
+        base1_path = os.path.join(self.client.current_folder, "name1")
+        header1_path = os.path.join(base1_path, "include", "header1.h")
+        stat_info = os.stat(header1_path)
+        self.assertTrue(stat_info.st_mode & stat.S_IXUSR)

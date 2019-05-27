@@ -70,7 +70,7 @@ class HeaderOnlyLibTestClient(TestClient):
             self.save({"mylayout": self.conan_inrepo_layout, })
 
         if use_cache_file:
-            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            file_path = os.path.join(self.cache.cache_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
             save(file_path, self.conan_cache_layout)
 
     def update_hello_word(self, hello_word):

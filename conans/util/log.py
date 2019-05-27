@@ -40,6 +40,7 @@ def configure_logger():
     logger.setLevel(logging_level)
     return logger
 
+
 logger = configure_logger()
 
 # CRITICAL = 50

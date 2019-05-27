@@ -1,7 +1,6 @@
 import fnmatch
 import os
 import platform
-
 import requests
 import time
 
@@ -12,7 +11,9 @@ from conans.util.tracer import log_client_rest_api_call
 
 class ConanRequester(object):
 
-    def __init__(self, requester, cache, timeout):
+    def __init__(self, cache, http_requester=None):
+        self._http_requester = http_requester if http_requester else requests.Session()
+        timeout = cache.config.request_timeout
         self.proxies = cache.config.proxies or {}
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -24,7 +25,6 @@ class ConanRequester(object):
         if no_proxy:
             os.environ["NO_PROXY"] = no_proxy
 
-        self._requester = requester
         self._cache = cache
 
         if not os.path.exists(self._cache.cacert_path):
@@ -87,12 +87,12 @@ class ConanRequester(object):
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
             for var_name in ("http_proxy", "https_proxy", "no_proxy"):
-                popped = popped or os.environ.pop(var_name, None)
-                popped = popped or os.environ.pop(var_name.upper(), None)
+                popped = True if os.environ.pop(var_name, None) else popped
+                popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             t1 = time.time()
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(self._requester, method)(url, **all_kwargs)
+            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             duration = time.time() - t1
             log_client_rest_api_call(url, method.upper(), duration, all_kwargs.get("headers"))
             return tmp
