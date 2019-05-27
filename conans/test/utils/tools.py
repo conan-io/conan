@@ -15,7 +15,6 @@ from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
 import bottle
-import nose
 import requests
 import six
 import time
@@ -23,18 +22,19 @@ from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
+from requests.exceptions import HTTPError
 
 from conans import tools, load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
-from conans.client.conan_command_output import CommandOutputer
+from conans.client.conan_api import Conan, migrate_and_get_cache
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -48,7 +48,6 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
@@ -56,6 +55,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -108,6 +108,18 @@ class TestingResponse(object):
     @property
     def ok(self):
         return self.test_response.status_code == 200
+
+    def raise_for_status(self):
+        """Raises stored :class:`HTTPError`, if one occurred."""
+        http_error_msg = ''
+        if 400 <= self.status_code < 500:
+            http_error_msg = u'%s Client Error: %s' % (self.status_code, self.content)
+
+        elif 500 <= self.status_code < 600:
+            http_error_msg = u'%s Server Error: %s' % (self.status_code, self.content)
+
+        if http_error_msg:
+            raise HTTPError(http_error_msg, response=self)
 
     @property
     def content(self):
@@ -759,7 +771,7 @@ servers["r2"] = TestServer()
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
         self.cache = ClientCache(self.base_folder, output)
-        self.runner = TestRunner(output, runner=self.conan_runner)
+        self.runner = self.conan_runner or ConanRunner(output=output)
 
         # Check if servers are real
         real_servers = False
@@ -777,8 +789,7 @@ servers["r2"] = TestServer()
                 else:
                     requester = TestRequester(self.servers)
 
-            self.requester = ConanRequester(requester, self.cache,
-                                            get_request_timeout())
+            self.requester = ConanRequester(self.cache, requester)
 
             self.hook_manager = HookManager(self.cache.hooks_path,
                                             get_env("CONAN_HOOKS", list()), self.user_io.out)
@@ -806,13 +817,12 @@ servers["r2"] = TestServer()
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
                           self.hook_manager, requester, interactive=interactive)
-        outputer = CommandOutputer(self.user_io, self.cache)
-        command = Command(conan, self.cache, self.user_io, outputer)
+        command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.cache.conan_folder, "python"))
+        sys.path.append(os.path.join(self.cache.cache_folder, "python"))
         old_modules = list(sys.modules.keys())
 
         old_output, old_requester = set_global_instances(output, requester)

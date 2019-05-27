@@ -55,7 +55,7 @@ class GraphBinariesAnalyzer(object):
             return
 
         if build_mode.forced(conanfile, ref):
-            output.warn('Forced build from source')
+            output.info('Forced build from source')
             node.binary = BINARY_BUILD
             node.prev = None
             return
