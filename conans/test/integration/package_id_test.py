@@ -23,9 +23,10 @@ class Pkg(ConanFile):
     settings = "os", "arch", "compiler", "os_build", "arch_build"
         """
         client.save({"conanfile.py": conanfile})
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
-                   '-s compiler.version=15 -s compiler.runtime=MD '
-                   '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
+        with catch_deprecation_warning(self, n=2):
+            client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                       '-s compiler.version=15 -s compiler.runtime=MD '
+                       '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("compiler.toolset=None", conaninfo)
         self.assertNotIn("os_build=None", conaninfo)
@@ -288,12 +289,13 @@ class Pkg(ConanFile):
             self._export("Hello", "1.2.0", package_id_text=package_id_text,
                          channel="user/testing",
                          settings='"os", "os_build", "arch", "arch_build"')
-            self.client.run('install Hello/1.2.0@user/testing '
-                            ' -s os="Windows" '
-                            ' -s os_build="Linux"'
-                            ' -s arch="x86_64"'
-                            ' -s arch_build="x86"'
-                            ' --build missing')
+            with catch_deprecation_warning(self, n=2):
+                self.client.run('install Hello/1.2.0@user/testing '
+                                ' -s os="Windows" '
+                                ' -s os_build="Linux"'
+                                ' -s arch="x86_64"'
+                                ' -s arch_build="x86"'
+                                ' --build missing')
 
             ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
             pkg = os.listdir(self.client.cache.package_layout(ref).packages())
@@ -307,9 +309,10 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.arch_build), "None")
 
         # Package has to be present with only os and arch settings
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os="Windows" '
-                        ' -s arch="x86_64"')
+        with catch_deprecation_warning(self, n=1):
+            self.client.run('install Hello/1.2.0@user/testing '
+                            ' -s os="Windows" '
+                            ' -s arch="x86_64"')
 
         # Even with wrong build settings
         self.client.run('install Hello/1.2.0@user/testing '

@@ -1,3 +1,5 @@
+import warnings
+
 import yaml
 
 from conans.errors import ConanException
@@ -23,6 +25,13 @@ def undefined_field(name, field, fields=None, value=None):
 
 def undefined_value(name):
     return ConanException("'%s' value not defined" % name)
+
+
+def xbuild_deprecation(setting_name):
+    if setting_name in ["os_build", "arch_build", "os_target", "arch_target"]:
+        warnings.warn("Setting '{}' is deprecated in favor of the new"
+                      " cross-compiling model. Please, refer to the docs and"
+                      " actualize your recipe.".format(setting_name))
 
 
 class SettingsItem(object):
@@ -255,6 +264,7 @@ class Settings(object):
         self._data = {}
 
     def _check_field(self, field):
+        xbuild_deprecation(field)
         if field not in self._data:
             raise undefined_field(self._name, field, self.fields, self._parent_value)
 

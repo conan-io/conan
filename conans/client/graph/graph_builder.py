@@ -277,7 +277,10 @@ class DepsGraphBuilder(object):
                 with conanfile_exception_formatter(str(conanfile), "configure"):
                     conanfile.configure()
 
-                conanfile.settings.validate()  # All has to be ok!
+                import warnings
+                with warnings.catch_warnings(record=True):
+                    warnings.filterwarnings("always")
+                    conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
 
                 # Update requirements (overwrites), computing new upstream

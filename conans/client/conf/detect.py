@@ -177,7 +177,6 @@ def _detect_os_arch(result, output):
                      'sun4v': 'sparc'}
     the_os = detected_os()
     result.append(("os", the_os))
-    result.append(("os_build", the_os))
     platform_machine = platform.machine().lower()
     if platform_machine:
         arch = architectures.get(platform_machine, platform_machine)
@@ -190,7 +189,6 @@ def _detect_os_arch(result, output):
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
         result.append(("arch", arch))
-        result.append(("arch_build", arch))
 
 
 def detect_defaults_settings(output, profile_path):

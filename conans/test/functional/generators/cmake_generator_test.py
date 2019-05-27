@@ -2,8 +2,8 @@ import os
 import unittest
 
 from conans import tools
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
-
 
 CONAN_RECIPE = """
 from conans import ConanFile, CMake
@@ -48,8 +48,9 @@ class CMakeGeneratorTest(unittest.TestCase):
                      "dummy.cpp": CPP_CONTENT,
                      "my_profile": PROFILE.format(os_build=os_build)
                      })
-        client.run("install . -p my_profile")
-        client.run("build .")
+        with catch_deprecation_warning(self, n=3):
+            client.run("install . -p my_profile")
+            client.run("build .")
 
         if generator:
             self.assertIn('cmake -G "{}"'.format(generator), client.out)

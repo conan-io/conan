@@ -134,15 +134,25 @@ class ConanFile(object):
         self.settings = create_settings(self, settings)
 
         try:
-            if self.settings.os_build and self.settings.os:
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-                self.output.writeln("  This package defines both 'os' and 'os_build' ",
+            import warnings
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                cross_building_old = ['os_build', 'arch_build', 'os_target', 'arch_target']
+                old_xbuild = any([self.settings.get_safe(it) for it in cross_building_old])
+
+            if old_xbuild:
+                self.output.writeln("*" * 60, front=Color.BRIGHT_RED)
+                self.output.writeln("  This package defines 'os_build' or 'arch_build' settings",
                                     front=Color.BRIGHT_RED)
-                self.output.writeln("  Please use 'os' for libraries and 'os_build'",
+                self.output.writeln("  (or the 'os_target' and 'arch_target' ones)",
                                     front=Color.BRIGHT_RED)
-                self.output.writeln("  only for build-requires used for cross-building",
+                self.output.writeln("  that are deprecated in favor of 'host' and 'build'",
                                     front=Color.BRIGHT_RED)
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
+                self.output.writeln("  configurations. Review the documentation section about",
+                                    front=Color.BRIGHT_RED)
+                self.output.writeln("  cross-building to know more about it.",
+                                    front=Color.BRIGHT_RED)
+                self.output.writeln("*" * 60, front=Color.BRIGHT_RED)
         except ConanException:
             pass
 
