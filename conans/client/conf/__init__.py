@@ -379,20 +379,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return float(timeout) if timeout is not None else None
         except ValueError:
             raise ConanException("Specify a numeric parameter for 'request_timeout'")
-              
-    @property
-    def retry(self):
-        try:
-            return self.get_item("general.retry")
-        except ConanException:
-            return None
-
-    @property
-    def retry_wait(self):
-        try:
-            return self.get_item("general.retry_wait")
-        except ConanException:
-            return None
 
     @property
     def revisions_enabled(self):
