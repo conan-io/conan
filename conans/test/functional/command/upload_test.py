@@ -136,6 +136,17 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading package 1/1: {} to 'default'".format(NO_SETTINGS_PACKAGE_ID),
                       client.out)
 
+    def upload_with_pref_and_p_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing:{} -c -p {}".format(NO_SETTINGS_PACKAGE_ID,
+                                                                         NO_SETTINGS_PACKAGE_ID),
+                   assert_error=True)
+
+        self.assertIn("Use a full package reference (preferred) or the "
+                      "`--package` command argument, but not both.", client.out)
+
     def _client(self):
         if not hasattr(self, "_servers"):
             servers = {}
