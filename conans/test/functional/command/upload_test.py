@@ -115,6 +115,27 @@ class UploadTest(unittest.TestCase):
         client.run("upload Pkg/0.1@user/channel -p hash1", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
+    def deprecated_p_arg_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing -p {} -c".format(NO_SETTINGS_PACKAGE_ID))
+        self.assertIn("WARN: Usage of `--package` argument is deprecated. "
+                      "Use a full reference instead: `conan upload [...] "
+                      "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+    def upload_with_pref_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing:{} -c".format(NO_SETTINGS_PACKAGE_ID))
+        self.assertNotIn("WARN: Usage of `--package` argument is deprecated. "
+                         "Use a full reference instead: `conan upload [...] "
+                         "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID),
+                         client.out)
+        self.assertIn("Uploading package 1/1: {} to 'default'".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+
     def _client(self):
         if not hasattr(self, "_servers"):
             servers = {}
