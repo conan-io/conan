@@ -116,9 +116,9 @@ _target_template = """
     conan_package_library_targets("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
                                   CONAN_PACKAGE_TARGETS_{uname}_RELEASE "{deps}" "release" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "{deps}" "release" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "{deps}" "relwithdebinfo" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "{deps}" "release" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "{deps}" "minsizerel" {pkg_name})
 
     add_library({name} INTERFACE IMPORTED)
 
@@ -508,6 +508,10 @@ macro(conan_global_flags)
                                   CONAN_LIBS_DEBUG)
     conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
                                   CONAN_LIBS_RELEASE)
+    conan_find_libraries_abs_path("${CONAN_LIBS_RELWITHDEBINFO}" "${CONAN_LIB_DIRS_RELWITHDEBINFO}"
+                                  CONAN_LIBS_RELWITHDEBINFO)
+    conan_find_libraries_abs_path("${CONAN_LIBS_MINSIZEREL}" "${CONAN_LIB_DIRS_MINSIZEREL}"
+                                  CONAN_LIBS_MINSIZEREL)
 
     add_compile_options(${CONAN_DEFINES}
                         "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
@@ -675,6 +679,14 @@ else()
     message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
+endif()
+
+if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
+endif()
+
 macro(conan_set_vs_runtime)
     # This conan_set_vs_runtime is MORE opinionated than the regular one. It will
     # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
@@ -698,12 +710,19 @@ endmacro()
 
 macro(conan_set_find_paths)
     if(CMAKE_BUILD_TYPE)
+        MESSAGE("BUILD TYPE: ${CMAKE_BUILD_TYPE}")
         if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
             set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_PREFIX_PATH})
             set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_MODULE_PATH})
-        else()
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
             set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_PREFIX_PATH})
             set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_MODULE_PATH})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_PREFIX_PATH})
+            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_MODULE_PATH})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_PREFIX_PATH})
+            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_MODULE_PATH})
         endif()
     endif()
 endmacro()
