@@ -112,7 +112,7 @@ class ConanFileToolsTest(ConanFile):
     requires = "test/1.9@lasote/testing"
     '''
 
-        client.save({"conanfile.py": newlib_content}, clean_first=True)
+        client.save({"conanfile.py": newlib_content})
         client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)

@@ -336,7 +336,8 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      install_folder=args.install_folder)
+                                      install_folder=args.install_folder,
+                                      use_lock=args.use_lock)
         except ConanException as exc:
             info = exc.info
             raise
@@ -400,8 +401,6 @@ class Command(object):
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
-        parser.add_argument("-l", "--use-lock", action='store_true', default=False,
-                            help="Use lock dependencies in lockfile")
 
         _add_manifests_arguments(parser)
 
@@ -613,7 +612,7 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    output_folder=args.output_folder)
+                                    use_lock=args.use_lock)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -1793,6 +1792,8 @@ def _add_common_install_arguments(parser, build_help):
                         help="Check updates exist from upstream remotes")
     parser.add_argument("-if", "--install-folder", action=OnceArgument,
                         help='Origin and destination of conan generated files')
+    parser.add_argument("-l", "--use-lock", action='store_true', default=False,
+                        help="Use lock dependencies in lockfile")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

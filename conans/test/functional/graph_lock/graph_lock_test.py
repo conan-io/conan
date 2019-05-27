@@ -69,7 +69,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertNotIn("PkgA/0.2/user/channel", cmake)
 
         # Info also works
-        client.run("info . --install-folder=.")
+        client.run("info . --install-folder=. --use-lock")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
 
@@ -89,13 +89,13 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . user/channel --install-folder=.")
+        self.client.run("export . user/channel --install-folder=. --use-lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@user/channel --install-folder=.")
+        client.run("create . PkgB/0.1@user/channel --install-folder=. --use-lock")
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2/user/channel", client.out)
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
