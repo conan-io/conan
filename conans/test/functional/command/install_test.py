@@ -413,12 +413,13 @@ class Pkg(ConanFile):
         self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                       conan_info.full_requires.dumps())
 
-    def test_cross_platform_msg_test(self):
+    def cross_platform_msg_test(self):
         # Explicit with os_build and os_arch settings
         message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
-        with catch_deprecation_warning(self):
-            self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
+        with catch_deprecation_warning(self, n=2):
+            self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows"
+                            " -s arch_build=x86_64 -s arch=x86_64",
                             assert_error=True)
         self.assertIn(message, self.client.user_io.out)
 

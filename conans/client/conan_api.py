@@ -549,8 +549,6 @@ class ConanAPIV1(object):
                             generators=generators)
             return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
-            import traceback;
-            traceback.print_exc()
             recorder.error = True
             exc.info = recorder.get_info(self._cache.config.revisions_enabled)
             raise

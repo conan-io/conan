@@ -308,18 +308,13 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.os_build), "None")
         self.assertEqual(str(info.settings.arch_build), "None")
 
-        # Package has to be present with only os and arch settings
-        with catch_deprecation_warning(self, n=1):
+        # Package has to be present with different build settings
+        with catch_deprecation_warning(self, n=2):
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os="Windows" '
-                            ' -s arch="x86_64"')
-
-        # Even with wrong build settings
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os="Windows" '
-                        ' -s arch="x86_64"'
-                        ' -s os_build="Macos"'
-                        ' -s arch_build="x86_64"')
+                            ' -s arch="x86_64"'
+                            ' -s os_build="Macos"'
+                            ' -s arch_build="x86_64"')
 
         # take into account build
         info = install_and_get_info("self.info.include_build_settings()")
@@ -327,29 +322,32 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.arch_build), "x86")
 
         # Now the build settings matter
-        err = self.client.run('install Hello/1.2.0@user/testing '
-                              ' -s os="Windows" '
-                              ' -s arch="x86_64"'
-                              ' -s os_build="Macos"'
-                              ' -s arch_build="x86_64"', assert_error=True)
+        with catch_deprecation_warning(self, n=2):
+            err = self.client.run('install Hello/1.2.0@user/testing '
+                                  ' -s os="Windows" '
+                                  ' -s arch="x86_64"'
+                                  ' -s os_build="Macos"'
+                                  ' -s arch_build="x86_64"', assert_error=True)
         self.assertTrue(err)
         self.assertIn("Can't find", self.client.out)
 
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os="Windows" '
-                        ' -s arch="x86_64"'
-                        ' -s os_build="Linux"'
-                        ' -s arch_build="x86"')
+        with catch_deprecation_warning(self, n=2):
+            self.client.run('install Hello/1.2.0@user/testing '
+                            ' -s os="Windows" '
+                            ' -s arch="x86_64"'
+                            ' -s os_build="Linux"'
+                            ' -s arch_build="x86"')
 
         # Now only settings for build
         self.client.run("remove * -f")
         self._export("Hello", "1.2.0",
                      channel="user/testing",
                      settings='"os_build", "arch_build"')
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s os_build="Linux"'
-                        ' -s arch_build="x86"'
-                        ' --build missing')
+        with catch_deprecation_warning(self, n=2):
+            self.client.run('install Hello/1.2.0@user/testing '
+                            ' -s os_build="Linux"'
+                            ' -s arch_build="x86"'
+                            ' --build missing')
         ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
         pkg = os.listdir(self.client.cache.package_layout(ref).packages())
         pref = PackageReference(ref, pkg[0])
