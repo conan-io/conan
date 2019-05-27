@@ -1333,6 +1333,10 @@ build_type: [ Release]
         cmake.build()
         self.assertIn("/verbosity:quiet", conan_file.command)
 
+        cmake = CMake(conan_file, msbuild_verbosity=None)
+        cmake.build()
+        self.assertNotIn("/verbosity", conan_file.command)
+
         with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
             cmake = CMake(conan_file)
             cmake.build()
