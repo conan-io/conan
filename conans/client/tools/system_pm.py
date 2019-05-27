@@ -87,12 +87,12 @@ class SystemPackageTool(object):
         self._is_up_to_date = True
         self._tool.update()
 
-    def install(self, packages, update=True, force=False):
+    def install(self, packages, update=True, force=False, platforms=None):
         """
             Get the system package tool install command.
         '"""
         packages = [packages] if isinstance(packages, str) else list(packages)
-        packages = self._parse_packages_arch(packages)
+        packages = self._parse_packages_arch(packages, platforms)
 
         mode = self._get_sysrequire_mode()
 
@@ -116,14 +116,15 @@ class SystemPackageTool(object):
             self.update()
         self._install_any(packages)
 
-    def _parse_packages_arch(self, packages):
+    def _parse_packages_arch(self, packages, platforms):
         if self._settings and cross_building(self._settings):
-            _, _, _, host_arch = get_cross_building_settings(self._settings)
+            _, build_arch, _, host_arch = get_cross_building_settings(self._settings)
+            arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
                 if isinstance(package, str):
                     for package_name in package.split(" "):
-                        parsed_packages.append(self._tool._parse_package(package_name, host_arch))
+                        parsed_packages.append(self._tool._parse_package(package_name, arch, platforms))
             return parsed_packages
         return packages
 
@@ -152,6 +153,9 @@ class BaseTool(object):
     def __init__(self, output=None):
         self._output = default_output(output, 'conans.client.tools.system_pm.BaseTool')
 
+    def _parse_package(self, package, arch, platforms):
+        return package
+
 
 class NullTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
@@ -166,9 +170,6 @@ class NullTool(BaseTool):
 
     def installed(self, package_name):
         return False
-
-    def _parse_package(self, package, arch):
-        return package
 
 
 class AptTool(BaseTool):
@@ -194,15 +195,16 @@ class AptTool(BaseTool):
     def _platforms(self):
         return
 
-    def _parse_package(self, package, arch):
-        platforms = {"x86_64": "amd64",
-                     "x86": "i386",
-                     "ppc32": "powerpc",
-                     "ppc64le": "ppc64el",
-                     "armv7": "arm",
-                     "armv7hf": "armhf",
-                     "armv8": "arm64",
-                     "s390x": "s390x"}
+    def _parse_package(self, package, arch, platforms):
+        if platforms is None:
+            platforms = {"x86_64": "amd64",
+                         "x86": "i386",
+                         "ppc32": "powerpc",
+                         "ppc64le": "ppc64el",
+                         "armv7": "arm",
+                         "armv7hf": "armhf",
+                         "armv8": "arm64",
+                         "s390x": "s390x"}
         if arch in platforms:
             return "%s:%s" % (package, platforms[arch])
         return package
@@ -224,15 +226,16 @@ class YumTool(BaseTool):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch):
-        platforms = {"x86_64": "x86_64",
-                     "x86": "i?86",
-                     "ppc32": "powerpc",
-                     "ppc64le": "ppc64le",
-                     "armv7": "armv7",
-                     "armv7hf": "armv7hl",
-                     "armv8": "aarch64",
-                     "s390x": "s390x"}
+    def _parse_package(self, package, arch, platforms):
+        if platforms is None:
+            platforms = {"x86_64": "x86_64",
+                         "x86": "i?86",
+                         "ppc32": "powerpc",
+                         "ppc64le": "ppc64le",
+                         "armv7": "armv7",
+                         "armv7hf": "armv7hl",
+                         "armv8": "aarch64",
+                         "s390x": "s390x"}
         if arch in platforms:
             return "%s.%s" % (package, platforms[arch])
         return package
@@ -252,9 +255,6 @@ class BrewTool(BaseTool):
         exit_code = self._runner('test -n "$(brew ls --versions %s)"' % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch):
-        return package
-
 
 class PkgTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
@@ -270,9 +270,6 @@ class PkgTool(BaseTool):
     def installed(self, package_name):
         exit_code = self._runner("pkg info %s" % package_name, None)
         return exit_code == 0
-
-    def _parse_package(self, package, arch):
-        return package
 
 
 class PkgUtilTool(BaseTool):
@@ -290,9 +287,6 @@ class PkgUtilTool(BaseTool):
         exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch):
-        return package
-
 
 class ChocolateyTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
@@ -308,9 +302,6 @@ class ChocolateyTool(BaseTool):
         exit_code = self._runner('choco search --local-only --exact %s | '
                                  'findstr /c:"1 packages installed."' % package_name, None)
         return exit_code == 0
-
-    def _parse_package(self, package, arch):
-        return package
 
 
 class PacManTool(BaseTool):
@@ -328,8 +319,9 @@ class PacManTool(BaseTool):
         exit_code = self._runner("pacman -Qi %s" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch):
-        platforms = {"x86": "lib32"}
+    def _parse_package(self, package, arch, platforms):
+        if platforms is None:
+            platforms = {"x86": "lib32"}
         if arch in platforms:
             return "%s-%s" % (platforms[arch], package)
         return package
@@ -350,8 +342,9 @@ class ZypperTool(BaseTool):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch):
-        platforms = {"x86": "i586"}
+    def _parse_package(self, package, arch, platforms):
+        if platforms is None:
+            platforms = {"x86": "i586"}
         if arch in platforms:
             return "%s.%s" % (platforms[arch], package)
         return package

@@ -258,6 +258,17 @@ class SystemPackageToolTest(unittest.TestCase):
                 self.assertEqual(runner.command_called,
                             "apt-get install -y --no-install-recommends a_package%s" % distro_arch)
 
+            for arch, distro_arch in {"x86_64": "", "x86": ":all"}.items():
+                settings = MockSettings({"arch": arch,
+                                         "arch_build": "x86_64",
+                                         "os": "Linux",
+                                         "os_build": "Linux"})
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
+                                        settings=settings)
+                spt.install("a_package", force=True, platforms={"x86": "all"})
+                self.assertEqual(runner.command_called,
+                            "apt-get install -y --no-install-recommends a_package%s" % distro_arch)
+
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
