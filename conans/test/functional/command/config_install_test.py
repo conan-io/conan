@@ -78,6 +78,7 @@ def zipdir(path, zipfilename):
                 z.write(file_path, relpath)
 
 
+@patch.dict('os.environ', {})
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
