@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import textwrap
 import unittest
 import zipfile
 
@@ -16,7 +17,7 @@ from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
-import textwrap
+
 
 win_profile = """[settings]
     os: Windows
@@ -56,7 +57,6 @@ default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_
 # If don't want proxy at all, remove section [proxies]
 # As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
-no_proxy = mylocalhost
 https = None
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
@@ -165,7 +165,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
-        self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
