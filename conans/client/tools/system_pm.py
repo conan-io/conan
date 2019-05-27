@@ -18,7 +18,7 @@ class SystemPackageTool(object):
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info, output=self._output)
         self._tool._sudo_str = self._get_sudo_str()
-        self._tool._runner = runner or ConanRunner()
+        self._tool._runner = runner or ConanRunner(output=self._output)
         self._tool._recommends = recommends
 
     @staticmethod
@@ -148,8 +148,8 @@ class NullTool(BaseTool):
         pass
 
     def install(self, package_name):
-        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or "
-                            "FreeBSD with pkg or Solaris with pkgutil")
+        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or"
+                          " FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False

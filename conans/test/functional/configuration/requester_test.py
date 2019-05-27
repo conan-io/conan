@@ -29,7 +29,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
             conan_api, cache, _ = Conan.factory()
         requester = conan_api._requester
         mock_requester = MockRequesterGet()
-        requester._requester = mock_requester
+        requester._http_requester = mock_requester
         return requester, mock_requester, cache
 
     def test_default_no_verify(self):

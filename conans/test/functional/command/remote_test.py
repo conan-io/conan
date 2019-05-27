@@ -258,6 +258,17 @@ class HelloConan(ConanFile):
         self.assertIn("r3: https://r3", lines[1])
         self.assertIn("r2: https://r2new2", lines[2])
 
+    def test_update_insert_same_url(self):
+        # https://github.com/conan-io/conan/issues/5107
+        client = TestClient()
+        client.run("remote add r1 https://r1")
+        client.run("remote add r2 https://r2")
+        client.run("remote add r3 https://r3")
+        client.run("remote update r2 https://r2 --insert=0")
+        client.run("remote list")
+        self.assertLess(str(client.out).find("r2"), str(client.out).find("r1"))
+        self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
+
     def verify_ssl_test(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl TRUE")

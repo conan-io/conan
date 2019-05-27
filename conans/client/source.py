@@ -18,7 +18,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    sources_folder = cache.export_sources(ref, conanfile.short_paths)
+    sources_folder = cache.package_layout(ref, conanfile.short_paths).export_sources()
     if os.path.exists(sources_folder):
         return None
 
@@ -35,7 +35,7 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
         raise ConanException("Error while trying to get recipe sources for %s. "
                              "No remote defined" % str(ref))
 
-    export_path = cache.export(ref)
+    export_path = cache.package_layout(ref).export()
     remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
 
 
@@ -110,7 +110,7 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
             if raise_error or isinstance(e_rm, KeyboardInterrupt):
                 raise ConanException("Unable to remove source folder")
 
-    sources_pointer = cache.scm_folder(reference)
+    sources_pointer = cache.package_layout(reference).scm_folder()
     local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
     if is_dirty(src_folder):
         output.warn("Trying to remove corrupted source folder")

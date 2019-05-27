@@ -73,7 +73,10 @@ def touch(fname, times=None):
 def touch_folder(folder):
     for dirname, _, filenames in walk(folder):
         for fname in filenames:
-            os.utime(os.path.join(dirname, fname), None)
+            try:
+                os.utime(os.path.join(dirname, fname), None)
+            except Exception:
+                pass
 
 
 def normalize(text):
@@ -298,7 +301,7 @@ def tar_extract(fileobj, destination_dir):
         return not realpath(abspath(joinpath(base, path))).startswith(base)
 
     def safemembers(members):
-        base = realpath(abspath("."))
+        base = realpath(abspath(destination_dir))
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():

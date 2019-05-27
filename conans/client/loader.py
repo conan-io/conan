@@ -7,7 +7,7 @@ import uuid
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
@@ -136,6 +136,8 @@ class ConanFileLoader(object):
         try:
             self._initialize_conanfile(conanfile, processed_profile)
             return conanfile
+        except ConanInvalidConfiguration:
+            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
@@ -235,7 +237,18 @@ def parse_conanfile(conanfile_path, python_requires):
         module, filename = _parse_conanfile(conanfile_path)
         try:
             conanfile = _parse_module(module, filename)
-            conanfile.python_requires = py_requires
+
+            # Check for duplicates
+            py_reqs = {}
+            for it in py_requires:
+                if it.ref.name in py_reqs:
+                    dupes = [str(it.ref), str(py_reqs[it.ref.name].ref)]
+                    raise ConanException("Same python_requires with different versions not allowed"
+                                         " for a conanfile. Found '{}'".format("', '".join(dupes)))
+                py_reqs[it.ref.name] = it
+
+            # Make them available to the conanfile itself
+            conanfile.python_requires = py_reqs
             return module, conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))

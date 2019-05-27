@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+from mock import Mock
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
@@ -44,7 +45,7 @@ class ExporterTest(unittest.TestCase):
         files = hello_source_files()
 
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        reg_folder = client.cache.export(ref)
+        reg_folder = client.cache.package_layout(ref).export()
 
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
@@ -71,8 +72,8 @@ class ExporterTest(unittest.TestCase):
 
         conanfile_path = os.path.join(reg_folder, CONANFILE)
         pref = PackageReference(ref, "myfakeid")
-        build_folder = client.cache.build(pref)
-        package_folder = client.cache.package(pref)
+        build_folder = client.cache.package_layout(pref.ref).build(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)
@@ -81,7 +82,7 @@ class ExporterTest(unittest.TestCase):
         conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       client.hook_manager, conanfile_path, ref, copy_info=True)
+                       Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

@@ -3,7 +3,7 @@ import os
 
 from conans.client.build.compiler_flags import build_type_define, build_type_flags, format_defines, \
     include_path_option, parallel_compiler_cl_flag, visual_runtime
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 
 
 class VisualStudioBuildEnvironment(object):
@@ -11,6 +11,7 @@ class VisualStudioBuildEnvironment(object):
     - LIB: library paths with semicolon separator
     - CL: /I (include paths)
     - _LINK_: linker options and libraries
+    - UseEnv: True https://github.com/conan-io/conan/pull/4583
 
     https://msdn.microsoft.com/en-us/library/19z1t1wy.aspx
     https://msdn.microsoft.com/en-us/library/fwkeyyhe.aspx
@@ -21,8 +22,6 @@ class VisualStudioBuildEnvironment(object):
     def __init__(self, conanfile, with_build_type_flags=True):
         """
         :param conanfile: ConanFile instance
-        :param quote_paths: The path directories will be quoted. If you are using the vars together with
-                            environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
         """
         self._with_build_type_flags = with_build_type_flags
 
@@ -92,10 +91,12 @@ class VisualStudioBuildEnvironment(object):
 
         cl_args = " ".join(flags) + _environ_value_prefix("CL")
         link_args = " ".join(link_flags)
-        lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + _environ_value_prefix("LIB", ";")
+        lib_paths = (";".join(['%s' % lib for lib in self.lib_paths]) +
+                     _environ_value_prefix("LIB", ";"))
         return {"CL": cl_args,
                 "LIB": lib_paths,
-                "_LINK_": link_args}
+                "_LINK_": link_args,
+                "UseEnv": "True"}
 
     @property
     def vars_dict(self):
@@ -117,7 +118,8 @@ class VisualStudioBuildEnvironment(object):
 
         ret = {"CL": cl,
                "LIB": lib,
-               "_LINK_": link}
+               "_LINK_": link,
+               "UseEnv": "True"}
         return ret
 
     def _std_cpp(self):
@@ -141,11 +143,11 @@ def vs_build_type_flags(settings, with_flags=True):
 
 
 def vs_std_cpp(settings):
-    if settings.get_safe("compiler") == "Visual Studio" and \
-       settings.get_safe("cppstd"):
+    cppstd = cppstd_from_settings(settings)
+    if settings.get_safe("compiler") == "Visual Studio" and cppstd:
         flag = cppstd_flag(settings.get_safe("compiler"),
                            settings.get_safe("compiler.version"),
-                           settings.get_safe("cppstd"))
+                           cppstd)
         return flag
     return None
 

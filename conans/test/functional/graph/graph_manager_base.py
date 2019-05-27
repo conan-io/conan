@@ -46,11 +46,11 @@ class GraphManagerTest(unittest.TestCase):
         if isinstance(test_conanfile, TestConanFile):
             test_conanfile.info = True
         ref = ConanFileReference.loads(reference)
-        save(self.cache.conanfile(ref), str(test_conanfile))
+        save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.cache.export(ref))
-        manifest.save(self.cache.export(ref))
+        manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
+        manifest.save(self.cache.package_layout(ref).export())
 
     def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None):
         path = temp_folder()
@@ -75,7 +75,7 @@ class GraphManagerTest(unittest.TestCase):
         self.binary_installer.install(deps_graph, False, graph_info)
         return deps_graph
 
-    def _check_node(self, node, ref, deps, build_deps, dependents, closure, public_deps):
+    def _check_node(self, node, ref, deps, build_deps, dependents, closure):
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
         self.assertEqual(node.ref.full_repr(), ref.full_repr())
@@ -86,9 +86,6 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(len(dependants), len(dependents))
         for d in dependents:
             self.assertIn(d, dependants)
-
-        public_deps = {n.name: n for n in public_deps}
-        self.assertEqual(node.public_deps, public_deps)
 
         # The recipe requires is resolved to the reference WITH revision!
         self.assertEqual(len(deps), len(conanfile.requires))
