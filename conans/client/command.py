@@ -553,7 +553,8 @@ class Command(object):
         parser.add_argument("--package-filter", nargs='?',
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
-
+        parser.add_argument("-of", "--output-folder", action=OnceArgument,
+                            help='Origin and destination of conan generated files')
         dry_build_help = ("Apply the --build argument to output the information, as it would be done"
                           " by the install command")
         parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
@@ -611,7 +612,8 @@ class Command(object):
                                     profile_names=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
-                                    build=args.dry_build)
+                                    build=args.dry_build,
+                                    output_folder=args.output_folder)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:

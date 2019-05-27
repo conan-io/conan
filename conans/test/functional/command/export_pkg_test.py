@@ -280,7 +280,7 @@ class TestConan(ConanFile):
 
         # Try to specify a install folder with no files
         client.run("export-pkg . Hello/0.1@lasote/stable -if fake", assert_error=True)
-        self.assertIn("ERROR: Missing conan.lock file", client.out)
+        self.assertIn("ERROR: Failed to load graphinfo file in install-folder", client.out)
 
     def _consume(self, client, install_args):
         consumer = """

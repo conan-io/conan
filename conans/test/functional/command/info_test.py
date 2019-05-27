@@ -10,6 +10,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 from conans.test.utils.conanfile import TestConanFile
+from conans.model.graph_lock import LOCKFILE
 
 
 class InfoTest(unittest.TestCase):
@@ -621,6 +622,7 @@ class MyTest(ConanFile):
         graph_info = json.loads(graph_info)
         graph_info.pop("root")
         save(path, json.dumps(graph_info))
+        os.unlink(os.path.join(client.current_folder, LOCKFILE))
         client.run("info .")
         self.assertIn("conanfile.py (Hello/0.1@None/None)", client.out)
         save(path, "broken thing")
