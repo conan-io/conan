@@ -2,7 +2,7 @@ import os
 import platform
 import shutil
 from collections import OrderedDict
-from os.path import join, normpath
+from os.path import join
 
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -28,11 +28,6 @@ LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
-
-
-# Client certificates
-CLIENT_CERT = "client.crt"
-CLIENT_KEY = "client.key"
 
 
 def is_case_insensitive_os():
@@ -77,8 +72,6 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
-        self.client_cert_path = normpath(join(self.cache_folder, CLIENT_CERT))
-        self.client_cert_key_path = normpath(join(self.cache_folder, CLIENT_KEY))
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
