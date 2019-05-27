@@ -61,7 +61,7 @@ http=http://conan.url
             return "mocked ok!"
 
         requester._http_requester.get = verify_proxies
-        self.assertFalse("NO_PROXY" in os.environ, "NO_PROXY=%s" % os.environ["NO_PROXY"])
+        self.assertFalse("NO_PROXY" in os.environ, "Error: NO_PROXY=%s" % os.environ["NO_PROXY"])
 
         self.assertEqual(requester.get("MyUrl"), "mocked ok!")
 
