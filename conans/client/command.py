@@ -960,8 +960,7 @@ class Command(object):
                 raise ConanException("Please specify a valid pattern or reference to be cleaned")
 
             if check_valid_ref(args.pattern_or_reference, allow_pattern=False):
-                ref = ConanFileReference.loads(args.pattern_or_reference)
-                return self._conan.remove_system_reqs(ref)
+                return self._conan.remove_system_reqs(args.pattern_or_reference)
 
             return self._conan.remove_system_reqs_by_pattern(args.pattern_or_reference)
         else:
