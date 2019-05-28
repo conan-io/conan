@@ -4,7 +4,7 @@ from collections import defaultdict, namedtuple
 
 from conans.client.generators import TXTGenerator
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, DepsCppInfo, Component
+from conans.model.build_info import CppInfo, DepsCppInfo, Component, DirList
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
@@ -254,8 +254,40 @@ VAR2=23
         info["Crypto"].bindirs = ["different_bin"]
         info["Crypto"].resdirs = ["different_res"]
         self.assertEqual(["my_headers", "different_include"], info["Crypto"].includedirs)
+        self.assertEqual(["my_libraries", "different_lib"], info["Crypto"].libdirs)
+        self.assertEqual(["my_build_scripts", "different_build"], info["Crypto"].builddirs)
+        self.assertEqual(["my_binaries", "different_bin"], info["Crypto"].bindirs)
+        self.assertEqual(["my_resources", "different_res"], info["Crypto"].resdirs)
 
-        # FIXME:
-        # info["Crypto"].includedirs.extend(["another_include"])
-        # self.assertEqual(["my_headers", "different_include", "another_include"],
-        #                 info["Crypto"].includedirs)
+        info["Crypto"].includedirs.extend(["another_include"])
+        info["Crypto"].includedirs.append("another_other_include")
+        info["Crypto"].libdirs.extend(["another_lib"])
+        info["Crypto"].libdirs.append("another_other_lib")
+        info["Crypto"].builddirs.extend(["another_build"])
+        info["Crypto"].builddirs.append("another_other_build")
+        info["Crypto"].bindirs.extend(["another_bin"])
+        info["Crypto"].bindirs.append("another_other_bin")
+        info["Crypto"].resdirs.extend(["another_res"])
+        info["Crypto"].resdirs.append("another_other_res")
+        self.assertEqual(["my_headers", "different_include", "another_include",
+                          "another_other_include"], info["Crypto"].includedirs)
+        self.assertEqual(["my_libraries", "different_lib", "another_lib", "another_other_lib"],
+                         info["Crypto"].libdirs)
+        self.assertEqual(["my_build_scripts", "different_build", "another_build",
+                          "another_other_build"], info["Crypto"].builddirs)
+        self.assertEqual(["my_binaries", "different_bin", "another_bin", "another_other_bin"],
+                         info["Crypto"].bindirs)
+        self.assertEqual(["my_resources", "different_res", "another_res", "another_other_res"],
+                         info["Crypto"].resdirs)
+
+    def dirlist_test(self):
+        dirlist = DirList(["inc0"], ["inc1"])
+        dirlist.append("inc2")
+        self.assertEqual(["inc0", "inc1", "inc2"], dirlist)
+        dirlist.extend(["inc3", "inc4"])
+        self.assertEqual(["inc0", "inc1", "inc2", "inc3", "inc4"], dirlist)
+
+        dirlist.insert(0, "inc5")
+        self.assertEqual(["inc0", "inc5", "inc1", "inc2", "inc3", "inc4"], dirlist)
+        dirlist.insert(2, "inc6")
+        self.assertEqual(["inc0", "inc5", "inc1", "inc6", "inc2", "inc3", "inc4"], dirlist)

@@ -203,8 +203,7 @@ class Component(object):
 
     @property
     def includedirs(self):
-        includedirs = self._parent.includedirs + self._includedirs
-        return list(OrderedDict.fromkeys(includedirs))
+        return DirList(self._parent.includedirs, self._includedirs)
 
     @includedirs.setter
     def includedirs(self, value):
@@ -212,8 +211,7 @@ class Component(object):
 
     @property
     def libdirs(self):
-        libdirs = self._parent.libdirs + self._libdirs
-        return list(OrderedDict.fromkeys(libdirs))
+        return DirList(self._parent.libdirs, self._libdirs)
 
     @libdirs.setter
     def libdirs(self, value):
@@ -221,8 +219,7 @@ class Component(object):
 
     @property
     def resdirs(self):
-        resdirs = self._parent.resdirs + self._resdirs
-        return list(OrderedDict.fromkeys(resdirs))
+        return DirList(self._parent.resdirs, self._resdirs)
 
     @resdirs.setter
     def resdirs(self, value):
@@ -230,8 +227,7 @@ class Component(object):
 
     @property
     def bindirs(self):
-        bindirs = self._parent.bindirs + self._bindirs
-        return list(OrderedDict.fromkeys(bindirs))
+        return DirList(self._parent.bindirs, self._bindirs)
 
     @bindirs.setter
     def bindirs(self, value):
@@ -239,12 +235,43 @@ class Component(object):
 
     @property
     def builddirs(self):
-        builddirs = self._parent.builddirs + self._builddirs
-        return list(OrderedDict.fromkeys(builddirs))
+        return DirList(self._parent.builddirs, self._builddirs)
 
     @builddirs.setter
     def builddirs(self, value):
         self._builddirs = value
+
+
+class DirList(object):
+
+    def __init__(self, inherited_dirs=None, dirs=None):
+        self._inherited_dirs = inherited_dirs or []
+        self._dirs = dirs or []
+
+    @property
+    def _complete_list(self):
+        return list(OrderedDict.fromkeys(self._inherited_dirs + self._dirs))
+
+    def append(self, directory):
+        self._dirs.append(directory)
+
+    def extend(self, directories):
+        self._dirs.extend(directories)
+
+    def __getitem__(self, index):
+        return self._complete_list[index]
+
+    def __repr__(self):
+        return str(self._complete_list)
+
+    def __eq__(self, other):
+        return self._complete_list == other
+
+    def __len__(self):
+        return len(self._complete_list)
+
+    def insert(self, index, directory):
+        self._dirs.insert(index, directory)
 
 
 class _BaseDepsCppInfo(_CppInfo):
