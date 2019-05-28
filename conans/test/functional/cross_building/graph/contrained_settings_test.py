@@ -16,13 +16,12 @@ from conans.util.files import save
 
 
 class ClassicProtocExample(GraphManagerTest):
-    """ There is an application that requires the protobuf library, and also
-        build_requires the protoc executable to generate some files, but protoc
-        also requires the protobuf library to build.
+    """
+        Note.- For the description of this graph check test in 'protoc_basic_test'
 
-        Expected packages:
-            * host_machine: application, protobuf
-            * build_machine: protoc, protobuf
+        This test is constraining the settings inside the recipes. It make sense that Conan
+        only validates (and contrain) the settings within the build context of the
+        package
     """
 
     protobuf = textwrap.dedent("""
@@ -32,7 +31,7 @@ class ClassicProtocExample(GraphManagerTest):
             name = "protobuf"
             version = "testing"
 
-            settings = "os"  # , "arch", "compiler", "build_type"
+            settings = "os"
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -59,7 +58,7 @@ class ClassicProtocExample(GraphManagerTest):
             name = "application"
             version = "testing"
 
-            settings = "os"
+            settings = {"os": None, "arch": ["x86", ]}
             requires = "protobuf/testing@user/channel"
 
             def build_requirements(self):
@@ -104,12 +103,12 @@ class ClassicProtocExample(GraphManagerTest):
     def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"
-        profile_host.settings["arch"] = "x86_64"
+        profile_host.settings["arch"] = "x86"  # Application contraints to x86
         profile_host.process_settings(self.cache)
 
         profile_build = Profile()
         profile_build.settings["os"] = "Build"
-        profile_build.settings["arch"] = "x86_64"
+        profile_build.settings["arch"] = "x86_64"  # Protoc constrain to x86_64
         profile_build.process_settings(self.cache)
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
@@ -120,9 +119,9 @@ class ClassicProtocExample(GraphManagerTest):
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
-        self.assertEqual(application.conanfile.settings.get_safe("arch"), None)
+        self.assertEqual(application.conanfile.settings.get_safe("arch"), profile_host.settings['arch'])
         self.assertEqual(str(application.conanfile.settings_build.os), profile_build.settings['os'])
-        self.assertEqual(application.conanfile.settings_build.get_safe("arch"), None)
+        self.assertEqual(application.conanfile.settings_build.get_safe("arch"), profile_build.settings['arch'])
 
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")

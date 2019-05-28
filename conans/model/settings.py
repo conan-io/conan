@@ -310,7 +310,7 @@ class Settings(object):
         assert isinstance(vals, Values)
         self.values_list = vals.as_list()
 
-    def constraint(self, constraint_def):
+    def constraint(self, constraint_def, constraint_values=True):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
@@ -319,7 +319,9 @@ class Settings(object):
         if isinstance(constraint_def, (list, tuple, set)):
             constraint_def = {str(k): None for k in constraint_def or []}
         else:
-            constraint_def = {str(k): v for k, v in constraint_def.items()}
+            def values_contrained(values):
+                return values if constraint_values else None
+            constraint_def = {str(k): values_contrained(v) for k, v in constraint_def.items()}
 
         fields_to_remove = []
         for field, config_item in self._data.items():

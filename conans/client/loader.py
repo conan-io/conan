@@ -165,7 +165,7 @@ class ConanFileLoader(object):
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
         conanfile.settings = processed_profile_host._settings.copy_values()
-        conanfile.settings_build =processed_profile_build._settings.copy_values()
+        conanfile.settings_build = processed_profile_build._settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)

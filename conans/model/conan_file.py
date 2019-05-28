@@ -70,10 +70,10 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(settings, defined_settings):
+def create_settings(settings, defined_settings, constraint_values):
     try:
         current = defined_settings or {}
-        settings.constraint(current)
+        settings.constraint(current, constraint_values=constraint_values)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
@@ -156,8 +156,8 @@ class ConanFile(object):
         defined_settings = getattr(self, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
-        self.settings = create_settings(settings_host, defined_settings)
-        self.settings_build = create_settings(settings_build, defined_settings)
+        self.settings = create_settings(settings_host, defined_settings, constraint_values=True)
+        self.settings_build = create_settings(settings_build, defined_settings, constraint_values=False)
 
         try:
             if self.settings.os_build and self.settings.os:
