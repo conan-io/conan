@@ -2,6 +2,7 @@ import os
 import unittest
 
 import six
+from mock import patch
 
 from conans.client import tools
 from conans.paths import CONANFILE
@@ -20,15 +21,8 @@ class TestConan(ConanFile):
 """
 
 
+@patch.dict('os.environ', {"CONAN_RECIPE_LINTER": "True"})
 class ExportLinterTest(unittest.TestCase):
-
-    def setUp(self):
-        self.old_env = dict(os.environ)
-        os.environ["CONAN_RECIPE_LINTER"] = "True"
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.old_env)
 
     def test_basic(self):
         client = TestClient()

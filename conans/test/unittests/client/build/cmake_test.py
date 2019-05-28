@@ -193,10 +193,10 @@ class CMakeTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.settings = Settings()
 
-        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator",
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "Green Hills MULTI",
                                        "CONAN_CMAKE_GENERATOR_PLATFORM": "My CMake Platform"}):
             cmake = CMake(conan_file)
-            self.assertIn('-G "My CMake Generator" -A "My CMake Platform"', cmake.command_line)
+            self.assertIn('-G "Green Hills MULTI" -A "My CMake Platform"', cmake.command_line)
 
     def cmake_generator_platform_override_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -287,6 +287,25 @@ class CMakeTest(unittest.TestCase):
                                        "CONAN_CMAKE_GENERATOR_PLATFORM": platform}):
             cmake = CMake(conan_file)
             self.assertIn('-G "Green Hills MULTI" -A "%s"' % platform, cmake.command_line)
+
+    @parameterized.expand([('Ninja',),
+                           ('NMake Makefiles',),
+                           ('NMake Makefiles JOM',)
+                           ])
+    def test_generator_platform_with_unsupported_generator(self, generator):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.compiler.toolset = "v140"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        with self.assertRaises(ConanException):
+            cmake = CMake(conan_file, generator=generator, generator_platform="x64")
+            cmake.command_line
 
     def cmake_fpic_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -1148,6 +1167,25 @@ build_type: [ Release]
         cmake = CMake(conan_file)
         self.assertIn('-T "v140"', cmake.command_line)
 
+    @parameterized.expand([('Ninja',),
+                           ('NMake Makefiles',),
+                           ('NMake Makefiles JOM',)
+                           ])
+    def test_toolset_with_unsupported_generator(self, generator):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.compiler.toolset = "v140"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        with self.assertRaises(ConanException):
+            cmake = CMake(conan_file, generator=generator)
+            cmake.command_line
+
     def test_missing_settings(self):
         def instance_with_os_build(os_build):
             settings = Settings.loads(default_settings_yml)
@@ -1332,6 +1370,10 @@ build_type: [ Release]
         cmake = CMake(conan_file, msbuild_verbosity="quiet")
         cmake.build()
         self.assertIn("/verbosity:quiet", conan_file.command)
+
+        cmake = CMake(conan_file, msbuild_verbosity=None)
+        cmake.build()
+        self.assertNotIn("/verbosity", conan_file.command)
 
         with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
             cmake = CMake(conan_file)

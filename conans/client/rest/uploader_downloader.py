@@ -8,6 +8,7 @@ from conans.errors import AuthenticationException, ConanConnectionError, ConanEx
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
+from conans.util.env_reader import get_env
 
 
 class Uploader(object):
@@ -18,7 +19,12 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None, headers=None):
+        if retry is None:
+            retry = get_env("CONAN_RETRY", 1)
+        if retry_wait is None:
+            retry_wait = get_env("CONAN_RETRY_WAIT", 0)
+
         # Send always the header with the Sha1
         headers = headers or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
@@ -63,6 +69,9 @@ class Uploader(object):
                 if auth.token is None:
                     raise AuthenticationException(response.content)
                 raise ForbiddenException(response.content)
+
+            response.raise_for_status()  # Raise HTTPError for bad http response status
+
         except ConanException:
             raise
         except Exception as exc:
@@ -133,8 +142,12 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False,
+    def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
+        if retry is None:
+            retry = get_env("CONAN_RETRY", 3)
+        if retry_wait is None:
+            retry_wait = get_env("CONAN_RETRY_WAIT", 0)
 
         if file_path and not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
