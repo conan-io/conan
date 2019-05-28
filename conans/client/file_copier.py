@@ -38,7 +38,7 @@ class FileCopier(object):
         will not be used in the relative names while copying
         param source_folders: list of folders to copy things from, typically the
                                   store build folder
-        param root_destination_folder: The base folder to copy things to, typicall the
+        param root_destination_folder: The base folder to copy things to, typical the
                                        store package folder
         """
         assert isinstance(source_folders, list), "source folders must be a list"
@@ -91,7 +91,7 @@ class FileCopier(object):
         files_to_copy, link_folders = self._filter_files(src, pattern, symlinks, excludes,
                                                          ignore_case, excluded_folders)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks)
-        self._link_folders(src, dst, link_folders)
+        self.link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
 
@@ -155,7 +155,7 @@ class FileCopier(object):
         return files_to_copy, linked_folders
 
     @staticmethod
-    def _link_folders(src, dst, linked_folders):
+    def link_folders(src, dst, linked_folders):
         created_links = []
         for linked_folder in linked_folders:
             src_link = os.path.join(src, linked_folder)
