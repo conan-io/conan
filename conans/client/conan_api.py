@@ -9,7 +9,7 @@ from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
+from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
@@ -716,11 +716,6 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        conanfile_folder = os.path.dirname(conanfile_path)
-        if conanfile_folder != source_folder:
-            conanfile.output.info("Executing exports to: %s" % source_folder)
-            export_recipe(conanfile, conanfile_folder, source_folder)
-            export_source(conanfile, conanfile_folder, source_folder)
         config_source_local(source_folder, conanfile, conanfile_path, self._hook_manager)
 
     @api_method
@@ -961,8 +956,9 @@ class ConanAPIV1(object):
         return self._cache.registry.clear()
 
     @api_method
-    def remove_system_reqs(self, ref):
+    def remove_system_reqs(self, reference):
         try:
+            ref = ConanFileReference.loads(reference)
             self._cache.package_layout(ref).remove_system_reqs()
             self._user_io.out.info(
                 "Cache system_reqs from %s has been removed" % repr(ref))
@@ -972,7 +968,7 @@ class ConanAPIV1(object):
     @api_method
     def remove_system_reqs_by_pattern(self, pattern):
         for ref in search_recipes(self._cache, pattern=pattern):
-            self.remove_system_reqs(ref)
+            self.remove_system_reqs(ref.full_repr())
 
     @api_method
     def remove_locks(self):

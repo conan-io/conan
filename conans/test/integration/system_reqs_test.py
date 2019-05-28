@@ -196,7 +196,7 @@ class SystemReqsTest(unittest.TestCase):
         self.assertIn("Cache system_reqs from Test/0.1@user/channel has been removed",
                       client.user_io.out)
         self.assertNotIn("Cache system_reqs from Test/0.1@user/channel_other has been removed",
-                      client.user_io.out)
+                         client.user_io.out)
         self.assertFalse(os.path.exists(system_reqs_path))
         self.assertTrue(os.path.exists(system_reqs_path_other))
 
@@ -204,7 +204,7 @@ class SystemReqsTest(unittest.TestCase):
         client.run("create . user/channel")
         client.run("remove --system-reqs Test/0.1@user/channel_*")
         self.assertNotIn("Cache system_reqs from Test/0.1@user/channel has been removed",
-                      client.user_io.out)
+                         client.user_io.out)
         self.assertIn("Cache system_reqs from Test/0.1@user/channel_other has been removed",
                       client.user_io.out)
         self.assertTrue(os.path.exists(system_reqs_path))
