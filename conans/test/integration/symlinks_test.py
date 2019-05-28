@@ -253,7 +253,7 @@ class ConanSymlink(ConanFile):
         client.save({"release/file.cpp": conanfile})
         real_dir_path = os.path.join(client.current_folder, "release")
         symlink_path = os.path.join(client.current_folder, "debug")
-        os.symlink(real_dir_path, symlink_path, target_is_directory=True)
+        os.symlink(real_dir_path, symlink_path)
 
         # Verify that the symlink is created correctly
         self.assertEqual(os.path.realpath(symlink_path), real_dir_path)
