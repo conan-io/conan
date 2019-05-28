@@ -264,13 +264,20 @@ class ConanSymlink(ConanFile):
         # Export the recipe and check that the symlink is still there
         client.export(ref, conanfile=conanfile)
         sf = package_layout.export_sources()
-        self.assertTrue(os.path.islink(os.path.join(sf, "debug")))
+        sf_symlink = os.path.join(sf, "debug")
+        self.assertTrue(os.path.islink(sf_symlink))
+        self.assertEqual(os.path.realpath(sf_symlink), os.path.join(sf, "release"))
 
         # Now do the create
         pref = client.create(ref, conanfile=conanfile)
         # Assert that the symlink is preserved when copy to source from exports_sources
         sf = package_layout.source()
-        self.assertTrue(os.path.islink(os.path.join(sf, "debug")))
+        sf_symlink = os.path.join(sf, "debug")
+        self.assertTrue(os.path.islink(sf_symlink))
+        self.assertEqual(os.path.realpath(sf_symlink), os.path.join(sf, "release"))
+
         # Assert that the symlink is preserved when copy to build folder
         bf = client.cache.package_layout(pref.ref).build(pref)
-        self.assertTrue(os.path.islink(os.path.join(bf, "debug")))
+        bf_symlink = os.path.join(bf, "debug")
+        self.assertTrue(os.path.islink(bf_symlink))
+        self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))
