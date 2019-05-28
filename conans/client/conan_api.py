@@ -966,8 +966,9 @@ class ConanAPIV1(object):
         return self._cache.registry.clear()
 
     @api_method
-    def remove_system_reqs(self, ref):
+    def remove_system_reqs(self, reference):
         try:
+            ref = ConanFileReference.loads(reference)
             self._cache.package_layout(ref).remove_system_reqs()
             self._user_io.out.info(
                 "Cache system_reqs from %s has been removed" % repr(ref))
@@ -977,7 +978,7 @@ class ConanAPIV1(object):
     @api_method
     def remove_system_reqs_by_pattern(self, pattern):
         for ref in search_recipes(self._cache, pattern=pattern):
-            self.remove_system_reqs(ref)
+            self.remove_system_reqs(ref.full_repr())
 
     @api_method
     def remove_locks(self):
