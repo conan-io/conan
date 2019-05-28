@@ -1,6 +1,7 @@
 import os
 import platform
 import unittest
+import textwrap
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
@@ -236,17 +237,18 @@ class ConanSymlink(ConanFile):
         self.assertTrue(os.path.exists(package_other_dir))
 
     def create_keep_folder_symlink_test(self):
-        conanfile = """
-import os
-from conans import ConanFile
-class ConanSymlink(ConanFile):
-    name = "ConanSymlink"
-    version = "3.0.0"
-    exports_sources = ["*"]
-    def build(self):
-        debug_path = os.path.join(self.build_folder, "debug")
-        assert os.path.exists(debug_path), "Symlinked folder not created!"
-"""
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class ConanSymlink(ConanFile):
+                name = "ConanSymlink"
+                version = "3.0.0"
+                exports_sources = ["*"]
+                def build(self):
+                    debug_path = os.path.join(self.build_folder, "debug")
+                    assert os.path.exists(debug_path), "Symlinked folder not created!"
+            """)
+        
         client = TurboTestClient()
         client.save({"conanfile.py": conanfile})
         client.save({"release/file.cpp": conanfile})
