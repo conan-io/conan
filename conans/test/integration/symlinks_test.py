@@ -1,11 +1,10 @@
 import os
 import platform
-import unittest
 import textwrap
+import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
-from conans.tools import chdir
 from conans.util.files import load, mkdir, save
 
 conanfile = """
