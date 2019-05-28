@@ -6,6 +6,8 @@ import requests
 from nose.plugins.attrib import attr
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.conf import ConanClientConfigParser
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.rest_client_v1 import complete_url
 from conans.model.info import ConanInfo
@@ -61,7 +63,11 @@ class RestApiTest(unittest.TestCase):
             cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
             cls.server.start()
 
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests,
+            filename = os.path.join(temp_folder(), "conan.conf")
+            save(filename, "")
+            config = ConanClientConfigParser(filename)
+            requester = ConanRequester(config, requests)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requester,
                                     revisions_enabled=False)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 

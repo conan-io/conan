@@ -59,6 +59,7 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')
 
+    # It might be possible that users provide their own requester
     retry = retry if retry is not None else getattr(requester, "retry", None)
     retry = retry if retry is not None else 1
     retry_wait = retry_wait if retry_wait is not None else getattr(requester, "retry_wait", None)

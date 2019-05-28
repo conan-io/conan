@@ -145,7 +145,7 @@ class FileDownloader(object):
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
         retry = retry if retry is not None else self.requester.retry
-        retry = retry if retry is not None else 1
+        retry = retry if retry is not None else 2
         retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
         retry_wait = retry_wait if retry_wait is not None else 0
 
