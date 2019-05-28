@@ -95,7 +95,7 @@ _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', 
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
 _PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
                               "'%s', '%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE, _PREF_EXAMPLE))
-_PREF_OR_PREF_HELP = ("Recipe reference or package reference e.g., '%s', "
+_REF_OR_PREF_HELP = ("Recipe reference or package reference e.g., '%s', "
                        "'%s'" % (_REFERENCE_EXAMPLE, _PREF_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
