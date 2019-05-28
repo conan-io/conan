@@ -236,6 +236,7 @@ class ConanInfo(object):
         """
         result = ConanInfo()
         result.settings = self.settings.copy()
+        # TODO: build_settings... the recipe might use them to generate a different binary, or not?
         result.options = self.options.copy()
         result.build_options = self.build_options.copy()
         result.requires = self.requires.copy()

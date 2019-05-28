@@ -113,21 +113,28 @@ class BuildRequireOfBuildRequire(GraphManagerTest):
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
+        self.assertEqual(str(application.conanfile.settings_host.os), profile_host.settings['os'])
+        self.assertEqual(str(application.conanfile.settings_build.os), profile_build.settings['os'])
 
         gtest_host = application.dependencies[1].dst
         self.assertEqual(gtest_host.conanfile.name, "gtest")
         self.assertEqual(gtest_host.build_context, CONTEXT_HOST)
         self.assertEqual(gtest_host.conanfile.settings.os, profile_host.settings['os'])
+        self.assertEqual(str(gtest_host.conanfile.settings_host.os), profile_host.settings['os'])
+        self.assertEqual(str(gtest_host.conanfile.settings_build.os), profile_build.settings['os'])
 
         # Check BUILD packages
         cmake_build = application.dependencies[0].dst
         self.assertEqual(cmake_build.conanfile.name, "cmake")
         self.assertEqual(cmake_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_build.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(cmake_build.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(str(cmake_build.conanfile.settings_build.os), profile_build.settings['os'])
 
         cmake_gtest_build = gtest_host.dependencies[0].dst
         self.assertNotEqual(cmake_build, cmake_gtest_build)
         self.assertEqual(cmake_gtest_build.conanfile.name, "cmake")
         self.assertEqual(cmake_gtest_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_gtest_build.conanfile.settings.os), profile_build.settings['os'])
-
+        self.assertEqual(str(cmake_gtest_build.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(str(cmake_gtest_build.conanfile.settings_build.os), profile_build.settings['os'])
