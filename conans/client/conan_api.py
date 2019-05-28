@@ -59,6 +59,7 @@ from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.util.env_reader import get_env
 
 default_manifest_folder = '.conan_manifests'
 
