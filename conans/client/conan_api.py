@@ -53,6 +53,7 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files
@@ -964,13 +965,22 @@ class ConanAPIV1(object):
         return self._cache.registry.clear()
 
     @api_method
-    def remove_locks(self):
-        self._cache.remove_locks()
+    def remove_system_reqs(self, ref):
+        try:
+            self._cache.package_layout(ref).remove_system_reqs()
+            self._user_io.out.info(
+                "Cache system_reqs from %s has been removed" % repr(ref))
+        except Exception as error:
+            raise ConanException("Unable to remove system_reqs: %s" % error)
 
     @api_method
-    def remove_system_reqs(self, reference):
-        ref = ConanFileReference.loads(reference)
-        self._cache.package_layout(ref).remove_system_reqs()
+    def remove_system_reqs_by_pattern(self, pattern):
+        for ref in search_recipes(self._cache, pattern=pattern):
+            self.remove_system_reqs(ref)
+
+    @api_method
+    def remove_locks(self):
+        self._cache.remove_locks()
 
     @api_method
     def profile_list(self):
