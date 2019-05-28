@@ -166,7 +166,8 @@ class ConanAPIV1(object):
         put_headers = cache.read_put_headers()
         rest_api_client = RestApiClient(user_io.out, requester,
                                         revisions_enabled=config.revisions_enabled,
-                                        put_headers=put_headers)
+                                        put_headers=put_headers, retry=config.retry,
+                                        retry_wait=config.retry_wait)
         # To store user and token
         localdb = LocalDB.create(cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)

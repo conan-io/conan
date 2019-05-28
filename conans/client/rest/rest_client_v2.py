@@ -39,7 +39,8 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_remote_file_contents(self, url):
         # We don't want traces in output of these downloads, they are ugly in output
-        downloader = FileDownloader(self.requester, None, self.verify_ssl)
+        downloader = FileDownloader(self.requester, None, self.verify_ssl, retry=self._retry,
+                                    retry_wait=self._retry_wait)
         contents = downloader.download(url, auth=self.auth)
         return contents
 
@@ -174,7 +175,8 @@ class RestV2Methods(RestCommonMethods):
     def _upload_files(self, files, urls, retry, retry_wait):
         t1 = time.time()
         failed = []
-        uploader = FileUploader(self.requester, self._output, self.verify_ssl)
+        uploader = FileUploader(self.requester, self._output, self.verify_ssl, retry=self._retry,
+                                retry_wait=self._retry_wai)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
@@ -205,7 +207,8 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files):
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, retry=self._retry,
+                                    retry_wait=self._retry_wait)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):

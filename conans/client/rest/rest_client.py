@@ -11,7 +11,8 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, revisions_enabled, put_headers=None):
+    def __init__(self, output, requester, revisions_enabled, put_headers=None, retry=None,
+                 retry_wait=None):
 
         # Set to instance
         self.token = None
@@ -19,6 +20,8 @@ class RestApiClient(object):
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
+        self._retry = retry
+        self._retry_wait = retry_wait
 
         # Remote manager will set it to True or False dynamically depending on the remote
         self.verify_ssl = True
@@ -30,7 +33,8 @@ class RestApiClient(object):
     def _get_api(self):
         if self.remote_url not in self._cached_capabilities:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                self.requester, self.verify_ssl, self._put_headers)
+                                self.requester, self.verify_ssl, self._put_headers,
+                                retry=self._retry, retry_wait=self._retry_wait)
             _, _, cap = tmp.server_info()
             self._cached_capabilities[self.remote_url] = cap
             if not self._revisions_enabled and ONLY_V2 in cap:
@@ -40,10 +44,11 @@ class RestApiClient(object):
             checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,
-                                 checksum_deploy)
+                                 checksum_deploy, retry=self._retry, retry_wait=self._retry_wait)
         else:
             return RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
-                                 self.requester, self.verify_ssl, self._put_headers)
+                                 self.requester, self.verify_ssl, self._put_headers,
+                                 retry=self._retry, retry_wait=self._retry_wait)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)

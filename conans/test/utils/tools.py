@@ -813,7 +813,8 @@ servers["r2"] = TestServer()
         put_headers = self.cache.read_put_headers()
         self.rest_api_client = RestApiClient(self.user_io.out, self.requester,
                                              revisions_enabled=config.revisions_enabled,
-                                             put_headers=put_headers)
+                                             put_headers=put_headers, retry=config.retry,
+                                             retry_wait=config.retry_wait)
         # To store user and token
         self.localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)

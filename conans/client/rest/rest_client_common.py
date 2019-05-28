@@ -63,7 +63,7 @@ def handle_return_deserializer(deserializer=None):
 class RestCommonMethods(object):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 put_headers=None):
+                 put_headers=None, retry=None, retry_wait=None):
 
         self.token = token
         self.remote_url = remote_url
@@ -72,6 +72,8 @@ class RestCommonMethods(object):
         self.requester = requester
         self.verify_ssl = verify_ssl
         self._put_headers = put_headers
+        self._retry = retry
+        self._retry_wait = retry_wait
 
     @property
     def auth(self):

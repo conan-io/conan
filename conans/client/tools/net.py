@@ -3,6 +3,7 @@ import os
 from conans.client.rest.uploader_downloader import FileDownloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
+from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output, default_requester
 
 
@@ -59,10 +60,8 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')
 
-    retry = retry if retry is not None else getattr(requester, "retry", None)
-    retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else getattr(requester, "retry_wait", None)
-    retry_wait = retry_wait if retry_wait is not None else 5
+    retry = retry if retry is not None else get_env("CONAN_RETRY", 2)
+    retry_wait = retry_wait if retry_wait is not None else get_env("CONAN_RETRY_WAIT", 5)
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
