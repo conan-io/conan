@@ -16,7 +16,7 @@ from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
     ConanMigrationError
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
@@ -941,10 +941,6 @@ class Command(object):
 
         self._warn_python2()
 
-        # NOTE: returns the expanded pattern (if a pattern was given), and checks
-        # that the query parameter wasn't abused
-        reference = self._check_query_parameter(args.pattern_or_reference, args.query)
-
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
@@ -961,16 +957,15 @@ class Command(object):
             self._user_io.out.info("Cache locks removed")
             return
         elif args.system_reqs:
-            if not reference:
-                raise ConanException("Please specify a valid package reference to be cleaned")
             if args.packages:
                 raise ConanException("'-t' and '-p' parameters can't be used at the same time")
-            try:
-                self._conan.remove_system_reqs(reference)
-                self._user_io.out.info("Cache system_reqs from %s has been removed" % reference)
-                return
-            except Exception as error:
-                raise ConanException("Unable to remove system_reqs: %s" % error)
+            if not args.pattern_or_reference:
+                raise ConanException("Please specify a valid pattern or reference to be cleaned")
+
+            if check_valid_ref(args.pattern_or_reference, allow_pattern=False):
+                return self._conan.remove_system_reqs(args.pattern_or_reference)
+
+            return self._conan.remove_system_reqs_by_pattern(args.pattern_or_reference)
         else:
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
@@ -1212,10 +1207,9 @@ class Command(object):
                             help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('-c', '--confirm', default=False, action='store_true',
                             help='Upload all matching recipes without confirmation')
-        parser.add_argument('--retry', default=2, type=int, action=OnceArgument,
-                            help="In case of fail retries to upload again the specified times. "
-                                 "Defaulted to 2")
-        parser.add_argument('--retry-wait', default=5, type=int, action=OnceArgument,
+        parser.add_argument('--retry', default=None, type=int, action=OnceArgument,
+                            help="In case of fail retries to upload again the specified times.")
+        parser.add_argument('--retry-wait', default=None, type=int, action=OnceArgument,
                             help='Waits specified seconds before retry again')
         parser.add_argument("-no", "--no-overwrite", nargs="?", type=str, choices=["all", "recipe"],
                             action=OnceArgument, const="all",

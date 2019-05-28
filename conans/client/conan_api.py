@@ -9,7 +9,7 @@ from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
+from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
@@ -53,6 +53,7 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files, save,\
@@ -60,6 +61,7 @@ from conans.util.files import exception_message_safe, mkdir, save_files, save,\
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.graph_lock import GraphLockFile
+from conans.util.env_reader import get_env
 
 
 default_manifest_folder = '.conan_manifests'
@@ -756,11 +758,6 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        conanfile_folder = os.path.dirname(conanfile_path)
-        if conanfile_folder != source_folder:
-            conanfile.output.info("Executing exports to: %s" % source_folder)
-            export_recipe(conanfile, conanfile_folder, source_folder)
-            export_source(conanfile, conanfile_folder, source_folder)
         config_source_local(source_folder, conanfile, conanfile_path, self._hook_manager)
 
     @api_method
@@ -906,9 +903,13 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,
-               retry=2, retry_wait=5, integrity_check=False, policy=None, query=None):
+               retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
+        if retry is None:
+            retry = get_env("CONAN_RETRY", 2)
+        if retry_wait is None:
+            retry_wait = get_env("CONAN_RETRY_WAIT", 5)
 
         upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,
@@ -1012,13 +1013,23 @@ class ConanAPIV1(object):
         return self._cache.registry.clear()
 
     @api_method
-    def remove_locks(self):
-        self._cache.remove_locks()
+    def remove_system_reqs(self, reference):
+        try:
+            ref = ConanFileReference.loads(reference)
+            self._cache.package_layout(ref).remove_system_reqs()
+            self._user_io.out.info(
+                "Cache system_reqs from %s has been removed" % repr(ref))
+        except Exception as error:
+            raise ConanException("Unable to remove system_reqs: %s" % error)
 
     @api_method
-    def remove_system_reqs(self, reference):
-        ref = ConanFileReference.loads(reference)
-        self._cache.package_layout(ref).remove_system_reqs()
+    def remove_system_reqs_by_pattern(self, pattern):
+        for ref in search_recipes(self._cache, pattern=pattern):
+            self.remove_system_reqs(ref.full_repr())
+
+    @api_method
+    def remove_locks(self):
+        self._cache.remove_locks()
 
     @api_method
     def profile_list(self):

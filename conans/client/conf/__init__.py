@@ -108,6 +108,8 @@ compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
 default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
+# retry = 2                             # environment CONAN_RETRY
+# retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
 # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
@@ -203,6 +205,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
                "CONAN_REQUEST_TIMEOUT": self._env_c("general.request_timeout", "CONAN_REQUEST_TIMEOUT", None),
+               "CONAN_RETRY": self._env_c("general.retry", "CONAN_RETRY", None),
+               "CONAN_RETRY_WAIT": self._env_c("general.retry_wait", "CONAN_RETRY_WAIT", None),
                "CONAN_VS_INSTALLATION_PREFERENCE": self._env_c("general.vs_installation_preference", "CONAN_VS_INSTALLATION_PREFERENCE", None),
                "CONAN_RECIPE_LINTER": self._env_c("general.recipe_linter", "CONAN_RECIPE_LINTER", "True"),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
