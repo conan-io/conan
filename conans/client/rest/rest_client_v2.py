@@ -21,10 +21,10 @@ from conans.util.log import logger
 class RestV2Methods(RestCommonMethods):
 
     def __init__(self, remote_url, token, custom_headers, output, requester, verify_ssl,
-                 put_headers=None, checksum_deploy=False):
+                 put_headers=None, checksum_deploy=False, retry=None, retry_wait=None):
 
         super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            verify_ssl, put_headers)
+                                            verify_ssl, put_headers, retry, retry_wait)
         self._checksum_deploy = checksum_deploy
 
     @property
@@ -176,7 +176,7 @@ class RestV2Methods(RestCommonMethods):
         t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, self._output, self.verify_ssl, retry=self._retry,
-                                retry_wait=self._retry_wai)
+                                retry_wait=self._retry_wait)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
