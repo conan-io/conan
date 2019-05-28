@@ -170,10 +170,10 @@ class Component(object):
         self._exe = None
         self.system_deps = []
         self._includedirs = []
-        self.libdirs = []
-        self.resdirs = []
-        self.bindirs = []
-        self.builddirs = []
+        self._libdirs = []
+        self._resdirs = []
+        self._bindirs = []
+        self._builddirs = []
         self.defines = []
         self.cflags = []
         self.cppflags = []
@@ -209,6 +209,42 @@ class Component(object):
     @includedirs.setter
     def includedirs(self, value):
         self._includedirs = value
+
+    @property
+    def libdirs(self):
+        libdirs = self._parent.libdirs + self._libdirs
+        return list(OrderedDict.fromkeys(libdirs))
+
+    @libdirs.setter
+    def libdirs(self, value):
+        self._libdirs = value
+
+    @property
+    def resdirs(self):
+        resdirs = self._parent.resdirs + self._resdirs
+        return list(OrderedDict.fromkeys(resdirs))
+
+    @resdirs.setter
+    def resdirs(self, value):
+        self._resdirs = value
+
+    @property
+    def bindirs(self):
+        bindirs = self._parent.bindirs + self._bindirs
+        return list(OrderedDict.fromkeys(bindirs))
+
+    @bindirs.setter
+    def bindirs(self, value):
+        self._bindirs = value
+
+    @property
+    def builddirs(self):
+        builddirs = self._parent.builddirs + self._builddirs
+        return list(OrderedDict.fromkeys(builddirs))
+
+    @builddirs.setter
+    def builddirs(self, value):
+        self._builddirs = value
 
 
 class _BaseDepsCppInfo(_CppInfo):

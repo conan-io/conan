@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conans.paths import CONANFILE, CONANFILE_TXT
@@ -46,3 +47,48 @@ class HelloConan(ConanFile):
 
         client.run("install . -o *:switch=0 --build Lib3")
         self.assertIn("Lib3/1.0@conan/stable: WARN: Env var MYVAR=foo", client.out)
+
+    def package_info_components_test(self):
+        dep = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Dep(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.name = "Boost"
+                self.cpp_info.includedirs = ["boost"]
+                self.cpp_info["Accumulators"].includedirs = ["boost/accumulators"]
+                self.cpp_info["Accumulators"].lib = "libaccumulators"
+                self.cpp_info["Containers"].includedirs = ["boost/containers"]
+                self.cpp_info["Containers"].lib = "libcontainers"
+                self.cpp_info["Containers"].deps = ["Accumulators"]
+                self.cpp_info["SuperContainers"].includedirs = ["boost/supercontainers"]
+                self.cpp_info["SuperContainers"].lib = "libsupercontainers"
+                self.cpp_info["SuperContainers"].deps = ["Containers"]
+        """)
+        consumer = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Consumer(ConanFile):
+            requires = "dep/1.0@us/ch"
+
+            def build(self):
+                acc_includes = self.deps_cpp_info["dep"]["Accumulators"].includedirs
+                con_include = self.deps_cpp_info["dep"]["Containers"].includedirs
+                sup_include = self.deps_cpp_info["dep"]["SuperContainers"].includedirs
+                self.output.info("Name: %s" % self.deps_cpp_info["dep"].name)
+                self.output.info("Accumulators: %s" % acc_includes)
+                self.output.info("Containers: %s" % con_include)
+                self.output.info("SuperContainers: %s" % sup_include)
+                self.output.info("LIBS: %s" % self.deps_cpp_info["dep"].libs)
+        """)
+
+        client = TestClient()
+        client.save({"conanfile_dep.py": dep, "conanfile_consumer.py": consumer})
+        client.run("create conanfile_dep.py dep/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        self.assertIn("Name: Boost", client.out)
+        self.assertIn("Accumulators: ['boost', 'boost/accumulators']", client.out)
+        self.assertIn("Containers: ['boost', 'boost/containers']", client.out)
+        self.assertIn("SuperContainers: ['boost', 'boost/supercontainers']", client.out)
+        self.assertIn("LIBS: ['libaccumulators', 'libcontainers', 'libsupercontainers']", client.out)

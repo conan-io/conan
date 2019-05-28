@@ -207,20 +207,52 @@ VAR2=23
                                                      "when Components are already in use"):
             info.libs = ["libgreet"]
 
-    def cppinfo_includedirs_test(self):
+    def cppinfo_dirs_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
         info.name = "OpenSSL"
         info["OpenSSL"].includedirs = ["include"]
+        info["OpenSSL"].libdirs = ["lib"]
+        info["OpenSSL"].builddirs = ["build"]
+        info["OpenSSL"].bindirs = ["bin"]
+        info["OpenSSL"].resdirs = ["res"]
         info["Crypto"].includedirs = ["headers"]
+        info["Crypto"].libdirs = ["libraries"]
+        info["Crypto"].builddirs = ["build_scripts"]
+        info["Crypto"].bindirs = ["binaries"]
+        info["Crypto"].resdirs = ["resources"]
         self.assertEqual(["include"], info["OpenSSL"].includedirs)
+        self.assertEqual(["lib"], info["OpenSSL"].libdirs)
+        self.assertEqual(["", "build"], info["OpenSSL"].builddirs)
+        self.assertEqual(["bin"], info["OpenSSL"].bindirs)
+        self.assertEqual(["res"], info["OpenSSL"].resdirs)
         self.assertEqual(["include", "headers"], info["Crypto"].includedirs)
+        self.assertEqual(["lib", "libraries"], info["Crypto"].libdirs)
+        self.assertEqual(["", "build_scripts"], info["Crypto"].builddirs)
+        self.assertEqual(["bin", "binaries"], info["Crypto"].bindirs)
+        self.assertEqual(["res", "resources"], info["Crypto"].resdirs)
 
         info.includedirs = ["my_headers"]
+        info.libdirs = ["my_libraries"]
+        info.builddirs = ["my_build_scripts"]
+        info.bindirs = ["my_binaries"]
+        info.resdirs = ["my_resources"]
         self.assertEqual(["my_headers", "include"], info["OpenSSL"].includedirs)
+        self.assertEqual(["my_libraries", "lib"], info["OpenSSL"].libdirs)
+        self.assertEqual(["my_build_scripts", "build"], info["OpenSSL"].builddirs)
+        self.assertEqual(["my_binaries", "bin"], info["OpenSSL"].bindirs)
+        self.assertEqual(["my_resources", "res"], info["OpenSSL"].resdirs)
         self.assertEqual(["my_headers", "headers"], info["Crypto"].includedirs)
+        self.assertEqual(["my_libraries", "libraries"], info["Crypto"].libdirs)
+        self.assertEqual(["my_build_scripts", "build_scripts"], info["Crypto"].builddirs)
+        self.assertEqual(["my_binaries", "binaries"], info["Crypto"].bindirs)
+        self.assertEqual(["my_resources", "resources"], info["Crypto"].resdirs)
 
         info["Crypto"].includedirs = ["different_include"]
+        info["Crypto"].libdirs = ["different_lib"]
+        info["Crypto"].builddirs = ["different_build"]
+        info["Crypto"].bindirs = ["different_bin"]
+        info["Crypto"].resdirs = ["different_res"]
         self.assertEqual(["my_headers", "different_include"], info["Crypto"].includedirs)
 
         # FIXME:
