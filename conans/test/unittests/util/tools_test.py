@@ -708,7 +708,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests)
-        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 1)
+        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 2)
 
         # Retry arguments override defaults
         with six.assertRaisesRegex(self, ConanException, "Error downloading"):
@@ -719,17 +719,12 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
 
         # Retry default values from the config
-        class MockRequester(object):
-            retry = 2
-            retry_wait = 0
-
-            def get(self, *args, **kwargs):
-                return requests.get(*args, **kwargs)
-
         with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=MockRequester())
+            with tools.environment_append({"CONAN_RETRY": "2"}):
+                with tools.environment_append({"CONAN_RETRY_WAIT": "0"}):
+                    tools.download("http://fakeurl3.es/nonexists",
+                                   os.path.join(temp_folder(), "file.txt"), out=out,
+                                   requester=requests)
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
         # Not found error
