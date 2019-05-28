@@ -252,7 +252,6 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
 
-
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)

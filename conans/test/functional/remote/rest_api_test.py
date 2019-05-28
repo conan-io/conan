@@ -31,20 +31,20 @@ class RestApiUnitTest(unittest.TestCase):
 
         # test relative urls
         self.assertEqual(complete_url("http://host", "v1/path_to_file.txt"),
-                          "http://host/v1/path_to_file.txt")
+                         "http://host/v1/path_to_file.txt")
 
         self.assertEqual(complete_url("http://host:1234", "v1/path_to_file.txt"),
-                          "http://host:1234/v1/path_to_file.txt")
+                         "http://host:1234/v1/path_to_file.txt")
 
         self.assertEqual(complete_url("https://host", "v1/path_to_file.txt"),
-                          "https://host/v1/path_to_file.txt")
+                         "https://host/v1/path_to_file.txt")
 
         self.assertEqual(complete_url("https://host:1234", "v1/path_to_file.txt"),
-                          "https://host:1234/v1/path_to_file.txt")
+                         "https://host:1234/v1/path_to_file.txt")
 
         # test relative urls with subdirectory
         self.assertEqual(complete_url("https://host:1234/subdir/", "v1/path_to_file.txt"),
-                          "https://host:1234/subdir/v1/path_to_file.txt")
+                         "https://host:1234/subdir/v1/path_to_file.txt")
 
 
 @attr('slow')

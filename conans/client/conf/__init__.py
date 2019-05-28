@@ -532,6 +532,34 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
+    def retry(self):
+        retry = os.getenv("CONAN_RETRY")
+        if not retry:
+            try:
+                retry = self.get_item("general.retry")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry) if retry is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry'")
+
+    @property
+    def retry_wait(self):
+        retry_wait = os.getenv("CONAN_RETRY_WAIT")
+        if not retry_wait:
+            try:
+                retry_wait = self.get_item("general.retry_wait")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry_wait) if retry_wait is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry_wait'")
+
+    @property
     def generate_run_log_file(self):
         try:
             generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE")
