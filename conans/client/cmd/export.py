@@ -49,7 +49,7 @@ def check_casing_conflict(cache, ref):
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisions_enabled,
-               output, hook_manager, loader, cache, export=True, graph_lock=None):
+               output, hook_manager, loader, cache, export=True, graph_info=None):
 
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
@@ -59,11 +59,11 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
     ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
                              conanfile.channel)
 
-    if graph_lock:
+    if graph_info and graph_info.graph_lock:
         # To invalidate previous version range output
         loader._python_requires._range_resolver.output
-        node_id = graph_lock.get_node(ref)
-        python_requires = graph_lock.python_requires(node_id)
+        node_id = graph_info.graph_lock.get_node(ref)
+        python_requires = graph_info.graph_lock.python_requires(node_id)
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
                                        conanfile.user, conanfile.channel, python_requires)
 
@@ -74,8 +74,10 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
         ref = ref.copy_with_rev(recipe_revision)
-        if graph_lock:
-            graph_lock.update_ref(ref)
+        if graph_info:
+            graph_info.root = ref
+            if graph_info.graph_lock:
+                graph_info.graph_lock.update_ref(ref)
         return ref
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
@@ -159,8 +161,10 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
 
     ref = ref.copy_with_rev(revision)
     output.info("Exported revision: %s" % revision)
-    if graph_lock:
-        graph_lock.update_ref(ref)
+    if graph_info:
+        graph_info.root = ref
+        if graph_info.graph_lock:
+            graph_info.graph_lock.update_ref(ref)
     return ref
 
 
