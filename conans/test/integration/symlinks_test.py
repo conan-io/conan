@@ -236,7 +236,7 @@ class ConanSymlink(ConanFile):
         self.assertTrue(os.path.exists(package_file))
         self.assertTrue(os.path.exists(package_other_dir))
 
-    def create_keep_folder_symlink_test(self):
+    def test_create_keep_folder_symlink(self):
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -248,28 +248,28 @@ class ConanSymlink(ConanFile):
                     debug_path = os.path.join(self.build_folder, "debug")
                     assert os.path.exists(debug_path), "Symlinked folder not created!"
             """)
-        
+
         client = TurboTestClient()
         client.save({"conanfile.py": conanfile})
         client.save({"release/file.cpp": conanfile})
         real_dir_path = os.path.join(client.current_folder, "release")
-        with chdir(client.current_folder):
-            os.symlink(real_dir_path, "debug", target_is_directory=True)
+        symlink_path = os.path.join(client.current_folder, "debug")
+        os.symlink(real_dir_path, symlink_path, target_is_directory=True)
 
         # Verify that the symlink is created correctly
-        self.assertEqual(os.path.realpath(os.path.join(client.current_folder, "debug")),
-                         real_dir_path)
+        self.assertEqual(os.path.realpath(symlink_path), real_dir_path)
 
-        # Export the recipe and check that the symlink is still there
         ref = ConanFileReference.loads("ConanSymlink/3.0.0@user/channel")
-        client.run("export . user/channel")
-        sf = client.cache.package_layout(ref).export_sources()
+        package_layout = client.cache.package_layout(ref)
+        # Export the recipe and check that the symlink is still there
+        client.export(ref, conanfile=conanfile)
+        sf = package_layout.export_sources()
         self.assertTrue(os.path.islink(os.path.join(sf, "debug")))
 
         # Now do the create
         pref = client.create(ref, conanfile=conanfile)
         # Assert that the symlink is preserved when copy to source from exports_sources
-        sf = client.cache.package_layout(pref.ref).source()
+        sf = package_layout.source()
         self.assertTrue(os.path.islink(os.path.join(sf, "debug")))
         # Assert that the symlink is preserved when copy to build folder
         bf = client.cache.package_layout(pref.ref).build(pref)
