@@ -42,9 +42,9 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class Lib(ConanFile):
-                settings = "{}"           
+                settings = "{}"
             """.format('", "'.join(settings)))
         self.t.save({"conanfile.py": conanfile})
 
@@ -97,7 +97,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
 
             class Lib(ConanFile):
                 settings = "os", "arch", "cppstd"
-                
+
                 def configure(self):
                     self.output.info(">>> cppstd: {}".format(self.settings.cppstd))
         """)
@@ -118,10 +118,10 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Lib(ConanFile):
             settings = "cppstd", "os", "compiler", "arch", "build_type"
-            
+
             def configure(self):
                 self.output.info(">>> cppstd: {}".format(self.settings.cppstd))
                 self.output.info(">>> compiler.cppstd: {}".format(self.settings.compiler.cppstd))
@@ -155,4 +155,3 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
         self.t.run("info . {}".format(settings_str), assert_error=True)
         self.assertIn("Do not use settings 'compiler.cppstd' together with 'cppstd'."
                       " Use only the former one.", self.t.out)
-

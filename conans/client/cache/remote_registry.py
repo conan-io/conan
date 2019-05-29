@@ -56,7 +56,7 @@ def load_old_registry_json(contents):
 
 
 def migrate_registry_file(cache, out):
-    folder = cache.conan_folder
+    folder = cache.cache_folder
     reg_json_path = os.path.join(folder, "registry.json")
     reg_txt_path = os.path.join(folder, "registry.txt")
     remotes_path = cache.registry_path
@@ -248,13 +248,21 @@ class Remotes(object):
 
 class RemoteRegistry(object):
 
-    def __init__(self, cache):
+    def __init__(self, cache, output):
         self._cache = cache
+        self._output = output
         self._filename = cache.registry_path
 
     def load_remotes(self):
-        content = load(self._filename)
-        return Remotes.loads(content)
+        if not os.path.exists(self._filename):
+            self._output.warn("Remotes registry file missing, "
+                              "creating default one in %s" % self._filename)
+            remotes = Remotes.defaults()
+            remotes.save(self._filename)
+        else:
+            content = load(self._filename)
+            remotes = Remotes.loads(content)
+        return remotes
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
         remotes = self.load_remotes()

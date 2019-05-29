@@ -58,6 +58,7 @@ class ConanCreateTest(unittest.TestCase):
                     old_stdout = sys.stdout
                     result = StringIO()
                     sys.stdout = result
+                    sys.stderr = sys.stdout
                     api, _, _ = ConanAPIV1.factory()
                     api._user_io.out = TestBufferConanOutput()
                     conanfile = dedent("""

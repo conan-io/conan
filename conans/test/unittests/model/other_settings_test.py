@@ -190,7 +190,7 @@ class Test(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        default_profile = os.path.join(client.base_folder, ".conan/profiles/default")
+        default_profile = os.path.join(client.base_folder, "profiles/default")
         save(default_profile, "[settings]\ncompiler=gcc\ncompiler.version=6.3")
         client.run("create . user/channel", assert_error=True)
         self.assertIn("Invalid setting '6.3' is not a valid 'settings.compiler.version'",
@@ -340,8 +340,8 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'SunOS',
-                                     'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
+                                    ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
+                                     'SunOS', 'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
                       str(client.user_io.out))
 
         # Now add new settings to config and try again

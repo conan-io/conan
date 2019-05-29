@@ -221,7 +221,7 @@ class AutoToolsBuildEnvironment(object):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
 
@@ -239,7 +239,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
         btfs = build_type_flags(compiler=self._compiler, build_type=self._build_type,
@@ -329,8 +329,9 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": cxx_flags,
                "CFLAGS": c_flags,
                "LDFLAGS": ld_flags,
-               "LIBS": libs,
+               "LIBS": libs
                }
+
         return ret
 
     @property
@@ -347,8 +348,9 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": cxx_flags.strip(),
                "CFLAGS": cflags.strip(),
                "LDFLAGS": ldflags.strip(),
-               "LIBS": libs.strip(),
+               "LIBS": libs.strip()
                }
+
         return ret
 
 

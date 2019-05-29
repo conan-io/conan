@@ -2,7 +2,8 @@ import os
 import unittest
 
 from conans import tools
-from conans.test.utils.tools import TestClient
+from conans.client.runner import ConanRunner
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
 
 CONAN_RECIPE = """
@@ -42,7 +43,9 @@ os_build={os_build}
 class CMakeGeneratorTest(unittest.TestCase):
 
     def _check_build_generator(self, os_build, generator):
-        client = TestClient()
+        output = TestBufferConanOutput()
+        runner = ConanRunner(True, False, True, output=output)
+        client = TestClient(runner=runner)
         client.save({"conanfile.py": CONAN_RECIPE,
                      "CMakeLists.txt": CMAKE_RECIPE,
                      "dummy.cpp": CPP_CONTENT,
@@ -52,10 +55,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("build .")
 
         if generator:
-            self.assertIn('cmake -G "{}"'.format(generator), client.out)
+            self.assertIn('cmake -G "{}"'.format(generator), output)
             self.assertTrue(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
         else:
-            self.assertNotIn("cmake -G", client.out)
+            self.assertNotIn("cmake -G", output)
             self.assertFalse(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
 
     @unittest.skipUnless(tools.os_info.is_linux, "Compilation with real gcc needed")
