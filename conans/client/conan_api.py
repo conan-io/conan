@@ -59,7 +59,7 @@ from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.util.env_reader import get_env
+
 
 default_manifest_folder = '.conan_manifests'
 
@@ -854,11 +854,6 @@ class ConanAPIV1(object):
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        if retry is None:
-            retry = get_env("CONAN_RETRY", 2)
-        if retry_wait is None:
-            retry_wait = get_env("CONAN_RETRY_WAIT", 5)
-
         upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,
                              self._loader, self._hook_manager)

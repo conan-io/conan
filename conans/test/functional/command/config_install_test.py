@@ -12,7 +12,7 @@ from conans.client import tools
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.uploader_downloader import Downloader
+from conans.client.rest.uploader_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -300,7 +300,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -312,7 +312,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -329,6 +329,7 @@ class Pkg(ConanFile):
     def failed_install_http_test(self):
         """ should install from a http zip
         """
+        self.client.run("config set general.retry_wait=0")
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Error while installing config from httpnonexisting", self.client.out)
 
@@ -431,7 +432,7 @@ class Pkg(ConanFile):
             self.assertEqual(url, fake_url_with_credentials)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install %s" % fake_url_with_credentials)
 
             # Check credentials are not displayed in output
@@ -452,10 +453,10 @@ class Pkg(ConanFile):
             self.assertTrue(obj.verify)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=download_verify_false):
+        with patch.object(FileDownloader, 'download', new=download_verify_false):
             self.client.run("config install %s --verify-ssl=False" % fake_url)
 
-        with patch.object(Downloader, 'download', new=download_verify_true):
+        with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
     def test_git_checkout_is_possible(self):
