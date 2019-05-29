@@ -28,9 +28,10 @@ class MultiRemotesTest(unittest.TestCase):
         if export:
             client.run("export . lasote/stable")
 
-    def conan_test_test(self):
+    def conan_install_build_flag_test(self):
         """
-        Checks --build in test command
+        Checks conan install --update works with different remotes and changes the asociated ones
+        in registry accordingly
         """
         client_a = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")],
                                                            "local": [("lasote", "mypass")]})
@@ -42,17 +43,18 @@ class MultiRemotesTest(unittest.TestCase):
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
         client_a.run("remote list_ref")
-        self.assertIn(": local", str(client_a.user_io.out))
+        self.assertIn(": local", str(client_a.out))
         sleep(1)  # For timestamp and updates checks
 
         # Download Hello0 from local with client_b
         client_b.run("install Hello0/0.0@lasote/stable -r local --build missing")
         client_b.run("remote list_ref")
-        self.assertIn(": local", str(client_b.user_io.out))
+        self.assertIn(": local", str(client_b.out))
 
         # Update Hello0 with client_a and reupload
         self._create(client_a, "Hello0", "0.0", modifier="\n")
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
+        self.assertIn("Uploaded conan recipe 'Hello0/0.0@lasote/stable' to 'local'", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("info Hello0/0.0@lasote/stable -u")
@@ -63,6 +65,7 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.user_io.out))
         client_b.run("install Hello0/0.0@lasote/stable -u --build")
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.user_io.out))
 
@@ -74,12 +77,13 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Now client_b checks for updates without -r parameter
         client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("    Remote: local", str(client_b.user_io.out))
-        self.assertIn("    Recipe: Cache", client_b.out)
+        self.assertIn("Remote: local", client_b.out)
+        self.assertIn("Recipe: Cache", client_b.out)
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         client_b.run("info Hello0/0.0@lasote/stable -r default -u")
-        self.assertIn("Remote: local", str(client_b.user_io.out))
+        self.assertIn("Remote: local", client_b.out)
+        self.assertIn("Recipe: Update available", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.user_io.out))
 
@@ -90,6 +94,8 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("info Hello0/0.0@lasote/stable -u")
         self.assertIn("Recipe: Cache", client_b.out)
         self.assertIn("Binary: Cache", client_b.out)
+        client_b.run("remote list_ref")
+        self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
 
 
 class MultiRemoteTest(unittest.TestCase):
