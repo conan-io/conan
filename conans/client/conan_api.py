@@ -622,18 +622,13 @@ class ConanAPIV1(object):
         cwd = get_cwd()
         try:
             ref = ConanFileReference.loads(reference_or_path)
-            lock_folder = _make_abs_path(install_folder, cwd) if install_folder else None
-            install_folder = None
         except ConanException:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
-            if install_folder:
-                install_folder = _make_abs_path(install_folder, cwd)
-            else:
-                # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
-                if os.path.exists(os.path.join(cwd, GRAPH_INFO_FILE)):
-                    install_folder = cwd
-            lock_folder = install_folder
+        install_folder = _make_abs_path(install_folder, cwd)
+        lock_folder = install_folder
+        if not os.path.exists(os.path.join(install_folder, GRAPH_INFO_FILE)):
+            install_folder = None
 
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
                                     self._cache, self._user_io.out, lock_folder=lock_folder,
@@ -674,8 +669,7 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-             profile_names=None, update=False, install_folder=None, build=None, use_lock=None,
-             output_folder=None):
+             profile_names=None, update=False, install_folder=None, build=None, use_lock=None):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env, use_lock=use_lock)
         recorder = ActionRecorder()
@@ -687,8 +681,8 @@ class ConanAPIV1(object):
                                                                update, False, remotes,
                                                                recorder)
 
-        if output_folder:
-            output_folder = _make_abs_path(output_folder)
+        if install_folder:
+            output_folder = _make_abs_path(install_folder)
             graph_info.save(output_folder)
             self._user_io.out.info("Generated graphinfo")
 
