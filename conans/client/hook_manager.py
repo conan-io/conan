@@ -28,7 +28,8 @@ valid_hook_methods = ["pre_export", "post_export",
                       "pre_upload_package", "post_upload_package",
                       "pre_download", "post_download",
                       "pre_download_recipe", "post_download_recipe",
-                      "pre_download_package", "post_download_package"]
+                      "pre_download_package", "post_download_package",
+                      "pre_package_info", "post_package_info"]
 
 
 class HookManager(object):
@@ -49,7 +50,8 @@ class HookManager(object):
         if not self.hooks:
             self.load_hooks()
 
-        assert method_name in valid_hook_methods
+        assert method_name in valid_hook_methods, \
+            "Method '{}' not in valid hooks methods".format(method_name)
         for name, method in self.hooks[method_name]:
             try:
                 output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)

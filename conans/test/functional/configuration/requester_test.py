@@ -12,6 +12,8 @@ from conans.client.tools.files import replace_in_file, save
 from conans.errors import ConanException
 from conans.paths import CACERT_FILE
 from conans.test.utils.tools import TestBufferConanOutput, temp_folder
+from conans.client.rest.conan_requester import ConanRequester
+from conans.client.cache.cache import ClientCache
 
 
 class MockRequesterGet(Mock):
@@ -29,7 +31,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
             conan_api, cache, _ = Conan.factory()
         requester = conan_api._requester
         mock_requester = MockRequesterGet()
-        requester._requester = mock_requester
+        requester._http_requester = mock_requester
         return requester, mock_requester, cache
 
     def test_default_no_verify(self):
@@ -40,7 +42,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
     def test_default_verify(self):
         requester, mocked_requester, cache = self._create_requesters()
         requester.get(url="aaa", verify=True)
-        self.assertEqual(mocked_requester.verify, cache.cacert_path)
+        self.assertEqual(mocked_requester.verify, cache.config.cacert_path)
 
     def test_env_variable(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
@@ -51,15 +53,17 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
             self.assertEqual(mocked_requester.verify, file_path)
 
     def test_cache_config(self):
-        file_path = os.path.join(temp_folder(), "whatever_cacert")
-        save(file_path, "dummy")
-
-        requester, mocked_requester, cache = self._create_requesters()
+        cache = ClientCache(temp_folder(), TestBufferConanOutput())
+        file_path = os.path.join(cache.cache_folder, "whatever_cacert")
         replace_in_file(cache.conan_conf_path, "# cacert_path",
                         "cacert_path={}".format(file_path),
                         output=TestBufferConanOutput())
+        save(file_path, "")
         cache.invalidate()
 
+        requester = ConanRequester(cache.config)
+        mocked_requester = MockRequesterGet()
+        requester._http_requester = mocked_requester
         requester.get(url="bbbb", verify=True)
         self.assertEqual(mocked_requester.verify, file_path)
 
@@ -78,5 +82,5 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
 
         requester, mocked_requester, cache = self._create_requesters(conan_user_home)
         requester.get(url="aaa", verify=True)
-        self.assertEqual(mocked_requester.verify, cache.cacert_path)
-        self.assertEqual(cache.cacert_path, default_cacert_path)
+        self.assertEqual(mocked_requester.verify, cache.config.cacert_path)
+        self.assertEqual(cache.config.cacert_path, default_cacert_path)

@@ -1,18 +1,40 @@
 import os
+import textwrap
+import time
 import unittest
 
-import time
-import textwrap
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer, \
     NO_SETTINGS_PACKAGE_ID, create_local_git_repo
-from conans.test.utils.conanfile import TestConanFile
 
 
 class PythonExtendTest(unittest.TestCase):
+    def test_with_python_requires(self):
+        # https://github.com/conan-io/conan/issues/5140
+        client = TestClient()
+        client.save({"conanfile.py": TestConanFile("dep", "0.1")})
+        client.run("export . user/testing")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+            p = python_requires("dep/0.1@user/testing")
+            class APck(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run('editable add . pkg/0.1@user/testing')
+        self.assertIn("Reference 'pkg/0.1@user/testing' in editable mode", client.out)
+        client.run("editable remove pkg/0.1@user/testing")
+        client.run("create . pkg/0.1@user/testing")
+        client.run("copy pkg/0.1@user/testing company/stable")
+        self.assertIn("Copied pkg/0.1@user/testing to pkg/0.1@company/stable", client.out)
+        # imports should raise either
+        client.run("install .")
+        client.run("imports .")
+
     def _define_base(self, client):
         conanfile = """from conans import ConanFile
 class MyConanfileBase(ConanFile):
@@ -326,26 +348,6 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
-    def reuse_exports_test(self):
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    exports_sources = "*.h"
-"""
-        client = TestClient()
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "my header"})
-        client.run("export . Base/0.1@user/testing")
-        conanfile = """from conans import python_requires, load
-base = python_requires("Base/0.1@user/testing")
-class Pkg2(base.Pkg):
-    def build(self):
-        self.output.info("Exports sources: %s" % self.exports_sources)
-        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
-"""
-        client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("No such file or directory: 'header.h'", client.out)
-
     def reuse_class_members_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -505,6 +507,7 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("ERROR: Error loading conanfile", t.out)
         self.assertIn("Same python_requires with different versions not allowed for a conanfile",
                       t.out)
+
 
 class PythonRequiresNestedTest(unittest.TestCase):
 

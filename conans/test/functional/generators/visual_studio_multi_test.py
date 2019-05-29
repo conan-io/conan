@@ -84,7 +84,8 @@ class VisualStudioMultiTest(unittest.TestCase):
             arch = "x86"
             runner = ConanRunner(print_commands_to_output=True,
                                  generate_run_log_file=False,
-                                 log_run_to_output=True)
+                                 log_run_to_output=True,
+                                 output=TestBufferConanOutput())
             settings = MockSettings({"os": "Windows",
                                      "build_type": build_type,
                                      "arch": arch,

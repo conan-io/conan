@@ -157,6 +157,15 @@ class UploadTest(unittest.TestCase):
     def upload_error_test(self):
         """Cause an error in the transfer and see some message"""
 
+        # Check for the default behaviour
+        client = self._get_client(BadConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm")
+        self.assertIn("Can't connect because of the evil mock", client.user_io.out)
+        self.assertIn("Waiting 5 seconds to retry...", client.user_io.out)
+
         # This will fail in the first put file, so, as we need to
         # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
         client = self._get_client(BadConnectionUploader)
@@ -194,6 +203,55 @@ class UploadTest(unittest.TestCase):
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEqual(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
+
+    def upload_error_with_config_test(self):
+        """Cause an error in the transfer and see some message"""
+
+        # This will fail in the first put file, so, as we need to
+        # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
+        client = self._get_client(BadConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export . frodo/stable")
+        client.run('config set general.retry_wait=0')
+        client.run("upload Hello* --confirm")
+        self.assertIn("Can't connect because of the evil mock", client.user_io.out)
+        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
+
+        # but not with 1
+        client = self._get_client(BadConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export . frodo/stable")
+        client.run('config set general.retry=1')
+        client.run('config set general.retry_wait=1')
+        client.run("upload Hello* --confirm", assert_error=True)
+        self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+                      "conan_export.tgz. [Remote: default]", client.user_io.out)
+
+        # Try with broken connection even with 10 retries
+        client = self._get_client(TerribleConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export . frodo/stable")
+        client.run('config set general.retry=10')
+        client.run('config set general.retry_wait=0')
+        client.run("upload Hello* --confirm", assert_error=True)
+        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.out)
+
+        # For each file will fail the first time and will success in the second one
+        client = self._get_client(FailPairFilesUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export . frodo/stable")
+        client.run("install Hello0/1.2.1@frodo/stable --build")
+        client.run('config set general.retry=3')
+        client.run('config set general.retry_wait=0')
+        client.run("upload Hello* --confirm --all")
+        self.assertEqual(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
+
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
