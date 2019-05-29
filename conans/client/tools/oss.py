@@ -77,6 +77,15 @@ def detected_architecture():
     elif "s390" in machine:
         return "s390"
 
+    if OSInfo().is_aix:
+        processor = platform.processor()
+        if "powerpc" in processor:
+            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
+            if kernel_bitness:
+                return "ppc64" if kernel_bitness == "64" else "ppc32"
+        elif "rs6000" in processor:
+            return "ppc32"
+
     return None
 
 # DETECT OS, VERSION AND DISTRIBUTIONS
@@ -113,6 +122,7 @@ class OSInfo(object):
         self.is_macos = system == "Darwin"
         self.is_freebsd = system == "FreeBSD"
         self.is_solaris = system == "SunOS"
+        self.is_aix = system == "AIX"
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
@@ -129,6 +139,9 @@ class OSInfo(object):
         elif self.is_solaris:
             self.os_version = Version(platform.release())
             self.os_version_name = self.get_solaris_version_name(self.os_version)
+        elif self.is_aix:
+            self.os_version = self.get_aix_version()
+            self.os_version_name = "AIX %s" % self.os_version.minor(fill=False)
 
     def _get_linux_distro_info(self):
         import distro
@@ -281,6 +294,14 @@ class OSInfo(object):
             return "Solaris 11"
 
     @staticmethod
+    def get_aix_version():
+        try:
+            ret = check_output("oslevel").strip()
+            return Version(ret)
+        except Exception:
+            return Version("%s.%s" % (platform.version(), platform.release()))
+
+    @staticmethod
     def bash_path():
         if os.getenv("CONAN_BASH_PATH"):
             return os.getenv("CONAN_BASH_PATH")
@@ -301,6 +322,18 @@ class OSInfo(object):
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
                 ret = check_output(command).strip().lower()
                 return ret
+        except Exception:
+            return None
+
+    @staticmethod
+    def get_aix_conf(options=None):
+        options = " %s" % options if options else ""
+        if not OSInfo().is_aix:
+            raise ConanException("Command only for AIX operating system")
+
+        try:
+            ret = check_output("getconf%s" % options).strip()
+            return ret
         except Exception:
             return None
 
@@ -388,8 +421,15 @@ def get_gnu_triplet(os_, arch, compiler=None):
 
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
-        if "arm" in arch:
+        if os_ == "AIX":
+            if "ppc32" in arch:
+                machine = "rs6000"
+            elif "ppc64" in arch:
+                machine = "powerpc"
+        elif "arm" in arch:
             machine = "arm"
+        elif "ppc32be" in arch:
+            machine = "powerpcbe"
         elif "ppc64le" in arch:
             machine = "powerpc64le"
         elif "ppc64" in arch:
@@ -408,6 +448,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "s390x-ibm"
         elif "s390" in arch:
             machine = "s390-ibm"
+        elif "sh4" in arch:
+            machine = "sh4"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -432,7 +474,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "tvOS": "apple-darwin",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
-                 "Emscripten": "local-emscripten"}.get(os_, os_.lower())
+                 "Emscripten": "local-emscripten",
+                 "AIX": "ibm-aix",
+                 "Neutrino": "nto-qnx"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:

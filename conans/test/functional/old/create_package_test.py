@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+from mock import Mock
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
@@ -81,7 +82,7 @@ class ExporterTest(unittest.TestCase):
         conanfile = loader.load_consumer(conanfile_path, test_processed_profile())
 
         create_package(conanfile, None, build_folder, build_folder, package_folder, install_folder,
-                       client.hook_manager, conanfile_path, ref, copy_info=True)
+                       Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

@@ -35,6 +35,7 @@ class CompilerArgsGenerator(Generator):
         flags.extend(self._deps_build_info.cflags)
 
         arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"),
+                                      os=self.conanfile.settings.get_safe("os"),
                                       compiler=self.compiler)
         if arch_flag:
             flags.append(arch_flag)

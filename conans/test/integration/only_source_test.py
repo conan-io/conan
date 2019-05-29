@@ -65,12 +65,12 @@ class DefaultNameConan(ConanFile):
         # Now Hello2 should be built and not fail
         client.run("create . lasote/stable")
         self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.user_io.out)
-        self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
+        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
                       client.user_io.out)
 
         # Now package is generated but should be built again
         client.run("create . lasote/stable")
-        self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
+        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
                       client.user_io.out)
 
     def build_policies_update_test(self):
