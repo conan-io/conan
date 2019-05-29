@@ -2,7 +2,7 @@ import json
 import time
 from collections import namedtuple
 
-from conans.util.dates import from_timestamp_to_iso8601, valid_iso8601
+from conans.util.dates import from_timestamp_to_iso8601
 
 _RevisionEntry = namedtuple("RevisionEntry", "revision time")
 

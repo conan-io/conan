@@ -1106,6 +1106,9 @@ class Test(ConanFile):
     def test_exception_client_without_revs(self):
         client = TestClient()
         client.run("search whatever --revisions", assert_error=True)
+        self.assertIn("ERROR: With --revision, specify a reference", client.out)
+
+        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 

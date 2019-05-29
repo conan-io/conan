@@ -34,7 +34,7 @@ def _handle_remotes(cache, remote_file):
 
 @contextmanager
 def tmp_config_install_folder(cache):
-    tmp_folder = os.path.join(cache.conan_folder, "tmp_config_install")
+    tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
     mkdir(tmp_folder)
@@ -90,9 +90,13 @@ def _process_folder(config, folder, cache, output):
                 output.info("Defining remotes from remotes.txt")
                 _handle_remotes(cache, os.path.join(root, f))
             elif f in ("registry.txt", "registry.json"):
-                os.remove(cache.registry_path)
-                shutil.copy(os.path.join(root, f), cache.conan_folder)
-                migrate_registry_file(cache, output)
+                try:
+                    os.remove(cache.registry_path)
+                except OSError:
+                    pass
+                finally:
+                    shutil.copy(os.path.join(root, f), cache.cache_folder)
+                    migrate_registry_file(cache, output)
             elif f == "remotes.json":
                 # Fix for Conan 2.0
                 raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
@@ -103,10 +107,10 @@ def _process_folder(config, folder, cache, output):
                     continue
                 relpath = os.path.relpath(root, folder)
                 if config.target_folder:
-                    target_folder = os.path.join(cache.conan_folder, config.target_folder,
+                    target_folder = os.path.join(cache.cache_folder, config.target_folder,
                                                  relpath)
                 else:
-                    target_folder = os.path.join(cache.conan_folder, relpath)
+                    target_folder = os.path.join(cache.cache_folder, relpath)
                 mkdir(target_folder)
                 output.info("Copying file %s to %s" % (f, target_folder))
                 shutil.copy(os.path.join(root, f), target_folder)
