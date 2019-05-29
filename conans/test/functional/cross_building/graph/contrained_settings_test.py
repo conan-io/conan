@@ -16,55 +16,54 @@ from conans.util.files import save
 
 
 class ClassicProtocExample(GraphManagerTest):
-    """ There is an application that requires the protobuf library, and also
-        build_requires the protoc executable to generate some files, but protoc
-        also requires the protobuf library to build.
+    """
+        Note.- For the description of this graph check test in 'protoc_basic_test'
 
-        Expected packages:
-            * host_machine: application, protobuf
-            * build_machine: protoc, protobuf
+        This test is constraining the settings inside the recipes. It make sense that Conan
+        only validates (and contrain) the settings within the build context of the
+        package
     """
 
     protobuf = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protobuf(ConanFile):
             name = "protobuf"
             version = "testing"
-            
-            settings = "os"  # , "arch", "compiler", "build_type"
-            
+
+            settings = "os"
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
     protoc = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protoc(ConanFile):
             name = "protoc"
             version = "testing"
-            
-            settings = "os"
+
+            settings = {"os": None, "arch": ["x86_64", ]}
             requires = "protobuf/testing@user/channel"
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
     application = textwrap.dedent("""
         from conans import ConanFile
-        
+
         class Protoc(ConanFile):
             name = "application"
             version = "testing"
-            
-            settings = "os"
+
+            settings = {"os": None, "arch": ["x86", ]}
             requires = "protobuf/testing@user/channel"
-            
+
             def build_requirements(self):
                 self.build_requires("protoc/testing@user/channel")
-            
+
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
@@ -73,6 +72,7 @@ class ClassicProtocExample(GraphManagerTest):
         os:
             Host:
             Build:
+        arch: [x86, x86_64]
     """)
 
     def setUp(self):
@@ -103,10 +103,12 @@ class ClassicProtocExample(GraphManagerTest):
     def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"
+        profile_host.settings["arch"] = "x86"  # Application contraints to x86
         profile_host.process_settings(self.cache)
 
         profile_build = Profile()
         profile_build.settings["os"] = "Build"
+        profile_build.settings["arch"] = "x86_64"  # Protoc constrain to x86_64
         profile_build.process_settings(self.cache)
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
@@ -117,27 +119,31 @@ class ClassicProtocExample(GraphManagerTest):
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
-        self.assertEqual(application.conanfile.settings_host.os, profile_host.settings['os'])
+        self.assertEqual(application.conanfile.settings.get_safe("arch"), profile_host.settings['arch'])
         self.assertEqual(str(application.conanfile.settings_build.os), profile_build.settings['os'])
+        self.assertEqual(application.conanfile.settings_build.get_safe("arch"), profile_build.settings['arch'])
 
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
         self.assertEqual(protobuf_host.build_context, CONTEXT_HOST)
         self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
-        self.assertEqual(protobuf_host.conanfile.settings_host.os, profile_host.settings['os'])
+        self.assertEqual(protobuf_host.conanfile.settings.get_safe("arch"), None)
         self.assertEqual(protobuf_host.conanfile.settings_build.os, profile_build.settings['os'])
+        self.assertEqual(protobuf_host.conanfile.settings_build.get_safe("arch"), None)
 
         # Check BUILD packages
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
-        self.assertEqual(str(protoc_build.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(str(protoc_build.conanfile.settings.get_safe("arch")), profile_build.settings['arch'])
         self.assertEqual(str(protoc_build.conanfile.settings_build.os), profile_build.settings['os'])
+        self.assertEqual(str(protoc_build.conanfile.settings_build.get_safe("arch")), profile_build.settings['arch'])
 
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
         self.assertEqual(protoc_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
-        self.assertEqual(str(protobuf_build.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(protobuf_build.conanfile.settings.get_safe("arch"), None)
         self.assertEqual(str(protobuf_build.conanfile.settings_build.os), profile_build.settings['os'])
+        self.assertEqual(protobuf_build.conanfile.settings_build.get_safe("arch"), None)

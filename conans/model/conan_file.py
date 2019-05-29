@@ -70,13 +70,10 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings):
+def create_settings(settings, defined_settings, constraint_values):
     try:
-        defined_settings = getattr(conanfile, "settings", None)
-        if isinstance(defined_settings, str):
-            defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current)
+        settings.constraint(current, constraint_values=constraint_values)
         return settings
     except Exception as e:
         raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
@@ -133,6 +130,7 @@ class ConanFile(object):
 
     # Settings and Options
     settings = None
+    settings_build = None
     options = None
     default_options = None
     default_build_options = None
@@ -146,7 +144,7 @@ class ConanFile(object):
         self._conan_user = user
         self._conan_channel = channel
 
-    def initialize(self, settings, env):
+    def initialize(self, settings_host, settings_build, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
@@ -154,7 +152,12 @@ class ConanFile(object):
         self.build_options = create_build_options(self)
 
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings)
+
+        defined_settings = getattr(self, "settings", None)
+        if isinstance(defined_settings, str):
+            defined_settings = [defined_settings]
+        self.settings = create_settings(settings_host, defined_settings, constraint_values=True)
+        self.settings_build = create_settings(settings_build, defined_settings, constraint_values=False)
 
         try:
             import warnings
@@ -198,6 +201,10 @@ class ConanFile(object):
 
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
+
+    @property
+    def settings_host(self):
+        return self.settings
 
     @property
     def env(self):

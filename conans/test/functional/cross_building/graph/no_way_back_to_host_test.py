@@ -117,15 +117,21 @@ class NoWayBackToHost(GraphManagerTest):
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.build_context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
+        self.assertEqual(str(application.conanfile.settings_host.os), profile_host.settings['os'])
+        self.assertEqual(str(application.conanfile.settings_build.os), profile_build.settings['os'])
 
         # Check BUILD package
         build_tool = application.dependencies[0].dst
         self.assertEqual(build_tool.conanfile.name, "build_tool")
         self.assertEqual(build_tool.build_context, CONTEXT_BUILD)
         self.assertEqual(build_tool.conanfile.settings.os, profile_build.settings['os'])
+        self.assertEqual(str(build_tool.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(str(build_tool.conanfile.settings_build.os), profile_build.settings['os'])
 
         # There is no way back to host profile from build one (host=build)
         host_tool = build_tool.dependencies[0].dst
         self.assertEqual(host_tool.conanfile.name, "host_tool")
         self.assertEqual(host_tool.build_context, CONTEXT_BUILD)
         self.assertEqual(str(host_tool.conanfile.settings.os), profile_build.settings['os'])
+        self.assertEqual(str(host_tool.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(str(host_tool.conanfile.settings_build.os), profile_build.settings['os'])

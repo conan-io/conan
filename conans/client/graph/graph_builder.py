@@ -5,7 +5,6 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
-from conans.model.options import OptionsValues, Options, PackageOptions
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
@@ -181,7 +180,7 @@ class DepsGraphBuilder(object):
             processed_profile_host = processed_profile_host if require.build_context == CONTEXT_HOST else processed_profile_build
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remotes,
-                                             processed_profile_host)
+                                             processed_profile_host, processed_profile_build)
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
@@ -315,6 +314,7 @@ class DepsGraphBuilder(object):
                 with warnings.catch_warnings(record=True):
                     warnings.filterwarnings("always")
                     conanfile.settings.validate()  # All has to be ok!
+                    conanfile.settings_build.validate()
                 conanfile.options.validate()
                 conanfile.build_options.validate()
 
@@ -351,7 +351,8 @@ class DepsGraphBuilder(object):
         return new_down_reqs, new_options, new_build_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, name_req,
-                         check_updates, update, remotes, processed_profile, alias_ref=None):
+                         check_updates, update, remotes, processed_profile_host,
+                         processed_profile_build, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
 
@@ -366,8 +367,8 @@ class DepsGraphBuilder(object):
             raise e
         conanfile_path, recipe_status, remote, new_ref = result
 
-        dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile,
-                                                    ref=requirement.ref)
+        dep_conanfile = self._loader.load_conanfile(conanfile_path, processed_profile_host,
+                                                    processed_profile_build, ref=requirement.ref)
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
@@ -378,7 +379,7 @@ class DepsGraphBuilder(object):
             dep_graph.aliased[alias_ref] = requirement.ref
             return self._create_new_node(current_node, dep_graph, requirement,
                                          name_req, check_updates, update,
-                                         remotes, processed_profile,
+                                         remotes, processed_profile_host, processed_profile_build,
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))

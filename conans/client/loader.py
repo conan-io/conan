@@ -78,17 +78,18 @@ class ConanFileLoader(object):
         return conanfile(self._output, self._runner, str(ref), user, channel)
 
     @staticmethod
-    def _initialize_conanfile(conanfile, processed_profile):
+    def _initialize_conanfile(conanfile, processed_profile_host, processed_profile_build):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
-        tmp_settings = processed_profile._settings.copy()
-        if (processed_profile._package_settings and
-                conanfile.name in processed_profile._package_settings):
+        tmp_settings = processed_profile_host._settings.copy()
+        if (processed_profile_host._package_settings and
+                conanfile.name in processed_profile_host._package_settings):
             # Update the values, keeping old ones (confusing assign)
-            values_tuple = processed_profile._package_settings[conanfile.name]
+            values_tuple = processed_profile_host._package_settings[conanfile.name]
             tmp_settings.values = Values.from_list(values_tuple)
 
-        conanfile.initialize(tmp_settings, processed_profile._env_values)
+        conanfile.initialize(tmp_settings, processed_profile_build._settings.copy(),
+                             processed_profile_host._env_values)
 
     def load_consumer(self, conanfile_path, processed_profile_host, processed_profile_build,
                       name=None, version=None, user=None, channel=None, test=None):
@@ -131,15 +132,15 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile(self, conanfile_path, processed_profile, ref):
+    def load_conanfile(self, conanfile_path, processed_profile_host, processed_profile_build, ref):
         conanfile_class = self.load_class(conanfile_path)
         conanfile_class.name = ref.name
         conanfile_class.version = ref.version
         conanfile = conanfile_class(self._output, self._runner, str(ref), ref.user, ref.channel)
-        if processed_profile._dev_reference and processed_profile._dev_reference == ref:
+        if processed_profile_host._dev_reference and processed_profile_host._dev_reference == ref:
             conanfile.develop = True
         try:
-            self._initialize_conanfile(conanfile, processed_profile)
+            self._initialize_conanfile(conanfile, processed_profile_host, processed_profile_build)
             return conanfile
         except ConanInvalidConfiguration:
             raise
@@ -161,11 +162,12 @@ class ConanFileLoader(object):
     def _parse_conan_txt(self, contents, path, display_name, processed_profile_host,
                          processed_profile_build):
         conanfile = ConanFile(self._output, self._runner, display_name)
-        conanfile.initialize(Settings(), processed_profile_host._env_values)
+        conanfile.initialize(Settings(), Settings(), processed_profile_host._env_values)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
         conanfile.settings = processed_profile_host._settings.copy_values()
+        conanfile.settings_build = processed_profile_build._settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -201,8 +203,10 @@ class ConanFileLoader(object):
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(processed_profile_host._settings.copy(),
+                             processed_profile_build._settings.copy(),
                              processed_profile_host._env_values)
         conanfile.settings = processed_profile_host._settings.copy_values()
+        conanfile.settings_build = processed_profile_build._settings.copy_values()
 
         for reference in references:
             conanfile.requires.add(reference.full_repr())  # Convert to string necessary
