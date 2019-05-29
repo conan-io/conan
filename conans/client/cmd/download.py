@@ -18,10 +18,10 @@ def download(ref, package_ids, remote, recipe, remote_manager,
     conan_file_path = cache.package_layout(ref).conanfile()
     conanfile = loader.load_class(conan_file_path)
 
-    if not recipe:  # Not only the recipe
-        # Download the sources too, don't be lazy
-        complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
+    # Download the sources too, don't be lazy
+    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
 
+    if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
             output.info("Getting the complete package list from '%s'..." % ref.full_repr())
             packages_props = remote_manager.search_packages(remote, ref, None)

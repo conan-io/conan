@@ -4,6 +4,7 @@ from conans.client.rest.uploader_downloader import Downloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
+from conans.util.env_reader import get_env
 
 
 def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
@@ -57,9 +58,9 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
              auth=None, headers=None, requester=None):
 
     if retry is None:
-        retry = 2
+        retry = get_env("CONAN_RETRY", 2)
     if retry_wait is None:
-        retry_wait = 5
+        retry_wait = get_env("CONAN_RETRY_WAIT", 5)
 
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')

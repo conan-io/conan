@@ -40,13 +40,13 @@ class Pkg(ConanFile):
         client.run("download pkg/0.1@lasote/stable --recipe")
 
         self.assertIn("Downloading conanfile.py", client.out)
-        self.assertNotIn("Downloading conan_sources.tgz", client.out)
+        self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertNotIn("Downloading conan_package.tgz", client.out)
         export = client.cache.package_layout(ref).export()
         self.assertTrue(os.path.exists(os.path.join(export, "conanfile.py")))
         self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
         source = client.cache.package_layout(ref).export_sources()
-        self.assertFalse(os.path.exists(os.path.join(source, "file.h")))
+        self.assertTrue(os.path.exists(os.path.join(source, "file.h")))
         conan = client.cache.package_layout(ref).base_folder()
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
 

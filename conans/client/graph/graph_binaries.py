@@ -4,7 +4,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_SKIP, BINARY_UPDATE,
                                        RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
-from conans.errors import NoRemoteAvailable, NotFoundException,\
+from conans.errors import NoRemoteAvailable, NotFoundException, \
     conanfile_exception_formatter
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -54,8 +54,9 @@ class GraphBinariesAnalyzer(object):
             # TODO: PREV?
             return
 
-        if build_mode.forced(conanfile, ref):
-            output.warn('Forced build from source')
+        with_deps_to_build = any([dep.dst.binary == BINARY_BUILD for dep in node.dependencies])
+        if build_mode.forced(conanfile, ref, with_deps_to_build):
+            output.info('Forced build from source')
             node.binary = BINARY_BUILD
             node.prev = None
             return

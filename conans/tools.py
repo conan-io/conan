@@ -52,7 +52,7 @@ def get_global_instances():
 
 
 # Assign a default, will be overwritten in the factory of the ConanAPI
-set_global_instances(the_output=ConanOutput(sys.stdout, True), the_requester=requests)
+set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_requester=requests)
 
 
 """
@@ -111,6 +111,7 @@ def replace_path_in_file(*args, **kwargs):
 # from conans.client.tools.oss
 args_to_string = tools_oss.args_to_string
 detected_architecture = tools_oss.detected_architecture
+detected_os = tools_oss.detected_os
 OSInfo = tools_oss.OSInfo
 cross_building = tools_oss.cross_building
 get_cross_building_settings = tools_oss.get_cross_building_settings

@@ -16,6 +16,7 @@ class BuildMode(object):
         self.outdated = False
         self.missing = False
         self.never = False
+        self.cascade = False
         self.patterns = []
         self._unused_patterns = []
         self.all = False
@@ -33,14 +34,16 @@ class BuildMode(object):
                     self.missing = True
                 elif param == "never":
                     self.never = True
+                elif param == "cascade":
+                    self.cascade = True
                 else:
                     self.patterns.append("%s" % param)
 
-            if self.never and (self.outdated or self.missing or self.patterns):
+            if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
-    def forced(self, conan_file, ref):
+    def forced(self, conan_file, ref, with_deps_to_build=False):
         if self.never:
             return False
         if self.all:
@@ -49,6 +52,9 @@ class BuildMode(object):
         if conan_file.build_policy_always:
             conan_file.output.info("Building package from source as defined by "
                                    "build_policy='always'")
+            return True
+
+        if self.cascade and with_deps_to_build:
             return True
 
         # Patterns to match, if package matches pattern, build is forced
