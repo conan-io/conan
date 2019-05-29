@@ -115,6 +115,38 @@ class FileCopierTest(unittest.TestCase):
         copied = copier("*.cpp", links=True)
         self.assertEqual(copied, [])
 
+    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    def linked_folder_copy_from_linked_folder_test(self):
+        # https://github.com/conan-io/conan/issues/5114
+        folder1 = temp_folder(path_with_spaces=False)
+        sub_src = os.path.join(folder1, "sub/src")
+
+        src = os.path.join(folder1, "src")
+        src_dir = os.path.join(folder1, "src/dir")
+        src_dir_link = os.path.join(folder1, "src/dir_link")
+        src_dir_file = os.path.join(src_dir, "file.txt")
+
+        dst = os.path.join(folder1, "dst")
+        dst_dir = os.path.join(folder1, "dst/dir")
+        dst_dir_link = os.path.join(folder1, "dst/dir_link")
+        dst_dir_file = os.path.join(dst_dir, "file.txt")
+
+        os.makedirs(dst)
+        os.makedirs(sub_src)
+        # input src folder should be a symlink
+        os.symlink(sub_src, src)
+        # folder, file and folder link to copy
+        os.mkdir(src_dir)
+        save(src_dir_file, "file")
+        os.symlink(src_dir, src_dir_link)
+
+        copier = FileCopier([src], dst)
+        copied = copier("*", symlinks=True)
+
+        self.assertEqual(copied, [dst_dir_file])
+        self.assertEqual(os.listdir(dst), os.listdir(src))
+        self.assertTrue(os.path.islink(dst_dir_link))
+
     def excludes_test(self):
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "subdir1")

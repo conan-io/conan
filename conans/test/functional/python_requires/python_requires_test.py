@@ -1,15 +1,15 @@
 import os
+import textwrap
+import time
 import unittest
 
-import time
-import textwrap
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer, \
     NO_SETTINGS_PACKAGE_ID, create_local_git_repo
-from conans.test.utils.conanfile import TestConanFile
 
 
 class PythonExtendTest(unittest.TestCase):
@@ -347,26 +347,6 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
-
-    def reuse_exports_test(self):
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    exports_sources = "*.h"
-"""
-        client = TestClient()
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "my header"})
-        client.run("export . Base/0.1@user/testing")
-        conanfile = """from conans import python_requires, load
-base = python_requires("Base/0.1@user/testing")
-class Pkg2(base.Pkg):
-    def build(self):
-        self.output.info("Exports sources: %s" % self.exports_sources)
-        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
-"""
-        client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("No such file or directory: 'header.h'", client.out)
 
     def reuse_class_members_test(self):
         client = TestClient()

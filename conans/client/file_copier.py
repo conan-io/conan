@@ -161,7 +161,7 @@ class FileCopier(object):
             src_link = os.path.join(src, linked_folder)
             # Discard symlinks that go out of the src folder
             abs_path = os.path.realpath(src_link)
-            relpath = os.path.relpath(abs_path, src)
+            relpath = os.path.relpath(abs_path, os.path.realpath(src))
             if relpath.startswith("."):
                 continue
 

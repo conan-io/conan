@@ -34,7 +34,7 @@ class PathsTest(unittest.TestCase):
         paths = ClientCache(folder, TestBufferConanOutput())
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
         pref = PackageReference(ref, "456fa678eae68")
-        expected_base = os.path.join(folder, ".conan", "data",
+        expected_base = os.path.join(folder, "data",
                                      os.path.sep.join(["opencv", "2.4.10",
                                                        "lasote", "testing"]))
         layout = paths.package_layout(ref)
