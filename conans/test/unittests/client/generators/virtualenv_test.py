@@ -14,7 +14,7 @@ class VirtualenvGeneratorTest(unittest.TestCase):
         Check list values are only prepended once
         """
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues.loads("PATH=[1,2,three]"))
+        conanfile.initialize(Settings({}), Settings({}), EnvValues.loads("PATH=[1,2,three]"))
         gen = VirtualEnvGenerator(conanfile)
         content = gen.content
         self.assertIn("PATH=\"1\":\"2\":\"three\"${PATH+:$PATH}", content["activate.sh"])

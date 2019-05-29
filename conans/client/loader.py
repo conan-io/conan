@@ -114,7 +114,7 @@ class ConanFileLoader(object):
         conanfile = conanfile_class(self._output, self._runner, display_name, user, channel)
         conanfile.in_local_cache = False
         try:
-            self._initialize_conanfile(conanfile, processed_profile_host)
+            self._initialize_conanfile(conanfile, processed_profile_host, processed_profile_build)
 
             # The consumer specific
             conanfile.develop = True

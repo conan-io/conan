@@ -13,7 +13,7 @@ class SConsGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("")
         cpp_info.defines = ["MYDEFINE1"]

@@ -13,7 +13,7 @@ class ConanFileTest(unittest.TestCase):
                 self.assertTrue(member.startswith('_conan'))
 
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings(), EnvValues())
+        conanfile.initialize(Settings(), Settings(), EnvValues())
 
         for member in vars(conanfile):
             if member.startswith('_') and not member.startswith("__"):

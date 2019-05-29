@@ -18,7 +18,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
     def valid_xml_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         cpp_info = CppInfo("dummy_root_folder1")
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
@@ -37,7 +37,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
     def user_profile_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         tmp_folder = temp_folder()
         pkg1 = os.path.join(tmp_folder, "pkg1")
@@ -70,7 +70,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         tmp_folder = temp_folder()
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         cpp_info = CppInfo(tmp_folder)
         cpp_info.defines = ["_WIN32_WINNT=x0501"]
         cpp_info.debug.defines = ["_DEBUG", "DEBUG"]
