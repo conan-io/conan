@@ -23,7 +23,8 @@ class VCVarsArchTest(unittest.TestCase):
         output = output or self.output
         command = tools.vcvars_command(settings, output=output, **kwargs)
         command = command.replace('"', '').replace("'", "")
-        self.assertTrue(command.endswith('vcvarsall.bat %s' % expected))
+        self.assertTrue(command.endswith('vcvarsall.bat %s' % expected),
+                        msg="Command: '{}' (expected end: '{}')".format(command, expected))
 
     def test_arch(self):
         settings = Settings.loads(default_settings_yml)
