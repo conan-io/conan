@@ -12,6 +12,7 @@ from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 @attr('visual_studio')
@@ -49,7 +50,8 @@ class VCVarsArchTest(unittest.TestCase):
         with self.assertRaises(ConanException):
             tools.vcvars_command(settings, output=self.output)
 
-        settings.arch_build = 'x86_64'
+        with catch_deprecation_warning(self):
+            settings.arch_build = 'x86_64'
         settings.arch = 'x86'
         self.assert_vcvars_command(settings, "amd64_x86")
 
