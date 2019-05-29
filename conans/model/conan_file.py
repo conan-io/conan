@@ -5,7 +5,7 @@ from conans.client import tools
 from conans.client.output import Color, ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -76,7 +76,7 @@ def create_settings(settings, defined_settings, constraint_values):
         settings.constraint(current, constraint_values=constraint_values)
         return settings
     except Exception as e:
-        raise ConanException("Error while initializing settings. %s" % str(e))
+        raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
 
 
 @contextmanager

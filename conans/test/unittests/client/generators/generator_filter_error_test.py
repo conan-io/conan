@@ -44,6 +44,6 @@ llvm/5.0@user/channel
         content = load(os.path.join(client.current_folder,
                                     "test_package/build/91852f76fac8dd11832a54cf197288f5fd7d18f4"
                                     "/conanbuildinfo.txt"))
-        self.assertIn(".conan/data/MyLib/0.1/user/channel/package/"
+        self.assertIn("/data/MyLib/0.1/user/channel/package/"
                       "%s/include" % NO_SETTINGS_PACKAGE_ID,
                       content)
