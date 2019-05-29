@@ -20,7 +20,7 @@ class HelloConan(ConanFile):
     options = {"switch": ["1",  "0"]}
     default_options = "switch=0"
     %s
-    
+
     def build(self):
         self.output.warn("Env var MYVAR={0}.".format(os.getenv("MYVAR", "")))
 
@@ -53,6 +53,10 @@ class HelloConan(ConanFile):
         from conans import ConanFile
 
         class Dep(ConanFile):
+            exports_sources = "*"
+
+            def package(self):
+                self.copy("*")
 
             def package_info(self):
                 self.cpp_info.name = "Boost"
@@ -81,10 +85,16 @@ class HelloConan(ConanFile):
                 self.output.info("Containers: %s" % con_include)
                 self.output.info("SuperContainers: %s" % sup_include)
                 self.output.info("LIBS: %s" % self.deps_cpp_info["dep"].libs)
+                print("INCLUDE_PATHS: %s" % self.deps_cpp_info["dep"].include_paths)
+                print("INCLUDE_PATHS: %s" % self.deps_cpp_info.include_paths)
         """)
 
         client = TestClient()
-        client.save({"conanfile_dep.py": dep, "conanfile_consumer.py": consumer})
+        client.save({"conanfile_dep.py": dep, "conanfile_consumer.py": consumer,
+                     "boost/boost.h": "",
+                     "boost/accumulators/accumulators.h": "",
+                     "boost/containers/containers.h": "",
+                     "boost/supercontainers/supercontainers.h": ""})
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
         self.assertIn("Name: Boost", client.out)

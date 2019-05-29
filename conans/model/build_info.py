@@ -45,6 +45,30 @@ class _CppInfo(object):
         self.description = None  # Description of the conan package
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self.filter_empty = True
+        self._deps = OrderedDict()
+
+    @property
+    def libs(self):
+        if self._deps:
+            deps = [v for v in self._deps.values()]
+            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
+            return [dep.lib for dep in deps_sorted if dep.lib is not None]
+        else:
+            return self._libs
+
+    @libs.setter
+    def libs(self, libs):
+        if self._deps:
+            raise ConanException("Setting first level libs is not supported when Components are "
+                                 "already in use")
+        self._libs = libs
+
+    def __getitem__(self, key):
+        if self._libs:
+            raise ConanException("Usage of Components with '.libs' values is not allowed")
+        if key not in self._deps.keys():
+            self._deps[key] = Component(self, key)
+        return self._deps[key]
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
@@ -57,7 +81,12 @@ class _CppInfo(object):
     @property
     def include_paths(self):
         if self._include_paths is None:
-            self._include_paths = self._filter_paths(self.includedirs)
+            includedirs = self.includedirs
+            for key, value in self._deps.items():
+                for directory in value.includedirs:
+                    if directory not in includedirs:
+                        includedirs.append(directory)
+            self._include_paths = self._filter_paths(includedirs)
         return self._include_paths
 
     @property
@@ -275,6 +304,7 @@ class DirList(object):
 
 
 class _BaseDepsCppInfo(_CppInfo):
+
     def __init__(self):
         super(_BaseDepsCppInfo, self).__init__()
 
@@ -289,7 +319,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
         self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
-        self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.libs = merge_lists(self.libs, dep_cpp_info._libs)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order

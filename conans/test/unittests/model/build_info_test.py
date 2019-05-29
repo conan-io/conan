@@ -180,13 +180,13 @@ VAR2=23
         component = cpp_info["my_component"]
         self.assertIn(component.name, "my_component")
         component.lib = "libhola"
-        self.assertEquals(component.lib, "libhola")
-        with self.assertRaisesRegexp(ConanException, "'.lib' is already set for this Component"):
+        self.assertEqual(component.lib, "libhola")
+        with self.assertRaisesRegex(ConanException, "'.lib' is already set for this Component"):
             component.exe = "hola.exe"
         component.lib = None
         component.exe = "hola.exe"
-        self.assertEquals(component.lib, None)
-        with self.assertRaisesRegexp(ConanException, "'.exe' is already set for this Component"):
+        self.assertEqual(component.lib, None)
+        with self.assertRaisesRegex(ConanException, "'.exe' is already set for this Component"):
             component.lib = "libhola"
 
     def cpp_info_libs_components_fail_test(self):
