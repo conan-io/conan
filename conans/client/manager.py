@@ -70,10 +70,13 @@ class ConanManager(object):
         print_graph(deps_graph, self._user_io.out)
 
         try:
-            if cross_building(graph_info.profile_host.processed_settings):
-                settings = get_cross_building_settings(graph_info.profile_host.processed_settings)
-                message = "Cross-build from '%s:%s' to '%s:%s'" % settings
-                self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
+            import warnings
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                if cross_building(graph_info.profile_host.processed_settings):
+                    settings = get_cross_building_settings(graph_info.profile_host.processed_settings)
+                    message = "Cross-build from '%s:%s' to '%s:%s'" % settings
+                    self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass
 

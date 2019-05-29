@@ -383,8 +383,13 @@ def cross_building(settings, self_os=None, self_arch=None):
 
 
 def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or detected_os()
-    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
+    import warnings
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        os_build = settings.get_safe("os_build")
+        arch_build = settings.get_safe("arch_build")
+    build_os = self_os or os_build or detected_os()
+    build_arch = self_arch or arch_build or detected_architecture()
     host_os = settings.get_safe("os")
     host_arch = settings.get_safe("arch")
 

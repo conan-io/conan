@@ -369,15 +369,18 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
-    arch_build = settings.get_safe("arch_build") or detected_architecture()
+    import warnings
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        arch_build = settings.get_safe("arch_build")
+    arch_build = arch_build or detected_architecture()
     if os_setting == 'WindowsCE':
         vcvars_arch = "x86"
     elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
-        if ((settings.get_safe("arch_build") or
-                os.getenv("PreferredToolArchitecture") == "x64")
+        if ((arch_build or os.getenv("PreferredToolArchitecture") == "x64")
                 and int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:

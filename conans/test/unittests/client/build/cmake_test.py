@@ -19,6 +19,7 @@ from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock, MockSettings
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
 
@@ -213,20 +214,21 @@ class CMakeTest(unittest.TestCase):
             self.assertIn('-G "Visual Studio 15 2017" -A "Win64"', cmake.command_line)
 
     def cmake_generator_platform_gcc_test(self):
-            settings = Settings.loads(default_settings_yml)
-            settings.os = "Linux"
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        with catch_deprecation_warning(self):
             settings.os_build = "Linux"
-            settings.compiler = "gcc"
-            settings.compiler.version = "8"
-            settings.compiler.libcxx = "libstdc++"
-            settings.arch = "x86"
+        settings.compiler = "gcc"
+        settings.compiler.version = "8"
+        settings.compiler.libcxx = "libstdc++"
+        settings.arch = "x86"
 
-            conan_file = ConanFileMock()
-            conan_file.settings = settings
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
 
-            cmake = CMake(conan_file)
-            self.assertIn('-G "Unix Makefiles"', cmake.command_line)
-            self.assertNotIn('-A', cmake.command_line)
+        cmake = CMake(conan_file)
+        self.assertIn('-G "Unix Makefiles"', cmake.command_line)
+        self.assertNotIn('-A', cmake.command_line)
 
     @parameterized.expand([('x86', 'Visual Studio 15 2017'),
                            ('x86_64', 'Visual Studio 15 2017 Win64'),
@@ -833,7 +835,8 @@ build_type: [ Release]
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Android"
-        settings.os_build = "Windows"  # Here we are declaring we are cross building
+        with catch_deprecation_warning(self):
+            settings.os_build = "Windows"  # Here we are declaring we are cross building
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
         settings.arch = "armv7"
@@ -1189,7 +1192,8 @@ build_type: [ Release]
     def test_missing_settings(self):
         def instance_with_os_build(os_build):
             settings = Settings.loads(default_settings_yml)
-            settings.os_build = os_build
+            with catch_deprecation_warning(self):
+                settings.os_build = os_build
             conan_file = ConanFileMock()
             conan_file.settings = settings
             return CMake(conan_file)

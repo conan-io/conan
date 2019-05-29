@@ -6,10 +6,11 @@ from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, mkdir, rmdir
-from conans.test.utils.conanfile import TestConanFile
 
 
 class InstallTest(unittest.TestCase):
@@ -416,8 +417,10 @@ class Pkg(ConanFile):
         # Explicit with os_build and os_arch settings
         message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
-        self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
-                        assert_error=True)
+        with catch_deprecation_warning(self, n=2):
+            self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows"
+                            " -s arch_build=x86_64 -s arch=x86_64",
+                            assert_error=True)
         self.assertIn(message, self.client.user_io.out)
 
         # Implicit detection when not available (retrocompatibility)
@@ -439,11 +442,13 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        client.run("install . --build=missing -s os=Windows -s os_build=Windows "
-                   "--install-folder=win_dir")
+        with catch_deprecation_warning(self):
+            client.run("install . --build=missing -s os=Windows -s os_build=Windows "
+                       "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
-        client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
+        with catch_deprecation_warning(self):
+            client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)

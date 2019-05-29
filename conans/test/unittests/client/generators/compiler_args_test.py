@@ -8,6 +8,7 @@ from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.settings import Settings
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class CompilerArgsTest(unittest.TestCase):
@@ -124,7 +125,8 @@ class CompilerArgsTest(unittest.TestCase):
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
-        settings.os_build = "Macos"
+        with catch_deprecation_warning(self):
+            settings.os_build = "Macos"
         settings.compiler = "apple-clang"
         settings.compiler.version = "9.0"
         settings.arch = "x86"
