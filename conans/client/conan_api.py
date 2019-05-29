@@ -1264,40 +1264,6 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
     return graph_info
 
 
-    root_ref = ConanFileReference(name, version, user, channel, validate=False)
-
-    try:
-        graph_info = GraphInfo.load(install_folder)
-        assert install_folder == lock_folder, "Install folder must be equal to lock_folder"
-    except IOError:
-        if install_folder:
-            raise ConanException("Failed to load graphinfo file in install-folder: %s"
-                                 % install_folder)
-        graph_info = GraphInfo()
-        graph_info.root = root_ref
-
-    if profile_names or settings or options or env:
-        if use_lock:
-            raise ConanException("If using lockfiles, do not provide profiles, settings, or options")
-    else:
-        try:
-            graph_lock_file = GraphLockFile.load(lock_folder)
-        except Exception:
-            if use_lock:
-                raise
-        else:
-            if use_lock:
-                graph_info.graph_lock = graph_lock_file.graph_lock
-            graph_info.profile = graph_lock_file.profile
-            graph_info.profile.process_settings(cache, preprocess=False)
-            return graph_info
-
-    profile = profile_from_args(profile_names, settings, options, env, cwd, cache)
-    profile.process_settings(cache)
-    graph_info.profile = profile
-    return graph_info
-
-
 def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     if manifests and manifests_interactive:
         raise ConanException("Do not specify both manifests and "
