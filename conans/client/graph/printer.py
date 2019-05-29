@@ -5,6 +5,7 @@ from conans.client.graph.graph import BINARY_SKIP, RECIPE_CONSUMER, RECIPE_VIRTU
     RECIPE_EDITABLE
 from conans.client.output import Color
 from conans.model.ref import PackageReference
+from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
 
 def _get_python_requires(conanfile):
@@ -16,8 +17,9 @@ def _get_python_requires(conanfile):
 
 
 def print_graph(deps_graph, out):
-    requires = OrderedDict()
-    build_requires = OrderedDict()
+    requires_host = OrderedDict()
+    build_requires_host = OrderedDict()
+    build_requires_build = OrderedDict()
     python_requires = set()
     for node in sorted(deps_graph.nodes):
         python_requires.update(_get_python_requires(node.conanfile))
@@ -25,11 +27,19 @@ def print_graph(deps_graph, out):
             continue
         pref = PackageReference(node.ref, node.package_id)
         if node.build_require:
-            build_requires.setdefault(pref, []).append(node)
+            if node.build_context == CONTEXT_HOST:
+                build_requires_host.setdefault(pref, []).append(node)
+            else:
+                assert node.build_context == CONTEXT_BUILD,\
+                    "Context '{}' not handled".format(node.context)
+                build_requires_build.setdefault(pref, []).append(node)
         else:
-            requires.setdefault(pref, []).append(node)
+            assert node.build_context == CONTEXT_HOST,\
+                "A requires in BUILD context: {}".format(node.ref)
+            requires_host.setdefault(pref, []).append(node)
 
-    out.writeln("Requirements", Color.BRIGHT_YELLOW)
+    # Print requirements (all correspond to context of 'host_machine')
+    out.writeln("Requirements (host machine):", Color.BRIGHT_YELLOW)
 
     def _recipes(nodes):
         for _, list_nodes in nodes.items():
@@ -40,13 +50,16 @@ def print_graph(deps_graph, out):
                 from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
             out.writeln("    %s %s - %s" % (repr(node.ref), from_text, node.recipe),
                         Color.BRIGHT_CYAN)
+    _recipes(requires_host)
 
-    _recipes(requires)
+    # List of python requires
     if python_requires:
         out.writeln("Python requires", Color.BRIGHT_YELLOW)
         for p in python_requires:
             out.writeln("    %s" % repr(p), Color.BRIGHT_CYAN)
-    out.writeln("Packages", Color.BRIGHT_YELLOW)
+
+    # Package for requirements
+    out.writeln("Packages (host machine):", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):
         for package_id, list_nodes in nodes.items():
@@ -58,12 +71,20 @@ def print_graph(deps_graph, out):
             assert len(binary) == 1
             binary = binary.pop()
             out.writeln("    %s - %s" % (repr(package_id), binary), Color.BRIGHT_CYAN)
-    _packages(requires)
+    _packages(requires_host)
 
-    if build_requires:
-        out.writeln("Build requirements", Color.BRIGHT_YELLOW)
-        _recipes(build_requires)
-        out.writeln("Build requirements packages", Color.BRIGHT_YELLOW)
-        _packages(build_requires)
+    # Build requires (host machine)
+    if build_requires_host:
+        out.writeln("Build requirements (host machine)", Color.BRIGHT_YELLOW)
+        _recipes(build_requires_host)
+        out.writeln("Build requirements packages (host machine)", Color.BRIGHT_YELLOW)
+        _packages(build_requires_host)
+
+    # Build requires (build machine)
+    if build_requires_build:
+        out.writeln("Build requirements (build machine)", Color.BRIGHT_YELLOW)
+        _recipes(build_requires_build)
+        out.writeln("Build requirements packages (build machine)", Color.BRIGHT_YELLOW)
+        _packages(build_requires_build)
 
     out.writeln("")
