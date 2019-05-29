@@ -41,7 +41,7 @@ class GraphLockCITest(unittest.TestCase):
                                                         requires=['PkgA/0.1@user/channel'],
                                                         info=True)),
                       LOCKFILE: lock_file})
-        clientb.run("create . PkgB/0.1@user/channel --install-folder=.")
+        clientb.run("create . PkgB/0.1@user/channel --install-folder=. --use-lock")
         lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
         self.assertIn("PkgB/0.1@user/channel#360565ec9c69359f1ea65c270e97acb7:"
                       "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#7b581251035fc05a4db847f9b7e80d40",
@@ -55,4 +55,4 @@ class GraphLockCITest(unittest.TestCase):
 
         # Go back to main orchestrator
         client.save({LOCKFILE: lock_fileb})
-        client.run("info . --lock")
+        client.run("info . --use-lock")

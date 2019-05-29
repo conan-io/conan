@@ -612,7 +612,8 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    use_lock=args.use_lock)
+                                    use_lock=args.use_lock,
+                                    output_folder=args.output_folder)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -898,13 +899,16 @@ class Command(object):
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use files from a previous conan installation')
+        parser.add_argument("-l", "--use-lock", action='store_true', default=False,
+                            help="Use lock dependencies in lockfile")
 
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, install_folder=args.install_folder)
+                                  keep_source=args.keep_source, install_folder=args.install_folder,
+                                  use_lock=args.use_lock)
 
     def remove(self, *args):
         """

@@ -674,7 +674,8 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference, remote_name=None, settings=None, options=None, env=None,
-             profile_names=None, update=False, install_folder=None, build=None, use_lock=None):
+             profile_names=None, update=False, install_folder=None, build=None, use_lock=None,
+             output_folder=None):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env, use_lock=use_lock)
         recorder = ActionRecorder()
@@ -686,8 +687,8 @@ class ConanAPIV1(object):
                                                                update, False, remotes,
                                                                recorder)
 
-        if install_folder:
-            output_folder = _make_abs_path(install_folder)
+        if output_folder:
+            output_folder = _make_abs_path(output_folder)
             graph_info.save(output_folder)
             self._user_io.out.info("Generated graphinfo")
 

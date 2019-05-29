@@ -116,7 +116,7 @@ class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
 
 
 class GraphLockVersionRangeInfoTest(GraphLockVersionRangeTest):
-    graph_lock_command = "info . --install-folder=."
+    graph_lock_command = "info . --output-folder=."
 
 
 class GraphLockRevisionTest(unittest.TestCase):
@@ -182,18 +182,18 @@ class GraphLockRevisionTest(unittest.TestCase):
         self.assertIn("conanfile.py (PkgB/0.1@None/None): BUILD DEP LIBS: !!", client.out)
 
         # Info also works
-        client.run("info . --install-folder=.")
+        client.run("info . --install-folder=. --use-lock")
         self.assertIn("Revision: b55538d56afb03f068a054f11310ce5a", client.out)
 
     def export_lock_test(self):
         # locking a version range at export
-        self.client.run("export . user/channel --install-folder=.")
+        self.client.run("export . user/channel --install-folder=. --use-lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
 
     def create_lock_test(self):
         # Create is also possible
         client = self.client
-        client.run("create . PkgB/0.1@user/channel --install-folder=. --update")
+        client.run("create . PkgB/0.1@user/channel --install-folder=. --update --use-lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -201,7 +201,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client = self.client
         # Necessary to clean previous revision
         client.run("remove * -f")
-        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=.")
+        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=. --use-lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
@@ -277,12 +277,12 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("package .")
         self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
 
-        client.run("info . --install-folder=.")
+        client.run("info . --install-folder=. --use-lock")
         self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
 
     def create_test(self):
         client = self.client
-        client.run("create . Pkg/0.1@user/channel --install-folder=.")
+        client.run("create . Pkg/0.1@user/channel --install-folder=. --use-lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
