@@ -39,7 +39,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
     def cmake_vars_unit_test(self):
         settings = _MockSettings("Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(settings, EnvValues())
+        conanfile.initialize(settings, settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo(tmp)
         custom_dir = os.path.join(tmp, "custom_build_dir")

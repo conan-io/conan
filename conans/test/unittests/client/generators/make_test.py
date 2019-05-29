@@ -25,7 +25,7 @@ class MakeGeneratorTest(unittest.TestCase):
         save(os.path.join(tmp_folder2, "bin2", "file.bin"), "")
 
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(tmp_folder1)
         cpp_info.defines = ["MYDEFINE1"]
