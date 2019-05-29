@@ -1221,6 +1221,19 @@ Conan = ConanAPIV1
 def get_graph_info(profile_names, settings, options, env, cwd, install_folder, cache, output,
                    name=None, version=None, user=None, channel=None, lock_folder=None,
                    use_lock=None):
+    if use_lock:
+        try:
+            graph_info = GraphInfo.load(lock_folder)
+        except IOError:  # Only if file is missing
+            graph_info = GraphInfo()
+            root_ref = ConanFileReference(name, version, user, channel, validate=False)
+            graph_info.root = root_ref
+        graph_lock_file = GraphLockFile.load(lock_folder)
+        graph_info.profile = graph_lock_file.profile
+        graph_info.profile.process_settings(cache, preprocess=False)
+        graph_info.graph_lock = graph_lock_file.graph_lock
+        return graph_info
+
     try:
         graph_info = GraphInfo.load(install_folder)
     except IOError:  # Only if file is missing
