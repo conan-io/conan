@@ -20,6 +20,7 @@ from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.client.output import ConanOutput
 from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
@@ -437,7 +438,8 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
-        settings.arch_build = "x86_64"
+        with catch_deprecation_warning(self):
+            settings.arch_build = "x86_64"
 
         # Set the env with a PATH containing the vcvars paths
         tmp = tools.vcvars_dict(settings, only_diff=False, output=self.output)
@@ -460,7 +462,8 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
-        settings.arch_build = "x86_64"
+        with catch_deprecation_warning(self):
+            settings.arch_build = "x86_64"
         with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
             tmp = tools.vcvars_dict(settings, only_diff=False,
                                     filter_known_paths=True, output=self.output)
@@ -481,12 +484,14 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
-        settings.arch_build = "x86_64"
+        with catch_deprecation_warning(self):
+            settings.arch_build = "x86_64"
         cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
-        settings.arch_build = "x86"
+        with catch_deprecation_warning(self):
+            settings.arch_build = "x86"
         cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
 
