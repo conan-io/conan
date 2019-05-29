@@ -110,6 +110,4 @@ class DetectTest(unittest.TestCase):
             result = detect_defaults_settings(output=TestBufferConanOutput(), profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual("AIX", result['os'])
-            self.assertEqual("AIX", result['os_build'])
             self.assertEqual(expected_arch, result['arch'])
-            self.assertEqual(expected_arch, result['arch_build'])
