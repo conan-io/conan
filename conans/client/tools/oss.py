@@ -4,8 +4,11 @@ import platform
 import subprocess
 import sys
 import tempfile
+import warnings
 from subprocess import CalledProcessError, PIPE
+
 import six
+
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
 from conans.errors import ConanException
@@ -383,10 +386,28 @@ def cross_building(settings, self_os=None, self_arch=None):
 
 
 def get_cross_building_settings(settings, self_os=None, self_arch=None):
-    build_os = self_os or settings.get_safe("os_build") or detected_os()
-    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
-    host_os = settings.get_safe("os")
-    host_arch = settings.get_safe("arch")
+    # TODO: Conan 2.0 change signature of this function: settings -> conanfile
+    from conans.model.conan_file import ConanFile
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings_host = conanfile.settings_host
+        if settings_host.get_safe("os_build") or settings_host.get_safe("arch_build"):
+            # Still can use old behavior:
+            build_os, build_arch, host_os, host_arch = \
+                get_cross_building_settings(settings_host, self_os=self_os, self_arch=self_arch)
+        else:
+            # Otherwise, get it from the new one
+            build_os = conanfile.settings_build.get_safe('os')
+            build_arch = conanfile.settings_build.get_safe('arch')
+            host_os = settings_host.get_safe('os')
+            host_arch = settings_host.get_safe('arch')
+    else:
+        warnings.warn("Pass the conanfile to 'get_cross_building_settings' instead of settings."
+                      " Use 'get_cross_building_settings(self, ...)'")
+        build_os = self_os or settings.get_safe("os_build") or detected_os()
+        build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
+        host_os = settings.get_safe("os")
+        host_arch = settings.get_safe("arch")
 
     return build_os, build_arch, host_os, host_arch
 
