@@ -232,14 +232,16 @@ class CMakeDefinitionsBuilder(object):
 
             # Adjust Android stuff
             if os_ == "Android":
-                arch_abi_settings = {"armv8": "arm64-v8a",
-                                     "armv7": "armeabi-v7a",
-                                     "armv7hf": "armeabi-v7a",
-                                     "armv6": "armeabi-v6",
-                                     "armv5": "armeabi"
-                                     }.get(arch, arch)
+                arch_abi_settings = tools.to_android_abi(arch)
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
+                    ret["ANDROID_ABI"] = arch_abi_settings
+
+                if 'CONAN_CMAKE_ANDROID_NDK_HOME' in os.environ:
+                    ret["ANDROID_NDK"] = os.environ['CONAN_CMAKE_ANDROID_NDK_HOME']
+
+                ret["ANDROID_PLATFORM"] = "android-%s" % op_system_version
+
 
         logger.info("Setting Cross build flags: %s"
                     % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
@@ -355,5 +357,13 @@ class CMakeDefinitionsBuilder(object):
 
         # Disable CMake export registry #3070 (CMake installing modules in user home's)
         ret["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
+
+        if os_ == "Android":
+            ret["ANDROID_TOOLCHAIN"] = compiler
+            # More details about supported stdc++ libraries here https://developer.android.com/ndk/guides/cpp-support.html
+            if libcxx:
+                ret["ANDROID_STL"] = libcxx
+            else:
+                ret["ANDROID_STL"] = 'none'
 
         return ret
