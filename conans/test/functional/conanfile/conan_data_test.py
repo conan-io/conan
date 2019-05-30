@@ -68,6 +68,7 @@ sources:
 """})
         ref = ConanFileReference.loads("Lib/0.1@user/testing")
         client.run("create . {}".format(ref))
+        self.assertIn("File 'conandata.yml' found. Exporting it...", client.out)
         self.assertIn("My URL:", client.out)
         export_folder = client.cache.package_layout(ref).export()
         self.assertTrue(os.path.exists(os.path.join(export_folder, "conandata.yml")))
