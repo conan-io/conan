@@ -6,7 +6,7 @@ import sys
 import unittest
 import warnings
 from collections import namedtuple
-
+from conans.test.utils.deprecation import catch_deprecation_warning
 import mock
 import requests
 import six
@@ -504,7 +504,8 @@ compiler:
         with six.assertRaisesRegex(self, ConanException,
                                    "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
-            tools.vcvars_command(settings, output=output)
+            with catch_deprecation_warning(self):
+                tools.vcvars_command(settings, output=output)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_constrained_test(self):
@@ -626,7 +627,8 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
             with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
-                vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
+                with catch_deprecation_warning(self):
+                    vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
                 self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
                 self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
                                  "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
