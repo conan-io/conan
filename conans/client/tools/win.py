@@ -3,6 +3,7 @@ import os
 import platform
 import re
 import subprocess
+import warnings
 from contextlib import contextmanager
 
 import deprecation
@@ -15,7 +16,7 @@ from conans.model.version import Version
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
-from conans.util.files import decode_text, mkdir_tmp, save
+from conans.util.files import mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -350,11 +351,28 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                    winsdk_version=None, output=None):
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
-    arch_setting = arch or settings.get_safe("arch")
+    # TODO: Conan 2.0 change signature of this function: settings -> conanfile
+    from conans.model.conan_file import ConanFile  # Circular import from conan_file to tools
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings_host = conanfile.settings_host
+        if settings_host.get_safe("os_build") or settings_host.get_safe("arch_build"):
+            # Still can use old behavior:
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                return vcvars_command(settings_host, arch=arch, compiler_version=compiler_version,
+                                      force=force, vcvars_ver=vcvars_ver,
+                                      winsdk_version=winsdk_version, output=output)
+        settings_build_arch = conanfile.settings_build.get_safe("arch")
+    else:
+        settings_host = settings
+        settings_build_arch = settings.get_safe("arch_build")
 
-    compiler = settings.get_safe("compiler")
+    arch_setting = arch or settings_host.get_safe("arch")
+
+    compiler = settings_host.get_safe("compiler")
     if compiler == 'Visual Studio':
-        compiler_version = compiler_version or settings.get_safe("compiler.version")
+        compiler_version = compiler_version or settings_host.get_safe("compiler.version")
     else:
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools
@@ -363,22 +381,21 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         last_version = latest_vs_version_installed(output=output)
 
         compiler_version = compiler_version or last_version
-    os_setting = settings.get_safe("os")
+    os_setting = settings_host.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
-    arch_build = settings.get_safe("arch_build") or detected_architecture()
+    arch_build = settings_build_arch or detected_architecture()
     if os_setting == 'WindowsCE':
         vcvars_arch = "x86"
     elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
-        if ((settings.get_safe("arch_build") or
-                os.getenv("PreferredToolArchitecture") == "x64")
-                and int(compiler_version) >= 12):
+        if ((settings_build_arch or os.getenv("PreferredToolArchitecture") == "x64") and
+                int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:
             x86_cross = "x86"
@@ -428,7 +445,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
     if os_setting == 'WindowsStore':
-        os_version_setting = settings.get_safe("os.version")
+        os_version_setting = settings_host.get_safe("os.version")
         if os_version_setting == '8.1':
             command.append('store 8.1')
         elif os_version_setting == '10.0':
