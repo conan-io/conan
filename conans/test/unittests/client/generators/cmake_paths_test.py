@@ -24,7 +24,7 @@ class _MockSettings(object):
     def compiler(self):
         raise ConanException("mock: not available")
 
-    def constraint(self, _):
+    def constraint(self, _, constraint_values):
         return self
 
     def get_safe(self, _):

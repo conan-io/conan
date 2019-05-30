@@ -314,7 +314,7 @@ class DepsGraphBuilder(object):
                 with warnings.catch_warnings(record=True):
                     warnings.filterwarnings("always")
                     conanfile.settings.validate()  # All has to be ok!
-                    conanfile.settings_build.validate()
+                    #conanfile.settings_build.validate()
                 conanfile.options.validate()
                 conanfile.build_options.validate()
 
