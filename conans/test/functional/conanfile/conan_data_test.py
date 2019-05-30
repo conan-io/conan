@@ -118,3 +118,17 @@ sources:
 
         source_folder = client.cache.package_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "foo.txt")))
+
+    def invalid_yml_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+
+class Lib(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile,
+                     "conandata.yml": ">>>> ::"})
+        ref = ConanFileReference.loads("Lib/0.1@user/testing")
+        client.run("create . {}".format(ref), assert_error=True)
+        self.assertIn("ERROR: Error loading conanfile at", client.out)
+        self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar", client.out)

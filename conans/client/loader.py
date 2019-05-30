@@ -63,7 +63,12 @@ class ConanFileLoader(object):
         if not os.path.exists(data_path):
             return None
 
-        return yaml.safe_load(load(data_path)) or {}
+        try:
+            data = yaml.safe_load(load(data_path))
+        except Exception as e:
+            raise ConanException("Invalid yml format at {}: {}".format(DATA_YML, e))
+
+        return data or {}
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
