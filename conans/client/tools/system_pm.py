@@ -3,6 +3,7 @@ import sys
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
+from conans.client.tools.files import which
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
@@ -17,7 +18,7 @@ class SystemPackageTool(object):
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info, output=self._output)
         self._tool._sudo_str = self._get_sudo_str()
-        self._tool._runner = runner or ConanRunner()
+        self._tool._runner = runner or ConanRunner(output=self._output)
         self._tool._recommends = recommends
 
     @staticmethod
@@ -33,6 +34,8 @@ class SystemPackageTool(object):
     @staticmethod
     def _is_sudo_enabled():
         if "CONAN_SYSREQUIRES_SUDO" not in os.environ:
+            if not which("sudo"):
+                return False
             if os.name == 'posix' and os.geteuid() == 0:
                 return False
             if os.name == 'nt':
@@ -145,8 +148,8 @@ class NullTool(BaseTool):
         pass
 
     def install(self, package_name):
-        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or "
-                            "FreeBSD with pkg or Solaris with pkgutil")
+        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or"
+                          " FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False

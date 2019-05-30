@@ -6,7 +6,7 @@ from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
 
-EDITABLE_PACKAGES_FILE = 'editable_packages'
+EDITABLE_PACKAGES_FILE = 'editable_packages.json'
 
 
 class EditablePackages(object):
@@ -21,6 +21,10 @@ class EditablePackages(object):
         else:
             self._edited_refs = {}  # {ref: {"path": path, "layout": layout}}
 
+    @property
+    def edited_refs(self):
+        return self._edited_refs
+
     def save(self):
         d = {str(ref): d for ref, d in self._edited_refs.items()}
         save(self._edited_file, json.dumps(d))
@@ -29,7 +33,7 @@ class EditablePackages(object):
         ref = ref.copy_clear_rev()
         return self._edited_refs.get(ref)
 
-    def link(self, ref, path, layout):
+    def add(self, ref, path, layout):
         assert isinstance(ref, ConanFileReference)
         ref = ref.copy_clear_rev()
         self._edited_refs[ref] = {"path": path, "layout": layout}
@@ -42,3 +46,6 @@ class EditablePackages(object):
             self.save()
             return True
         return False
+
+    def override(self, workspace_edited):
+        self._edited_refs = workspace_edited

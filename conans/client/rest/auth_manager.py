@@ -124,15 +124,17 @@ class ConanApiAuthManager(object):
         custom_headers['X-Client-Id'] = str(username or "")
 
     # ######### CONAN API METHODS ##########
+    @input_credentials_if_unauthorized
+    def check_credentials(self):
+        self._rest_client.check_credentials()
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, ref, the_files, retry, retry_wait, policy, remote_manifest):
-        return self._rest_client.upload_recipe(ref, the_files, retry, retry_wait,
-                                               policy, remote_manifest)
+    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+        return self._rest_client.upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, pref, the_files, retry, retry_wait, policy):
-        return self._rest_client.upload_package(pref, the_files, retry, retry_wait, policy)
+    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
+        return self._rest_client.upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     @input_credentials_if_unauthorized
     def get_recipe_manifest(self, ref):

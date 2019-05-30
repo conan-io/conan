@@ -49,10 +49,10 @@ class FileUploadDownloadServiceTest(unittest.TestCase):
                                                        "pepe", len(self.content))
         path_to_file = self.service.get_file_path(self.relative_file_path, token)
 
-        self.assertEquals(path_to_file, self.absolute_file_path)
+        self.assertEqual(path_to_file, self.absolute_file_path)
 
         readed_content = load(self.absolute_file_path)
-        self.assertEquals(readed_content, self.content)
+        self.assertEqual(readed_content, self.content)
 
         # Expire token
         sleep(2)
@@ -114,7 +114,7 @@ class ConanServiceTest(unittest.TestCase):
                          'CMakeLists.txt':  md5sum(os.path.join(base_path, "CMakeLists.txt")),
                          'hellotest.h':  md5sum(os.path.join(base_path, "hellotest.h"))}
 
-        self.assertEquals(snap, snap_expected)
+        self.assertEqual(snap, snap_expected)
 
     def test_get_conanfile_download_urls(self):
         urls = self.service.get_conanfile_download_urls(self.ref)
@@ -133,7 +133,7 @@ class ConanServiceTest(unittest.TestCase):
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellotest.h': fake_url_build('hellotest.h'),
                          'main.cpp': fake_url_build('main.cpp')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_get_package_download_urls(self):
         urls = self.service.get_package_download_urls(self.pref)
@@ -153,7 +153,7 @@ class ConanServiceTest(unittest.TestCase):
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellopackage.h': fake_url_build('hellopackage.h'),
                          'main.cpp': fake_url_build('main.cpp')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_get_conanfile_upload_urls(self):
         urls = self.service.get_conanfile_upload_urls(self.ref,
@@ -170,7 +170,7 @@ class ConanServiceTest(unittest.TestCase):
 
         expected_urls = {'conanfile.py': fake_url_build('conanfile.py'),
                          'conanmanifest.txt': fake_url_build('conanmanifest.txt')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_get_package_upload_urls(self):
         urls = self.service.get_package_upload_urls(self.pref, {"uno.lib": 23, "dos.dll": 24})
@@ -187,7 +187,7 @@ class ConanServiceTest(unittest.TestCase):
 
         expected_urls = {'uno.lib': fake_url_build('uno.lib'),
                          'dos.dll': fake_url_build('dos.dll')}
-        self.assertEquals(urls, expected_urls)
+        self.assertEqual(urls, expected_urls)
 
     def test_search(self):
         """ check the dict is returned by get_packages_info service
@@ -252,7 +252,7 @@ class ConanServiceTest(unittest.TestCase):
 
         # Delete all the conans folder
         self.service.remove_conanfile(self.ref)
-        conan_path = self.server_store.conan(self.ref)
+        conan_path = self.server_store.base_folder(self.ref)
         self.assertFalse(os.path.exists(conan_path))
 
         # Delete one package

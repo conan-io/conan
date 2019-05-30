@@ -28,7 +28,8 @@ valid_hook_methods = ["pre_export", "post_export",
                       "pre_upload_package", "post_upload_package",
                       "pre_download", "post_download",
                       "pre_download_recipe", "post_download_recipe",
-                      "pre_download_package", "post_download_package"]
+                      "pre_download_package", "post_download_package",
+                      "pre_package_info", "post_package_info"]
 
 
 class HookManager(object):
@@ -49,7 +50,8 @@ class HookManager(object):
         if not self.hooks:
             self.load_hooks()
 
-        assert method_name in valid_hook_methods
+        assert method_name in valid_hook_methods, \
+            "Method '{}' not in valid hooks methods".format(method_name)
         for name, method in self.hooks[method_name]:
             try:
                 output = ScopedOutput("[HOOK - %s] %s()" % (name, method_name), self.output)
@@ -101,8 +103,14 @@ class HookManager(object):
                 module = sys.modules[added]
                 if module:
                     try:
-                        folder = os.path.dirname(module.__file__)
-                    except AttributeError:  # some module doesn't have __file__
+                        try:
+                            # Most modules will have __file__ != None
+                            folder = os.path.dirname(module.__file__)
+                        except (AttributeError, TypeError):
+                            # But __file__ might not exist or equal None
+                            # Like some builtins and Namespace packages py3
+                            folder = module.__path__._path[0]
+                    except AttributeError:  # In case the module.__path__ doesn't exist
                         pass
                     else:
                         if folder.startswith(current_dir):

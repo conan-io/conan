@@ -16,12 +16,13 @@ def report_copied_files(copied, output, message_suffix="Copied"):
         return False
 
     for ext, files in ext_files.items():
-        files_str = (", ".join(files)) if len(files) < 5 else ""
+        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
         file_or_files = "file" if len(files) == 1 else "files"
         if not ext:
-            output.info("%s %d %s: %s" % (message_suffix, len(files), file_or_files, files_str))
+            output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
         else:
-            output.info("%s %d '%s' %s: %s" % (message_suffix, len(files), ext, file_or_files, files_str))
+            output.info("%s %d '%s' %s%s"
+                        % (message_suffix, len(files), ext, file_or_files, files_str))
     return True
 
 
@@ -31,21 +32,19 @@ class FileCopier(object):
     imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
-    def __init__(self, root_source_folder, root_destination_folder, excluded=None):
+    def __init__(self, source_folders, root_destination_folder):
         """
         Takes the base folders to copy resources src -> dst. These folders names
         will not be used in the relative names while copying
-        param root_source_folder: The base folder to copy things from, typically the
+        param source_folders: list of folders to copy things from, typically the
                                   store build folder
         param root_destination_folder: The base folder to copy things to, typicall the
                                        store package folder
         """
-        self._base_src = root_source_folder
-        self._base_dst = root_destination_folder
+        assert isinstance(source_folders, list), "source folders must be a list"
+        self._src_folders = source_folders
+        self._dst_folder = root_destination_folder
         self._copied = []
-        self._excluded = [root_destination_folder]
-        if excluded:
-            self._excluded.append(excluded)
 
     def report(self, output):
         return report_copied_files(self._copied, output)
@@ -64,27 +63,39 @@ class FileCopier(object):
                          lib dir
         return: list of copied files
         """
+        # TODO: Remove the old "links" arg for Conan 2.0
         if symlinks is not None:
             links = symlinks
+
+        files = []
+        for src_folder in self._src_folders:
+            excluded = [self._dst_folder]
+            excluded.extend([d for d in self._src_folders if d is not src_folder])
+            fs = self._copy(src_folder, pattern, src, dst, links, ignore_case, excludes,
+                            keep_path, excluded_folders=excluded)
+            files.extend(fs)
+
+        return files
+
+    def _copy(self, base_src, pattern, src, dst, symlinks, ignore_case, excludes, keep_path,
+              excluded_folders):
         # Check for ../ patterns and allow them
         if pattern.startswith(".."):
-            rel_dir = os.path.abspath(os.path.join(self._base_src, pattern))
+            rel_dir = os.path.abspath(os.path.join(base_src, pattern))
             base_src = os.path.dirname(rel_dir)
             pattern = os.path.basename(rel_dir)
-        else:
-            base_src = self._base_src
 
         src = os.path.join(base_src, src)
-        dst = os.path.join(self._base_dst, dst)
+        dst = os.path.join(self._dst_folder, dst)
 
-        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
-                                                         ignore_case)
-        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
+        files_to_copy, link_folders = self._filter_files(src, pattern, symlinks, excludes,
+                                                         ignore_case, excluded_folders)
+        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks)
         self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
 
-    def _filter_files(self, src, pattern, links, excludes, ignore_case):
+    def _filter_files(self, src, pattern, links, excludes, ignore_case, excluded_folders):
 
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
@@ -101,7 +112,7 @@ class FileCopier(object):
             excludes = []
 
         for root, subfolders, files in walk(src, followlinks=True):
-            if root in self._excluded:
+            if root in excluded_folders:
                 subfolders[:] = []
                 continue
 
@@ -117,7 +128,7 @@ class FileCopier(object):
             if basename == "test_package":  # DO NOT export test_package/build folder
                 try:
                     subfolders.remove("build")
-                except:
+                except ValueError:
                     pass
 
             relative_path = os.path.relpath(root, src)
@@ -150,7 +161,7 @@ class FileCopier(object):
             src_link = os.path.join(src, linked_folder)
             # Discard symlinks that go out of the src folder
             abs_path = os.path.realpath(src_link)
-            relpath = os.path.relpath(abs_path, src)
+            relpath = os.path.relpath(abs_path, os.path.realpath(src))
             if relpath.startswith("."):
                 continue
 
@@ -166,7 +177,8 @@ class FileCopier(object):
             except OSError:
                 pass
             # link is a string relative to linked_folder
-            # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
+            # e.g.: os.symlink("test/bar", "./foo/test_link") will create a link
+            # to foo/test/bar in ./foo/test_link
             mkdir(os.path.dirname(dst_link))
             os.symlink(link, dst_link)
             created_links.append(dst_link)
@@ -195,7 +207,7 @@ class FileCopier(object):
             abs_dst_name = os.path.normpath(os.path.join(dst, filename))
             try:
                 os.makedirs(os.path.dirname(abs_dst_name))
-            except:
+            except Exception:
                 pass
             if symlinks and os.path.islink(abs_src_name):
                 linkto = os.readlink(abs_src_name)  # @UndefinedVariable

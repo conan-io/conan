@@ -5,7 +5,7 @@ from conans.client import tools
 from conans.client.output import Color, ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -59,7 +59,7 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanException("Error while initializing settings. %s" % str(e))
+        raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
 
 
 @contextmanager
@@ -97,6 +97,7 @@ class ConanFile(object):
     exports = None
     exports_sources = None
     generators = ["txt"]
+    revision_mode = "hash"
 
     # Vars to control the build steps (build(), package())
     should_configure = True
@@ -131,6 +132,7 @@ class ConanFile(object):
         self.options = create_options(self)
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
+
         try:
             if self.settings.os_build and self.settings.os:
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
@@ -143,6 +145,10 @@ class ConanFile(object):
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
         except ConanException:
             pass
+
+        if 'cppstd' in self.settings.fields:
+            self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                             " please update your recipe.")
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
@@ -247,13 +253,13 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False):
+            ignore_errors=False, run_environment=False, with_login=True):
         def _run():
             if not win_bash:
                 return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw)
+                                             msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
             with tools.run_environment(self):
                 if OSInfo().is_macos:

@@ -7,7 +7,8 @@ from time import sleep
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
+    TurboTestClient, GenConanfile
 from conans.util.files import load, save
 
 
@@ -173,9 +174,9 @@ class Pkg(ConanFile):
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
         pref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
-        export_folder = self.client.cache.export(ref)
+        export_folder = self.client.cache.package_layout(ref).export()
         recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
-        package_folder = self.client.cache.package(pref)
+        package_folder = self.client.cache.package_layout(pref.ref).package(pref)
         package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
         def timestamps():
@@ -234,10 +235,10 @@ class Pkg(ConanFile):
         self.client.run("install Hello0/1.0@lasote/stable --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
 
-        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
         client2.run("install Hello0/1.0@lasote/stable")
 
-        self.assertEquals(str(client2.out).count("Downloading conaninfo.txt"), 1)
+        self.assertEqual(str(client2.out).count("Downloading conaninfo.txt"), 1)
 
         files["helloHello0.h"] = "//EMPTY!"
         self.client.save(files, clean_first=True)
@@ -248,8 +249,9 @@ class Pkg(ConanFile):
 
         client2.run("install Hello0/1.0@lasote/stable --update")
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-        package_ids = client2.cache.conan_packages(ref)
-        package_path = client2.cache.package(PackageReference(ref, package_ids[0]))
+        package_ids = client2.cache.package_layout(ref).conan_packages()
+        pref = PackageReference(ref, package_ids[0])
+        package_path = client2.cache.package_layout(ref).package(pref)
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
 
@@ -290,5 +292,24 @@ class ConanLib(ConanFile):
                       client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        header = os.path.join(client.cache.package(pref), "header.h")
+        header = os.path.join(client.cache.package_layout(pref.ref).package(pref), "header.h")
         self.assertEqual(load(header), "mycontent2")
+
+    def fail_usefully_when_failing_retrieving_package_test(self):
+        ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
+        client = TurboTestClient(servers={"default": TestServer()})
+        pref1 = client.create(ref)
+        client.upload_all(ref)
+
+        client.create(ref2, conanfile=GenConanfile().with_requirement(ref))
+        client.upload_all(ref2)
+
+        # remove only the package from pref1
+        client.run("remove {} -p {} -f".format(pref1.ref, pref1.id))
+
+        # Now fake the remote url to force a network failure
+        client.run("remote update default http://this_not_exist8823.com")
+        # Try to install ref2, it will try to download the binary for ref1
+        client.run("install {}".format(ref2), assert_error=True)
+        self.assertIn("ERROR: Error downloading binary package: '{}'".format(pref1), client.out)

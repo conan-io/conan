@@ -3,7 +3,7 @@
 import os
 
 from conans.errors import ConanException
-from conans.model.editable_cpp_info import EditableCppInfo
+from conans.model.editable_layout import EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
@@ -17,7 +17,11 @@ class PackageEditableLayout(object):
         self._base_folder = base_folder
         self._layout_file = layout_file
 
-    def conan(self):
+    @property
+    def ref(self):
+        return self._ref
+
+    def base_folder(self):
         """ Returns the base folder for this package reference """
         return self._base_folder
 
@@ -25,12 +29,12 @@ class PackageEditableLayout(object):
         """ Path to the conanfile. We can agree that an editable package
             needs to be a Conan package
         """
-        return os.path.join(self.conan(), CONANFILE)
+        return os.path.join(self._base_folder, CONANFILE)
 
     def editable_cpp_info(self):
         if self._layout_file:
             if os.path.isfile(self._layout_file):
-                return EditableCppInfo.load(self._layout_file)
+                return EditableLayout(self._layout_file)
             else:
                 raise ConanException("Layout file not found: %s" % self._layout_file)
 
@@ -53,3 +57,6 @@ class PackageEditableLayout(object):
 
     def package_metadata(self):
         raise ConanException("Package metadata is not available for editable packages")
+
+    def get_path(self, package_id=None, path=None):
+        raise ConanException("Operation not allowed on a package installed as editable")

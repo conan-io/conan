@@ -4,13 +4,13 @@ import traceback
 
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException
+    NotFoundException, ForbiddenException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
 
-class Uploader(object):
+class FileUploader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
         self.chunk_size = chunk_size
@@ -18,7 +18,13 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
+               headers=None):
+        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else 1
+        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else 5
+
         # Send always the header with the Sha1
         headers = headers or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
@@ -28,6 +34,13 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 401:
+                raise AuthenticationException(response.content)
+
+            if response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
@@ -49,6 +62,18 @@ class Uploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+            if response.status_code == 401:
+                raise AuthenticationException(response.content)
+
+            if response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
+
+            response.raise_for_status()  # Raise HTTPError for bad http response status
+
+        except ConanException:
+            raise
         except Exception as exc:
             raise ConanException(exc)
 
@@ -109,7 +134,7 @@ def load_in_chunks(path, chunk_size=1024):
             yield data
 
 
-class Downloader(object):
+class FileDownloader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
         self.chunk_size = chunk_size
@@ -117,8 +142,12 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False,
+    def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
+        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else 2
+        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else 0
 
         if file_path and not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
@@ -181,7 +210,8 @@ class Downloader(object):
             total_length = int(total_length)
             encoding = response.headers.get('content-encoding')
             gzip = (encoding == "gzip")
-            # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+            # chunked can be a problem:
+            # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
             # It will not send content-length or should be ignored
 
             def download_chunks(file_handler=None, ret_buffer=None):
@@ -238,13 +268,13 @@ def print_progress(output, units, progress=""):
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
-    for counter in range(retry):
+    for counter in range(retry + 1):
         try:
             return method(*args, **kwargs)
         except NotFoundException:
             raise
         except ConanException as exc:
-            if counter == (retry - 1):
+            if counter == retry:
                 raise
             else:
                 if out:

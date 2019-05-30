@@ -19,14 +19,14 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         conanfile.deps_cpp_info.lib_paths.append("/two/lib/path")
         conanfile.deps_cpp_info.cflags.append("-mycflag")
         conanfile.deps_cpp_info.cflags.append("-mycflag2")
-        conanfile.deps_cpp_info.cppflags.append("-mycppflag")
-        conanfile.deps_cpp_info.cppflags.append("-mycppflag2")
+        conanfile.deps_cpp_info.cxxflags.append("-mycxxflag")
+        conanfile.deps_cpp_info.cxxflags.append("-mycxxflag2")
         conanfile.deps_cpp_info.exelinkflags.append("-myexelinkflag")
         conanfile.deps_cpp_info.sharedlinkflags.append("-mysharedlinkflag")
         conanfile.deps_cpp_info.libs.extend(['gdi32', 'user32.lib'])
 
         tool = VisualStudioBuildEnvironment(conanfile)
-        self.assertEquals(tool.vars_dict, {
+        self.assertEqual(tool.vars_dict, {
             "CL": ["-I/one/include/path", "-I/two/include/path",
                    '-MDd',
                    '-mycflag',
@@ -34,13 +34,14 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Zi',
                    '-Ob0',
                    '-Od',
-                   '-mycppflag',
-                   '-mycppflag2'],
+                   '-mycxxflag',
+                   '-mycxxflag2'],
             "LIB": ["/one/lib/path", "/two/lib/path"],
+            "UseEnv": "True",
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = True
-        self.assertEquals(tool.vars_dict, {
+        self.assertEqual(tool.vars_dict, {
             "CL": ["-I/one/include/path", "-I/two/include/path",
                    '-MDd',
                    '-mycflag',
@@ -48,10 +49,11 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Zi',
                    '-Ob0',
                    '-Od',
-                   '-mycppflag',
-                   '-mycppflag2',
+                   '-mycxxflag',
+                   '-mycxxflag2',
                    '/MP%s' % tools.cpu_count(output=conanfile.output)],
             "LIB": ["/one/lib/path", "/two/lib/path"],
+            "UseEnv": "True",
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
         tool.parallel = False
@@ -60,7 +62,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         tool.include_paths.append("/three/include/path")
         tool.lib_paths.append("/three/lib/path")
 
-        self.assertEquals(tool.vars_dict, {
+        self.assertEqual(tool.vars_dict, {
             "CL": ["-I/one/include/path",
                    "-I/two/include/path",
                    "-I/three/include/path",
@@ -70,16 +72,17 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                    '-Zi',
                    '-Ob0',
                    '-Od',
-                   '-mycppflag',
-                   '-mycppflag2'],
+                   '-mycxxflag',
+                   '-mycxxflag2'],
             "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path"],
+            "UseEnv": "True",
             "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
         })
 
         # Now try appending to environment
         with tools.environment_append({"CL": "-I/four/include/path -I/five/include/path",
                                        "LIB": "/four/lib/path;/five/lib/path"}):
-            self.assertEquals(tool.vars_dict, {
+            self.assertEqual(tool.vars_dict, {
                 "CL": ["-I/one/include/path", "-I/two/include/path",
                        "-I/three/include/path",
                        '-MDd',
@@ -88,19 +91,22 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                        '-Zi',
                        '-Ob0',
                        '-Od',
-                       '-mycppflag',
-                       '-mycppflag2',
+                       '-mycxxflag',
+                       '-mycxxflag2',
                        "-I/four/include/path -I/five/include/path"],
-                "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path", "/four/lib/path;/five/lib/path"],
+                "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path",
+                        "/four/lib/path;/five/lib/path"],
+                "UseEnv": "True",
                 "_LINK_": ['-myexelinkflag', '-mysharedlinkflag', 'gdi32.lib', 'user32.lib']
             })
 
-            self.assertEquals(tool.vars, {
+            self.assertEqual(tool.vars, {
                 "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" -MDd '
                       '-mycflag -mycflag2 -Zi -Ob0 -Od '
-                      '-mycppflag -mycppflag2 '
+                      '-mycxxflag -mycxxflag2 '
                       '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",
+                "UseEnv": "True",
                 "_LINK_": "-myexelinkflag -mysharedlinkflag gdi32.lib user32.lib"
             })
 

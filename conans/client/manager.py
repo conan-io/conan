@@ -7,7 +7,7 @@ from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
-from conans.client.output import Color, ScopedOutput
+from conans.client.output import Color
 from conans.client.source import complete_recipe_sources
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
@@ -29,23 +29,7 @@ class ConanManager(object):
         self._graph_manager = graph_manager
         self._hook_manager = hook_manager
 
-    def install_workspace(self, graph_info, workspace, remote_name, build_modes, update):
-        refs = [ConanFileReference(v, "root", "project", "develop") for v in workspace.root]
-        deps_graph, _ = self._graph_manager.load_graph(refs, None, graph_info, build_modes,
-                                                       False, update, remote_name, self._recorder,
-                                                       workspace)
-
-        output = ScopedOutput(str("Workspace"), self._user_io.out)
-        output.highlight("Installing...")
-        print_graph(deps_graph, self._user_io.out)
-
-        installer = BinaryInstaller(self._cache, output, self._remote_manager,
-                                    recorder=self._recorder, workspace=workspace,
-                                    hook_manager=self._hook_manager)
-        installer.install(deps_graph, keep_build=False, graph_info=graph_info)
-        workspace.generate()
-
-    def install(self, ref_or_path, install_folder, graph_info, remote_name=None, build_modes=None,
+    def install(self, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
                 keep_build=False):
@@ -72,8 +56,8 @@ class ConanManager(object):
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(graph_info.profile.dumps())
         result = self._graph_manager.load_graph(ref_or_path, create_reference, graph_info,
-                                                build_modes, False, update, remote_name,
-                                                self._recorder, None)
+                                                build_modes, False, update, remotes,
+                                                self._recorder)
         deps_graph, conanfile = result
 
         if conanfile.display_name == "virtual":
@@ -91,9 +75,9 @@ class ConanManager(object):
             pass
 
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
-                                    recorder=self._recorder, workspace=None,
+                                    recorder=self._recorder,
                                     hook_manager=self._hook_manager)
-        installer.install(deps_graph, keep_build)
+        installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
@@ -101,7 +85,8 @@ class ConanManager(object):
             for node in deps_graph.nodes:
                 if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                     continue
-                complete_recipe_sources(self._remote_manager, self._cache, node.conanfile, node.ref)
+                complete_recipe_sources(self._remote_manager, self._cache, node.conanfile, node.ref,
+                                        remotes)
             manifest_manager.check_graph(deps_graph,
                                          verify=manifest_verify,
                                          interactive=manifest_interactive)

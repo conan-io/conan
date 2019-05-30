@@ -5,11 +5,10 @@ import time
 
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
-from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error, \
-    handle_return_deserializer
-from conans.client.rest.uploader_downloader import Downloader, Uploader
+from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
+from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
-    RecipeNotFoundException
+    RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -39,7 +38,8 @@ class RestV2Methods(RestCommonMethods):
         return data
 
     def _get_remote_file_contents(self, url):
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
+        # We don't want traces in output of these downloads, they are ugly in output
+        downloader = FileDownloader(self.requester, None, self.verify_ssl)
         contents = downloader.download(url, auth=self.auth)
         return contents
 
@@ -174,10 +174,10 @@ class RestV2Methods(RestCommonMethods):
     def _upload_files(self, files, urls, retry, retry_wait):
         t1 = time.time()
         failed = []
-        uploader = Uploader(self.requester, self._output, self.verify_ssl)
-        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
-        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename in sorted(files, reverse=True):
+        uploader = FileUploader(self.requester, self._output, self.verify_ssl)
+        # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
+        # or conanamanifest.txt with missing files due to a network failure
+        for filename in sorted(files):
             self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
@@ -192,6 +192,8 @@ class RestV2Methods(RestCommonMethods):
                     failed.append(filename)
                 else:
                     pass
+            except (AuthenticationException, ForbiddenException):
+                raise
             except Exception as exc:
                 self._output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
@@ -203,7 +205,7 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files):
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):
@@ -212,6 +214,8 @@ class RestV2Methods(RestCommonMethods):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
+            if self._output:
+                self._output.writeln("")
 
     def _remove_conanfile_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed

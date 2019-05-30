@@ -47,7 +47,8 @@ def _format_conanfile_exception(scope, method, exception):
         content_lines = []
 
         while True:  # If out of index will raise and will be captured later
-            filepath, line, name, contents = traceback.extract_tb(tb, 40)[index]  # 40 levels of nested functions max, get the latest
+            # 40 levels of nested functions max, get the latest
+            filepath, line, name, contents = traceback.extract_tb(tb, 40)[index]
             if "conanfile.py" not in filepath:  # Avoid show trace from internal conan source code
                 if conanfile_reached:  # The error goes to internal code, exit print
                     break
@@ -56,11 +57,12 @@ def _format_conanfile_exception(scope, method, exception):
                     msg = "%s: Error in %s() method" % (scope, method)
                     msg += ", line %d\n\t%s" % (line, contents)
                 else:
-                    msg = "while calling '%s', line %d\n\t%s" % (name, line, contents) if line else "\n\t%s" % contents
+                    msg = ("while calling '%s', line %d\n\t%s" % (name, line, contents)
+                           if line else "\n\t%s" % contents)
                 content_lines.append(msg)
                 conanfile_reached = True
             index += 1
-    except:
+    except Exception:
         pass
     ret = "\n".join(content_lines)
     ret += "\n\t%s: %s" % (exception.__class__.__name__, str(exception))
@@ -90,6 +92,15 @@ class ConanException(Exception):
         return exception_message_safe(msg)
 
 
+class OnlyV2Available(ConanException):
+
+    def __init__(self, remote_url):
+        msg = "The remote at '%s' only works with revisions enabled. " \
+              "Set CONAN_REVISIONS_ENABLED=1 " \
+              "or set 'general.revisions_enabled = 1' at the 'conan.conf'" % remote_url
+        super(OnlyV2Available, self).__init__(msg)
+
+
 class NoRestV2Available(ConanException):
     pass
 
@@ -117,6 +128,10 @@ class ConanExceptionInUserConanfileMethod(ConanException):
 
 
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
+    pass
+
+
+class ConanMigrationError(ConanException):
     pass
 
 
@@ -187,7 +202,7 @@ class PackageNotFoundException(NotFoundException):
 
     def __str__(self):
         tmp = self.pref.full_repr() if self.print_rev else str(self.pref)
-        return "Binary package not found: '{}'%s".format(tmp, self.remote_message())
+        return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 
 class UserInterfaceErrorException(RequestErrorException):

@@ -11,14 +11,17 @@ from conans.client.conf import default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.settings import Settings
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('visual_studio')
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsArchTest(unittest.TestCase):
+    output = TestBufferConanOutput()
 
-    def assert_vcvars_command(self, settings, expected, **kwargs):
-        command = tools.vcvars_command(settings, **kwargs)
+    def assert_vcvars_command(self, settings, expected, output=None, **kwargs):
+        output = output or self.output
+        command = tools.vcvars_command(settings, output=output, **kwargs)
         command = command.replace('"', '').replace("'", "")
         self.assertTrue(command.endswith('vcvarsall.bat %s' % expected))
 
@@ -43,7 +46,7 @@ class VCVarsArchTest(unittest.TestCase):
 
         settings.arch = 'mips'
         with self.assertRaises(ConanException):
-            tools.vcvars_command(settings)
+            tools.vcvars_command(settings, output=self.output)
 
         settings.arch_build = 'x86_64'
         settings.arch = 'x86'
@@ -61,7 +64,7 @@ class VCVarsArchTest(unittest.TestCase):
         self.assert_vcvars_command(settings, "amd64_arm64", arch='armv8')
 
         with self.assertRaises(ConanException):
-            tools.vcvars_command(settings, arch='mips')
+            tools.vcvars_command(settings, arch='mips', output=self.output)
 
     def test_vcvars_ver_override(self):
         settings = Settings.loads(default_settings_yml)
@@ -69,13 +72,13 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '15'
         settings.arch = 'x86_64'
 
-        command = tools.vcvars_command(settings, vcvars_ver='14.14')
+        command = tools.vcvars_command(settings, vcvars_ver='14.14', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('-vcvars_ver=14.14', command)
 
         settings.compiler.version = '14'
 
-        command = tools.vcvars_command(settings, vcvars_ver='14.14')
+        command = tools.vcvars_command(settings, vcvars_ver='14.14', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('-vcvars_ver=14.14', command)
 
@@ -85,12 +88,20 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '15'
         settings.arch = 'x86_64'
 
-        command = tools.vcvars_command(settings, winsdk_version='8.1')
+        command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('8.1', command)
 
         settings.compiler.version = '14'
 
-        command = tools.vcvars_command(settings, winsdk_version='8.1')
+        command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('8.1', command)
+
+    def test_windows_ce(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = 'WindowsCE'
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = '15'
+        settings.arch = 'armv4i'
+        self.assert_vcvars_command(settings, "x86")

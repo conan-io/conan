@@ -2,16 +2,15 @@
 
 import os
 import tempfile
-import unittest
 import textwrap
+import unittest
 
 from parameterized import parameterized
 
-
+from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
-from conans.model.editable_cpp_info import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -71,7 +70,7 @@ class HeaderOnlyLibTestClient(TestClient):
             self.save({"mylayout": self.conan_inrepo_layout, })
 
         if use_cache_file:
-            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            file_path = os.path.join(self.cache.cache_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
             save(file_path, self.conan_cache_layout)
 
     def update_hello_word(self, hello_word):
@@ -95,9 +94,9 @@ class EditableReferenceTest(unittest.TestCase):
                                                   use_cache_file=use_cache_file,
                                                   base_folder=base_folder)
         if use_repo_file:
-            client_editable.run("link . MyLib/0.1@user/editable --layout=mylayout")
+            client_editable.run("editable add . MyLib/0.1@user/editable --layout=mylayout")
         else:
-            client_editable.run("link . MyLib/0.1@user/editable")
+            client_editable.run("editable add . MyLib/0.1@user/editable")
 
         # Consumer project
         client = TestClient(base_folder=base_folder)

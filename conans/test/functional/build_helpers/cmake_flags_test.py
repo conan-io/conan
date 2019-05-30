@@ -1,12 +1,14 @@
 import os
 import platform
 import unittest
+from textwrap import dedent
 
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.client.build.cmake import CMake
 from conans.model.version import Version
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
@@ -17,7 +19,7 @@ class HelloConan(ConanFile):
     version = "0.1"
     build_policy="missing"
     def package_info(self):
-        self.cpp_info.cppflags = ["MyFlag1", "MyFlag2"]
+        self.cpp_info.cxxflags = ["MyFlag1", "MyFlag2"]
         self.cpp_info.cflags = ["-load", "C:\some\path"]
         self.cpp_info.defines = ['MY_DEF=My" \string', 'MY_DEF2=My${} other \string']
 """
@@ -31,7 +33,7 @@ class ChatConan(ConanFile):
     requires = "Hello/0.1@lasote/testing"
     build_policy="missing"
     def package_info(self):
-        self.cpp_info.cppflags = ["MyChatFlag1", "MyChatFlag2"]
+        self.cpp_info.cxxflags = ["MyChatFlag1", "MyChatFlag2"]
 """
 
 conanfile = """[requires]
@@ -130,7 +132,8 @@ int main(){
                      "CMakeLists.txt": cmake}, clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -149,7 +152,8 @@ int main(){
                      "CMakeLists.txt": cmake}, clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
@@ -170,7 +174,8 @@ int main(){
                     clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -196,7 +201,9 @@ int main(){
                     clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake . -DCONAN_CXX_FLAGS=CmdCXXFlag", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s -DCONAN_CXX_FLAGS=CmdCXXFlag" % generator,
+                      cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
@@ -225,7 +232,8 @@ int main(){
                     clean_first=True)
 
         client.run('install . -g cmake')
-        client.runner("cmake .", cwd=client.current_folder)
+        generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
+        client.runner("cmake . %s" % generator, cwd=client.current_folder)
 
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
@@ -320,19 +328,22 @@ target_link_libraries(mylib ${CONAN_LIBS})
 """})
 
         if platform.system() != "Windows":
-            client.run("install . --install-folder=build -s cppstd=gnu98")
+            with catch_deprecation_warning(self):
+                client.run("install . --install-folder=build -s cppstd=gnu98")
             client.run("build . --build-folder=build", assert_error=True)
             self.assertIn("Error in build()", client.out)
 
             # Now specify c++14
-            client.run("install . --install-folder=build -s cppstd=gnu14")
+            with catch_deprecation_warning(self):
+                client.run("install . --install-folder=build -s cppstd=gnu14")
             client.run("build . --build-folder=build")
             self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
             libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
             libpath = os.path.join(client.current_folder, "build", "lib", libname)
             self.assertTrue(os.path.exists(libpath))
 
-        client.run("install . --install-folder=build -s cppstd=14")
+        with catch_deprecation_warning(self):
+            client.run("install . --install-folder=build -s cppstd=14")
         client.run("build . --build-folder=build")
         self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
         self.assertNotIn("Conan setting CXX_FLAGS flags", client.out)
@@ -373,15 +384,17 @@ conan_set_std()
             cmake_version = CMake.get_version()
             return cmake_version < Version("3.12")
 
-        client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
-                   "-s compiler.libcxx=libstdc++11")
+        with catch_deprecation_warning(self):
+            client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
+                       "-s compiler.libcxx=libstdc++11")
         if conan_set_std_branch():
             self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
         else:
             self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
 
-        client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
-                   "-s compiler.libcxx=libstdc++11")
+        with catch_deprecation_warning(self):
+            client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
+                       "-s compiler.libcxx=libstdc++11")
         if conan_set_std_branch():
             self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
         else:
@@ -431,3 +444,39 @@ conan_basic_setup()
         client.save({"CMakeLists.txt": tmp, "conanfile.py": conanfile}, clean_first=True)
         client.run("create . user/channel -o MyLib:fPIC=True")
         self.assertNotIn("Conan: Adjusting fPIC flag", client.out)
+
+    def header_only_generator_test(self):
+        """ Test cmake.install() is possible although Generetaor could not be deduced from
+        settings
+        """
+        conanfile = dedent("""
+        from conans import ConanFile, CMake
+
+        class TestConan(ConanFile):
+            name = "kk"
+            version = "1.0"
+            exports = "*"
+
+            def package(self):
+                cmake = CMake(self)
+                self.output.info("Configure command: %s" % cmake.command_line)
+                cmake.configure()
+                cmake.install()
+        """)
+        cmakelists = dedent("""
+        cmake_minimum_required(VERSION 3.3)
+        project(test)
+
+        install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include"
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists, "include/file.h": ""})
+        client.run("create . danimtb/testing")
+        if platform.system() == "Windows":
+            self.assertIn("WARN: CMake generator could not be deduced from settings", client.out)
+            self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="ON" '
+                          '-DCMAKE_INSTALL_PREFIX=', client.out)
+        else:
+            self.assertIn('Configure command: -G "Unix Makefiles" -DCONAN_EXPORTED="1" '
+                          '-DCONAN_IN_LOCAL_CACHE="ON" -DCMAKE_INSTALL_PREFIX=', client.out)

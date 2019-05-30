@@ -23,7 +23,7 @@ class Pkg(ConanFile):
         os.makedirs(os.path.join(self.package_folder, "include"))
     def package_info(self):
         self.cpp_info.libs = ["hello"]
-        self.cpp_info.cppflags = ["-some_cpp_compiler_flag"]
+        self.cpp_info.cxxflags = ["-some_cxx_compiler_flag"]
         self.cpp_info.cflags = ["-some_c_compiler_flag"]
 """})
         client.run("export . Hello/0.1@lasote/stable")
@@ -53,13 +53,13 @@ xcode
 
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
-        self.assertIn(".conan/data/Hello/0.1/lasote/stable/package", cmake)
+        self.assertIn("/data/Hello/0.1/lasote/stable/package", cmake)
 
         self.assertIn("-L", gcc)
         self.assertIn("-l", gcc)
         self.assertIn("-I", gcc)
 
-        self.assertIn(".conan/data/Hello/0.1/lasote/stable/package", gcc)
+        self.assertIn("/data/Hello/0.1/lasote/stable/package", gcc)
 
         # CHECK VISUAL STUDIO GENERATOR
 
@@ -68,32 +68,33 @@ xcode
         definition_group = xmldoc.getElementsByTagName('ItemDefinitionGroup')[0]
         compiler = definition_group.getElementsByTagName("ClCompile")[0]
 
-        include_dirs = compiler.getElementsByTagName("AdditionalIncludeDirectories")[0].firstChild.data
+        elem = compiler.getElementsByTagName("AdditionalIncludeDirectories")
+        include_dirs = elem[0].firstChild.data
         definitions = compiler.getElementsByTagName("PreprocessorDefinitions")[0].firstChild.data
 
         linker = definition_group.getElementsByTagName("Link")[0]
         lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
         libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
 
-        package_id = os.listdir(client.cache.packages(ref))[0]
+        package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
-        package_path = client.cache.package(pref).replace("\\", "/")
+        package_path = client.cache.package_layout(pref.ref).package(pref)
 
-        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),
+        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "\\\\"),
                                "$(USERPROFILE)", package_path, flags=re.I)
-        expected_lib_dirs = os.path.join(replaced_path, "lib").replace("\\", "/")
-        expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
+        expected_lib_dirs = os.path.join(replaced_path, "lib")
+        expected_include_dirs = os.path.join(replaced_path, "include")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
-        self.assertEquals("hello.lib;%(AdditionalDependencies)", libs)
-        self.assertEquals("%(PreprocessorDefinitions)", definitions)
+        self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
+        self.assertEqual("%(PreprocessorDefinitions)", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR
         xcode = load(os.path.join(client.current_folder, BUILD_INFO_XCODE))
 
         expected_c_flags = '-some_c_compiler_flag'
-        expected_cpp_flags = '-some_cpp_compiler_flag'
+        expected_cpp_flags = '-some_cxx_compiler_flag'
         expected_lib_dirs = os.path.join(package_path, "lib").replace("\\", "/")
         expected_include_dirs = os.path.join(package_path, "include").replace("\\", "/")
 
@@ -102,4 +103,5 @@ xcode
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
-        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"), xcode)
+        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"),
+                      xcode)

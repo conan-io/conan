@@ -7,7 +7,7 @@ from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV1Router
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
-from conans.client.rest.uploader_downloader import Downloader, Uploader
+from conans.client.rest.uploader_downloader import FileDownloader, FileUploader
 from conans.errors import ConanException, NotFoundException, NoRestV2Available, \
     PackageNotFoundException
 from conans.model.info import ConanInfo
@@ -40,7 +40,7 @@ class RestV1Methods(RestCommonMethods):
         Its a generator, so it yields elements for memory performance
         """
         output = self._output if not quiet else None
-        downloader = Downloader(self.requester, output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
@@ -141,10 +141,10 @@ class RestV1Methods(RestCommonMethods):
     def _upload_files(self, file_urls, files, output, retry, retry_wait):
         t1 = time.time()
         failed = []
-        uploader = Uploader(self.requester, output, self.verify_ssl)
-        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
-        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename, resource_url in sorted(file_urls.items(), reverse=True):
+        uploader = FileUploader(self.requester, output, self.verify_ssl)
+        # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
+        # or conanamanifest.txt with missing files due to a network failure
+        for filename, resource_url in sorted(file_urls.items()):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
@@ -173,7 +173,7 @@ class RestV1Methods(RestCommonMethods):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = Downloader(self.requester, self._output, self.verify_ssl)
+        downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -257,7 +257,7 @@ class RestV1Methods(RestCommonMethods):
                         ret.append(tmp)
             return sorted(ret)
         else:
-            downloader = Downloader(self.requester, None, self.verify_ssl)
+            downloader = FileDownloader(self.requester, None, self.verify_ssl)
             auth, _ = self._file_server_capabilities(urls[path])
             content = downloader.download(urls[path], auth=auth)
 

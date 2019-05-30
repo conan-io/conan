@@ -21,8 +21,8 @@ class CollectLibsTest(unittest.TestCase):
         client.run("install %s --build missing" % str(ref))
 
         # Check compilation ok
-        package_ids = client.cache.conan_packages(ref)
-        self.assertEquals(len(package_ids), 1)
+        package_ids = client.cache.package_layout(ref).conan_packages()
+        self.assertEqual(len(package_ids), 1)
 
         # Reuse them
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"],

@@ -5,6 +5,8 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
+# TODO: This file does nothing!
+
 class VCVarsTest(unittest.TestCase):
 
     def basic(self):

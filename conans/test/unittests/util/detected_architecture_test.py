@@ -3,63 +3,51 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 
+import mock
 import unittest
 
-from mock import mock
+from parameterized import parameterized
 
 from conans.client.tools.oss import detected_architecture
 
-
 class DetectedArchitectureTest(unittest.TestCase):
 
-    def test_various(self):
+    @parameterized.expand([
+        ['i386', 'x86'],
+        ['i686', 'x86'],
+        ['x86_64', 'x86_64'],
+        ['amd64', 'x86_64'],
+        ['aarch64_be', 'armv8'],
+        ['armv8b', 'armv8'],
+        ['armv7l', 'armv7'],
+        ['armv6l', 'armv6'],
+        ['arm', 'armv6'],
+        ['ppc64le', 'ppc64le'],
+        ['ppc64', 'ppc64'],
+        ['mips', 'mips'],
+        ['mips64', 'mips64'],
+        ['sparc', 'sparc'],
+        ['sparc64', 'sparcv9'],
+        ['s390', 's390'],
+        ['s390x', 's390x']
+    ])
+    def test_various(self, mocked_machine, expected_arch):
 
-        # x86
-        with mock.patch("platform.machine", mock.MagicMock(return_value='i386')):
-            self.assertEqual('x86', detected_architecture())
+        with mock.patch("platform.machine", mock.MagicMock(return_value=mocked_machine)):
+            self.assertEqual(expected_arch, detected_architecture(), "given '%s' expected '%s'" % (mocked_machine, expected_arch))
 
-        with mock.patch("platform.machine", mock.MagicMock(return_value='i686')):
-            self.assertEqual('x86', detected_architecture())
 
-        with mock.patch("platform.machine", mock.MagicMock(return_value='x86_64')):
-            self.assertEqual('x86_64', detected_architecture())
+    def test_aix(self):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
+                mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value='32')),\
+                mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
+            self.assertEqual('ppc32', detected_architecture())
 
-        with mock.patch("platform.machine", mock.MagicMock(return_value='amd64')):
-            self.assertEqual('x86_64', detected_architecture())
-
-        # ARM
-        with mock.patch("platform.machine", mock.MagicMock(return_value='aarch64_be')):
-            self.assertEqual('armv8', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='armv8b')):
-            self.assertEqual('armv8', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='armv7l')):
-            self.assertEqual('armv7', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='armv6l')):
-            self.assertEqual('armv6', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='arm')):
-            self.assertEqual('armv6', detected_architecture())
-
-        # PowerPC
-        with mock.patch("platform.machine", mock.MagicMock(return_value='ppc64le')):
-            self.assertEqual('ppc64le', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='ppc64')):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
+                mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value='64')),\
+                mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
             self.assertEqual('ppc64', detected_architecture())
-
-        # MIPS
-        with mock.patch("platform.machine", mock.MagicMock(return_value='mips')):
-            self.assertEqual('mips', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='mips64')):
-            self.assertEqual('mips64', detected_architecture())
-
-        # SPARC
-        with mock.patch("platform.machine", mock.MagicMock(return_value='sparc')):
-            self.assertEqual('sparc', detected_architecture())
-
-        with mock.patch("platform.machine", mock.MagicMock(return_value='sparc64')):
-            self.assertEqual('sparcv9', detected_architecture())

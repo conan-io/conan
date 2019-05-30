@@ -21,7 +21,7 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(sub2, "file2.c"), "2 Hello2")
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*.txt", "texts")
         self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
         self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
@@ -29,7 +29,7 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual(['file1.txt'], os.listdir(os.path.join(folder2, "texts/subdir2")))
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*.txt", "texts", "subdir1")
         self.assertEqual("Hello1", load(os.path.join(folder2, "texts/file1.txt")))
         self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
@@ -48,7 +48,7 @@ class FileCopierTest(unittest.TestCase):
 
         for links in (False, True):
             folder2 = temp_folder()
-            copier = FileCopier(folder1, folder2)
+            copier = FileCopier([folder1], folder2)
             copier("*.txt", "texts", links=links)
             if links:
                 self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1") # @UndefinedVariable
@@ -59,7 +59,7 @@ class FileCopierTest(unittest.TestCase):
 
         for links in (False, True):
             folder2 = temp_folder()
-            copier = FileCopier(folder1, folder2)
+            copier = FileCopier([folder1], folder2)
             copier("*.txt", "texts", "subdir1", links=links)
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/file1.txt")))
             self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
@@ -77,7 +77,7 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*.cpp", links=True)
         self.assertEqual(os.listdir(folder2), [])
         copier("*.txt", links=True)
@@ -95,7 +95,7 @@ class FileCopierTest(unittest.TestCase):
         os.symlink("other/file", sub2)  # @UndefinedVariable
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*", links=True)
         symlink = os.path.join(folder2, "foo", "symlink")
         self.assertTrue(os.path.islink(symlink))
@@ -111,9 +111,41 @@ class FileCopierTest(unittest.TestCase):
         os.symlink("60.2", sub2)  # @UndefinedVariable
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copied = copier("*.cpp", links=True)
         self.assertEqual(copied, [])
+
+    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    def linked_folder_copy_from_linked_folder_test(self):
+        # https://github.com/conan-io/conan/issues/5114
+        folder1 = temp_folder(path_with_spaces=False)
+        sub_src = os.path.join(folder1, "sub/src")
+
+        src = os.path.join(folder1, "src")
+        src_dir = os.path.join(folder1, "src/dir")
+        src_dir_link = os.path.join(folder1, "src/dir_link")
+        src_dir_file = os.path.join(src_dir, "file.txt")
+
+        dst = os.path.join(folder1, "dst")
+        dst_dir = os.path.join(folder1, "dst/dir")
+        dst_dir_link = os.path.join(folder1, "dst/dir_link")
+        dst_dir_file = os.path.join(dst_dir, "file.txt")
+
+        os.makedirs(dst)
+        os.makedirs(sub_src)
+        # input src folder should be a symlink
+        os.symlink(sub_src, src)
+        # folder, file and folder link to copy
+        os.mkdir(src_dir)
+        save(src_dir_file, "file")
+        os.symlink(src_dir, src_dir_link)
+
+        copier = FileCopier([src], dst)
+        copied = copier("*", symlinks=True)
+
+        self.assertEqual(copied, [dst_dir_file])
+        self.assertEqual(os.listdir(dst), os.listdir(src))
+        self.assertTrue(os.path.islink(dst_dir_link))
 
     def excludes_test(self):
         folder1 = temp_folder()
@@ -122,7 +154,7 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(sub1, "file2.c"), "Hello2")
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*.*", "texts", excludes="*.c")
         self.assertEqual(['file1.txt'], os.listdir(os.path.join(folder2, "texts/subdir1")))
 
@@ -131,11 +163,11 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(folder1, "MyLibImpl.txt"), "")
         save(os.path.join(folder1, "MyLibTests.txt"), "")
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*.txt", excludes="*Test*.txt")
         self.assertEqual(set(['MyLib.txt', 'MyLibImpl.txt']), set(os.listdir(folder2)))
 
         folder2 = temp_folder()
-        copier = FileCopier(folder1, folder2)
+        copier = FileCopier([folder1], folder2)
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))

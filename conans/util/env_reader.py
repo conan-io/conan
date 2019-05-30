@@ -25,5 +25,7 @@ def get_env(env_key, default=None, environment=None):
         elif isinstance(default, float):
             return float(env_var)
         elif isinstance(default, list):
-            return [var.strip() for var in env_var.split(",")]
+            if env_var.strip():
+                return [var.strip() for var in env_var.split(",")]
+            return []
     return env_var

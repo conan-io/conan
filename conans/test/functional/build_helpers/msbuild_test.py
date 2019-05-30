@@ -5,11 +5,12 @@ import unittest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
-from conans.client import tools
+from conans.client.tools.files import replace_in_file
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class MSBuildTest(unittest.TestCase):
@@ -41,10 +42,12 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         client.save(files)
-        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
-                   'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
-        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
-                   '-s compiler="Visual Studio" -s compiler.version=14')
+        with catch_deprecation_warning(self):
+            client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
+                       'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
+        with catch_deprecation_warning(self):
+            client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
+                       '-s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         files = get_vs_project_files()
@@ -52,8 +55,9 @@ class HelloConan(ConanFile):
 
         # Try to not update the project
         client.cache._config = None  # Invalidate cached config
-        tools.replace_in_file(client.cache.conan_conf_path, "[general]",
-                              "[general]\nskip_vs_projects_upgrade = True")
+
+        replace_in_file(client.cache.conan_conf_path, "[general]",
+                        "[general]\nskip_vs_projects_upgrade = True", output=client.out)
         client.save(files, clean_first=True)
         client.run("create . Hello/1.2.1@lasote/stable --build")
         self.assertNotIn("devenv", client.user_io.out)
@@ -90,7 +94,7 @@ class HelloConan(ConanFile):
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
         full_ref = "Hello/1.2.1@lasote/stable:b786e9ece960c3a76378ca4d5b0d0e922f4cedc1"
         pref = PackageReference.loads(full_ref)
-        build_folder = client.cache.build(pref)
+        build_folder = client.cache.package_layout(pref.ref).build(pref)
         self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
