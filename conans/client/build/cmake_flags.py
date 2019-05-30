@@ -163,23 +163,27 @@ class CMakeDefinitionsBuilder(object):
         return self._conanfile.settings.get_safe(setname)
 
     def _get_cpp_standard_vars(self):
+        defines = CMakeDefinitions({
+            "CONAN_CMAKE_CXX_STANDARD": None,
+            "CONAN_CMAKE_CXX_EXTENSIONS": None,
+            "CONAN_STD_CXX_FLAG": None})
+
         cppstd = cppstd_from_settings(self._conanfile.settings)
         compiler = self._ss("compiler")
         compiler_version = self._ss("compiler.version")
 
         if not cppstd:
-            return {}
+            return defines.result()
 
-        ret = {}
         if cppstd.startswith("gnu"):
-            ret["CONAN_CMAKE_CXX_STANDARD"] = cppstd[3:]
-            ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
+            defines.set("CONAN_CMAKE_CXX_STANDARD", cppstd[3:])
+            defines.set("CONAN_CMAKE_CXX_EXTENSIONS", "ON")
         else:
-            ret["CONAN_CMAKE_CXX_STANDARD"] = cppstd
-            ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
+            defines.set("CONAN_CMAKE_CXX_STANDARD", cppstd)
+            defines.set("CONAN_CMAKE_CXX_EXTENSIONS", "OFF")
 
-        ret["CONAN_STD_CXX_FLAG"] = cppstd_flag(compiler, compiler_version, cppstd)
-        return ret
+        defines.set("CONAN_STD_CXX_FLAG", cppstd_flag(compiler, compiler_version, cppstd))
+        return defines.result()
 
     def _cmake_cross_build_defines(self):
 
@@ -295,6 +299,7 @@ class CMakeDefinitionsBuilder(object):
         return defines.result()
 
     def _get_make_program_definition(self):
+        defines = CMakeDefinitions({"CMAKE_MAKE_PROGRAM": None})
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
@@ -302,9 +307,8 @@ class CMakeDefinitionsBuilder(object):
                                   "ignored" % make_program)
             else:
                 self._output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
-                return {"CMAKE_MAKE_PROGRAM": make_program}
-
-        return {}
+                defines.set("CMAKE_MAKE_PROGRAM", make_program)
+        return defines.result()
 
     def get_definitions(self):
 
