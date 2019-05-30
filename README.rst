@@ -137,7 +137,7 @@ Contributing to the project
 ===========================
 
 Feedback and contribution is always welcome in this project.
-Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+Please read our `contributing guide <https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md>`_.
 
 Running the tests
 =================

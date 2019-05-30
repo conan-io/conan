@@ -40,6 +40,7 @@ class AutoToolsBuildEnvironment(object):
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
+        self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self._cppstd = cppstd_from_settings(conanfile.settings)
 
@@ -251,6 +252,8 @@ class AutoToolsBuildEnvironment(object):
                            compiler=self._compiler)
         if srf:
             ret.append(srf)
+        if self._compiler_runtime:
+            ret.append("-%s" % self._compiler_runtime)
 
         return ret
 

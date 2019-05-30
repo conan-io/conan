@@ -8,10 +8,9 @@ from conans.errors import AuthenticationException, ConanConnectionError, ConanEx
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
-from conans.util.env_reader import get_env
 
 
-class Uploader(object):
+class FileUploader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
         self.chunk_size = chunk_size
@@ -19,11 +18,12 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None, headers=None):
-        if retry is None:
-            retry = get_env("CONAN_RETRY", 1)
-        if retry_wait is None:
-            retry_wait = get_env("CONAN_RETRY_WAIT", 0)
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
+               headers=None):
+        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else 1
+        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else 5
 
         # Send always the header with the Sha1
         headers = headers or {}
@@ -134,7 +134,7 @@ def load_in_chunks(path, chunk_size=1024):
             yield data
 
 
-class Downloader(object):
+class FileDownloader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
         self.chunk_size = chunk_size
@@ -144,10 +144,10 @@ class Downloader(object):
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
-        if retry is None:
-            retry = get_env("CONAN_RETRY", 3)
-        if retry_wait is None:
-            retry_wait = get_env("CONAN_RETRY_WAIT", 0)
+        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else 2
+        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else 0
 
         if file_path and not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
@@ -210,7 +210,8 @@ class Downloader(object):
             total_length = int(total_length)
             encoding = response.headers.get('content-encoding')
             gzip = (encoding == "gzip")
-            # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+            # chunked can be a problem:
+            # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
             # It will not send content-length or should be ignored
 
             def download_chunks(file_handler=None, ret_buffer=None):
@@ -267,13 +268,13 @@ def print_progress(output, units, progress=""):
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
-    for counter in range(retry):
+    for counter in range(retry + 1):
         try:
             return method(*args, **kwargs)
         except NotFoundException:
             raise
         except ConanException as exc:
-            if counter == (retry - 1):
+            if counter == retry:
                 raise
             else:
                 if out:

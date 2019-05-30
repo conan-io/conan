@@ -60,7 +60,6 @@ from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.graph_lock import GraphLockFile
-from conans.util.env_reader import get_env
 
 
 default_manifest_folder = '.conan_manifests'
@@ -181,7 +180,7 @@ class ConanAPIV1(object):
 
         # Settings preprocessor
         if interactive is None:
-            interactive = config.non_interactive
+            interactive = not config.non_interactive
 
         runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
                              config.log_run_to_output)
@@ -896,11 +895,6 @@ class ConanAPIV1(object):
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        if retry is None:
-            retry = get_env("CONAN_RETRY", 2)
-        if retry_wait is None:
-            retry_wait = get_env("CONAN_RETRY_WAIT", 5)
-
         upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,
                              self._loader, self._hook_manager)
@@ -1217,6 +1211,8 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                    name=None, version=None, user=None, channel=None, lock_folder=None,
                    use_lock=None):
     if use_lock:
+        if not lock_folder:
+            raise ConanException("Lockfile requested, but folder not defined (use --install-folder)")
         try:
             graph_info = GraphInfo.load(lock_folder)
         except IOError:  # Only if file is missing
@@ -1227,6 +1223,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
         graph_info.profile = graph_lock_file.profile
         graph_info.profile.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
+        output.info("Using lockfile: '{}'".format(lock_folder))
         return graph_info
 
     try:

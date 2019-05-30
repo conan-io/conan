@@ -60,7 +60,9 @@ class GraphManager(object):
             graph_info = GraphInfo.load(info_folder)
             graph_lock_file = GraphLockFile.load(info_folder)
             graph_lock = graph_lock_file.graph_lock
+            self._output.info("Using lockfile: '{}'".format(info_folder))
             profile = graph_lock_file.profile
+            self._output.info("Using cached profile from lockfile")
         except IOError:  # Only if file is missing
             graph_lock = None
             # This is very dirty, should be removed for Conan 2.0 (source() method only)
