@@ -285,8 +285,9 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         if not os.path.isfile(template):
             raise ConanException("Template doesn't exist: %s" % template)
         conanfile_template = load(template)
-        files = {"conanfile.py": conanfile_template.format(name=name, version=version,
-                                                           package_name=package_name)}
+        conanfile_template = conanfile_template.replace("{name}", name).replace("{version}", version)
+        conanfile_template = conanfile_template.replace("{package_name}", package_name)
+        files = {"conanfile.py": conanfile_template}
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}
