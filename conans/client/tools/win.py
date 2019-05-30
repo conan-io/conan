@@ -139,9 +139,19 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
                        output=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms, output=output)
+    from conans.model.conan_file import ConanFile
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings = conanfile.settings_host
+    else:
+        warnings.warn("Pass the conanfile to 'msvc_build_command' instead of settings."
+                      " Use 'tools.msvc_build_command(self, ...)'")
+
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        vcvars = vcvars_command(settings, force=force_vcvars, output=output)
+        build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
+                                  parallel, toolset=toolset, platforms=platforms, output=output)
     command = "%s && %s" % (vcvars, build)
     return command
 
@@ -365,6 +375,8 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                                       winsdk_version=winsdk_version, output=output)
         settings_build_arch = conanfile.settings_build.get_safe("arch")
     else:
+        warnings.warn("Pass the conanfile to 'vcvars_command' instead of settings."
+                      " Use 'tools.vcvars_command(self, ...)'")
         settings_host = settings
         settings_build_arch = settings.get_safe("arch_build")
 
@@ -461,10 +473,21 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
                 vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
+    from conans.model.conan_file import ConanFile
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings = conanfile.settings_host
+    else:
+        warnings.warn("Pass the conanfile to 'vcvars_dict' instead of settings."
+                      " Use 'tools.vcvars_dict(self, ...)'")
+
     known_path_lists = ("include", "lib", "libpath", "path")
-    cmd = vcvars_command(settings, arch=arch,
-                         compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
+
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        cmd = vcvars_command(settings, arch=arch,
+                             compiler_version=compiler_version, force=force,
+                             vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"
     ret = check_output(cmd)
     new_env = {}
