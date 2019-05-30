@@ -8,11 +8,12 @@ import six
 from parameterized import parameterized
 
 from conans.client import tools
-from conans.client.tools.files import chdir
 from conans.client.build.msbuild import MSBuild
+from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class MSBuildTest(unittest.TestCase):
@@ -131,7 +132,8 @@ class MSBuildTest(unittest.TestCase):
                                  "compiler.version": "15",
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
-        version = MSBuild.get_version(settings)
+        with catch_deprecation_warning(self):
+            version = MSBuild.get_version(settings)
         six.assertRegex(self, version, "(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 

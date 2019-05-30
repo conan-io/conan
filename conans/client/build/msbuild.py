@@ -228,12 +228,13 @@ class MSBuild(object):
         if isinstance(settings, ConanFile):
             conanfile = settings
             settings = conanfile.settings_host
+            vcvars = tools_vcvars_command(conanfile)
         else:
             warnings.warn("Pass the conanfile to 'MSBuild::get_version' instead of settings."
                           " Use 'MSBuild::get_version(self, ...)'")
+            vcvars = tools_vcvars_command(settings)
 
         msbuild_cmd = "msbuild -version"
-        vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
             out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
