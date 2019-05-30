@@ -220,7 +220,6 @@ class ProfileRequiresTest(unittest.TestCase):
         self.client.save({CONANFILE: var_conanfile}, clean_first=True)
         self.client.run("export . lasote/stable")
 
-    @unittest.expectedFailure  # TODO: Need CLI to input profile:build with the options
     def test_profile_requires(self):
         self._export(build_require_parent)
         self._export(build_require)

@@ -22,7 +22,7 @@ class B2GeneratorTest(unittest.TestCase):
         settings.cppstd = "gnu17"
 
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         conanfile.settings = settings
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -336,7 +336,7 @@ if $(__define_targets__) {
 
     def b2_empty_settings_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
 
         generator = B2Generator(conanfile)
         # fails if generator doesn't support empty settings

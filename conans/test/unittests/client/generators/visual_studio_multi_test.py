@@ -31,7 +31,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             if use_toolset:
                 settings.compiler.toolset = "v110"
             conanfile = ConanFile(TestBufferConanOutput(), None)
-            conanfile.initialize(Settings({}), EnvValues())
+            conanfile.initialize(Settings({}), Settings({}), EnvValues())
 
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
             cpp_info = CppInfo("dummy_root_folder1")

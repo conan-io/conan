@@ -16,7 +16,7 @@ class VisualStudioLegacyGeneratorTest(unittest.TestCase):
 
     def valid_xml_test(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}), Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         folder1 = temp_folder()
         folder1 = folder1.replace("\\", "/")

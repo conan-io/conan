@@ -64,5 +64,5 @@ class LoadConanfileTest(unittest.TestCase):
                     version = "1.0"
              """))
         ref = ConanFileReference("hello", "1.0", "user", "channel")
-        conanfile = self.loader.load_conanfile(self.conanfile_path, self.profile, ref)
+        conanfile = self.loader.load_conanfile(self.conanfile_path, self.profile, self.profile, ref)
         self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})

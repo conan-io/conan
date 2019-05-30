@@ -76,7 +76,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         save(os.path.join(self.tmp_folder2, "bin2", "file.bin"), "")
 
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
-        self.conanfile.initialize(Settings({}), EnvValues())
+        self.conanfile.initialize(Settings({}), Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(self.tmp_folder1)
         cpp_info.defines = ["MYDEFINE1"]

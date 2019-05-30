@@ -312,7 +312,7 @@ class DepsGraphBuilder(object):
                     conanfile.configure()
 
                 conanfile.settings.validate()  # All has to be ok!
-                conanfile.settings_build.validate()
+                # conanfile.settings_build.validate()
                 conanfile.options.validate()
                 conanfile.build_options.validate()
 
