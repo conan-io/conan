@@ -125,6 +125,25 @@ def build_type_definition(build_type, generator):
     return {}
 
 
+class CMakeDefinitions(object):
+
+    def __init__(self, definitions=None):
+        if definitions:
+            assert isinstance(definitions, dict), "definitions is not an dict"
+        self._definitions = definitions or OrderedDict()
+
+    def set(self, key, value):
+        assert key in self._definitions, "key not previously set in dictionary"
+        self._definitions[key] = value
+
+    def get(self, key, value=None):
+        assert key in self._definitions, "key not previously set in dictionary"
+        return self._definitions.get(key, value)
+
+    def result(self):
+        return OrderedDict({key: value for key, value in self._definitions.items() if value})
+
+
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
@@ -177,42 +196,59 @@ class CMakeDefinitionsBuilder(object):
         compiler = self._ss("compiler")
         libcxx = self._ss("compiler.libcxx")
 
-        ret = OrderedDict()
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", op_system_version)
         toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
 
+        defines = CMakeDefinitions({
+            "TOOLCHAIN_FILE": None,
+            "CMAKE_SYSTEM_NAME": None,
+            "CMAKE_SYSTEM_VERSION": None,
+            "CMAKE_OSX_DEPLOYMENT_TARGET": None,
+            "CMAKE_SYSTEM_PROCESSOR": None,
+            "CONAN_CMAKE_FIND_ROOT_PATH": None,
+            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM": None,
+            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY": None,
+            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE": None,
+            "CMAKE_SYSROOT": None,
+            "CMAKE_ANDROID_ARCH_ABI": None,
+            "ANDROID_ABI": None,
+            "ANDROID_NDK": None,
+            "ANDROID_PLATFORM": None,
+            "ANDROID_TOOLCHAIN": None,
+            "ANDROID_STL": None
+        })
+
         if toolchain_file != "":
             logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
-            ret["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
-            return ret
+            defines.set("CMAKE_TOOLCHAIN_FILE", toolchain_file)
 
         if cmake_system_name is False:
-            return ret
+            return defines.result()
 
         # System name and system version
         if cmake_system_name is not True:  # String not empty
-            ret["CMAKE_SYSTEM_NAME"] = cmake_system_name
+            defines.set("CMAKE_SYSTEM_NAME", cmake_system_name)
         else:  # detect if we are cross building and the system name and version
             if cross_building(self._conanfile.settings):  # We are cross building
                 if os_ != os_build:
                     if os_:  # the_os is the host (regular setting)
-                        ret["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
-                                                    "tvOS": "Darwin",
-                                                    "wfatchOS": "Darwin",
-                                                    "Neutrino": "QNX"}.get(os_, os_)
+                        defines.set("CMAKE_SYSTEM_NAME", {"iOS": "Darwin",
+                                                          "tvOS": "Darwin",
+                                                          "wfatchOS": "Darwin",
+                                                          "Neutrino": "QNX"}.get(os_, os_))
                     else:
-                        ret["CMAKE_SYSTEM_NAME"] = "Generic"
+                        defines.set("CMAKE_SYSTEM_NAME", "Generic")
         if os_ver:
-            ret["CMAKE_SYSTEM_VERSION"] = os_ver
+            defines.set("CMAKE_SYSTEM_VERSION", os_ver)
             if str(os_) == "Macos":
-                ret["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
+                defines.set("CMAKE_OSX_DEPLOYMENT_TARGET", os_ver)
 
         # system processor
         cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR")
         if cmake_system_processor:
-            ret["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
+            defines.set("CMAKE_SYSTEM_PROCESSOR", cmake_system_processor)
 
-        if ret:  # If enabled cross compile
+        if defines.result():
             for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
@@ -220,7 +256,7 @@ class CMakeDefinitionsBuilder(object):
 
                 value = os.getenv(env_var)
                 if value:
-                    ret[env_var] = value
+                    defines.set(env_var, value)
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
@@ -230,32 +266,33 @@ class CMakeDefinitionsBuilder(object):
             if sysroot_path:
                 # Needs to be set here, can't be managed in the cmake generator, CMake needs
                 # to know about the sysroot before any other thing
-                ret["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                defines.set("CMAKE_SYSROOT", sysroot_path.replace("\\", "/"))
 
             # Adjust Android stuff
-            if str(os_) == "Android" and ret["CMAKE_SYSTEM_NAME"] == "Android":
+            if str(os_) == "Android" and defines.get("CMAKE_SYSTEM_NAME") == "Android":
                 arch_abi_settings = tools.to_android_abi(arch)
                 if arch_abi_settings:
-                    ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
-                    ret["ANDROID_ABI"] = arch_abi_settings
+                    defines.set("CMAKE_ANDROID_ARCH_ABI", arch_abi_settings)
+                    defines.set("ANDROID_ABI", arch_abi_settings)
 
                 conan_cmake_android_ndk = os.getenv("CONAN_CMAKE_ANDROID_NDK")
                 if conan_cmake_android_ndk:
-                    ret["ANDROID_NDK"] = conan_cmake_android_ndk
+                    defines.set("ANDROID_NDK", conan_cmake_android_ndk)
 
-                ret["ANDROID_PLATFORM"] = "android-%s" % op_system_version
-                ret["ANDROID_TOOLCHAIN"] = compiler
+                defines.set("ANDROID_PLATFORM", "android-%s" % op_system_version)
+                defines.set("ANDROID_TOOLCHAIN", compiler)
 
                 # More details about supported stdc++ libraries here:
                 # https://developer.android.com/ndk/guides/cpp-support.html
                 if libcxx:
-                    ret["ANDROID_STL"] = libcxx
+                    defines.set("ANDROID_STL", libcxx)
                 else:
-                    ret["ANDROID_STL"] = 'none'
+                    defines.set("ANDROID_STL", "none")
 
         logger.info("Setting Cross build flags: %s"
-                    % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
-        return ret
+                    % ", ".join(["%s=%s" % (k, v) for k, v in defines.result().items()]))
+
+        return defines.result()
 
     def _get_make_program_definition(self):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
