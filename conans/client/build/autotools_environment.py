@@ -80,7 +80,7 @@ class AutoToolsBuildEnvironment(object):
 
         if os_detected is None or arch_detected is None or self._arch is None or self._os is None:
             return False, False, False
-        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+        if not cross_building(self._conanfile, os_detected, arch_detected):
             return False, False, False
 
         try:
@@ -232,7 +232,8 @@ class AutoToolsBuildEnvironment(object):
             ret.append(sysf)
 
         if self._include_rpath_flags:
-            the_os = self._conanfile.settings.get_safe("os_build") or self._os
+            the_os = self._conanfile.settings_host.get_safe("os_build") or \
+                     self._conanfile.settings_build.get_safe("os") or self._os
             ret.extend(rpath_flags(the_os, self._compiler, self._deps_cpp_info.lib_paths))
 
         return ret

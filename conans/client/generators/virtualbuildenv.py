@@ -12,7 +12,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
         compiler = conanfile.settings.get_safe("compiler")
         if compiler == "Visual Studio":
             self.env = VisualStudioBuildEnvironment(conanfile).vars_dict
-            settings_vars = vcvars_dict(conanfile.settings, output=conanfile.output)
+            settings_vars = vcvars_dict(conanfile, output=conanfile.output)
             # self.env has higher priority, so only extend (append) to it.
             for name, value in self.env.items():
                 if isinstance(value, list):

@@ -2,6 +2,7 @@ import copy
 import os
 import re
 import subprocess
+import warnings
 
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
@@ -76,7 +77,7 @@ class MSBuild(object):
             props_file_contents = self._get_props_file_contents(definitions)
             property_file_name = os.path.abspath(property_file_name)
             save(property_file_name, props_file_contents)
-            vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
+            vcvars = vcvars_command(self._conanfile, force=force_vcvars,
                                     vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
                                     output=self._output)
             command = self.get_command(project_file, property_file_name,
@@ -139,7 +140,7 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuild.get_version(self._settings)
+            msbuild_version = MSBuild.get_version(self._conanfile)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)
@@ -224,8 +225,17 @@ class MSBuild(object):
 
     @staticmethod
     def get_version(settings):
+        if isinstance(settings, ConanFile):
+            conanfile = settings
+            vcvars = tools_vcvars_command(conanfile)
+        else:
+            warnings.warn("Pass the conanfile to 'MSBuild::get_version' instead of settings."
+                          " Use 'MSBuild::get_version(self, ...)'")
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                vcvars = tools_vcvars_command(settings)
+
         msbuild_cmd = "msbuild -version"
-        vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
             out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()

@@ -21,7 +21,7 @@ conanfile_build_new_env = """
         if self.settings.compiler == "Visual Studio":
             env_build = VisualStudioBuildEnvironment(self)
             with environment_append(env_build.vars):
-                vcvars = vcvars_command(self.settings)
+                vcvars = vcvars_command(self)
                 flags = " ".join("%s.lib" % lib for lib in self.deps_cpp_info.libs)
                 lang = '/DCONAN_LANGUAGE=%s' % self.options.language
                 if self.options.static:

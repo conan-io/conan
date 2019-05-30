@@ -404,6 +404,7 @@ class ConanInfo(object):
             del self.settings.arch_build
 
     def include_build_settings(self):
+        # TODO: Do we want to include here the 'settings_build' from the conanfile?
         self.settings.os_build = self.full_settings.os_build
         self.settings.arch_build = self.full_settings.arch_build
 

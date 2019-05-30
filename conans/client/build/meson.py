@@ -157,7 +157,7 @@ class Meson(object):
 
     def _append_vs_if_needed(self, command):
         if self._compiler == "Visual Studio" and self.backend == "ninja":
-            vcvars = tools.vcvars_command(self._conanfile.settings, output=self._conanfile.output)
+            vcvars = tools.vcvars_command(self._conanfile, output=self._conanfile.output)
             command = "%s && %s" % (vcvars, command)
         return command
 

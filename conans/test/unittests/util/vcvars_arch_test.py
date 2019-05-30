@@ -11,6 +11,7 @@ from conans.client.conf import default_settings_yml
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.settings import Settings
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.test.utils.deprecation import catch_deprecation_warning
 
@@ -22,7 +23,8 @@ class VCVarsArchTest(unittest.TestCase):
 
     def assert_vcvars_command(self, settings, expected, output=None, **kwargs):
         output = output or self.output
-        command = tools.vcvars_command(settings, output=output, **kwargs)
+        with catch_deprecation_warning(self):
+            command = tools.vcvars_command(settings, output=output, **kwargs)
         command = command.replace('"', '').replace("'", "")
         self.assertTrue(command.endswith('vcvarsall.bat %s' % expected),
                         msg="Command: '{}' (expected end: '{}')".format(command, expected))
@@ -61,13 +63,15 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '14'
         settings.arch = 'mips64'
 
-        self.assert_vcvars_command(settings, "x86", arch='x86')
-        self.assert_vcvars_command(settings, "amd64", arch='x86_64')
-        self.assert_vcvars_command(settings, "amd64_arm", arch='armv7')
-        self.assert_vcvars_command(settings, "amd64_arm64", arch='armv8')
+        with catch_deprecation_warning(self, n=4):
+            self.assert_vcvars_command(settings, "x86", arch='x86')
+            self.assert_vcvars_command(settings, "amd64", arch='x86_64')
+            self.assert_vcvars_command(settings, "amd64_arm", arch='armv7')
+            self.assert_vcvars_command(settings, "amd64_arm64", arch='armv8')
 
         with self.assertRaises(ConanException):
-            tools.vcvars_command(settings, arch='mips', output=self.output)
+            with catch_deprecation_warning(self):
+                tools.vcvars_command(settings, arch='mips', output=self.output)
 
     def test_vcvars_ver_override(self):
         settings = Settings.loads(default_settings_yml)
@@ -75,13 +79,15 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '15'
         settings.arch = 'x86_64'
 
-        command = tools.vcvars_command(settings, vcvars_ver='14.14', output=self.output)
+        with catch_deprecation_warning(self):
+            command = tools.vcvars_command(settings, vcvars_ver='14.14', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('-vcvars_ver=14.14', command)
 
         settings.compiler.version = '14'
 
-        command = tools.vcvars_command(settings, vcvars_ver='14.14', output=self.output)
+        with catch_deprecation_warning(self):
+            command = tools.vcvars_command(settings, vcvars_ver='14.14', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('-vcvars_ver=14.14', command)
 
@@ -91,13 +97,15 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '15'
         settings.arch = 'x86_64'
 
-        command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
+        with catch_deprecation_warning(self):
+            command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('8.1', command)
 
         settings.compiler.version = '14'
 
-        command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
+        with catch_deprecation_warning(self):
+            command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('8.1', command)
 

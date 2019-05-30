@@ -66,6 +66,7 @@ class PkgConfigGenerator(Generator):
         with warnings.catch_warnings(record=True):
             warnings.filterwarnings("always")
             the_os = (self.conanfile.settings.get_safe("os_build") or
+                      self.conanfile.settings_build.get_safe("os") or
                       self.conanfile.settings.get_safe("os"))
         rpaths = rpath_flags(the_os, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,

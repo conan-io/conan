@@ -3,6 +3,7 @@ import os
 import platform
 import re
 import subprocess
+import warnings
 from contextlib import contextmanager
 
 import deprecation
@@ -15,7 +16,7 @@ from conans.model.version import Version
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
-from conans.util.files import decode_text, mkdir_tmp, save
+from conans.util.files import mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -138,9 +139,19 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
                        output=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings, force=force_vcvars, output=output)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms, output=output)
+    from conans.model.conan_file import ConanFile
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings = conanfile.settings_host
+    else:
+        warnings.warn("Pass the conanfile to 'msvc_build_command' instead of settings."
+                      " Use 'tools.msvc_build_command(self, ...)'")
+
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        vcvars = vcvars_command(settings, force=force_vcvars, output=output)
+        build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
+                                  parallel, toolset=toolset, platforms=platforms, output=output)
     command = "%s && %s" % (vcvars, build)
     return command
 
@@ -350,11 +361,32 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                    winsdk_version=None, output=None):
     output = default_output(output, 'conans.client.tools.win.vcvars_command')
 
-    arch_setting = arch or settings.get_safe("arch")
+    # TODO: Conan 2.0 change signature of this function: settings -> conanfile
+    from conans.model.conan_file import ConanFile  # Circular import from conan_file to tools
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings_host = conanfile.settings_host
+        if settings_host.get_safe("os_build") or settings_host.get_safe("arch_build"):
+            # Still can use old behavior:
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                return vcvars_command(settings_host, arch=arch, compiler_version=compiler_version,
+                                      force=force, vcvars_ver=vcvars_ver,
+                                      winsdk_version=winsdk_version, output=output)
+        settings_build_arch = conanfile.settings_build.get_safe("arch")
+    else:
+        warnings.warn("Pass the conanfile to 'vcvars_command' instead of settings."
+                      " Use 'tools.vcvars_command(self, ...)'")
+        settings_host = settings
+        with warnings.catch_warnings(record=True):
+            warnings.filterwarnings("always")
+            settings_build_arch = settings.get_safe("arch_build")
 
-    compiler = settings.get_safe("compiler")
+    arch_setting = arch or settings_host.get_safe("arch")
+
+    compiler = settings_host.get_safe("compiler")
     if compiler == 'Visual Studio':
-        compiler_version = compiler_version or settings.get_safe("compiler.version")
+        compiler_version = compiler_version or settings_host.get_safe("compiler.version")
     else:
         # vcvars might be still needed for other compilers, e.g. clang-cl or Intel C++,
         # as they might be using Microsoft STL and other tools
@@ -363,25 +395,21 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
         last_version = latest_vs_version_installed(output=output)
 
         compiler_version = compiler_version or last_version
-    os_setting = settings.get_safe("os")
+    os_setting = settings_host.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
-    import warnings
-    with warnings.catch_warnings(record=True):
-        warnings.filterwarnings("always")
-        arch_build_raw = settings.get_safe("arch_build")
-    arch_build = arch_build_raw or detected_architecture()
+    arch_build = settings_build_arch or detected_architecture()
     if os_setting == 'WindowsCE':
         vcvars_arch = "x86"
     elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
-        if ((arch_build_raw or os.getenv("PreferredToolArchitecture") == "x64")
-                and int(compiler_version) >= 12):
+        if ((settings_build_arch or os.getenv("PreferredToolArchitecture") == "x64") and
+                int(compiler_version) >= 12):
             x86_cross = "amd64_x86"
         else:
             x86_cross = "x86"
@@ -431,7 +459,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
                 command.append("-vcvars_ver=%s" % vcvars_ver)
 
     if os_setting == 'WindowsStore':
-        os_version_setting = settings.get_safe("os.version")
+        os_version_setting = settings_host.get_safe("os.version")
         if os_version_setting == '8.1':
             command.append('store 8.1')
         elif os_version_setting == '10.0':
@@ -447,10 +475,21 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
 
 def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False,
                 vcvars_ver=None, winsdk_version=None, only_diff=True, output=None):
+    from conans.model.conan_file import ConanFile
+    if isinstance(settings, ConanFile):
+        conanfile = settings
+        settings = conanfile.settings_host
+    else:
+        warnings.warn("Pass the conanfile to 'vcvars_dict' instead of settings."
+                      " Use 'tools.vcvars_dict(self, ...)'")
+
     known_path_lists = ("include", "lib", "libpath", "path")
-    cmd = vcvars_command(settings, arch=arch,
-                         compiler_version=compiler_version, force=force,
-                         vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
+
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        cmd = vcvars_command(settings, arch=arch,
+                             compiler_version=compiler_version, force=force,
+                             vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
     cmd += " && set"
     ret = check_output(cmd)
     new_env = {}

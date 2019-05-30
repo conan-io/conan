@@ -6,6 +6,7 @@ import unittest
 
 from conans.client.tools.oss import get_cross_building_settings, OSInfo
 from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class GetCrossBuildSettingsTest(unittest.TestCase):
@@ -15,7 +16,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
              mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"),\
              mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Windows", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -25,7 +27,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
              mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"), \
              mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Windows", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -35,7 +38,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
              mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"), \
              mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Windows", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -45,7 +49,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
              mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"), \
              mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Windows", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -55,7 +60,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
              mock.patch.object(OSInfo, "get_win_version_name", return_value="Windows 98"), \
              mock.patch.object(OSInfo, "get_win_os_version", return_value="4.0"):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Windows", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -64,7 +70,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
              mock.patch("platform.machine", mock.MagicMock(return_value="x86_64")), \
              mock.patch.object(OSInfo, '_get_linux_distro_info'):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Linux", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -72,7 +79,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
         with mock.patch("platform.system", mock.MagicMock(return_value='Darwin')), \
              mock.patch("platform.machine", mock.MagicMock(return_value="x86_64")):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("Macos", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -80,7 +88,8 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
         with mock.patch("platform.system", mock.MagicMock(return_value='FreeBSD')), \
              mock.patch("platform.machine", mock.MagicMock(return_value="x86_64")):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("FreeBSD", build_os)
             self.assertEqual("x86_64", build_arch)
 
@@ -88,6 +97,7 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
         with mock.patch("platform.system", mock.MagicMock(return_value='SunOS')), \
              mock.patch("platform.machine", mock.MagicMock(return_value="x86_64")):
             settings = MockSettings({})
-            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            with catch_deprecation_warning(self):
+                build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("SunOS", build_os)
             self.assertEqual("x86_64", build_arch)

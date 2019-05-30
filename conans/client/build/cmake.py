@@ -50,7 +50,7 @@ class CMake(object):
         self._build_type = build_type or conanfile.settings.get_safe("build_type")
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
-        self.generator = generator or get_generator(conanfile.settings)
+        self.generator = generator or get_generator(conanfile)
         self.generator_platform = generator_platform or get_generator_platform(conanfile.settings,
                                                                                self.generator)
         if not self.generator:
@@ -174,7 +174,7 @@ class CMake(object):
         is_msvc = compiler == "Visual Studio"
         if (is_msvc or is_clangcl) and self.generator in ["Ninja", "NMake Makefiles",
                                                           "NMake Makefiles JOM"]:
-            with tools.vcvars(self._settings, force=True, filter_known_paths=False,
+            with tools.vcvars(self._conanfile, force=True, filter_known_paths=False,
                               output=self._conanfile.output):
                 self._conanfile.run(command)
         else:
