@@ -27,16 +27,15 @@ def get_toolset(settings):
     return None
 
 
-def get_generator(settings):
+def get_generator(conanfile):
+    settings = conanfile.settings_host
     if "CONAN_CMAKE_GENERATOR" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
-    with warnings.catch_warnings(record=True):
-        warnings.filterwarnings("always")
-        os_build, _, _, _ = get_cross_building_settings(settings)
+    os_build, _, _, _ = get_cross_building_settings(conanfile)
     os_host = settings.get_safe("os")
 
     if not compiler or not compiler_version or not arch:

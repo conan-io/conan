@@ -57,6 +57,7 @@ class CompilerArgsGenerator(Generator):
             flags.append(visual_linker_option_separator)
 
         the_os = (self.conanfile.settings.get_safe("os_build") or
+                  self.conanfile.settings_build.get_safe("os") or
                   self.conanfile.settings.get_safe("os"))
         flags.extend(rpath_flags(the_os, self.compiler, self._deps_build_info.lib_paths))
         flags.extend(format_library_paths(self._deps_build_info.lib_paths, compiler=self.compiler))
