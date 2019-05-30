@@ -44,12 +44,6 @@ class Node(object):
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
 
-    def update_ancestors(self, ancestors):
-        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
-        self.ancestors.update(ancestors)
-        for n in self.neighbors():
-            n.update_ancestors(ancestors)
-
     @property
     def package_id(self):
         return self._package_id
