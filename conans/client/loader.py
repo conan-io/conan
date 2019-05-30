@@ -53,7 +53,6 @@ class ConanFileLoader(object):
             _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
             self.cached_conanfiles[conanfile_path] = conanfile
-            # FIXME: Colliding common name
             conanfile.conan_data = self._load_data(conanfile_path)
             return conanfile
         except ConanException as e:
