@@ -238,7 +238,7 @@ class CMakeDefinitionsBuilder(object):
                     if os_:  # the_os is the host (regular setting)
                         defines.set("CMAKE_SYSTEM_NAME", {"iOS": "Darwin",
                                                           "tvOS": "Darwin",
-                                                          "wfatchOS": "Darwin",
+                                                          "watchOS": "Darwin",
                                                           "Neutrino": "QNX"}.get(os_, os_))
                     else:
                         defines.set("CMAKE_SYSTEM_NAME", "Generic")
