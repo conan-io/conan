@@ -5,8 +5,9 @@ import six
 
 from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
-from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+from conans.client.file_copier import FileCopier
+from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
+    conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
@@ -53,9 +54,16 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             return True
         return False
 
+    linked_folders = []
     for src_dir, dirs, files in walk(src, followlinks=True):
+
         if is_excluded(src_dir):
             dirs[:] = []
+            continue
+
+        if os.path.islink(src_dir):
+            rel_link = os.path.relpath(src_dir, src)
+            linked_folders.append(rel_link)
             continue
 
         # Overwriting the dirs will prevents walk to get into them
@@ -72,6 +80,8 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                 os.symlink(linkto, dst_file)
             else:
                 shutil.copy2(src_file, dst_file)
+
+    FileCopier.link_folders(src, dst, linked_folders)
 
 
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
