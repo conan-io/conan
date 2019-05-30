@@ -179,7 +179,7 @@ class ConanAPIV1(object):
 
         # Settings preprocessor
         if interactive is None:
-            interactive = config.non_interactive
+            interactive = not config.non_interactive
 
         runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
                              config.log_run_to_output)
