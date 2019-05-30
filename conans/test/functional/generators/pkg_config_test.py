@@ -129,7 +129,7 @@ class PkgConfigConan(ConanFile):
                      "linux_gcc": profile,
                      "mylib.so": "fake lib content"})
         client.run("create . danimtb/testing -pr=linux_gcc")
-        client.run("install MyLib/0.1@danimtb/testing -g pkg_config -pr=linux_gcc")
+        client.run("install MyLib/0.1@danimtb/testing -g pkg_config -pr:h=linux_gcc -pr:b=linux_gcc")
 
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
