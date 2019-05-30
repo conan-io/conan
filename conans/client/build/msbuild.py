@@ -227,12 +227,13 @@ class MSBuild(object):
     def get_version(settings):
         if isinstance(settings, ConanFile):
             conanfile = settings
-            settings = conanfile.settings_host
             vcvars = tools_vcvars_command(conanfile)
         else:
             warnings.warn("Pass the conanfile to 'MSBuild::get_version' instead of settings."
                           " Use 'MSBuild::get_version(self, ...)'")
-            vcvars = tools_vcvars_command(settings)
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                vcvars = tools_vcvars_command(settings)
 
         msbuild_cmd = "msbuild -version"
         command = "%s && %s" % (vcvars, msbuild_cmd)
