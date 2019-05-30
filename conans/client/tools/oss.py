@@ -374,7 +374,15 @@ class OSInfo(object):
 
 
 def cross_building(settings, self_os=None, self_arch=None):
-    ret = get_cross_building_settings(settings, self_os, self_arch)
+    # TODO: Conan 2.0 change signature of this function: settings -> conanfile
+    from conans.model.conan_file import ConanFile  # Circular import from conan_file to tools
+    if not isinstance(settings, ConanFile):
+        warnings.warn("Pass the conanfile to 'cross_building' instead of settings."
+                      " Use 'cross_building(self, ...)'")
+
+    with warnings.catch_warnings(record=True):
+        warnings.filterwarnings("always")
+        ret = get_cross_building_settings(settings, self_os, self_arch)
     build_os, build_arch, host_os, host_arch = ret
 
     if host_os is not None and (build_os != host_os):
@@ -387,18 +395,22 @@ def cross_building(settings, self_os=None, self_arch=None):
 
 def get_cross_building_settings(settings, self_os=None, self_arch=None):
     # TODO: Conan 2.0 change signature of this function: settings -> conanfile
-    from conans.model.conan_file import ConanFile
+    from conans.model.conan_file import ConanFile  # Circular import from conan_file to tools
     if isinstance(settings, ConanFile):
         conanfile = settings
         settings_host = conanfile.settings_host
         if settings_host.get_safe("os_build") or settings_host.get_safe("arch_build"):
             # Still can use old behavior:
-            build_os, build_arch, host_os, host_arch = \
-                get_cross_building_settings(settings_host, self_os=self_os, self_arch=self_arch)
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                build_os, build_arch, host_os, host_arch = \
+                    get_cross_building_settings(settings_host, self_os=self_os, self_arch=self_arch)
         else:
-            # Otherwise, get it from the new one
-            build_os = conanfile.settings_build.get_safe('os')
-            build_arch = conanfile.settings_build.get_safe('arch')
+            # Otherwise, get it from the build profile
+            # TODO: I don't like the detected_os() and detected_architecture() here, they should
+            #       probably be assigned in the settings_build builder.
+            build_os = self_os or conanfile.settings_build.get_safe('os') or detected_os()
+            build_arch = self_arch or conanfile.settings_build.get_safe('arch') or detected_architecture()
             host_os = settings_host.get_safe('os')
             host_arch = settings_host.get_safe('arch')
     else:

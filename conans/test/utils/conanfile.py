@@ -127,6 +127,7 @@ class ConanFileMock(ConanFile):
         self.path = None
         self.source_folder = self.build_folder = "."
         self.settings = None
+        self.settings_build = None
         self.options = Options(PackageOptions.loads(options))
         if options_values:
             for var, value in options_values.items():
@@ -148,3 +149,7 @@ class ConanFileMock(ConanFile):
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+
+    @property
+    def settings_host(self):
+        return self.settings

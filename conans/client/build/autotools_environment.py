@@ -80,7 +80,7 @@ class AutoToolsBuildEnvironment(object):
 
         if os_detected is None or arch_detected is None or self._arch is None or self._os is None:
             return False, False, False
-        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+        if not cross_building(self._conanfile, os_detected, arch_detected):
             return False, False, False
 
         try:
