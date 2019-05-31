@@ -122,9 +122,8 @@ class SystemPackageTool(object):
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
-                if isinstance(package, str):
-                    for package_name in package.split(" "):
-                        parsed_packages.append(self._tool._parse_package(package_name, arch, platforms))
+                for package_name in package.split(" "):
+                    parsed_packages.append(self._tool._parse_package(package_name, arch, platforms))
             return parsed_packages
         return packages
 
@@ -191,9 +190,6 @@ class AptTool(BaseTool):
     def installed(self, package_name):
         exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
         return exit_code == 0
-
-    def _platforms(self):
-        return
 
     def _parse_package(self, package, arch, platforms):
         if platforms is None:
