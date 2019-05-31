@@ -48,7 +48,8 @@ class VCVarsArchTest(unittest.TestCase):
 
         settings.arch = 'mips'
         with self.assertRaises(ConanException):
-            tools.vcvars_command(settings, output=self.output)
+            with catch_deprecation_warning(self):
+                tools.vcvars_command(settings, output=self.output)
 
         settings.arch_build = 'x86_64'
         settings.arch = 'x86'
@@ -60,11 +61,10 @@ class VCVarsArchTest(unittest.TestCase):
         settings.compiler.version = '14'
         settings.arch = 'mips64'
 
-        with catch_deprecation_warning(self, n=4):
-            self.assert_vcvars_command(settings, "x86", arch='x86')
-            self.assert_vcvars_command(settings, "amd64", arch='x86_64')
-            self.assert_vcvars_command(settings, "amd64_arm", arch='armv7')
-            self.assert_vcvars_command(settings, "amd64_arm64", arch='armv8')
+        self.assert_vcvars_command(settings, "x86", arch='x86')
+        self.assert_vcvars_command(settings, "amd64", arch='x86_64')
+        self.assert_vcvars_command(settings, "amd64_arm", arch='armv7')
+        self.assert_vcvars_command(settings, "amd64_arm64", arch='armv8')
 
         with self.assertRaises(ConanException):
             with catch_deprecation_warning(self):

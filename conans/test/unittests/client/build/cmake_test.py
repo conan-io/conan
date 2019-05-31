@@ -1052,6 +1052,7 @@ build_type: [ Release]
         settings.compiler.version = "12"
         settings.arch = "x86"
         conanfile.settings = settings
+        conanfile.settings_build = settings
 
         cmake = CMake(conanfile)
         cmake.configure()

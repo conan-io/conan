@@ -39,6 +39,7 @@ class MockConanfile(ConanFile):
     def __init__(self, settings, options=None, runner=None):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
+        self.settings_build = settings
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
