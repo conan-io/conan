@@ -265,7 +265,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                          "os_build": "Linux"})
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         settings=settings)
-                spt.install("a_package", force=True, platforms={"x86": "all"})
+                spt.install("a_package", force=True, arch_names={"x86": "all"})
                 self.assertEqual(runner.command_called,
                             "apt-get install -y --no-install-recommends a_package%s" % distro_arch)
 

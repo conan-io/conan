@@ -87,12 +87,17 @@ class SystemPackageTool(object):
         self._is_up_to_date = True
         self._tool.update()
 
-    def install(self, packages, update=True, force=False, platforms=None):
+    def install(self, packages, update=True, force=False, arch_names=None):
+        """ Get the system package tool install command.
+
+        :param packages: String with all package to be installed e.g. "libusb-dev libfoobar-dev"
+        :param update: Run update command before to install
+        :param force: Force installing all packages
+        :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
+        :return: None
         """
-            Get the system package tool install command.
-        '"""
         packages = [packages] if isinstance(packages, str) else list(packages)
-        packages = self._parse_packages_arch(packages, platforms)
+        packages = self._get_package_names(packages, arch_names)
 
         mode = self._get_sysrequire_mode()
 
@@ -116,14 +121,21 @@ class SystemPackageTool(object):
             self.update()
         self._install_any(packages)
 
-    def _parse_packages_arch(self, packages, platforms):
+    def _get_package_names(self, packages, arch_names):
+        """ Parse package names according it architecture
+
+        :param packages: list with all package to be installed e.g. ["libusb-dev libfoobar-dev"]
+        :param arch_names: Package suffix/prefix name used by installer tool
+        :return: list with all parsed names e.g. ["libusb-dev:armhf libfoobar-dev:armhf"]
+        """
         if self._settings and cross_building(self._settings):
             _, build_arch, _, host_arch = get_cross_building_settings(self._settings)
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
                 for package_name in package.split(" "):
-                    parsed_packages.append(self._tool._parse_package(package_name, arch, platforms))
+                    parsed_packages.append(self._tool.get_package_name(package_name, arch,
+                                                                       arch_names))
             return parsed_packages
         return packages
 
@@ -152,7 +164,14 @@ class BaseTool(object):
     def __init__(self, output=None):
         self._output = default_output(output, 'conans.client.tools.system_pm.BaseTool')
 
-    def _parse_package(self, package, arch, platforms):
+    def get_package_name(self, package, arch, arch_names):
+        """ Retrieve package name to installed according the target arch.
+
+        :param package: Regular package name e.g libusb-dev
+        :param arch: Host arch from Conanfile.settings
+        :param arch_names: Dictionary with suffix/prefix names e.g {"x86_64": "amd64"}
+        :return: Package name for Tool e.g. libusb-dev:i386
+        """
         return package
 
 
@@ -191,9 +210,9 @@ class AptTool(BaseTool):
         exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch, platforms):
-        if platforms is None:
-            platforms = {"x86_64": "amd64",
+    def get_package_name(self, package, arch, arch_names):
+        if arch_names is None:
+            arch_names = {"x86_64": "amd64",
                          "x86": "i386",
                          "ppc32": "powerpc",
                          "ppc64le": "ppc64el",
@@ -201,8 +220,8 @@ class AptTool(BaseTool):
                          "armv7hf": "armhf",
                          "armv8": "arm64",
                          "s390x": "s390x"}
-        if arch in platforms:
-            return "%s:%s" % (package, platforms[arch])
+        if arch in arch_names:
+            return "%s:%s" % (package, arch_names[arch])
         return package
 
 
@@ -222,9 +241,9 @@ class YumTool(BaseTool):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch, platforms):
-        if platforms is None:
-            platforms = {"x86_64": "x86_64",
+    def get_package_name(self, package, arch, arch_names):
+        if arch_names is None:
+            arch_names = {"x86_64": "x86_64",
                          "x86": "i?86",
                          "ppc32": "powerpc",
                          "ppc64le": "ppc64le",
@@ -232,8 +251,8 @@ class YumTool(BaseTool):
                          "armv7hf": "armv7hl",
                          "armv8": "aarch64",
                          "s390x": "s390x"}
-        if arch in platforms:
-            return "%s.%s" % (package, platforms[arch])
+        if arch in arch_names:
+            return "%s.%s" % (package, arch_names[arch])
         return package
 
 
@@ -315,11 +334,11 @@ class PacManTool(BaseTool):
         exit_code = self._runner("pacman -Qi %s" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch, platforms):
-        if platforms is None:
-            platforms = {"x86": "lib32"}
-        if arch in platforms:
-            return "%s-%s" % (platforms[arch], package)
+    def get_package_name(self, package, arch, arch_names):
+        if arch_names is None:
+            arch_names = {"x86": "lib32"}
+        if arch in arch_names:
+            return "%s-%s" % (arch_names[arch], package)
         return package
 
 
@@ -338,11 +357,11 @@ class ZypperTool(BaseTool):
         exit_code = self._runner("rpm -q %s" % package_name, None)
         return exit_code == 0
 
-    def _parse_package(self, package, arch, platforms):
-        if platforms is None:
-            platforms = {"x86": "i586"}
-        if arch in platforms:
-            return "%s.%s" % (platforms[arch], package)
+    def get_package_name(self, package, arch, arch_names):
+        if arch_names is None:
+            arch_names = {"x86": "i586"}
+        if arch in arch_names:
+            return "%s.%s" % (arch_names[arch], package)
         return package
 
 
