@@ -146,11 +146,9 @@ Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting 
 'libstdc++' for backwards compatibility.
 Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
 
-If you want Conan to use the new ABI, edit the {profile} profile at:
+If you want Conan to use the new ABI for the {profile} profile, run:
 
-    {profile_path}
-
-adjusting 'compiler.libcxx=libstdc++11'
+    conan profile update settings.compiler.libcxx=libstdc++11 {profile}
 """.format(profile=profile_name, profile_path=profile_path)
                 output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
                                "***********************\n %s\n************************************"
