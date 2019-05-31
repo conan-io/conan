@@ -366,7 +366,11 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     if isinstance(settings, ConanFile):
         conanfile = settings
         settings_host = conanfile.settings_host
-        if settings_host.get_safe("os_build") or settings_host.get_safe("arch_build"):
+        with warnings.catch_warnings(record=True):
+            warnings.filterwarnings("always")
+            os_build = settings_host.get_safe("os_build")
+            arch_build = settings_host.get_safe("arch_build")
+        if os_build or arch_build:
             # Still can use old behavior:
             with warnings.catch_warnings(record=True):
                 warnings.filterwarnings("always")

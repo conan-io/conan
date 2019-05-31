@@ -497,7 +497,8 @@ class HelloConan(ConanFile):
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
-        settings.arch_build = "x86"
+        with catch_deprecation_warning(self):
+            settings.arch_build = "x86"
         with catch_deprecation_warning(self):
             cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)

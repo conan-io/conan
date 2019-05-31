@@ -1,6 +1,7 @@
 import copy
 import os
 import platform
+import warnings
 
 from conans.client import join_arguments
 from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
@@ -232,8 +233,10 @@ class AutoToolsBuildEnvironment(object):
             ret.append(sysf)
 
         if self._include_rpath_flags:
-            the_os = self._conanfile.settings_host.get_safe("os_build") or \
-                     self._conanfile.settings_build.get_safe("os") or self._os
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                host_os_build = self._conanfile.settings_host.get_safe("os_build")
+            the_os = host_os_build or self._conanfile.settings_build.get_safe("os") or self._os
             ret.extend(rpath_flags(the_os, self._compiler, self._deps_cpp_info.lib_paths))
 
         return ret
