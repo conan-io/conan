@@ -502,6 +502,40 @@ class PkgTest(base.MyConanfileBase):
         client2.run("install . --update")
         self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
 
+    def update_ranges_test(self):
+        # https://github.com/conan-io/conan/issues/4650#issuecomment-497464305
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+somevar = 42
+class MyConanfileBase(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . MyConanfileBase/1.1@lasote/testing")
+        client.run("upload * --confirm")
+
+        client2 = TestClient(servers=client.servers, users={"default": [("lasote", "mypass")]})
+
+        reuse = """from conans import python_requires
+base = python_requires("MyConanfileBase/[>1.0]@lasote/testing")
+class PkgTest(base.MyConanfileBase):
+    def configure(self):
+        self.output.info("PYTHON REQUIRE VAR %s" % base.somevar)
+"""
+
+        client2.save({"conanfile.py": reuse})
+        client2.run("install .")
+        self.assertIn("conanfile.py: PYTHON REQUIRE VAR 42", client2.out)
+
+        client.save({"conanfile.py": conanfile.replace("42", "143")})
+        # Make sure to bump the version!
+        client.run("export . MyConanfileBase/1.2@lasote/testing")
+        client.run("upload * --confirm")
+
+        client2.run("install . --update")
+        self.assertIn("conanfile.py: PYTHON REQUIRE VAR 143", client2.out)
+
     def duplicate_pyreq_test(self):
         t = TestClient()
         conanfile = textwrap.dedent("""
