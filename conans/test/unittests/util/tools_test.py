@@ -450,13 +450,14 @@ class HelloConan(ConanFile):
         with tools.environment_append({"path": tmp["path"]}):
             previous_path = os.environ["PATH"].split(";")
             # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
-            with tools.vcvars(settings, output=self.output):
-                path = os.environ["PATH"].split(";")
-                values_count = {value: path.count(value) for value in path}
-                for value, counter in values_count.items():
-                    if value and counter > 1 and previous_path.count(value) != counter:
-                        # If the entry was already repeated before calling "tools.vcvars" we keep it
-                        self.fail("The key '%s' has been repeated" % value)
+            with catch_deprecation_warning(self):
+                with tools.vcvars(settings, output=self.output):
+                    path = os.environ["PATH"].split(";")
+                    values_count = {value: path.count(value) for value in path}
+                    for value, counter in values_count.items():
+                        if value and counter > 1 and previous_path.count(value) != counter:
+                            # If the entry was already repeated before calling "tools.vcvars" keep it
+                            self.fail("The key '%s' has been repeated" % value)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
     def vcvars_filter_known_paths_test(self):
@@ -594,7 +595,8 @@ compiler:
             self.assertIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
-            ret = vcvars_dict(settings, output=self.output)
+            with catch_deprecation_warning(self):
+                ret = vcvars_dict(settings, output=self.output)
             self.assertNotIn("MYVAR", ret)
             self.assertIn("VCINSTALLDIR", ret)
 
