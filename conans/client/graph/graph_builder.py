@@ -198,7 +198,9 @@ class DepsGraphBuilder(object):
                                      % (node.ref, require.ref, previous.ref))
 
             # Add current ancestors to the previous node
-            previous.update_ancestors(node.ancestors.union([node.name]))
+            union = node.ancestors.union([node.name])
+            for prev_node in previous.public_closure.values():
+                prev_node.ancestors.update(union)
             if previous.private and not require.private:
                 previous.make_public()
 

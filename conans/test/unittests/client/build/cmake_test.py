@@ -331,7 +331,7 @@ class CMakeTest(unittest.TestCase):
             cmake.configure()
             if expected_option is not None:
                 self.assertEqual(cmake.definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"],
-                                  expected_option)
+                                 expected_option)
             else:
                 self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake.definitions)
 
@@ -856,7 +856,9 @@ build_type: [ Release]
                 ' -DCMAKE_SYSROOT="/path/to/sysroot"' \
                 ' -DCMAKE_ANDROID_ARCH_ABI="armeabi-v7a"' \
                 ' -DANDROID_ABI="armeabi-v7a"' \
-                ' -DANDROID_PLATFORM="android-{0}"'.format(settings.os.api_level)
+                ' -DANDROID_PLATFORM="android-{0}"' \
+                ' -DANDROID_TOOLCHAIN="{1}"' \
+                ' -DANDROID_STL="none"'.format(settings.os.api_level, settings.compiler)
         target_test = CMakeTest.scape('--target test')
 
         cmake.configure()
@@ -865,9 +867,8 @@ build_type: [ Release]
                          '{1} -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF"'
                          ' -DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}"'
                          ' -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
-                         ' -DANDROID_TOOLCHAIN="{2}"'
-                         ' -DANDROID_STL="none"'
-                         ' -Wno-dev {0}'.format(dot_dir, cross, settings.compiler, settings.compiler.version),
+                         ' -Wno-dev {0}'.format(dot_dir, cross, settings.compiler,
+                                                settings.compiler.version),
                          conan_file.command)
 
         cmake.build()
@@ -906,8 +907,8 @@ build_type: [ Release]
                          '{1} -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
                          '-DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}" '
                          '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" '
-                         '-DANDROID_TOOLCHAIN="{2}" -DANDROID_STL="none" '
-                         '-Wno-dev {4}'.format(tempdir, cross, settings.compiler, settings.compiler.version, escaped_args),
+                         '-Wno-dev {4}'.format(tempdir, cross, settings.compiler,
+                                               settings.compiler.version, escaped_args),
                          conan_file.command)
 
         cmake.build(args=["--bar 'foo'"], target="install")

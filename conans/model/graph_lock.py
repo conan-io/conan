@@ -7,6 +7,7 @@ from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
+from conans.model.options import OptionsValues
 
 
 LOCKFILE = "conan.lock"
@@ -53,12 +54,38 @@ class GraphLockFile(object):
         return json.dumps(result, indent=True)
 
 
+class GraphLockNode(object):
+    def __init__(self, pref=None, python_requires=None, options=None):
+        self.pref = pref
+        self.python_requires = python_requires
+        self.options = options
+        self.modified = False
+
+    @staticmethod
+    def from_dict(node_json):
+        json_pref = node_json["pref"]
+        pref = PackageReference.loads(json_pref) if json_pref else None
+        python_requires = node_json.get("python_requires")
+        if python_requires:
+            python_requires = [ConanFileReference.loads(ref) for ref in python_requires]
+        options = OptionsValues.loads(node_json["options"])
+        node = GraphLockNode(pref, python_requires, options)
+        return node
+
+    def as_dict(self):
+        result = {}
+        result["pref"] = self.pref.full_repr() if self.pref else None
+        result["options"] = self.options.dumps()
+        if self.python_requires:
+            result["python_requires"] = [r.full_repr() for r in self.python_requires]
+        return result
+
+
 class GraphLock(object):
 
     def __init__(self, graph=None):
         self._nodes = {}  # {numeric id: PREF or None}
         self._edges = {}  # {numeric_id: [numeric_ids]}
-        self._python_requires = {}  # {numeric_id: [REFS (with RREV)]}
         if graph:
             for node in graph.nodes:
                 if node.recipe == RECIPE_VIRTUAL:
@@ -66,41 +93,40 @@ class GraphLock(object):
                 dependencies = []
                 for edge in node.dependencies:
                     dependencies.append(edge.dst.id)
-                self._nodes[node.id] = node.pref if node.ref else None
-                self._edges[node.id] = dependencies
                 python_reqs = getattr(node.conanfile, "python_requires", {})
-                self._python_requires[node.id] = [r.ref for _, r in python_reqs.items()]
+                python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
+                graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
+                                           node.conanfile.options.values)
+                self._nodes[node.id] = graph_node
+                self._edges[node.id] = dependencies
 
     @staticmethod
     def from_dict(graph_json):
         graph_lock = GraphLock()
-        for id_, pref in graph_json["nodes"].items():
-            graph_lock._nodes[id_] = PackageReference.loads(pref) if pref else None
+        for id_, node in graph_json["nodes"].items():
+            graph_lock._nodes[id_] = GraphLockNode.from_dict(node)
         for id_, dependencies in graph_json["edges"].items():
             graph_lock._edges[id_] = dependencies
-        for id_, refs in graph_json["python_requires"].items():
-            graph_lock._python_requires[id_] = [ConanFileReference.loads(ref) for ref in refs]
+
         return graph_lock
 
     def as_dict(self):
         result = {}
         nodes = {}
-        for id_, pref in self._nodes.items():
-            nodes[id_] = pref.full_repr() if pref else None
+        for id_, node in self._nodes.items():
+            nodes[id_] = node.as_dict()
         result["nodes"] = nodes
         result["edges"] = self._edges
-        result["python_requires"] = {id_: [r.full_repr() for r in reqs]
-                                     for id_, reqs in self._python_requires.items() if reqs}
         return result
 
     def update_check_graph(self, deps_graph, output):
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
                 continue
-            lock_node_pref = self._nodes[node.id]
             if node.binary == BINARY_BUILD:
-                self._nodes[node.id] = node.pref
+                self._nodes[node.id].pref = node.pref
             else:
+                lock_node_pref = self._nodes[node.id].pref
                 if (lock_node_pref and node.ref and
                         lock_node_pref.full_repr() != node.pref.full_repr()):
                     raise ConanException("Mistmatch between lock and graph:\nLock %s\nGraph: %s"
@@ -117,28 +143,28 @@ class GraphLock(object):
             require._locked_id = locked_id
 
     def pref(self, node_id):
-        return self._nodes[node_id]
+        return self._nodes[node_id].pref
 
     def python_requires(self, node_id):
-        return self._python_requires.get(node_id)
+        return self._nodes[node_id].python_requires
 
     def dependencies(self, node_id):
         # return {pkg_name: PREF}
-        return {self._nodes[i].ref.name: (self._nodes[i], i) for i in self._edges[node_id]}
+        return {self._nodes[i].pref.ref.name: (self._nodes[i].pref, i) for i in self._edges[node_id]}
 
     def get_node(self, ref):
         # None reference
         if ref is None:
             try:
-                return self._nodes[None]
+                return self._nodes[None].pref
             except KeyError:
                 raise ConanException("Unspecified reference in graph-lock, please specify")
 
         # First search by ref (without RREV)
         ids = []
         search_ref = str(ref)
-        for id_, pref in self._nodes.items():
-            if pref and str(pref.ref) == search_ref:
+        for id_, node in self._nodes.items():
+            if node.pref and str(node.pref.ref) == search_ref:
                 ids.append(id_)
         if ids:
             if len(ids) == 1:
@@ -147,8 +173,8 @@ class GraphLock(object):
 
         # Search by approximate name
         ids = []
-        for id_, pref in self._nodes.items():
-            if pref and pref.ref.name == ref.name:
+        for id_, node in self._nodes.items():
+            if node.pref and node.pref.ref.name == ref.name:
                 ids.append(id_)
         if ids:
             if len(ids) == 1:
@@ -159,14 +185,14 @@ class GraphLock(object):
 
     def update_ref(self, ref):
         node_id = self.get_node(ref)
-        pref = self._nodes[node_id]
-        self._nodes[node_id] = PackageReference(ref, pref.id)
+        node = self._nodes[node_id]
+        node.pref = PackageReference(ref, node.pref.id)
 
     def find_node(self, node, reference):
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self.get_node(reference)
-            pref = self._nodes[node_id]
+            pref = self._nodes[node_id].pref
             # Adding a new node, has the problem of
             # python_requires
 

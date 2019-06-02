@@ -4,6 +4,8 @@ import os
 import sys
 import uuid
 
+import yaml
+
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -14,6 +16,7 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
+from conans.paths import DATA_YML
 from conans.util.files import load
 
 
@@ -51,14 +54,31 @@ class ConanFileLoader(object):
             self._python_requires.valid = True
             _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
+
             self._python_requires.locked_versions = None
             self.cached_conanfiles[conanfile_path] = (conanfile, lock_python_requires)
+
+            conanfile.conan_data = self._load_data(conanfile_path)
+
             return conanfile
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
+    def _load_data(self, conanfile_path):
+        data_path = os.path.join(os.path.dirname(conanfile_path), DATA_YML)
+        if not os.path.exists(data_path):
+            return None
+
+        try:
+            data = yaml.safe_load(load(data_path))
+        except Exception as e:
+            raise ConanException("Invalid yml format at {}: {}".format(DATA_YML, e))
+
+        return data or {}
+
     def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
         conanfile = self.load_class(conanfile_path, lock_python_requires)
+
         # Export does a check on existing name & version
         if "name" in conanfile.__dict__:
             if name and name != conanfile.name:

@@ -11,7 +11,7 @@ from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
@@ -369,6 +369,16 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports, )
 
+    output = conanfile.output
+    package_output = ScopedOutput("%s exports" % output.scope, output)
+
+    if os.path.exists(os.path.join(origin_folder, DATA_YML)):
+        package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
+        tmp = [DATA_YML]
+        if conanfile.exports:
+            tmp.extend(conanfile.exports)  # conanfile.exports could be a tuple (immutable)
+        conanfile.exports = tmp
+
     included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
     try:
@@ -379,6 +389,5 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    output = conanfile.output
-    package_output = ScopedOutput("%s exports" % output.scope, output)
+
     copier.report(package_output)

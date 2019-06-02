@@ -174,6 +174,8 @@ class CMakeDefinitionsBuilder(object):
         cmake_system_name = env_sn or self._forced_cmake_system_name
 
         os_build, _, _, _ = get_cross_building_settings(self._conanfile.settings)
+        compiler = self._ss("compiler")
+        libcxx = self._ss("compiler.libcxx")
 
         ret = OrderedDict()
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", op_system_version)
@@ -231,17 +233,25 @@ class CMakeDefinitionsBuilder(object):
                 ret["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
 
             # Adjust Android stuff
-            if os_ == "Android":
+            if str(os_) == "Android" and ret["CMAKE_SYSTEM_NAME"] == "Android":
                 arch_abi_settings = tools.to_android_abi(arch)
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
                     ret["ANDROID_ABI"] = arch_abi_settings
 
-                if 'CONAN_CMAKE_ANDROID_NDK_HOME' in os.environ:
-                    ret["ANDROID_NDK"] = os.environ['CONAN_CMAKE_ANDROID_NDK_HOME']
+                conan_cmake_android_ndk = os.getenv("CONAN_CMAKE_ANDROID_NDK")
+                if conan_cmake_android_ndk:
+                    ret["ANDROID_NDK"] = conan_cmake_android_ndk
 
                 ret["ANDROID_PLATFORM"] = "android-%s" % op_system_version
+                ret["ANDROID_TOOLCHAIN"] = compiler
 
+                # More details about supported stdc++ libraries here:
+                # https://developer.android.com/ndk/guides/cpp-support.html
+                if libcxx:
+                    ret["ANDROID_STL"] = libcxx
+                else:
+                    ret["ANDROID_STL"] = 'none'
 
         logger.info("Setting Cross build flags: %s"
                     % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
@@ -357,13 +367,4 @@ class CMakeDefinitionsBuilder(object):
 
         # Disable CMake export registry #3070 (CMake installing modules in user home's)
         ret["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
-
-        if os_ == "Android":
-            ret["ANDROID_TOOLCHAIN"] = compiler
-            # More details about supported stdc++ libraries here https://developer.android.com/ndk/guides/cpp-support.html
-            if libcxx:
-                ret["ANDROID_STL"] = libcxx
-            else:
-                ret["ANDROID_STL"] = 'none'
-
         return ret
