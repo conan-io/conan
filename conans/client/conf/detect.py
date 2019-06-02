@@ -4,8 +4,8 @@ import re
 from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
-from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.client.tools import detected_os, OSInfo
+from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 
 
@@ -148,7 +148,9 @@ Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
 
 If you want Conan to use the new ABI for the {profile} profile, run:
 
-    conan profile update settings.compiler.libcxx=libstdc++11 {profile}
+    $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
+
+Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
 """.format(profile=profile_name, profile_path=profile_path)
                 output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
                                "***********************\n %s\n************************************"
