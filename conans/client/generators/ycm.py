@@ -189,9 +189,9 @@ def FlagsForFile( filename, **kwargs ):
         cxx_version = ''
         try:
             cxx_version = str(self.settings.compiler.version).split('.')[0]
-        except:
+        except Exception:
             pass
 
         ycm_data = self.template.format(cxx_version=cxx_version)
-        return {"conan_ycm_extra_conf.py" : ycm_data,
-                "conan_ycm_flags.json" : json.dumps(conan_flags, indent=2)}
+        return {"conan_ycm_extra_conf.py": ycm_data,
+                "conan_ycm_flags.json": json.dumps(conan_flags, indent=2)}

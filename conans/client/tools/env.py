@@ -32,9 +32,10 @@ def run_environment(conanfile):
 @contextmanager
 def environment_append(env_vars):
     """
-    :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2} => e.g.: MYVAR=1
-                     The values can also be lists of appendable environment vars. {name: [value, value2]}
-                      => e.g. PATH=/path/1:/path/2
+    :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2}
+                     => e.g.: MYVAR=1
+                     The values can also be lists of appendable environment vars.
+                     {name: [value, value2]} => e.g. PATH=/path/1:/path/2
                      If the value is set to None, then that environment variable is unset.
     :return: None
     """
