@@ -94,9 +94,9 @@ _KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if th
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
 _PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
-                              "'%s', '%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE, _PREF_EXAMPLE))
+                             "'%s', '%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE, _PREF_EXAMPLE))
 _REF_OR_PREF_HELP = ("Recipe reference or package reference e.g., '%s', "
-                       "'%s'" % (_REFERENCE_EXAMPLE, _PREF_EXAMPLE))
+                     "'%s'" % (_REFERENCE_EXAMPLE, _PREF_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
 _QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
@@ -1814,6 +1814,10 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
     --build            Build all from sources, do not use binary packages.
     --build=never      Never build, use binary packages or fail if a binary package is not found.
     --build=missing    Build from code if a binary package is not found.
+    --build=cascade    Will build from code all the nodes with some dependency being built
+                       (for any reason). Can be used together with any other build policy.
+                       Useful to make sure that any new change introduced in a dependency is
+                       incorporated by building again the package.
     --build=outdated   Build from code if the binary is not built with the current recipe or
                        when missing binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.

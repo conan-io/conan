@@ -24,8 +24,7 @@ from conans.client.tools.android import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
 from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
-    rmdir, save as files_save, save_append, sha1sum, sha256sum, touch, sha1sum, sha256sum, \
-    to_file_bytes, touch
+    rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
 

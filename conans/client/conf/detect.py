@@ -49,7 +49,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
                 output.info("gcc>=5, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -70,7 +70,7 @@ def _clang_compiler(output, compiler_exe="clang"):
                 output.info("clang>=8, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -82,7 +82,7 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -128,7 +128,7 @@ def _get_default_compiler(output):
 def _detect_compiler_version(result, output, profile_path):
     try:
         compiler, version = _get_default_compiler(output)
-    except:
+    except Exception:
         compiler, version = None, None
     if not compiler or not version:
         output.error("Unable to find a working compiler")

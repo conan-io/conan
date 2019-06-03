@@ -1,5 +1,6 @@
 import os
 
+
 def load_authentication_plugin(server_folder, plugin_name):
     try:
         from pluginbase import PluginBase
@@ -12,6 +13,6 @@ def load_authentication_plugin(server_folder, plugin_name):
         # and some imports fail
         auth.plugin_source = plugin_source
         return auth
-    except:
+    except Exception:
         print("Error loading authenticator plugin '%s'" % plugin_name)
         raise

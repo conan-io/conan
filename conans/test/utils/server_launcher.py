@@ -108,7 +108,7 @@ class TestServerLauncher(object):
         if os.path.exists(self._base_path):
             try:
                 shutil.rmtree(self._base_path)
-            except:
+            except Exception:
                 print("Can't clean the test server data, probably a server process is still opened")
 
 

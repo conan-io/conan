@@ -13,9 +13,9 @@ class NewTest(unittest.TestCase):
     def template_test(self):
         client = TestClient()
         template1 = textwrap.dedent("""
-            class {package_name}Conan(ConanFile):
-                name = "{name}"
-                version = "{version}"
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
         """)
         save(os.path.join(client.base_folder, "templates/mytemplate.py"), template1)
         client.run("new hello/0.1 --f=mytemplate.py")
@@ -27,7 +27,7 @@ class NewTest(unittest.TestCase):
     def template_test_package_test(self):
         client = TestClient()
         template2 = textwrap.dedent("""
-            class {package_name}Conan(ConanFile):
+            class {{package_name}}Conan(ConanFile):
                 version = "fixed"
         """)
         save(os.path.join(client.base_folder, "templates", "subfolder", "mytemplate.py"), template2)
@@ -39,7 +39,7 @@ class NewTest(unittest.TestCase):
     def template_abs_path_test_package_test(self):
         client = TestClient()
         template2 = textwrap.dedent("""
-            class {package_name}Conan(ConanFile):
+            class {{package_name}}Conan(ConanFile):
                 version = "fixed"
         """)
         tmp = temp_folder()
