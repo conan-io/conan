@@ -1814,7 +1814,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
     --build            Build all from sources, do not use binary packages.
     --build=never      Never build, use binary packages or fail if a binary package is not found.
     --build=missing    Build from code if a binary package is not found.
-    --build cascade    Will build from code all the nodes with some dependency being built
+    --build=cascade    Will build from code all the nodes with some dependency being built
                        (for any reason). Can be used together with any other build policy.
                        Useful to make sure that any new change introduced in a dependency is
                        incorporated by building again the package.
