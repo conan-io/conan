@@ -126,33 +126,65 @@ def build_type_definition(build_type, generator):
 
 
 class CMakeDefinitions(object):
+    """
+    Create list of unrepeated definitions and discard the ones without value as result
+    """
 
     def __init__(self, definitions=None):
         if definitions:
-            assert isinstance(definitions, dict), "definitions is not an dict"
+            if isinstance(definitions, list):
+                for item in definitions:
+                    assert isinstance(item, tuple), self._init_assert_msg()
+                definitions = OrderedDict(definitions)
+            assert isinstance(definitions, OrderedDict), self._init_assert_msg()
         self._definitions = definitions or OrderedDict()
 
+    def _init_assert_msg(self):
+        return "Definitions argument needs to be list of tuples or an OrderedDict to preserve the " \
+               "order of items"
+
     def set(self, key, value):
+        """
+        Set a definition with a valid value checking that the key already exists (it is an
+        expected key), and the value is different form the previous one
+        :param key: Definition name
+        :param value: Definition value
+        """
         self._set(key, value)
 
     def _set(self, key, value, new=False):
         if not new:
-            assert key in self._definitions, "key not previously set in dictionary"
-            assert self._definitions[key] is None, "key already has a value assigned"
+            assert key in self._definitions, "Key '%s' not previously set in dictionary" % key
+            assert self._definitions[key] is None, \
+                "Key '%s' already has a value assigned: '%s'" % (key, self._definitions[key])
         else:
-            assert key not in self._definitions, "key previously set in dictionary"
+            assert key not in self._definitions, "Key '%s' previously set in dictionary" % key
         self._definitions[key] = value
 
     def update(self, definitions):
+        """
+        Update the definitions creating new keys and checkign they weren't previously added
+        :param definitions: Dictionary with definition names as keys and their values
+        """
         for key, value in definitions.items():
             self._set(key, value, True)
 
-    def get(self, key, value=None):
-        assert key in self._definitions, "key not previously set in dictionary"
-        return self._definitions.get(key, value)
+    def get(self, key):
+        """
+        Get the value of a definition checking that the deifinition name already exists
+        :param key: defintion name
+        :return:
+        """
+        assert key in self._definitions, "Key '%s' not previously set in dictionary" % key
+        return self._definitions.get(key)
 
     def result(self):
-        return OrderedDict({key: value for key, value in self._definitions.items() if value})
+        """
+        Definitions with their value
+        :return: Ordered dictionary only with definitions that have a value assigned
+        """
+        return OrderedDict([(key, value) for key, value in self._definitions.items() if value is not
+                            None])
 
 
 class CMakeDefinitionsBuilder(object):
@@ -174,10 +206,10 @@ class CMakeDefinitionsBuilder(object):
         return self._conanfile.settings.get_safe(setname)
 
     def _get_cpp_standard_vars(self):
-        defines = CMakeDefinitions({
-            "CONAN_CMAKE_CXX_STANDARD": None,
-            "CONAN_CMAKE_CXX_EXTENSIONS": None,
-            "CONAN_STD_CXX_FLAG": None})
+        defines = CMakeDefinitions([
+            ("CONAN_CMAKE_CXX_STANDARD", None),
+            ("CONAN_CMAKE_CXX_EXTENSIONS", None),
+            ("CONAN_STD_CXX_FLAG", None)])
 
         cppstd = cppstd_from_settings(self._conanfile.settings)
         compiler = self._ss("compiler")
@@ -214,24 +246,24 @@ class CMakeDefinitionsBuilder(object):
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", op_system_version)
         toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
 
-        defines = CMakeDefinitions({
-            "TOOLCHAIN_FILE": None,
-            "CMAKE_SYSTEM_NAME": None,
-            "CMAKE_SYSTEM_VERSION": None,
-            "CMAKE_OSX_DEPLOYMENT_TARGET": None,
-            "CMAKE_SYSTEM_PROCESSOR": None,
-            "CONAN_CMAKE_FIND_ROOT_PATH": None,
-            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM": None,
-            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY": None,
-            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE": None,
-            "CMAKE_SYSROOT": None,
-            "CMAKE_ANDROID_ARCH_ABI": None,
-            "ANDROID_ABI": None,
-            "ANDROID_NDK": None,
-            "ANDROID_PLATFORM": None,
-            "ANDROID_TOOLCHAIN": None,
-            "ANDROID_STL": None
-        })
+        defines = CMakeDefinitions([
+            ("TOOLCHAIN_FILE", None),
+            ("CMAKE_SYSTEM_NAME", None),
+            ("CMAKE_SYSTEM_VERSION", None),
+            ("CMAKE_OSX_DEPLOYMENT_TARGET", None),
+            ("CMAKE_SYSTEM_PROCESSOR", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY", None),
+            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE", None),
+            ("CMAKE_SYSROOT", None),
+            ("CMAKE_ANDROID_ARCH_ABI", None),
+            ("ANDROID_ABI", None),
+            ("ANDROID_NDK", None),
+            ("ANDROID_PLATFORM", None),
+            ("ANDROID_TOOLCHAIN", None),
+            ("ANDROID_STL", None)
+        ])
 
         if toolchain_file != "":
             logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
@@ -310,7 +342,7 @@ class CMakeDefinitionsBuilder(object):
         return defines.result()
 
     def _get_make_program_definition(self):
-        defines = CMakeDefinitions({"CMAKE_MAKE_PROGRAM": None})
+        defines = CMakeDefinitions([("CMAKE_MAKE_PROGRAM", None)])
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
@@ -331,33 +363,33 @@ class CMakeDefinitionsBuilder(object):
         runtime = self._ss("compiler.runtime")
         build_type = self._ss("build_type")
 
-        defines = CMakeDefinitions({
-            "CONAN_EXPORTED": "1",
-            "CMAKE_OSX_ARCHITECTURES": None,
-            "CONAN_COMPILER": None,
-            "CONAN_COMPILER_VERSION": None,
-            "CONAN_CXX_FLAGS": None,
-            "CONAN_C_FLAGS": None,
-            "CONAN_SHARED_LINKER_FLAGS": None,
-            "CMAKE_C_FLAGS": None,
-            "CMAKE_CXX_FLAGS": None,
-            "CMAKE_SHARED_LINKER_FLAGS": None,
-            "CONAN_LIBCXX": None,
-            "BUILD_SHARED_LIBS": None,
-            "CMAKE_INSTALL_PREFIX": None,
-            "CMAKE_INSTALL_BINDIR": None,
-            "CMAKE_INSTALL_SBINDIR": None,
-            "CMAKE_INSTALL_LIBEXECDIR": None,
-            "CMAKE_INSTALL_LIBDIR": None,
-            "CMAKE_INSTALL_INCLUDEDIR": None,
-            "CMAKE_INSTALL_OLDINCLUDEDIR": None,
-            "CMAKE_INSTALL_DATAROOTDIR": None,
-            "CONAN_CMAKE_POSITION_INDEPENDENT_CODE": None,
-            "CMAKE_MODULE_PATH": None,
-            "CMAKE_PREFIX_PATH": None,
+        defines = CMakeDefinitions([
+            ("CONAN_EXPORTED", "1"),
+            ("CMAKE_OSX_ARCHITECTURES", None),
+            ("CONAN_COMPILER", None),
+            ("CONAN_COMPILER_VERSION", None),
+            ("CONAN_CXX_FLAGS", None),
+            ("CONAN_C_FLAGS", None),
+            ("CONAN_SHARED_LINKER_FLAGS", None),
+            ("CMAKE_C_FLAGS", None),
+            ("CMAKE_CXX_FLAGS", None),
+            ("CMAKE_SHARED_LINKER_FLAGS", None),
+            ("CONAN_LIBCXX", None),
+            ("BUILD_SHARED_LIBS", None),
+            ("CMAKE_INSTALL_PREFIX", None),
+            ("CMAKE_INSTALL_BINDIR", None),
+            ("CMAKE_INSTALL_SBINDIR", None),
+            ("CMAKE_INSTALL_LIBEXECDIR", None),
+            ("CMAKE_INSTALL_LIBDIR", None),
+            ("CMAKE_INSTALL_INCLUDEDIR", None),
+            ("CMAKE_INSTALL_OLDINCLUDEDIR", None),
+            ("CMAKE_INSTALL_DATAROOTDIR", None),
+            ("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", None),
+            ("CMAKE_MODULE_PATH", None),
+            ("CMAKE_PREFIX_PATH", None),
             # Disable CMake export registry #3070 (CMake installing modules in user home's)
-            "CMAKE_EXPORT_NO_PACKAGE_REGISTRY": "ON"
-        })
+            ("CMAKE_EXPORT_NO_PACKAGE_REGISTRY", "ON")
+        ])
 
         if self._forced_build_type and self._forced_build_type != build_type:
             self._output.warn("Forced CMake build type ('%s') different from the settings build "
