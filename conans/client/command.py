@@ -1224,8 +1224,6 @@ class Command(object):
 
         try:
             pref = PackageReference.loads(args.pattern_or_reference, validate=True)
-            reference = pref.ref.full_repr()
-            package_id = pref.id
         except ConanException:
             reference = args.pattern_or_reference
             package_id = args.package
@@ -1234,16 +1232,19 @@ class Command(object):
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
                                        "`conan upload [...] {}:{}`".format(reference, package_id))
+
+            if args.query and package_id:
+                raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
+            reference = pref.ref.full_repr()
+            package_id = pref.id
+
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
+            if args.query:
+                raise ConanException("'--query' argument cannot be used together with full reference")
 
-        if args.query and package_id:
-            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
-
-        cwd = os.getcwd()
-        info = None
 
         if args.force and args.no_overwrite:
             raise ConanException("'--no-overwrite' argument cannot be used together with '--force'")
@@ -1266,18 +1267,20 @@ class Command(object):
         else:
             policy = None
 
+        info = None
         try:
             info = self._conan.upload(pattern=reference, package=package_id,
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
                                       retry_wait=args.retry_wait, integrity_check=args.check)
+
         except ConanException as exc:
             info = exc.info
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                self._outputer.json_output(info, args.json, os.getcwd())
 
     def remote(self, *args):
         """
