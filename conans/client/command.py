@@ -164,7 +164,7 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
-        parser.add_argument("-f", "--file",
+        parser.add_argument("-m", "--template",
                             help='Use the given template from the local cache for conanfile.py')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
@@ -216,7 +216,7 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.file)
+                        template=args.template)
 
     def inspect(self, *args):
         """
