@@ -133,8 +133,19 @@ class CMakeDefinitions(object):
         self._definitions = definitions or OrderedDict()
 
     def set(self, key, value):
-        assert key in self._definitions, "key not previously set in dictionary"
+        self._set(key, value)
+
+    def _set(self, key, value, new=False):
+        if not new:
+            assert key in self._definitions, "key not previously set in dictionary"
+            assert self._definitions[key] is None, "key already has a value assigned"
+        else:
+            assert key not in self._definitions, "key previously set in dictionary"
         self._definitions[key] = value
+
+    def update(self, definitions):
+        for key, value in definitions.items():
+            self._set(key, value, True)
 
     def get(self, key, value=None):
         assert key in self._definitions, "key not previously set in dictionary"
@@ -320,68 +331,85 @@ class CMakeDefinitionsBuilder(object):
         runtime = self._ss("compiler.runtime")
         build_type = self._ss("build_type")
 
-        ret = OrderedDict()
-        ret.update(runtime_definition(runtime))
+        defines = CMakeDefinitions({
+            "CONAN_EXPORTED": "1",
+            "CMAKE_OSX_ARCHITECTURES": None,
+            "CONAN_COMPILER": None,
+            "CONAN_COMPILER_VERSION": None,
+            "CONAN_CXX_FLAGS": None,
+            "CONAN_C_FLAGS": None,
+            "CONAN_SHARED_LINKER_FLAGS": None,
+            "CMAKE_C_FLAGS": None,
+            "CMAKE_CXX_FLAGS": None,
+            "CMAKE_SHARED_LINKER_FLAGS": None,
+            "CONAN_LIBCXX": None,
+            "BUILD_SHARED_LIBS": None,
+            "CMAKE_INSTALL_PREFIX": None,
+            "CMAKE_INSTALL_BINDIR": None,
+            "CMAKE_INSTALL_SBINDIR": None,
+            "CMAKE_INSTALL_LIBEXECDIR": None,
+            "CMAKE_INSTALL_LIBDIR": None,
+            "CMAKE_INSTALL_INCLUDEDIR": None,
+            "CMAKE_INSTALL_OLDINCLUDEDIR": None,
+            "CMAKE_INSTALL_DATAROOTDIR": None,
+            "CONAN_CMAKE_POSITION_INDEPENDENT_CODE": None,
+            "CMAKE_MODULE_PATH": None,
+            "CMAKE_PREFIX_PATH": None,
+            # Disable CMake export registry #3070 (CMake installing modules in user home's)
+            "CMAKE_EXPORT_NO_PACKAGE_REGISTRY": "ON"
+        })
 
         if self._forced_build_type and self._forced_build_type != build_type:
             self._output.warn("Forced CMake build type ('%s') different from the settings build "
                               "type ('%s')" % (self._forced_build_type, build_type))
             build_type = self._forced_build_type
 
-        ret.update(build_type_definition(build_type, self._generator))
-
         if str(os_) == "Macos":
             if arch == "x86":
-                ret["CMAKE_OSX_ARCHITECTURES"] = "i386"
-
-        ret.update(self._cmake_cross_build_defines())
-        ret.update(self._get_cpp_standard_vars())
-
-        ret["CONAN_EXPORTED"] = "1"
-        ret.update(in_local_cache_definition(self._conanfile.in_local_cache))
+                defines.set("CMAKE_OSX_ARCHITECTURES", "i386")
 
         if compiler:
-            ret["CONAN_COMPILER"] = compiler
+            defines.set("CONAN_COMPILER", compiler)
         if compiler_version:
-            ret["CONAN_COMPILER_VERSION"] = str(compiler_version)
+            defines.set("CONAN_COMPILER_VERSION", str(compiler_version))
 
         # C, CXX, LINK FLAGS
         if compiler == "Visual Studio":
             if self._parallel:
                 flag = parallel_compiler_cl_flag(output=self._output)
-                ret['CONAN_CXX_FLAGS'] = flag
-                ret['CONAN_C_FLAGS'] = flag
+                defines.set("CONAN_CXX_FLAGS", flag)
+                defines.set("CONAN_C_FLAGS", flag)
         else:  # arch_flag is only set for non Visual Studio
             arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
             if arch_flag:
-                ret['CONAN_CXX_FLAGS'] = arch_flag
-                ret['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
-                ret['CONAN_C_FLAGS'] = arch_flag
+                defines.set("CONAN_CXX_FLAGS", arch_flag)
+                defines.set("CONAN_SHARED_LINKER_FLAGS", arch_flag)
+                defines.set("CONAN_C_FLAGS", arch_flag)
                 if self._set_cmake_flags:
-                    ret['CMAKE_CXX_FLAGS'] = arch_flag
-                    ret['CMAKE_SHARED_LINKER_FLAGS'] = arch_flag
-                    ret['CMAKE_C_FLAGS'] = arch_flag
+                    defines.set("CMAKE_CXX_FLAGS", arch_flag)
+                    defines.set("CMAKE_SHARED_LINKER_FLAGS", arch_flag)
+                    defines.set("CMAKE_C_FLAGS", arch_flag)
 
         if libcxx:
-            ret["CONAN_LIBCXX"] = libcxx
+            defines.set("CONAN_LIBCXX", libcxx)
 
         # Shared library
         try:
-            ret["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
+            defines.set("BUILD_SHARED_LIBS", "ON" if self._conanfile.options.shared else "OFF")
         except ConanException:
             pass
 
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
-                ret["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
-                ret["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
-                ret["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN
-                ret["CMAKE_INSTALL_LIBDIR"] = DEFAULT_LIB
-                ret["CMAKE_INSTALL_INCLUDEDIR"] = DEFAULT_INCLUDE
-                ret["CMAKE_INSTALL_OLDINCLUDEDIR"] = DEFAULT_INCLUDE
-                ret["CMAKE_INSTALL_DATAROOTDIR"] = DEFAULT_SHARE
+                defines.set("CMAKE_INSTALL_PREFIX", self._conanfile.package_folder)
+                defines.set("CMAKE_INSTALL_BINDIR", DEFAULT_BIN)
+                defines.set("CMAKE_INSTALL_SBINDIR", DEFAULT_BIN)
+                defines.set("CMAKE_INSTALL_LIBEXECDIR", DEFAULT_BIN)
+                defines.set("CMAKE_INSTALL_LIBDIR", DEFAULT_LIB)
+                defines.set("CMAKE_INSTALL_INCLUDEDIR", DEFAULT_INCLUDE)
+                defines.set("CMAKE_INSTALL_OLDINCLUDEDIR", DEFAULT_INCLUDE)
+                defines.set("CMAKE_INSTALL_DATAROOTDIR", DEFAULT_SHARE)
         except AttributeError:
             pass
 
@@ -390,22 +418,25 @@ class CMakeDefinitionsBuilder(object):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
-                ret["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
+                defines.set("CONAN_CMAKE_POSITION_INDEPENDENT_CODE",
+                            "ON" if (fpic or shared) else "OFF")
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
         install_folder = self._conanfile.install_folder.replace("\\", "/")
         if "cmake_find_package" in self._conanfile.generators:
-            ret["CMAKE_MODULE_PATH"] = install_folder
+            defines.set("CMAKE_MODULE_PATH", install_folder)
 
         if "cmake_find_package_multi" in self._conanfile.generators:
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
             # that require the prefix path and the module path
-            ret["CMAKE_PREFIX_PATH"] = install_folder
-            ret["CMAKE_MODULE_PATH"] = install_folder
+            defines.set("CMAKE_PREFIX_PATH", install_folder)
+            defines.set("CMAKE_MODULE_PATH", install_folder)
 
-        ret.update(self._get_make_program_definition())
-
-        # Disable CMake export registry #3070 (CMake installing modules in user home's)
-        ret["CMAKE_EXPORT_NO_PACKAGE_REGISTRY"] = "ON"
-        return ret
+        defines.update(build_type_definition(build_type, self._generator))
+        defines.update(self._cmake_cross_build_defines())
+        defines.update(self._get_cpp_standard_vars())
+        defines.update(in_local_cache_definition(self._conanfile.in_local_cache))
+        defines.update(self._get_make_program_definition())
+        defines.update(runtime_definition(runtime))
+        return defines.result()
