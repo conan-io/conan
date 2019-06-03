@@ -57,8 +57,8 @@ class RetryDownloadTests(unittest.TestCase):
             uploader.upload(url="fake", abs_path=self.filename, retry=2)
         output_lines = str(output).splitlines()
         counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        self.assertEqual(counter["ERROR: content"], 0)
+        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_403_forbidden(self):
         output = TestBufferConanOutput()
@@ -69,8 +69,8 @@ class RetryDownloadTests(unittest.TestCase):
             uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
         output_lines = str(output).splitlines()
         counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        self.assertEqual(counter["ERROR: content"], 0)
+        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_403_authentication(self):
         output = TestBufferConanOutput()
@@ -81,8 +81,8 @@ class RetryDownloadTests(unittest.TestCase):
             uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
         output_lines = str(output).splitlines()
         counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        self.assertEqual(counter["ERROR: content"], 0)
+        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_requests(self):
         class _RequesterMock:

@@ -176,6 +176,10 @@ class FileDownloader(object):
         if not response.ok:
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
+            elif response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response.content)
+                raise ForbiddenException(response.content)
             elif response.status_code == 401:
                 raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
@@ -271,7 +275,7 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
     for counter in range(retry + 1):
         try:
             return method(*args, **kwargs)
-        except NotFoundException:
+        except (NotFoundException, ForbiddenException, AuthenticationException):
             raise
         except ConanException as exc:
             if counter == retry:
