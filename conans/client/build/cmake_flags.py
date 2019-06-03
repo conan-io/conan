@@ -434,9 +434,9 @@ class CMakeDefinitionsBuilder(object):
             defines.set("CMAKE_MODULE_PATH", install_folder)
 
         defines.update(build_type_definition(build_type, self._generator))
+        defines.update(in_local_cache_definition(self._conanfile.in_local_cache))
         defines.update(self._cmake_cross_build_defines())
         defines.update(self._get_cpp_standard_vars())
-        defines.update(in_local_cache_definition(self._conanfile.in_local_cache))
         defines.update(self._get_make_program_definition())
         defines.update(runtime_definition(runtime))
         return defines.result()
