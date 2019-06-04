@@ -2,7 +2,6 @@ import os
 import unittest
 
 from conans.client import tools
-from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, TestServer

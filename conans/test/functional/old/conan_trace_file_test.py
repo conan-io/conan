@@ -5,10 +5,11 @@ import unittest
 from conans.client import tools
 from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE, RUN_LOG_NAME
+from conans.paths import RUN_LOG_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer,\
+    TestBufferConanOutput
 from conans.util.files import load
 
 
@@ -36,25 +37,21 @@ class HelloConan(ConanFile):
     ''' % RUN_LOG_NAME
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-
+            output = TestBufferConanOutput()
             runner = ConanRunner(print_commands_to_output, generate_run_log_file,
-                                 log_run_to_output=True)
+                                 log_run_to_output=True, output=output)
 
             client = TestClient(servers=self.servers,
                                 users={"default": [("lasote", "mypass")]},
                                 runner=runner)
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-            files = dict()
-            files[CONANFILE] = base
-            client.save(files)
-            client.run("user lasote -p mypass -r default")
-            client.run("export . lasote/stable")
-            client.run("install %s --build missing" % str(ref))
-            package_dir = client.cache.package_layout(
-                ConanFileReference.loads("Hello0/0.1@lasote/stable")).packages()
+            client.save({"conanfile.py": base})
+            client.run("create . lasote/stable")
+            package_dir = client.cache.package_layout(ref).packages()
             package_dir = os.path.join(package_dir, os.listdir(package_dir)[0])
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
-            return log_file_packaged_, client.user_io.out
+            output = "\n".join([str(output), str(client.out)])
+            return log_file_packaged_, output
 
         log_file_packaged, output = _install_a_package(False, True)
         self.assertIn("Packaged 1 '.log' file: conan_run.log", output)

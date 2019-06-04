@@ -76,7 +76,7 @@ class LayoutTest(unittest.TestCase):
             [{}:includedirs]
             include_{}
             """)
-        layout_folder = os.path.join(client.base_folder, ".conan", LAYOUTS_FOLDER)
+        layout_folder = os.path.join(client.base_folder, LAYOUTS_FOLDER)
         ref_str = "mytool/0.1@user/testing"
         save_files(layout_folder, {"layout_win_cache": layout_cache.format(ref_str, "win_cache"),
                                    "layout_linux_cache": layout_cache.format(ref_str,
@@ -120,7 +120,7 @@ class LayoutTest(unittest.TestCase):
             include_{}
             """)
 
-        layout_folder = os.path.join(client.base_folder, ".conan", LAYOUTS_FOLDER)
+        layout_folder = os.path.join(client.base_folder, LAYOUTS_FOLDER)
         save_files(layout_folder, {"win/cache": layout_repo.format("win/cache"),
                                    "linux/cache": layout_repo.format("linux/cache")})
         client.save({"conanfile.py": conanfile,

@@ -77,7 +77,7 @@ class CmdUpload(object):
         self._num_threads = 1
 
     def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
-               all_packages=None, confirm=False, retry=0, retry_wait=0, integrity_check=False,
+               all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
                policy=None, query=None, parallel_upload=False):
         t1 = time.time()
         refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
