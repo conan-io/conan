@@ -77,17 +77,12 @@ class _PackageBuilder(object):
         return build_folder, skip_build
 
     def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, package_folder, remotes):
+                         build_folder, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
-        try:
-            rmdir(build_folder)
-            rmdir(package_folder)
-        except OSError as e:
-            raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % str(e))
+        _remove_folder_raising(build_folder)
 
         config_source(export_folder, export_source_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
@@ -140,6 +135,7 @@ class _PackageBuilder(object):
 
     def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
                  package_folder):
+
         # FIXME: Is weak to assign here the recipe_hash
         manifest = package_layout.recipe_manifest()
         conanfile.info.recipe_hash = manifest.summary_hash
@@ -190,10 +186,11 @@ class _PackageBuilder(object):
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
                 self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, package_folder, remotes)
+                                      build_folder, remotes)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
+            _remove_folder_raising(package_folder)
             mkdir(build_folder)
             os.chdir(build_folder)
             self._output.info('Building your package in %s' % build_folder)
@@ -227,6 +224,14 @@ class _PackageBuilder(object):
             return node.pref
 
 
+def _remove_folder_raising(folder):
+    try:
+        rmdir(folder)
+    except OSError as e:
+        raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                             "Close any app using it, and retry" % str(e))
+
+
 def _handle_system_requirements(conan_file, pref, cache, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
@@ -236,8 +241,9 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     if "system_requirements" not in type(conan_file).__dict__:
         return
 
-    system_reqs_path = cache.system_reqs(pref.ref)
-    system_reqs_package_path = cache.system_reqs_package(pref)
+    package_layout = cache.package_layout(pref.ref)
+    system_reqs_path = package_layout.system_reqs()
+    system_reqs_package_path = package_layout.system_reqs_package(pref)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
         return
 
@@ -337,7 +343,7 @@ class BinaryInstaller(object):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
         base_path = package_layout.base_folder()
-        self._call_package_info(node.conanfile, package_folder=base_path)
+        self._call_package_info(node.conanfile, package_folder=base_path, ref=node.ref)
 
         node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
@@ -370,11 +376,11 @@ class BinaryInstaller(object):
         pref = node.pref
         assert pref.id, "Package-ID without value"
 
-        conan_file = node.conanfile
-        output = conan_file.output
-        package_folder = self._cache.package(pref, conan_file.short_paths)
+        conanfile = node.conanfile
+        output = conanfile.output
+        package_folder = self._cache.package_layout(pref.ref, conanfile.short_paths).package(pref)
 
-        with self._cache.package_lock(pref):
+        with self._cache.package_layout(pref.ref).package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
@@ -407,15 +413,15 @@ class BinaryInstaller(object):
                     self._recorder.package_fetched_from_cache(pref)
 
             # Call the info method
-            self._call_package_info(conan_file, package_folder)
-            self._recorder.package_cpp_info(pref, conan_file.cpp_info)
+            self._call_package_info(conanfile, package_folder, ref=pref.ref)
+            self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _build_package(self, node, pref, output, keep_build, remotes):
         conanfile = node.conanfile
         assert pref.id, "Package-ID without value"
 
         # It is necessary to complete the sources of python requires, which might be used
-        for python_require in conanfile.python_requires:
+        for python_require in conanfile.python_requires.values():
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(self._remote_manager, self._cache,
@@ -447,8 +453,7 @@ class BinaryInstaller(object):
                    package_name == conan_file.name:
                     conan_file.info.env_values.add(name, value, package_name)
 
-    @staticmethod
-    def _call_package_info(conanfile, package_folder):
+    def _call_package_info(self, conanfile, package_folder, ref):
         conanfile.cpp_info = CppInfo(package_folder)
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
@@ -467,4 +472,8 @@ class BinaryInstaller(object):
                     conanfile.source_folder = None
                     conanfile.build_folder = None
                     conanfile.install_folder = None
+                    self._hook_manager.execute("pre_package_info", conanfile=conanfile,
+                                               reference=ref)
                     conanfile.package_info()
+                    self._hook_manager.execute("post_package_info", conanfile=conanfile,
+                                               reference=ref)

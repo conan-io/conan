@@ -14,9 +14,9 @@ def discarded_file(filename):
     # The __conan pattern is to be prepared for the future, in case we want to manage our
     own files that shouldn't be uploaded
     """
-    return filename == ".DS_Store" or filename.endswith(".pyc") or \
-           filename.endswith(".pyo") or filename == "__pycache__" or \
-           filename.startswith("__conan")
+    return (filename == ".DS_Store" or filename.endswith(".pyc") or
+            filename.endswith(".pyo") or filename == "__pycache__" or
+            filename.startswith("__conan"))
 
 
 def gather_files(folder):
@@ -39,7 +39,10 @@ def gather_files(folder):
             else:
                 if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
                     raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'"
+                                         "you are packaging the needed destination files: '%s'."
+                                         "You can skip this check adjusting the "
+                                         "'general.skip_broken_symlinks_check' at the conan.conf "
+                                         "file."
                                          % abs_path)
 
     return file_dict, symlinks

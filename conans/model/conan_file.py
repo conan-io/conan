@@ -5,7 +5,7 @@ from conans.client import tools
 from conans.client.output import Color, ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -59,7 +59,7 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanException("Error while initializing settings. %s" % str(e))
+        raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
 
 
 @contextmanager
@@ -132,6 +132,7 @@ class ConanFile(object):
         self.options = create_options(self)
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
+
         try:
             if self.settings.os_build and self.settings.os:
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
@@ -144,6 +145,10 @@ class ConanFile(object):
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
         except ConanException:
             pass
+
+        if 'cppstd' in self.settings.fields:
+            self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                             " please update your recipe.")
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time

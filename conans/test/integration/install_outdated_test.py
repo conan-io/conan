@@ -81,7 +81,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("upload Hello0/0.1@lasote/stable")
 
         # Now, with the new_client, remove only the binary package from Hello0
-        rmdir(new_client.cache.packages(self.ref))
+        rmdir(new_client.cache.package_layout(self.ref).packages())
         # And try to install Hello1 again, should not complain because the remote
         # binary is in the "same version" than local cached Hello0
         new_client.run("install Hello1/0.1@lasote/stable --build outdated")
@@ -121,12 +121,12 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("upload Hello0/0.1@lasote/stable")
 
         # Now, with the new_client, remove only the binary package from Hello0
-        rmdir(new_client.cache.packages(self.ref))
+        rmdir(new_client.cache.package_layout(self.ref).packages())
         # And try to install Hello1 again, should not complain because the remote
         # binary is in the "same version" than local cached Hello0
         new_client.run("install Hello1/0.1@lasote/stable --build outdated --build Hello1")
         self.assertIn("Downloading conan_package.tgz", new_client.user_io.out)
-        self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
+        self.assertIn("Hello1/0.1@lasote/stable: Forced build from source",
                       new_client.user_io.out)
 
     def install_outdated_checking_updates_test(self):

@@ -9,7 +9,8 @@ from conans.client import defs_to_string, join_arguments, tools
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     get_generator, is_multi_configuration, verbose_definition, verbose_definition_name, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
-    cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform
+    cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
+    is_generator_platform_supported, is_toolset_supported
 from conans.client.output import ConanOutput
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -23,7 +24,7 @@ class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None, make_program=None,
-                 set_cmake_flags=False, msbuild_verbosity=None, cmake_program=None,
+                 set_cmake_flags=False, msbuild_verbosity="minimal", cmake_program=None,
                  generator_platform=None):
         """
         :param conanfile: Conanfile instance
@@ -50,7 +51,8 @@ class CMake(object):
         self._cmake_program = os.getenv("CONAN_CMAKE_PROGRAM") or cmake_program or "cmake"
 
         self.generator = generator or get_generator(conanfile.settings)
-        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings)
+        self.generator_platform = generator_platform or get_generator_platform(conanfile.settings,
+                                                                               self.generator)
         if not self.generator:
             self._conanfile.output.warn("CMake generator could not be deduced from settings")
         self.parallel = parallel
@@ -68,8 +70,7 @@ class CMake(object):
         self.definitions = builder.get_definitions()
         self.toolset = toolset or get_toolset(self._settings)
         self.build_dir = None
-        self.msbuild_verbosity = (os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity or
-                                  "minimal")
+        self.msbuild_verbosity = os.getenv("CONAN_MSBUILD_VERBOSITY") or msbuild_verbosity
 
     @property
     def build_folder(self):
@@ -117,12 +118,22 @@ class CMake(object):
     def command_line(self):
         args = ['-G "%s"' % self.generator] if self.generator else []
         if self.generator_platform:
-            args.append('-A "%s"' % self.generator_platform)
+            if is_generator_platform_supported(self.generator):
+                args.append('-A "%s"' % self.generator_platform)
+            else:
+                raise ConanException('CMake does not support generator platform with generator "%s:.'
+                                     'Please check your conan profile to either remove the generator'
+                                     ' platform, or change the CMake generator.' % self.generator)
         args.append(self.flags)
         args.append('-Wno-dev')
 
         if self.toolset:
-            args.append('-T "%s"' % self.toolset)
+            if is_toolset_supported(self.generator):
+                args.append('-T "%s"' % self.toolset)
+            else:
+                raise ConanException('CMake does not support toolsets with generator "%s:.'
+                                     'Please check your conan profile to either remove the toolset,'
+                                     ' or change the CMake generator.' % self.generator)
         return join_arguments(args)
 
     @property

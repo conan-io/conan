@@ -35,17 +35,14 @@ class Node(object):
         self.build_require = False
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
-        # all the public deps to which this node belongs
+
+        # The dependencies that can conflict to downstream consumers
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
+        # The dependencies that will be part of deps_cpp_info, can't conflict
         self.public_closure = None  # {ref.name: Node}
+        self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
-
-    def update_ancestors(self, ancestors):
-        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
-        self.ancestors.update(ancestors)
-        for n in self.neighbors():
-            n.update_ancestors(ancestors)
 
     @property
     def package_id(self):
@@ -88,6 +85,12 @@ class Node(object):
 
     def private_neighbors(self):
         return [edge.dst for edge in self.dependencies if edge.private]
+
+    def make_public(self):
+        self.private = False
+        for edge in self.dependencies:
+            if not edge.private:
+                edge.dst.make_public()
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]

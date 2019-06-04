@@ -3,6 +3,7 @@ import os
 import unittest
 from collections import OrderedDict
 
+from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
@@ -62,16 +63,17 @@ class UserTest(unittest.TestCase):
         client.run('user john')
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
                       client.out)
-        self.assertEqual(('john', None), client.localdb.get_login(test_server.fake_url))
+        localdb = LocalDB.create(client.cache.localdb)
+        self.assertEqual(('john', None), localdb.get_login(test_server.fake_url))
 
         client.run('user will')
         self.assertIn("Changed user of remote 'default' from 'john' to 'will'", client.out)
-        self.assertEqual(('will', None), client.localdb.get_login(test_server.fake_url))
+        self.assertEqual(('will', None), localdb.get_login(test_server.fake_url))
 
         client.run('user None')
         self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
                       client.out)
-        self.assertEqual((None, None), client.localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
@@ -93,7 +95,8 @@ class UserTest(unittest.TestCase):
         conan.run('user none')
         self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
                       conan.out)
-        self.assertEqual((None, None), conan.localdb.get_login(test_server.fake_url))
+        localdb = LocalDB.create(conan.cache.localdb)
+        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
         conan.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", conan.out)
 

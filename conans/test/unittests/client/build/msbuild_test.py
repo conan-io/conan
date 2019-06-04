@@ -8,6 +8,7 @@ import six
 from parameterized import parameterized
 
 from conans.client import tools
+from conans.client.tools.files import chdir
 from conans.client.build.msbuild import MSBuild
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -151,6 +152,36 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
+
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def skip_toolset_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "arch": "x86_64"})
+
+        class Runner(object):
+
+            def __init__(self):
+                self.commands = []
+
+            def __call__(self, *args, **kwargs):
+                self.commands.append(args[0])
+
+        with chdir(tools.mkdir_tmp()):
+            runner = Runner()
+            conanfile = MockConanfile(settings, runner=runner)
+            msbuild = MSBuild(conanfile)
+            msbuild.build("myproject", toolset=False)
+            self.assertEqual(len(runner.commands), 1)
+            self.assertNotIn("PlatformToolset", runner.commands[0])
+
+            runner = Runner()
+            conanfile = MockConanfile(settings, runner=runner)
+            msbuild = MSBuild(conanfile)
+            msbuild.build("myproject", toolset="mytoolset")
+            self.assertEqual(len(runner.commands), 1)
+            self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
 
     @parameterized.expand([("v142",),
                            ("v141",),

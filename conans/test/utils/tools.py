@@ -15,7 +15,6 @@ from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
 import bottle
-import nose
 import requests
 import six
 import time
@@ -23,18 +22,19 @@ from mock import Mock
 from six import StringIO
 from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
+from requests.exceptions import HTTPError
 
-from conans import tools, load
+from conans import tools, load, __version__
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan, get_request_timeout, migrate_and_get_cache
-from conans.client.conan_command_output import CommandOutputer
+from conans.client.conan_api import Conan
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -48,7 +48,6 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
@@ -56,16 +55,24 @@ from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
+from conans.client.rest.rest_client import RestApiClient
+from conans.client.store.localdb import LocalDB
+from conans.client.rest.auth_manager import ConanApiAuthManager
+from conans.client.remote_manager import RemoteManager
+from conans.client.migrations import ClientMigrator
+from conans.model.version import Version
+
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-ARTIFACTORY_DEFAULT_USER = "admin"
-ARTIFACTORY_DEFAULT_PASSWORD = "password"
-ARTIFACTORY_DEFAULT_URL = "http://localhost:8090/artifactory"
+
+ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
+ARTIFACTORY_DEFAULT_PASSWORD = os.getenv("ARTIFACTORY_DEFAULT_PASSWORD", "password")
+ARTIFACTORY_DEFAULT_URL = os.getenv("ARTIFACTORY_DEFAULT_URL", "http://localhost:8090/artifactory")
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(reference)
-    path = cache.export(ref)
+    path = cache.package_layout(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -73,7 +80,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     pref = PackageReference.loads(package_reference)
-    path = cache.package(pref)
+    path = cache.package_layout(pref.ref).package(pref)
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -107,6 +114,18 @@ class TestingResponse(object):
     @property
     def ok(self):
         return self.test_response.status_code == 200
+
+    def raise_for_status(self):
+        """Raises stored :class:`HTTPError`, if one occurred."""
+        http_error_msg = ''
+        if 400 <= self.status_code < 500:
+            http_error_msg = u'%s Client Error: %s' % (self.status_code, self.content)
+
+        elif 500 <= self.status_code < 600:
+            http_error_msg = u'%s Server Error: %s' % (self.status_code, self.content)
+
+        if http_error_msg:
+            raise HTTPError(http_error_msg, response=self)
 
     @property
     def content(self):
@@ -295,15 +314,13 @@ class ArtifactoryServerStore(object):
 
 class ArtifactoryServer(object):
 
-    def __init__(self, url=None, user=None, password=None, server_capabilities=None):
-        self._user = user or ARTIFACTORY_DEFAULT_USER
-        self._password = password or ARTIFACTORY_DEFAULT_PASSWORD
-        self._url = url or ARTIFACTORY_DEFAULT_URL
+    def __init__(self, *args, **kwargs):
+        self._user = ARTIFACTORY_DEFAULT_USER
+        self._password = ARTIFACTORY_DEFAULT_PASSWORD
+        self._url = ARTIFACTORY_DEFAULT_URL
         self._repo_name = "conan_{}".format(str(uuid.uuid4()).replace("-", ""))
         self.create_repository()
         self.server_store = ArtifactoryServerStore(self.repo_url, self._user, self._password)
-        if server_capabilities is not None:
-            raise nose.SkipTest("The Artifactory Server can't adjust capabilities")
 
     @property
     def _auth(self):
@@ -755,13 +772,7 @@ servers["r2"] = TestServer()
         finally:
             self.current_folder = old_dir
 
-    def _init_collaborators(self, user_io=None):
-
-        output = TestBufferConanOutput()
-        self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, output)
-        self.runner = TestRunner(output, runner=self.conan_runner)
-
+    def _get_http_requester(self):
         # Check if servers are real
         real_servers = False
         for server in self.servers.values():
@@ -769,32 +780,48 @@ servers["r2"] = TestServer()
                 real_servers = True
                 break
 
-        with tools.environment_append(self.cache.config.env_vars):
-            if real_servers:
-                requester = requests.Session()
+        http_requester = None
+        if not real_servers:
+            if self.requester_class:
+                http_requester = self.requester_class(self.servers)
             else:
-                if self.requester_class:
-                    requester = self.requester_class(self.servers)
-                else:
-                    requester = TestRequester(self.servers)
 
-            self.requester = ConanRequester(requester, self.cache,
-                                            get_request_timeout())
-
-            self.hook_manager = HookManager(self.cache.hooks_path,
-                                            get_env("CONAN_HOOKS", list()), self.user_io.out)
-
-            self.localdb, self.rest_api_client, self.remote_manager = \
-                Conan.instance_remote_manager(self.requester, self.cache,
-                                              self.user_io, self.hook_manager)
-            return output, self.requester
+                http_requester = TestRequester(self.servers)
+        return http_requester
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
-        self.cache = migrate_and_get_cache(self.base_folder, TestBufferConanOutput())
+        output = TestBufferConanOutput()
+        self.user_io = user_io or MockedUserIO(self.users, out=output)
+        self.cache = ClientCache(self.base_folder, output)
 
-        # Maybe something have changed with migrations
-        return self._init_collaborators(user_io)
+        # Migration system
+        migrator = ClientMigrator(self.cache, Version(__version__), output)
+        migrator.migrate()
+
+        http_requester = self._get_http_requester()
+        config = self.cache.config
+        if self.conan_runner:
+            self.runner = self.conan_runner
+        else:
+            self.runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
+                                      config.log_run_to_output, output=output)
+
+        self.requester = ConanRequester(config, http_requester)
+        self.hook_manager = HookManager(self.cache.hooks_path, config.hooks, self.user_io.out)
+
+        put_headers = self.cache.read_put_headers()
+        self.rest_api_client = RestApiClient(self.user_io.out, self.requester,
+                                             revisions_enabled=config.revisions_enabled,
+                                             put_headers=put_headers)
+        # To store user and token
+        self.localdb = LocalDB.create(self.cache.localdb)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
+        # Handle remote connections
+        self.remote_manager = RemoteManager(self.cache, auth_manager, self.user_io.out,
+                                            self.hook_manager)
+        return output, self.requester
 
     def run(self, command_line, user_io=None, assert_error=False):
         """ run a single command as in the command line.
@@ -807,13 +834,12 @@ servers["r2"] = TestServer()
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
                           self.hook_manager, requester, interactive=interactive)
-        outputer = CommandOutputer(self.user_io, self.cache)
-        command = Command(conan, self.cache, self.user_io, outputer)
+        command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.cache.conan_folder, "python"))
+        sys.path.append(os.path.join(self.cache.cache_folder, "python"))
         old_modules = list(sys.modules.keys())
 
         old_output, old_requester = set_global_instances(output, requester)
@@ -847,7 +873,7 @@ servers["r2"] = TestServer()
 
     def run_command(self, command):
         self.all_output += str(self.out)
-        self.init_dynamic_vars() # Resets the output
+        self.init_dynamic_vars()  # Resets the output
         return self.runner(command, cwd=self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
@@ -857,6 +883,7 @@ servers["r2"] = TestServer()
         path = path or self.current_folder
         if clean_first:
             shutil.rmtree(self.current_folder, ignore_errors=True)
+        files = {f: str(content) for f, content in files.items()}
         save_files(path, files)
         if not files:
             mkdir(self.current_folder)
@@ -976,8 +1003,8 @@ class TurboTestClient(TestClient):
     def init_svn_repo(self, subpath, files=None, repo_url=None):
         if not repo_url:
             repo_url = create_remote_svn_repo(temp_folder())
-        url, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                             rel_project_path=subpath, delete_checkout=False)
+        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
+                                           rel_project_path=subpath, delete_checkout=False)
         return rev
 
 
@@ -991,8 +1018,8 @@ class GenConanfile(object):
         with_default_option("shared", True).\
         with_build_msg("holaaa").\
         with_build_msg("adiooos").\
-        with_package_file("file.txt", "hola"). \
-        with_package_file("file2.txt", "hola").gen()
+        with_package_file("file.txt", "hola").\
+        with_package_file("file2.txt", "hola")
     """
 
     def __init__(self):
@@ -1039,11 +1066,11 @@ class GenConanfile(object):
     def with_package_file(self, file_name, contents=None, env_var=None):
         if not contents and not env_var:
             raise Exception("Specify contents or env_var")
+        self.with_import("import os")
         self.with_import("from conans import tools")
         if contents:
             self._package_files[file_name] = contents
         if env_var:
-            self.with_import("import os")
             self._package_files_env[file_name] = env_var
         return self
 

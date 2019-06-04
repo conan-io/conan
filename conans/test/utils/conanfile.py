@@ -59,7 +59,7 @@ class MockConanfile(ConanFile):
 class TestConanFile(object):
     def __init__(self, name="Hello", version="0.1", settings=None, requires=None, options=None,
                  default_options=None, package_id=None, build_requires=None, info=None,
-                 private_requires=None):
+                 private_requires=None, private_first=False):
         self.name = name
         self.version = version
         self.settings = settings
@@ -70,6 +70,7 @@ class TestConanFile(object):
         self.default_options = default_options
         self.package_id = package_id
         self.info = info
+        self.private_first = private_first
 
     def __repr__(self):
         base = """from conans import ConanFile
@@ -81,8 +82,12 @@ class {name}Conan(ConanFile):
         if self.settings:
             base += "    settings = %s\n" % self.settings
         if self.requires or self.private_requires:
-            reqs_list = ['"%s"' % r for r in self.requires or []]
-            reqs_list.extend(["('%s', 'private')" % r for r in self.private_requires or []])
+            if self.private_first:
+                reqs_list = ["('%s', 'private')" % r for r in self.private_requires or []]
+                reqs_list.extend(['"%s"' % r for r in self.requires or []])
+            else:
+                reqs_list = ['"%s"' % r for r in self.requires or []]
+                reqs_list.extend(["('%s', 'private')" % r for r in self.private_requires or []])
             reqs_list.append("")
             base += "    requires = %s\n" % (", ".join(reqs_list))
         if self.build_requires:

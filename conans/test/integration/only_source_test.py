@@ -65,12 +65,12 @@ class DefaultNameConan(ConanFile):
         # Now Hello2 should be built and not fail
         client.run("create . lasote/stable")
         self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.user_io.out)
-        self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
+        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
                       client.user_io.out)
 
         # Now package is generated but should be built again
         client.run("create . lasote/stable")
-        self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
+        self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
                       client.user_io.out)
 
     def build_policies_update_test(self):
@@ -158,8 +158,8 @@ class MyPackage(ConanFile):
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
 
-        self.assertTrue(os.path.exists(client.cache.builds(ref)))
-        self.assertTrue(os.path.exists(client.cache.packages(ref)))
+        self.assertTrue(os.path.exists(client.cache.package_layout(ref).builds()))
+        self.assertTrue(os.path.exists(client.cache.package_layout(ref).packages()))
 
         # Upload
         client.run("upload %s --all" % str(ref))
@@ -167,28 +167,28 @@ class MyPackage(ConanFile):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(ref))
-        self.assertFalse(os.path.exists(other_conan.cache.builds(ref)))
-        self.assertTrue(os.path.exists(other_conan.cache.packages(ref)))
+        self.assertFalse(os.path.exists(other_conan.cache.package_layout(ref).builds()))
+        self.assertTrue(os.path.exists(other_conan.cache.package_layout(ref).packages()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build" % str(ref))
-        self.assertTrue(os.path.exists(other_conan.cache.builds(ref)))
-        self.assertTrue(os.path.exists(other_conan.cache.packages(ref)))
+        self.assertTrue(os.path.exists(other_conan.cache.package_layout(ref).builds()))
+        self.assertTrue(os.path.exists(other_conan.cache.package_layout(ref).packages()))
 
         # Use an invalid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid" % str(ref))
         self.assertIn("No package matching 'HelloInvalid' pattern", other_conan.user_io.out)
-        self.assertFalse(os.path.exists(other_conan.cache.builds(ref)))
-        # self.assertFalse(os.path.exists(other_conan.cache.packages(ref)))
+        self.assertFalse(os.path.exists(other_conan.cache.package_layout(ref).builds()))
+        # self.assertFalse(os.path.exists(other_conan.cache.package_layout(ref).packages()))
 
         # Use another valid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid -b Hello" % str(ref))
         self.assertIn("No package matching 'HelloInvalid' pattern", other_conan.user_io.out)
-        # self.assertFalse(os.path.exists(other_conan.cache.builds(ref)))
-        # self.assertFalse(os.path.exists(other_conan.cache.packages(ref)))
+        # self.assertFalse(os.path.exists(other_conan.cache.package_layout(ref).builds()))
+        # self.assertFalse(os.path.exists(other_conan.cache.package_layout(ref).packages()))
 
         # Now even if the package is in local store, check that's rebuilded
         other_conan.run("install %s -b Hello*" % str(ref))

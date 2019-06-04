@@ -18,7 +18,7 @@ class SystemPackageTool(object):
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info, output=self._output)
         self._tool._sudo_str = self._get_sudo_str()
-        self._tool._runner = runner or ConanRunner()
+        self._tool._runner = runner or ConanRunner(output=self._output)
         self._tool._recommends = recommends
 
     @staticmethod
@@ -48,7 +48,8 @@ class SystemPackageTool(object):
         mode = get_env("CONAN_SYSREQUIRES_MODE", "enabled")
         mode_lower = mode.lower()
         if mode_lower not in allowed_modes:
-            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r" % (mode, allowed_modes))
+            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r"
+                                 % (mode, allowed_modes))
         return mode_lower
 
     @staticmethod
@@ -97,14 +98,15 @@ class SystemPackageTool(object):
         if mode in ("verify", "disabled"):
             # Report to output packages need to be installed
             if mode == "disabled":
-                self._output.info("The following packages need to be installed:\n %s" % "\n".join(packages))
+                self._output.info("The following packages need to be installed:\n %s"
+                                  % "\n".join(packages))
                 return
 
             if mode == "verify" and not self._installed(packages):
-                self._output.error("The following packages need to be installed:\n %s" % "\n".join(packages))
-                raise ConanException(
-                    "Aborted due to CONAN_SYSREQUIRES_MODE=%s. Some system packages need to be installed" % mode
-                )
+                self._output.error("The following packages need to be installed:\n %s"
+                                   % "\n".join(packages))
+                raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                                     "Some system packages need to be installed" % mode)
 
         if not force and self._installed(packages):
             return
@@ -148,8 +150,8 @@ class NullTool(BaseTool):
         pass
 
     def install(self, package_name):
-        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or "
-                            "FreeBSD with pkg or Solaris with pkgutil")
+        self._output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or"
+                          " FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False
@@ -168,11 +170,13 @@ class AptTool(BaseTool):
 
     def install(self, package_name):
         recommends_str = '' if self._recommends else '--no-install-recommends '
-        _run(self._runner, "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name),
+        _run(self._runner,
+             "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name),
              output=self._output)
 
     def installed(self, package_name):
-        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
+        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\""
+                                 % package_name, None)
         return exit_code == 0
 
 
