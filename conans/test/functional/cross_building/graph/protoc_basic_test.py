@@ -50,6 +50,10 @@ class ClassicProtocExample(GraphManagerTest):
             
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
+                
+            def package_info(self):
+                self.env_info.PATH.append(os.path.join(self.package_folder, "bin"))
+                self.env_info["OTHER"] = "protoc"
     """)
 
     application = textwrap.dedent("""
@@ -66,7 +70,8 @@ class ClassicProtocExample(GraphManagerTest):
                 self.build_requires("protoc/testing@user/channel")
             
             def build(self):
-                self.output.info(">> settings.os:".format(self.settings.os))
+                self.output.info(">> settings.os: {}".format(self.settings.os))
+                self.output.info(">> deps_env_info: {}".format(self.deps_env_info["protoc"]))
     """)
 
     settings_yml = textwrap.dedent("""

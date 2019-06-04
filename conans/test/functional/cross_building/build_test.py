@@ -25,6 +25,7 @@ class CrossBuilding(ClassicProtocExample):
     """)
 
     protoc = textwrap.dedent("""
+        import os
         from conans import ConanFile
 
         class Protoc(ConanFile):
@@ -33,9 +34,17 @@ class CrossBuilding(ClassicProtocExample):
 
             settings = "os"
             requires = "protobuf/testing@user/channel"
-
+            options = {"target": "ANY"}
+            default_options = {"target": "None"}
+            
             def build(self):
                 self.output.info(">> settings.os: {}".format(self.settings.os))
+                self.output.info(">> options.target: {}".format(self.options.target))
+                
+            def package_info(self):
+                if self.settings.os == "Build":
+                    self.env_info.PATH.append(os.path.join(self.package_folder, "bin"))
+                self.env_info.context = str(self.settings.os)                
     """)
 
     gtest = textwrap.dedent("""
@@ -71,6 +80,9 @@ class CrossBuilding(ClassicProtocExample):
 
             def build(self):
                 self.output.info(">> settings.os: {}".format(self.settings.os))
+                for key, value in self.deps_env_info["protoc"].vars.items():
+                    self.output.info(">> protoc/env_info: {}={}".format(key, value))
+                
     """)
 
     settings_yml = textwrap.dedent("""
@@ -118,3 +130,6 @@ class CrossBuilding(ClassicProtocExample):
         # Check build packages
         self.assertIn("protoc/testing@user/channel: >> settings.os: Build", self.t.out)
         self.assertIn("protobuf/testing@user/channel: >> settings.os: Build", self.t.out)
+
+        # Check env_info
+        self.assertIn("application/testing@user/channel: >> protoc/env_info: context=Host", self.t.out)  # TODO: Here I expect to get the BR("build") one

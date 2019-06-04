@@ -20,7 +20,7 @@ class ClassicProtocExample(GraphManagerTest):
         Note.- For the description of this graph check test in 'protoc_basic_test'
 
         This test is constraining the settings inside the recipes. It make sense that Conan
-        only validates (and contrain) the settings within the build context of the
+        only validates (and constrain) the settings within the build context of the
         package
     """
 
