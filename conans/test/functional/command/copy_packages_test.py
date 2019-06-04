@@ -27,8 +27,8 @@ class Pkg(ConanFile):
         packages = os.listdir(pkgdir)
         self.assertEqual(len(packages), 3)
 
-        # Copy just one
-        client.run("copy Hello0/0.1@lasote/stable pepe/stable -p %s" % packages[0])
+        # Copy just one with --package argument
+        client.run("copy Hello0/0.1@lasote/stable:%s pepe/stable" % packages[0])
         pkgdir = client.cache.package_layout(ConanFileReference.loads("Hello0/0.1@pepe/stable")).packages()
         packages = os.listdir(pkgdir)
         self.assertEqual(len(packages), 1)
