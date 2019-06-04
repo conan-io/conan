@@ -406,8 +406,8 @@ class CMakeTest(unittest.TestCase):
         conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
         conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         with tools.chdir(self.tempdir):
-            linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                          '-DCMAKE_SYSROOT="/path/to/sysroot"' \
+            linux_stuff = ' -DCMAKE_SYSTEM_NAME="Linux"' \
+                          ' -DCMAKE_SYSROOT="/path/to/sysroot"' \
                           if platform.system() != "Linux" else ""
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
@@ -419,7 +419,7 @@ class CMakeTest(unittest.TestCase):
             flags_in_local_cache = flags.format(' -D' + cmake_in_local_cache_var_name + '="ON"')
             flags_no_local_cache = flags.format(' -D' + cmake_in_local_cache_var_name + '="OFF"')
 
-            base_cmd = 'cmake -G "{generator}" {{flags}} {linux_stuff} -Wno-dev'
+            base_cmd = 'cmake -G "{generator}" {{flags}}{linux_stuff} -Wno-dev'
             base_cmd = base_cmd.format(generator=generator, linux_stuff=linux_stuff)
             full_cmd = "cd {build_expected} && {base_cmd} {source_expected}"
 
