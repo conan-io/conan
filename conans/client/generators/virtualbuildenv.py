@@ -13,8 +13,11 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
         if compiler == "Visual Studio":
             self.env = VisualStudioBuildEnvironment(conanfile).vars_dict
             settings_vars = vcvars_dict(conanfile.settings, output=conanfile.output)
-            for env_var in self.env:
-                self.env[env_var].extend(settings_vars.pop(env_var, []))
+            # self.env has higher priority, so only extend (append) to it.
+            for name, value in self.env.items():
+                if isinstance(value, list):
+                    value.extend(settings_vars.pop(name, []))
+
             self.env.update(settings_vars)
         else:
             self.env = AutoToolsBuildEnvironment(conanfile).vars_dict
@@ -23,8 +26,9 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
     def content(self):
         tmp = super(VirtualBuildEnvGenerator, self).content
         ret = {}
+        # The generic virtualenv generator contents, but with the name "xxx_build.xxx"
         for name, value in tmp.items():
-            tmp = name.split(".")
-            ret["%s_build.%s" % (tmp[0], tmp[1])] = value
+            filename, ext = name.split(".")
+            ret["%s_build.%s" % (filename, ext)] = value
 
         return ret

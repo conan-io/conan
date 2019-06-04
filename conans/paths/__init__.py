@@ -50,6 +50,7 @@ DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
 PACKAGE_METADATA = "metadata.json"
 CACERT_FILE = "cacert.pem"  # Server authorities file
+DATA_YML = "conandata.yml"
 
 # Directories
 EXPORT_FOLDER = "export"

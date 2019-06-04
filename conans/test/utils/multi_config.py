@@ -17,8 +17,10 @@ class {name}Conan(ConanFile):
             self.run(cmd)
             self.run("cmake --build . --config Debug")
             self.run("cmake --build . --config Release")
+            self.run("cmake --build . --config RelWithDebInfo")
+            self.run("cmake --build . --config MinSizeRel")
         else:
-            for config in ("Debug", "Release"):
+            for config in ("Debug", "Release", "RelWithDebInfo", "MinSizeRel"):
                 self.output.info("Building %s" % config)
                 self.run('cmake "%s" %s -DCMAKE_BUILD_TYPE=%s'
                          % (self.source_folder, cmake.command_line, config))
@@ -35,10 +37,17 @@ class {name}Conan(ConanFile):
     def package_info(self):
         self.cpp_info.release.libs = ["hello{name}"]
         self.cpp_info.debug.libs = ["hello{name}_d"]
+        self.cpp_info.relwithdebinfo.libs = ["hello{name}_relwithdebinfo"]
+        self.cpp_info.minsizerel.libs = ["hello{name}_minsizerel"]
+
         self.cpp_info.release.defines = ['HELLO{name}DEFINE="Release"',
                                          'HELLO{name}BUILD="Release"']
         self.cpp_info.debug.defines = ['HELLO{name}DEFINE="Debug"',
                                        'HELLO{name}BUILD="Debug"']
+        self.cpp_info.relwithdebinfo.defines = ['HELLO{name}DEFINE="RelWithDebInfo"',
+                                                'HELLO{name}BUILD="RelWithDebInfo"']
+        self.cpp_info.minsizerel.defines = ['HELLO{name}DEFINE="MinSizeRel"',
+                                            'HELLO{name}BUILD="MinSizeRel"']
 """
 
 testconanfile = """
@@ -111,9 +120,13 @@ conan_basic_setup()
 
 add_library(hello{name} hello.cpp)
 set_target_properties(hello{name} PROPERTIES DEBUG_POSTFIX _d)
+set_target_properties(hello{name} PROPERTIES MINSIZEREL_POSTFIX _minsizerel)
+set_target_properties(hello{name} PROPERTIES RELWITHDEBINFO_POSTFIX _relwithdebinfo)
 conan_target_link_libraries(hello{name})
 add_executable(say_hello main.cpp)
 set_target_properties(say_hello PROPERTIES DEBUG_POSTFIX _d)
+set_target_properties(hello{name} PROPERTIES MINSIZEREL_POSTFIX _minsizerel)
+set_target_properties(hello{name} PROPERTIES RELWITHDEBINFO_POSTFIX _relwithdebinfo)
 target_link_libraries(say_hello hello{name})
 
 """

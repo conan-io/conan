@@ -318,7 +318,7 @@ class SVN(SCMBase):
     def get_qualified_remote_url(self, remove_credentials=False):
         # Return url with peg revision
         url = self.get_remote_url(remove_credentials=remove_credentials)
-        revision = self.get_last_changed_revision()
+        revision = self.get_revision()
         return "{url}@{revision}".format(url=url, revision=revision)
 
     def is_local_repository(self):

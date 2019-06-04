@@ -6,6 +6,8 @@ from textwrap import dedent
 import six
 import time
 
+from parameterized.parameterized import parameterized
+
 from conans.client import tools
 from conans.errors import ConanException
 from conans.model.workspace import Workspace
@@ -188,7 +190,8 @@ class WorkspaceTest(unittest.TestCase):
             for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
-    def multiple_roots_test(self):
+    @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])
+    def multiple_roots_test(self, root_attribute_format):
         # https://github.com/conan-io/conan/issues/4720
         client = TestClient()
 
@@ -201,6 +204,14 @@ class WorkspaceTest(unittest.TestCase):
         client.save(files("A", "C"), path=os.path.join(client.current_folder, "A"))
         client.save(files("B", "D"), path=os.path.join(client.current_folder, "B"))
 
+        # https://github.com/conan-io/conan/issues/5155
+        roots = ["HelloA/0.1@lasote/stable", "HelloB/0.1@lasote/stable"]
+        root_attribute = {
+            "csv": ", ".join(roots),
+            "list": "".join(["\n    - %s" % r for r in roots]),
+            "abbreviated_list": str(roots),
+        }[root_attribute_format]
+
         project = dedent("""
             editables:
                 HelloD/0.1@lasote/stable:
@@ -212,11 +223,11 @@ class WorkspaceTest(unittest.TestCase):
                 HelloA/0.1@lasote/stable:
                     path: A
             layout: layout
-            root: HelloA/0.1@lasote/stable, HelloB/0.1@lasote/stable
-            """)
+            root: {root_attribute}
+            """).format(root_attribute=root_attribute)
+
         layout = dedent("""
             [build_folder]
-
             """)
         client.save({"conanws.yml": project,
                      "layout": layout})

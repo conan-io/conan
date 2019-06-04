@@ -21,6 +21,7 @@ from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_client_conf, default_settings_yml
 from conans.client.output import ConanOutput
+from conans.client.runner import ConanRunner
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import check_output, OSInfo
 from conans.client.tools.win import vcvars_dict, vswhere
@@ -28,10 +29,8 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
-from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, \
-    TestBufferConanOutput, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
@@ -415,13 +414,13 @@ class HelloConan(ConanFile):
         settings.compiler.version = "14"
         cmd = tools.vcvars_command(settings, output=self.output)
         output = TestBufferConanOutput()
-        runner = TestRunner(output)
+        runner = ConanRunner(print_commands_to_output=True, output=output)
         runner(cmd + " && set vs140comntools")
         self.assertIn("vcvarsall.bat", str(output))
         self.assertIn("VS140COMNTOOLS=", str(output))
         with tools.environment_append({"VisualStudioVersion": "14"}):
             output = TestBufferConanOutput()
-            runner = TestRunner(output)
+            runner = ConanRunner(print_commands_to_output=True, output=output)
             cmd = tools.vcvars_command(settings, output=self.output)
             runner(cmd + " && set vs140comntools")
             self.assertNotIn("vcvarsall.bat", str(output))
@@ -704,19 +703,41 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
 
         # Connection error
+        # Default behaviour
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests)
+        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 1)
+
+        # Retry arguments override defaults
         with six.assertRaisesRegex(self, ConanException, "Error downloading"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
-                           retry=3, retry_wait=0)
+                           retry=2, retry_wait=1)
+        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
+
+        # Retry default values from the config
+        class MockRequester(object):
+            retry = 2
+            retry_wait = 0
+
+            def get(self, *args, **kwargs):
+                return requests.get(*args, **kwargs)
+
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=MockRequester())
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
         # Not found error
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
         with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
-                           retry=3, retry_wait=0)
+                           retry=2, retry_wait=0)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
@@ -728,10 +749,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # overwrite = False
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
-                           retry=3, retry_wait=0, overwrite=False, requester=requests)
+                           retry=2, retry_wait=0, overwrite=False, requester=requests)
 
         # overwrite = True
-        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=2,
                        retry_wait=0, overwrite=True, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
@@ -790,7 +811,13 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["tvOS", "armv8", None, "aarch64-apple-darwin"],
         ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
         ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
-        ["Emscripten", "wasm", None, "wasm32-local-emscripten"]
+        ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
+        ["AIX", "ppc32", None, "rs6000-ibm-aix"],
+        ["AIX", "ppc64", None, "powerpc-ibm-aix"],
+        ["Neutrino", "armv7", None, "arm-nto-qnx"],
+        ["Neutrino", "armv8", None, "aarch64-nto-qnx"],
+        ["Neutrino", "sh4le", None, "sh4-nto-qnx"],
+        ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"]
     ])
     def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
@@ -867,7 +894,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with six.assertRaisesRegex(self, ConanException, "Error"):
             tools.get("http://localhost:%s/error_url" % thread.port,
                       filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
-                      retry=3, retry_wait=0)
+                      retry=2, retry_wait=0)
 
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
@@ -975,6 +1002,7 @@ class HelloConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
+
 
 class CollectLibTestCase(unittest.TestCase):
 

@@ -5,7 +5,7 @@ from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
 from conans.client.tools.win import latest_visual_studio_version_installed
-from conans.client.tools import detected_os
+from conans.client.tools import detected_os, OSInfo
 from conans.model.version import Version
 
 
@@ -49,7 +49,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
                 output.info("gcc>=5, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -70,7 +70,7 @@ def _clang_compiler(output, compiler_exe="clang"):
                 output.info("clang>=8, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -82,7 +82,7 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -128,7 +128,7 @@ def _get_default_compiler(output):
 def _detect_compiler_version(result, output, profile_path):
     try:
         compiler, version = _get_default_compiler(output)
-    except:
+    except Exception:
         compiler, version = None, None
     if not compiler or not version:
         output.error("Unable to find a working compiler")
@@ -178,6 +178,7 @@ def _detect_os_arch(result, output):
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
+
     platform_machine = platform.machine().lower()
     if platform_machine:
         arch = architectures.get(platform_machine, platform_machine)
@@ -189,6 +190,15 @@ def _detect_os_arch(result, output):
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
+        elif the_os == 'AIX':
+            processor = platform.processor()
+            if "powerpc" in processor:
+                kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
+                if kernel_bitness:
+                    arch = "ppc64" if kernel_bitness == "64" else "ppc32"
+            elif "rs6000" in processor:
+                arch = "ppc32"
+
         result.append(("arch", arch))
         result.append(("arch_build", arch))
 

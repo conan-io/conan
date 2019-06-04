@@ -1,6 +1,8 @@
 import os
 import unittest
 
+from requests.exceptions import ConnectionError
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
@@ -45,21 +47,41 @@ class ConanFileToolsTest(ConanFile):
         client.run("upload lib/1.0@lasote/stable -c --all")
 
         class DownloadFilesBrokenRequester(TestRequester):
-
-            def __init__(self, *args, **kwargs):
-                self.first_fail = False
+            def __init__(self, times_to_fail=1, *args, **kwargs):
+                self.times_to_fail = times_to_fail
                 super(DownloadFilesBrokenRequester, self).__init__(*args, **kwargs)
 
             def get(self, url, **kwargs):
                 # conaninfo is skipped sometimes from the output, use manifest
-                if "conanmanifest.txt" in url and not self.first_fail:
-                    self.first_fail = True
+                if "conanmanifest.txt" in url and self.times_to_fail > 0:
+                    self.times_to_fail = self.times_to_fail - 1
                     raise ConnectionError("Fake connection error exception")
                 else:
                     return super(DownloadFilesBrokenRequester, self).get(url, **kwargs)
 
-        client2 = TestClient(servers=servers,
-                             users={"default": [("lasote", "mypass")]},
-                             requester_class=DownloadFilesBrokenRequester)
-        client2.run("install lib/1.0@lasote/stable")
-        self.assertEqual(1, str(client2.out).count("Waiting 0 seconds to retry..."))
+        def DownloadFilesBrokenRequesterTimesOne(*args, **kwargs):
+            return DownloadFilesBrokenRequester(1, *args, **kwargs)
+        client = TestClient(servers=servers,
+                            users={"default": [("lasote", "mypass")]},
+                            requester_class=DownloadFilesBrokenRequesterTimesOne)
+        client.run("install lib/1.0@lasote/stable")
+        self.assertIn("ERROR: Error downloading file", client.out)
+        self.assertIn('Fake connection error exception', client.out)
+        self.assertEqual(1, str(client.out).count("Waiting 0 seconds to retry..."))
+
+        client = TestClient(servers=servers,
+                            users={"default": [("lasote", "mypass")]},
+                            requester_class=DownloadFilesBrokenRequesterTimesOne)
+        client.run('config set general.retry_wait=1')
+        client.run("install lib/1.0@lasote/stable")
+        self.assertEqual(1, str(client.out).count("Waiting 1 seconds to retry..."))
+
+        def DownloadFilesBrokenRequesterTimesTen(*args, **kwargs):
+            return DownloadFilesBrokenRequester(10, *args, **kwargs)
+        client = TestClient(servers=servers,
+                            users={"default": [("lasote", "mypass")]},
+                            requester_class=DownloadFilesBrokenRequesterTimesTen)
+        client.run('config set general.retry=11')
+        client.run('config set general.retry_wait=0')
+        client.run("install lib/1.0@lasote/stable")
+        self.assertEqual(10, str(client.out).count("Waiting 0 seconds to retry..."))

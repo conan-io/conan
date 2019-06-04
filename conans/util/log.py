@@ -18,13 +18,8 @@ class MultiLineFormatter(logging.Formatter):
         return str_
 
 
-def configure_logger():
-    from conans.util.env_reader import get_env
-
+def configure_logger(logging_level=logging.CRITICAL, logging_file=None):
     # #### LOGGER, MOVED FROM CONF BECAUSE OF MULTIPLE PROBLEM WITH CIRCULAR INCLUDES #####
-    logging_level = get_env('CONAN_LOGGING_LEVEL', logging.CRITICAL)
-    logging_file = get_env('CONAN_LOGGING_FILE', None)  # None is stdout
-
     logger = logging.getLogger('conans')
     if logging_file is not None:
         hdlr = logging.FileHandler(logging_file)
@@ -39,6 +34,7 @@ def configure_logger():
     logger.addHandler(hdlr)
     logger.setLevel(logging_level)
     return logger
+
 
 logger = configure_logger()
 
