@@ -368,10 +368,10 @@ class MyLib(ConanFile):
         cmake.configure()
 """
         cmakelists = """
+cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_set_std()
 """
@@ -475,8 +475,8 @@ conan_basic_setup()
         client.run("create . danimtb/testing")
         if platform.system() == "Windows":
             self.assertIn("WARN: CMake generator could not be deduced from settings", client.out)
-            self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="ON" '
-                          '-DCMAKE_INSTALL_PREFIX=', client.out)
+            self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCMAKE_INSTALL_PREFIX=',
+                          client.out)
         else:
-            self.assertIn('Configure command: -G "Unix Makefiles" -DCONAN_EXPORTED="1" '
-                          '-DCONAN_IN_LOCAL_CACHE="ON" -DCMAKE_INSTALL_PREFIX=', client.out)
+            self.assertIn('Configure command: -G "Unix Makefiles" -DCONAN_EXPORTED="1"'
+                          '-DCMAKE_INSTALL_PREFIX=', client.out)

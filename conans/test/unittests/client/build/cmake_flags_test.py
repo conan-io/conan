@@ -1,4 +1,6 @@
 import unittest
+import six
+
 from collections import OrderedDict
 
 from conans.client.build.cmake_flags import CMakeDefinitions
@@ -13,15 +15,15 @@ class CMakeDefinitionsTest(unittest.TestCase):
                                                    ("DEFINE4", False)])
 
     def wrong_init_test(self):
-        with self.assertRaisesRegexp(AssertionError, "Definitions argument needs to be list of "
-                                                     "tuples or an OrderedDict to preserve the "
-                                                     "order of items"):
+        with six.assertRaisesRegex(self, AssertionError, "Definitions argument needs to be list of "
+                                                         "tuples or an OrderedDict to preserve the "
+                                                         "order of items"):
             CMakeDefinitions(["1", "2", "3"]).result()
 
     def not_ordered_dict_init_test(self):
-        with self.assertRaisesRegexp(AssertionError, "Definitions argument needs to be list of "
-                                                     "tuples or an OrderedDict to preserve the "
-                                                     "order of items"):
+        with six.assertRaisesRegex(self, AssertionError, "Definitions argument needs to be list of "
+                                                         "tuples or an OrderedDict to preserve the "
+                                                         "order of items"):
             CMakeDefinitions({"1": 1, "2": 2, "3": 3})
 
     def set_key_test(self):
@@ -37,16 +39,16 @@ class CMakeDefinitionsTest(unittest.TestCase):
         Setting another value to a key is not allowed. Assignment of value can only be done once
         """
         self.assertEqual("real_value", self.cmake_definitions.result()["DEFINE2"])
-        with self.assertRaisesRegexp(AssertionError,
-                                     "Key 'DEFINE2' already has a value assigned: 'real_value'"):
+        with six.assertRaisesRegex(self, AssertionError,
+                                   "Key 'DEFINE2' already has a value assigned: 'real_value'"):
             self.cmake_definitions.set("DEFINE2", "value")
 
     def set_new_key_test(self):
         """
         New keys are not allowed unless they are previously set
         """
-        with self.assertRaisesRegexp(AssertionError,
-                                     "Key 'DEFINE5' not previously set in dictionary"):
+        with six.assertRaisesRegex(self, AssertionError,
+                                   "Key 'DEFINE5' not previously set in dictionary"):
             self.cmake_definitions.set("DEFINE5", "value")
 
     def get_result_test(self):
@@ -66,8 +68,8 @@ class CMakeDefinitionsTest(unittest.TestCase):
         self.assertEqual("real_value", self.cmake_definitions.get("DEFINE2"))
         self.assertEqual("", self.cmake_definitions.get("DEFINE3"))
         self.assertFalse(self.cmake_definitions.get("DEFINE4"))
-        with self.assertRaisesRegexp(AssertionError,
-                                     "Key 'DEFINE5' not previously set in dictionary"):
+        with six.assertRaisesRegex(self, AssertionError,
+                                   "Key 'DEFINE5' not previously set in dictionary"):
             self.cmake_definitions.get("DEFINE5")
 
     def update_test(self):
@@ -83,7 +85,7 @@ class CMakeDefinitionsTest(unittest.TestCase):
         Check dictionary is not updated with repeated keys
         """
         previous_values = {"DEFINE1": "NEW_CONTENT"}
-        with self.assertRaisesRegexp(AssertionError,
-                                     "Key 'DEFINE5' previously set in dictionary"):
+        with six.assertRaisesRegex(self, AssertionError,
+                                   "Key 'DEFINE1' previously set in dictionary"):
             self.cmake_definitions.update(previous_values)
-        self.assertEqual("NEW_CONTENT", self.cmake_definitions.result()["DEFINE1"])
+        self.assertNotIn("DEFINE1", self.cmake_definitions.result().keys())
