@@ -308,5 +308,3 @@ class RestV1Methods(RestCommonMethods):
 
     def get_latest_package_revision(self, pref):
         raise NoRestV2Available("The remote doesn't support revisions")
-
-
