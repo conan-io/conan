@@ -428,28 +428,28 @@ class CMakeTest(unittest.TestCase):
 
             cmake = CMake(conanfile)
             cmake.configure(source_dir="../subdir", build_dir="build")
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_no_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_no_local_cache)),
+                          conanfile.command)
 
             cmake = CMake(conanfile)
             cmake.configure(build_dir="build")
             build_expected = quote_var("build")
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_no_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_no_local_cache)),
+                          conanfile.command)
 
             cmake = CMake(conanfile)
             cmake.configure()
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_no_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_no_local_cache)),
+                          conanfile.command)
 
             cmake = CMake(conanfile)
             cmake.configure(source_folder="source", build_folder="build")
@@ -458,10 +458,10 @@ class CMakeTest(unittest.TestCase):
             source_expected = quote_var(os.path.join(os.path.join(self.tempdir,
                                                                   "my_cache_source_folder",
                                                                   "source")))
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_no_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_no_local_cache)),
+                          conanfile.command)
 
             conanfile.in_local_cache = True
             cmake = CMake(conanfile)
@@ -471,10 +471,10 @@ class CMakeTest(unittest.TestCase):
                                                     "rel_only_cache"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder",
                                                      "source"))
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_in_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_in_local_cache)),
+                          conanfile.command)
 
             conanfile.in_local_cache = False
             cmake = CMake(conanfile)
@@ -483,10 +483,10 @@ class CMakeTest(unittest.TestCase):
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder",
                                                      "source"))
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_no_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_no_local_cache)),
+                          conanfile.command)
 
             conanfile.in_local_cache = True
             cmake = CMake(conanfile)
@@ -494,10 +494,10 @@ class CMakeTest(unittest.TestCase):
             build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder",
                                                     "rel_only_cache"))
             source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
-            self.assertEqual(full_cmd.format(build_expected=build_expected,
-                                             source_expected=source_expected,
-                                             base_cmd=base_cmd.format(flags=flags_in_local_cache)),
-                             conanfile.command)
+            self.assertIn(full_cmd.format(build_expected=build_expected,
+                                          source_expected=source_expected,
+                                          base_cmd=base_cmd.format(flags=flags_in_local_cache)),
+                          conanfile.command)
 
             # Raise mixing
             with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
