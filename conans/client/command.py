@@ -79,7 +79,6 @@ class SmartFormatter(argparse.HelpFormatter):
         text = textwrap.dedent(text)
         return ''.join(indent + line for line in text.splitlines(True))
 
-
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
@@ -366,7 +365,7 @@ class Command(object):
         parser.add_argument("reference",
                             help='pkg/version@user/channel')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='Force install specified package ID (ignore settings/options)')
+                            help='Force install specified package ID (ignore settings/options) [DEPRECATED: use full reference instead]')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
         parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
@@ -1008,7 +1007,7 @@ class Command(object):
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel. e.g., lasote/testing')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='copy specified package ID')
+                            help='copy specified package ID [DEPRECATED: use full reference instead]')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Copy all packages from the specified package recipe')
         parser.add_argument("--force", action='store_true', default=False,
