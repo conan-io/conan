@@ -14,10 +14,11 @@ from conans.util.files import is_dirty, rmdir
 
 class GraphBinariesAnalyzer(object):
 
-    def __init__(self, cache, output, remote_manager):
+    def __init__(self, cache, output, remote_manager, graph_lock=None):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
+        self._graph_lock = graph_lock
 
     def _check_update(self, upstream_manifest, package_folder, output, node):
         read_manifest = FileTreeManifest.load(package_folder)
@@ -34,7 +35,10 @@ class GraphBinariesAnalyzer(object):
         assert node.package_id is not None, "Node.package_id shouldn't be None"
 
         ref, conanfile = node.ref, node.conanfile
-        pref = PackageReference(ref, node.package_id)
+        if self._graph_lock:
+            pref = self._graph_lock.pref(node.id)
+        else:
+            pref = PackageReference(ref, node.package_id)
 
         # Check that this same reference hasn't already been checked
         previous_nodes = evaluated_nodes.get(pref)

@@ -8,6 +8,7 @@ from conans.errors import ConanException
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
 from conans.model.options import OptionsValues
+from platform import node
 
 
 LOCKFILE = "conan.lock"
@@ -55,11 +56,11 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    def __init__(self, pref=None, python_requires=None, options=None):
+    def __init__(self, pref, python_requires, options, modified):
         self.pref = pref
         self.python_requires = python_requires
         self.options = options
-        self.modified = False
+        self.modified = modified
 
     @staticmethod
     def from_dict(node_json):
@@ -69,8 +70,8 @@ class GraphLockNode(object):
         if python_requires:
             python_requires = [ConanFileReference.loads(ref) for ref in python_requires]
         options = OptionsValues.loads(node_json["options"])
-        node = GraphLockNode(pref, python_requires, options)
-        return node
+        modified = node_json.get("modified")
+        return GraphLockNode(pref, python_requires, options, modified)
 
     def as_dict(self):
         result = {}
@@ -78,6 +79,8 @@ class GraphLockNode(object):
         result["options"] = self.options.dumps()
         if self.python_requires:
             result["python_requires"] = [r.full_repr() for r in self.python_requires]
+        if self.modified:
+            result["modified"] = True
         return result
 
 
@@ -96,7 +99,7 @@ class GraphLock(object):
                 python_reqs = getattr(node.conanfile, "python_requires", {})
                 python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                           node.conanfile.options.values)
+                                           node.conanfile.options.values, False)
                 self._nodes[node.id] = graph_node
                 self._edges[node.id] = dependencies
 
@@ -119,12 +122,77 @@ class GraphLock(object):
         result["edges"] = self._edges
         return result
 
+    def update_lock(self, new_lock):
+        for id_, node in new_lock._nodes.items():
+            if node.modified:
+                old_node = self._nodes[id_]
+                if old_node.modified:
+                    raise ConanException("Lockfile had already modified %s" % str(node.pref))
+                self._nodes[id_] = node
+
+    def clean_modified(self):
+        for id_, node in self._nodes.items():
+            node.modified = False
+
+    def build_order(self):
+        levels = self._inverse_levels()
+        affected = self._closure_affected()
+        result = []
+        for level in levels:
+            partial = [(id_, node.pref.full_repr()) for id_, node in level if id_ in affected]
+            if partial:
+                result.append(partial)
+        return result
+
+    def _closure_affected(self):
+        closure = set()
+        current = [id_ for id_, node in self._nodes.items() if node.modified]
+        # closure.update(current)
+        while current:
+            new_current = set()
+            for n in current:
+                new_neighs = self._inverse_neighbors(n)
+                to_add = set(new_neighs).difference(current)
+                new_current.update(to_add)
+                closure.update(to_add)
+            current = new_current
+
+        return closure
+
+    def _inverse_neighbors(self, node_id):
+        result = []
+        for id_, nodes_ids in self._edges.items():
+            if node_id in nodes_ids:
+                result.append(id_)
+        return result
+
+    def _inverse_levels(self):
+        current_level = []
+        result = [current_level]
+        opened = list(self._nodes.keys())
+        while opened:
+            current = opened[:]
+            for o in opened:
+                o_neighs = self._edges[o]
+                if not any(n in opened for n in o_neighs):
+                    current_level.append((o, self._nodes[o]))
+                    current.remove(o)
+            current_level.sort()
+            opened = current
+            if opened:
+                current_level = []
+                result.append(current_level)
+        return result
+
     def update_check_graph(self, deps_graph, output):
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
                 continue
+            lock_node = self._nodes[node.id]
             if node.binary == BINARY_BUILD:
-                self._nodes[node.id].pref = node.pref
+                if lock_node.pref != node.pref:
+                    lock_node.pref = node.pref
+                    lock_node.modified = True
             else:
                 lock_node_pref = self._nodes[node.id].pref
                 if (lock_node_pref and node.ref and
@@ -185,8 +253,10 @@ class GraphLock(object):
 
     def update_ref(self, ref):
         node_id = self.get_node(ref)
-        node = self._nodes[node_id]
-        node.pref = PackageReference(ref, node.pref.id)
+        lock_node = self._nodes[node_id]
+        if lock_node.pref.ref != ref:
+            lock_node.pref = PackageReference(ref, lock_node.pref.id)
+            lock_node.modified = True
 
     def find_node(self, node, reference):
         if node.recipe == RECIPE_VIRTUAL:

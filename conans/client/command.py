@@ -1612,6 +1612,37 @@ class Command(object):
                 self._user_io.out.writeln("    Path: %s" % v["path"])
                 self._user_io.out.writeln("    Layout: %s" % v["layout"])
 
+    def graph(self, *args):
+        """
+        """
+        parser = argparse.ArgumentParser(description=self.remote.__doc__,
+                                         prog="conan graph",
+                                         formatter_class=SmartFormatter)
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
+
+        # create the parser for the "a" command
+        merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
+        merge_cmd.add_argument('old_lockfile', help='previous lockfile')
+        merge_cmd.add_argument('new_lockfile', help='modified lockfile')
+
+        build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
+        build_order_cmd.add_argument('lockfile', help='lockfile')
+
+        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
+        clean_cmd.add_argument('lockfile', help='lockfile')
+
+        args = parser.parse_args(*args)
+        self._warn_python2()
+
+        if args.subcommand == "update-lock":
+            self._conan.update_lock(args.old_lockfile, args.new_lockfile)
+        elif args.subcommand == "build-order":
+            build_order = self._conan.build_order(args.lockfile)
+            self._user_io.out.writeln(build_order)
+        elif args.subcommand == "clean-modified":
+            self._conan.lock_clean_modified(args.lockfile)
+
     def _show_help(self):
         """
         Prints a summary of all commands.
@@ -1621,7 +1652,7 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help"))]
+                                   "alias", "download", "inspect", "help", "graph"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""

@@ -32,7 +32,7 @@ class ConanManager(object):
     def install(self, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False):
+                keep_build=False, use_lock=False):
         """ Fetch and build all dependencies for the given reference
         @param ref_or_path: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -103,7 +103,7 @@ class ConanManager(object):
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
-            if not isinstance(ref_or_path, ConanFileReference):
+            if not isinstance(ref_or_path, ConanFileReference) or use_lock:
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)

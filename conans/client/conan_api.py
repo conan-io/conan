@@ -539,7 +539,7 @@ class ConanAPIV1(object):
                             update=update, manifest_folder=manifest_folder,
                             manifest_verify=manifest_verify,
                             manifest_interactive=manifest_interactive,
-                            generators=generators)
+                            generators=generators, use_lock=use_lock)
             return recorder.get_info(self._cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -1202,6 +1202,35 @@ class ConanAPIV1(object):
     @api_method
     def editable_list(self):
         return {str(k): v for k, v in self._cache.editable_packages.edited_refs.items()}
+
+    @api_method
+    def update_lock(self, old_lockfile, new_lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        old_lockfile = _make_abs_path(old_lockfile, cwd)
+        old_lock = GraphLockFile.load(old_lockfile)
+        new_lockfile = _make_abs_path(new_lockfile, cwd)
+        new_lock = GraphLockFile.load(new_lockfile)
+        #if old_lock.profile != new_lock.profile:
+        #    raise ConanException("Profiles of lockfiles are different\n%s\n%s"
+        #                         % (old_lock.profile, new_lock.profile))
+        old_lock.graph_lock.update_lock(new_lock.graph_lock)
+        old_lock.save(old_lockfile)
+
+    @api_method
+    def build_order(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock = GraphLockFile.load(lockfile)
+        return lock.graph_lock.build_order()
+
+    @api_method
+    def lock_clean_modified(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock = GraphLockFile.load(lockfile)
+        lock.graph_lock.clean_modified()
+        lock.save(lockfile)
+
 
 
 Conan = ConanAPIV1

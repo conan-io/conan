@@ -266,7 +266,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile,
                                    graph_lock)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
-                                                  self._remote_manager)
+                                                  self._remote_manager, graph_lock)
 
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remotes,
