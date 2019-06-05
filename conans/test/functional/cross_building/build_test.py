@@ -132,4 +132,4 @@ class CrossBuilding(ClassicProtocExample):
         self.assertIn("protobuf/testing@user/channel: >> settings.os: Build", self.t.out)
 
         # Check env_info
-        self.assertIn("application/testing@user/channel: >> protoc/env_info: context=Host", self.t.out)  # TODO: Here I expect to get the BR("build") one
+        self.assertIn("application/testing@user/channel: >> protoc/env_info: context=Build", self.t.out)  # TODO: Here I expect to get the BR("build") one
