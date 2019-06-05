@@ -84,3 +84,15 @@ class Pkg(ConanFile):
             self.assertIn("my data!", data)
         else:
             self.assertIn("my data rev2!", data)
+
+    def test_full_reference_with_all_argument(self):
+        client = TestClient()
+        client.run("copy pkg/0.1@user/channel:{} other/channel --all".format("mimic"),
+                   assert_error=True)
+        self.assertIn("'--all' argument cannot be used together with full reference", client.out)
+
+    def test_copy_with_p_and_all(self):
+        client = TestClient()
+        client.run("copy pkg/0.1@user/channel other/channel -p {} --all".format("mimic"),
+                   assert_error=True)
+        self.assertIn("Cannot specify both --all and --package", client.out)

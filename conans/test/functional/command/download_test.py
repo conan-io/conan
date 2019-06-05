@@ -197,3 +197,12 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(package_layout.conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
+
+    def test_download_with_full_reference_and_p(self):
+        client = TestClient()
+        client.run("download pkg/0.1@user/channel:{package_id} -p {package_id}".
+                   format(package_id="dupqipa4tog2ju3pncpnrzbim1fgd09g"),
+                   assert_error=True)
+        self.assertIn("Use a full package reference (preferred) or the `--package`"
+                      " command argument, but not both.", client.out)
+
