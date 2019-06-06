@@ -234,12 +234,13 @@ class WorkspaceCMake(Workspace):
         save(os.path.join(install_folder, 'CMakeLists.txt'), content)
 
         # Create the conanbuildinfo.cmake (no dependencies)
-        # TODO: Silent output here (it will confuse the users)
+        # TODO: Silent output here (it could confuse the users)
         manager.install([], manifest_folder=False, install_folder=install_folder,
                         build_modes=["never"], generators=["cmake", ], **kwargs)
 
         # Create findXXX files for consumed packages
         if out_consumed:
+            # TODO: Silent output here?
             manager.install([it for it in out_consumed],
                             manifest_folder=False, install_folder=install_folder,
                             build_modes=["never"], generators=["cmake_find_package", ], **kwargs)
