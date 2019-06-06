@@ -42,8 +42,7 @@ class TarExtractTest(unittest.TestCase):
 
         # Once unpackaged, this is the content of the destination directory
         def check_files(destination_dir):
-            d = os.listdir(destination_dir)
-            d.sort()
+            d = sorted(os.listdir(destination_dir))
             self.assertListEqual(d, ["file1", "folder"])
             d_folder = os.listdir(os.path.join(destination_dir, "folder"))
             self.assertEqual(d_folder, ["file2"])
