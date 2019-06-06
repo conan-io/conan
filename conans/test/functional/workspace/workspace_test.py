@@ -1,11 +1,10 @@
 import os
 import platform
+import time
 import unittest
 from textwrap import dedent
 
 import six
-import time
-
 from parameterized.parameterized import parameterized
 
 from conans.client import tools
@@ -64,20 +63,11 @@ hello_h = """#pragma once
 HELLO_EXPORT void hello{name}();
 """
 
-cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
-project(Hello CXX)
-cmake_minimum_required(VERSION 2.8.12)
-include(${{CMAKE_CURRENT_BINARY_DIR}}/conanbuildinfo.cmake)
-conan_basic_setup()
-add_library(hello{name} hello.cpp)
-target_link_libraries(hello{name} ${{CONAN_LIBS}})
-"""
-
 cmake_multi = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(Hello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 include(${{CMAKE_CURRENT_BINARY_DIR}}/conanbuildinfo_multi.cmake)
-conan_basic_setup()
+conan_basic_setup(TARGETS)
 add_library(hello{name} hello.cpp)
 conan_target_link_libraries(hello{name})
 """
@@ -97,62 +87,66 @@ class WorkspaceTest(unittest.TestCase):
     def parse_test(self):
         folder = temp_folder()
         path = os.path.join(folder, "conanws.yml")
-        project = "root: Hellob/0.1@lasote/stable"
+        project = dedent("""
+            workspace_generator: cmake
+            root: Hellob/0.1@lasote/stable
+            """)
         save(path, project)
         with six.assertRaisesRegex(self, ConanException,
                                    "Root Hellob/0.1@lasote/stable is not defined as editable"):
-            Workspace(path, None)
+            Workspace.create(path, None)
 
         project = dedent("""
             editables:
                 HelloB/0.1@lasote/stable:
                     path: B
                     random: something
+            workspace_generator: cmake
             root: HelloB/0.1@lasote/stable
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Workspace unrecognized fields: {'random': 'something'}"):
-            Workspace(path, None)
+        with six.assertRaisesRegex(self, ConanException, "Unrecognized fields 'random' for"
+                                                         " editable 'HelloB/0.1@lasote/stable'"):
+            Workspace.create(path, None)
 
         project = dedent("""
             editables:
                 HelloB/0.1@lasote/stable:
                     path: B
+            workspace_generator: cmake
             root: HelloB/0.1@lasote/stable
             random: something
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Workspace unrecognized fields: {'random': 'something'}"):
-            Workspace(path, None)
+        with six.assertRaisesRegex(self, ConanException, "Unrecognized fields 'random'"):
+            Workspace.create(path, None)
 
         project = dedent("""
             editables:
                 HelloB/0.1@lasote/stable:
+            workspace_generator: cmake
             root: HelloB/0.1@lasote/stable
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Workspace editable HelloB/0.1@lasote/stable "
-                                   "does not define path"):
-            Workspace(path, None)
+        with six.assertRaisesRegex(self, ConanException, "Editable 'HelloB/0.1@lasote/stable'"
+                                                         " doesn't define field 'path'"):
+            Workspace.create(path, None)
 
         project = dedent("""
             editables:
                 HelloB/0.1@lasote/stable:
                     layout: layout
+            workspace_generator: cmake
             root: HelloB/0.1@lasote/stable
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Workspace editable HelloB/0.1@lasote/stable "
-                                   "does not define path"):
-            Workspace(path, None)
+        with six.assertRaisesRegex(self, ConanException, "Editable 'HelloB/0.1@lasote/stable'"
+                                                         " doesn't define field 'path'"):
+            Workspace.create(path, None)
 
     def simple_test(self):
         client = TestClient()
@@ -174,6 +168,7 @@ class WorkspaceTest(unittest.TestCase):
                 HelloA/0.1@lasote/stable:
                     path: A
             layout: layout
+            workspace_generator: cmake
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
@@ -464,7 +459,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)
 
-    def complete_single_conf_build_test(self):
+    def test_complete_single_conf_build_test(self):
         client = TestClient()
 
         def files(name, depend=None):
@@ -510,15 +505,8 @@ class WorkspaceTest(unittest.TestCase):
             build/{{settings.build_type}}/lib
             """)
 
-        metacmake = dedent("""
-            cmake_minimum_required(VERSION 3.3)
-            project(MyProject CXX)
-            include(${CMAKE_BINARY_DIR}/conanworkspace.cmake)
-            conan_workspace_subdirectories()
-            """)
         client.save({"conanws.yml": project,
-                     "layout": layout,
-                     "CMakeLists.txt": metacmake})
+                     "layout": layout})
         base_release = os.path.join(client.current_folder, "build_release")
         base_debug = os.path.join(client.current_folder, "build_debug")
 
@@ -529,7 +517,7 @@ class WorkspaceTest(unittest.TestCase):
         client.init_dynamic_vars()
 
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
-        client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
+        client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
         client.runner('cmake --build . --config Release', cwd=base_release)
 
         cmd_release = os.path.normpath("./A/build/Release/bin/app")
@@ -732,6 +720,7 @@ class Pkg(ConanFile):
                     path: C
                 HelloA/0.1@lasote/stable:
                     path: A
+            workspace_generator: cmake
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)

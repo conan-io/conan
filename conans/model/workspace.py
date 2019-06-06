@@ -1,19 +1,14 @@
 import os
-
-from collections import OrderedDict
+import textwrap
 
 import yaml
-import textwrap
 from jinja2 import Template
 
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.errors import ConanException
-from conans.client.graph.printer import print_graph
 from conans.model.editable_layout import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
-from conans.client.recorder.action_recorder import ActionRecorder
-from conans.client.installer import BinaryInstaller
 
 
 class LocalPackage(object):
@@ -23,8 +18,9 @@ class LocalPackage(object):
         self.path = path
         self.layout = layout
 
-        def layout_path(self, path):
-            return os.path.normpath(os.path.join(os.path.dirname(self.layout), path))
+    def layout_path(self, path):
+        path = path or "."
+        return os.path.normpath(os.path.join(self.path, path))
 
 
 class Workspace(object):
@@ -40,8 +36,7 @@ class Workspace(object):
         # Every package in the root list must be contained in the packages dictionary
         for ref in self.root_list:
             if ref not in self.packages:
-                raise ConanException("Package '{}' from root has to be in"
-                                     " editables dict".format(ref))
+                raise ConanException("Root {} is not defined as editable".format(ref))
         return True
 
     """
@@ -132,6 +127,8 @@ class Workspace(object):
         # Editable packages
         editables = yml.pop("editables", {})
         for ref, data in editables.items():
+            if not data or 'path' not in data:
+                raise ConanException("Editable '{}' doesn't define field 'path'".format(ref))
             try:
                 layout = data.pop("layout", ws_layout)
                 if layout:
@@ -145,10 +142,13 @@ class Workspace(object):
                 ws.packages[ref] = package
 
                 if data:
-                    raise ConanException("Unrecognized field '{}' for"
-                                         " editable '{}'".format(data.keys(), ref))
+                    raise ConanException("Unrecognized fields '{}' for"
+                                         " editable '{}'".format("', '".join(data.keys()), ref))
             except KeyError as e:
                 raise ConanException("Field '{}' not found for editable '{}'".format(e, ref))
+
+        if yml:
+            raise ConanException("Unrecognized fields '{}'".format("', '".join(yml.keys())))
 
         ws.validate()
         return ws
@@ -210,12 +210,12 @@ class WorkspaceCMake(Workspace):
 
     cmakelists_template = textwrap.dedent(r"""
         cmake_minimum_required(VERSION 2.8.12)
-        project({{ ws.name }})
+        project("{{ ws.name }}")
         
-        include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
+        include(${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake)
         conan_basic_setup()  # Execute Conan magic
         
-        include(${CMAKE_CURRENT_BINARY_DIR}/conanworkspace.cmake)
+        include(${CMAKE_CURRENT_SOURCE_DIR}/conanworkspace.cmake)
         
     """)
 
@@ -278,5 +278,13 @@ class WorkspaceCMake(Workspace):
                            out_consumed=out_consumed)
         save(os.path.join(install_folder, 'CMakeLists.txt'), content)
 
+        # Create the conanbuildinfo.cmake (no dependencies)
+        # TODO: Silent output here (it will confuse the users)
+        manager.install([], manifest_folder=False, install_folder=install_folder,
+                        build_modes=["never"], generators=["cmake", ], **kwargs)
 
-
+        # Create findXXX files for consumed packages
+        if out_consumed:
+            manager.install([it for it in out_consumed],
+                            manifest_folder=False, install_folder=install_folder,
+                            build_modes=["never"], generators=["cmake_find_package", ], **kwargs)
