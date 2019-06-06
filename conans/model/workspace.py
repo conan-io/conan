@@ -147,7 +147,6 @@ class WorkspaceCMake(Workspace):
         add_library({{ ref.name }}::{{ ref.name }} ALIAS {{ ref.name }})
         add_library(CONAN_PKG::{{ ref.name }} ALIAS {{ ref.name }}) 
         {% endfor %}
-
     """)
 
     cmakelists_template = textwrap.dedent(r"""
@@ -158,7 +157,6 @@ class WorkspaceCMake(Workspace):
         conan_basic_setup()  # Execute Conan magic
         
         include(${CMAKE_CURRENT_SOURCE_DIR}/conanworkspace.cmake)
-        
     """)
 
     def generate(self, install_folder, manager, output, **kwargs):
