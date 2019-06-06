@@ -69,15 +69,6 @@ add_library(hello{name} hello.cpp)
 conan_target_link_libraries(hello{name})
 """
 
-cmake_targets = """set(CMAKE_CXX_COMPILER_WORKS 1)
-project(Hello CXX)
-cmake_minimum_required(VERSION 2.8.12)
-include(${{CMAKE_CURRENT_BINARY_DIR}}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
-add_library(hello{name} hello.cpp)
-target_link_libraries(hello{name} {dep})
-"""
-
 
 class WorkspaceTest(unittest.TestCase):
 
