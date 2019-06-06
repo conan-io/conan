@@ -84,70 +84,6 @@ target_link_libraries(hello{name} {dep})
 
 class WorkspaceTest(unittest.TestCase):
 
-    def parse_test(self):
-        folder = temp_folder()
-        path = os.path.join(folder, "conanws.yml")
-        project = dedent("""
-            workspace_generator: cmake
-            root: Hellob/0.1@lasote/stable
-            """)
-        save(path, project)
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Root Hellob/0.1@lasote/stable is not defined as editable"):
-            Workspace.create(path, None)
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: B
-                    random: something
-            workspace_generator: cmake
-            root: HelloB/0.1@lasote/stable
-            """)
-        save(path, project)
-
-        with six.assertRaisesRegex(self, ConanException, "Unrecognized fields 'random' for"
-                                                         " editable 'HelloB/0.1@lasote/stable'"):
-            Workspace.create(path, None)
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: B
-            workspace_generator: cmake
-            root: HelloB/0.1@lasote/stable
-            random: something
-            """)
-        save(path, project)
-
-        with six.assertRaisesRegex(self, ConanException, "Unrecognized fields 'random'"):
-            Workspace.create(path, None)
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-            workspace_generator: cmake
-            root: HelloB/0.1@lasote/stable
-            """)
-        save(path, project)
-
-        with six.assertRaisesRegex(self, ConanException, "Editable 'HelloB/0.1@lasote/stable'"
-                                                         " doesn't define field 'path'"):
-            Workspace.create(path, None)
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    layout: layout
-            workspace_generator: cmake
-            root: HelloB/0.1@lasote/stable
-            """)
-        save(path, project)
-
-        with six.assertRaisesRegex(self, ConanException, "Editable 'HelloB/0.1@lasote/stable'"
-                                                         " doesn't define field 'path'"):
-            Workspace.create(path, None)
-
     def simple_test(self):
         client = TestClient()
 
@@ -217,6 +153,7 @@ class WorkspaceTest(unittest.TestCase):
                     path: C
                 HelloA/0.1@lasote/stable:
                     path: A
+            workspace_generator: cmake
             layout: layout
             root: {root_attribute}
             """).format(root_attribute=root_attribute)
@@ -264,6 +201,7 @@ class WorkspaceTest(unittest.TestCase):
                     path: C
                 HelloA/0.1@lasote/stable:
                     path: A
+            workspace_generator: cmake
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)
@@ -310,266 +248,9 @@ class WorkspaceTest(unittest.TestCase):
             """)
 
         client.save({"conanws.yml": project})
-        client.run("workspace install conanws.yml")
-        self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
-
-    def simple_build_test(self):
-        client = TestClient()
-
-        def files(name, depend=None):
-            includes = ('#include "hello%s.h"' % depend) if depend else ""
-            calls = ('hello%s();' % depend) if depend else ""
-            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
-            return {"conanfile.py": conanfile_build.format(deps=deps, name=name),
-                    "src/hello%s.h" % name: hello_h.format(name=name),
-                    "src/hello.cpp": hello_cpp.format(name=name, includes=includes, calls=calls),
-                    "src/CMakeLists.txt": cmake.format(name=name)}
-
-        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
-        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
-        a = files("A", "B")
-        a["src/CMakeLists.txt"] += ("add_executable(app main.cpp)\n"
-                                    "target_link_libraries(app helloA)\n")
-        a["src/main.cpp"] = main_cpp
-        client.save(a, path=os.path.join(client.current_folder, "A"))
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: B
-                HelloC/0.1@lasote/stable:
-                    path: C
-                HelloA/0.1@lasote/stable:
-                    path: A
-            layout: layout
-            root: HelloA/0.1@lasote/stable
-            """)
-        layout = dedent("""
-            [build_folder]
-            build/{{settings.build_type}}
-
-            [includedirs]
-            src
-
-            [libdirs]
-            build/{{settings.build_type}}/lib
-            """)
-        client.save({"conanws.yml": project,
-                     "layout": layout})
-        client.run("workspace install conanws.yml")
-        client.run("workspace install conanws.yml -s build_type=Debug")
-        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
-
-        build_type = "Release"
-        client.run("build C -bf=C/build/%s" % build_type)
-        client.run("build B -bf=B/build/%s" % build_type)
-        client.run("build A -bf=A/build/%s" % build_type)
-
-        cmd_release = os.path.normpath("./A/build/Release/bin/app")
-        cmd_debug = os.path.normpath("./A/build/Debug/bin/app")
-
-        client.runner(cmd_release, cwd=client.current_folder)
-        self.assertIn("Hello World C Release!", client.out)
-        self.assertIn("Hello World B Release!", client.out)
-        self.assertIn("Hello World A Release!", client.out)
-
-        build_type = "Debug"
-        client.run("build C -bf=C/build/%s" % build_type)
-        client.run("build B -bf=B/build/%s" % build_type)
-        client.run("build A -bf=A/build/%s" % build_type)
-
-        client.runner(cmd_debug, cwd=client.current_folder)
-        self.assertIn("Hello World C Debug!", client.out)
-        self.assertIn("Hello World B Debug!", client.out)
-        self.assertIn("Hello World A Debug!", client.out)
-
-    def simple_out_of_source_build_test(self):
-        client = TestClient()
-
-        def files(name, depend=None):
-            includes = ('#include "hello%s.h"' % depend) if depend else ""
-            calls = ('hello%s();' % depend) if depend else ""
-            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
-            return {"conanfile.py": conanfile_build.format(deps=deps, name=name),
-                    "src/hello%s.h" % name: hello_h.format(name=name),
-                    "src/hello.cpp": hello_cpp.format(name=name, includes=includes, calls=calls),
-                    "src/CMakeLists.txt": cmake.format(name=name)}
-
-        client.save(files("C"), path=os.path.join(client.current_folder, "HelloC"))
-        client.save(files("B", "C"), path=os.path.join(client.current_folder, "HelloB"))
-        a = files("A", "B")
-        a["src/CMakeLists.txt"] += ("add_executable(app main.cpp)\n"
-                                    "target_link_libraries(app helloA)\n")
-        a["src/main.cpp"] = main_cpp
-        client.save(a, path=os.path.join(client.current_folder, "HelloA"))
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: HelloB
-                HelloC/0.1@lasote/stable:
-                    path: HelloC
-                HelloA/0.1@lasote/stable:
-                    path: HelloA
-            layout: layout
-            root: HelloA/0.1@lasote/stable
-            """)
-        layout = dedent("""
-            [build_folder]
-            ../build/{{reference.name}}/{{settings.build_type}}
-
-            [includedirs]
-            src
-
-            [libdirs]
-            ../build/{{reference.name}}/{{settings.build_type}}/lib
-            """)
-
-        client.save({"conanws.yml": project,
-                     "layout": layout})
-        client.run("workspace install conanws.yml")
-        client.run("workspace install conanws.yml -s build_type=Debug")
-        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
-
-        build_type = "Release"
-        client.run("build HelloC -bf=build/HelloC/%s" % build_type)
-        client.run("build HelloB -bf=build/HelloB/%s" % build_type)
-        client.run("build HelloA -bf=build/HelloA/%s" % build_type)
-
-        cmd_release = os.path.normpath("./build/HelloA/Release/bin/app")
-        cmd_debug = os.path.normpath("./build/HelloA/Debug/bin/app")
-
-        client.runner(cmd_release, cwd=client.current_folder)
-        self.assertIn("Hello World C Release!", client.out)
-        self.assertIn("Hello World B Release!", client.out)
-        self.assertIn("Hello World A Release!", client.out)
-
-        build_type = "Debug"
-        client.run("build HelloC -bf=build/HelloC/%s" % build_type)
-        client.run("build HelloB -bf=build/HelloB/%s" % build_type)
-        client.run("build HelloA -bf=build/HelloA/%s" % build_type)
-
-        client.runner(cmd_debug, cwd=client.current_folder)
-        self.assertIn("Hello World C Debug!", client.out)
-        self.assertIn("Hello World B Debug!", client.out)
-        self.assertIn("Hello World A Debug!", client.out)
-
-    def test_complete_single_conf_build_test(self):
-        client = TestClient()
-
-        def files(name, depend=None):
-            includes = ('#include "hello%s.h"' % depend) if depend else ""
-            calls = ('hello%s();' % depend) if depend else ""
-            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
-            return {"conanfile.py": conanfile_build.format(deps=deps, name=name),
-                    "src/hello%s.h" % name: hello_h.format(name=name),
-                    "src/hello.cpp": hello_cpp.format(name=name, includes=includes, calls=calls),
-                    "src/CMakeLists.txt": cmake.format(name=name)}
-
-        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
-        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
-        a = files("A", "B")
-        a["src/CMakeLists.txt"] += ("add_executable(app main.cpp)\n"
-                                    "target_link_libraries(app helloA)\n")
-        a["src/main.cpp"] = main_cpp
-        client.save(a, path=os.path.join(client.current_folder, "A"))
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: B
-                HelloC/0.1@lasote/stable:
-                    path: C
-                HelloA/0.1@lasote/stable:
-                    path: A
-            layout: layout
-            workspace_generator: cmake
-            root: HelloA/0.1@lasote/stable
-            """)
-        layout = dedent("""
-            [build_folder]
-            build/{{settings.build_type}}
-
-            [source_folder]
-            src
-
-            [includedirs]
-            src
-
-            [libdirs]
-            build/{{settings.build_type}}/lib
-            """)
-
-        client.save({"conanws.yml": project,
-                     "layout": layout})
-        base_release = os.path.join(client.current_folder, "build_release")
-        base_debug = os.path.join(client.current_folder, "build_debug")
-
-        with client.chdir("build_release"):
-            client.run("workspace install ../conanws.yml")
-        with client.chdir("build_debug"):
-            client.run("workspace install ../conanws.yml -s build_type=Debug")
-        client.init_dynamic_vars()
-
-        generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
-        client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
-        client.runner('cmake --build . --config Release', cwd=base_release)
-
-        cmd_release = os.path.normpath("./A/build/Release/bin/app")
-        cmd_debug = os.path.normpath("./A/build/Debug/bin/app")
-
-        client.runner(cmd_release, cwd=client.current_folder)
-        self.assertIn("Hello World C Release!", client.out)
-        self.assertIn("Hello World B Release!", client.out)
-        self.assertIn("Hello World A Release!", client.out)
-
-        time.sleep(1)
-        tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
-                              "Hello World", "Bye Moon", output=client.out)
-        time.sleep(1)
-        client.runner('cmake --build . --config Release', cwd=base_release)
-        client.runner(cmd_release, cwd=client.current_folder)
-        self.assertIn("Bye Moon C Release!", client.out)
-        self.assertIn("Hello World B Release!", client.out)
-        self.assertIn("Hello World A Release!", client.out)
-
-        time.sleep(1)
-        tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
-                              "Hello World", "Bye Moon", output=client.out)
-        time.sleep(1)
-        client.runner('cmake --build . --config Release', cwd=base_release)
-        client.runner(cmd_release, cwd=client.current_folder)
-        self.assertIn("Bye Moon C Release!", client.out)
-        self.assertIn("Bye Moon B Release!", client.out)
-        self.assertIn("Hello World A Release!", client.out)
-
-        self.assertNotIn("Debug", client.out)
-        client.init_dynamic_vars()
-
-        client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
-        client.runner('cmake --build . --config Debug', cwd=base_debug)
-        client.runner(cmd_debug, cwd=client.current_folder)
-        self.assertIn("Bye Moon C Debug!", client.out)
-        self.assertIn("Bye Moon B Debug!", client.out)
-        self.assertIn("Hello World A Debug!", client.out)
-
-        time.sleep(1)
-        tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
-                              "Bye Moon", "Hello World", output=client.out)
-
-        time.sleep(1)
-        client.runner('cmake --build . --config Debug', cwd=base_debug)
-        client.runner(cmd_debug, cwd=client.current_folder)
-        self.assertIn("Hello World C Debug!", client.out)
-        self.assertIn("Bye Moon B Debug!", client.out)
-        self.assertIn("Hello World A Debug!", client.out)
-
-        self.assertNotIn("Release", client.out)
+        client.run("workspace install conanws.yml", assert_error=True)
+        self.assertIn("No layout defined for editable 'HelloD/0.1@lasote/stable' and cannot"
+                      " find the default one neither", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "only windows")
     def complete_multi_conf_build_test(self):
@@ -773,6 +454,7 @@ class Pkg(ConanFile):
                     path: A
                 Tool/0.1@user/testing:
                     path: Tool
+            workspace_generator: cmake
             layout: layout
             root: HelloA/0.1@lasote/stable
             """)
@@ -813,6 +495,7 @@ class Pkg(ConanFile):
                 HelloA/0.1@lasote/stable:
                     path: A
                     layout: A/layoutA
+            workspace_generator: cmake
             root: HelloA/0.1@lasote/stable
             """)
         layout = dedent("""
@@ -834,96 +517,6 @@ class Pkg(ConanFile):
         cmake = load(os.path.join(client.current_folder, "A", "build", "conanbuildinfo.cmake"))
         self.assertIn("myincludeC", cmake)
         self.assertIn("myincludeB", cmake)
-
-    def generators_test(self):
-        client = TestClient()
-
-        def files(name, depend=None):
-            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
-            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
-
-        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
-        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
-        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: B
-                    generators: [make, qmake]
-                HelloC/0.1@lasote/stable:
-                    path: C
-                HelloA/0.1@lasote/stable:
-                    path: A
-                    generators: visual_studio
-            layout: layout
-            generators: cmake
-            workspace_generator: cmake
-            root: HelloA/0.1@lasote/stable
-            """)
-        layout = dedent("""
-            [build_folder]
-
-            """)
-        client.save({"conanws.yml": project,
-                     "layout": layout})
-        client.run("workspace install conanws.yml")
-        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
-
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
-                                                    "conanbuildinfo.mak")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
-                                                    "conanbuildinfo.pri")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "A",
-                                                    "conanbuildinfo.props")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "C",
-                                                    "conanbuildinfo.cmake")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
-                                                    "conanworkspace.cmake")))
-
-    def gen_subdirectories_test(self):
-        client = TestClient()
-
-        def files(name, depend=None):
-            deps = ('"Hello%s/0.1@lasote/stable"' % depend) if depend else "None"
-            return {"conanfile.py": conanfile_build.format(deps=deps, name=name)}
-
-        client.save(files("C"), path=os.path.join(client.current_folder, "C"))
-        client.save(files("B", "C"), path=os.path.join(client.current_folder, "B"))
-        client.save(files("A", "B"), path=os.path.join(client.current_folder, "A"))
-
-        project = dedent("""
-            editables:
-                HelloB/0.1@lasote/stable:
-                    path: B
-                HelloC/0.1@lasote/stable:
-                    path: C
-                HelloA/0.1@lasote/stable:
-                    path: A
-            layout: layout
-            workspace_generator: cmake
-            root: HelloA/0.1@lasote/stable
-            """)
-        layout = dedent("""
-            [build_folder]
-
-            [source_folder]
-
-            """)
-        client.save({"conanws.yml": project,
-                     "layout": layout})
-        client.run("workspace install conanws.yml")
-        self.assertIn("HelloA/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
-        self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
-
-        conanws_cmake = load(os.path.join(client.current_folder, "conanworkspace.cmake"))
-        self.assertIn("macro(conan_workspace_subdirectories)", conanws_cmake)
-        for p in ("HelloC", "HelloB", "HelloA"):
-            self.assertIn("add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})" % (p, p),
-                          conanws_cmake)
 
     def test_default_filename(self):
         client = TestClient()
@@ -954,11 +547,6 @@ class Pkg(ConanFile):
         ws_folder = temp_folder()
         client.save({os.path.join(ws_folder, Workspace.default_filename): project,
                      os.path.join(ws_folder, "layout"): layout})
-
-        # For the right folder, it works
-        client.run('workspace install "{}"'.format(ws_folder))
-        conanws_cmake = load(os.path.join(client.current_folder, "conanworkspace.cmake"))
-        self.assertIn("macro(conan_workspace_subdirectories)", conanws_cmake)
 
         # For a non existing folder, it will try to load the default filename (it fails)
         non_existing = temp_folder()

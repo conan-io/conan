@@ -39,54 +39,6 @@ class Workspace(object):
                 raise ConanException("Root {} is not defined as editable".format(ref))
         return True
 
-    """
-    def generate(self, install_folder, graph, output):
-        if self._ws_generator == "cmake":
-            cmake = ""
-            add_subdirs = ""
-            # To avoid multiple additions (can happen for build_requires repeated nodes)
-            unique_refs = OrderedDict()
-            for node in graph.ordered_iterate():
-                if node.recipe != RECIPE_EDITABLE:
-                    continue
-                unique_refs[node.ref] = node
-            for ref, node in unique_refs.items():
-                ws_pkg = self._workspace_packages[ref]
-                layout = self._cache.package_layout(ref)
-                editable = layout.editable_cpp_info()
-
-                conanfile = node.conanfile
-                src = build = None
-                if editable:
-                    build = editable.folder(ref, EditableLayout.BUILD_FOLDER, conanfile.settings,
-                                            conanfile.options)
-                    src = editable.folder(ref, EditableLayout.SOURCE_FOLDER, conanfile.settings,
-                                          conanfile.options)
-                if src is not None:
-                    src = os.path.join(ws_pkg.root_folder, src).replace("\\", "/")
-                    cmake += 'set(PACKAGE_%s_SRC "%s")\n' % (ref.name, src)
-                else:
-                    output.warn("CMake workspace: source_folder is not defined for %s" % str(ref))
-                if build is not None:
-                    build = os.path.join(ws_pkg.root_folder, build).replace("\\", "/")
-                    cmake += 'set(PACKAGE_%s_BUILD "%s")\n' % (ref.name, build)
-                else:
-                    output.warn("CMake workspace: build_folder is not defined for %s" % str(ref))
-
-                if src and build:
-                    add_subdirs += ('    add_subdirectory(${PACKAGE_%s_SRC} ${PACKAGE_%s_BUILD})\n'
-                                    % (ref.name, ref.name))
-                else:
-                    output.warn("CMake workspace: cannot 'add_subdirectory()'")
-
-            if add_subdirs:
-                cmake += "macro(conan_workspace_subdirectories)\n"
-                cmake += add_subdirs
-                cmake += "endmacro()"
-            cmake_path = os.path.join(install_folder, "conanworkspace.cmake")
-            save(cmake_path, cmake)
-    """
-
     @classmethod
     def create(cls, path, cache):
         # Look for the workspace file
@@ -133,6 +85,9 @@ class Workspace(object):
                 layout = data.pop("layout", ws_layout)
                 if layout:
                     layout = get_editable_abs_path(layout, base_folder, cache.cache_folder)
+                if not layout:
+                    raise ConanException("No layout defined for editable '{}' and cannot find the"
+                                         " default one neither".format(ref))
 
                 data.pop("generators", None)  # Not used
 
