@@ -26,18 +26,10 @@ class LocalPackage(object):
 class Workspace(object):
     default_filename = "conanws.yml"
     name = None
-    root_list = None
     packages = {}
 
     def __init__(self, cache):
         self._cache = cache
-
-    def validate(self):
-        # Every package in the root list must be contained in the packages dictionary
-        for ref in self.root_list:
-            if ref not in self.packages:
-                raise ConanException("Root {} is not defined as editable".format(ref))
-        return True
 
     @classmethod
     def create(cls, path, cache):
@@ -70,11 +62,7 @@ class Workspace(object):
         yml.pop("generators", None)  # Not used
 
         # Root packages
-        root_list = yml.pop("root", [])
-        if isinstance(root_list, str):
-            root_list = root_list.split(",")
-        ws.root_list = [ConanFileReference.loads(s.strip(), validate=True)
-                        for s in root_list if s.strip()]
+        yml.pop("root", [])  # Not needed
 
         # Editable packages
         editables = yml.pop("editables", {})
@@ -105,7 +93,6 @@ class Workspace(object):
         if yml:
             raise ConanException("Unrecognized fields '{}'".format("', '".join(yml.keys())))
 
-        ws.validate()
         return ws
 
     def _build_graph(self, manager, refs, **kwargs):
@@ -174,14 +161,9 @@ class WorkspaceCMake(Workspace):
         
     """)
 
-    def validate(self):
-        super(WorkspaceCMake, self).validate()
-        for _, pkg in self.packages.items():
-            pass
-
     def generate(self, install_folder, manager, output, **kwargs):
         # Add roots and editables, all together
-        roots = list(set(self.root_list + list(self.packages.keys())))
+        roots = list(self.packages.keys())
         graph = self._build_graph(manager, refs=roots, **kwargs)
 
         # Prepare the context for the templates
