@@ -449,42 +449,26 @@ class ConanAPIV1(object):
                           remote_name=None, build=None, profile_name=None,
                           update=False, cwd=None, install_folder=None):
         cwd = cwd or get_cwd()
+        install_folder = install_folder or cwd
         abs_path = os.path.normpath(os.path.join(cwd, path))
 
         remotes = self._cache.registry.load_remotes()
         remotes.select(remote_name)
         self._python_requires.enable_remotes(update=update, remotes=remotes)
 
-        workspace = Workspace(abs_path, self._cache)
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
 
         self._user_io.out.info("Configuration:")
         self._user_io.out.writeln(graph_info.profile.dumps())
 
-        self._cache.editable_packages.override(workspace.get_editable_dict())
-
         recorder = ActionRecorder()
-        deps_graph, _ = self._graph_manager.load_graph(workspace.root, None, graph_info, build,
-                                                       False, update, remotes, recorder)
+        manager = self._init_manager(recorder)
 
-        print_graph(deps_graph, self._user_io.out)
-
-        # Inject the generators before installing
-        for node in deps_graph.nodes:
-            if node.recipe == RECIPE_EDITABLE:
-                generators = workspace[node.ref].generators
-                if generators is not None:
-                    tmp = list(node.conanfile.generators)
-                    tmp.extend([g for g in generators if g not in tmp])
-                    node.conanfile.generators = tmp
-
-        installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
-                                    recorder=recorder, hook_manager=self._hook_manager)
-        installer.install(deps_graph, remotes, keep_build=False, graph_info=graph_info)
-
-        install_folder = install_folder or cwd
-        workspace.generate(install_folder, deps_graph, self._user_io.out)
+        workspace = Workspace.create(abs_path, self._cache)
+        workspace.generate(install_folder, manager=manager, output=self._user_io.out,
+                           graph_info=graph_info, remotes=remotes,
+                           update=update, create_reference=False)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

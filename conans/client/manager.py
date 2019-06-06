@@ -117,3 +117,5 @@ class ConanManager(object):
                 deploy_conanfile = neighbours[0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder)
+
+        return deps_graph
