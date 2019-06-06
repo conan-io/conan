@@ -272,10 +272,10 @@ class DepsGraph(object):
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
-        current_level = []
-        result = [current_level]
-        opened = self.nodes.copy()
+        result = []
+        opened = self.nodes
         while opened:
+            current_level = []
             current = opened.copy()
             for o in opened:
                 o_neighs = o.neighbors() if direct else o.inverse_neighbors()
@@ -283,10 +283,8 @@ class DepsGraph(object):
                     current_level.append(o)
                     current.discard(o)
             current_level.sort()
+            result.append(current_level)
             # now initialize new level
             opened = current
-            if opened:
-                current_level = []
-                result.append(current_level)
 
         return result
