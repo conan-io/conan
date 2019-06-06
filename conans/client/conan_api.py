@@ -421,23 +421,23 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def download(self, reference, remote_name=None, package_list=None, recipe=False):
-        if package_list and recipe:
-            raise ConanException("recipe parameter cannot be used together with package_list")
+    def download(self, reference, remote_name=None, packages=None, recipe=False):
+        if packages and recipe:
+            raise ConanException("recipe parameter cannot be used together with packages")
         # Install packages without settings (fixed ids or all)
         ref = ConanFileReference.loads(reference)
         if check_valid_ref(ref, allow_pattern=False):
-            if package_list and ref.revision is None:
-                for package_id in package_list:
+            if packages and ref.revision is None:
+                for package_id in packages:
                     if "#" in package_id:
                         raise ConanException("It is needed to specify the recipe revision if you "
-                                             "specify a package_list revision")
+                                             "specify a packages revision")
             remotes = self._cache.registry.load_remotes()
             remotes.select(remote_name)
             self._python_requires.enable_remotes(remotes=remotes)
             remote = remotes.get_remote(remote_name)
             recorder = ActionRecorder()
-            download(ref, package_list, remote, recipe, self._remote_manager,
+            download(ref, packages, remote, recipe, self._remote_manager,
                      self._cache, self._user_io.out, recorder, self._loader,
                      self._hook_manager, remotes=remotes)
         else:

@@ -377,21 +377,21 @@ class Command(object):
             pref = PackageReference.loads(args.reference, validate=True)
         except ConanException:
             reference = args.reference
-            package_id_list = args.package
+            packages_list = args.package
 
-            if package_id_list:
+            if packages_list:
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
-                                       "`conan download [...] {}:{}`".format(reference, package_id_list[0]))
+                                       "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
             reference = pref.ref.full_repr()
-            package_id_list = [pref.id]
+            packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
 
         self._warn_python2()
-        return self._conan.download(reference=reference, package_list=package_id_list,
+        return self._conan.download(reference=reference, packages=packages_list,
                                     remote_name=args.remote, recipe=args.recipe)
 
     def install(self, *args):
@@ -1018,18 +1018,18 @@ class Command(object):
             pref = PackageReference.loads(args.reference, validate=True)
         except ConanException:
             reference = args.reference
-            package_id_list = args.package
+            packages_list = args.package
 
-            if package_id_list:
+            if packages_list:
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
-                                       "`conan download [...] {}:{}`".format(reference, package_id_list[0]))
+                                       "`conan download [...] {}:{}`".format(reference, packages_list[0]))
 
-            if args.all and package_id_list:
+            if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
         else:
             reference = pref.ref.full_repr()
-            package_id_list = [pref.id]
+            packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
@@ -1040,7 +1040,7 @@ class Command(object):
         self._warn_python2()
 
         return self._conan.copy(reference=reference, user_channel=args.user_channel,
-                                force=args.force, packages=package_id_list or args.all)
+                                force=args.force, packages=packages_list or args.all)
 
     def user(self, *args):
         """
