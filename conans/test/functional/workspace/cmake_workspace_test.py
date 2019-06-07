@@ -102,8 +102,8 @@ class WSTests(unittest.TestCase):
         cls.affected_by_editables = [cls.libC, cls.libF]
         cls.inmutable = [cls.libD, ]
 
-    #def setUp(self):
-    #    self._reset()
+    def setUp(self):
+        self._reset()
 
     def _reset(self):
         # Return editable packages to its original state
