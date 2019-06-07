@@ -151,14 +151,43 @@ class WorkspaceCMake(Workspace):
             endif()
         endfunction()
         
-        {# Packages that depend on editable ones: out_dependents #}
+        # Custom target
+        function(outer_package PKG_NAME FULL_REF)
+            set(PKG_SENTINEL "{{install_folder}}/${PKG_NAME}.setinel")
+            add_custom_command(OUTPUT ${PKG_SENTINEL}
+                               COMMAND echo "Package ${FULL_REF} not build"
+                               WORKING_DIRECTORY "{{install_folder}}"
+                               COMMENT "Conan install for outter ${PKG_NAME}")
+            add_custom_target(${PKG_NAME} DEPENDS ${PKG_SENTINEL})
+        endfunction()
         
+        {% for ref in ordered_packages %}
+            {%- if ref in in_ws %}
+                # Inner: {{ ref }}
+                {% set pkg_in=in_ws[ref] %}
+                add_subdirectory("{{ pkg_in.source_folder }}" "{{ pkg_in.build_folder }}")
+                add_library({{ ref.name }}::{{ ref.name }} ALIAS {{ ref.name }})
+                add_library(CONAN_PKG::{{ ref.name }} ALIAS {{ ref.name }})
+                {% for r in pkg_in.requires %}
+                    add_dependencies({{ ref.name }} {{ r }})
+                {% endfor %} 
+            {%- else %}
+                # Outter: {{ ref }}
+                outer_package({{out_dependents[ref].name}} {{ref}})
+                {% for r in out_dependents[ref].requires %}
+                    add_dependencies({{ out_dependents[ref].name }} {{ r }})
+                {% endfor %}
+            {%- endif %}
+        {% endfor %}
+        
+        {#
         # Add subdirectories for packages (like it is now) and create aliases
         {%- for ref, pkg in in_ws.items() %}
         add_subdirectory("{{ pkg.source_folder }}" "{{ pkg.build_folder }}")
         add_library({{ ref.name }}::{{ ref.name }} ALIAS {{ ref.name }})
         add_library(CONAN_PKG::{{ ref.name }} ALIAS {{ ref.name }}) 
         {% endfor %}
+        #}
     """)
 
     cmakelists_template = textwrap.dedent(r"""
@@ -177,9 +206,10 @@ class WorkspaceCMake(Workspace):
         graph = self._build_graph(manager, refs=roots, **kwargs)
 
         # Prepare the context for the templates
+        ordered_packages = []
         in_ws = {}  # {ref: {source_folder: X, build_folder: Y}}
         out_ws = []
-        out_dependents = []
+        out_dependents = {}  # {ref: {name, requires}}
         for node in graph.ordered_iterate():
             if node.ref in self.packages:
                 assert node.recipe == RECIPE_EDITABLE, "Not editable in the graph, but in workspace"
@@ -193,11 +223,19 @@ class WorkspaceCMake(Workspace):
                                                conanfile.settings, conanfile.options)
 
                 in_ws[node.ref] = {'source_folder': self.packages[node.ref].layout_path(source_folder),
-                                   'build_folder': self.packages[node.ref].layout_path(build_folder)}
+                                   'build_folder': self.packages[node.ref].layout_path(build_folder),
+                                   'requires': [it.ref.name for it in node.neighbors()
+                                                if it.ref in in_ws or
+                                                it.ref in out_dependents]}
+                ordered_packages.append(node.ref)
             else:
                 out_ws.append(node)
                 if node.ref and any([it.ref in in_ws for it in node.public_closure]):
-                    out_dependents.append(node.ref)
+                    out_dependents[node.ref] = {'name': node.ref.name,
+                                                'requires': [it.ref.name for it in node.neighbors()
+                                                             if it.ref in in_ws or
+                                                             it.ref in out_dependents]}
+                    ordered_packages.append(node.ref)
         out_ws = [it for it in out_ws if it.ref is not None]  # Get rid of the None ref
 
         # Warn for package not in workspace but depending on packages in the workspace
@@ -205,7 +243,7 @@ class WorkspaceCMake(Workspace):
             output.warn("Packages '{}' are not included in the workspace and depend on"
                         " packages that are included. Binaries for these packages are not"
                         " going to take into account local changes, you'll need to build"
-                        " them manually".format("', '".join(map(str, out_dependents))))
+                        " them manually".format("', '".join(map(str, out_dependents.keys()))))
 
         # Gather packages not in workspace but consumed by packages in the workspace
         out_consumed = []
@@ -216,7 +254,8 @@ class WorkspaceCMake(Workspace):
         # Create the conanworkspace.cmake file
         t = Template(self.conanworkspace_cmake_template)
         content = t.render(ws=self, in_ws=in_ws, out_dependents=out_dependents,
-                           out_consumed=out_consumed)
+                           out_consumed=out_consumed, ordered_packages=ordered_packages,
+                           install_folder=install_folder)
         save(os.path.join(install_folder, 'conanworkspace.cmake'), content)
 
         # Create the CMakeLists.txt file

@@ -39,16 +39,27 @@ class WSTests(unittest.TestCase):
 
     original_output = textwrap.dedent("""\
         > pkgG_exe: default
+        > pkgG_header: default
         > pkgG: default
+        \t> pkgE_header: default
         \t> pkgE: default
+        \t\t> pkgB_header: default
         \t\t> pkgB: default
+        \t\t\t> pkgA_header: default
         \t\t\t> pkgA: default
+        \t\t> pkgC_header: default
         \t\t> pkgC: default
+        \t\t\t> pkgA_header: default
         \t\t\t> pkgA: default
+        \t\t\t> pkgD_header: default
         \t\t\t> pkgD: default
+        \t> pkgF_header: default
         \t> pkgF: default
+        \t\t> pkgC_header: default
         \t\t> pkgC: default
+        \t\t\t> pkgA_header: default
         \t\t\t> pkgA: default
+        \t\t\t> pkgD_header: default
         \t\t\t> pkgD: default""")
 
     @staticmethod
@@ -115,7 +126,10 @@ class WSTests(unittest.TestCase):
     def test_created_projects(self):
         self.run_outside_ws()
 
-    def test_workspace(self):
+    def test_modify_editable(self):
+        """ If an editable package is modified, then only the changes into cpp work (if ABI compatible)
+            because the linking is done in the root project.
+        """
         t = TestClient(base_folder=self.base_folder)
         ws_yml = Template(workspace_yml_template).render(editables=self.editables)
         t.save({'ws.yml': ws_yml}, clean_first=True)
@@ -127,9 +141,37 @@ class WSTests(unittest.TestCase):
         t.run_command('cd build && ./bin/pkgG_exe')
         self.assertMultiLineEqual(str(t.out).strip(), self.original_output.strip())
 
-        self.libA.modify_cpp_message("Edited!!!")
+        self.libA.modify_cpp_message("Edited!!!")  # It will change value in cpp and in header file
         t.run_command('cd build && cmake --build .')
         t.run_command('cd build && ./bin/pkgG_exe')
-        print(t.out)
 
-        self.fail("test_workspace")
+        self.assertMultiLineEqual(str(t.out).strip(), textwrap.dedent("""\
+            > pkgG_exe: default
+            > pkgG_header: default
+            > pkgG: default
+            \t> pkgE_header: default
+            \t> pkgE: default
+            \t\t> pkgB_header: default
+            \t\t> pkgB: default
+            \t\t\t> pkgA_header: Edited!!!
+            \t\t\t> pkgA: Edited!!!
+            \t\t> pkgC_header: default
+            \t\t> pkgC: default
+            \t\t\t> pkgA_header: default
+            \t\t\t> pkgA: Edited!!!
+            \t\t\t> pkgD_header: default
+            \t\t\t> pkgD: default
+            \t> pkgF_header: default
+            \t> pkgF: default
+            \t\t> pkgC_header: default
+            \t\t> pkgC: default
+            \t\t\t> pkgA_header: default
+            \t\t\t> pkgA: Edited!!!
+            \t\t\t> pkgD_header: default
+            \t\t\t> pkgD: default"""))
+
+        # TODO: The desired output should take into account changes for libraries not in WS
+        # self.assertNotIn("> pkgA_header: default", t.out)
+
+        # And outside the workspace, everything should behave exactly the same
+        self.run_outside_ws()

@@ -19,7 +19,7 @@ cmakelists_template = textwrap.dedent(r"""
     {% endif %}
 
     {% for library in package.libraries %}
-    add_library({{library.target}} {{library.name}}/lib.cpp)
+    add_library({{library.target}} {{library.name}}/lib.cpp {{library.name}}/lib.h)
     target_include_directories({{library.target}}
         PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
@@ -82,7 +82,6 @@ conanfile_template = textwrap.dedent(r"""
 # For each library/component inside a package
 lib_cpp_template = textwrap.dedent(r"""
     #include "{{library.name}}/lib.h"
-    #include <iostream>
 
     {% for require in library.requires %}
     #include "{{require.name}}/lib.h"
@@ -91,6 +90,7 @@ lib_cpp_template = textwrap.dedent(r"""
     void {{library.name}}(int tabs) {
         std::cout << std::string(tabs, '\t') << "> {{library.name}}: {{ message|default("default") }}" << std::endl;
         {% for require in library.requires %}
+        {{require.name}}_header(tabs+1);
         {{require.name}}(tabs+1);
         {% endfor %}
     }
@@ -98,8 +98,14 @@ lib_cpp_template = textwrap.dedent(r"""
 
 lib_h_template = textwrap.dedent(r"""
     #pragma once
+    
+    #include <iostream>
 
     void {{library.name}}(int tabs);
+    
+    static void {{library.name}}_header(int tabs) {
+        std::cout << std::string(tabs, '\t') << "> {{library.name}}_header: {{ message|default("default") }}" << std::endl;
+    }
 """)
 
 main_cpp_template = textwrap.dedent(r"""
@@ -112,6 +118,7 @@ main_cpp_template = textwrap.dedent(r"""
     int main() {
         std::cout << "> {{executable.name}}: {{ message|default("default") }}" << std::endl;
         {% for require in executable.requires %}
+        {{require.name}}_header(0);
         {{require.name}}(0);
         {% endfor %}
     }
