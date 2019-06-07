@@ -114,32 +114,44 @@ class WorkspaceCMake(Workspace):
         {%- for ref in in_ws %}
         list(APPEND ws_targets "{{ ref.name }}")
         {%- endfor %}
+        {%- for ref in out_consumed %}
+        list(APPEND ws_targets "{{ ref.name }}")
+        {%- endfor %}
 
-        # Override functions to avoid importing existing TARGETs (or calling again Conan Magic)
+        {% if out_consumed %}
+        # Packages that are consumed by editable ones
+        {%- for pkg in out_consumed %}
+        find_package({{ pkg.name }} REQUIRED)
+        set_target_properties({{pkg.name}}::{{pkg.name}} PROPERTIES IMPORTED_GLOBAL TRUE)
+        add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }}::{{ pkg.name }}) 
+        {% endfor %}
+        {%- endif %}
+
+        # Override functions to avoid importing their own TARGETs (or calling again Conan Magic)
         function(conan_basic_setup)
             message("Ignored call to 'conan_basic_setup'")
         endfunction()
         
+        function(include)
+            if ("${ARGV0}" MATCHES ".*/conanbuildinfo(_multi)?.cmake")
+                message("Ignore inclusion of ${ARGV0}")
+            else()
+                _include(${ARGV})
+            endif()
+        endfunction(include)
+        
         # Do not use find_package for those packages handled within the workspace
         function(find_package)
-            if(NOT "${ARG0}" IN_LIST ws_targets)
+            if(NOT "${ARGV0}" IN_LIST ws_targets)
                 # Note.- If it's been already overridden, it will recurse forever
-                message("find_package(${ARG0})")
+                message("find_package(${ARGV0})")
                 _find_package(${ARGV})
             else()
-                message("find_package(${ARG0}) ignored, it is a target handled by Conan workspace")
+                message("find_package(${ARGV0}) ignored, it is a target handled by Conan workspace")
             endif()
         endfunction()
         
         {# Packages that depend on editable ones: out_dependents #}
-
-        {%- if out_consumed %}
-        # Packages that are consumed by editable ones
-        {%- for pkg in out_consumed %}
-        find_package({{ pkg.name }} REQUIRED)
-        add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }}) 
-        {%- endfor %}
-        {%- endif %}
         
         # Add subdirectories for packages (like it is now) and create aliases
         {%- for ref, pkg in in_ws.items() %}
@@ -150,7 +162,7 @@ class WorkspaceCMake(Workspace):
     """)
 
     cmakelists_template = textwrap.dedent(r"""
-        cmake_minimum_required(VERSION 2.8.12)
+        cmake_minimum_required(VERSION 3.3)
         project("{{ ws.name }}")
         
         include(${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake)
@@ -198,7 +210,7 @@ class WorkspaceCMake(Workspace):
         # Gather packages not in workspace but consumed by packages in the workspace
         out_consumed = []
         for it in out_ws:
-            if any([n.ref in in_ws for n in it.inverse_closure]):
+            if any([n.ref in in_ws and it not in in_ws for n in it.inverse_closure]):
                 out_consumed.append(it.ref)
 
         # Create the conanworkspace.cmake file
