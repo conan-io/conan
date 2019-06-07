@@ -207,21 +207,21 @@ class WorkspaceCMake(Workspace):
                                                conanfile.settings, conanfile.options)
 
                 pkg = {'name': node.ref.name,
-                                   'source_folder': self.packages[node.ref].layout_path(source_folder),
-                                   'build_folder': self.packages[node.ref].layout_path(build_folder),
-                                   'requires': [it.ref.name for it in node.neighbors()
-                                                if it.ref in in_ws or
-                                                it.ref in out_dependents],
-                                   'in': True}
+                       'source_folder': self.packages[node.ref].layout_path(source_folder),
+                       'build_folder': self.packages[node.ref].layout_path(build_folder),
+                       'requires': [it.ref.name for it in node.neighbors()
+                                    if it.ref in in_ws or
+                                    it.ref in out_dependents],
+                       'in': True}
                 in_ws[node.ref] = pkg
                 ordered_packages.append((node.ref, pkg))
             else:
                 if node.ref and any([it.ref in in_ws for it in node.public_closure]):
                     pkg = {'name': node.ref.name,
-                                                'requires': [it.ref.name for it in node.neighbors()
-                                                             if it.ref in in_ws or
-                                                             it.ref in out_dependents],
-                                                'in': False}
+                           'requires': [it.ref.name for it in node.neighbors()
+                                        if it.ref in in_ws or
+                                        it.ref in out_dependents],
+                           'in': False}
                     out_dependents[node.ref] = pkg
                     ordered_packages.append((node.ref, pkg))
 
