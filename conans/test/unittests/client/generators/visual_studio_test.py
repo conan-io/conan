@@ -104,3 +104,29 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         self.assertIn(condition_debug, content)
         self.assertIn(condition_release, content)
         self.assertIn(condition_custom, content)
+
+    def addional_dependencies_test(self):
+
+        def validate_additional_dependencies(lib, additional_dep):
+            conanfile = ConanFile(TestBufferConanOutput(), None)
+            conanfile.initialize(Settings({}), EnvValues())
+            ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
+            cpp_info = CppInfo("dummy_root_folder1")
+            cpp_info.libs = [lib]
+            conanfile.deps_cpp_info.update(cpp_info, ref.name)
+            generator = VisualStudioGenerator(conanfile)
+            self.assertIn("<AdditionalDependencies>" \
+                          "{};%(AdditionalDependencies)" \
+                          "</AdditionalDependencies>".format(additional_dep), generator.content)
+
+        # regular
+        validate_additional_dependencies("foobar", "foobar.lib")
+
+        # .lib extension
+        validate_additional_dependencies("blah.lib", "blah.lib")
+
+        # extra dot dot
+        validate_additional_dependencies("foo.v12.core", "foo.v12.core.lib")
+
+        # extra dot dot + .lib
+        validate_additional_dependencies("foo.v12.core.lib", "foo.v12.core.lib")

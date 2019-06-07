@@ -78,7 +78,10 @@ class VisualStudioBuildEnvironment(object):
         # FIXME: Conan 2.0. The libs are being added twice to visual_studio
         # one in the conanbuildinfo.props, and the other in the env-vars
         def format_lib(lib):
-            return lib if os.path.splitext(lib)[1] else '%s.lib' % lib
+            ext = os.path.splitext(lib)[1]
+            if ext in (".lib", ".dll"):
+                return ext
+            return '%s.lib' % lib
 
         ret = [flag for flag in self.link_flags]  # copy
         ret.extend([format_lib(lib) for lib in self.libs])

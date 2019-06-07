@@ -86,3 +86,50 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                           "Project=\"conanbuildinfo_release_x64_v141.props\"/>", content_multi)
 
             os.unlink('conanbuildinfo_multi.props')
+
+    def addional_dependencies_test(self):
+
+        def validate_additional_dependencies(libname, additional_dep):
+            tempdir = temp_folder()
+            with chdir(tempdir):
+                settings = Settings.loads(default_settings_yml)
+                settings.os = "Windows"
+                settings.compiler = "Visual Studio"
+                settings.compiler.version = "11"
+                settings.compiler.runtime = "MD"
+                conanfile = ConanFile(TestBufferConanOutput(), None)
+                conanfile.initialize(Settings({}), EnvValues())
+
+                ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
+                cpp_info = CppInfo("dummy_root_folder1")
+                cpp_info.libs = [libname]
+                conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+                settings.arch = "x86_64"
+                settings.build_type = "Release"
+                settings.compiler.version = "15"
+                settings.compiler.toolset = "v141"
+                conanfile.settings = settings
+
+                generator = VisualStudioMultiGenerator(conanfile)
+                generator.output_path = ""
+                content = generator.content
+
+                self.assertIn('conanbuildinfo_release_x64_v141.props', content.keys())
+
+                content_release = content['conanbuildinfo_release_x64_v141.props']
+                self.assertIn("<AdditionalDependencies>" \
+                              "{};%(AdditionalDependencies)" \
+                              "</AdditionalDependencies>".format(additional_dep), content_release)
+
+        # regular
+        validate_additional_dependencies("foobar", "foobar.lib")
+
+        # .lib extension
+        validate_additional_dependencies("blah.lib", "blah.lib")
+
+        # extra dot dot
+        validate_additional_dependencies("foo.v12.core", "foo.v12.core.lib")
+
+        # extra dot dot + .lib
+        validate_additional_dependencies("foo.v12.core.lib", "foo.v12.core.lib")
