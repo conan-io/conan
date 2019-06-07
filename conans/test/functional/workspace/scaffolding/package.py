@@ -8,6 +8,7 @@ from jinja2 import Template
 from conans.test.functional.workspace.scaffolding.templates import conanfile_template, \
     cmakelists_template, lib_cpp_template, lib_h_template, main_cpp_template, layout_template
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import mkdir
 
 
 class _Library:
@@ -116,7 +117,7 @@ class Package:
 
     def render(self, output_folder=None):
         self._directory = output_folder or os.path.join(temp_folder(False), self.name)
-        os.makedirs(self._directory)
+        mkdir(self._directory)
         self._render_template(conanfile_template,
                               os.path.join(self._directory, 'conanfile.py'),
                               package=self)
@@ -126,7 +127,7 @@ class Package:
         self._render_template(layout_template, self.layout_file, package=self)
         for library in self._libraries:
             library_dir = os.path.join(self._directory, library.name)
-            os.makedirs(library_dir)
+            mkdir(library_dir)
             self._render_template(lib_h_template,
                                   os.path.join(library_dir, 'lib.h'),
                                   package=self, library=library)
@@ -135,7 +136,7 @@ class Package:
                                   package=self, library=library)
         for executable in self._executables:
             executable_dir = os.path.join(self._directory, executable.name)
-            os.makedirs(executable_dir, exist_ok=True)
+            mkdir(executable_dir)
             self._render_template(main_cpp_template,
                                   os.path.join(executable_dir, 'main.cpp'),
                                   package=self, executable=executable)
