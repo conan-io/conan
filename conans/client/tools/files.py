@@ -148,7 +148,7 @@ def untargz(filename, destination=".", pattern=None):
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature:
+    if real_signature != signature.lower():
         raise ConanException("%s signature failed for '%s' file. \n"
                              " Provided signature: %s  \n"
                              " Computed signature: %s" % (algorithm_name,
