@@ -78,9 +78,8 @@ class GraphLockCITest(unittest.TestCase):
                       LOCKFILE: lock_file})
         clientb.run("create . PkgB/0.1@user/channel --install-folder=. --use-lock")
         lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
-        print lock_fileb
-        self.assertIn("PkgB/0.1@user/channel#a186a3cf91ce42e988284d45deaca4da:"
-                      "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#2f5e91611df70b536e1624caf597b435",
+        self.assertIn("PkgB/0.1@user/channel#569839e7b741ee474406de1db69d19c2:"
+                      "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#d1974c85c53dfaa549478a9ead361fe2",
                       lock_fileb)
         self.assertIn("PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#5ba7f606729949527141beef73c72bc8",
