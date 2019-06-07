@@ -114,13 +114,13 @@ class WorkspaceCMake(Workspace):
         {%- for ref in in_ws %}
         list(APPEND ws_targets "{{ ref.name }}")
         {%- endfor %}
-        {%- for ref in out_consumed %}
+        {%- for ref, _ in out_dependents.items() %}
         list(APPEND ws_targets "{{ ref.name }}")
         {%- endfor %}
 
-        {% if out_consumed %}
+        {% if out_dependents %}
         # Packages that are consumed by editable ones
-        {%- for pkg in out_consumed %}
+        {%- for ref, pkg in out_dependents.items() %}
         find_package({{ pkg.name }} REQUIRED)
         set_target_properties({{pkg.name}}::{{pkg.name}} PROPERTIES IMPORTED_GLOBAL TRUE)
         add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }}::{{ pkg.name }}) 
@@ -208,7 +208,6 @@ class WorkspaceCMake(Workspace):
         # Prepare the context for the templates
         ordered_packages = []
         in_ws = {}  # {ref: {source_folder: X, build_folder: Y}}
-        out_ws = []
         out_dependents = {}  # {ref: {name, requires}}
         for node in graph.ordered_iterate():
             if node.ref in self.packages:
@@ -229,14 +228,12 @@ class WorkspaceCMake(Workspace):
                                                 it.ref in out_dependents]}
                 ordered_packages.append(node.ref)
             else:
-                out_ws.append(node)
                 if node.ref and any([it.ref in in_ws for it in node.public_closure]):
                     out_dependents[node.ref] = {'name': node.ref.name,
                                                 'requires': [it.ref.name for it in node.neighbors()
                                                              if it.ref in in_ws or
                                                              it.ref in out_dependents]}
                     ordered_packages.append(node.ref)
-        out_ws = [it for it in out_ws if it.ref is not None]  # Get rid of the None ref
 
         # Warn for package not in workspace but depending on packages in the workspace
         if out_dependents:
@@ -245,23 +242,16 @@ class WorkspaceCMake(Workspace):
                         " going to take into account local changes, you'll need to build"
                         " them manually".format("', '".join(map(str, out_dependents.keys()))))
 
-        # Gather packages not in workspace but consumed by packages in the workspace
-        out_consumed = []
-        for it in out_ws:
-            if any([n.ref in in_ws and it not in in_ws for n in it.inverse_closure]):
-                out_consumed.append(it.ref)
-
         # Create the conanworkspace.cmake file
         t = Template(self.conanworkspace_cmake_template)
         content = t.render(ws=self, in_ws=in_ws, out_dependents=out_dependents,
-                           out_consumed=out_consumed, ordered_packages=ordered_packages,
+                           ordered_packages=ordered_packages,
                            install_folder=install_folder)
         save(os.path.join(install_folder, 'conanworkspace.cmake'), content)
 
         # Create the CMakeLists.txt file
         t = Template(self.cmakelists_template)
-        content = t.render(ws=self, in_ws=in_ws, out_dependents=out_dependents,
-                           out_consumed=out_consumed)
+        content = t.render(ws=self, in_ws=in_ws, out_dependents=out_dependents)
         save(os.path.join(install_folder, 'CMakeLists.txt'), content)
 
         # Create the conanbuildinfo.cmake (no dependencies)
@@ -270,8 +260,8 @@ class WorkspaceCMake(Workspace):
                         build_modes=["never"], generators=["cmake", ], **kwargs)
 
         # Create findXXX files for consumed packages
-        if out_consumed:
+        if out_dependents:
             # TODO: Silent output here?
-            manager.install([it for it in out_consumed],
+            manager.install(list(out_dependents.keys()),
                             manifest_folder=False, install_folder=install_folder,
                             build_modes=["never"], generators=["cmake_find_package", ], **kwargs)
