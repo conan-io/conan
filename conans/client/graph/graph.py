@@ -276,15 +276,14 @@ class DepsGraph(object):
         opened = self.nodes
         while opened:
             current_level = []
-            current = opened.copy()
             for o in opened:
                 o_neighs = o.neighbors() if direct else o.inverse_neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
-                    current.discard(o)
+
             current_level.sort()
             result.append(current_level)
             # now initialize new level
-            opened = current
+            opened = opened.difference(current_level)
 
         return result
