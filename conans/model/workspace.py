@@ -26,10 +26,11 @@ class LocalPackage(object):
 class Workspace(object):
     default_filename = "conanws.yml"
     name = None
-    packages = {}
+    packages = None
 
     def __init__(self, cache):
         self._cache = cache
+        self.packages = {}
 
     @classmethod
     def create(cls, path, cache):
