@@ -115,8 +115,7 @@ class CmdUpload(object):
 
         for ref in refs:
             layout = self._cache.package_layout(ref)
-            metadata = layout.load_metadata()
-            ref = ref.copy_with_rev(metadata.recipe.revision)
+            conanfile, metadata, ref = layout.init_from_metadata(self._loader)
 
             remote = remotes.selected
             if remote:
@@ -130,14 +129,6 @@ class CmdUpload(object):
                 msg = "Are you sure you want to upload '%s' to '%s'?" % (str(ref), ref_remote.name)
                 upload = self._user_io.request_boolean(msg)
             if upload:
-                try:
-                    conanfile_path = layout.conanfile()
-                    conanfile = self._loader.load_class(conanfile_path)
-                    layout.short_paths = conanfile.short_paths
-                except NotFoundException:
-                    raise NotFoundException(("There is no local conanfile exported as %s" %
-                                             str(ref)))
-
                 # TODO: This search of binary packages has to be improved, more robust
                 # So only real packages are retrieved
                 if all_packages or query:

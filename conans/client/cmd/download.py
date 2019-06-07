@@ -16,10 +16,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
     with layout.update_metadata() as metadata:
         metadata.recipe.remote = remote.name
 
-    conan_file_path = layout.conanfile()
-    conanfile = loader.load_class(conan_file_path)
-    # TODO: Improve this, the cache layout might store short_paths without reading conanfile
-    layout.short_paths = conanfile.short_paths
+    conanfile, metadata, ref = layout.init_from_metadata(loader)
 
     # Download the sources too, don't be lazy
     complete_recipe_sources(remote_manager, layout, conanfile, remotes)
@@ -34,7 +31,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
 
         _download_binaries(conanfile, ref, package_ids, cache, remote_manager,
                            remote, output, recorder)
-    hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
+    hook_manager.execute("post_download", conanfile_path=layout.conanfile(), reference=ref,
                          remote=remote)
 
 

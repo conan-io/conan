@@ -27,7 +27,7 @@ def short_path(func):
 
         def wrap(self, *args, **kwargs):
             p = func(self, *args, **kwargs)
-            return path_shortener(p, self.short_paths)
+            return path_shortener(p, self._short_paths)
 
         return wrap
     else:
@@ -41,8 +41,18 @@ class PackageCacheLayout(object):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = os.path.normpath(base_folder)
-        self.short_paths = short_paths
+        self._short_paths = short_paths
         self._no_lock = no_lock
+
+    def init_from_metadata(self, loader):
+        """ loads the metadata and conanfile
+        """
+        metadata = self.load_metadata()
+        self._ref = self._ref.copy_with_rev(metadata.recipe.revision)
+        conanfile_path = self.conanfile()
+        conanfile = loader.load_class(conanfile_path)
+        self._short_paths = conanfile.short_paths
+        return conanfile, metadata, self._ref
 
     @property
     def ref(self):
