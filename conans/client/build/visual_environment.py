@@ -79,9 +79,7 @@ class VisualStudioBuildEnvironment(object):
         # one in the conanbuildinfo.props, and the other in the env-vars
         def format_lib(lib):
             ext = os.path.splitext(lib)[1]
-            if ext in (".lib", ".dll"):
-                return ext
-            return '%s.lib' % lib
+            return lib if ext in (".lib", ".dll") else '%s.lib' % lib
 
         ret = [flag for flag in self.link_flags]  # copy
         ret.extend([format_lib(lib) for lib in self.libs])
