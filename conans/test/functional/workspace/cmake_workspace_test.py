@@ -175,7 +175,8 @@ class WSTests(unittest.TestCase):
         t.run_command('cd build && cmake ..'
                       ' -DCMAKE_MODULE_PATH="{}"'
                       ' -DBUILD_SHARED_LIBS:BOOL=TRUE'
-                      ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'.format(t.current_folder))
+                      ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'
+                      ' -DCONAN_CMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(t.current_folder))
         t.run_command('cd build && cmake --build .')
 
         # Check that it is building shared libs:
