@@ -20,7 +20,7 @@ class LocalPackage(object):
 
     def layout_path(self, path):
         path = path or "."
-        return os.path.normpath(os.path.join(self.path, path))
+        return os.path.normpath(os.path.join(self.path, path)).replace('\\', '/')
 
 
 class Workspace(object):
@@ -233,6 +233,7 @@ class WorkspaceCMake(Workspace):
                         " going to take into account local changes, you'll need to build"
                         " them manually".format("', '".join(map(str, out_dependents.keys()))))
 
+        install_folder = install_folder.replace('\\', '/')
         # Create the conanworkspace.cmake file
         t = Template(self.conanworkspace_cmake_template)
         content = t.render(ws=self, out_dependents=out_dependents,
