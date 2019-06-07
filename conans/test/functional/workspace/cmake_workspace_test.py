@@ -75,8 +75,8 @@ class WSTests(unittest.TestCase):
                 library = item.libraries[0]  # There is only one lib per package (wait for Dani)
                 pkg_lib.add_link_library(library, generator='cmake')
         if add_executable:
-            exec = pkg.add_executable(name="{}_{}".format(pkg.name, "exe"))
-            exec.add_link_library(pkg_lib)
+            executable = pkg.add_executable(name="{}_{}".format(pkg.name, "exe"))
+            executable.add_link_library(pkg_lib)
         pkg_folder = pkg.render()
         client.run('create "{}" ws/testing'.format(os.path.join(pkg_folder, 'conanfile.py')))
         return pkg
