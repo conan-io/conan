@@ -42,13 +42,17 @@ conanfile_template = textwrap.dedent(r"""
         name = "{{ package.name }}"
         version = "{{ package.version }}"
         settings = "os", "arch", "compiler", "build_type"
-        options = {"shared": [True, False]}
-        default_options = {"shared": {{"True" if package.shared else "False"}}}
+        options = {"shared": [True, False], "fPIC": [True, False]}
+        default_options = {"shared": {{"True" if package.shared else "False"}}, "fPIC": True}
         exports = "*"
 
         {% if package.generators %}
         generators = "{{package.generators.keys()|join('", "')}}"
         {% endif %}
+
+        def configure(self):
+            if self.settings.compiler == 'Visual Studio':
+                del self.options.fPIC
 
         def requirements(self):
             {%- for require in package.requires %}

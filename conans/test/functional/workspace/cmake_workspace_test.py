@@ -129,8 +129,9 @@ class WSTests(unittest.TestCase):
         self.run_outside_ws()
 
     def test_modify_editable(self):
-        """ If an editable package is modified, then only the changes into cpp work (if ABI compatible)
-            because the linking is done in the root project.
+        """ If an editable package is modified, then only the changes into CPP files
+            will be reflected because the linking is done in the root project (given
+            ABI compatibility).
         """
         t = TestClient(base_folder=self.base_folder)
         ws_yml = Template(workspace_yml_template).render(editables=self.editables)
