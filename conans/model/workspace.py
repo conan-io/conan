@@ -111,11 +111,8 @@ class WorkspaceCMake(Workspace):
 
     conanworkspace_cmake_template = textwrap.dedent(r"""
         # List of targets involved in the workspace
-        {%- for ref in in_ws %}
-        list(APPEND ws_targets "{{ ref.name }}")
-        {%- endfor %}
-        {%- for ref, _ in out_dependents.items() %}
-        list(APPEND ws_targets "{{ ref.name }}")
+        {%- for _, pkg in ordered_packages %}
+        list(APPEND ws_targets "{{ pkg.name }}")
         {%- endfor %}
 
         {% if out_dependents %}
@@ -161,33 +158,20 @@ class WorkspaceCMake(Workspace):
             add_custom_target(${PKG_NAME} DEPENDS ${PKG_SENTINEL})
         endfunction()
         
-        {% for ref in ordered_packages %}
-            {%- if ref in in_ws %}
+        {% for ref, pkg in ordered_packages %}
+            {%- if pkg.in %}
                 # Inner: {{ ref }}
-                {% set pkg_in=in_ws[ref] %}
-                add_subdirectory("{{ pkg_in.source_folder }}" "{{ pkg_in.build_folder }}")
-                add_library({{ ref.name }}::{{ ref.name }} ALIAS {{ ref.name }})
-                add_library(CONAN_PKG::{{ ref.name }} ALIAS {{ ref.name }})
-                {% for r in pkg_in.requires %}
-                    add_dependencies({{ ref.name }} {{ r }})
-                {% endfor %} 
+                add_subdirectory("{{ pkg.source_folder }}" "{{ pkg.build_folder }}")
+                add_library({{ pkg.name }}::{{ pkg.name }} ALIAS {{ pkg.name }})
+                add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }})
             {%- else %}
                 # Outter: {{ ref }}
-                outer_package({{out_dependents[ref].name}} {{ref}})
-                {% for r in out_dependents[ref].requires %}
-                    add_dependencies({{ out_dependents[ref].name }} {{ r }})
-                {% endfor %}
+                outer_package({{pkg.name}} {{ref}})
             {%- endif %}
+            {%- for r in pkg.requires %}
+                add_dependencies({{ pkg.name }} {{ r }})
+            {%- endfor %}
         {% endfor %}
-        
-        {#
-        # Add subdirectories for packages (like it is now) and create aliases
-        {%- for ref, pkg in in_ws.items() %}
-        add_subdirectory("{{ pkg.source_folder }}" "{{ pkg.build_folder }}")
-        add_library({{ ref.name }}::{{ ref.name }} ALIAS {{ ref.name }})
-        add_library(CONAN_PKG::{{ ref.name }} ALIAS {{ ref.name }}) 
-        {% endfor %}
-        #}
     """)
 
     cmakelists_template = textwrap.dedent(r"""
@@ -206,7 +190,7 @@ class WorkspaceCMake(Workspace):
         graph = self._build_graph(manager, refs=roots, **kwargs)
 
         # Prepare the context for the templates
-        ordered_packages = []
+        ordered_packages = []  # [(ref, pkg), ]
         in_ws = {}  # {ref: {source_folder: X, build_folder: Y}}
         out_dependents = {}  # {ref: {name, requires}}
         for node in graph.ordered_iterate():
@@ -221,19 +205,24 @@ class WorkspaceCMake(Workspace):
                 build_folder = editable.folder(node.ref, EditableLayout.BUILD_FOLDER,
                                                conanfile.settings, conanfile.options)
 
-                in_ws[node.ref] = {'source_folder': self.packages[node.ref].layout_path(source_folder),
+                pkg = {'name': node.ref.name,
+                                   'source_folder': self.packages[node.ref].layout_path(source_folder),
                                    'build_folder': self.packages[node.ref].layout_path(build_folder),
                                    'requires': [it.ref.name for it in node.neighbors()
                                                 if it.ref in in_ws or
-                                                it.ref in out_dependents]}
-                ordered_packages.append(node.ref)
+                                                it.ref in out_dependents],
+                                   'in': True}
+                in_ws[node.ref] = pkg
+                ordered_packages.append((node.ref, pkg))
             else:
                 if node.ref and any([it.ref in in_ws for it in node.public_closure]):
-                    out_dependents[node.ref] = {'name': node.ref.name,
+                    pkg = {'name': node.ref.name,
                                                 'requires': [it.ref.name for it in node.neighbors()
                                                              if it.ref in in_ws or
-                                                             it.ref in out_dependents]}
-                    ordered_packages.append(node.ref)
+                                                             it.ref in out_dependents],
+                                                'in': False}
+                    out_dependents[node.ref] = pkg
+                    ordered_packages.append((node.ref, pkg))
 
         # Warn for package not in workspace but depending on packages in the workspace
         if out_dependents:
@@ -244,14 +233,14 @@ class WorkspaceCMake(Workspace):
 
         # Create the conanworkspace.cmake file
         t = Template(self.conanworkspace_cmake_template)
-        content = t.render(ws=self, in_ws=in_ws, out_dependents=out_dependents,
+        content = t.render(ws=self, out_dependents=out_dependents,
                            ordered_packages=ordered_packages,
                            install_folder=install_folder)
         save(os.path.join(install_folder, 'conanworkspace.cmake'), content)
 
         # Create the CMakeLists.txt file
         t = Template(self.cmakelists_template)
-        content = t.render(ws=self, in_ws=in_ws, out_dependents=out_dependents)
+        content = t.render(ws=self, out_dependents=out_dependents)
         save(os.path.join(install_folder, 'CMakeLists.txt'), content)
 
         # Create the conanbuildinfo.cmake (no dependencies)
