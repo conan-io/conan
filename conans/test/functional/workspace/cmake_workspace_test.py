@@ -116,11 +116,11 @@ class WSTests(unittest.TestCase):
         t = TestClient(base_folder=self.base_folder)
         t.save({'conanfile.txt': "[requires]\n{}".format(self.libG.ref)})
         t.run('install conanfile.txt -g virtualrunenv')
-        exec = self.libG.executables[0]
+        executable = self.libG.executables[0]
         if platform.system() != "Windows":
-            t.run_command("bash -c 'source activate_run.sh && {}'".format(exec.name))
+            t.run_command("bash -c 'source activate_run.sh && {}'".format(executable.name))
         else:
-            t.run_command("activate_run.bat && {}.exe".format(exec.name))
+            t.run_command("activate_run.bat && {}.exe".format(executable.name))
         self.assertMultiLineEqual(str(t.out).strip(), self.original_output.strip())
 
     def test_created_projects(self):
