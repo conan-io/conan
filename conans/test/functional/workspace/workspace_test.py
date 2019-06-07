@@ -231,11 +231,13 @@ class WorkspaceTest(unittest.TestCase):
                     path: D
                 HelloC/0.1@lasote/stable:
                     path: C
+                    layout: layout
             workspace_generator: cmake
             root: HelloC/0.1@lasote/stable
             """)
 
-        client.save({"conanws.yml": project})
+        client.save({"conanws.yml": project,
+                     "layout": ""})
         client.run("workspace install conanws.yml", assert_error=True)
         self.assertIn("No layout defined for editable 'HelloD/0.1@lasote/stable' and cannot"
                       " find the default one neither", client.out)
