@@ -45,7 +45,7 @@ class ConanPythonRequire(object):
         except KeyError:
             ref = ConanFileReference.loads(require)
             requirement = Requirement(ref)
-            self._range_resolver.resolve(requirement, "python_require", update=False,
+            self._range_resolver.resolve(requirement, "python_require", update=self._update,
                                          remotes=self._remotes)
             ref = requirement.ref
             result = self._proxy.get_recipe(ref, self._check_updates, self._update,

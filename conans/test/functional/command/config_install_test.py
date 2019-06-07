@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import textwrap
 import unittest
 import zipfile
 
@@ -11,12 +12,12 @@ from conans.client import tools
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.uploader_downloader import Downloader
+from conans.client.rest.uploader_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
-import textwrap
+
 
 win_profile = """[settings]
     os: Windows
@@ -56,7 +57,6 @@ default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_
 # If don't want proxy at all, remove section [proxies]
 # As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
-no_proxy = mylocalhost
 https = None
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
@@ -165,7 +165,6 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
-        self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
@@ -301,7 +300,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -313,7 +312,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -330,6 +329,7 @@ class Pkg(ConanFile):
     def failed_install_http_test(self):
         """ should install from a http zip
         """
+        self.client.run("config set general.retry_wait=0")
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Error while installing config from httpnonexisting", self.client.out)
 
@@ -432,7 +432,7 @@ class Pkg(ConanFile):
             self.assertEqual(url, fake_url_with_credentials)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install %s" % fake_url_with_credentials)
 
             # Check credentials are not displayed in output
@@ -453,10 +453,10 @@ class Pkg(ConanFile):
             self.assertTrue(obj.verify)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=download_verify_false):
+        with patch.object(FileDownloader, 'download', new=download_verify_false):
             self.client.run("config install %s --verify-ssl=False" % fake_url)
 
-        with patch.object(Downloader, 'download', new=download_verify_true):
+        with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
     def test_git_checkout_is_possible(self):

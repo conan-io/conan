@@ -11,13 +11,18 @@ from conans.util.tracer import log_client_rest_api_call
 
 class ConanRequester(object):
 
-    def __init__(self, cache, http_requester=None):
+    def __init__(self, config, http_requester=None):
         self._http_requester = http_requester if http_requester else requests.Session()
-        timeout = cache.config.request_timeout
-        self.proxies = cache.config.proxies or {}
+        self._timeout_seconds = config.request_timeout
+        self.proxies = config.proxies or {}
+        self._cacert_path = config.cacert_path
+        self._client_cert_path = config.client_cert_path
+        self._client_cert_key_path = config.client_cert_key_path
+        self._retry = config.retry
+        self._retry_wait = config.retry_wait
+
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
-        self._timeout_seconds = timeout
 
         # Retrocompatibility with deprecated no_proxy
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
@@ -25,22 +30,28 @@ class ConanRequester(object):
         if no_proxy:
             os.environ["NO_PROXY"] = no_proxy
 
-        self._cache = cache
-
-        if not os.path.exists(self._cache.cacert_path):
+        if not os.path.exists(self._cacert_path):
             from conans.client.rest.cacert import cacert
-            save(self._cache.cacert_path, cacert)
+            save(self._cacert_path, cacert)
 
-        if not os.path.exists(cache.client_cert_path):
+        if not os.path.exists(self._client_cert_path):
             self._client_certificates = None
         else:
-            if os.path.exists(cache.client_cert_key_path):
+            if os.path.exists(self._client_cert_key_path):
                 # Requests can accept a tuple with cert and key, or just an string with a
                 # file having both
-                self._client_certificates = (cache.client_cert_path,
-                                             cache.client_cert_key_path)
+                self._client_certificates = (self._client_cert_path,
+                                             self._client_cert_key_path)
             else:
-                self._client_certificates = cache.client_cert_path
+                self._client_certificates = self._client_cert_path
+
+    @property
+    def retry(self):
+        return self._retry
+
+    @property
+    def retry_wait(self):
+        return self._retry_wait
 
     def _should_skip_proxy(self, url):
 
@@ -52,7 +63,7 @@ class ConanRequester(object):
 
     def _add_kwargs(self, url, kwargs):
         if kwargs.get("verify", None) is True:
-            kwargs["verify"] = self._cache.cacert_path
+            kwargs["verify"] = self._cacert_path
         else:
             kwargs["verify"] = False
         kwargs["cert"] = self._client_certificates

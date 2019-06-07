@@ -1,9 +1,10 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
 from conans.util.files import load, mkdir, save
 
 conanfile = """
@@ -233,3 +234,49 @@ class ConanSymlink(ConanFile):
         client.run("create . danimtb/testing")
         self.assertTrue(os.path.exists(package_file))
         self.assertTrue(os.path.exists(package_other_dir))
+
+    def test_create_keep_folder_symlink(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class ConanSymlink(ConanFile):
+                name = "ConanSymlink"
+                version = "3.0.0"
+                exports_sources = ["*"]
+                def build(self):
+                    debug_path = os.path.join(self.build_folder, "debug")
+                    assert os.path.exists(debug_path), "Symlinked folder not created!"
+            """)
+
+        client = TurboTestClient()
+        client.save({"conanfile.py": conanfile})
+        client.save({"release/file.cpp": conanfile})
+        real_dir_path = os.path.join(client.current_folder, "release")
+        symlink_path = os.path.join(client.current_folder, "debug")
+        os.symlink(real_dir_path, symlink_path)
+
+        # Verify that the symlink is created correctly
+        self.assertEqual(os.path.realpath(symlink_path), real_dir_path)
+
+        ref = ConanFileReference.loads("ConanSymlink/3.0.0@user/channel")
+        package_layout = client.cache.package_layout(ref)
+        # Export the recipe and check that the symlink is still there
+        client.export(ref, conanfile=conanfile)
+        sf = package_layout.export_sources()
+        sf_symlink = os.path.join(sf, "debug")
+        self.assertTrue(os.path.islink(sf_symlink))
+        self.assertEqual(os.path.realpath(sf_symlink), os.path.join(sf, "release"))
+
+        # Now do the create
+        pref = client.create(ref, conanfile=conanfile)
+        # Assert that the symlink is preserved when copy to source from exports_sources
+        sf = package_layout.source()
+        sf_symlink = os.path.join(sf, "debug")
+        self.assertTrue(os.path.islink(sf_symlink))
+        self.assertEqual(os.path.realpath(sf_symlink), os.path.join(sf, "release"))
+
+        # Assert that the symlink is preserved when copy to build folder
+        bf = client.cache.package_layout(pref.ref).build(pref)
+        bf_symlink = os.path.join(bf, "debug")
+        self.assertTrue(os.path.islink(bf_symlink))
+        self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))

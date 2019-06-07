@@ -18,7 +18,8 @@ class EnvValues(object):
     with the -e or profiles etc.
         self._data is a dictionary with: {package: {var: value}}
             "package" can be None if the var is global.
-            "value" can be a list or a string. If it's a list the variable is appendable like PATH or PYTHONPATH
+            "value" can be a list or a string. If it's a list the variable
+            is appendable like PATH or PYTHONPATH
     """
 
     def __init__(self):

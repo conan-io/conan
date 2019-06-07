@@ -71,7 +71,7 @@ class VisualStudioGenerator(Generator):
             'res_dirs': "".join("%s;" % p for p in build_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in build_info.include_paths),
             'lib_dirs': "".join("%s;" % p for p in build_info.lib_paths),
-            'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
+            'libs': "".join(['%s.lib;' % lib if not os.path.splitext(lib)[1]  # No extension
                              else '%s;' % lib for lib in build_info.libs]),
             'definitions': "".join("%s;" % d for d in build_info.defines),
             'compiler_flags': " ".join(build_info.cxxflags + build_info.cflags),

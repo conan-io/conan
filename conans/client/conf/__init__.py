@@ -8,6 +8,7 @@ from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
+import logging
 
 
 default_settings_yml = """
@@ -79,7 +80,7 @@ compiler:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0",
                   "8"]
-        libcxx: [libstdc++, libstdc++11, libc++]
+        libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
@@ -107,6 +108,8 @@ compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
 default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
+# retry = 2                             # environment CONAN_RETRY
+# retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
 # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
@@ -202,6 +205,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
                "CONAN_REQUEST_TIMEOUT": self._env_c("general.request_timeout", "CONAN_REQUEST_TIMEOUT", None),
+               "CONAN_RETRY": self._env_c("general.retry", "CONAN_RETRY", None),
+               "CONAN_RETRY_WAIT": self._env_c("general.retry_wait", "CONAN_RETRY_WAIT", None),
                "CONAN_VS_INSTALLATION_PREFERENCE": self._env_c("general.vs_installation_preference", "CONAN_VS_INSTALLATION_PREFERENCE", None),
                "CONAN_RECIPE_LINTER": self._env_c("general.recipe_linter", "CONAN_RECIPE_LINTER", "True"),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
@@ -463,3 +468,113 @@ class ConanClientConfigParser(ConfigParser, object):
                 raise ConanException("Configured file for 'cacert_path'"
                                      " doesn't exists: '{}'".format(cacert_path))
         return cacert_path
+
+    @property
+    def client_cert_path(self):
+        # TODO: Really parameterize the client cert location
+        folder = os.path.dirname(self.filename)
+        CLIENT_CERT = "client.crt"
+        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+
+    @property
+    def client_cert_key_path(self):
+        CLIENT_KEY = "client.key"
+        folder = os.path.dirname(self.filename)
+        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+
+    @property
+    def hooks(self):
+        hooks = get_env("CONAN_HOOKS", list())
+        if not hooks:
+            try:
+                hooks = self.get_conf("hooks")
+                hooks = [k for k, _ in hooks]
+            except Exception:
+                hooks = []
+        return hooks
+
+    @property
+    def non_interactive(self):
+        try:
+            non_interactive = get_env("CONAN_NON_INTERACTIVE")
+            if non_interactive is None:
+                non_interactive = self.get_item("general.non_interactive")
+            return non_interactive.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def logging_level(self):
+        try:
+            level = get_env("CONAN_LOGGING_LEVEL")
+            if level is None:
+                level = self.get_item("log.level")
+            try:
+                level = int(level)
+            except Exception:
+                level = logging.CRITICAL
+            return level
+        except ConanException:
+            return logging.CRITICAL
+
+    @property
+    def logging_file(self):
+        return get_env('CONAN_LOGGING_FILE', None)
+
+    @property
+    def print_commands_to_output(self):
+        try:
+            print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS")
+            if print_commands_to_output is None:
+                print_commands_to_output = self.get_item("log.print_run_commands")
+            return print_commands_to_output.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def retry(self):
+        retry = os.getenv("CONAN_RETRY")
+        if not retry:
+            try:
+                retry = self.get_item("general.retry")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry) if retry is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry'")
+
+    @property
+    def retry_wait(self):
+        retry_wait = os.getenv("CONAN_RETRY_WAIT")
+        if not retry_wait:
+            try:
+                retry_wait = self.get_item("general.retry_wait")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry_wait) if retry_wait is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry_wait'")
+
+    @property
+    def generate_run_log_file(self):
+        try:
+            generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE")
+            if generate_run_log_file is None:
+                generate_run_log_file = self.get_item("log.run_to_file")
+            return generate_run_log_file.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def log_run_to_output(self):
+        try:
+            log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT")
+            if log_run_to_output is None:
+                log_run_to_output = self.get_item("log.run_to_output")
+            return log_run_to_output.lower() in ("1", "true")
+        except ConanException:
+            return True

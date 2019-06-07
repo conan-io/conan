@@ -189,9 +189,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
 
         be = AutoToolsBuildEnvironment(conanfile)
-        expected = {'CFLAGS': 'a_c_flag -O2 -Ob2',
+        expected = {'CFLAGS': 'a_c_flag -O2 -Ob2 -MD',
                     'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition -DNDEBUG',
-                    'CXXFLAGS': 'a_c_flag -O2 -Ob2 a_cxx_flag',
+                    'CXXFLAGS': 'a_c_flag -O2 -Ob2 -MD a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib.lib twolib.lib'}
 
