@@ -12,7 +12,7 @@ cmakelists_template = textwrap.dedent(r"""
     find_package(item.name REQUIRED)
     {% endfor %}
     {% endif %}
-
+    
     {% if 'cmake' in package.generators %}
     include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup({% if use_targets|default(True) %}TARGETS{% endif %})
@@ -88,7 +88,11 @@ lib_cpp_template = textwrap.dedent(r"""
     {% endfor %}
 
     void {{library.name}}(int tabs) {
-        std::cout << std::string(tabs, '\t') << "> {{library.name}}: {{ message|default("default") }}" << std::endl;
+        #ifdef {{library.name}}_EXPORTS
+            std::cout << std::string(tabs, '\t') << "> {{library.name}}: {{ message|default("default") }} (shared!)" << std::endl;
+        #else
+            std::cout << std::string(tabs, '\t') << "> {{library.name}}: {{ message|default("default") }}" << std::endl;
+        #endif
         {% for require in library.requires %}
         {{require.name}}_header(tabs+1);
         {{require.name}}(tabs+1);

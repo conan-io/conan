@@ -115,6 +115,12 @@ class Package:
                                   os.path.join(library_dir, 'lib.cpp'),
                                   package=self, library=library, message=message)
 
+    def modify_options(self, shared=False):
+        self.shared = shared
+        self._render_template(conanfile_template,
+                              os.path.join(self._directory, 'conanfile.py'),
+                              package=self)
+
     def render(self, output_folder=None):
         self._directory = output_folder or os.path.join(temp_folder(False), self.name)
         mkdir(self._directory)

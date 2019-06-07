@@ -468,7 +468,7 @@ class ConanAPIV1(object):
         workspace = Workspace.create(abs_path, self._cache)
         workspace.generate(install_folder, manager=manager, output=self._user_io.out,
                            graph_info=graph_info, remotes=remotes,
-                           update=update, create_reference=False)
+                           update=update, create_reference=False, build_modes=build)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

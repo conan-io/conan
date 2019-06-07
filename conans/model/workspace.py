@@ -102,9 +102,7 @@ class Workspace(object):
                      for ref, ws_package in self.packages.items()}
         self._cache.editable_packages.override(editables)
 
-        return manager.install(refs, manifest_folder=False, install_folder=None,
-                               build_modes=["never"],
-                               **kwargs)
+        return manager.install(refs, manifest_folder=False, install_folder=None, **kwargs)
 
 
 class WorkspaceCMake(Workspace):
@@ -182,13 +180,16 @@ class WorkspaceCMake(Workspace):
         include(${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake)
         conan_basic_setup()  # Execute Conan magic
         
+        set(CMAKE_SKIP_RPATH 0)  # We are not creating packages here, it is ok to have rpaths
+        
         include(${CMAKE_CURRENT_SOURCE_DIR}/conanworkspace.cmake)
     """)
 
     def generate(self, install_folder, manager, output, **kwargs):
         # Add roots and editables, all together
         roots = list(self.packages.keys())
-        graph = self._build_graph(manager, refs=roots, **kwargs)
+        kwargs.pop("build_modes")  # TODO: Can we build non-ws packages?
+        graph = self._build_graph(manager, refs=roots, build_modes=["never"], **kwargs)
 
         # Prepare the context for the templates
         ordered_packages = []  # [(ref, pkg), ]
