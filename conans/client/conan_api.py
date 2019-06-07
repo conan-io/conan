@@ -1231,6 +1231,23 @@ class ConanAPIV1(object):
         lock.graph_lock.clean_modified()
         lock.save(lockfile)
 
+    @api_method
+    def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
+                    profile_names=None, update=False, install_folder=None, build=None,):
+        reference, graph_info = self._info_args(reference, install_folder, profile_names,
+                                                settings, options, env)
+        recorder = ActionRecorder()
+        remotes = self._cache.registry.load_remotes()
+        remotes.select(remote_name)
+        # FIXME: Using update as check_update?
+        self._python_requires.enable_remotes(check_updates=update, remotes=remotes)
+        deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, build, update,
+                                                       False, remotes, recorder)
+
+        print_graph(deps_graph, self._user_io.out)
+        output_folder = _make_abs_path(install_folder)
+        graph_info.save(output_folder)
+        self._user_io.out.info("Generated graphinfo and lockfile")
 
 
 Conan = ConanAPIV1

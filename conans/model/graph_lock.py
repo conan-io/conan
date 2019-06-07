@@ -131,7 +131,7 @@ class GraphLock(object):
                 self._nodes[id_] = node
 
     def clean_modified(self):
-        for id_, node in self._nodes.items():
+        for _, node in self._nodes.items():
             node.modified = False
 
     def build_order(self):
@@ -203,7 +203,9 @@ class GraphLock(object):
     def lock_node(self, node, requires):
         if node.recipe == RECIPE_VIRTUAL:
             return
-        prefs = self.dependencies(node.id)
+        prefs = self._dependencies(node.id)
+        options = self._nodes[node.id].options
+        #node.conanfile.options.values = options
         for require in requires:
             # Not new unlocked dependencies at this stage
             locked_pref, locked_id = prefs[require.ref.name]
@@ -216,7 +218,7 @@ class GraphLock(object):
     def python_requires(self, node_id):
         return self._nodes[node_id].python_requires
 
-    def dependencies(self, node_id):
+    def _dependencies(self, node_id):
         # return {pkg_name: PREF}
         return {self._nodes[i].pref.ref.name: (self._nodes[i].pref, i) for i in self._edges[node_id]}
 

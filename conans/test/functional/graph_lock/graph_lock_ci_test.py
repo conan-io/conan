@@ -78,6 +78,7 @@ class GraphLockCITest(unittest.TestCase):
                       LOCKFILE: lock_file})
         clientb.run("create . PkgB/0.1@user/channel --install-folder=. --use-lock")
         lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
+        print lock_fileb
         self.assertIn("PkgB/0.1@user/channel#a186a3cf91ce42e988284d45deaca4da:"
                       "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5#2f5e91611df70b536e1624caf597b435",
                       lock_fileb)
@@ -133,3 +134,64 @@ class GraphLockCITest(unittest.TestCase):
         client.run("install PkgD/0.1@user/channel -if=. --use-lock")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+
+    def test_options(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                {requires}
+                options = {{"myoption": [1, 2, 3, 4, 5]}}
+                default_options = {{"myoption": 1}}
+                def build(self):
+                    self.output.info("BUILDING WITH OPTION: %s!!" % self.options.myoption)
+                def package_info(self):
+                    self.output.info("PACKAGE_INFO OPTION: %s!!" % self.options.myoption)
+                """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile.format(requires="")})
+        client.run("export . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"')})
+        client.run("export . PkgB/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"')})
+        client.run("export . PkgC/0.1@user/channel")
+        conanfileD = conanfile.format(requires='requires="PkgC/0.1@user/channel"')
+        conanfileD = conanfileD.replace('default_options = {"myoption": 1}',
+                                        'default_options = {"myoption": 2, "PkgC:myoption": 3,'
+                                        '"PkgB:myoption": 4, "PkgA:myoption": 5}')
+        client.save({"conanfile.py": conanfileD})
+        client.run("export . PkgD/0.1@user/channel")
+
+        # FIXME: We need to do this with info, to avoid installing the binaries when we want info
+        client.run("profile new myprofile")
+        # To make sure we can provide a profile as input
+        client.run("graph lock PkgD/0.1@user/channel -pr=myprofile")
+        print client.out
+        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+
+        client2 = TestClient(base_folder=client.base_folder)
+        client2.save({"conanfile.py": conanfile.format(requires=""), LOCKFILE: lock_file})
+        client2.run("create . PkgA/0.1@user/channel -if=. --use-lock")
+        self.assertIn("PkgA/0.1@user/channel: BUILDING WITH OPTION: 5!!", client2.out)
+        self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
+
+        client2.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"')})
+        client2.run("create . PkgB/0.1@user/channel -if=. --use-lock")
+        self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
+        self.assertIn("PkgB/0.1@user/channel: BUILDING WITH OPTION: 4!!", client2.out)
+        self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
+
+        client2.save({"conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"')})
+        client2.run("create . PkgC/0.1@user/channel -if=. --use-lock")
+        self.assertIn("PkgC/0.1@user/channel: PACKAGE_INFO OPTION: 3!!", client2.out)
+        self.assertIn("PkgC/0.1@user/channel: BUILDING WITH OPTION: 3!!", client2.out)
+        self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
+        self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
+
+        client2.save({"conanfile.py": conanfile.format(requires='requires="PkgC/0.1@user/channel"')})
+        client2.run("create . PkgD/0.1@user/channel -if=. --use-lock")
+        self.assertIn("PkgD/0.1@user/channel: PACKAGE_INFO OPTION: 2!!", client2.out)
+        self.assertIn("PkgD/0.1@user/channel: BUILDING WITH OPTION: 2!!", client2.out)
+        self.assertIn("PkgC/0.1@user/channel: PACKAGE_INFO OPTION: 3!!", client2.out)
+        self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
+        self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)

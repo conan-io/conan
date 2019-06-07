@@ -1632,6 +1632,12 @@ class Command(object):
         clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
         clean_cmd.add_argument('lockfile', help='lockfile')
 
+        lock_cmd = subparsers.add_parser('lock', help='create a lock file')
+        lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                              " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                              "./my_project/conanfile.txt. It could also be a reference")
+        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source")
+
         args = parser.parse_args(*args)
         self._warn_python2()
 
@@ -1642,6 +1648,16 @@ class Command(object):
             self._user_io.out.writeln(build_order)
         elif args.subcommand == "clean-modified":
             self._conan.lock_clean_modified(args.lockfile)
+        elif args.subcommand == "lock":
+            self._conan.create_lock(args.path_or_reference,
+                                    remote_name=args.remote,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    profile_names=args.profile,
+                                    update=args.update,
+                                    install_folder=args.install_folder,
+                                    build=args.build)
 
     def _show_help(self):
         """
