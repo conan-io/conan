@@ -155,9 +155,9 @@ class WorkspaceCMake(Workspace):
         function(outer_package PKG_NAME FULL_REF)
             set(PKG_SENTINEL "{{install_folder}}/${PKG_NAME}.setinel")
             add_custom_command(OUTPUT ${PKG_SENTINEL}
-                               COMMAND echo "Package ${FULL_REF} not build"
+                               COMMAND echo "Package ${FULL_REF} not built" > ${PKG_SENTINEL}
                                WORKING_DIRECTORY "{{install_folder}}"
-                               COMMENT "Conan install for outter ${PKG_NAME}")
+                               COMMENT "Build ${PKG_NAME} outside workspace")
             add_custom_target(${PKG_NAME} DEPENDS ${PKG_SENTINEL})
         endfunction()
         

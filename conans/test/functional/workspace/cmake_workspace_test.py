@@ -138,11 +138,15 @@ class WSTests(unittest.TestCase):
         t.run_command('mkdir build')
         t.run_command('cd build && cmake .. -DCMAKE_MODULE_PATH="{}"'.format(t.current_folder))
         t.run_command('cd build && cmake --build .')
+        self.assertIn("Built target {}".format(self.libC.name), t.out)
+        self.assertIn("Built target {}".format(self.libF.name), t.out)
         t.run_command('cd build && ./bin/pkgG_exe')
         self.assertMultiLineEqual(str(t.out).strip(), self.original_output.strip())
 
         self.libA.modify_cpp_message("Edited!!!")  # It will change value in cpp and in header file
         t.run_command('cd build && cmake --build .')
+        self.assertIn("Built target {}".format(self.libC.name), t.out)
+        self.assertIn("Built target {}".format(self.libF.name), t.out)
         t.run_command('cd build && ./bin/pkgG_exe')
 
         self.assertMultiLineEqual(str(t.out).strip(), textwrap.dedent("""\
