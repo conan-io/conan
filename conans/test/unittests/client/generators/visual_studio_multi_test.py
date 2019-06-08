@@ -94,22 +94,20 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             with chdir(tempdir):
                 settings = Settings.loads(default_settings_yml)
                 settings.os = "Windows"
+                settings.arch = "x86_64"
+                settings.build_type = "Release"
                 settings.compiler = "Visual Studio"
-                settings.compiler.version = "11"
+                settings.compiler.version = "15"
                 settings.compiler.runtime = "MD"
+                settings.compiler.toolset = "v141"
+
                 conanfile = ConanFile(TestBufferConanOutput(), None)
-                conanfile.initialize(Settings({}), EnvValues())
+                conanfile.initialize(settings, EnvValues())
 
                 ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
                 cpp_info = CppInfo("dummy_root_folder1")
                 cpp_info.libs = [libname]
                 conanfile.deps_cpp_info.update(cpp_info, ref.name)
-
-                settings.arch = "x86_64"
-                settings.build_type = "Release"
-                settings.compiler.version = "15"
-                settings.compiler.toolset = "v141"
-                conanfile.settings = settings
 
                 generator = VisualStudioMultiGenerator(conanfile)
                 generator.output_path = ""

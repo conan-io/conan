@@ -67,7 +67,7 @@ class VisualStudioGenerator(Generator):
     def _format_properties(self, build_info, condition):
         def has_valid_ext(lib):
             ext = os.path.splitext(lib)[1]
-            return ext if ext in (".lib", ".dll") else None
+            return ext in (".lib", ".dll")
 
         fields = {
             'condition': condition,
