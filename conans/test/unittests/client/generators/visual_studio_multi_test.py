@@ -92,6 +92,14 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
         def validate_additional_dependencies(libname, additional_dep):
             tempdir = temp_folder()
             with chdir(tempdir):
+                conanfile = ConanFile(TestBufferConanOutput(), None)
+                conanfile.initialize(Settings({}), EnvValues())
+
+                ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
+                cpp_info = CppInfo("dummy_root_folder1")
+                cpp_info.libs = [libname]
+                conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
                 settings = Settings.loads(default_settings_yml)
                 settings.os = "Windows"
                 settings.arch = "x86_64"
@@ -100,14 +108,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                 settings.compiler.version = "15"
                 settings.compiler.runtime = "MD"
                 settings.compiler.toolset = "v141"
-
-                conanfile = ConanFile(TestBufferConanOutput(), None)
-                conanfile.initialize(settings, EnvValues())
-
-                ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
-                cpp_info = CppInfo("dummy_root_folder1")
-                cpp_info.libs = [libname]
-                conanfile.deps_cpp_info.update(cpp_info, ref.name)
+                conanfile.settings = settings
 
                 generator = VisualStudioMultiGenerator(conanfile)
                 generator.output_path = ""
