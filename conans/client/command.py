@@ -365,7 +365,8 @@ class Command(object):
         parser.add_argument("reference",
                             help='pkg/version@user/channel')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='Force install specified package ID (ignore settings/options) [DEPRECATED: use full reference instead]')
+                            help='Force install specified package ID (ignore settings/options)"'
+                                 '"[DEPRECATED: use full reference instead]')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
         parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
