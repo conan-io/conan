@@ -36,7 +36,7 @@ class Node(object):
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
 
-        # The dependencies that can conflict to downstream consumers
+        # A subset of the graph that will conflict by package name
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
@@ -91,6 +91,12 @@ class Node(object):
         for edge in self.dependencies:
             if not edge.private:
                 edge.dst.make_public()
+
+    def update_closures(self, node):
+        name = node.name
+        self.public_closure[name] = node
+        self.public_deps[name] = node
+        node.inverse_closure.add(self)
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
