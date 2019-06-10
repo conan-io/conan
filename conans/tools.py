@@ -94,6 +94,7 @@ collect_libs = tools_files.collect_libs
 which = tools_files.which
 unix2dos = tools_files.unix2dos
 dos2unix = tools_files.dos2unix
+valid_lib_extensions = tools_files.valid_lib_extensions
 
 
 def unzip(*args, **kwargs):

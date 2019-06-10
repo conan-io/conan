@@ -304,7 +304,7 @@ def _path_equals(path1, path2):
     return path1 == path2
 
 
-def _valid_lib_extensions():
+def valid_lib_extensions():
     return (".so", ".lib", ".a", ".dylib", ".bc")
 
 
@@ -325,7 +325,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in _valid_lib_extensions():
+            if ext in valid_lib_extensions():
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
