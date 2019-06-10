@@ -163,8 +163,6 @@ class CmdUpload(object):
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
 
-                # TODO: Improve this definition of ref with revisions for the layout
-                layout._ref = ref
                 refs_by_remote[ref_remote].append((ref, conanfile, layout, metadata, prefs))
 
         return refs_by_remote

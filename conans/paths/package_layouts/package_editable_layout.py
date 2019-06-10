@@ -50,6 +50,9 @@ class PackageEditableLayout(object):
     def load_metadata(self):
         raise ConanException("Operation not allowed on a package installed as editable")
 
+    def init_from_metadata(self, loader):
+        raise ConanException("Operation not allowed on a package installed as editable")
+
     def package(self, pref):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
