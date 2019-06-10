@@ -15,6 +15,8 @@ from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
 UNIT_SIZE = 1000.0
+# Library extensions supported by collect_libs
+VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 @contextmanager
@@ -304,10 +306,6 @@ def _path_equals(path1, path2):
     return path1 == path2
 
 
-def valid_lib_extensions():
-    return (".so", ".lib", ".a", ".dylib", ".bc")
-
-
 def collect_libs(conanfile, folder=None):
     if not conanfile.package_folder:
         return []
@@ -325,7 +323,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in valid_lib_extensions():
+            if ext in VALID_LIB_EXTENSIONS:
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
