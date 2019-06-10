@@ -3,6 +3,7 @@ import re
 
 from conans.model import Generator
 from conans.paths import BUILD_INFO_VISUAL_STUDIO
+from conans.client.tools.files import _valid_lib_extensions
 
 
 class VisualStudioGenerator(Generator):
@@ -67,7 +68,7 @@ class VisualStudioGenerator(Generator):
     def _format_properties(self, build_info, condition):
         def has_valid_ext(lib):
             ext = os.path.splitext(lib)[1]
-            return ext in (".a", ".lib", ".dll")
+            return ext in _valid_lib_extensions()
 
         fields = {
             'condition': condition,

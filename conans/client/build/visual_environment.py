@@ -4,6 +4,7 @@ import os
 from conans.client.build.compiler_flags import build_type_define, build_type_flags, format_defines, \
     include_path_option, parallel_compiler_cl_flag, visual_runtime
 from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
+from conans.client.tools.files import _valid_lib_extensions
 
 
 class VisualStudioBuildEnvironment(object):
@@ -79,7 +80,7 @@ class VisualStudioBuildEnvironment(object):
         # one in the conanbuildinfo.props, and the other in the env-vars
         def format_lib(lib):
             ext = os.path.splitext(lib)[1]
-            return lib if ext in (".a", ".lib", ".dll") else '%s.lib' % lib
+            return lib if ext in _valid_lib_extensions() else '%s.lib' % lib
 
         ret = [flag for flag in self.link_flags]  # copy
         ret.extend([format_lib(lib) for lib in self.libs])
