@@ -205,7 +205,7 @@ class GraphLock(object):
             return
         prefs = self._dependencies(node.id)
         options = self._nodes[node.id].options
-        #node.conanfile.options.values = options
+        node.conanfile.options.values = options
         for require in requires:
             # Not new unlocked dependencies at this stage
             locked_pref, locked_id = prefs[require.ref.name]
