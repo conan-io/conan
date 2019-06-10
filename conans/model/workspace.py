@@ -164,8 +164,10 @@ class WorkspaceCMake(Workspace):
                 add_library({{ pkg.name }}::{{ pkg.name }} ALIAS {{ pkg.name }})
                 add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }})
             {%- else %}
+                {%- if pkg.requires %}
                 # Outter: {{ ref }}
                 outer_package({{pkg.name}} {{ref}})
+                {%- endif %}
             {%- endif %}
             {%- for r in pkg.requires %}
                 add_dependencies({{ pkg.name }} {{ r }})
@@ -178,7 +180,7 @@ class WorkspaceCMake(Workspace):
         project("{{ ws.name }}")
         
         include(${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake)
-        conan_basic_setup()  # Execute Conan magic
+        conan_basic_setup(NO_OUTPUT_DIRS)  # Execute Conan magic
         
         set(CMAKE_SKIP_RPATH 0)  # We are not creating packages here, it is ok to have rpaths
         
@@ -194,7 +196,7 @@ class WorkspaceCMake(Workspace):
         # Prepare the context for the templates
         ordered_packages = []  # [(ref, pkg), ]
         in_ws = {}  # {ref: {source_folder: X, build_folder: Y}}
-        out_dependents = {}  # {ref: {name, requires}}
+        out_dependents = {}  # {ref: {name, requires}}  Package not in WS but consuming editable ones
         for node in graph.ordered_iterate():
             if node.ref in self.packages:
                 assert node.recipe == RECIPE_EDITABLE, "Not editable in the graph, but in workspace"
@@ -217,14 +219,27 @@ class WorkspaceCMake(Workspace):
                 in_ws[node.ref] = pkg
                 ordered_packages.append((node.ref, pkg))
             else:
-                if node.ref and any([it.ref in in_ws for it in node.public_closure]):
+                if not node.ref:
+                    continue
+
+                if any([it.ref in in_ws for it in node.public_closure]):
+                    # This node depends on one in the WS
                     pkg = {'name': node.ref.name,
                            'requires': [it.ref.name for it in node.neighbors()
                                         if it.ref in in_ws or
                                         it.ref in out_dependents],
                            'in': False}
-                    out_dependents[node.ref] = pkg
-                    ordered_packages.append((node.ref, pkg))
+                elif any([it.ref in self.packages for it in node.inverse_closure]):
+                    # This node is consumed by someone in the WS
+                    pkg = {'name': node.ref.name, 'in': False}
+                else:
+                    # This node is not consumed, neither consumes anyone in the WS
+                    # TODO: Is this possible?
+                    continue
+
+                out_dependents[node.ref] = pkg
+                ordered_packages.append((node.ref, pkg))
+
 
         # Warn for package not in workspace but depending on packages in the workspace
         if out_dependents:

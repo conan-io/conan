@@ -42,6 +42,10 @@ class _Library:
     def requires(self):
         return sorted(self._requires, key=lambda u: u.name)
 
+    def path_to_exec(self):
+        # Get build folder from the layout
+        return os.path.join(self.package.local_path, 'build', self.name)
+
 
 class Package:
     def __init__(self, name, version="0.1", user="ws", channel="testing"):

@@ -138,7 +138,7 @@ layout_template = textwrap.dedent(r"""
     .
 
     [build_folder]
-    .
+    build/
 
     [includedirs]
     .

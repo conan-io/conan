@@ -98,6 +98,9 @@ class WSTests(unittest.TestCase):
         cls.libF = cls._plain_package(t, pkg="pkgF", lib_requires=[cls.libC])
         cls.libG = cls._plain_package(t, pkg="pkgG", lib_requires=[cls.libE, cls.libF], add_executable=True)
 
+        executableG = cls.libG.executables[0]
+        cls.libG_editable_exe = executableG.path_to_exec()
+
         cls.editables = [cls.libA, cls.libB, cls.libE, cls.libG]
         cls.affected_by_editables = [cls.libC, cls.libF]
         cls.inmutable = [cls.libD, ]
@@ -143,16 +146,16 @@ class WSTests(unittest.TestCase):
         t.run_command('cd build && cmake --build .')
         self.assertIn("Built target {}".format(self.libC.name), t.out)
         self.assertIn("Built target {}".format(self.libF.name), t.out)
-        t.run_command('cd build && ./bin/pkgG_exe')
+        t.run_command(self.libG_editable_exe)
         self.assertMultiLineEqual(str(t.out).strip(), self.original_output.strip())
 
         self.libA.modify_cpp_message("Edited!!!")  # It will change value in cpp and in header file
         t.run_command('cd build && cmake --build .')
         self.assertIn("Built target {}".format(self.libC.name), t.out)
         self.assertIn("Built target {}".format(self.libF.name), t.out)
-        t.run_command('cd build && ./bin/pkgG_exe')
+        t.run_command(self.libG_editable_exe)
 
-        # Check the resulting message with the 'Editted!!!'
+        # Check the resulting message with the 'Edited!!!'
         original_output = self.original_output.replace("> pkgA: default",
                                                        "> pkgA: Edited!!!")
         # TODO: FIXME, if pkgC is compiled, then all pkgA_header would have the Edited!!! message.
@@ -188,7 +191,7 @@ class WSTests(unittest.TestCase):
         self.assertIn("pkgG.{}".format(extension), t.out)
 
         # And it runs!
-        t.run_command('cd build && ./bin/pkgG_exe')
+        t.run_command(self.libG_editable_exe)
 
         # And libraries are shared!
         original_output = self.original_output
@@ -202,7 +205,7 @@ class WSTests(unittest.TestCase):
         t.run_command('cd build && cmake --build .')
         self.assertIn("Built target {}".format(self.libC.name), t.out)
         self.assertIn("Built target {}".format(self.libF.name), t.out)
-        t.run_command('cd build && ./bin/pkgG_exe')
+        t.run_command(self.libG_editable_exe)
 
         original_output = original_output.replace("> pkgA: default (shared!)",
                                                   "> pkgA: Edited!!! (shared!)")
@@ -236,7 +239,82 @@ class WSTests(unittest.TestCase):
         t.run_command('cd build && cmake --build .')
 
         # And it runs!
-        t.run_command('cd build && ./bin/pkgG_exe')
+        t.run_command(self.libG_editable_exe)
         output_shared = self.original_output.replace("> pkgF: default", "> pkgF: default (shared!)")
         output_shared = output_shared.replace("> pkgC: default", "> pkgC: default (shared!)")
         self.assertMultiLineEqual(str(t.out).strip(), output_shared)
+
+    def test_several_workspaces(self):
+        """ One package is included into two different workspaces with different
+            resulting binaries. Those shouldn't mix.
+        """
+        tmp = TestClient(base_folder=self.base_folder)
+        libH = self._plain_package(tmp, pkg="pkgH", lib_requires=[self.libA, self.libD], add_executable=True)
+        libH_editable_exe = libH.executables[0].path_to_exec()
+        libI = self._plain_package(tmp, pkg="pkgI", lib_requires=[self.libA, self.libD], add_executable=True)
+        libI_editable_exe = libI.executables[0].path_to_exec()
+
+        # Create one workspace
+        self.libA.modify_cpp_message("WS-H")
+        tH = TestClient(base_folder=self.base_folder)
+        ws_yml = Template(workspace_yml_template).render(editables=[self.libA, libH])
+        tH.save({'ws.yml': ws_yml}, clean_first=True)
+        tH.run("workspace install ws.yml")
+
+        tH.run_command('mkdir build')
+        tH.run_command('cd build && cmake ..'
+                       ' -DCMAKE_MODULE_PATH="{}"'
+                       ' -DBUILD_SHARED_LIBS:BOOL=TRUE'
+                       ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'
+                       ' -DCONAN_CMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(tH.current_folder))
+        tH.run_command('cd build && cmake --build .')
+        tH.run_command(libH_editable_exe)
+        pkgH_output = textwrap.dedent("""\
+            > pkgH_exe: default
+            > pkgH_header: default
+            > pkgH: default (shared!)
+            \t> pkgA_header: WS-H
+            \t> pkgA: WS-H (shared!)
+            \t> pkgD_header: default
+            \t> pkgD: default
+          """)
+        self.assertMultiLineEqual(str(tH.out).strip(), pkgH_output.strip())
+
+        # Create the other workspace
+        self.libA.modify_cpp_message("WS-I")
+        tI = TestClient(base_folder=self.base_folder)
+        ws_yml = Template(workspace_yml_template).render(editables=[self.libA, libI])
+        tI.save({'ws.yml': ws_yml}, clean_first=True)
+        tI.run("workspace install ws.yml")
+
+        tI.run_command('mkdir build')
+        tI.run_command('cd build && cmake ..'
+                       ' -DCMAKE_MODULE_PATH="{}"'
+                       ' -DBUILD_SHARED_LIBS:BOOL=TRUE'
+                       ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'
+                       ' -DCONAN_CMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(tI.current_folder))
+        tI.run_command('cd build && cmake --build .')
+        tI.run_command(libI_editable_exe)
+        pkgI_output = textwrap.dedent("""\
+            > pkgI_exe: default
+            > pkgI_header: default
+            > pkgI: default (shared!)
+            \t> pkgA_header: WS-I
+            \t> pkgA: WS-I (shared!)
+            \t> pkgD_header: default
+            \t> pkgD: default
+          """)
+        self.assertMultiLineEqual(str(tI.out).strip(), pkgI_output.strip())
+
+        # What about the existing WS?
+        """ TODO:
+                We are using the same output folder... I demonstrated this behaviour changing
+                the sources but it could happen with any option which value is being set
+                downstream in the graph.
+                
+                So I think we should build each workspace into its own folder (by removing the
+                NO_OUTPUT_DIRS from the `conan_basic_setup` call), but then it is the WS the
+                one that has to compose the layout file.
+        """
+        tH.run_command(libH_editable_exe)
+        self.assertMultiLineEqual(str(tH.out).strip(), pkgH_output.strip())
