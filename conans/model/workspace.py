@@ -240,7 +240,6 @@ class WorkspaceCMake(Workspace):
                 out_dependents[node.ref] = pkg
                 ordered_packages.append((node.ref, pkg))
 
-
         # Warn for package not in workspace but depending on packages in the workspace
         if out_dependents:
             output.warn("Packages '{}' are not included in the workspace and depend on"
