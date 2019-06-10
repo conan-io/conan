@@ -92,11 +92,13 @@ class Node(object):
             if not edge.private:
                 edge.dst.make_public()
 
-    def update_closures(self, node):
-        name = node.name
-        self.public_closure[name] = node
-        self.public_deps[name] = node
-        node.inverse_closure.add(self)
+    def connect_closure(self, other_node):
+        # When 2 nodes of the graph become connected, their closures information has
+        # has to remain consistent. This method manages this.
+        name = other_node.name
+        self.public_closure[name] = other_node
+        self.public_deps[name] = other_node
+        other_node.inverse_closure.add(self)
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
