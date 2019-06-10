@@ -176,8 +176,8 @@ class WSTests(unittest.TestCase):
                       ' -DCMAKE_MODULE_PATH="{}"'
                       ' -DBUILD_SHARED_LIBS:BOOL=TRUE'
                       ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'
-                      ' -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(t.current_folder))
-        t.run_command('cd build && cmake --build .')
+                      ' -DCONAN_CMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(t.current_folder))
+        t.run_command('cd build && cmake --build .')  # TODO: Might need  --clean-first, but better if we control where the ws/build directories are placed.
 
         # Check that it is building shared libs:
         system = platform.system()
