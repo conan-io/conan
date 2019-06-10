@@ -117,8 +117,8 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                 self.assertIn('conanbuildinfo_release_x64_v141.props', content.keys())
 
                 content_release = content['conanbuildinfo_release_x64_v141.props']
-                self.assertIn("<AdditionalDependencies>" \
-                              "{};%(AdditionalDependencies)" \
+                self.assertIn("<AdditionalDependencies>"
+                              "{};%(AdditionalDependencies)"
                               "</AdditionalDependencies>".format(additional_dep), content_release)
 
         # regular

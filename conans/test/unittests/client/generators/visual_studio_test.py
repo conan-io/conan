@@ -115,8 +115,8 @@ class VisualStudioGeneratorTest(unittest.TestCase):
             cpp_info.libs = [lib]
             conanfile.deps_cpp_info.update(cpp_info, ref.name)
             generator = VisualStudioGenerator(conanfile)
-            self.assertIn("<AdditionalDependencies>" \
-                          "{};%(AdditionalDependencies)" \
+            self.assertIn("<AdditionalDependencies>"
+                          "{};%(AdditionalDependencies)"
                           "</AdditionalDependencies>".format(additional_dep), generator.content)
 
         # regular
