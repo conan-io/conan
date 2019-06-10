@@ -130,3 +130,9 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
         # extra dot dot + .lib
         validate_additional_dependencies("foo.v12.core.lib", "foo.v12.core.lib")
+
+        # extra case libiconv
+        validate_additional_dependencies("libiconv.dll.lib", "libiconv.dll.lib")
+
+        # extra case ffmpeg
+        validate_additional_dependencies("libavcodec.a", "libavcodec.a")
