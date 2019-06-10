@@ -779,6 +779,8 @@ class ConanAPIV1(object):
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None,
                install_folder=None, use_lock=None):
+        if install_folder and not use_lock:
+            raise ConanException("conan export defined install-folder, but not use-lock")
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
         graph_info = None

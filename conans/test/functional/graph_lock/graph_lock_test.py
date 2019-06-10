@@ -92,6 +92,11 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.client.run("export . user/channel --install-folder=. --use-lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision)
 
+    def export_generate_lock_test(self):
+        # locking a version range at export
+        self.client.run("export . user/channel --install-folder=.", assert_error=True)
+        self.assertIn("conan export defined install-folder, but not use-lock", self.client.out)
+
     def create_lock_test(self):
         # Create is also possible
         client = self.client
