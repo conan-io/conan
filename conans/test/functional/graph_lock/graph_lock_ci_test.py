@@ -165,7 +165,6 @@ class GraphLockCITest(unittest.TestCase):
         client.run("profile new myprofile")
         # To make sure we can provide a profile as input
         client.run("graph lock PkgD/0.1@user/channel -pr=myprofile")
-        print client.out
         lock_file = load(os.path.join(client.current_folder, LOCKFILE))
 
         client2 = TestClient(base_folder=client.base_folder)
