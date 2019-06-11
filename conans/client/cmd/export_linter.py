@@ -69,8 +69,6 @@ def _normal_linter(conanfile_path, hook):
             return False
         if symbol == "no-name-in-module" and "python_requires" in msg.get("message"):
             return False
-        if symbol == "no-member" and "conan_data" in msg.get("message"):
-            return False
 
         return True
 
