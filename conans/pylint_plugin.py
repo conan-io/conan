@@ -5,7 +5,7 @@ from astroid import MANAGER
 
 def register(linter):
     """Declare package as plugin
-    
+
     This function needs to be declared so astroid treats
     current file as a plugin.
     """
@@ -29,6 +29,7 @@ def transform_conanfile(node):
         "source_folder": str_class,
         "build_folder": str_class,
         "package_folder": str_class,
+        "install_folder": str_class,
         "build_requires": build_requires_class,
         "info_build": info_class,
         "info": info_class,

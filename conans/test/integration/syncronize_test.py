@@ -1,40 +1,40 @@
-import unittest
-from conans.test.utils.tools import TestServer, TestClient
-from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from nose.plugins.attrib import attr
-from conans.util.files import load, save
-from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
-from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.tools import untargz
+import unittest
+
+from conans import DEFAULT_REVISION_V1
+from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
-@attr("slow")
 class SynchronizeTest(unittest.TestCase):
 
-    def setUp(self):
-        test_server = TestServer()
-        self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-
     def upload_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1")
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
 
-        remote_paths = self.client.servers["default"].paths
-        server_conan_path = remote_paths.export(conan_reference)
+        remote_paths = client.servers["default"].server_store
 
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
+        client.save(files)
+        client.run("export . lasote/stable")
 
         # Upload conan file
-        self.client.run("upload %s" % str(conan_reference))
+        client.run("upload %s" % str(ref))
 
         # Verify the files are there
+        if client.cache.config.revisions_enabled:
+            rev = client.cache.package_layout(ref).recipe_revision()
+            ref = ref.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -42,9 +42,13 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted2.txt")), "delete me2")
 
         # Now delete local files export and upload and check that they are not in server
-        os.remove(os.path.join(self.client.current_folder, "to_be_deleted.txt"))
-        self.client.run("export . lasote/stable")
-        self.client.run("upload %s" % str(conan_reference))
+        os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
+        client.run("export . lasote/stable")
+        client.run("upload %s" % str(ref))
+        if client.cache.config.revisions_enabled:
+            rev = client.cache.package_layout(ref).recipe_revision()
+            ref = ref.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(ref)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
         untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
@@ -55,9 +59,14 @@ class SynchronizeTest(unittest.TestCase):
         files["to_be_deleted2.txt"] = "modified content"
         files["new_file.lib"] = "new file"
         del files["to_be_deleted.txt"]
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("upload %s" % str(conan_reference))
+        client.save(files)
+        client.run("export . lasote/stable")
+        client.run("upload %s" % str(ref))
+
+        if client.cache.config.revisions_enabled:
+            rev = client.cache.package_layout(ref).recipe_revision()
+            ref = ref.copy_with_rev(rev)
+        server_conan_path = remote_paths.export(ref)
 
         # Verify all is correct
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -71,51 +80,55 @@ class SynchronizeTest(unittest.TestCase):
         # Now try with the package
         ##########################
 
-        self.client.run("install %s --build missing" % str(conan_reference))
+        client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = self.client.paths.conan_packages(conan_reference)
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        package_ids = client.cache.package_layout(ref).conan_packages()
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that conans exists on server
-        package_reference = PackageReference(conan_reference, str(package_ids[0]))
-        package_server_path = remote_paths.package(package_reference)
+        pref = PackageReference(ref, str(package_ids[0]))
+        prev = remote_paths.get_last_package_revision(pref)
+        pref = pref.copy_with_revs(pref.ref.revision, prev.revision)
+        package_server_path = remote_paths.package(pref)
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = self.client.paths.package(package_reference)
+        pack_path = client.cache.package_layout(pref.ref).package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
 
-        self._create_manifest(package_reference)
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self._create_manifest(client, pref)
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
-        folder = uncompress_packaged_files(remote_paths, package_reference)
+        folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
         self.assertTrue(os.path.exists(remote_file_path))
 
         # Now modify the file and check again
         save(new_file_source_path, "othercontent")
-        self._create_manifest(package_reference)
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
-        folder = uncompress_packaged_files(remote_paths, package_reference)
+        self._create_manifest(client, pref)
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+        folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
         self.assertTrue(os.path.exists(remote_file_path))
         self.assertTrue(load(remote_file_path), "othercontent")
 
         # Now delete the file and check again
         os.remove(new_file_source_path)
-        self._create_manifest(package_reference)
+        self._create_manifest(client, pref)
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
-        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
-        folder = uncompress_packaged_files(remote_paths, package_reference)
+        client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+        folder = uncompress_packaged_files(remote_paths, pref)
         remote_file_path = os.path.join(folder, "newlib.lib")
 
-        self.assertFalse(os.path.exists(remote_file_path))
-        self.assertNotEquals(remote_file_path, new_file_source_path)
+        # With revisions makes no sense because there is a new revision always that sources change
+        if not client.cache.config.revisions_enabled:
+            self.assertFalse(os.path.exists(remote_file_path))
+            self.assertNotEqual(remote_file_path, new_file_source_path)
 
-    def _create_manifest(self, package_reference):
+    def _create_manifest(self, client, package_reference):
         # Create the manifest to be able to upload the package
-        pack_path = self.client.paths.package(package_reference)
+        pack_path = client.cache.package_layout(package_reference.ref).package(package_reference)
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

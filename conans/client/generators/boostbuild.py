@@ -22,7 +22,7 @@ def JamfileOutput(dep_cpp_info):
         out += '\t: # usage-requirements\n'
         out += ''.join('\t<define>%s\n' % x for x in dep_cpp_info.defines)
         out += ''.join('\t<include>%s\n' % x.replace("\\", "/") for x in dep_cpp_info.include_paths)
-        out += ''.join('\t<cxxflags>%s\n' % x for x in dep_cpp_info.cppflags)
+        out += ''.join('\t<cxxflags>%s\n' % x for x in dep_cpp_info.cxxflags)
         out += ''.join('\t<cflags>%s\n' % x for x in dep_cpp_info.cflags)
         out += ''.join('\t<ldflags>%s\n' % x for x in dep_cpp_info.sharedlinkflags)
         out += '\t;\n\n'

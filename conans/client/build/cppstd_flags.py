@@ -1,13 +1,25 @@
+import warnings
+
+from conans.errors import ConanException
 from conans.model.version import Version
 
 
-def available_cppstd_versions(compiler, compiler_version):
-    ret = []
-    stds = ["98", "gnu98", "11", "gnu11", "14",  "gnu14", "17", "gnu17", "20", "gnu20"]
-    for stdver in stds:
-        if cppstd_flag(compiler, compiler_version, stdver):
-            ret.append(stdver)
-    return ret
+def cppstd_from_settings(settings):
+    cppstd = settings.get_safe("cppstd")
+    compiler_cppstd = settings.get_safe("compiler.cppstd")
+
+    if not cppstd and not compiler_cppstd:
+        return None
+
+    if cppstd and compiler_cppstd:
+        # Both should never arrive with a value to build_helpers
+        warnings.warn("Both settings, 'cppstd' and 'compiler.cppstd', should never arrive"
+                      " with values to build_helpers")
+        if cppstd != compiler_cppstd:
+            raise ConanException("Can't decide value for C++ standard, settings mismatch: "
+                                 "'cppstd={}', 'compiler.cppstd='".format(cppstd, compiler_cppstd))
+
+    return compiler_cppstd or cppstd
 
 
 def cppstd_flag(compiler, compiler_version, cppstd):

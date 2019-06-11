@@ -1,9 +1,10 @@
-import unittest
-from conans.test.utils.tools import TestClient, TestServer
 import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE
+import unittest
+
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
@@ -20,51 +21,53 @@ class InstallSelectedPackagesTest(unittest.TestCase):
     def install_all_test(self):
         # Should retrieve the three packages
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        p1 = os.path.join(self.new_client.paths.packages(self.ref))
+        p1 = os.path.join(self.new_client.cache.package_layout(self.ref).packages())
         packages = os.listdir(p1)
-        self.assertEquals(len(packages), 3)
+        self.assertEqual(len(packages), 3)
 
     def install_some_reference_test(self):
         # Should retrieve the specified packages
         self.new_client.run("download Hello0/0.1@lasote/stable -p %s" % self.package_ids[0])
-        packages = os.listdir(self.new_client.paths.packages(self.ref))
-        self.assertEquals(len(packages), 1)
-        self.assertEquals(packages[0], self.package_ids[0])
+        packages = os.listdir(self.new_client.cache.package_layout(self.ref).packages())
+        self.assertEqual(len(packages), 1)
+        self.assertEqual(packages[0], self.package_ids[0])
 
         self.new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (self.package_ids[0],
                                                                                self.package_ids[1]))
-        packages = os.listdir(self.new_client.paths.packages(self.ref))
-        self.assertEquals(len(packages), 2)
+        packages = os.listdir(self.new_client.cache.package_layout(self.ref).packages())
+        self.assertEqual(len(packages), 2)
 
     def download_recipe_twice_test(self):
         expected_conanfile_contents = self.files[CONANFILE]
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        got_conanfile = load(os.path.join(self.new_client.paths.export(self.ref), CONANFILE))
-        self.assertEquals(expected_conanfile_contents, got_conanfile)
+        conanfile_path = self.new_client.cache.package_layout(self.ref).conanfile()
+        got_conanfile = load(conanfile_path)
+        self.assertEqual(expected_conanfile_contents, got_conanfile)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        got_conanfile = load(os.path.join(self.new_client.paths.export(self.ref), CONANFILE))
-        self.assertEquals(expected_conanfile_contents, got_conanfile)
+        got_conanfile = load(conanfile_path)
+        self.assertEqual(expected_conanfile_contents, got_conanfile)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        got_conanfile = load(os.path.join(self.new_client.paths.export(self.ref), CONANFILE))
-        self.assertEquals(expected_conanfile_contents, got_conanfile)
+        got_conanfile = load(conanfile_path)
+        self.assertEqual(expected_conanfile_contents, got_conanfile)
 
     def download_packages_twice_test(self):
         expected_header_contents = self.files["helloHello0.h"]
-        package_folder = self.new_client.paths.package(PackageReference(self.ref, self.package_ids[0]))
+        pref = PackageReference(self.ref, self.package_ids[0])
+        package_folder = self.new_client.cache.package_layout(self.ref).package(pref)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
-        self.assertEquals(expected_header_contents, got_header)
+        self.assertEqual(expected_header_contents, got_header)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
-        self.assertEquals(expected_header_contents, got_header)
+        self.assertEqual(expected_header_contents, got_header)
 
         self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
-        self.assertEquals(expected_header_contents, got_header)
+        self.assertEqual(expected_header_contents, got_header)
 
     def install_all_but_no_packages_test(self):
 
@@ -72,8 +75,8 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         self.new_client.run("remove Hello* -f -r default")
 
         # Try to install all
-        self.new_client.run("download Hello0/0.1@lasote/stable", ignore_error=True)
-        self.assertIn("'Hello0/0.1@lasote/stable' not found in remote", self.new_client.user_io.out)
+        self.new_client.run("download Hello0/0.1@lasote/stable", assert_error=True)
+        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/stable'", self.new_client.user_io.out)
 
         # Upload only the recipe
         self.new_client.save(self.files)
@@ -88,7 +91,8 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         self.files = cpp_hello_conan_files("Hello0", "0.1")
         # No build.
-        self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):", "def build(self):\n        return\n")
+        self.files[CONANFILE] = self.files[CONANFILE].replace("def build(self):",
+                                                              "def build(self):\n        return\n")
         client.save(self.files)
         client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
@@ -96,4 +100,4 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "
                    "compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")
-        return os.listdir(self.client.paths.packages(self.ref))
+        return os.listdir(self.client.cache.package_layout(self.ref).packages())

@@ -1,5 +1,6 @@
-from conans.model import Generator
 import json
+
+from conans.model import Generator
 
 
 class YouCompleteMeGenerator(Generator):
@@ -180,17 +181,17 @@ def FlagsForFile( filename, **kwargs ):
             return [prefix + x for x in values]
 
         conan_flags = {
-            "includes" : prefixed("-isystem", self.deps_build_info.include_paths),
-            "defines" : prefixed("-D", self.deps_build_info.defines),
-            "flags" : self.deps_build_info.cppflags
+            "includes": prefixed("-isystem", self.deps_build_info.include_paths),
+            "defines": prefixed("-D", self.deps_build_info.defines),
+            "flags": self.deps_build_info.cxxflags
         }
 
         cxx_version = ''
         try:
             cxx_version = str(self.settings.compiler.version).split('.')[0]
-        except:
+        except Exception:
             pass
 
         ycm_data = self.template.format(cxx_version=cxx_version)
-        return {"conan_ycm_extra_conf.py" : ycm_data,
-                "conan_ycm_flags.json" : json.dumps(conan_flags, indent=2)}
+        return {"conan_ycm_extra_conf.py": ycm_data,
+                "conan_ycm_flags.json": json.dumps(conan_flags, indent=2)}

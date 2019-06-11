@@ -1,11 +1,13 @@
 import os
 from collections import OrderedDict
 
+import deprecation
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
 DEFAULT_BIN = "bin"
 DEFAULT_RES = "res"
+DEFAULT_SHARE = "share"
 
 
 class _CppInfo(object):
@@ -15,6 +17,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.includedirs = []  # Ordered list of include paths
+        self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
         self.resdirs = []  # Directories to find resources, data, etc
         self.bindirs = []  # Directories to find executables and shared libs
@@ -23,7 +26,7 @@ class _CppInfo(object):
         self.libs = []  # The libs to link against
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
-        self.cppflags = []  # C++ compilation flags
+        self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
@@ -33,13 +36,19 @@ class _CppInfo(object):
         self._bin_paths = None
         self._build_paths = None
         self._res_paths = None
+        self._src_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = True
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
-        return [p for p in abs_paths if os.path.isdir(p)]
+        if self.filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
 
     @property
     def include_paths(self):
@@ -52,6 +61,12 @@ class _CppInfo(object):
         if self._lib_paths is None:
             self._lib_paths = self._filter_paths(self.libdirs)
         return self._lib_paths
+
+    @property
+    def src_paths(self):
+        if self._src_paths is None:
+            self._src_paths = self._filter_paths(self.srcdirs)
+        return self._src_paths
 
     @property
     def bin_paths(self):
@@ -70,6 +85,17 @@ class _CppInfo(object):
         if self._res_paths is None:
             self._res_paths = self._filter_paths(self.resdirs)
         return self._res_paths
+
+    # Compatibility for 'cppflags' (old style property to allow decoration)
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
+    def get_cppflags(self):
+        return self.cxxflags
+
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
+    def set_cppflags(self, value):
+        self.cxxflags = value
+
+    cppflags = property(get_cppflags, set_cppflags)
 
 
 class CppInfo(_CppInfo):
@@ -116,6 +142,7 @@ class _BaseDepsCppInfo(_CppInfo):
             return [s for s in seq1 if s not in seq2] + seq2
 
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
+        self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
         self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
@@ -125,7 +152,7 @@ class _BaseDepsCppInfo(_CppInfo):
 
         # Note these are in reverse order
         self.defines = merge_lists(dep_cpp_info.defines, self.defines)
-        self.cppflags = merge_lists(dep_cpp_info.cppflags, self.cppflags)
+        self.cxxflags = merge_lists(dep_cpp_info.cxxflags, self.cxxflags)
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
@@ -140,6 +167,10 @@ class _BaseDepsCppInfo(_CppInfo):
     @property
     def lib_paths(self):
         return self.libdirs
+
+    @property
+    def src_paths(self):
+        return self.srcdirs
 
     @property
     def bin_paths(self):

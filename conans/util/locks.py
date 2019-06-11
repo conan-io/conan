@@ -1,8 +1,10 @@
-import fasteners
-from conans.util.log import logger
-import time
-from conans.util.files import save, load
 import os
+import time
+
+import fasteners
+
+from conans.util.files import load, save
+from conans.util.log import logger
 
 
 class NoLock(object):
@@ -48,7 +50,7 @@ class Lock(object):
 
     @property
     def files(self):
-        return (self._count_file, self._count_lock_file)
+        return self._count_file, self._count_lock_file
 
     def _info_locked(self):
         if self._first_lock:
@@ -61,6 +63,9 @@ class Lock(object):
         try:
             return int(load(self._count_file))
         except IOError:
+            return 0
+        except (UnicodeEncodeError, ValueError):
+            self._output.warn("%s does not contain a number!" % self._count_file)
             return 0
 
 

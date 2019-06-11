@@ -1,11 +1,12 @@
 import os
+
+from conans.client.tools.oss import OSInfo
 from conans.model import Generator
-from conans.tools import os_info
 
 
 class VirtualEnvGenerator(Generator):
 
-    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL"]
+    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
 
     def __init__(self, conanfile):
         self.conanfile = conanfile
@@ -16,7 +17,7 @@ class VirtualEnvGenerator(Generator):
     def filename(self):
         return
 
-    def _variable_placeholder(self, flavor, name):
+    def _variable_placeholder(self, flavor, name, append_with_spaces):
         """
         :param flavor: flavor of the execution environment
         :param name: variable name
@@ -27,7 +28,8 @@ class VirtualEnvGenerator(Generator):
             return "%%%s%%" % name
         if flavor == "ps1":
             return "$env:%s" % name
-        return "$%s" % name  # flavor == sh
+        # flavor == sh
+        return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
 
     def format_values(self, flavor, variables):
         """
@@ -48,8 +50,9 @@ class VirtualEnvGenerator(Generator):
         for name, value in variables:
             # activate values
             if isinstance(value, list):
-                placeholder = self._variable_placeholder(flavor, name)
-                if name in self.append_with_spaces:
+                append_with_spaces = name in self.append_with_spaces
+                placeholder = self._variable_placeholder(flavor, name, append_with_spaces)
+                if append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
                     value = " ".join(value+[placeholder])
                     value = "\"%s\"" % value if quote_elements else value
@@ -58,7 +61,10 @@ class VirtualEnvGenerator(Generator):
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
                     value = ["\"%s\"" % v for v in value] if quote_elements else value
-                    value = path_sep.join(value+[placeholder])
+                    if flavor == "sh":
+                        value = path_sep.join(value) + placeholder
+                    else:
+                        value = path_sep.join(value + [placeholder])
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value
@@ -119,6 +125,7 @@ class VirtualEnvGenerator(Generator):
 
     @property
     def content(self):
+        os_info = OSInfo()
         result = {}
         if os_info.is_windows and not os_info.is_posix:
             activate, deactivate = self._cmd_lines()

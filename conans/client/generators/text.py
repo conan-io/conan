@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model import Generator
-from conans.model.build_info import DepsCppInfo, CppInfo
+from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
@@ -23,7 +23,7 @@ class DepsCppTXT(object):
                                      for p in cpp_info.build_paths)
         self.libs = "\n".join(cpp_info.libs)
         self.defines = "\n".join(cpp_info.defines)
-        self.cppflags = "\n".join(cpp_info.cppflags)
+        self.cxxflags = "\n".join(cpp_info.cxxflags)
         self.cflags = "\n".join(cpp_info.cflags)
         self.sharedlinkflags = "\n".join(cpp_info.sharedlinkflags)
         self.exelinkflags = "\n".join(cpp_info.exelinkflags)
@@ -106,15 +106,18 @@ class TXTGenerator(Generator):
                     config = None
                 tokens = var_name.split("_", 1)
                 field = tokens[0]
-
                 dep = tokens[1] if len(tokens) == 2 else None
-
+                if field == "cppflags":
+                    field = "cxxflags"
                 data[dep][config][field] = lines
 
             # Build the data structures
-            result = DepsCppInfo()
-            for pkg, configs_cpp_info in data.items():
-                cpp_info = result if not pkg else CppInfo(root_folder='')
+            deps_cpp_info = DepsCppInfo()
+            for dep, configs_cpp_info in data.items():
+                if dep is None:
+                    cpp_info = deps_cpp_info
+                else:
+                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(root_folder=""))
 
                 for config, fields in configs_cpp_info.items():
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)
@@ -123,20 +126,7 @@ class TXTGenerator(Generator):
                         if key in ['rootpath', 'sysroot']:
                             value = value[0]
                         setattr(item_to_apply, key, value)
-
-                if pkg:
-                    # FIXME: Here we should use `result.update(cpp_info, pkg)`, but then there will
-                    # FIXME:   be a problem with the order or dependent libraries in linking stage.
-                    # FIXME:   The problem is originated in conanbuildinfo.txt because the
-                    # FIXME:   dependencies of the dependencies are not listed, so the final order
-                    # FIXME:   of libraries is incorrect.
-                    # FIXME:
-                    # FIXME:   The workaround is to access the private member to avoid the `update`
-                    # FIXME:     behavior.
-                    # result.update(cpp_info, pkg)
-                    result._dependencies[pkg] = cpp_info
-
-            return result
+            return deps_cpp_info
 
         except Exception as e:
             logger.error(traceback.format_exc())
@@ -151,7 +141,8 @@ class TXTGenerator(Generator):
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
-                    '[cppflags{dep}{config}]\n{deps.cppflags}\n\n'
+                    '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # Backwards compatibility
+                    '[cxxflags{dep}{config}]\n{deps.cxxflags}\n\n'
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
                     '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'

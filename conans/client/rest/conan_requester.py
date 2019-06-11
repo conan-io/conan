@@ -1,22 +1,28 @@
 import fnmatch
 import os
-import requests
 import platform
-
+import requests
 import time
 
-from conans.util.files import save
 from conans import __version__ as client_version
+from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
 
 class ConanRequester(object):
 
-    def __init__(self, requester, client_cache, timeout):
-        self.proxies = client_cache.conan_config.proxies or {}
+    def __init__(self, config, http_requester=None):
+        self._http_requester = http_requester if http_requester else requests.Session()
+        self._timeout_seconds = config.request_timeout
+        self.proxies = config.proxies or {}
+        self._cacert_path = config.cacert_path
+        self._client_cert_path = config.client_cert_path
+        self._client_cert_key_path = config.client_cert_key_path
+        self._retry = config.retry
+        self._retry_wait = config.retry_wait
+
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
-        self._timeout_seconds = timeout
 
         # Retrocompatibility with deprecated no_proxy
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
@@ -24,23 +30,28 @@ class ConanRequester(object):
         if no_proxy:
             os.environ["NO_PROXY"] = no_proxy
 
-        self._requester = requester
-        self._client_cache = client_cache
-
-        if not os.path.exists(self._client_cache.cacert_path):
+        if not os.path.exists(self._cacert_path):
             from conans.client.rest.cacert import cacert
-            save(self._client_cache.cacert_path, cacert)
+            save(self._cacert_path, cacert)
 
-        if not os.path.exists(client_cache.client_cert_path):
+        if not os.path.exists(self._client_cert_path):
             self._client_certificates = None
         else:
-            if os.path.exists(client_cache.client_cert_key_path):
+            if os.path.exists(self._client_cert_key_path):
                 # Requests can accept a tuple with cert and key, or just an string with a
                 # file having both
-                self._client_certificates = (client_cache.client_cert_path,
-                                             client_cache.client_cert_key_path)
+                self._client_certificates = (self._client_cert_path,
+                                             self._client_cert_key_path)
             else:
-                self._client_certificates = client_cache.client_cert_path
+                self._client_certificates = self._client_cert_path
+
+    @property
+    def retry(self):
+        return self._retry
+
+    @property
+    def retry_wait(self):
+        return self._retry_wait
 
     def _should_skip_proxy(self, url):
 
@@ -52,7 +63,7 @@ class ConanRequester(object):
 
     def _add_kwargs(self, url, kwargs):
         if kwargs.get("verify", None) is True:
-            kwargs["verify"] = self._client_cache.cacert_path
+            kwargs["verify"] = self._cacert_path
         else:
             kwargs["verify"] = False
         kwargs["cert"] = self._client_certificates
@@ -63,9 +74,10 @@ class ConanRequester(object):
             kwargs["timeout"] = self._timeout_seconds
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
-        kwargs["headers"]["User-Agent"] = "Conan/%s (Python %s) %s" % (client_version,
-                                                                       platform.python_version(),
-                                                                       requests.utils.default_user_agent())
+
+        user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
+                                                  requests.utils.default_user_agent())
+        kwargs["headers"]["User-Agent"] = user_agent
         return kwargs
 
     def get(self, url, **kwargs):
@@ -86,12 +98,12 @@ class ConanRequester(object):
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
             for var_name in ("http_proxy", "https_proxy", "no_proxy"):
-                popped = popped or os.environ.pop(var_name, None)
-                popped = popped or os.environ.pop(var_name.upper(), None)
+                popped = True if os.environ.pop(var_name, None) else popped
+                popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             t1 = time.time()
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(self._requester, method)(url, **all_kwargs)
+            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             duration = time.time() - t1
             log_client_rest_api_call(url, method.upper(), duration, all_kwargs.get("headers"))
             return tmp

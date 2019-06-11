@@ -1,4 +1,5 @@
 import os
+
 from conans.client.build.compiler_flags import rpath_flags
 from conans.model import Generator
 
@@ -9,7 +10,7 @@ prefix=/usr
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
- 
+
 Name: my-project
 Description: Some brief but informative description
 Version: 1.2.3
@@ -72,7 +73,7 @@ class PkgConfigGenerator(Generator):
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,
-             cpp_info.cppflags,
+             cpp_info.cxxflags,
              cpp_info.cflags,
              ["-D%s" % d for d in cpp_info.defines]]))
 

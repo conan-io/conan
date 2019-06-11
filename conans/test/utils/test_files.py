@@ -1,14 +1,19 @@
-from conans.test.utils.cpp_test_files import cpp_hello_source_files, cpp_hello_conan_files
-from conans.test.utils.go_test_files import go_hello_source_files, go_hello_conan_files
 import os
-from conans.paths import PACKAGE_TGZ_NAME
-import tempfile
-from conans.test import CONAN_TEST_FOLDER
-from conans.tools import untargz
-from conans.errors import ConanException
-import time
-import shutil
 import platform
+import shutil
+import tempfile
+
+import time
+from six import BytesIO
+
+from conans.client.tools.files import untargz, chdir
+from conans.client.tools.win import get_cased_path
+from conans.errors import ConanException
+from conans.paths import PACKAGE_TGZ_NAME
+from conans.test import CONAN_TEST_FOLDER
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
+from conans.test.utils.go_test_files import go_hello_conan_files, go_hello_source_files
+from conans.util.files import mkdir_tmp
 
 
 def wait_until_removed(folder):
@@ -26,6 +31,8 @@ def wait_until_removed(folder):
 
 def temp_folder(path_with_spaces=True):
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+    # Make sure that the temp folder is correctly cased, as tempfile return lowercase for Win
+    t = get_cased_path(t)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
     # FreeBSD and Solaris do not use GNU Make as a the default 'make' program which has trouble
@@ -39,8 +46,12 @@ def temp_folder(path_with_spaces=True):
     return nt
 
 
-def uncompress_packaged_files(paths, package_reference):
-    package_path = paths.package(package_reference)
+def uncompress_packaged_files(paths, pref):
+    rev = paths.get_last_revision(pref.ref).revision
+    prev = paths.get_last_package_revision(pref.copy_with_revs(rev, None)).revision
+    pref = pref.copy_with_revs(rev, prev)
+
+    package_path = paths.package(pref)
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
         raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
     tmp = temp_folder()
@@ -77,7 +88,7 @@ def hello_source_files(number=0, deps=None, lang='cpp'):
         return go_hello_source_files(number, deps)
 
 
-def hello_conan_files(conan_reference, number=0, deps=None, language=0, lang='cpp'):
+def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -88,6 +99,20 @@ def hello_conan_files(conan_reference, number=0, deps=None, language=0, lang='cp
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
     if lang == 'cpp':
-        return cpp_hello_conan_files(conan_reference, number, deps, language)
+        return cpp_hello_conan_files(ref, number, deps, language)
     elif lang == 'go':
-        return go_hello_conan_files(conan_reference, number, deps)
+        return go_hello_conan_files(ref, number, deps)
+
+
+def tgz_with_contents(files):
+    with chdir(mkdir_tmp()):
+        import tarfile
+        file_path = os.path.abspath("myfile.tar.gz")
+        tar_file = tarfile.open(file_path, "w:gz")
+        for name, content in files.items():
+            info = tarfile.TarInfo(name=name)
+            data = content.encode('utf-8')
+            info.size = len(data)
+            tar_file.addfile(tarinfo=info, fileobj=BytesIO(data))
+            tar_file.close()
+        return file_path

@@ -9,8 +9,8 @@
     #   -LIBPATH, -D, -I, -ZI and so on.
 
 """
-from conans import tools
-from conans.tools import unix_path
+from conans.client.tools.oss import cpu_count
+from conans.client.tools.win import unix_path
 
 
 def rpath_flags(os_build, compiler, lib_paths):
@@ -23,7 +23,7 @@ def rpath_flags(os_build, compiler, lib_paths):
     return []
 
 
-def architecture_flag(compiler, arch):
+def architecture_flag(compiler, arch, os=None):
     """
     returns flags specific to the target architecture and compiler
     """
@@ -31,10 +31,17 @@ def architecture_flag(compiler, arch):
         return ""
 
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(arch) in ['x86_64', 'sparcv9']:
+        if str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
             return '-m32'
+        elif str(arch) in ['s390']:
+            return '-m31'
+        elif os == 'AIX':
+            if str(arch) in ['ppc32']:
+                return '-maix32'
+            elif str(arch) in ['ppc64']:
+                return '-maix64'
     return ""
 
 
@@ -67,6 +74,8 @@ def libcxx_flag(compiler, libcxx):
                             "libstdcxx": "-library=stdcxx4",
                             "libstlport": "-library=stlport4",
                             "libstdc++": "-library=stdcpp"}.get(libcxx, ""))
+    elif str(compiler) == "qcc":
+        return "-Y _%s" % str(libcxx)
     return ""
 
 
@@ -108,7 +117,7 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang"]:
+        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.
@@ -127,7 +136,6 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
                      "MinSizeRel": ["-xO2", "-xspace"],
                      }.get(build_type, [])
             return flags
-
     return ""
 
 
@@ -190,10 +198,16 @@ def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler
 
 
 def format_libraries(libraries, compiler=None):
-    pattern = "%s.lib" if str(compiler) == 'Visual Studio' else "-l%s"
-    return [pattern % library for library in libraries if library]
+    result = []
+    for library in libraries:
+        if str(compiler) == 'Visual Studio':
+            if not library.endswith(".lib"):
+                library += ".lib"
+            result.append(library)
+        else:
+            result.append("-l%s" % library)
+    return result
 
 
-def parallel_compiler_cl_flag():
-    cpu_count = tools.cpu_count()
-    return "/MP%s" % cpu_count
+def parallel_compiler_cl_flag(output=None):
+    return "/MP%s" % cpu_count(output=output)

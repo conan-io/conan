@@ -1,11 +1,12 @@
 import os
 import platform
 import re
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
-from conans.model.version import Version
+from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
+from conans.model.version import Version
 
 
 def _execute(command):
@@ -48,7 +49,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
                 output.info("gcc>=5, using the major as version")
                 installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -64,9 +65,14 @@ def _clang_compiler(output, compiler_exe="clang"):
         installed_version = re.search("([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
+            major = installed_version.split(".")[0]
+            if int(major) >= 8 and compiler == "clang":
+                output.info("clang>=8, using the major as version")
+                installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
+
 
 def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
@@ -76,7 +82,7 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -119,10 +125,10 @@ def _get_default_compiler(output):
         return gcc or clang
 
 
-def _detect_compiler_version(result, output):
+def _detect_compiler_version(result, output, profile_path):
     try:
         compiler, version = _get_default_compiler(output)
-    except:
+    except Exception:
         compiler, version = None, None
     if not compiler or not version:
         output.error("Unable to find a working compiler")
@@ -134,18 +140,18 @@ def _detect_compiler_version(result, output):
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
             if Version(version) >= Version("5.1"):
-
+                profile_name = os.path.basename(profile_path)
                 msg = """
 Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
 'libstdc++' for backwards compatibility.
 Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
 
-If you want Conan to use the new ABI, edit the default profile at:
+If you want Conan to use the new ABI for the {profile} profile, run:
 
-    ~/.conan/profiles/default
+    $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
 
-adjusting 'compiler.libcxx=libstdc++11'
-"""
+Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
+""".format(profile=profile_name, profile_path=profile_path)
                 output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
                                "***********************\n %s\n************************************"
                                "************************************************\n\n\n" % msg,
@@ -162,19 +168,6 @@ adjusting 'compiler.libcxx=libstdc++11'
             result.append(("compiler.libcxx", "libCstd"))
 
 
-def detected_os():
-    result = platform.system()
-    if result == "Darwin":
-        return "Macos"
-    if result.startswith("CYGWIN"):
-        return "Windows"
-    if result.startswith("MINGW32_NT") or result.startswith("MINGW64_NT"):
-        return "Windows"
-    if result.startswith("MSYS_NT"):
-        return "Windows"
-    return result
-
-
 def _detect_os_arch(result, output):
     architectures = {'i386': 'x86',
                      'i686': 'x86',
@@ -185,25 +178,40 @@ def _detect_os_arch(result, output):
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
-    arch = architectures.get(platform.machine().lower(), platform.machine().lower())
-    if arch.startswith('arm'):
-        for a in ("armv6", "armv7hf", "armv7", "armv8"):
-            if arch.startswith(a):
-                arch = a
-                break
-        else:
-            output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
-                         "Please check your conan.conf and settings.yml files" % arch)
-    result.append(("arch", arch))
-    result.append(("arch_build", arch))
+
+    platform_machine = platform.machine().lower()
+    if platform_machine:
+        arch = architectures.get(platform_machine, platform_machine)
+        if arch.startswith('arm'):
+            for a in ("armv6", "armv7hf", "armv7", "armv8"):
+                if arch.startswith(a):
+                    arch = a
+                    break
+            else:
+                output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
+                             "Please check your conan.conf and settings.yml files" % arch)
+        elif the_os == 'AIX':
+            processor = platform.processor()
+            if "powerpc" in processor:
+                kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
+                if kernel_bitness:
+                    arch = "ppc64" if kernel_bitness == "64" else "ppc32"
+            elif "rs6000" in processor:
+                arch = "ppc32"
+
+        result.append(("arch", arch))
+        result.append(("arch_build", arch))
 
 
-def detect_defaults_settings(output):
+def detect_defaults_settings(output, profile_path):
     """ try to deduce current machine values without any constraints at all
+    :param output: Conan Output instance
+    :param profile_path: Conan profile file path
+    :return: A list with default settings
     """
     result = []
     _detect_os_arch(result, output)
-    _detect_compiler_version(result, output)
+    _detect_compiler_version(result, output, profile_path)
     result.append(("build_type", "Release"))
 
     return result

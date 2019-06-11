@@ -4,14 +4,14 @@ import os
 import stat
 import time
 
-from conans import tools
+from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.env_reader import get_env
-from conans.util.files import md5sum, load
+from conans.util.files import load, md5sum
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -20,12 +20,12 @@ def undo_imports(current_path, output):
     manifest_path = os.path.join(current_path, IMPORTS_MANIFESTS)
     try:
         manifest_content = load(manifest_path)
-    except:
+    except Exception:
         raise ConanException("Cannot load file %s" % manifest_path)
 
     try:
         manifest = FileTreeManifest.loads(manifest_content)
-    except:
+    except Exception:
         raise ConanException("Wrong manifest file format %s" % manifest_path)
 
     not_removed = 0
@@ -36,7 +36,7 @@ def undo_imports(current_path, output):
             continue
         try:
             os.remove(filepath)
-        except:
+        except Exception:
             output.error("Cannot remove file (open or busy): %s" % filepath)
             not_removed += 1
 
@@ -47,7 +47,7 @@ def undo_imports(current_path, output):
     try:
         os.remove(manifest_path)
         output.success("Removed imports manifest file: %s" % manifest_path)
-    except:
+    except Exception:
         raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
@@ -71,7 +71,7 @@ def _make_files_writable(file_names):
         os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
 
 
-def run_imports(conanfile, dest_folder, output):
+def run_imports(conanfile, dest_folder):
     if not hasattr(conanfile, "imports"):
         return []
     file_importer = _FileImporter(conanfile, dest_folder)
@@ -82,7 +82,7 @@ def run_imports(conanfile, dest_folder, output):
             conanfile.imports()
     copied_files = file_importer.copied_files
     _make_files_writable(copied_files)
-    import_output = ScopedOutput("%s imports()" % output.scope, output)
+    import_output = ScopedOutput("%s imports()" % conanfile.display_name, conanfile.output)
     _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
     return copied_files
 
@@ -96,15 +96,15 @@ def remove_imports(conanfile, copied_files, output):
                 output.warn("Unable to remove imported file from build: %s" % f)
 
 
-def run_deploy(conanfile, install_folder, output):
-    deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
+def run_deploy(conanfile, install_folder):
+    deploy_output = ScopedOutput("%s deploy()" % conanfile.display_name, conanfile.output)
     file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()
 
     # This is necessary to capture FileCopier full destination paths
     # Maybe could be improved in FileCopier
     def file_copier(*args, **kwargs):
-        file_copy = FileCopier(conanfile.package_folder, install_folder)
+        file_copy = FileCopier([conanfile.package_folder], install_folder)
         copied = file_copy(*args, **kwargs)
         _make_files_writable(copied)
         package_copied.update(copied)
@@ -155,7 +155,7 @@ class _FileImporter(object):
         matching_paths = self._get_folders(root_package)
         for name, matching_path in matching_paths.items():
             final_dst_path = os.path.join(real_dst_folder, name) if folder else real_dst_folder
-            file_copier = FileCopier(matching_path, final_dst_path)
+            file_copier = FileCopier([matching_path], final_dst_path)
             files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case,
                                 excludes=excludes, keep_path=keep_path)
             self.copied_files.update(files)
@@ -165,6 +165,8 @@ class _FileImporter(object):
         each dependency
         """
         if not pattern:
-            return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
-        return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
+            return {pkg: cpp_info.rootpath
+                    for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
+        return {pkg: cpp_info.rootpath
+                for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
                 if fnmatch.fnmatch(pkg, pattern)}

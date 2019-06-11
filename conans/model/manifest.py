@@ -1,15 +1,22 @@
-import os
 import calendar
-import time
-from conans.util.files import md5sum, md5, save, load, walk
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
-from conans.errors import ConanException
 import datetime
+import os
+import time
+
+from conans.errors import ConanException
+from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.util.env_reader import get_env
+from conans.util.files import load, md5, md5sum, save, walk
 
 
 def discarded_file(filename):
-    return filename == ".DS_Store" or filename.endswith(".pyc") or \
-           filename.endswith(".pyo") or filename == "__pycache__"
+    """
+    # The __conan pattern is to be prepared for the future, in case we want to manage our
+    own files that shouldn't be uploaded
+    """
+    return (filename == ".DS_Store" or filename.endswith(".pyc") or
+            filename.endswith(".pyo") or filename == "__pycache__" or
+            filename.startswith("__conan"))
 
 
 def gather_files(folder):
@@ -30,18 +37,22 @@ def gather_files(folder):
             if os.path.exists(abs_path):
                 file_dict[rel_path] = abs_path
             else:
-                raise ConanException("The file is a broken symlink, verify that "
-                                     "you are packaging the needed destination files: '%s'"
-                                     % abs_path)
+                if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
+                    raise ConanException("The file is a broken symlink, verify that "
+                                         "you are packaging the needed destination files: '%s'."
+                                         "You can skip this check adjusting the "
+                                         "'general.skip_broken_symlinks_check' at the conan.conf "
+                                         "file."
+                                         % abs_path)
 
     return file_dict, symlinks
 
 
 class FileTreeManifest(object):
 
-    def __init__(self, time, file_sums):
+    def __init__(self, the_time, file_sums):
         """file_sums is a dict with filepaths and md5's: {filepath/to/file.txt: md5}"""
-        self.time = time
+        self.time = the_time
         self.file_sums = file_sums
 
     def files(self):
@@ -63,14 +74,14 @@ class FileTreeManifest(object):
         ConanDigest
         """
         tokens = text.split("\n")
-        time = int(tokens[0])
+        the_time = int(tokens[0])
         file_sums = {}
         for md5line in tokens[1:]:
             if md5line:
                 filename, file_md5 = md5line.split(": ")
                 if not discarded_file(filename):
                     file_sums[filename] = file_md5
-        return FileTreeManifest(time, file_sums)
+        return FileTreeManifest(the_time, file_sums)
 
     @staticmethod
     def load(folder):
@@ -78,16 +89,25 @@ class FileTreeManifest(object):
         return FileTreeManifest.loads(text)
 
     def __repr__(self):
-        ret = ["%s" % (self.time)]
-        for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret.append("%s: %s" % (filepath, file_md5))
+        ret = ["%s" % self.time]
+        for file_path, file_md5 in sorted(self.file_sums.items()):
+            ret.append("%s: %s" % (file_path, file_md5))
+        ret.append("")
+        content = "\n".join(ret)
+        return content
+
+    def __str__(self):
+        dt = datetime.datetime.utcfromtimestamp(self.time).strftime('%Y-%m-%d %H:%M:%S')
+        ret = ["Time: %s" % dt]
+        for file_path, file_md5 in sorted(self.file_sums.items()):
+            ret.append("%s, MD5: %s" % (file_path, file_md5))
         ret.append("")
         content = "\n".join(ret)
         return content
 
     def save(self, folder, filename=CONAN_MANIFEST):
         path = os.path.join(folder, filename)
-        save(path, str(self))
+        save(path, repr(self))
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):

@@ -1,4 +1,5 @@
 import os
+
 from conans.client.cmd.test import PackageTester
 from conans.errors import ConanException
 
@@ -23,15 +24,15 @@ def get_test_conanfile_path(tf, conanfile_path):
                                  % tf)
 
 
-def create(reference, manager, user_io, profile, remote_name, update, build_modes, manifest_folder,
-           manifest_verify, manifest_interactive, keep_build, test_build_folder, test_folder,
-           conanfile_path):
+def create(reference, manager, user_io, graph_info, remotes, update, build_modes,
+           manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
+           test_folder, conanfile_path):
 
     test_conanfile_path = get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:
         pt = PackageTester(manager, user_io)
-        pt.install_build_and_test(test_conanfile_path, reference, profile, remote_name, update,
+        pt.install_build_and_test(test_conanfile_path, reference, graph_info, remotes, update,
                                   build_modes=build_modes,
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
@@ -39,14 +40,14 @@ def create(reference, manager, user_io, profile, remote_name, update, build_mode
                                   keep_build=keep_build,
                                   test_build_folder=test_build_folder)
     else:
-        manager.install(reference=reference,
+        manager.install(ref_or_path=reference,
                         create_reference=reference,
                         install_folder=None,  # Not output anything
                         manifest_folder=manifest_folder,
                         manifest_verify=manifest_verify,
                         manifest_interactive=manifest_interactive,
-                        remote_name=remote_name,
-                        profile=profile,
+                        remotes=remotes,
+                        graph_info=graph_info,
                         build_modes=build_modes,
                         update=update,
                         keep_build=keep_build)

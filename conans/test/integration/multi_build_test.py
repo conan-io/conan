@@ -1,26 +1,28 @@
-import unittest
-from conans.test.utils.tools import TestClient
-from conans.model.ref import ConanFileReference
 import os
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+import unittest
+
 from nose.plugins.attrib import attr
+
+from conans.model.ref import ConanFileReference
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
 
 
 @attr("slow")
 class CollectLibsTest(unittest.TestCase):
 
     def collect_libs_test(self):
-        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", collect_libs=True)
         client = TestClient()
         client.save(files)
         client.run("export . lasote/stable")
 
-        client.run("install %s --build missing" % str(conan_reference))
+        client.run("install %s --build missing" % str(ref))
 
         # Check compilation ok
-        package_ids = client.paths.conan_packages(conan_reference)
-        self.assertEquals(len(package_ids), 1)
+        package_ids = client.cache.package_layout(ref).conan_packages()
+        self.assertEqual(len(package_ids), 1)
 
         # Reuse them
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"],

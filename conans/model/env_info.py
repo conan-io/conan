@@ -18,7 +18,8 @@ class EnvValues(object):
     with the -e or profiles etc.
         self._data is a dictionary with: {package: {var: value}}
             "package" can be None if the var is global.
-            "value" can be a list or a string. If it's a list the variable is appendable like PATH or PYTHONPATH
+            "value" can be a list or a string. If it's a list the variable
+            is appendable like PATH or PYTHONPATH
     """
 
     def __init__(self):
@@ -73,9 +74,9 @@ class EnvValues(object):
                 if isinstance(value, list):
                     value = "[%s]" % ",".join(value)
                 if package:
-                    result.append("%s:%s=%s" % (package, name, value.replace("\\", "/")))
+                    result.append("%s:%s=%s" % (package, name, value))
                 else:
-                    result.append("%s=%s" % (name, value.replace("\\", "/")))
+                    result.append("%s=%s" % (name, value))
 
         result = []
         # First the global vars
@@ -102,10 +103,7 @@ class EnvValues(object):
     def add(self, name, value, package=None):
         # New data, not previous value
         if name not in self._data[package]:
-            if isinstance(value, list):
-                self._data[package][name] = value
-            else:
-                self._data[package][name] = value.replace("\\", "/")
+            self._data[package][name] = value
         # There is data already
         else:
             # Only append at the end if we had a list
@@ -127,12 +125,6 @@ class EnvValues(object):
         else:
             package_name, key = None, key
         self._data[package_name][key] = value
-
-    def normalize_paths(self):
-        for package_name, env_vars in self._data.items():
-            for name, value in env_vars.items():
-                if not isinstance(value, list):
-                    self._data[package_name][name] = value.replace("\\", "/")
 
     def update(self, env_obj):
         """accepts other EnvValues object or DepsEnvInfo
@@ -263,7 +255,7 @@ class DepsEnvInfo(EnvInfo):
                 else:
                     self.vars[varname] = merge_lists(self.vars[varname], [value])
             else:
-                logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, pkg_name))
+                logger.warning("DISCARDED variable %s=%s from %s" % (varname, value, pkg_name))
 
     def update_deps_env_info(self, dep_env_info):
         assert isinstance(dep_env_info, DepsEnvInfo)
@@ -285,7 +277,7 @@ class DepsEnvInfo(EnvInfo):
                 env_info = EnvInfo()
             else:
                 var_name, value = line.split("=", 1)
-                if value[0] == "[" and value[-1] == "]":
+                if value and value[0] == "[" and value[-1] == "]":
                     # Take all the items between quotes
                     values = re.findall('"([^"]*)"', value[1:-1])
                     for val in values:

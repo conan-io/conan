@@ -1,40 +1,43 @@
+import traceback
 from os.path import join
 
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
+from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
-from conans.util.files import save, normalize
-
-from .virtualrunenv import VirtualRunEnvGenerator
-from .text import TXTGenerator
-from .gcc import GCCGenerator
+from conans.util.env_reader import get_env
+from conans.util.files import normalize, save
+from .b2 import B2Generator
+from .boostbuild import BoostBuildGenerator
 from .cmake import CMakeGenerator
-from .cmake_paths import CMakePathsGenerator
 from .cmake_multi import CMakeMultiGenerator
-from .qmake import QmakeGenerator
+from .cmake_paths import CMakePathsGenerator
+from .deploy import DeployGenerator
+from .gcc import GCCGenerator
+from .json_generator import JsonGenerator
+from .make import MakeGenerator
+from .premake import PremakeGenerator
 from .qbs import QbsGenerator
+from .qmake import QmakeGenerator
 from .scons import SConsGenerator
+from .text import TXTGenerator
+from .virtualbuildenv import VirtualBuildEnvGenerator
+from .virtualenv import VirtualEnvGenerator
+from .virtualrunenv import VirtualRunEnvGenerator
 from .visualstudio import VisualStudioGenerator
 from .visualstudio_multi import VisualStudioMultiGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
-from .virtualenv import VirtualEnvGenerator
-from .virtualbuildenv import VirtualBuildEnvGenerator
-from .boostbuild import BoostBuildGenerator
-from .json_generator import JsonGenerator
-import traceback
-from conans.util.env_reader import get_env
-from .b2 import B2Generator
 
 
 class _GeneratorManager(object):
     def __init__(self):
         self._generators = {}
 
-    def add(self, name, generator_class):
-        if name not in self._generators:
+    def add(self, name, generator_class, custom=False):
+        if name not in self._generators or custom:
             self._generators[name] = generator_class
 
     @property
@@ -57,6 +60,7 @@ registered_generators.add("cmake", CMakeGenerator)
 registered_generators.add("cmake_multi", CMakeMultiGenerator)
 registered_generators.add("cmake_paths", CMakePathsGenerator)
 registered_generators.add("cmake_find_package", CMakeFindPackageGenerator)
+registered_generators.add("cmake_find_package_multi", CMakeFindPackageMultiGenerator)
 registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
@@ -72,6 +76,9 @@ registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
 registered_generators.add("json", JsonGenerator)
 registered_generators.add("b2", B2Generator)
+registered_generators.add("premake", PremakeGenerator)
+registered_generators.add("make", MakeGenerator)
+registered_generators.add("deploy", DeployGenerator)
 
 
 def write_generators(conanfile, path, output):

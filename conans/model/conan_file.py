@@ -1,18 +1,17 @@
 import os
 from contextlib import contextmanager
 
-from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
-from conans.client.tools.env import pythonpath
-from conans.errors import ConanException
+from conans.client import tools
+from conans.client.output import Color, ScopedOutput
+from conans.client.tools.env import environment_append, no_op, pythonpath
+from conans.client.tools.oss import OSInfo
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
-from conans.model.options import Options, PackageOptions, OptionsValues
+from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.tools import environment_append, no_op
-from conans.client.output import Color
-from conans.client.tools.oss import os_info
 
 
 def create_options(conanfile):
@@ -51,16 +50,16 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings, local):
+def create_settings(conanfile, settings):
     try:
         defined_settings = getattr(conanfile, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current, raise_undefined_field=not local)
+        settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanException("Error while initializing settings. %s" % str(e))
+        raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
 
 
 @contextmanager
@@ -90,12 +89,15 @@ class ConanFile(object):
     license = None
     author = None  # Main maintainer/responsible for the package, any format
     description = None
+    topics = None
+    homepage = None
     build_policy = None
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
     exports_sources = None
     generators = ["txt"]
+    revision_mode = "hash"
 
     # Vars to control the build steps (build(), package())
     should_configure = True
@@ -105,21 +107,32 @@ class ConanFile(object):
     in_local_cache = True
     develop = False
 
-    def __init__(self, output, runner, user=None, channel=None):
+    # Defaulting the reference fields
+    default_channel = None
+    default_user = None
+
+    # Settings and Options
+    settings = None
+    options = None
+    default_options = None
+
+    def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
-        self.output = output
+        self.output = ScopedOutput(display_name, output)
+        self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
         self._conan_user = user
         self._conan_channel = channel
 
-    def initialize(self, settings, env, local=None):
+    def initialize(self, settings, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings, local)
+        self.settings = create_settings(self, settings)
+
         try:
             if self.settings.os_build and self.settings.os:
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
@@ -132,6 +145,10 @@ class ConanFile(object):
                 self.output.writeln("*"*60, front=Color.BRIGHT_RED)
         except ConanException:
             pass
+
+        if 'cppstd' in self.settings.fields:
+            self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                             " please update your recipe.")
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
@@ -165,7 +182,7 @@ class ConanFile(object):
     @property
     def channel(self):
         if not self._conan_channel:
-            self._conan_channel = os.getenv("CONAN_CHANNEL")
+            self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
             if not self._conan_channel:
                 raise ConanException("CONAN_CHANNEL environment variable not defined, "
                                      "but self.channel is used in conanfile")
@@ -174,15 +191,15 @@ class ConanFile(object):
     @property
     def user(self):
         if not self._conan_user:
-            self._conan_user = os.getenv("CONAN_USERNAME")
+            self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
             if not self._conan_user:
                 raise ConanException("CONAN_USERNAME environment variable not defined, "
                                      "but self.user is used in conanfile")
         return self._conan_user
 
-    def collect_libs(self, folder="lib"):
-        self.output.warn("Use 'self.collect_libs' is deprecated, "
-                         "use tools.collect_libs(self) instead")
+    def collect_libs(self, folder=None):
+        self.output.warn("'self.collect_libs' is deprecated, "
+                         "use 'tools.collect_libs(self)' instead")
         return tools.collect_libs(self, folder=folder)
 
     @property
@@ -236,16 +253,16 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False):
+            ignore_errors=False, run_environment=False, with_login=True):
         def _run():
             if not win_bash:
                 return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw)
+                                             msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
             with tools.run_environment(self):
-                if os_info.is_macos:
+                if OSInfo().is_macos:
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                                              command)
                 retcode = _run()
@@ -258,8 +275,8 @@ class ConanFile(object):
         return retcode
 
     def package_id(self):
-        """ modify the conans info, typically to narrow values
-        eg.: conaninfo.package_references = []
+        """ modify the binary info, typically to narrow values
+        e.g.: self.info.settings.compiler = "Any" => All compilers will generate same ID
         """
 
     def test(self):
@@ -269,9 +286,4 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        if self.name and self.version and self._conan_channel and self._conan_user:
-            return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
-        elif self.name and self.version:
-            return "%s/%s@PROJECT" % (self.name, self.version)
-        else:
-            return "PROJECT"
+        return self.display_name

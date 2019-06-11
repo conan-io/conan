@@ -1,7 +1,12 @@
+import os
 import re
+
+from jinja2 import Template
+
+from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.client.cmd.new_ci import ci_get_files
+from conans.util.files import load
 
 
 conanfile = """from conans import ConanFile, CMake, tools
@@ -11,21 +16,22 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
+    author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
     generators = "cmake"
 
     def source(self):
-        self.run("git clone https://github.com/memsharded/hello.git")
-        self.run("cd hello && git checkout static_shared")
+        self.run("git clone https://github.com/conan-io/hello.git")
         # This small hack might be useful to guarantee proper /MT /MD linkage
         # in MSVC if the packaged project doesn't have variables to set it
         # properly
-        tools.replace_in_file("hello/CMakeLists.txt", "PROJECT(MyHello)",
-                              '''PROJECT(MyHello)
+        tools.replace_in_file("hello/CMakeLists.txt", "PROJECT(HelloWorld)",
+                              '''PROJECT(HelloWorld)
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()''')
 
@@ -62,6 +68,8 @@ class {package_name}Conan(ConanFile):
     description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
+    author = "None"
+    topics = None
 
     def package(self):
         self.copy("*")
@@ -77,8 +85,10 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
+    author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -116,8 +126,10 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
+    author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    topics = ("<Put some tag here>", "<here>", "<and here>")
     no_copy_source = True
     # No settings/options are necessary, this is header only
 
@@ -226,9 +238,11 @@ test_package/build
 
 
 def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None,
-            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None):
+            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
+            osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
+            gitlab_gcc_versions=None, gitlab_clang_versions=None,
+            circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
+            template=None, cache=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -252,6 +266,8 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
         raise ConanException("'bare' is incompatible with 'header' and 'sources'")
+    if template and (header or exports_sources or bare):
+        raise ConanException("'template' argument incompatible with 'header', 'sources', and 'bare'")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
@@ -265,6 +281,15 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     elif bare:
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}
+    elif template:
+        if not os.path.isabs(template):
+            template = os.path.join(cache.cache_folder, "templates", template)
+        if not os.path.isfile(template):
+            raise ConanException("Template doesn't exist: %s" % template)
+        conanfile_template = load(template)
+        t = Template(conanfile_template)
+        replaced = t.render(name=name, version=version, package_name=package_name)
+        files = {"conanfile.py": replaced}
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}

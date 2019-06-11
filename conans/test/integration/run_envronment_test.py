@@ -1,12 +1,11 @@
+import platform
 import unittest
 
+from conans.client import tools
+from conans.client.tools.oss import check_output
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-import platform
-from conans.build_info import command
-import subprocess
-from conans import tools
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class RunEnvironmentTest(unittest.TestCase):
@@ -154,5 +153,5 @@ execute_process(COMMAND say_hello)
                 # running, or in the same line "$ DYLD_LIBRARY_PATH=[path] say_hello"
                 command = "bash -c 'source activate_run.sh && say_hello'"
 
-            output = subprocess.check_output(command, shell=True)
-            self.assertIn("Hello Tool!", str(output))
+            output = check_output(command)
+            self.assertIn("Hello Tool!", output)

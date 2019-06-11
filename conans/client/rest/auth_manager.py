@@ -12,11 +12,12 @@ Flow:
     get_conan with the new token.
 """
 
-from conans.errors import AuthenticationException, ForbiddenException, ConanException
-from uuid import getnode as get_mac
 import hashlib
-from conans.util.log import logger
+from uuid import getnode as get_mac
+
 from conans.client.cmd.user import update_localdb
+from conans.errors import AuthenticationException, ConanException, ForbiddenException
+from conans.util.log import logger
 
 
 def input_credentials_if_unauthorized(func):
@@ -71,7 +72,7 @@ def input_credentials_if_unauthorized(func):
                     self._user_io.out.info(
                         'You can change username with "conan user <username>"')
             else:
-                logger.debug("Got token: %s" % str(token))
+                logger.debug("Got token")
                 self._rest_client.token = token
                 self.user = user
                 # Set custom headers of mac_digest and username
@@ -123,64 +124,93 @@ class ConanApiAuthManager(object):
         custom_headers['X-Client-Id'] = str(username or "")
 
     # ######### CONAN API METHODS ##########
+    @input_credentials_if_unauthorized
+    def check_credentials(self):
+        self._rest_client.check_credentials()
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, policy, remote_manifest):
-        return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                               policy, remote_manifest)
+    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+        return self._rest_client.upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, package_reference, the_files, retry, retry_wait, policy):
-        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait,
-                                                policy)
+    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
+        return self._rest_client.upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     @input_credentials_if_unauthorized
-    def get_conan_manifest(self, conan_reference):
-        return self._rest_client.get_conan_manifest(conan_reference)
+    def get_recipe_manifest(self, ref):
+        return self._rest_client.get_recipe_manifest(ref)
 
     @input_credentials_if_unauthorized
-    def get_package_manifest(self, package_reference):
-        return self._rest_client.get_package_manifest(package_reference)
+    def get_package_manifest(self, pref):
+        return self._rest_client.get_package_manifest(pref)
 
     @input_credentials_if_unauthorized
-    def get_package(self, package_reference, dest_folder):
-        return self._rest_client.get_package(package_reference, dest_folder)
+    def get_package(self, pref, dest_folder):
+        return self._rest_client.get_package(pref, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_recipe(self, reference, dest_folder):
-        return self._rest_client.get_recipe(reference, dest_folder)
+    def get_recipe(self, ref, dest_folder):
+        return self._rest_client.get_recipe(ref, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_recipe_sources(self, reference, dest_folder):
-        return self._rest_client.get_recipe_sources(reference, dest_folder)
+    def get_recipe_snapshot(self, ref):
+        return self._rest_client.get_recipe_snapshot(ref)
+
+    @input_credentials_if_unauthorized
+    def get_recipe_sources(self, ref, dest_folder):
+        return self._rest_client.get_recipe_sources(ref, dest_folder)
 
     @input_credentials_if_unauthorized
     def download_files_to_folder(self, urls, dest_folder):
         return self._rest_client.download_files_to_folder(urls, dest_folder)
 
     @input_credentials_if_unauthorized
-    def get_package_info(self, package_reference):
-        return self._rest_client.get_package_info(package_reference)
+    def get_package_info(self, pref):
+        return self._rest_client.get_package_info(pref)
+
+    @input_credentials_if_unauthorized
+    def get_package_snapshot(self, pref):
+        return self._rest_client.get_package_snapshot(pref)
 
     @input_credentials_if_unauthorized
     def search(self, pattern, ignorecase):
         return self._rest_client.search(pattern, ignorecase)
 
     @input_credentials_if_unauthorized
-    def search_packages(self, reference, query):
-        return self._rest_client.search_packages(reference, query)
+    def search_packages(self, ref, query):
+        return self._rest_client.search_packages(ref, query)
 
     @input_credentials_if_unauthorized
-    def remove(self, conan_refernce):
-        return self._rest_client.remove_conanfile(conan_refernce)
+    def remove(self, ref):
+        return self._rest_client.remove_conanfile(ref)
 
     @input_credentials_if_unauthorized
-    def remove_packages(self, conan_reference, package_ids):
-        return self._rest_client.remove_packages(conan_reference, package_ids)
+    def remove_packages(self, ref, package_ids):
+        return self._rest_client.remove_packages(ref, package_ids)
 
     @input_credentials_if_unauthorized
-    def get_path(self, conan_reference, path, package_id):
-        return self._rest_client.get_path(conan_reference, path, package_id)
+    def get_recipe_path(self, ref, path):
+        return self._rest_client.get_recipe_path(ref, path)
+
+    @input_credentials_if_unauthorized
+    def get_package_path(self, pref, path):
+        return self._rest_client.get_package_path(pref, path)
+
+    @input_credentials_if_unauthorized
+    def get_recipe_revisions(self, ref):
+        return self._rest_client.get_recipe_revisions(ref)
+
+    @input_credentials_if_unauthorized
+    def get_package_revisions(self, pref):
+        return self._rest_client.get_package_revisions(pref)
+
+    @input_credentials_if_unauthorized
+    def get_latest_recipe_revision(self, ref):
+        return self._rest_client.get_latest_recipe_revision(ref)
+
+    @input_credentials_if_unauthorized
+    def get_latest_package_revision(self, pref):
+        return self._rest_client.get_latest_package_revision(pref)
 
     def authenticate(self, user, password):
         if user is None:  # The user is already in DB, just need the passwd

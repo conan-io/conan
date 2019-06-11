@@ -1,5 +1,6 @@
-from conans.errors import ConanException
 import yaml
+
+from conans.errors import ConanException
 from conans.model.values import Values
 
 
@@ -28,6 +29,7 @@ class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
     - "ANY", as string to accept any value
+    - List ["None", "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name):
@@ -84,13 +86,16 @@ class SettingsItem(object):
         return self.__bool__()
 
     def __str__(self):
-        return self._value
+        return str(self._value)
+
+    def _not_any(self):
+        return self._definition != "ANY" and "ANY" not in self._definition
 
     def __eq__(self, other):
         if other is None:
             return self._value is None
         other = str(other)
-        if self._definition != "ANY" and other not in self.values_range:
+        if self._not_any() and other not in self.values_range:
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
 
@@ -103,7 +108,7 @@ class SettingsItem(object):
         """
         try:
             self._get_child(self._value).remove(item)
-        except:
+        except Exception:
             pass
 
     def remove(self, values):
@@ -113,10 +118,13 @@ class SettingsItem(object):
             v = str(v)
             if isinstance(self._definition, dict):
                 self._definition.pop(v, None)
-            elif self._definition != "ANY":
-                if v in self._definition:
-                    self._definition.remove(v)
-        if self._value is not None and self._value not in self._definition:
+            elif self._definition == "ANY":
+                if v == "ANY":
+                    self._definition = []
+            elif v in self._definition:
+                self._definition.remove(v)
+
+        if self._value is not None and self._value not in self._definition and self._not_any():
             raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
 
     def _get_child(self, item):
@@ -143,7 +151,7 @@ class SettingsItem(object):
         value = str(value)
         try:
             return self._definition[value]
-        except:
+        except Exception:
             raise ConanException(bad_value_msg(self._name, value, self.values_range))
 
     @property
@@ -153,7 +161,7 @@ class SettingsItem(object):
     @value.setter
     def value(self, v):
         v = str(v)
-        if self._definition != "ANY" and v not in self._definition:
+        if self._not_any() and v not in self.values_range:
             raise ConanException(bad_value_msg(self._name, v, self.values_range))
         self._value = v
 
@@ -161,7 +169,7 @@ class SettingsItem(object):
     def values_range(self):
         try:
             return sorted(list(self._definition.keys()))
-        except:
+        except Exception:
             return self._definition
 
     @property
@@ -179,14 +187,9 @@ class SettingsItem(object):
     def validate(self):
         if self._value is None and "None" not in self._definition:
             raise undefined_value(self._name)
-
         if isinstance(self._definition, dict):
             key = "None" if self._value is None else self._value
             self._definition[key].validate()
-
-    def remove_undefined(self):
-        if isinstance(self._definition, dict):
-            self._definition[self._value].remove_undefined()
 
 
 class Settings(object):
@@ -230,23 +233,12 @@ class Settings(object):
 
     @staticmethod
     def loads(text):
-        return Settings(yaml.load(text) or {})
+        return Settings(yaml.safe_load(text) or {})
 
     def validate(self):
         for field in self.fields:
             child = self._data[field]
             child.validate()
-
-    def remove_undefined(self):
-        """ Remove/delete those settings or subsettings that are not defined.
-        Kind of opposite to "validate()" that raises error for not defined settings
-        Necessary to recover settings state from conaninfo.txt
-        """
-        for name, setting in list(self._data.items()):
-            if setting.value is None:
-                self._data.pop(name)
-            else:
-                setting.remove_undefined()
 
     @property
     def fields(self):
@@ -318,18 +310,11 @@ class Settings(object):
         assert isinstance(vals, Values)
         self.values_list = vals.as_list()
 
-    def constraint(self, constraint_def, raise_undefined_field=True):
+    def constraint(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
         2. If the other defines {"compiler": None} means to keep the full specification
-
-        :param raise_missing_value:
-
-                When True: will raise when a value for a declared setting is not defined
-                When False: will remove the setting if it has not a value for it
-                            (local methods reading from a conaninfo.txt with already removed settings)
-
         """
         if isinstance(constraint_def, (list, tuple, set)):
             constraint_def = {str(k): None for k in constraint_def or []}
@@ -365,10 +350,9 @@ class Settings(object):
             config_item.remove(values_to_remove)
 
         # Sanity check for input constraint wrong fields
-        if raise_undefined_field:
-            for field in constraint_def:
-                if field not in self._data:
-                    raise undefined_field(self._name, field, self.fields)
+        for field in constraint_def:
+            if field not in self._data:
+                raise undefined_field(self._name, field, self.fields)
 
         # remove settings not defined in the constraint
         self.remove(fields_to_remove)

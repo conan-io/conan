@@ -1,9 +1,11 @@
 from __future__ import print_function
+
 import os
 import platform
-import subprocess
 import shutil
+import subprocess
 from distutils import dir_util
+
 from conans import __version__
 from conans.util.files import save
 

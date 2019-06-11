@@ -1,14 +1,18 @@
 import json
 import os
-import unittest
 import sys
+import unittest
+from collections import OrderedDict
 
-from conans import tools
+import six
+from nose.plugins.attrib import attr
+
 from conans.build_info.conan_build_info import get_build_info
-from conans.test.utils.tools import TestServer, TestClient
+from conans.client import tools
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conans.test.utils.tools import TestClient, TestServer
+from conans.util.files import load, save
 
 
 class MyBuildInfo(unittest.TestCase):
@@ -16,7 +20,9 @@ class MyBuildInfo(unittest.TestCase):
     def setUp(self):
         test_server = TestServer(users={"lasote": "lasote"})
         test_server2 = TestServer(users={"lasote": "lasote"})
-        self.servers = {"default": test_server, "alternative": test_server2}
+        self.servers = OrderedDict()
+        self.servers["default"] = test_server
+        self.servers["alternative"] = test_server2
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "lasote")],
                                                               "alternative": [("lasote", "lasote")]})
 
@@ -31,10 +37,10 @@ class MyBuildInfo(unittest.TestCase):
             self.client.run("install Hello/1.0@lasote/stable --build")
 
         data = get_build_info(trace_file).serialize()
-        self.assertEquals(len(data["modules"]), 1)
-        self.assertEquals(data["modules"][0]["id"], "DownloadOnly")
-        self.assertEquals(len(data["modules"][0]["artifacts"]), 0)
-        self.assertEquals(len(data["modules"][0]["dependencies"]), 3)
+        self.assertEqual(len(data["modules"]), 1)
+        self.assertEqual(data["modules"][0]["id"], "DownloadOnly")
+        self.assertEqual(len(data["modules"][0]["artifacts"]), 0)
+        self.assertEqual(len(data["modules"][0]["dependencies"]), 3)
 
     def test_json(self):
 
@@ -65,28 +71,28 @@ class MyBuildInfo(unittest.TestCase):
             data = get_build_info(trace_file).serialize()
             # Only uploaded 2 modules, the Hello0 recipe and the Hello0 package
             # without dependencies
-            self.assertEquals(len(data["modules"]), 2)
-            self.assertEquals(len(data["modules"][0]["dependencies"]), 0)
-            self.assertEquals(len(data["modules"][0]["dependencies"]), 0)
-            self.assertEquals(len(data["modules"][0]["artifacts"]), 3)
+            self.assertEqual(len(data["modules"]), 2)
+            self.assertEqual(len(data["modules"][0]["dependencies"]), 0)
+            self.assertEqual(len(data["modules"][0]["dependencies"]), 0)
+            self.assertEqual(len(data["modules"][0]["artifacts"]), 3)
 
             # Now upload the rest of them
             self.client.run("install Hello1/1.0@lasote/stable --build missing")
             self.client.run("install Hello2/1.0@lasote/stable --build missing")
             self.client.run("upload '*' -c --all")
             data = get_build_info(trace_file).serialize()
-            self.assertEquals(len(data["modules"]), 6)
+            self.assertEqual(len(data["modules"]), 6)
             for mod_name in ["Hello1/1.0@lasote/stable", "Hello2/1.0@lasote/stable"]:
                 module = _get_module(data, mod_name)
-                self.assertEquals(3, len(module["dependencies"]))
-                self.assertEquals(3, len(module["artifacts"]))
+                self.assertEqual(3, len(module["dependencies"]))
+                self.assertEqual(3, len(module["artifacts"]))
                 for dep in module["dependencies"]:
                     self.assertTrue(dep["id"].startswith("Hello0/1.0@lasote/stable"))
 
     def test_invalid_tracer(self):
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         save(trace_file, "invalid contents")
-        with self.assertRaisesRegexp(Exception, "INVALID TRACE FILE!"):
+        with six.assertRaisesRegex(self, Exception, "INVALID TRACE FILE!"):
             get_build_info(trace_file).serialize()
 
     def test_cross_remotes(self):
@@ -115,10 +121,11 @@ class MyBuildInfo(unittest.TestCase):
             self.client.run("upload 'Hello1*' -c --all -r default")
 
             data = get_build_info(trace_file).serialize()
-            self.assertEquals(len(data["modules"]), 2)
+            self.assertEqual(len(data["modules"]), 2)
             module = _get_module(data, "Hello1/1.0@lasote/stable")
-            self.assertEquals(0, len(module["dependencies"]))
+            self.assertEqual(0, len(module["dependencies"]))
 
+    @attr('ide_fail')
     def trace_command_test(self):
         from conans.build_info.command import run
         trace_file = os.path.join(temp_folder(), "conan_trace.log")

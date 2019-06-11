@@ -2,9 +2,9 @@ import os
 import sys
 from contextlib import contextmanager
 
-from conans.client.tools.files import which, _path_equals
-from conans.errors import ConanException
 from conans.client.run_environment import RunEnvironment
+from conans.client.tools.files import _path_equals, which
+from conans.errors import ConanException
 
 
 @contextmanager
@@ -32,20 +32,30 @@ def run_environment(conanfile):
 @contextmanager
 def environment_append(env_vars):
     """
-    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.g.: MYVAR=1
-                     The values can also be lists of appendable environment vars. {name: [value, value2]}
-                      => e.g. PATH=/path/1:/path/2
+    :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2}
+                     => e.g.: MYVAR=1
+                     The values can also be lists of appendable environment vars.
+                     {name: [value, value2]} => e.g. PATH=/path/1:/path/2
+                     If the value is set to None, then that environment variable is unset.
     :return: None
     """
+    unset_vars = []
+    for key in env_vars.keys():
+        if env_vars[key] is None:
+            unset_vars.append(key)
+    for var in unset_vars:
+        env_vars.pop(var, None)
     for name, value in env_vars.items():
         if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
             old = os.environ.get(name)
             if old:
                 env_vars[name] += os.pathsep + old
-    if env_vars:
+    if env_vars or unset_vars:
         old_env = dict(os.environ)
         os.environ.update(env_vars)
+        for var in unset_vars:
+            os.environ.pop(var, None)
         try:
             yield
         finally:
