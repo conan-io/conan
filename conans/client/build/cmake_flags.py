@@ -154,17 +154,17 @@ class CMakeDefinitionsBuilder(object):
         compiler_version = self._ss("compiler.version")
 
         if not cppstd:
-            return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
+            return OrderedDict()
 
         if cppstd.startswith("gnu"):
             defines["CONAN_CMAKE_CXX_STANDARD"] = cppstd[3:]
-            defines["CONAN_CMAKE_CXX_EXTENSIONS"] ="ON"
+            defines["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
         else:
             defines["CONAN_CMAKE_CXX_STANDARD"] = cppstd
             defines["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
 
         defines["CONAN_STD_CXX_FLAG"] = cppstd_flag(compiler, compiler_version, cppstd)
-        return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
+        return defines
 
     def _cmake_cross_build_defines(self):
 
