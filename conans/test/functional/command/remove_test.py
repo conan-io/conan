@@ -284,6 +284,15 @@ class RemoveTest(unittest.TestCase):
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
+    def test_remove_any_package_version(self):
+        self.client.run("remove Hello*/*@myuser/testing -f")
+        self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": False, "H2": False, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        six.assertCountEqual(self, ["Other", "Bye"], folders)
+
     def builds_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
