@@ -45,7 +45,8 @@ def path_shortener(path, short_paths):
     use_always_short_paths = get_env("CONAN_USE_ALWAYS_SHORT_PATHS", False)
     short_paths = use_always_short_paths or short_paths
 
-    if short_paths is False or os.getenv("CONAN_USER_HOME_SHORT") == "None":
+    short_home_env = os.getenv("CONAN_USER_HOME_SHORT")
+    if short_paths is False or short_home_env == "None":
         return path
     link = os.path.join(path, CONAN_LINK)
     if os.path.exists(link):
@@ -56,7 +57,7 @@ def path_shortener(path, short_paths):
     if os.path.exists(path):
         rmdir(path)
 
-    short_home = os.getenv("CONAN_USER_HOME_SHORT")
+    short_home = short_home_env
     if not short_home:
         drive = os.path.splitdrive(path)[0]
         short_home = os.path.join(drive, os.sep, ".conan")
@@ -74,7 +75,22 @@ def path_shortener(path, short_paths):
         # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
         pass
 
-    redirect = hashed_redirect(short_home, path)
+    effective_path = path
+    if short_home_env:
+        # Strip the store prefix from the path as we don't want it to contribute to the hash
+        import sys
+        from conans.client.cache.cache import ClientCache
+        from conans.client.output import ConanOutput
+        from conans.paths import get_conan_base_folder
+        out = ConanOutput(sys.stdout, sys.stderr, False)
+        store_folder = ClientCache(get_conan_base_folder(), out).store
+        try:
+            effective_path = os.path.relpath(path, store_folder)
+        except ValueError:
+            # relpath throws if the two paths are not on the same drive
+            pass
+
+    redirect = hashed_redirect(short_home, effective_path)
     if not redirect:
         logger.warning("Failed to create a deterministic short path in %s", short_home)
         redirect = tempfile.mkdtemp(dir=short_home, prefix="")
