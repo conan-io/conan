@@ -368,6 +368,8 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Depreca
 
 settings_1_15_1 = settings_1_15_0
 settings_1_15_2 = settings_1_15_1
+settings_1_15_3 = settings_1_15_2
+
 settings_1_16_0 = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
@@ -450,3 +452,5 @@ compiler:
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
 """
+
+settings_1_16_1 = settings_1_16_0
