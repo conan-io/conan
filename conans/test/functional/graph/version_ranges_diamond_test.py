@@ -34,19 +34,21 @@ class VersionRangesUpdatingTest(unittest.TestCase):
             """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
+        self.assertIn("boost/*@lasote/stable resolved in 'default' remote", client.out)
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+        client.run("install .")
+        self.assertIn("boost/*@lasote/stable resolved in cache", client.out)
         self.assertIn("boost/1.70.0", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
         self.assertNotIn("boost/1.68.0", client.out)
 
         client.run("install . --update")
+        self.assertIn("boost/*@lasote/stable resolved in 'default' remote", client.out)
         self.assertIn("boost/1.70.0", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
         self.assertNotIn("boost/1.68.0", client.out)
-
-
-
-
-
 
     def update_test(self):
         client = TestClient(servers={"default": TestServer()},

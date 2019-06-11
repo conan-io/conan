@@ -88,6 +88,7 @@ class RangeResolver(object):
         self._cache = cache
         self._remote_manager = remote_manager
         self._cached_remote_found = {}
+        self._cached_local_found = {}
         self._result = []
 
     @property
@@ -134,36 +135,42 @@ class RangeResolver(object):
                                  "could not be resolved" % (version_range, require, base_conanref))
 
     def _resolve_local(self, search_ref, version_range):
-        local_found = search_recipes(self._cache, search_ref)
+        local_found = self._cached_local_found.get(search_ref)
+        if local_found is None:
+            local_found = search_recipes(self._cache, search_ref)
+            if local_found:
+                self._result.append("%s resolved in cache" % (search_ref, ))
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def search_remotes(self, pattern, remotes):
+    def _search_remotes(self, pattern, remotes):
         remote = remotes.selected
         if remote:
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
-            return search_result
+            return search_result, remote
 
         for remote in remotes.values():
             search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
             if search_result:
-                return search_result
+                return search_result, remote
+        return None, None
 
     def _resolve_remote(self, search_ref, version_range, remotes):
-        remote = remotes.selected
-        remote_name = remote.name if remote else None
-        remote_cache = self._cached_remote_found.setdefault(remote_name, {})
         # We should use ignorecase=False, we want the exact case!
-        remote_found = remote_cache.get(search_ref)
-        if remote_found is None:
-            remote_found = self.search_remotes(search_ref, remotes)
+        found_refs = self._cached_remote_found.get(search_ref)
+        if found_refs is None:
+            found_refs, remote_found = self._search_remotes(search_ref, remotes)
+            if remote_found:
+                self._result.append("%s resolved in '%s' remote" % (search_ref, remote_found.name))
+            else:
+                self._result.append("%s not resolved in remotes")
             # We don't want here to resolve the revision that should be done in the proxy
             # as any other regular flow
-            remote_found = [ref.copy_clear_rev() for ref in remote_found or []]
+            found_refs = [ref.copy_clear_rev() for ref in found_refs or []]
             # Empty list, just in case it returns None
-            remote_cache[search_ref] = remote_found
-        if remote_found:
-            return self._resolve_version(version_range, remote_found)
+            self._cached_remote_found[search_ref] = found_refs
+        if found_refs:
+            return self._resolve_version(version_range, found_refs)
 
     def _resolve_version(self, version_range, refs_found):
         versions = {ref.version: ref for ref in refs_found}
