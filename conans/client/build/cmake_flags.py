@@ -125,68 +125,6 @@ def build_type_definition(build_type, generator):
     return {}
 
 
-class CMakeDefinitions(object):
-    """
-    Create list of unrepeated definitions and discard the ones without value as result
-    """
-
-    def __init__(self, definitions=None):
-        if definitions:
-            if isinstance(definitions, list):
-                for item in definitions:
-                    assert isinstance(item, tuple), self._init_assert_msg()
-                definitions = OrderedDict(definitions)
-            assert isinstance(definitions, OrderedDict), self._init_assert_msg()
-        self._definitions = definitions or OrderedDict()
-
-    def _init_assert_msg(self):
-        return "Definitions argument needs to be list of tuples or an OrderedDict to preserve the " \
-               "order of items"
-
-    def set(self, key, value):
-        """
-        Set a definition with a valid value checking that the key already exists (it is an
-        expected key), and the value is different form the previous one
-        :param key: Definition name
-        :param value: Definition value
-        """
-        self._set(key, value)
-
-    def _set(self, key, value, new=False):
-        if not new:
-            assert key in self._definitions, "Key '%s' not previously set in dictionary" % key
-            assert self._definitions[key] is None, \
-                "Key '%s' already has a value assigned: '%s'" % (key, self._definitions[key])
-        else:
-            assert key not in self._definitions, "Key '%s' previously set in dictionary" % key
-        self._definitions[key] = value
-
-    def update(self, definitions):
-        """
-        Update the definitions creating new keys and checkign they weren't previously added
-        :param definitions: Dictionary with definition names as keys and their values
-        """
-        for key, value in definitions.items():
-            self._set(key, value, True)
-
-    def get(self, key):
-        """
-        Get the value of a definition checking that the deifinition name already exists
-        :param key: defintion name
-        :return:
-        """
-        assert key in self._definitions, "Key '%s' not previously set in dictionary" % key
-        return self._definitions.get(key)
-
-    def result(self):
-        """
-        Definitions with their value
-        :return: Ordered dictionary only with definitions that have a value assigned
-        """
-        return OrderedDict([(key, value) for key, value in self._definitions.items() if value is not
-                            None])
-
-
 class CMakeDefinitionsBuilder(object):
 
     def __init__(self, conanfile, cmake_system_name=True, make_program=None,
@@ -206,7 +144,7 @@ class CMakeDefinitionsBuilder(object):
         return self._conanfile.settings.get_safe(setname)
 
     def _get_cpp_standard_vars(self):
-        defines = CMakeDefinitions([
+        defines = OrderedDict([
             ("CONAN_CMAKE_CXX_STANDARD", None),
             ("CONAN_CMAKE_CXX_EXTENSIONS", None),
             ("CONAN_STD_CXX_FLAG", None)])
@@ -216,17 +154,17 @@ class CMakeDefinitionsBuilder(object):
         compiler_version = self._ss("compiler.version")
 
         if not cppstd:
-            return defines.result()
+            return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
 
         if cppstd.startswith("gnu"):
-            defines.set("CONAN_CMAKE_CXX_STANDARD", cppstd[3:])
-            defines.set("CONAN_CMAKE_CXX_EXTENSIONS", "ON")
+            defines["CONAN_CMAKE_CXX_STANDARD"] = cppstd[3:]
+            defines["CONAN_CMAKE_CXX_EXTENSIONS"] ="ON"
         else:
-            defines.set("CONAN_CMAKE_CXX_STANDARD", cppstd)
-            defines.set("CONAN_CMAKE_CXX_EXTENSIONS", "OFF")
+            defines["CONAN_CMAKE_CXX_STANDARD"] = cppstd
+            defines["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
 
-        defines.set("CONAN_STD_CXX_FLAG", cppstd_flag(compiler, compiler_version, cppstd))
-        return defines.result()
+        defines["CONAN_STD_CXX_FLAG"] = cppstd_flag(compiler, compiler_version, cppstd)
+        return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
 
     def _cmake_cross_build_defines(self):
 
@@ -246,7 +184,7 @@ class CMakeDefinitionsBuilder(object):
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", op_system_version)
         toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
 
-        defines = CMakeDefinitions([
+        defines = OrderedDict([
             ("TOOLCHAIN_FILE", None),
             ("CMAKE_SYSTEM_NAME", None),
             ("CMAKE_SYSTEM_VERSION", None),
@@ -267,35 +205,35 @@ class CMakeDefinitionsBuilder(object):
 
         if toolchain_file != "":
             logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
-            defines.set("CMAKE_TOOLCHAIN_FILE", toolchain_file)
+            defines["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
 
         if cmake_system_name is False:
-            return defines.result()
+            return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
 
         # System name and system version
         if cmake_system_name is not True:  # String not empty
-            defines.set("CMAKE_SYSTEM_NAME", cmake_system_name)
+            defines["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
             if cross_building(self._conanfile.settings):  # We are cross building
                 if os_ != os_build:
                     if os_:  # the_os is the host (regular setting)
-                        defines.set("CMAKE_SYSTEM_NAME", {"iOS": "Darwin",
-                                                          "tvOS": "Darwin",
-                                                          "watchOS": "Darwin",
-                                                          "Neutrino": "QNX"}.get(os_, os_))
+                        defines["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
+                                                        "tvOS": "Darwin",
+                                                        "watchOS": "Darwin",
+                                                        "Neutrino": "QNX"}.get(os_, os_)
                     else:
-                        defines.set("CMAKE_SYSTEM_NAME", "Generic")
+                        defines["CMAKE_SYSTEM_NAME"] = "Generic"
         if os_ver:
-            defines.set("CMAKE_SYSTEM_VERSION", os_ver)
+            defines["CMAKE_SYSTEM_VERSION"] = os_ver
             if str(os_) == "Macos":
-                defines.set("CMAKE_OSX_DEPLOYMENT_TARGET", os_ver)
+                defines["CMAKE_OSX_DEPLOYMENT_TARGET"] = os_ver
 
         # system processor
         cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR")
         if cmake_system_processor:
-            defines.set("CMAKE_SYSTEM_PROCESSOR", cmake_system_processor)
+            defines["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
 
-        if defines.result():
+        if OrderedDict([(key, value) for key, value in defines.items() if value is not None]):
             for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
@@ -303,7 +241,7 @@ class CMakeDefinitionsBuilder(object):
 
                 value = os.getenv(env_var)
                 if value:
-                    defines.set(env_var, value)
+                    defines[env_var] = value
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
@@ -313,36 +251,36 @@ class CMakeDefinitionsBuilder(object):
             if sysroot_path:
                 # Needs to be set here, can't be managed in the cmake generator, CMake needs
                 # to know about the sysroot before any other thing
-                defines.set("CMAKE_SYSROOT", sysroot_path.replace("\\", "/"))
+                defines["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
 
             # Adjust Android stuff
-            if str(os_) == "Android" and defines.get("CMAKE_SYSTEM_NAME") == "Android":
+            if str(os_) == "Android" and defines["CMAKE_SYSTEM_NAME"] == "Android":
                 arch_abi_settings = tools.to_android_abi(arch)
                 if arch_abi_settings:
-                    defines.set("CMAKE_ANDROID_ARCH_ABI", arch_abi_settings)
-                    defines.set("ANDROID_ABI", arch_abi_settings)
+                    defines["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
+                    defines["ANDROID_ABI"] = arch_abi_settings
 
                 conan_cmake_android_ndk = os.getenv("CONAN_CMAKE_ANDROID_NDK")
                 if conan_cmake_android_ndk:
-                    defines.set("ANDROID_NDK", conan_cmake_android_ndk)
+                    defines["ANDROID_NDK"] = conan_cmake_android_ndk
 
-                defines.set("ANDROID_PLATFORM", "android-%s" % op_system_version)
-                defines.set("ANDROID_TOOLCHAIN", compiler)
+                defines["ANDROID_PLATFORM"] = "android-%s" % op_system_version
+                defines["ANDROID_TOOLCHAIN"] = compiler
 
                 # More details about supported stdc++ libraries here:
                 # https://developer.android.com/ndk/guides/cpp-support.html
                 if libcxx:
-                    defines.set("ANDROID_STL", libcxx)
+                    defines["ANDROID_STL"] = libcxx
                 else:
-                    defines.set("ANDROID_STL", "none")
+                    defines["ANDROID_STL"] = "none"
 
+        result = OrderedDict([(key, value) for key, value in defines.items() if value is not None])
         logger.info("Setting Cross build flags: %s"
-                    % ", ".join(["%s=%s" % (k, v) for k, v in defines.result().items()]))
-
-        return defines.result()
+                    % ", ".join(["%s=%s" % (k, v) for k, v in result.items()]))
+        return result
 
     def _get_make_program_definition(self):
-        defines = CMakeDefinitions([("CMAKE_MAKE_PROGRAM", None)])
+        defines = OrderedDict([("CMAKE_MAKE_PROGRAM", None)])
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
@@ -350,8 +288,8 @@ class CMakeDefinitionsBuilder(object):
                                   "ignored" % make_program)
             else:
                 self._output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
-                defines.set("CMAKE_MAKE_PROGRAM", make_program)
-        return defines.result()
+                defines["CMAKE_MAKE_PROGRAM"] = make_program
+        return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
 
     def get_definitions(self):
 
@@ -363,7 +301,7 @@ class CMakeDefinitionsBuilder(object):
         runtime = self._ss("compiler.runtime")
         build_type = self._ss("build_type")
 
-        defines = CMakeDefinitions([
+        defines = OrderedDict([
             ("CONAN_EXPORTED", "1"),
             ("CMAKE_OSX_ARCHITECTURES", None),
             ("CONAN_COMPILER", None),
@@ -398,50 +336,50 @@ class CMakeDefinitionsBuilder(object):
 
         if str(os_) == "Macos":
             if arch == "x86":
-                defines.set("CMAKE_OSX_ARCHITECTURES", "i386")
+                defines["CMAKE_OSX_ARCHITECTURES"] = "i386"
 
         if compiler:
-            defines.set("CONAN_COMPILER", compiler)
+            defines["CONAN_COMPILER"] = compiler
         if compiler_version:
-            defines.set("CONAN_COMPILER_VERSION", str(compiler_version))
+            defines["CONAN_COMPILER_VERSION"] = str(compiler_version)
 
         # C, CXX, LINK FLAGS
         if compiler == "Visual Studio":
             if self._parallel:
                 flag = parallel_compiler_cl_flag(output=self._output)
-                defines.set("CONAN_CXX_FLAGS", flag)
-                defines.set("CONAN_C_FLAGS", flag)
+                defines["CONAN_CXX_FLAGS"] = flag
+                defines["CONAN_C_FLAGS"] = flag
         else:  # arch_flag is only set for non Visual Studio
             arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
             if arch_flag:
-                defines.set("CONAN_CXX_FLAGS", arch_flag)
-                defines.set("CONAN_SHARED_LINKER_FLAGS", arch_flag)
-                defines.set("CONAN_C_FLAGS", arch_flag)
+                defines["CONAN_CXX_FLAGS"] = arch_flag
+                defines["CONAN_SHARED_LINKER_FLAGS"] = arch_flag
+                defines["CONAN_C_FLAGS"] = arch_flag
                 if self._set_cmake_flags:
-                    defines.set("CMAKE_CXX_FLAGS", arch_flag)
-                    defines.set("CMAKE_SHARED_LINKER_FLAGS", arch_flag)
-                    defines.set("CMAKE_C_FLAGS", arch_flag)
+                    defines["CMAKE_CXX_FLAGS"] = arch_flag
+                    defines["CMAKE_SHARED_LINKER_FLAGS"] = arch_flag
+                    defines["CMAKE_C_FLAGS"] = arch_flag
 
         if libcxx:
-            defines.set("CONAN_LIBCXX", libcxx)
+            defines["CONAN_LIBCXX"] = libcxx
 
         # Shared library
         try:
-            defines.set("BUILD_SHARED_LIBS", "ON" if self._conanfile.options.shared else "OFF")
+            defines["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
         except ConanException:
             pass
 
         # Install to package folder
         try:
             if self._conanfile.package_folder:
-                defines.set("CMAKE_INSTALL_PREFIX", self._conanfile.package_folder)
-                defines.set("CMAKE_INSTALL_BINDIR", DEFAULT_BIN)
-                defines.set("CMAKE_INSTALL_SBINDIR", DEFAULT_BIN)
-                defines.set("CMAKE_INSTALL_LIBEXECDIR", DEFAULT_BIN)
-                defines.set("CMAKE_INSTALL_LIBDIR", DEFAULT_LIB)
-                defines.set("CMAKE_INSTALL_INCLUDEDIR", DEFAULT_INCLUDE)
-                defines.set("CMAKE_INSTALL_OLDINCLUDEDIR", DEFAULT_INCLUDE)
-                defines.set("CMAKE_INSTALL_DATAROOTDIR", DEFAULT_SHARE)
+                defines["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
+                defines["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
+                defines["CMAKE_INSTALL_SBINDIR"] = DEFAULT_BIN
+                defines["CMAKE_INSTALL_LIBEXECDIR"] = DEFAULT_BIN
+                defines["CMAKE_INSTALL_LIBDIR"] = DEFAULT_LIB
+                defines["CMAKE_INSTALL_INCLUDEDIR"] = DEFAULT_INCLUDE
+                defines["CMAKE_INSTALL_OLDINCLUDEDIR"] = DEFAULT_INCLUDE
+                defines["CMAKE_INSTALL_DATAROOTDIR"] = DEFAULT_SHARE
         except AttributeError:
             pass
 
@@ -450,20 +388,19 @@ class CMakeDefinitionsBuilder(object):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
-                defines.set("CONAN_CMAKE_POSITION_INDEPENDENT_CODE",
-                            "ON" if (fpic or shared) else "OFF")
+                defines["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if fpic or shared else "OFF"
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
         install_folder = self._conanfile.install_folder.replace("\\", "/")
         if "cmake_find_package" in self._conanfile.generators:
-            defines.set("CMAKE_MODULE_PATH", install_folder)
+            defines["CMAKE_MODULE_PATH"] = install_folder
 
         if "cmake_find_package_multi" in self._conanfile.generators:
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
             # that require the prefix path and the module path
-            defines.set("CMAKE_PREFIX_PATH", install_folder)
-            defines.set("CMAKE_MODULE_PATH", install_folder)
+            defines["CMAKE_PREFIX_PATH"] = install_folder
+            defines["CMAKE_MODULE_PATH"] = install_folder
 
         defines.update(build_type_definition(build_type, self._generator))
         defines.update(in_local_cache_definition(self._conanfile.in_local_cache))
@@ -471,4 +408,4 @@ class CMakeDefinitionsBuilder(object):
         defines.update(self._get_cpp_standard_vars())
         defines.update(self._get_make_program_definition())
         defines.update(runtime_definition(runtime))
-        return defines.result()
+        return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
