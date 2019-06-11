@@ -133,6 +133,26 @@ class ToolsFilesPatchTest(unittest.TestCase):
                       client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
 
+    def test_patch_new_strip(self):
+        conanfile = base_conanfile + '''
+    def build(self):
+        from conans.tools import load, save
+        patch_content = """--- /dev/null
++++ b/newfile
+@@ -0,0 +0,3 @@
++New file!
++New file!
++New file!
+"""
+        patch(patch_string=patch_content, strip=1)
+        self.output.info("NEW FILE=%s" % load("newfile"))
+'''
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
+                      client.out)
+
     def test_error_patch(self):
         file_content = base_conanfile + '''
     def build(self):
