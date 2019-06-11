@@ -105,6 +105,26 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("source .")
         self.assertFalse(os.path.exists(path))
 
+    def test_patch_strip_delete_no_folder(self):
+        conanfile = dedent("""
+            from conans import ConanFile, tools
+            class PatchConan(ConanFile):
+                def source(self):
+                    tools.patch(self.source_folder, "example.patch", strip=1)""")
+        patch = dedent("""
+            --- a/oldfile
+            +++ b/dev/null
+            @@ -0,1 +0,0 @@
+            -legacy code""")
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "example.patch": patch,
+                     "oldfile": "legacy code"})
+        path = os.path.join(client.current_folder, "oldfile")
+        self.assertTrue(os.path.exists(path))
+        client.run("source .")
+        self.assertFalse(os.path.exists(path))
+
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
     def build(self):
@@ -132,6 +152,26 @@ class ToolsFilesPatchTest(unittest.TestCase):
         self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
                       client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
+
+    def test_patch_new_strip(self):
+        conanfile = base_conanfile + '''
+    def build(self):
+        from conans.tools import load, save
+        patch_content = """--- /dev/null
++++ b/newfile
+@@ -0,0 +0,3 @@
++New file!
++New file!
++New file!
+"""
+        patch(patch_string=patch_content, strip=1)
+        self.output.info("NEW FILE=%s" % load("newfile"))
+'''
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
+                      client.out)
 
     def test_error_patch(self):
         file_content = base_conanfile + '''
