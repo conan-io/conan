@@ -105,6 +105,26 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("source .")
         self.assertFalse(os.path.exists(path))
 
+    def test_patch_strip_delete_no_folder(self):
+        conanfile = dedent("""
+            from conans import ConanFile, tools
+            class PatchConan(ConanFile):
+                def source(self):
+                    tools.patch(self.source_folder, "example.patch", strip=1)""")
+        patch = dedent("""
+            --- a/oldfile
+            +++ b/dev/null
+            @@ -0,1 +0,0 @@
+            -legacy code""")
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "example.patch": patch,
+                     "oldfile": "legacy code"})
+        path = os.path.join(client.current_folder, "oldfile")
+        self.assertTrue(os.path.exists(path))
+        client.run("source .")
+        self.assertFalse(os.path.exists(path))
+
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
     def build(self):
