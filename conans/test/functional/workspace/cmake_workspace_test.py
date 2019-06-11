@@ -11,6 +11,7 @@ from conans.test.functional.workspace.scaffolding.package import Package
 from conans.test.functional.workspace.scaffolding.templates import workspace_yml_template
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans import tools
 
 
 class WSTests(unittest.TestCase):
@@ -64,12 +65,13 @@ class WSTests(unittest.TestCase):
         \t\t\t> pkgD: default""")
 
     @staticmethod
-    def _plain_package(client, pkg, lib_requires=None, add_executable=False, shared=False):
+    def _plain_package(client, pkg, lib_requires=None, add_executable=False,
+                       shared=False, version="0.1"):
         """ Create a package with only one library that links and uses libraries declared
             in 'lib_requires'. Optionally it adds an executable to the package (the
             executable will link to the library in the same package)
         """
-        pkg = Package(name=pkg)
+        pkg = Package(name=pkg, version=version)
         pkg_lib = pkg.add_library(name=pkg.name)  # TODO: Include components (@danimtb)
         if lib_requires:
             for item in lib_requires:
@@ -111,7 +113,8 @@ class WSTests(unittest.TestCase):
     def _reset(self):
         # Return editable packages to its original state
         for it in self.editables:
-            it.modify_cpp_message("default")
+            it.modify_cpp_message()
+            it.modify_options()
 
     def run_outside_ws(self):
         """ This function runs the full project without taking into account the ws,
@@ -244,6 +247,7 @@ class WSTests(unittest.TestCase):
         output_shared = output_shared.replace("> pkgC: default", "> pkgC: default (shared!)")
         self.assertMultiLineEqual(str(t.out).strip(), output_shared)
 
+    @unittest.expectedFailure
     def test_several_workspaces(self):
         """ One package is included into two different workspaces with different
             resulting binaries. Those shouldn't mix.
@@ -307,7 +311,7 @@ class WSTests(unittest.TestCase):
         self.assertMultiLineEqual(str(tI.out).strip(), pkgI_output.strip())
 
         # What about the existing WS?
-        """ TODO:
+        """ FIXME:
                 We are using the same output folder... I demonstrated this behaviour changing
                 the sources but it could happen with any option which value is being set
                 downstream in the graph.
@@ -318,3 +322,22 @@ class WSTests(unittest.TestCase):
         """
         tH.run_command(libH_editable_exe)
         self.assertMultiLineEqual(str(tH.out).strip(), pkgH_output.strip())
+
+    def test_version_override(self):
+        """ The workspace definition file is able to override dependencies, so we are always
+            using the references declared in the workspace file.
+        """
+        # Create a new version of package A, and recreate B depending on this new one
+        t = TestClient(base_folder=self.base_folder)
+        newA = self._plain_package(t, pkg=self.libA.name, version="2.0")
+        newB = self._plain_package(t, pkg="pkgB", lib_requires=[newA, ])
+
+        t = TestClient(base_folder=self.base_folder)
+        editables = [self.libA, newB, self.libE, self.libG]
+        ws_yml = Template(workspace_yml_template).render(editables=editables)
+        t.save({'ws.yml': ws_yml}, clean_first=True)
+        t.run("workspace install ws.yml")
+
+        self.assertIn("WARN: {} requirement {} overridden by your conanfile"
+                      " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
+        self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
