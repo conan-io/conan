@@ -1624,16 +1624,16 @@ class Command(object):
 
         # create the parser for the "a" command
         merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
-        merge_cmd.add_argument('old_lockfile', help='previous lockfile')
-        merge_cmd.add_argument('new_lockfile', help='modified lockfile')
+        merge_cmd.add_argument('old_lockfile', help='previous lockfile folder')
+        merge_cmd.add_argument('new_lockfile', help='modified lockfile folder')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
-        build_order_cmd.add_argument('lockfile', help='lockfile')
+        build_order_cmd.add_argument('lockfile', help='lockfile folder')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
         clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
-        clean_cmd.add_argument('lockfile', help='lockfile')
+        clean_cmd.add_argument('lockfile', help='lockfile folder')
 
         lock_cmd = subparsers.add_parser('lock', help='create a lock file')
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
