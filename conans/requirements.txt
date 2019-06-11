@@ -14,3 +14,4 @@ astroid>=1.6.5
 deprecation>=2.0, <2.1
 tqdm>=4.28.1, <5
 Jinja2>=2.3, <3
+typed-ast<1.4; python_version=="3.4" and platform_system=='Windows'
