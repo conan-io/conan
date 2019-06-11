@@ -2,16 +2,15 @@
 
 import os
 import platform
+import textwrap
 import unittest
 
 from jinja2 import Template
-import textwrap
 
 from conans.test.functional.workspace.scaffolding.package import Package
 from conans.test.functional.workspace.scaffolding.templates import workspace_yml_template
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans import tools
 
 
 class WSTests(unittest.TestCase):
@@ -27,13 +26,13 @@ class WSTests(unittest.TestCase):
         +--+---+       +---+--+
            ^               ^
            |               |
-           |    +------+   |  +------+
-           +----+ pkgE +---+--+ pkgF |
-                +------+      +------+
-                   ^               ^
-                   |               |
-                   |    +------+   |
-                   +----+ pkgG +---+
+           |    +------+   |  +------+      +------+
+           +----+ pkgE +---+--+ pkgF |      | pkgH |
+                +------+      +------+      +------+
+                   ^               ^           ^
+                   |               |           |
+                   |    +------+   |           |
+                   +----+ pkgG +---+-----------+
                         +------+
 
     """
@@ -62,7 +61,9 @@ class WSTests(unittest.TestCase):
         \t\t\t> pkgA_header: default
         \t\t\t> pkgA: default
         \t\t\t> pkgD_header: default
-        \t\t\t> pkgD: default""")
+        \t\t\t> pkgD: default
+        \t> pkgH_header: default
+        \t> pkgH: default""")
 
     @staticmethod
     def _plain_package(client, pkg, lib_requires=None, add_executable=False,
@@ -98,14 +99,16 @@ class WSTests(unittest.TestCase):
         cls.libC = cls._plain_package(t, pkg="pkgC", lib_requires=[cls.libA, cls.libD])
         cls.libE = cls._plain_package(t, pkg="pkgE", lib_requires=[cls.libB, cls.libC])
         cls.libF = cls._plain_package(t, pkg="pkgF", lib_requires=[cls.libC])
-        cls.libG = cls._plain_package(t, pkg="pkgG", lib_requires=[cls.libE, cls.libF], add_executable=True)
+        cls.libH = cls._plain_package(t, pkg="pkgH")
+        cls.libG = cls._plain_package(t, pkg="pkgG", lib_requires=[cls.libE, cls.libF, cls.libH],
+                                      add_executable=True)
 
         executableG = cls.libG.executables[0]
         cls.libG_editable_exe = executableG.path_to_exec()
 
         cls.editables = [cls.libA, cls.libB, cls.libE, cls.libG]
         cls.affected_by_editables = [cls.libC, cls.libF]
-        cls.inmutable = [cls.libD, ]
+        cls.inmutable = [cls.libD, cls.libH]
 
     def setUp(self):
         self._reset()
@@ -253,38 +256,12 @@ class WSTests(unittest.TestCase):
             resulting binaries. Those shouldn't mix.
         """
         tmp = TestClient(base_folder=self.base_folder)
-        libH = self._plain_package(tmp, pkg="pkgH", lib_requires=[self.libA, self.libD], add_executable=True)
-        libH_editable_exe = libH.executables[0].path_to_exec()
         libI = self._plain_package(tmp, pkg="pkgI", lib_requires=[self.libA, self.libD], add_executable=True)
         libI_editable_exe = libI.executables[0].path_to_exec()
+        libJ = self._plain_package(tmp, pkg="pkgJ", lib_requires=[self.libA, self.libD], add_executable=True)
+        libJ_editable_exe = libJ.executables[0].path_to_exec()
 
         # Create one workspace
-        self.libA.modify_cpp_message("WS-H")
-        tH = TestClient(base_folder=self.base_folder)
-        ws_yml = Template(workspace_yml_template).render(editables=[self.libA, libH])
-        tH.save({'ws.yml': ws_yml}, clean_first=True)
-        tH.run("workspace install ws.yml")
-
-        tH.run_command('mkdir build')
-        tH.run_command('cd build && cmake ..'
-                       ' -DCMAKE_MODULE_PATH="{}"'
-                       ' -DBUILD_SHARED_LIBS:BOOL=TRUE'
-                       ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'
-                       ' -DCONAN_CMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(tH.current_folder))
-        tH.run_command('cd build && cmake --build .')
-        tH.run_command(libH_editable_exe)
-        pkgH_output = textwrap.dedent("""\
-            > pkgH_exe: default
-            > pkgH_header: default
-            > pkgH: default (shared!)
-            \t> pkgA_header: WS-H
-            \t> pkgA: WS-H (shared!)
-            \t> pkgD_header: default
-            \t> pkgD: default
-          """)
-        self.assertMultiLineEqual(str(tH.out).strip(), pkgH_output.strip())
-
-        # Create the other workspace
         self.libA.modify_cpp_message("WS-I")
         tI = TestClient(base_folder=self.base_folder)
         ws_yml = Template(workspace_yml_template).render(editables=[self.libA, libI])
@@ -310,6 +287,32 @@ class WSTests(unittest.TestCase):
           """)
         self.assertMultiLineEqual(str(tI.out).strip(), pkgI_output.strip())
 
+        # Create the other workspace
+        self.libA.modify_cpp_message("WS-J")
+        tJ = TestClient(base_folder=self.base_folder)
+        ws_yml = Template(workspace_yml_template).render(editables=[self.libA, libJ])
+        tJ.save({'ws.yml': ws_yml}, clean_first=True)
+        tJ.run("workspace install ws.yml")
+
+        tJ.run_command('mkdir build')
+        tJ.run_command('cd build && cmake ..'
+                       ' -DCMAKE_MODULE_PATH="{}"'
+                       ' -DBUILD_SHARED_LIBS:BOOL=TRUE'
+                       ' -DWINDOWS_EXPORT_ALL_SYMBOLS:BOOL=TRUE'
+                       ' -DCONAN_CMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON'.format(tJ.current_folder))
+        tJ.run_command('cd build && cmake --build .')
+        tJ.run_command(libJ_editable_exe)
+        pkgJ_output = textwrap.dedent("""\
+            > pkgJ_exe: default
+            > pkgJ_header: default
+            > pkgJ: default (shared!)
+            \t> pkgA_header: WS-J
+            \t> pkgA: WS-J (shared!)
+            \t> pkgD_header: default
+            \t> pkgD: default
+          """)
+        self.assertMultiLineEqual(str(tJ.out).strip(), pkgJ_output.strip())
+
         # What about the existing WS?
         """ FIXME:
                 We are using the same output folder... I demonstrated this behaviour changing
@@ -320,8 +323,8 @@ class WSTests(unittest.TestCase):
                 NO_OUTPUT_DIRS from the `conan_basic_setup` call), but then it is the WS the
                 one that has to compose the layout file.
         """
-        tH.run_command(libH_editable_exe)
-        self.assertMultiLineEqual(str(tH.out).strip(), pkgH_output.strip())
+        tI.run_command(libI_editable_exe)
+        self.assertMultiLineEqual(str(tI.out).strip(), pkgI_output.strip())
 
     def test_version_override(self):
         """ The workspace definition file is able to override dependencies, so we are always
@@ -341,3 +344,5 @@ class WSTests(unittest.TestCase):
         self.assertIn("WARN: {} requirement {} overridden by your conanfile"
                       " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
         self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
+
+
