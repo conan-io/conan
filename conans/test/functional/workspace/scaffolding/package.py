@@ -110,14 +110,18 @@ class Package:
         return output_filename
 
     def modify_cpp_message(self, message=None):
+        context = {'package': self}
+        if message:
+            context["message"] = message
+
         for library in self._libraries:
             library_dir = os.path.join(self._directory, library.name)
             self._render_template(lib_h_template,
                                   os.path.join(library_dir, 'lib.h'),
-                                  package=self, library=library, message=message)
+                                  library=library, **context)
             self._render_template(lib_cpp_template,
                                   os.path.join(library_dir, 'lib.cpp'),
-                                  package=self, library=library, message=message)
+                                  library=library, **context)
 
     def modify_options(self, shared=False):
         self.shared = shared
