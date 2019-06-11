@@ -111,16 +111,16 @@ class WorkspaceCMake(Workspace):
     conanworkspace_cmake_template = textwrap.dedent(r"""
         # List of targets involved in the workspace
         {%- for _, pkg in ordered_packages %}
-        list(APPEND ws_targets "{{ pkg.name }}")
+            list(APPEND ws_targets "{{ pkg.name }}")
         {%- endfor %}
 
         {% if out_dependents %}
-        # Packages that are consumed by editable ones
-        {%- for ref, pkg in out_dependents.items() %}
-        find_package({{ pkg.name }} REQUIRED)
-        set_target_properties({{pkg.name}}::{{pkg.name}} PROPERTIES IMPORTED_GLOBAL TRUE)
-        add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }}::{{ pkg.name }}) 
-        {% endfor %}
+            # Packages that are consumed by editable ones
+            {%- for ref, pkg in out_dependents.items() %}
+                find_package({{ pkg.name }} REQUIRED)
+                set_target_properties({{pkg.name}}::{{pkg.name}} PROPERTIES IMPORTED_GLOBAL TRUE)
+                add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }}::{{ pkg.name }})
+            {% endfor %}
         {%- endif %}
 
         # Override functions to avoid importing their own TARGETs (or calling again Conan Magic)
