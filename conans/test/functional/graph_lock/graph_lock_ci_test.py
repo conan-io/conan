@@ -6,6 +6,7 @@ from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 from conans.model.ref import PackageReference
+import json
 
 
 class GraphLockCITest(unittest.TestCase):
@@ -94,9 +95,9 @@ class GraphLockCITest(unittest.TestCase):
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
-        client.run("graph build-order .")
-        output = str(client.out).splitlines()[-1]
-        to_build = eval(output)
+        client.run("graph build-order . --json=build_order.json")
+        json_file = os.path.join(client.current_folder, "build_order.json")
+        to_build = json.loads(load(json_file))
         lock_fileaux = lock_fileb
         while to_build:
             for _, pkg_ref in to_build[0]:

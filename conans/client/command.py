@@ -10,7 +10,8 @@ from argparse import ArgumentError
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder)
+from conans.client.conan_api import (Conan, default_manifest_folder,
+    _make_abs_path)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -1628,6 +1629,8 @@ class Command(object):
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile')
+        build_order_cmd.add_argument("--json", action=OnceArgument,
+                                     help="generate output file in json format")
 
         clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
         clean_cmd.add_argument('lockfile', help='lockfile')
@@ -1646,6 +1649,9 @@ class Command(object):
         elif args.subcommand == "build-order":
             build_order = self._conan.build_order(args.lockfile)
             self._user_io.out.writeln(build_order)
+            if args.json:
+                json_file = _make_abs_path(args.json)
+                save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "clean-modified":
             self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "lock":
