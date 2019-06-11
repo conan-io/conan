@@ -8,9 +8,45 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.files import load
+import textwrap
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
+
+    def update_remote_test(self):
+        # https://github.com/conan-io/conan/issues/5333
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Boost(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . boost/1.68.0@lasote/stable")
+        client.run("create . boost/1.69.0@lasote/stable")
+        client.run("create . boost/1.70.0@lasote/stable")
+        client.run("upload * -r=default --all --confirm")
+        client.run("remove * -f")
+        conanfile = textwrap.dedent("""
+            [requires]
+            boost/[>=1.68.0]@lasote/stable
+            """)
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install .")
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+
+        client.run("install . --update")
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+
+
+
+
+
 
     def update_test(self):
         client = TestClient(servers={"default": TestServer()},
