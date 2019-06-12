@@ -8,9 +8,9 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer, TurboTestClient
 
 
+@unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
 class TestSkipBrokenSymlinks(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
     def test_package_broken_symlinks(self):
         server = TestServer()
         client = TurboTestClient(servers={"default": server})
