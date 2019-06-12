@@ -280,3 +280,36 @@ class ConanSymlink(ConanFile):
         bf_symlink = os.path.join(bf, "debug")
         self.assertTrue(os.path.islink(bf_symlink))
         self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))
+
+
+class SymlinkExportSources(unittest.TestCase):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile, CMake
+
+        class SymlinksConan(ConanFile):
+            name = "symlinks"
+            version = "1.0.0"
+            exports_sources = "src/*"
+        """)
+
+    def test_create_source(self):
+        # Reproduces issue: https://github.com/conan-io/conan/issues/5329
+        t = TestClient()
+        rel_path_content = os.path.join('src', 'framework', 'Versions', 'v1', 'headers', 'content')
+        t.save({'conanfile.py': self.conanfile,
+                rel_path_content: "whatever"})
+
+        # Add two levels of symlinks
+        os.symlink('v1',
+                   os.path.join(t.current_folder, 'src', 'framework', 'Versions', 'Current'),
+                   target_is_directory=True)
+        os.symlink('Versions/Current/headers',
+                   os.path.join(t.current_folder, 'src', 'framework', 'headers'),
+                   target_is_directory=True)
+
+        # Check that things are in place
+        content = os.path.join(t.current_folder, 'src', 'framework', 'headers', 'content')
+        self.assertTrue(os.path.exists(content))
+        self.assertEqual(os.path.realpath(content), os.path.join(t.current_folder, rel_path_content))
+
+        t.run("create . user/channel")
