@@ -1,5 +1,6 @@
 import os
 import textwrap
+from collections import OrderedDict
 
 import yaml
 from jinja2 import Template
@@ -30,7 +31,7 @@ class Workspace(object):
 
     def __init__(self, cache):
         self._cache = cache
-        self.packages = {}
+        self.packages = OrderedDict()
 
     @classmethod
     def create(cls, path, cache):
