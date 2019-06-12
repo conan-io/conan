@@ -137,7 +137,7 @@ class _FileImporter(object):
         self.copied_files = set()
 
     def __call__(self, pattern, dst="", src="", root_package=None, folder=False,
-                 ignore_case=False, excludes=None, keep_path=True):
+                 ignore_case=False, excludes=None, keep_path=True, link_dll=False):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -146,6 +146,9 @@ class _FileImporter(object):
                    will be stripped from the dst name. Eg.: lib/Debug/x86
         param root_package: fnmatch pattern of the package name ("OpenCV", "Boost") from
                             which files will be copied. Default: all packages in deps
+        param excludes: patterns to be excluded from the copy
+        param ignore_case: case-insensitive pattern matching
+        param link_dll: generate symbolic for DLLs rather than copying
         """
         if os.path.isabs(dst):
             real_dst_folder = dst
@@ -157,7 +160,7 @@ class _FileImporter(object):
             final_dst_path = os.path.join(real_dst_folder, name) if folder else real_dst_folder
             file_copier = FileCopier([matching_path], final_dst_path)
             files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case,
-                                excludes=excludes, keep_path=keep_path)
+                                excludes=excludes, keep_path=keep_path, link_dll=link_dll)
             self.copied_files.update(files)
 
     def _get_folders(self, pattern):
