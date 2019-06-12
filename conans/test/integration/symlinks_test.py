@@ -301,12 +301,9 @@ class SymlinkExportSources(unittest.TestCase):
                 os.path.join(relpath_v1, 'file'): "content"})
 
         # Add two levels of symlinks
-        os.symlink('v1',
-                   os.path.join(t.current_folder, 'src', 'framework', 'Versions', 'Current'),
-                   target_is_directory=True)
+        os.symlink('v1', os.path.join(t.current_folder, 'src', 'framework', 'Versions', 'Current'))
         os.symlink('Versions/Current/headers',
-                   os.path.join(t.current_folder, 'src', 'framework', 'headers'),
-                   target_is_directory=True)
+                   os.path.join(t.current_folder, 'src', 'framework', 'headers'))
         os.symlink('Versions/Current/file',
                    os.path.join(t.current_folder, 'src', 'framework', 'file'))
 

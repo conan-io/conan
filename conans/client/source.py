@@ -63,7 +63,7 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
         if os.path.islink(src_dir):
             linkto = os.readlink(src_dir)
             dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
-            os.symlink(linkto, dst_dir, target_is_directory=True)
+            os.symlink(linkto, dst_dir)
             dirs[:] = []  # Do not enter subdirectories
             continue
 
