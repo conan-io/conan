@@ -310,12 +310,18 @@ class SymlinkExportSources(unittest.TestCase):
         os.symlink('Versions/Current/file',
                    os.path.join(t.current_folder, 'src', 'framework', 'file'))
 
-        # Check that things are in place
-        content = os.path.join(t.current_folder, 'src', 'framework', 'headers', 'content')
-        self.assertTrue(os.path.exists(content))
-        self.assertEqual(os.path.realpath(content),
+        # Check that things are in place (locally): file exists and points to local directory
+        relpath_content = os.path.join('src', 'framework', 'headers', 'content')
+        local_content = os.path.join(t.current_folder, relpath_content)
+        self.assertTrue(os.path.exists(local_content))
+        self.assertEqual(os.path.realpath(local_content),
                          os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
 
         t.run("create . user/channel")
 
-        # TODO: Check copied files
+        # Check that things are in place (in the cache): exists and points to 'source' directory
+        layout = t.cache.package_layout(ConanFileReference.loads("symlinks/1.0.0@user/channel"))
+        cache_content = os.path.join(layout.source(), relpath_content)
+        self.assertTrue(os.path.exists(cache_content))
+        self.assertEqual(os.path.realpath(cache_content),
+                         os.path.join(layout.source(), relpath_v1, 'headers', 'content'))
