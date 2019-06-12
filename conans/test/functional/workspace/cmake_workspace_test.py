@@ -6,6 +6,7 @@ import textwrap
 import unittest
 
 from jinja2 import Template
+from nose.plugins.attrib import attr
 
 from conans.test.functional.workspace.scaffolding.package import Package
 from conans.test.functional.workspace.scaffolding.templates import workspace_yml_template
@@ -13,6 +14,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
+@attr("slow")
 class WSTests(unittest.TestCase):
     """
         Dependency graph: packages on lower level depends on those in the upper one.
@@ -86,8 +88,7 @@ class WSTests(unittest.TestCase):
         client.run('create "{}" ws/testing'.format(os.path.join(pkg_folder, 'conanfile.py')))
         return pkg
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(cls):
         super(WSTests, cls).setUpClass()
         folder = temp_folder(path_with_spaces=False)
         cls.base_folder = temp_folder(path_with_spaces=False)
@@ -109,15 +110,6 @@ class WSTests(unittest.TestCase):
         cls.editables = [cls.libA, cls.libB, cls.libE, cls.libG]
         cls.affected_by_editables = [cls.libC, cls.libF]
         cls.inmutable = [cls.libD, cls.libH]
-
-    def setUp(self):
-        self._reset()
-
-    def _reset(self):
-        # Return editable packages to its original state
-        for it in self.editables:
-            it.modify_cpp_message()
-            it.modify_options()
 
     def run_outside_ws(self):
         """ This function runs the full project without taking into account the ws,
@@ -344,5 +336,3 @@ class WSTests(unittest.TestCase):
         self.assertIn("WARN: {} requirement {} overridden by your conanfile"
                       " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
         self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
-
-
