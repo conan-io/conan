@@ -267,8 +267,10 @@ class WSCMakeTests(unittest.TestCase):
         t.save({'ws.yml': ws_yml}, clean_first=True)
         t.run("workspace install ws.yml")
 
-        self.assertIn("WARN: {} requirement {} overridden by your conanfile"
-                      " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
+        import six
+        who = self.libE.ref if six.PY2 else "your conanfile"  # TODO: Make a unittest
+        self.assertIn("WARN: {} requirement {} overridden by {}"
+                      " to {}".format(newB.ref, newA.ref, who, self.libA.ref), t.out)
         self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
 
     @unittest.expectedFailure
