@@ -14,8 +14,29 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
+def _plain_package(client, pkg, lib_requires=None, add_executable=False,
+                   shared=False, version="0.1"):
+    """ Create a package with only one library that links and uses libraries declared
+        in 'lib_requires'. Optionally it adds an executable to the package (the
+        executable will link to the library in the same package)
+    """
+    pkg = Package(name=pkg, version=version)
+    pkg_lib = pkg.add_library(name=pkg.name)  # TODO: Include components (@danimtb)
+    if lib_requires:
+        for item in lib_requires:
+            library = item.libraries[0]  # There is only one lib per package (wait for Dani)
+            pkg_lib.add_link_library(library, generator='cmake')
+    if add_executable:
+        executable = pkg.add_executable(name="{}_{}".format(pkg.name, "exe"))
+        executable.add_link_library(pkg_lib)
+    pkg.shared = shared
+    pkg_folder = pkg.render()
+    client.run('create "{}" ws/testing'.format(os.path.join(pkg_folder, 'conanfile.py')))
+    return pkg
+
+
 @attr("slow")
-class WSTests(unittest.TestCase):
+class WSCMakeTests(unittest.TestCase):
     """
         Dependency graph: packages on lower level depends on those in the upper one.
 
@@ -67,49 +88,28 @@ class WSTests(unittest.TestCase):
         \t> pkgH_header: default
         \t> pkgH: default""")
 
-    @staticmethod
-    def _plain_package(client, pkg, lib_requires=None, add_executable=False,
-                       shared=False, version="0.1"):
-        """ Create a package with only one library that links and uses libraries declared
-            in 'lib_requires'. Optionally it adds an executable to the package (the
-            executable will link to the library in the same package)
-        """
-        pkg = Package(name=pkg, version=version)
-        pkg_lib = pkg.add_library(name=pkg.name)  # TODO: Include components (@danimtb)
-        if lib_requires:
-            for item in lib_requires:
-                library = item.libraries[0]  # There is only one lib per package (wait for Dani)
-                pkg_lib.add_link_library(library, generator='cmake')
-        if add_executable:
-            executable = pkg.add_executable(name="{}_{}".format(pkg.name, "exe"))
-            executable.add_link_library(pkg_lib)
-        pkg.shared = shared
-        pkg_folder = pkg.render()
-        client.run('create "{}" ws/testing'.format(os.path.join(pkg_folder, 'conanfile.py')))
-        return pkg
-
-    def setUp(cls):
-        super(WSTests, cls).setUpClass()
+    def setUp(self):
+        super(WSCMakeTests, self).setUp()
         folder = temp_folder(path_with_spaces=False)
-        cls.base_folder = temp_folder(path_with_spaces=False)
+        self.base_folder = temp_folder(path_with_spaces=False)
 
-        t = TestClient(current_folder=folder, base_folder=cls.base_folder)
-        cls.libA = cls._plain_package(t, pkg="pkgA")
-        cls.libD = cls._plain_package(t, pkg="pkgD")
-        cls.libB = cls._plain_package(t, pkg="pkgB", lib_requires=[cls.libA, ])
-        cls.libC = cls._plain_package(t, pkg="pkgC", lib_requires=[cls.libA, cls.libD])
-        cls.libE = cls._plain_package(t, pkg="pkgE", lib_requires=[cls.libB, cls.libC])
-        cls.libF = cls._plain_package(t, pkg="pkgF", lib_requires=[cls.libC])
-        cls.libH = cls._plain_package(t, pkg="pkgH")
-        cls.libG = cls._plain_package(t, pkg="pkgG", lib_requires=[cls.libE, cls.libF, cls.libH],
-                                      add_executable=True)
+        t = TestClient(current_folder=folder, base_folder=self.base_folder)
+        self.libA = _plain_package(t, pkg="pkgA")
+        self.libD = _plain_package(t, pkg="pkgD")
+        self.libB = _plain_package(t, pkg="pkgB", lib_requires=[self.libA, ])
+        self.libC = _plain_package(t, pkg="pkgC", lib_requires=[self.libA, self.libD])
+        self.libE = _plain_package(t, pkg="pkgE", lib_requires=[self.libB, self.libC])
+        self.libF = _plain_package(t, pkg="pkgF", lib_requires=[self.libC])
+        self.libH = _plain_package(t, pkg="pkgH")
+        self.libG = _plain_package(t, pkg="pkgG", lib_requires=[self.libE, self.libF, self.libH],
+                                   add_executable=True)
 
-        executableG = cls.libG.executables[0]
-        cls.libG_editable_exe = executableG.path_to_exec()
+        executableG = self.libG.executables[0]
+        self.libG_editable_exe = executableG.path_to_exec()
 
-        cls.editables = [cls.libA, cls.libB, cls.libE, cls.libG]
-        cls.affected_by_editables = [cls.libC, cls.libF]
-        cls.inmutable = [cls.libD, cls.libH]
+        self.editables = [self.libA, self.libB, self.libE, self.libG]
+        self.affected_by_editables = [self.libC, self.libF]
+        self.inmutable = [self.libD, self.libH]
 
     def run_outside_ws(self):
         """ This function runs the full project without taking into account the ws,
@@ -242,15 +242,62 @@ class WSTests(unittest.TestCase):
         output_shared = output_shared.replace("> pkgC: default", "> pkgC: default (shared!)")
         self.assertMultiLineEqual(str(t.out).strip(), output_shared)
 
+    def test_version_override(self):
+        """ The workspace definition file is able to override dependencies, so we are always
+            using the references declared in the workspace file.
+        """
+        # Create a new version of package A, and recreate B depending on this new one
+        t = TestClient(base_folder=self.base_folder)
+        newA = _plain_package(t, pkg=self.libA.name, version="2.0")
+        newB = _plain_package(t, pkg="pkgB", lib_requires=[newA, ])
+
+        t = TestClient(base_folder=self.base_folder)
+        editables = [self.libA, newB, self.libE, self.libG]
+        ws_yml = Template(workspace_yml_template).render(editables=editables)
+        t.save({'ws.yml': ws_yml}, clean_first=True)
+        t.run("workspace install ws.yml")
+
+        self.assertIn("WARN: {} requirement {} overridden by your conanfile"
+                      " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
+        self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
+
+
+@attr("slow")
+class WSSharedPackagesTests(unittest.TestCase):
+    """
+        Dependency graph: packages on lower level depends on those in the upper one.
+
+                +------+      +------+
+                | pkgA |      | pkgD |
+                +--+---+      +---+--+
+                   ^              ^
+                   |  +--------+  |
+                   +--+ pkgI/J +--+
+                      +----+---+
+
+    """
+    maxDiff = None
+
+    def setUp(self):
+        super(WSSharedPackagesTests, self).setUpClass()
+        folder = temp_folder(path_with_spaces=False)
+        self.base_folder = temp_folder(path_with_spaces=False)
+
+        t = TestClient(current_folder=folder, base_folder=self.base_folder)
+        self.libA = _plain_package(t, pkg="pkgA")
+        self.libD = _plain_package(t, pkg="pkgD")
+
     @unittest.expectedFailure
     def test_several_workspaces(self):
         """ One package is included into two different workspaces with different
             resulting binaries. Those shouldn't mix.
         """
         tmp = TestClient(base_folder=self.base_folder)
-        libI = self._plain_package(tmp, pkg="pkgI", lib_requires=[self.libA, self.libD], add_executable=True)
+        libI = _plain_package(tmp, pkg="pkgI", lib_requires=[self.libA, self.libD],
+                              add_executable=True)
         libI_editable_exe = libI.executables[0].path_to_exec()
-        libJ = self._plain_package(tmp, pkg="pkgJ", lib_requires=[self.libA, self.libD], add_executable=True)
+        libJ = _plain_package(tmp, pkg="pkgJ", lib_requires=[self.libA, self.libD],
+                              add_executable=True)
         libJ_editable_exe = libJ.executables[0].path_to_exec()
 
         # Create one workspace
@@ -317,22 +364,3 @@ class WSTests(unittest.TestCase):
         """
         tI.run_command(libI_editable_exe)
         self.assertMultiLineEqual(str(tI.out).strip(), pkgI_output.strip())
-
-    def test_version_override(self):
-        """ The workspace definition file is able to override dependencies, so we are always
-            using the references declared in the workspace file.
-        """
-        # Create a new version of package A, and recreate B depending on this new one
-        t = TestClient(base_folder=self.base_folder)
-        newA = self._plain_package(t, pkg=self.libA.name, version="2.0")
-        newB = self._plain_package(t, pkg="pkgB", lib_requires=[newA, ])
-
-        t = TestClient(base_folder=self.base_folder)
-        editables = [self.libA, newB, self.libE, self.libG]
-        ws_yml = Template(workspace_yml_template).render(editables=editables)
-        t.save({'ws.yml': ws_yml}, clean_first=True)
-        t.run("workspace install ws.yml")
-
-        self.assertIn("WARN: {} requirement {} overridden by your conanfile"
-                      " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
-        self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
