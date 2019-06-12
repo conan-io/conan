@@ -4,6 +4,9 @@ import textwrap
 
 # At package level
 cmakelists_template = textwrap.dedent(r"""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+
     cmake_minimum_required(VERSION {{cmake_minimum_version|default("3.10")}})
     project({{package.name}} LANGUAGES CXX)
 
