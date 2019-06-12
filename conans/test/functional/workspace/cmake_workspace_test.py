@@ -262,7 +262,7 @@ class WSCMakeTests(unittest.TestCase):
         newB = _plain_package(t, pkg="pkgB", lib_requires=[newA, ])
 
         t = TestClient(base_folder=self.base_folder)
-        editables = [self.libA, newB, self.libE, self.libG]
+        editables = sorted([self.libA, newB, self.libE, self.libG], key=lambda u: u.name)  # py2 fail
         ws_yml = Template(workspace_yml_template).render(editables=editables)
         t.save({'ws.yml': ws_yml}, clean_first=True)
         t.run("workspace install ws.yml")
