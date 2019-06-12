@@ -50,7 +50,7 @@ class FileCopier(object):
         return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None, ignore_case=False):
+                 excludes=None, ignore_case=False, link_dll=False):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -61,6 +61,10 @@ class FileCopier(object):
                          src to dst folders, or just drop. False is useful if you want
                          to collect e.g. many *.libs among many dirs into a single
                          lib dir
+        param symlinks: Symlink copying e.g. lib.so->lib.so.9
+        param excludes: patterns to be excluded from the copy
+        param ignore_case: case-insensitive pattern matching
+        param link_dll: generate symbolic for DLLs rather than copying
         return: list of copied files
         """
         # TODO: Remove the old "links" arg for Conan 2.0
@@ -72,13 +76,13 @@ class FileCopier(object):
             excluded = [self._dst_folder]
             excluded.extend([d for d in self._src_folders if d is not src_folder])
             fs = self._copy(src_folder, pattern, src, dst, links, ignore_case, excludes,
-                            keep_path, excluded_folders=excluded)
+                            keep_path, excluded_folders=excluded, link_dll=link_dll)
             files.extend(fs)
 
         return files
 
     def _copy(self, base_src, pattern, src, dst, symlinks, ignore_case, excludes, keep_path,
-              excluded_folders):
+              excluded_folders, link_dll):
         # Check for ../ patterns and allow them
         if pattern.startswith(".."):
             rel_dir = os.path.abspath(os.path.join(base_src, pattern))
@@ -90,7 +94,7 @@ class FileCopier(object):
 
         files_to_copy, link_folders = self._filter_files(src, pattern, symlinks, excludes,
                                                          ignore_case, excluded_folders)
-        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks)
+        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks, link_dll)
         self.link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
@@ -197,7 +201,7 @@ class FileCopier(object):
                     base_path = os.path.dirname(base_path)
 
     @staticmethod
-    def _copy_files(files, src, dst, keep_path, symlinks):
+    def _copy_files(files, src, dst, keep_path, symlinks, link_dll):
         """ executes a multiple file copy from [(src_file, dst_file), (..)]
         managing symlinks if necessary
         """
@@ -217,6 +221,8 @@ class FileCopier(object):
                 except OSError:
                     pass
                 os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
+            elif link_dll and filename.endswith(".dll"):
+                os.symlink(abs_src_name, abs_dst_name)
             else:
                 shutil.copy2(abs_src_name, abs_dst_name)
             copied_files.append(abs_dst_name)

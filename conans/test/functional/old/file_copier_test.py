@@ -171,3 +171,31 @@ class FileCopierTest(unittest.TestCase):
         copier = FileCopier([folder1], folder2)
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
+
+    def test_symbolic_link_dll(self):
+        folder1 = temp_folder()
+        bin_dir = os.path.join(folder1, "bin")
+        lib_dir = os.path.join(folder1, "lib")
+        save(os.path.join(bin_dir, "foobar.dll"), "Hello1")
+        save(os.path.join(lib_dir, "foobar.lib"), "Hello2")
+        save(os.path.join(lib_dir, "foobar.dylib"), "Hello2")
+        save(os.path.join(lib_dir, "foobar.so"), "Hello2")
+        save(os.path.join(lib_dir, "foobar.a"), "Hello2")
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier("*.a", dst="lib", src="lib", link_dll=True)
+        copier("*.lib", dst="lib", src="lib", link_dll=True)
+        copier("*.dll", dst="bin", src="bin", link_dll=True)
+        copier("*.so", dst="bin", src="lib", link_dll=True)
+        copier("*.dylib", dst="bin", src="lib", link_dll=True)
+
+        self.assertEqual(['foobar.lib', 'foobar.a'], os.listdir(os.path.join(folder2, "lib")))
+        self.assertEqual(['foobar.dylib', 'foobar.so', 'foobar.dll'],
+                         os.listdir(os.path.join(folder2, "bin")))
+
+        self.assertTrue(os.path.islink(os.path.join(folder2, "bin", "foobar.dll")))
+        self.assertFalse(os.path.islink(os.path.join(folder2, "bin", "foobar.dylib")))
+        self.assertFalse(os.path.islink(os.path.join(folder2, "bin", "foobar.so")))
+        self.assertFalse(os.path.islink(os.path.join(folder2, "lib", "foobar.a")))
+        self.assertFalse(os.path.islink(os.path.join(folder2, "lib", "foobar.lib")))
