@@ -295,9 +295,10 @@ class SymlinkExportSources(unittest.TestCase):
     def test_create_source(self):
         # Reproduces issue: https://github.com/conan-io/conan/issues/5329
         t = TestClient()
-        rel_path_content = os.path.join('src', 'framework', 'Versions', 'v1', 'headers', 'content')
+        relpath_v1 = os.path.join('src', 'framework', 'Versions', 'v1')
         t.save({'conanfile.py': self.conanfile,
-                rel_path_content: "whatever"})
+                os.path.join(relpath_v1, 'headers', 'content'): "whatever",
+                os.path.join(relpath_v1, 'file'): "content"})
 
         # Add two levels of symlinks
         os.symlink('v1',
@@ -306,10 +307,15 @@ class SymlinkExportSources(unittest.TestCase):
         os.symlink('Versions/Current/headers',
                    os.path.join(t.current_folder, 'src', 'framework', 'headers'),
                    target_is_directory=True)
+        os.symlink('Versions/Current/file',
+                   os.path.join(t.current_folder, 'src', 'framework', 'file'))
 
         # Check that things are in place
         content = os.path.join(t.current_folder, 'src', 'framework', 'headers', 'content')
         self.assertTrue(os.path.exists(content))
-        self.assertEqual(os.path.realpath(content), os.path.join(t.current_folder, rel_path_content))
+        self.assertEqual(os.path.realpath(content),
+                         os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
 
         t.run("create . user/channel")
+
+        # TODO: Check copied files
