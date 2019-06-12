@@ -190,9 +190,10 @@ class FileCopierTest(unittest.TestCase):
         copier("*.so", dst="bin", src="lib", link_dll=True)
         copier("*.dylib", dst="bin", src="lib", link_dll=True)
 
-        self.assertEqual(['foobar.lib', 'foobar.a'], os.listdir(os.path.join(folder2, "lib")))
-        self.assertEqual(['foobar.dylib', 'foobar.so', 'foobar.dll'],
-                         os.listdir(os.path.join(folder2, "bin")))
+        self.assertEqual(sorted(['foobar.a', 'foobar.lib']),
+                         sorted(os.listdir(os.path.join(folder2, "lib"))))
+        self.assertEqual(sorted(['foobar.dylib', 'foobar.so', 'foobar.dll']),
+                         sorted(os.listdir(os.path.join(folder2, "bin"))))
 
         self.assertTrue(os.path.islink(os.path.join(folder2, "bin", "foobar.dll")))
         self.assertFalse(os.path.islink(os.path.join(folder2, "bin", "foobar.dylib")))
