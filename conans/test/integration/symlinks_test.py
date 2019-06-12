@@ -282,6 +282,7 @@ class ConanSymlink(ConanFile):
         self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))
 
 
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
 class SymlinkExportSources(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake
