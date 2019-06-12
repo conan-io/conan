@@ -285,7 +285,7 @@ class RemoveTest(unittest.TestCase):
                                                      "Hello/2.4.11/myuser/testing")))
 
     def test_remove_any_package_version(self):
-        self.client.run("remove Hello*/*@myuser/testing -f")
+        self.client.run("remove Hello/*@myuser/testing -f")
         self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},

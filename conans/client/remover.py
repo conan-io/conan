@@ -168,7 +168,7 @@ class ConanRemover(object):
             else:
                 refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            if input_ref:
+            if input_ref and input_ref.version != "*":
                 refs = []
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))
