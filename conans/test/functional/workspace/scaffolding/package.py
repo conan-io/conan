@@ -59,6 +59,7 @@ class Package:
         self.shared = False
 
         self.generators = defaultdict(set)
+        self.generators['cmake'] = set()  # Need to apply Conan magic to every package (handle fPIC)
 
         self._directory = None
 
