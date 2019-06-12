@@ -54,7 +54,6 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             return True
         return False
 
-    linked_folders = []
     for src_dir, dirs, files in walk(src, followlinks=True):
 
         if is_excluded(src_dir):
@@ -62,8 +61,10 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             continue
 
         if os.path.islink(src_dir):
-            rel_link = os.path.relpath(src_dir, src)
-            linked_folders.append(rel_link)
+            linkto = os.readlink(src_dir)
+            dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
+            os.symlink(linkto, dst_dir, target_is_directory=True)
+            dirs[:] = []  # Do not enter subdirectories
             continue
 
         # Overwriting the dirs will prevents walk to get into them
@@ -80,8 +81,6 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                 os.symlink(linkto, dst_file)
             else:
                 shutil.copy2(src_file, dst_file)
-
-    FileCopier.link_folders(src, dst, linked_folders)
 
 
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
