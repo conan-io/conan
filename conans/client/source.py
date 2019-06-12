@@ -5,7 +5,6 @@ import six
 
 from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
-from conans.client.file_copier import FileCopier
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
