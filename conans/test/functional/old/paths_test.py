@@ -63,6 +63,7 @@ class PathShortenerTest(unittest.TestCase):
             shutil.rmtree(self.home, ignore_errors=True)
 
     @parameterized.expand([(False,), (True,)])
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_default(self, _, short_paths):
         p = tempfile.mkdtemp(dir=self.home)
         r = path_shortener(path=p, short_paths=short_paths)
@@ -71,6 +72,7 @@ class PathShortenerTest(unittest.TestCase):
         self.assertEqual(self.home in r, not short_paths)
 
     @parameterized.expand([(False,), (True,)])
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_with_env_variable(self, _, short_paths):
         with environment_append({'CONAN_USE_ALWAYS_SHORT_PATHS': "True"}):
             p = tempfile.mkdtemp(dir=self.home)
@@ -86,6 +88,7 @@ class PathShortenerTest(unittest.TestCase):
             self.assertEqual(self.home_short in r, short_paths)
             self.assertEqual(self.home in r, not short_paths)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_path_is_different_for_different_files(self, _):
         p1 = tempfile.mkdtemp(dir=self.home)
         short1 = path_shortener(p1, True)
@@ -94,6 +97,7 @@ class PathShortenerTest(unittest.TestCase):
 
         self.assertNotEqual(short1, short2)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_path_is_deterministic(self, _):
         p = tempfile.mkdtemp(dir=self.home)
         short1 = path_shortener(p, True)
@@ -101,6 +105,7 @@ class PathShortenerTest(unittest.TestCase):
 
         self.assertEqual(short1, short2)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_path_is_relative_to_home_short(self, _):
         with environment_append({"CONAN_USER_HOME_SHORT": self.home_short}):
             p = tempfile.mkdtemp(dir=self.home)
@@ -125,6 +130,7 @@ class PathShortenerWithTwoHomes(unittest.TestCase):
             for f in (self.home1, self.home2, self.home_short1, self.home_short2):
                 shutil.rmtree(f, ignore_errors=True)
 
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_path_is_not_the_same_for_different_homes(self, _):
         with environment_append({"CONAN_USER_HOME": self.home1}):
             short1 = path_shortener(self.file1, True)
@@ -136,6 +142,7 @@ class PathShortenerWithTwoHomes(unittest.TestCase):
 
     # This test case is important for CI setups with folder-based isolation of
     # conan homes and compiler caches.
+    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def test_path_is_deterministic_relatively_to_home_short_with_different_homes(self, _):
         with environment_append({"CONAN_USER_HOME": self.home1,
                                  "CONAN_USER_HOME_SHORT": self.home_short1}):
