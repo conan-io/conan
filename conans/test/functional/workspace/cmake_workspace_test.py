@@ -88,28 +88,38 @@ class WSCMakeTests(unittest.TestCase):
         \t> pkgH_header: default
         \t> pkgH: default""")
 
-    def setUp(self):
-        super(WSCMakeTests, self).setUp()
+    @classmethod
+    def setUpClass(cls):
+        super(WSCMakeTests, cls).setUpClass()
         folder = temp_folder(path_with_spaces=False)
-        self.base_folder = temp_folder(path_with_spaces=False)
+        cls.base_folder = temp_folder(path_with_spaces=False)
 
-        t = TestClient(current_folder=folder, base_folder=self.base_folder)
-        self.libA = _plain_package(t, pkg="pkgA")
-        self.libD = _plain_package(t, pkg="pkgD")
-        self.libB = _plain_package(t, pkg="pkgB", lib_requires=[self.libA, ])
-        self.libC = _plain_package(t, pkg="pkgC", lib_requires=[self.libA, self.libD])
-        self.libE = _plain_package(t, pkg="pkgE", lib_requires=[self.libB, self.libC])
-        self.libF = _plain_package(t, pkg="pkgF", lib_requires=[self.libC])
-        self.libH = _plain_package(t, pkg="pkgH")
-        self.libG = _plain_package(t, pkg="pkgG", lib_requires=[self.libE, self.libF, self.libH],
-                                   add_executable=True)
+        t = TestClient(current_folder=folder, base_folder=cls.base_folder)
+        cls.libA = _plain_package(t, pkg="pkgA")
+        cls.libD = _plain_package(t, pkg="pkgD")
+        cls.libB = _plain_package(t, pkg="pkgB", lib_requires=[cls.libA, ])
+        cls.libC = _plain_package(t, pkg="pkgC", lib_requires=[cls.libA, cls.libD])
+        cls.libE = _plain_package(t, pkg="pkgE", lib_requires=[cls.libB, cls.libC])
+        cls.libF = _plain_package(t, pkg="pkgF", lib_requires=[cls.libC])
+        cls.libH = _plain_package(t, pkg="pkgH")
+        cls.libG = _plain_package(t, pkg="pkgG", lib_requires=[cls.libE, cls.libF, cls.libH],
+                                  add_executable=True)
 
-        executableG = self.libG.executables[0]
-        self.libG_editable_exe = executableG.path_to_exec()
+        executableG = cls.libG.executables[0]
+        cls.libG_editable_exe = executableG.path_to_exec()
 
-        self.editables = [self.libA, self.libB, self.libE, self.libG]
-        self.affected_by_editables = [self.libC, self.libF]
-        self.inmutable = [self.libD, self.libH]
+        cls.editables = [cls.libA, cls.libB, cls.libE, cls.libG]
+        cls.affected_by_editables = [cls.libC, cls.libF]
+        cls.inmutable = [cls.libD, cls.libH]
+
+    def setUp(self):
+        self._reset()
+
+    def _reset(self):
+        # Return editable packages to its original state
+        for it in self.editables:
+            it.modify_cpp_message()
+            it.modify_options()
 
     def run_outside_ws(self):
         """ This function runs the full project without taking into account the ws,
@@ -261,36 +271,11 @@ class WSCMakeTests(unittest.TestCase):
                       " to {}".format(newB.ref, newA.ref, self.libA.ref), t.out)
         self.assertIn("{} from user folder - Editable".format(self.libA.ref), t.out)
 
-
-@attr("slow")
-class WSSharedPackagesTests(unittest.TestCase):
-    """
-        Dependency graph: packages on lower level depends on those in the upper one.
-
-                +------+      +------+
-                | pkgA |      | pkgD |
-                +--+---+      +---+--+
-                   ^              ^
-                   |  +--------+  |
-                   +--+ pkgI/J +--+
-                      +----+---+
-
-    """
-    maxDiff = None
-
-    def setUp(self):
-        super(WSSharedPackagesTests, self).setUpClass()
-        folder = temp_folder(path_with_spaces=False)
-        self.base_folder = temp_folder(path_with_spaces=False)
-
-        t = TestClient(current_folder=folder, base_folder=self.base_folder)
-        self.libA = _plain_package(t, pkg="pkgA")
-        self.libD = _plain_package(t, pkg="pkgD")
-
     @unittest.expectedFailure
     def test_several_workspaces(self):
         """ One package is included into two different workspaces with different
-            resulting binaries. Those shouldn't mix.
+            resulting binaries. Packages affected by workspaces shouldn't be built
+            in the local folder but in the workspace one.
         """
         tmp = TestClient(base_folder=self.base_folder)
         libI = _plain_package(tmp, pkg="pkgI", lib_requires=[self.libA, self.libD],
