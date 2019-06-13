@@ -352,7 +352,7 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
                 linked_folder = os.path.join(self.source_folder, 'link', 'folder')
                 self.output.info(">> linked-folder islink: {{}}".format(os.path.islink(linked_folder)))
                 self.output.info(">> linked-folder exists: {{}}".format(os.path.exists(linked_folder)))
-                if self.scm["type"] != "git":
+                if os.path.exists(linked_folder):
                     folder_file = os.path.join(linked_folder, 'file.txt')
                     self.output.info(">> linked-folder content: {{}}".format(tools.load(folder_file)))
         """)
@@ -431,10 +431,8 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
 
         # Add symlinks inside the repo
         os.mkdir(os.path.join(t.current_folder, 'link'))
-        os.symlink(os.path.join(t.current_folder, 'file.txt'),
-                   os.path.join(t.current_folder, 'link', 'file.txt'))
-        os.symlink(os.path.join(t.current_folder, 'folder'),
-                   os.path.join(t.current_folder, 'link', 'folder'))
+        os.symlink('../file.txt', os.path.join(t.current_folder, 'link', 'file.txt'))
+        os.symlink('../folder', os.path.join(t.current_folder, 'link', 'folder'))
         t.run_command('git add link/file.txt')  # Linked files can be added to the repo
         t.run_command('git add link/folder/file.txt')  # Linked folder fails
         self.assertIn('fatal:', t.out)
@@ -454,6 +452,11 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
 
         self._run_actual_testing(t, use_optimization, repo_type="git")
 
+        # Modifying local files, doesn't affect those already in the package
+        save_files(t.current_folder, {'file.txt': "file modified content",
+                                      'folder/file.txt': "folder modified content"})
+        self._run_actual_testing(t, use_optimization=False, repo_type="git")
+
     @parameterized.expand([(False,), (True,)])
     def test_svn_symlink_inside(self, use_optimization):
         conanfile = self.conanfile.format("svn")
@@ -465,10 +468,8 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
 
         # Add internal symlinks
         os.mkdir(os.path.join(t.current_folder, 'link'))
-        os.symlink(os.path.join(t.current_folder, 'file.txt'),
-                   os.path.join(t.current_folder, 'link', 'file.txt'))
-        os.symlink(os.path.join(t.current_folder, 'folder'),
-                   os.path.join(t.current_folder, 'link', 'folder'))
+        os.symlink('../file.txt', os.path.join(t.current_folder, 'link', 'file.txt'))
+        os.symlink('../folder', os.path.join(t.current_folder, 'link', 'folder'))
         t.run_command('svn add link')
         t.run_command('svn add link/file.txt')
         t.run_command('svn add link/folder')
@@ -481,6 +482,11 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
         t.run_command('svn update')
 
         self._run_actual_testing(t, use_optimization, repo_type="svn")
+
+        # Modifying local files, doesn't affect those already in the package
+        save_files(t.current_folder, {'file.txt': "file modified content",
+                                      'folder/file.txt': "folder modified content"})
+        self._run_actual_testing(t, use_optimization=False, repo_type="svn")
 
     @parameterized.expand([(False,), (True,)])
     def test_svn_symlink_outside(self, use_optimization):
