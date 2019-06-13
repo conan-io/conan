@@ -130,7 +130,7 @@ class WorkspaceCMake(Workspace):
         endfunction()
         
         function(include)
-            if ("${ARGV0}" MATCHES ".*/conanbuildinfo(_multi)?.cmake")
+            if ("${ARGV0}" MATCHES ".*conanbuildinfo(_multi)?\.cmake")
                 message("Ignore inclusion of ${ARGV0}")
             else()
                 _include(${ARGV})
