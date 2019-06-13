@@ -461,14 +461,20 @@ class ConanInfo(object):
         same as specifying None, packages are the same
         """
 
-        if self.full_settings.cppstd and \
-                self.full_settings.compiler and \
-                self.full_settings.compiler.version:
+        if (self.full_settings.compiler and
+                self.full_settings.compiler.version):
             default = cppstd_default(str(self.full_settings.compiler),
                                      str(self.full_settings.compiler.version))
-            if default == str(self.full_settings.cppstd):
+
+            if str(self.full_settings.cppstd) == default:
                 self.settings.cppstd = None
+
+            if str(self.full_settings.compiler.cppstd) == default:
+                self.settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
         if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
+
+        if self.full_settings.compiler.cppstd:
+            self.settings.compiler.cppstd = self.full_settings.compiler.cppstd

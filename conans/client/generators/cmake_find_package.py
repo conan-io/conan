@@ -22,7 +22,7 @@ assign_target_properties = """
     endif()
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_LINK_LIBRARIES ${{{name}_LIBRARIES_TARGETS}} "${{{name}_LINKER_FLAGS_LIST}}")
     set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{{name}_COMPILE_DEFINITIONS}})
-    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")   
+    set_property(TARGET {name}::{name} PROPERTY INTERFACE_COMPILE_OPTIONS "${{{name}_COMPILE_OPTIONS_LIST}}")
 """
 
 
@@ -55,7 +55,8 @@ endif()
         deps = DepsCppCmake(cpp_info)
         lines = []
         if cpp_info.public_deps:
-            lines = find_dependency_lines(name, cpp_info)
+            # Here we are generating FindXXX, so find_modules=True
+            lines = find_dependency_lines(name, cpp_info, find_modules=True)
         find_package_header_block = find_package_header.format(name=name, version=cpp_info.version)
         find_libraries_block = target_template.format(name=name, deps=deps, build_type_suffix="")
         target_props = assign_target_properties.format(name=name, deps=deps)
@@ -68,7 +69,7 @@ endif()
         return tmp
 
 
-def find_dependency_lines(name, cpp_info):
+def find_dependency_lines(name, cpp_info, find_modules):
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep in cpp_info.public_deps:
         def property_lines(prop):
@@ -79,7 +80,17 @@ def find_dependency_lines(name, cpp_info):
                     "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
                     'endif()']
 
-        lines.append("find_dependency(%s REQUIRED)" % dep)
+        if find_modules:
+            lines.append("find_dependency(%s REQUIRED)" % dep)
+        else:
+            # https://github.com/conan-io/conan/issues/4994
+            # https://github.com/conan-io/conan/issues/5040
+            lines.append('if(${CMAKE_VERSION} VERSION_LESS "3.9.0")')
+            lines.append('  find_package(%s REQUIRED NO_MODULE)' % dep)
+            lines.append("else()")
+            lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep)
+            lines.append("endif()")
+
         lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
         lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
         lines.extend(property_lines("INTERFACE_INCLUDE_DIRECTORIES"))

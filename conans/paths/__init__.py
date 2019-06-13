@@ -36,6 +36,7 @@ BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
 BUILD_INFO_MAKE = 'conanbuildinfo.mak'
+BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
@@ -49,6 +50,7 @@ DEFAULT_PROFILE_NAME = "default"
 SCM_FOLDER = "scm_folder.txt"
 PACKAGE_METADATA = "metadata.json"
 CACERT_FILE = "cacert.pem"  # Server authorities file
+DATA_YML = "conandata.yml"
 
 # Directories
 EXPORT_FOLDER = "export"

@@ -260,54 +260,54 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_partial_match_test(self):
         self.client.run("search Hello")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search hello")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search Hel")
         self.assertEqual("There are no packages matching the 'Hel' pattern\n", self.client.out)
 
         self.client.run("search Hello/")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4")
         self.assertEqual("There are no packages matching the 'Hello/1.4' pattern\n",
-                          self.client.out)
+                         self.client.out)
 
         self.client.run("search Hello/1.4.10@")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@fen")
         self.assertEqual("There are no packages matching the 'Hello/1.4.10@fen' pattern\n",
-                          self.client.out)
+                         self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
         self.assertEqual("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
@@ -315,9 +315,9 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
         self.assertEqual("Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
@@ -510,21 +510,21 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         # test in remote with search capabilities
         test_cases(remote="search_able")
 
-    def _copy_to_server(self, client_store_path, server_store):
-        subdirs = list_folder_subdirs(basedir=client_store_path.store, level=4)
+    def _copy_to_server(self, cache, server_store):
+        subdirs = list_folder_subdirs(basedir=cache.store, level=4)
         refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1)
                 for folder in subdirs]
         for ref in refs:
-            origin_path = client_store_path.export(ref)
+            origin_path = cache.package_layout(ref).export()
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
-            packages = client_store_path.packages(ref)
+            packages = cache.package_layout(ref).packages()
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
                 pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
-                origin_path = client_store_path.package(pref)
+                origin_path = cache.package_layout(ref).package(pref)
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)
@@ -1106,6 +1106,9 @@ class Test(ConanFile):
     def test_exception_client_without_revs(self):
         client = TestClient()
         client.run("search whatever --revisions", assert_error=True)
+        self.assertIn("ERROR: With --revision, specify a reference", client.out)
+
+        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 
@@ -1376,4 +1379,3 @@ class SearchRemoteAllTestCase(unittest.TestCase):
         self.assertIn("all: http://fake", self.client.out)
         self.client.run("search -r {} {}".format(self.remote_name, self.reference))
         self.assertIn("Existing recipe in remote 'all':", self.client.out)  # Searching in 'all'
-

@@ -15,7 +15,7 @@ from conans.model.version import Version
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
-from conans.util.files import decode_text, mkdir_tmp, save
+from conans.util.files import mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -370,7 +370,9 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
-    if arch_build == 'x86_64':
+    if os_setting == 'WindowsCE':
+        vcvars_arch = "x86"
+    elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0

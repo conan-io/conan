@@ -19,7 +19,7 @@ class UserIO(object):
         """
         self._ins = ins
         if not out:
-            out = ConanOutput(sys.stdout)
+            out = ConanOutput(sys.stdout, sys.stderr)
         self.out = out
         self._interactive = True
 

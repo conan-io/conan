@@ -4,16 +4,19 @@ import os
 import sys
 import uuid
 
+import yaml
+
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
+from conans.paths import DATA_YML
 from conans.util.files import load
 
 
@@ -50,9 +53,22 @@ class ConanFileLoader(object):
             _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
             self.cached_conanfiles[conanfile_path] = conanfile
+            conanfile.conan_data = self._load_data(conanfile_path)
             return conanfile
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
+
+    def _load_data(self, conanfile_path):
+        data_path = os.path.join(os.path.dirname(conanfile_path), DATA_YML)
+        if not os.path.exists(data_path):
+            return None
+
+        try:
+            data = yaml.safe_load(load(data_path))
+        except Exception as e:
+            raise ConanException("Invalid yml format at {}: {}".format(DATA_YML, e))
+
+        return data or {}
 
     def load_export(self, conanfile_path, name, version, user, channel):
         conanfile = self.load_class(conanfile_path)
@@ -136,6 +152,8 @@ class ConanFileLoader(object):
         try:
             self._initialize_conanfile(conanfile, processed_profile)
             return conanfile
+        except ConanInvalidConfiguration:
+            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
@@ -235,7 +253,18 @@ def parse_conanfile(conanfile_path, python_requires):
         module, filename = _parse_conanfile(conanfile_path)
         try:
             conanfile = _parse_module(module, filename)
-            conanfile.python_requires = py_requires
+
+            # Check for duplicates
+            py_reqs = {}
+            for it in py_requires:
+                if it.ref.name in py_reqs:
+                    dupes = [str(it.ref), str(py_reqs[it.ref.name].ref)]
+                    raise ConanException("Same python_requires with different versions not allowed"
+                                         " for a conanfile. Found '{}'".format("', '".join(dupes)))
+                py_reqs[it.ref.name] = it
+
+            # Make them available to the conanfile itself
+            conanfile.python_requires = py_reqs
             return module, conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))

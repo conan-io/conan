@@ -6,6 +6,8 @@ import requests
 from nose.plugins.attrib import attr
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.conf import ConanClientConfigParser
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.rest_client_v1 import complete_url
 from conans.model.info import ConanInfo
@@ -31,20 +33,20 @@ class RestApiUnitTest(unittest.TestCase):
 
         # test relative urls
         self.assertEqual(complete_url("http://host", "v1/path_to_file.txt"),
-                          "http://host/v1/path_to_file.txt")
+                         "http://host/v1/path_to_file.txt")
 
         self.assertEqual(complete_url("http://host:1234", "v1/path_to_file.txt"),
-                          "http://host:1234/v1/path_to_file.txt")
+                         "http://host:1234/v1/path_to_file.txt")
 
         self.assertEqual(complete_url("https://host", "v1/path_to_file.txt"),
-                          "https://host/v1/path_to_file.txt")
+                         "https://host/v1/path_to_file.txt")
 
         self.assertEqual(complete_url("https://host:1234", "v1/path_to_file.txt"),
-                          "https://host:1234/v1/path_to_file.txt")
+                         "https://host:1234/v1/path_to_file.txt")
 
         # test relative urls with subdirectory
         self.assertEqual(complete_url("https://host:1234/subdir/", "v1/path_to_file.txt"),
-                          "https://host:1234/subdir/v1/path_to_file.txt")
+                         "https://host:1234/subdir/v1/path_to_file.txt")
 
 
 @attr('slow')
@@ -61,7 +63,11 @@ class RestApiTest(unittest.TestCase):
             cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
             cls.server.start()
 
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests,
+            filename = os.path.join(temp_folder(), "conan.conf")
+            save(filename, "")
+            config = ConanClientConfigParser(filename)
+            requester = ConanRequester(config, requests)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requester,
                                     revisions_enabled=False)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 

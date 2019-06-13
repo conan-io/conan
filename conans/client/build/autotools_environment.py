@@ -8,7 +8,7 @@ from conans.client.build.compiler_flags import (architecture_flag, build_type_de
                                                 format_include_paths, format_libraries,
                                                 format_library_paths, libcxx_define, libcxx_flag,
                                                 pic_flag, rpath_flags, sysroot_flag)
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
     detected_architecture, detected_os, get_gnu_triplet
@@ -40,8 +40,9 @@ class AutoToolsBuildEnvironment(object):
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
+        self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
-        self._cppstd = conanfile.settings.get_safe("cppstd")
+        self._cppstd = cppstd_from_settings(conanfile.settings)
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
@@ -65,7 +66,7 @@ class AutoToolsBuildEnvironment(object):
         self.build, self.host, self.target = self._get_host_build_target_flags()
 
     def _configure_fpic(self):
-        if str(self._os) not in ["Windows", "WindowsStore"]:
+        if not str(self._os).startswith("Windows"):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
@@ -207,7 +208,8 @@ class AutoToolsBuildEnvironment(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count(output=self._conanfile.output)) if "-j" not in str_args else None
+            cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
+                                if "-j" not in str_args else None)
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
@@ -221,7 +223,7 @@ class AutoToolsBuildEnvironment(object):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
 
@@ -239,7 +241,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
         btfs = build_type_flags(compiler=self._compiler, build_type=self._build_type,
@@ -251,6 +253,8 @@ class AutoToolsBuildEnvironment(object):
                            compiler=self._compiler)
         if srf:
             ret.append(srf)
+        if self._compiler_runtime:
+            ret.append("-%s" % self._compiler_runtime)
 
         return ret
 
@@ -329,8 +333,9 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": cxx_flags,
                "CFLAGS": c_flags,
                "LDFLAGS": ld_flags,
-               "LIBS": libs,
+               "LIBS": libs
                }
+
         return ret
 
     @property
@@ -347,8 +352,9 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": cxx_flags.strip(),
                "CFLAGS": cflags.strip(),
                "LDFLAGS": ldflags.strip(),
-               "LIBS": libs.strip(),
+               "LIBS": libs.strip()
                }
+
         return ret
 
 

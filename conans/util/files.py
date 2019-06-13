@@ -73,7 +73,10 @@ def touch(fname, times=None):
 def touch_folder(folder):
     for dirname, _, filenames in walk(folder):
         for fname in filenames:
-            os.utime(os.path.join(dirname, fname), None)
+            try:
+                os.utime(os.path.join(dirname, fname), None)
+            except Exception:
+                pass
 
 
 def normalize(text):
@@ -120,7 +123,7 @@ def _generic_algorithm_sum(file_path, algorithm_name):
 def save_append(path, content):
     try:
         os.makedirs(os.path.dirname(path))
-    except:
+    except Exception:
         pass
 
     with open(path, "ab") as handle:
@@ -137,7 +140,7 @@ def save(path, content, only_if_modified=False):
     """
     try:
         os.makedirs(os.path.dirname(path))
-    except:
+    except Exception:
         pass
 
     new_content = to_file_bytes(content)
@@ -283,7 +286,7 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
         if mode == 'r':
             raise ReadError("not a gzip file")
         raise
-    except:
+    except Exception:
         fileobj.close()
         raise
     t._extfileobj = False
@@ -298,7 +301,7 @@ def tar_extract(fileobj, destination_dir):
         return not realpath(abspath(joinpath(base, path))).startswith(base)
 
     def safemembers(members):
-        base = realpath(abspath("."))
+        base = realpath(abspath(destination_dir))
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
@@ -332,5 +335,5 @@ def list_folder_subdirs(basedir, level):
 def exception_message_safe(exc):
     try:
         return str(exc)
-    except:
+    except Exception:
         return decode_text(repr(exc))
