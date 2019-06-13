@@ -4,7 +4,7 @@ from collections import defaultdict, namedtuple
 
 from conans.client.generators import TXTGenerator
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, DepsCppInfo, Component, DirList
+from conans.model.build_info import CppInfo, DepsCppInfo, Component
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
@@ -170,6 +170,7 @@ VAR2=23
         info.libdirs.append(abs_lib)
         info.bindirs.append(abs_bin)
         info.bindirs.append("local_bindir")
+        print("result: ", info.include_paths, info.lib_paths, info.bin_paths)
         self.assertEqual(info.include_paths, [os.path.join(folder, "include"), abs_include])
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
         self.assertEqual(info.bin_paths, [abs_bin,
@@ -181,12 +182,12 @@ VAR2=23
         self.assertIn(component.name, "my_component")
         component.lib = "libhola"
         self.assertEqual(component.lib, "libhola")
-        with self.assertRaisesRegex(ConanException, "'.lib' is already set for this Component"):
+        with self.assertRaisesRegexp(ConanException, "'.lib' is already set for this Component"):
             component.exe = "hola.exe"
         component.lib = None
         component.exe = "hola.exe"
         self.assertEqual(component.lib, None)
-        with self.assertRaisesRegex(ConanException, "'.exe' is already set for this Component"):
+        with self.assertRaisesRegexp(ConanException, "'.exe' is already set for this Component"):
             component.lib = "libhola"
 
     def cpp_info_libs_components_fail_test(self):
@@ -197,8 +198,8 @@ VAR2=23
         info.name = "Greetings"
         self.assertIn(info.name, "Greetings")
         info.libs = ["libgreet"]
-        with self.assertRaisesRegexp(ConanException, "Usage of Components with '.libs' values is "
-                                                     "not allowed"):
+        with self.assertRaisesRegexp(ConanException, "Usage of Components with '.libs' or '.exes' "
+                                                     "values is not allowed"):
             info["hola"].exe = "hola.exe"
 
         info.libs = []
@@ -206,6 +207,19 @@ VAR2=23
         with self.assertRaisesRegexp(ConanException, "Setting first level libs is not supported "
                                                      "when Components are already in use"):
             info.libs = ["libgreet"]
+
+    def cpp_info_libs_system_deps_order_test(self):
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].system_deps = ["sys1", "sys11"]
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].lib = "lib2"
+        info["LIB2"].system_deps = ["sys2"]
+        info["LIB1"].deps = ["LIB3"]
+        info["LIB3"].lib = "lib3"
+        info["LIB3"].system_deps = ["sys3", "sys2"]
+        self.assertEqual(['sys2', 'lib2', 'sys3', 'lib3', 'sys1', 'sys11', 'lib1'], info.libs)
+        print(info.libs)
 
     def cppinfo_dirs_test(self):
         folder = temp_folder()
@@ -223,41 +237,25 @@ VAR2=23
         info["Crypto"].resdirs = ["resources"]
         self.assertEqual(["include"], info["OpenSSL"].includedirs)
         self.assertEqual(["lib"], info["OpenSSL"].libdirs)
-        self.assertEqual(["", "build"], info["OpenSSL"].builddirs)
+        self.assertEqual(["build"], info["OpenSSL"].builddirs)
         self.assertEqual(["bin"], info["OpenSSL"].bindirs)
         self.assertEqual(["res"], info["OpenSSL"].resdirs)
-        self.assertEqual(["include", "headers"], info["Crypto"].includedirs)
-        self.assertEqual(["lib", "libraries"], info["Crypto"].libdirs)
-        self.assertEqual(["", "build_scripts"], info["Crypto"].builddirs)
-        self.assertEqual(["bin", "binaries"], info["Crypto"].bindirs)
-        self.assertEqual(["res", "resources"], info["Crypto"].resdirs)
-
-        info.includedirs = ["my_headers"]
-        info.libdirs = ["my_libraries"]
-        info.builddirs = ["my_build_scripts"]
-        info.bindirs = ["my_binaries"]
-        info.resdirs = ["my_resources"]
-        self.assertEqual(["my_headers", "include"], info["OpenSSL"].includedirs)
-        self.assertEqual(["my_libraries", "lib"], info["OpenSSL"].libdirs)
-        self.assertEqual(["my_build_scripts", "build"], info["OpenSSL"].builddirs)
-        self.assertEqual(["my_binaries", "bin"], info["OpenSSL"].bindirs)
-        self.assertEqual(["my_resources", "res"], info["OpenSSL"].resdirs)
-        self.assertEqual(["my_headers", "headers"], info["Crypto"].includedirs)
-        self.assertEqual(["my_libraries", "libraries"], info["Crypto"].libdirs)
-        self.assertEqual(["my_build_scripts", "build_scripts"], info["Crypto"].builddirs)
-        self.assertEqual(["my_binaries", "binaries"], info["Crypto"].bindirs)
-        self.assertEqual(["my_resources", "resources"], info["Crypto"].resdirs)
+        self.assertEqual(["headers"], info["Crypto"].includedirs)
+        self.assertEqual(["libraries"], info["Crypto"].libdirs)
+        self.assertEqual(["build_scripts"], info["Crypto"].builddirs)
+        self.assertEqual(["binaries"], info["Crypto"].bindirs)
+        self.assertEqual(["resources"], info["Crypto"].resdirs)
 
         info["Crypto"].includedirs = ["different_include"]
         info["Crypto"].libdirs = ["different_lib"]
         info["Crypto"].builddirs = ["different_build"]
         info["Crypto"].bindirs = ["different_bin"]
         info["Crypto"].resdirs = ["different_res"]
-        self.assertEqual(["my_headers", "different_include"], info["Crypto"].includedirs)
-        self.assertEqual(["my_libraries", "different_lib"], info["Crypto"].libdirs)
-        self.assertEqual(["my_build_scripts", "different_build"], info["Crypto"].builddirs)
-        self.assertEqual(["my_binaries", "different_bin"], info["Crypto"].bindirs)
-        self.assertEqual(["my_resources", "different_res"], info["Crypto"].resdirs)
+        self.assertEqual(["different_include"], info["Crypto"].includedirs)
+        self.assertEqual(["different_lib"], info["Crypto"].libdirs)
+        self.assertEqual(["different_build"], info["Crypto"].builddirs)
+        self.assertEqual(["different_bin"], info["Crypto"].bindirs)
+        self.assertEqual(["different_res"], info["Crypto"].resdirs)
 
         info["Crypto"].includedirs.extend(["another_include"])
         info["Crypto"].includedirs.append("another_other_include")
@@ -269,25 +267,13 @@ VAR2=23
         info["Crypto"].bindirs.append("another_other_bin")
         info["Crypto"].resdirs.extend(["another_res"])
         info["Crypto"].resdirs.append("another_other_res")
-        self.assertEqual(["my_headers", "different_include", "another_include",
-                          "another_other_include"], info["Crypto"].includedirs)
-        self.assertEqual(["my_libraries", "different_lib", "another_lib", "another_other_lib"],
+        self.assertEqual(["different_include", "another_include", "another_other_include"],
+                         info["Crypto"].includedirs)
+        self.assertEqual(["different_lib", "another_lib", "another_other_lib"],
                          info["Crypto"].libdirs)
-        self.assertEqual(["my_build_scripts", "different_build", "another_build",
-                          "another_other_build"], info["Crypto"].builddirs)
-        self.assertEqual(["my_binaries", "different_bin", "another_bin", "another_other_bin"],
+        self.assertEqual(["different_build", "another_build", "another_other_build"],
+                         info["Crypto"].builddirs)
+        self.assertEqual(["different_bin", "another_bin", "another_other_bin"],
                          info["Crypto"].bindirs)
-        self.assertEqual(["my_resources", "different_res", "another_res", "another_other_res"],
+        self.assertEqual(["different_res", "another_res", "another_other_res"],
                          info["Crypto"].resdirs)
-
-    def dirlist_test(self):
-        dirlist = DirList(["inc0"], ["inc1"])
-        dirlist.append("inc2")
-        self.assertEqual(["inc0", "inc1", "inc2"], dirlist)
-        dirlist.extend(["inc3", "inc4"])
-        self.assertEqual(["inc0", "inc1", "inc2", "inc3", "inc4"], dirlist)
-
-        dirlist.insert(0, "inc5")
-        self.assertEqual(["inc0", "inc5", "inc1", "inc2", "inc3", "inc4"], dirlist)
-        dirlist.insert(2, "inc6")
-        self.assertEqual(["inc0", "inc5", "inc1", "inc6", "inc2", "inc3", "inc4"], dirlist)
