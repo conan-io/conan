@@ -66,7 +66,8 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
                                       os.path.realpath(src))
             if not relpath.startswith("."):
                 # Absolute links could be a problem, convert to relative
-                linkto = os.path.normpath(os.path.relpath(linkto, src_dir))
+                if os.path.isabs(linkto):
+                    linkto = os.path.normpath(os.path.relpath(linkto, src_dir))
                 dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
                 os.symlink(linkto, dst_dir)
             dirs[:] = []  # Do not enter subdirectories
