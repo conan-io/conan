@@ -22,6 +22,11 @@ def get_conan_user_home():
     return os.path.abspath(tmp)
 
 
+def get_conan_base_folder():
+    user_home = get_conan_user_home()
+    return os.path.join(user_home, ".conan")
+
+
 # Files
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"

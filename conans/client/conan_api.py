@@ -52,7 +52,7 @@ from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths import BUILD_INFO, CONANINFO, get_conan_base_folder
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
@@ -144,8 +144,7 @@ class ConanAPIV1(object):
         out = ConanOutput(sys.stdout, sys.stderr, color)
         user_io = UserIO(out=out)
 
-        user_home = get_conan_user_home()
-        base_folder = os.path.join(user_home, ".conan")
+        base_folder = get_conan_base_folder()
 
         cache = ClientCache(base_folder, out)
         # Migration system
