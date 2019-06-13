@@ -83,6 +83,7 @@ class SmartFormatter(argparse.HelpFormatter):
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
+_PREF_EXAMPLE = ("MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
@@ -91,7 +92,11 @@ _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildin
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
                      "Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
-                              "'%s'" % (_REFERENCE_EXAMPLE, _PATTERN_EXAMPLE))
+                              "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
+_PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
+                             "'%s', '%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE, _PREF_EXAMPLE))
+_REF_OR_PREF_HELP = ("Recipe reference or package reference e.g., '%s', "
+                     "'%s'" % (_REFERENCE_EXAMPLE, _PREF_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
 _QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
@@ -159,7 +164,7 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
-        parser.add_argument("-f", "--file",
+        parser.add_argument("-m", "--template",
                             help='Use the given template from the local cache for conanfile.py')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
@@ -211,7 +216,7 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.file)
+                        template=args.template)
 
     def inspect(self, *args):
         """
@@ -960,8 +965,7 @@ class Command(object):
                 raise ConanException("Please specify a valid pattern or reference to be cleaned")
 
             if check_valid_ref(args.pattern_or_reference, allow_pattern=False):
-                ref = ConanFileReference.loads(args.pattern_or_reference)
-                return self._conan.remove_system_reqs(ref)
+                return self._conan.remove_system_reqs(args.pattern_or_reference)
 
             return self._conan.remove_system_reqs_by_pattern(args.pattern_or_reference)
         else:
@@ -1188,9 +1192,10 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload",
                                          formatter_class=SmartFormatter)
-        parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
-        parser.add_argument("-p", "--package", default=None, action=OnceArgument,
-                            help='package ID to upload')
+        parser.add_argument('pattern_or_reference', help=_PATTERN_REF_OR_PREF_HELP)
+        parser.add_argument("-p", "--package", default=None,
+                            help="Package ID [DEPRECATED: use full reference instead]",
+                            action=OnceArgument)
         parser.add_argument('-q', '--query', default=None, action=OnceArgument,
                             help="Only upload packages matching a specific query. " + _QUERY_HELP)
         parser.add_argument("-r", "--remote", action=OnceArgument,
@@ -1217,7 +1222,24 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        if args.query and args.package:
+        try:
+            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+            reference = pref.ref.full_repr()
+            package_id = pref.id
+        except ConanException:
+            reference = args.pattern_or_reference
+            package_id = args.package
+
+            if package_id:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan upload [...] {}:{}`".format(reference, package_id))
+        else:
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
+
+        if args.query and package_id:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
         cwd = os.getcwd()
@@ -1245,7 +1267,7 @@ class Command(object):
             policy = None
 
         try:
-            info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
+            info = self._conan.upload(pattern=reference, package=package_id,
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
@@ -1448,7 +1470,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.get.__doc__,
                                          prog="conan get",
                                          formatter_class=SmartFormatter)
-        parser.add_argument('reference', help='package recipe reference')
+        parser.add_argument('reference', help=_REF_OR_PREF_HELP)
         parser.add_argument('path',
                             help='Path to the file or directory. If not specified will get the '
                                  'conanfile if only a reference is specified and a conaninfo.txt '
@@ -1792,6 +1814,10 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
     --build            Build all from sources, do not use binary packages.
     --build=never      Never build, use binary packages or fail if a binary package is not found.
     --build=missing    Build from code if a binary package is not found.
+    --build=cascade    Will build from code all the nodes with some dependency being built
+                       (for any reason). Can be used together with any other build policy.
+                       Useful to make sure that any new change introduced in a dependency is
+                       incorporated by building again the package.
     --build=outdated   Build from code if the binary is not built with the current recipe or
                        when missing binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.

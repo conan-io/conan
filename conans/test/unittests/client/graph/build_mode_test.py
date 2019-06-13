@@ -20,16 +20,25 @@ class BuildModeTest(unittest.TestCase):
         self.assertTrue(build_mode.outdated)
         self.assertTrue(build_mode.missing)
         self.assertFalse(build_mode.never)
+        self.assertFalse(build_mode.cascade)
 
         build_mode = BuildMode(["never"], self.output)
         self.assertFalse(build_mode.outdated)
         self.assertFalse(build_mode.missing)
         self.assertTrue(build_mode.never)
+        self.assertFalse(build_mode.cascade)
+
+        build_mode = BuildMode(["cascade"], self.output)
+        self.assertFalse(build_mode.outdated)
+        self.assertFalse(build_mode.missing)
+        self.assertFalse(build_mode.never)
+        self.assertTrue(build_mode.cascade)
 
     def test_invalid_configuration(self):
-        with six.assertRaisesRegex(self, ConanException,
-                                     "--build=never not compatible with other options"):
-            BuildMode(["outdated", "missing", "never"], self.output)
+        for mode in ["outdated", "missing", "cascade"]:
+            with six.assertRaisesRegex(self, ConanException,
+                                         "--build=never not compatible with other options"):
+                BuildMode([mode, "never"], self.output)
 
     def test_common_build_force(self):
         reference = ConanFileReference.loads("Hello/0.1@user/testing")

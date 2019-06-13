@@ -30,8 +30,7 @@ from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.conanfile import ConanFileMock
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, \
-    TestBufferConanOutput, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
@@ -716,24 +715,29 @@ ProgramFiles(x86)=C:\Program Files (x86)
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
-                           retry=3, retry_wait=1)
+                           retry=2, retry_wait=1)
         self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
 
         # Retry default values from the config
+        class MockRequester(object):
+            retry = 2
+            retry_wait = 0
+
+            def get(self, *args, **kwargs):
+                return requests.get(*args, **kwargs)
+
         with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            with tools.environment_append({"CONAN_RETRY": "10"}):
-                with tools.environment_append({"CONAN_RETRY_WAIT": "0"}):
-                    tools.download("http://fakeurl3.es/nonexists",
-                                   os.path.join(temp_folder(), "file.txt"), out=out,
-                                   requester=requests)
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 9)
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=MockRequester())
+        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
         # Not found error
         with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            requester=requests,
-                           retry=3, retry_wait=0)
+                           retry=2, retry_wait=0)
 
         # And OK
         dest = os.path.join(temp_folder(), "manual.html")
@@ -745,10 +749,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # overwrite = False
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out,
-                           retry=3, retry_wait=0, overwrite=False, requester=requests)
+                           retry=2, retry_wait=0, overwrite=False, requester=requests)
 
         # overwrite = True
-        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
+        tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=2,
                        retry_wait=0, overwrite=True, requester=requests)
         self.assertTrue(os.path.exists(dest))
         content_new = load(dest)
@@ -890,7 +894,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         with six.assertRaisesRegex(self, ConanException, "Error"):
             tools.get("http://localhost:%s/error_url" % thread.port,
                       filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
-                      retry=3, retry_wait=0)
+                      retry=2, retry_wait=0)
 
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
@@ -998,6 +1002,7 @@ class HelloConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile, "file.txt": "hello\r\n"})
         client.run("create . user/channel")
+
 
 class CollectLibTestCase(unittest.TestCase):
 

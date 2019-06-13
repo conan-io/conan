@@ -40,6 +40,7 @@ class AutoToolsBuildEnvironment(object):
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
+        self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self._cppstd = cppstd_from_settings(conanfile.settings)
 
@@ -207,7 +208,8 @@ class AutoToolsBuildEnvironment(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count(output=self._conanfile.output)) if "-j" not in str_args else None
+            cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
+                                if "-j" not in str_args else None)
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
@@ -251,6 +253,8 @@ class AutoToolsBuildEnvironment(object):
                            compiler=self._compiler)
         if srf:
             ret.append(srf)
+        if self._compiler_runtime:
+            ret.append("-%s" % self._compiler_runtime)
 
         return ret
 

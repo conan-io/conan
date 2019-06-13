@@ -9,7 +9,7 @@ from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import build
 from conans.client.cmd.create import create
 from conans.client.cmd.download import download
-from conans.client.cmd.export import cmd_export, export_alias, export_recipe, export_source
+from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
@@ -59,7 +59,7 @@ from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.util.env_reader import get_env
+
 
 default_manifest_folder = '.conan_manifests'
 
@@ -179,7 +179,7 @@ class ConanAPIV1(object):
 
         # Settings preprocessor
         if interactive is None:
-            interactive = config.non_interactive
+            interactive = not config.non_interactive
 
         runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
                              config.log_run_to_output)
@@ -716,11 +716,6 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self._graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        conanfile_folder = os.path.dirname(conanfile_path)
-        if conanfile_folder != source_folder:
-            conanfile.output.info("Executing exports to: %s" % source_folder)
-            export_recipe(conanfile, conanfile_folder, source_folder)
-            export_source(conanfile, conanfile_folder, source_folder)
         config_source_local(source_folder, conanfile, conanfile_path, self._hook_manager)
 
     @api_method
@@ -859,11 +854,6 @@ class ConanAPIV1(object):
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        if retry is None:
-            retry = get_env("CONAN_RETRY", 2)
-        if retry_wait is None:
-            retry_wait = get_env("CONAN_RETRY_WAIT", 5)
-
         upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,
                              self._loader, self._hook_manager)
@@ -966,8 +956,9 @@ class ConanAPIV1(object):
         return self._cache.registry.clear()
 
     @api_method
-    def remove_system_reqs(self, ref):
+    def remove_system_reqs(self, reference):
         try:
+            ref = ConanFileReference.loads(reference)
             self._cache.package_layout(ref).remove_system_reqs()
             self._user_io.out.info(
                 "Cache system_reqs from %s has been removed" % repr(ref))
@@ -977,7 +968,7 @@ class ConanAPIV1(object):
     @api_method
     def remove_system_reqs_by_pattern(self, pattern):
         for ref in search_recipes(self._cache, pattern=pattern):
-            self.remove_system_reqs(ref)
+            self.remove_system_reqs(ref.full_repr())
 
     @api_method
     def remove_locks(self):

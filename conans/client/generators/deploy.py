@@ -4,7 +4,6 @@ import shutil
 import time
 
 from conans.model import Generator
-from conans import ConanFile
 from conans.model.manifest import FileTreeManifest
 from conans.paths import BUILD_INFO_DEPLOY
 from conans.util.files import mkdir, md5sum

@@ -108,7 +108,7 @@ class SettingsItem(object):
         """
         try:
             self._get_child(self._value).remove(item)
-        except:
+        except Exception:
             pass
 
     def remove(self, values):
@@ -151,7 +151,7 @@ class SettingsItem(object):
         value = str(value)
         try:
             return self._definition[value]
-        except:
+        except Exception:
             raise ConanException(bad_value_msg(self._name, value, self.values_range))
 
     @property
@@ -169,7 +169,7 @@ class SettingsItem(object):
     def values_range(self):
         try:
             return sorted(list(self._definition.keys()))
-        except:
+        except Exception:
             return self._definition
 
     @property
