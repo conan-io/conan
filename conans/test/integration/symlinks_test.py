@@ -473,10 +473,7 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
         t.run_command('svn add link')
         t.run_command('svn add link/file.txt')
         t.run_command('svn add link/folder')
-        try:
-            t.run_command('svn add link/folder/file.txt')  # File inside symlinked folder fails
-        except AssertionError as e:
-            self.assertIn("svn: E145001: Can't schedule an addition:", str(e))
+        t.run_command('svn add link/folder/file.txt')  # File inside symlinked folder fails
 
         t.run_command('svn commit -m "add link to externals"')
         t.run_command('svn update')
@@ -508,10 +505,7 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
         t.run_command('svn add link')
         t.run_command('svn add link/file.txt')
         t.run_command('svn add link/folder')
-        try:
-            t.run_command('svn add link/folder/file.txt')  # File inside symlinked folder fails
-        except AssertionError as e:
-            self.assertIn("svn: E145001: Can't schedule an addition:", str(e))
+        t.run_command('svn add link/folder/file.txt')  # File inside symlinked folder fails
 
         t.run_command('svn commit -m "add link to externals"')
         t.run_command('svn update')
