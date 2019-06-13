@@ -352,8 +352,9 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
                 linked_folder = os.path.join(self.source_folder, 'link', 'folder')
                 self.output.info(">> linked-folder islink: {{}}".format(os.path.islink(linked_folder)))
                 self.output.info(">> linked-folder exists: {{}}".format(os.path.exists(linked_folder)))
-                folder_file = os.path.join(linked_folder, 'file.txt')
-                self.output.info(">> linked-folder content: {{}}".format(tools.load(folder_file)))
+                if self.scm["type"] != "git":
+                    folder_file = os.path.join(linked_folder, 'file.txt')
+                    self.output.info(">> linked-folder content: {{}}".format(tools.load(folder_file)))
         """)
 
     def _run_actual_testing(self, t, use_optimization, repo_type):
@@ -373,9 +374,13 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
         self.assertIn("symrepo/0.1@user/channel: >> linked-file content: file content", t.out)
 
         # Check linked folder
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder islink: True", t.out)
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder exists: True", t.out)
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder content: folder content", t.out)
+        linked_folder_exists = "True" if repo_type == "svn" else "False"
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder"
+                      " islink: {}".format(linked_folder_exists), t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder"
+                      " exists: {}".format(linked_folder_exists), t.out)
+        if repo_type == "svn":
+            self.assertIn("symrepo/0.1@user/channel: >> linked-folder content: folder content", t.out)
 
     @parameterized.expand([(False,), (True,)])
     def test_git_symlink_outside(self, use_optimization):
@@ -449,57 +454,10 @@ class SymlinkWithSCM(SVNLocalRepoTestCase):
 
         self._run_actual_testing(t, use_optimization, repo_type="git")
 
-
-class SymlinkWithSVN(SVNLocalRepoTestCase):
-    conanfile = textwrap.dedent("""
-        import os
-        from conans import ConanFile, tools
-
-        class SymlinkRepo(ConanFile):
-            name = "symrepo"
-            version = "0.1"
-            scm = {"type": "svn", "revision": "auto", "url": "auto"}
-
-            def source(self):
-                # Linked file
-                linked_file = os.path.join(self.source_folder, 'link', 'file.txt')
-                self.output.info(">> linked-file islink: {}".format(os.path.islink(linked_file)))
-                self.output.info(">> linked-file exists: {}".format(os.path.exists(linked_file)))
-                self.output.info(">> linked-file content: {}".format(tools.load(linked_file)))
-
-                # Linked folder
-                linked_folder = os.path.join(self.source_folder, 'link', 'folder')
-                self.output.info(">> linked-folder islink: {}".format(os.path.islink(linked_folder)))
-                self.output.info(">> linked-folder exists: {}".format(os.path.exists(linked_folder)))
-                folder_file = os.path.join(linked_folder, 'file.txt')
-                self.output.info(">> linked-folder content: {}".format(tools.load(folder_file)))
-        """)
-
-    def _run_actual_testing(self, t, use_optimization):
-        if use_optimization:
-            # Just create
-            t.run("create . user/channel")
-            self.assertIn("symrepo/0.1@user/channel: Getting sources from folder:", t.out)
-        else:
-            # Export and compile
-            t.run("export . user/channel")
-            t.run("install symrepo/0.1@user/channel --build=symrepo")
-            self.assertIn("symrepo/0.1@user/channel: Getting sources from url:", t.out)
-
-        # Check linked file
-        self.assertIn("symrepo/0.1@user/channel: >> linked-file islink: True", t.out)
-        self.assertIn("symrepo/0.1@user/channel: >> linked-file exists: True", t.out)
-        self.assertIn("symrepo/0.1@user/channel: >> linked-file content: file content", t.out)
-
-        # Check linked folder
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder islink: True", t.out)
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder exists: True", t.out)
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder content: folder content", t.out)
-
-
     @parameterized.expand([(False,), (True,)])
-    def test_symlink_inside(self, use_optimization):
-        url, _ = self.create_project(files={'conanfile.py': self.conanfile,
+    def test_svn_symlink_inside(self, use_optimization):
+        conanfile = self.conanfile.format("svn")
+        url, _ = self.create_project(files={'conanfile.py': conanfile,
                                             'file.txt': "file content",
                                             'folder/file.txt': "folder content"})
         t = TestClient()
@@ -522,15 +480,16 @@ class SymlinkWithSVN(SVNLocalRepoTestCase):
         t.run_command('svn commit -m "add link to externals"')
         t.run_command('svn update')
 
-        self._run_actual_testing(t, use_optimization)
+        self._run_actual_testing(t, use_optimization, repo_type="svn")
 
     @parameterized.expand([(False,), (True,)])
-    def test_symlink_outside(self, use_optimization):
+    def test_svn_symlink_outside(self, use_optimization):
+        conanfile = self.conanfile.format("svn")
         base_folder = temp_folder(path_with_spaces=False)
         save_files(base_folder, {'file.txt': "file content",
                                  'folder/file.txt': "folder content"})
 
-        url, _ = self.create_project(files={'conanfile.py': self.conanfile})
+        url, _ = self.create_project(files={'conanfile.py': conanfile})
         t = TestClient()
         t.run_command('svn co "{}" .'.format(url))
 
@@ -551,4 +510,4 @@ class SymlinkWithSVN(SVNLocalRepoTestCase):
         t.run_command('svn commit -m "add link to externals"')
         t.run_command('svn update')
 
-        self._run_actual_testing(t, use_optimization)
+        self._run_actual_testing(t, use_optimization, repo_type="svn")
