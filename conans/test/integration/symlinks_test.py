@@ -3,9 +3,14 @@ import platform
 import textwrap
 import unittest
 
+from parameterized.parameterized import parameterized
+
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, temp_folder, save_files
+from conans.test.utils.tools import TestServer, TurboTestClient, create_local_git_repo
 from conans.util.files import load, mkdir, save
+from conans.test.utils.tools import SVNLocalRepoTestCase
 
 conanfile = """
 from conans import ConanFile
@@ -323,3 +328,227 @@ class SymlinkExportSources(unittest.TestCase):
         self.assertTrue(os.path.exists(cache_content))
         self.assertEqual(os.path.realpath(cache_content),
                          os.path.join(layout.source(), relpath_v1, 'headers', 'content'))
+
+
+@unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
+class SymlinkWithSCM(SVNLocalRepoTestCase):
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile, tools
+
+        class SymlinkRepo(ConanFile):
+            name = "symrepo"
+            version = "0.1"
+            scm = {{"type": "{}", "revision": "auto", "url": "auto"}}
+
+            def source(self):
+                # Linked file
+                linked_file = os.path.join(self.source_folder, 'link', 'file.txt')
+                self.output.info(">> linked-file islink: {{}}".format(os.path.islink(linked_file)))
+                self.output.info(">> linked-file exists: {{}}".format(os.path.exists(linked_file)))
+                self.output.info(">> linked-file content: {{}}".format(tools.load(linked_file)))
+
+                # Linked folder
+                linked_folder = os.path.join(self.source_folder, 'link', 'folder')
+                self.output.info(">> linked-folder islink: {{}}".format(os.path.islink(linked_folder)))
+                self.output.info(">> linked-folder exists: {{}}".format(os.path.exists(linked_folder)))
+                folder_file = os.path.join(linked_folder, 'file.txt')
+                self.output.info(">> linked-folder content: {{}}".format(tools.load(folder_file)))
+        """)
+
+    def _run_actual_testing(self, t, use_optimization, repo_type):
+        if use_optimization:
+            # Just create
+            t.run("create . user/channel")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from folder:", t.out)
+        else:
+            # Export and compile
+            t.run("export . user/channel")
+            t.run("install symrepo/0.1@user/channel --build=symrepo")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from url:", t.out)
+
+        # Check linked file
+        self.assertIn("symrepo/0.1@user/channel: >> linked-file islink: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-file exists: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-file content: file content", t.out)
+
+        # Check linked folder
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder islink: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder exists: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder content: folder content", t.out)
+
+    @parameterized.expand([(False,), (True,)])
+    def test_git_symlink_outside(self, use_optimization):
+        base_folder = temp_folder(path_with_spaces=False)
+        save_files(base_folder, {'file.txt': "file content",
+                                 'folder/file.txt': "folder content"})
+
+        conanfile = self.conanfile.format("git")
+
+        url, _ = create_local_git_repo(files={'conanfile.py': conanfile})
+        t = TestClient()
+        t.run_command('git clone "{}" .'.format(url))
+
+        # Add external symlinks to the repo
+        os.mkdir(os.path.join(t.current_folder, 'link'))
+        os.symlink(os.path.join(base_folder, 'file.txt'),
+                   os.path.join(t.current_folder, 'link', 'file.txt'))
+        os.symlink(os.path.join(base_folder, 'folder'),
+                   os.path.join(t.current_folder, 'link', 'folder'))
+        t.run_command('git add link/file.txt')  # Linked files can be added to the repo
+        t.run_command('git add link/folder/file.txt')  # Linked folder fails
+        self.assertIn('fatal:', t.out)
+
+        t.run_command('git commit -m "add link to externals"')
+        t.run_command('git push')
+
+        if use_optimization:
+            # Just create
+            t.run("create . user/channel")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from folder:", t.out)
+        else:
+            # Export and compile
+            t.run("export . user/channel")
+            t.run("install symrepo/0.1@user/channel --build=symrepo")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from url:", t.out)
+
+        self._run_actual_testing(t, use_optimization, repo_type="git")
+
+    @parameterized.expand([(False,), (True,)])
+    def test_git_symlink_inside(self, use_optimization):
+        conanfile = self.conanfile.format("git")
+
+        url, _ = create_local_git_repo(files={'conanfile.py': conanfile,
+                                              'file.txt': "file content",
+                                              'folder/file.txt': "folder content"})
+        t = TestClient()
+        t.run_command('git clone "{}" .'.format(url))
+
+        # Add symlinks inside the repo
+        os.mkdir(os.path.join(t.current_folder, 'link'))
+        os.symlink(os.path.join(t.current_folder, 'file.txt'),
+                   os.path.join(t.current_folder, 'link', 'file.txt'))
+        os.symlink(os.path.join(t.current_folder, 'folder'),
+                   os.path.join(t.current_folder, 'link', 'folder'))
+        t.run_command('git add link/file.txt')  # Linked files can be added to the repo
+        t.run_command('git add link/folder/file.txt')  # Linked folder fails
+        self.assertIn('fatal:', t.out)
+
+        t.run_command('git commit -m "add link to externals"')
+        t.run_command('git push')
+
+        if use_optimization:
+            # Just create
+            t.run("create . user/channel")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from folder:", t.out)
+        else:
+            # Export and compile
+            t.run("export . user/channel")
+            t.run("install symrepo/0.1@user/channel --build=symrepo")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from url:", t.out)
+
+        self._run_actual_testing(t, use_optimization, repo_type="git")
+
+
+class SymlinkWithSVN(SVNLocalRepoTestCase):
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile, tools
+
+        class SymlinkRepo(ConanFile):
+            name = "symrepo"
+            version = "0.1"
+            scm = {"type": "svn", "revision": "auto", "url": "auto"}
+
+            def source(self):
+                # Linked file
+                linked_file = os.path.join(self.source_folder, 'link', 'file.txt')
+                self.output.info(">> linked-file islink: {}".format(os.path.islink(linked_file)))
+                self.output.info(">> linked-file exists: {}".format(os.path.exists(linked_file)))
+                self.output.info(">> linked-file content: {}".format(tools.load(linked_file)))
+
+                # Linked folder
+                linked_folder = os.path.join(self.source_folder, 'link', 'folder')
+                self.output.info(">> linked-folder islink: {}".format(os.path.islink(linked_folder)))
+                self.output.info(">> linked-folder exists: {}".format(os.path.exists(linked_folder)))
+                folder_file = os.path.join(linked_folder, 'file.txt')
+                self.output.info(">> linked-folder content: {}".format(tools.load(folder_file)))
+        """)
+
+    def _run_actual_testing(self, t, use_optimization):
+        if use_optimization:
+            # Just create
+            t.run("create . user/channel")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from folder:", t.out)
+        else:
+            # Export and compile
+            t.run("export . user/channel")
+            t.run("install symrepo/0.1@user/channel --build=symrepo")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from url:", t.out)
+
+        # Check linked file
+        self.assertIn("symrepo/0.1@user/channel: >> linked-file islink: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-file exists: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-file content: file content", t.out)
+
+        # Check linked folder
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder islink: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder exists: True", t.out)
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder content: folder content", t.out)
+
+
+    @parameterized.expand([(False,), (True,)])
+    def test_symlink_inside(self, use_optimization):
+        url, _ = self.create_project(files={'conanfile.py': self.conanfile,
+                                            'file.txt': "file content",
+                                            'folder/file.txt': "folder content"})
+        t = TestClient()
+        t.run_command('svn co "{}" .'.format(url))
+
+        # Add internal symlinks
+        os.mkdir(os.path.join(t.current_folder, 'link'))
+        os.symlink(os.path.join(t.current_folder, 'file.txt'),
+                   os.path.join(t.current_folder, 'link', 'file.txt'))
+        os.symlink(os.path.join(t.current_folder, 'folder'),
+                   os.path.join(t.current_folder, 'link', 'folder'))
+        t.run_command('svn add link')
+        t.run_command('svn add link/file.txt')
+        t.run_command('svn add link/folder')
+        try:
+            t.run_command('svn add link/folder/file.txt')  # File inside symlinked folder fails
+        except AssertionError as e:
+            self.assertIn("svn: E145001: Can't schedule an addition:", str(e))
+
+        t.run_command('svn commit -m "add link to externals"')
+        t.run_command('svn update')
+
+        self._run_actual_testing(t, use_optimization)
+
+    @parameterized.expand([(False,), (True,)])
+    def test_symlink_outside(self, use_optimization):
+        base_folder = temp_folder(path_with_spaces=False)
+        save_files(base_folder, {'file.txt': "file content",
+                                 'folder/file.txt': "folder content"})
+
+        url, _ = self.create_project(files={'conanfile.py': self.conanfile})
+        t = TestClient()
+        t.run_command('svn co "{}" .'.format(url))
+
+        # Add external symlinks to the repo
+        os.mkdir(os.path.join(t.current_folder, 'link'))
+        os.symlink(os.path.join(base_folder, 'file.txt'),
+                   os.path.join(t.current_folder, 'link', 'file.txt'))
+        os.symlink(os.path.join(base_folder, 'folder'),
+                   os.path.join(t.current_folder, 'link', 'folder'))
+        t.run_command('svn add link')
+        t.run_command('svn add link/file.txt')
+        t.run_command('svn add link/folder')
+        try:
+            t.run_command('svn add link/folder/file.txt')  # File inside symlinked folder fails
+        except AssertionError as e:
+            self.assertIn("svn: E145001: Can't schedule an addition:", str(e))
+
+        t.run_command('svn commit -m "add link to externals"')
+        t.run_command('svn update')
+
+        self._run_actual_testing(t, use_optimization)
