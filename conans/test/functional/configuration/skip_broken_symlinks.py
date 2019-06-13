@@ -107,21 +107,25 @@ class BrokenLinksSCM(SVNLocalRepoTestCase):
                 self.output.info(">> linked-folder exists: {{}}".format(os.path.exists(linked_folder)))
         """)
 
-    def _run_actual_testing(self, t, use_optimization):
+    def _run_actual_testing(self, t, use_optimization, repo_type):
         if use_optimization:
             # Just create
             t.run("create . user/channel")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from folder:", t.out)
         else:
             # Export and compile
             t.run("export . user/channel")
             t.run("install symrepo/0.1@user/channel --build=symrepo")
+            self.assertIn("symrepo/0.1@user/channel: Getting sources from url:", t.out)
 
         # Link to file
         self.assertIn("symrepo/0.1@user/channel: >> linked-file islink: True", t.out)
         self.assertIn("symrepo/0.1@user/channel: >> linked-file exists: False", t.out)
 
         # Link to folder
-        self.assertIn("symrepo/0.1@user/channel: >> linked-folder islink: False", t.out)
+        linked_folder_exists = "True" if repo_type == "svn" else "False"
+        self.assertIn("symrepo/0.1@user/channel: >> linked-folder"
+                      " islink: {}".format(linked_folder_exists), t.out)
         self.assertIn("symrepo/0.1@user/channel: >> linked-folder exists: False", t.out)
 
     @parameterized.expand([(False,), (True,)])
@@ -140,7 +144,7 @@ class BrokenLinksSCM(SVNLocalRepoTestCase):
         t.run_command('git commit -m "add link to externals"')
         t.run_command('git push')
 
-        self._run_actual_testing(t, use_optimization)
+        self._run_actual_testing(t, use_optimization, repo_type="git")
 
     @parameterized.expand([(False,), (True,)])
     def test_svn(self, use_optimization):
@@ -160,5 +164,5 @@ class BrokenLinksSCM(SVNLocalRepoTestCase):
         t.run_command('svn commit -m "add link to externals"')
         t.run_command('svn update')
 
-        self._run_actual_testing(t, use_optimization)
+        self._run_actual_testing(t, use_optimization, repo_type="svn")
 
