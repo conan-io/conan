@@ -55,14 +55,19 @@ def merge_directories(src, dst, excluded=None):
 
     def link_to_rel(pointer_src):
         linkto = os.readlink(pointer_src)
-        relpath = os.path.relpath(os.path.realpath(linkto), os.path.realpath(src))
-        # See if outside of the folder
-        if not relpath.startswith("."):
-            # Absolute links could be a problem, convert to relative
-            if os.path.isabs(linkto):
-                linkto = os.path.normpath(os.path.relpath(linkto, pointer_src))
-            pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
-            os.symlink(linkto, pointer_dst)
+        if not os.path.isabs(linkto):
+            linkto = os.path.join(os.path.dirname(pointer_src), linkto)
+
+        # Check if it is outside the sources
+        out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
+        if out_of_source:
+            # May warn about out of sources symlink
+            return
+
+        # Create the symlink
+        linkto_rel = os.path.relpath(linkto, os.path.dirname(pointer_src))
+        pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
+        os.symlink(linkto_rel, pointer_dst)
 
     for src_dir, dirs, files in walk(src, followlinks=True):
         if is_excluded(src_dir):
