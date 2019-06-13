@@ -53,23 +53,24 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             return True
         return False
 
-    for src_dir, dirs, files in walk(src, followlinks=True):
+    def link_to_rel(pointer_src):
+        linkto = os.readlink(pointer_src)
+        relpath = os.path.relpath(os.path.realpath(linkto), os.path.realpath(src))
+        # See if outside of the folder
+        if not relpath.startswith("."):
+            # Absolute links could be a problem, convert to relative
+            if os.path.isabs(linkto):
+                linkto = os.path.normpath(os.path.relpath(linkto, pointer_src))
+            pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
+            os.symlink(linkto, pointer_dst)
 
+    for src_dir, dirs, files in walk(src, followlinks=True):
         if is_excluded(src_dir):
             dirs[:] = []
             continue
 
-        if os.path.islink(src_dir):
-            linkto = os.readlink(src_dir)
-            # See if outside of the folder
-            relpath = os.path.relpath(os.path.realpath(src_dir),
-                                      os.path.realpath(src))
-            if not relpath.startswith("."):
-                # Absolute links could be a problem, convert to relative
-                if os.path.isabs(linkto):
-                    linkto = os.path.normpath(os.path.relpath(linkto, src_dir))
-                dst_dir = os.path.normpath(os.path.join(dst, os.path.relpath(src_dir, src)))
-                os.symlink(linkto, dst_dir)
+        if os.path.islink(src_dir) and symlinks:
+            link_to_rel(src_dir)
             dirs[:] = []  # Do not enter subdirectories
             continue
 
@@ -83,8 +84,7 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             src_file = os.path.join(src_dir, file_)
             dst_file = os.path.join(dst_dir, file_)
             if os.path.islink(src_file) and symlinks:
-                linkto = os.readlink(src_file)
-                os.symlink(linkto, dst_file)
+                link_to_rel(src_file)
             else:
                 shutil.copy2(src_file, dst_file)
 
