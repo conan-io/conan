@@ -72,14 +72,6 @@ endif()
 def find_dependency_lines(name, cpp_info, find_modules):
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep in cpp_info.public_deps:
-        def property_lines(prop):
-            lib_t = "%s::%s" % (name, name)
-            dep_t = "%s::%s" % (dep, dep)
-            return ["get_target_property(tmp %s %s)" % (dep_t, prop),
-                    "if(tmp)",
-                    "  set_property(TARGET %s APPEND PROPERTY %s ${tmp})" % (lib_t, prop),
-                    'endif()']
-
         if find_modules:
             lines.append("find_dependency(%s REQUIRED)" % dep)
         else:
@@ -91,7 +83,7 @@ def find_dependency_lines(name, cpp_info, find_modules):
             lines.append('  find_dependency(%s REQUIRED NO_MODULE)' % dep)
             lines.append("endif()")
 
-        lines.extend(property_lines("INTERFACE_LINK_LIBRARIES"))
-        lines.extend(property_lines("INTERFACE_COMPILE_DEFINITIONS"))
-        lines.extend(property_lines("INTERFACE_INCLUDE_DIRECTORIES"))
+        lines.append(
+            'set_property(TARGET %s::%s APPEND PROPERTY INTERFACE_LINK_LIBRARIES %s::%s)'
+            % (name, name, dep, dep))
     return ["    {}".format(l) for l in lines]
