@@ -567,8 +567,12 @@ class ConanAPIV1(object):
     @api_method
     def config_get(self, item):
         config_parser = ConanClientConfigParser(self._cache.conan_conf_path)
-        self._user_io.out.info(config_parser.get_item(item))
-        return config_parser.get_item(item)
+        if item == "storage.path":
+            result = config_parser.storage_path
+        else:
+            result = config_parser.get_item(item)
+        self._user_io.out.info(result)
+        return result
 
     @api_method
     def config_set(self, item, value):
