@@ -364,10 +364,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
-    def storage(self):
-        return dict(self.get_conf("storage"))
-
-    @property
     def request_timeout(self):
         timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
         if not timeout:
@@ -416,7 +412,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 current_dir = os.path.dirname(self.filename)
                 # if env var is declared, any specified path will be relative to CONAN_USER_HOME
                 # even with the ~/
-                result = self.storage["path"]
+                result = dict(self.get_conf("storage"))["path"]
                 if result.startswith("."):
                     result = os.path.abspath(os.path.join(current_dir, result))
                 elif result[:2] == "~/":
