@@ -74,7 +74,7 @@ class _CppInfo(object):
             return self._exes
 
     @exes.setter
-    def libs(self, libs):
+    def exes(self, exes):
         if self._deps:
             raise ConanException("Setting first level exes is not supported when Components are "
                                  "already in use")
