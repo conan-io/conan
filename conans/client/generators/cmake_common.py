@@ -357,8 +357,8 @@ function(check_compiler_version)
         if(
             # 1920-1929 = VS 16.0 (v142 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "16" AND NOT((MSVC_VERSION GREATER 1919) AND (MSVC_VERSION LESS 1930))) OR
-            # 1910-1919 = VS 15.0 (v141 toolset)
-            (CONAN_COMPILER_VERSION STREQUAL "15" AND NOT((MSVC_VERSION GREATER 1909) AND (MSVC_VERSION LESS 1920))) OR
+            # 1910-1919 = VS 15.0 (v140 and v141 toolsets)
+            (CONAN_COMPILER_VERSION STREQUAL "15" AND NOT((MSVC_VERSION GREATER_EQUAL  1900) AND (MSVC_VERSION LESS 1920))) OR
             # 1900      = VS 14.0 (v140 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "14" AND NOT(MSVC_VERSION EQUAL 1900)) OR
             # 1800      = VS 12.0 (v120 toolset)

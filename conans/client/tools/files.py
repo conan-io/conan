@@ -208,7 +208,9 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         return path
 
     def strip_path(path):
-        tokens = path.split("/")[strip:]
+        tokens = path.split("/")
+        if len(tokens) > 1:
+            tokens = tokens[strip:]
         path = "/".join(tokens)
         if base_path:
             path = os.path.join(base_path, path)
