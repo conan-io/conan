@@ -32,12 +32,14 @@ class GraphBinariesAnalyzer(object):
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
-        assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
+
+        if node.package_id == PACKAGE_ID_UNKNOWN:
+            node.binary = BINARY_MISSING
+            return
 
         ref, conanfile = node.ref, node.conanfile
         pref = PackageReference(ref, node.package_id)
-        output = conanfile.output
 
         # Check that this same reference hasn't already been checked
         previous_nodes = evaluated_nodes.get(pref)
@@ -49,6 +51,8 @@ class GraphBinariesAnalyzer(object):
             node.prev = previous_node.prev
             return
         evaluated_nodes[pref] = [node]
+
+        output = conanfile.output
 
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE
@@ -169,23 +173,22 @@ class GraphBinariesAnalyzer(object):
     def _compute_package_id(node, default_package_id_mode):
         conanfile = node.conanfile
         neighbors = node.neighbors()
-        direct_reqs = []  # of Nodes
-        indirect_reqs = {}   # of {pref: Nodes}, avoid duplicates
+        direct_reqs = []  # of PackageReference
+        indirect_reqs = set()   # of PackageReference, avoid duplicates
         for neighbor in neighbors:
             ref, nconan = neighbor.ref, neighbor.conanfile
-            direct_reqs.append((neighbor.pref, neighbor))
-            indirect_reqs.update(nconan.info.requires.nodes())
+            direct_reqs.append(neighbor.pref)
+            indirect_reqs.update(nconan.info.requires.refs())
             conanfile.options.propagate_downstream(ref, nconan.info.full_options)
             # Might be never used, but update original requirement, just in case
             conanfile.requires[ref.name].ref = ref
 
         # Make sure not duplicated
-        direct_refs = [pref for pref, _ in direct_reqs]
-        indirect_reqs = {k: v for k, v in indirect_reqs.items() if k not in direct_refs}
+        indirect_reqs.difference_update(direct_reqs)
         # There might be options that are not upstream, backup them, might be
         # for build-requires
         conanfile.build_requires_options = conanfile.options.values
-        conanfile.options.clear_unused([pref for (pref, _) in direct_reqs] + list(indirect_reqs.keys()))
+        conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
         conanfile.options.freeze()
 
         conanfile.info = ConanInfo.create(conanfile.settings.values,
@@ -219,11 +222,6 @@ class GraphBinariesAnalyzer(object):
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                continue
-            if node.package_id == PACKAGE_ID_UNKNOWN:
-                assert node.binary is None
-                node.update = update
-                node.build_mode = build_mode
                 continue
             self._evaluate_node(node, build_mode, update, evaluated, remotes)
             self._handle_private(node)

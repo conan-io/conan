@@ -15,7 +15,6 @@ from conans.model.graph_info import GraphInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from conans.model.info import PACKAGE_ID_UNKNOWN
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -186,9 +185,8 @@ class GraphManager(object):
             # FIXME: To be improved and build a explicit model for this
             if node.recipe == RECIPE_VIRTUAL:
                 continue
-            # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE)
-                    and node.recipe != RECIPE_CONSUMER and node.package_id != PACKAGE_ID_UNKNOWN):
+                    and node.recipe != RECIPE_CONSUMER):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.ref)
