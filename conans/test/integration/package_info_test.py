@@ -31,8 +31,8 @@ class HelloConan(ConanFile):
             self.env_info.MYVAR = "foo"
         else:
             self.env_info.MYVAR = "bar"
-
 '''
+
         for index in range(4):
             requires = "requires = 'Lib%s/1.0@conan/stable'" % index if index > 0 else ""
             conanfile = conanfile_tmp % ("Lib%s" % (index + 1), requires)
@@ -65,10 +65,11 @@ class HelloConan(ConanFile):
                 self.cpp_info.name = "Boost"
                 self.cpp_info["Accumulators"].includedirs = [os.path.join("boost", "accumulators")]
                 self.cpp_info["Accumulators"].lib = "libaccumulators"
-                self.cpp_info["Containers"].includedirs = ["boost/containers"]
+                self.cpp_info["Containers"].includedirs = [os.path.join("boost", "containers")]
                 self.cpp_info["Containers"].lib = "libcontainers"
                 self.cpp_info["Containers"].deps = ["Accumulators"]
-                self.cpp_info["SuperContainers"].includedirs = ["boost/supercontainers"]
+                self.cpp_info["SuperContainers"].includedirs = [os.path.join("boost",
+                                                                             "supercontainers")]
                 self.cpp_info["SuperContainers"].lib = "libsupercontainers"
                 self.cpp_info["SuperContainers"].deps = ["Containers"]
         """)
@@ -87,8 +88,6 @@ class HelloConan(ConanFile):
                 self.output.info("Containers: %s" % con_include)
                 self.output.info("SuperContainers: %s" % sup_include)
                 self.output.info("LIBS: %s" % self.deps_cpp_info["dep"].libs)
-                print("INCLUDE_PATHS: %s" % self.deps_cpp_info["dep"].include_paths)
-                print("INCLUDE_PATHS: %s" % self.deps_cpp_info.include_paths)
         """)
 
         client = TestClient()
@@ -99,16 +98,14 @@ class HelloConan(ConanFile):
                      "boost/supercontainers/supercontainers.h": ""})
         dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
         dep_pref = PackageReference(dep_ref, NO_SETTINGS_PACKAGE_ID)
-        print("package_folder1: ", client.cache.package_layout(dep_ref).package(dep_pref))
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
         package_folder = client.cache.package_layout(dep_ref).package(dep_pref)
-        accumulators_expected = os.path.join(package_folder, "boost", "accumulators")
-        print("package_folder2: ", client.cache.package_layout(dep_ref).package(dep_pref))
+        accumulators_expected = [os.path.join(package_folder, "boost", "accumulators")]
+        containers_expected = [os.path.join(package_folder, "boost", "containers")]
+        supercontainers_expected = [os.path.join(package_folder, "boost", "supercontainers")]
         self.assertIn("Name: Boost", client.out)
-        print("EXPECTED: ", "Accumulators: ['%s']" % accumulators_expected)
-        print("RESULT: ", client.out)
         self.assertIn("LIBS: ['libaccumulators', 'libcontainers', 'libsupercontainers']", client.out)
-        #FIXME: self.assertIn("Accumulators: ['%s']" % accumulators_expected, client.out)
-        #FIXME: self.assertIn("Containers: ['boost', 'boost/containers']", client.out)
-        #FIXME: self.assertIn("SuperContainers: ['boost', 'boost/supercontainers']", client.out)
+        self.assertIn("Accumulators: %s" % accumulators_expected, client.out)
+        self.assertIn("Containers: %s" % containers_expected, client.out)
+        self.assertIn("SuperContainers: %s" % supercontainers_expected, client.out)
