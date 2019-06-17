@@ -25,7 +25,7 @@ INSTALL_ERROR_BUILDING = "building"
 def _cpp_info_to_dict(cpp_info):
     doc = {}
     for it, value in vars(cpp_info).items():
-        if it.startswith("_") or not value:
+        if (it.startswith("_") and it != "_libs") or not value:
             continue
 
         if it == "configs":
@@ -35,7 +35,8 @@ def _cpp_info_to_dict(cpp_info):
             doc["configs"] = configs_data
             continue
 
-        doc[it] = value
+        key = "libs" if it == "_libs" else it
+        doc[key] = value
     return doc
 
 

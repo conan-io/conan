@@ -54,9 +54,8 @@ class _CppInfo(object):
         if self._deps:
             deps = [v for v in self._deps.values()]
             deps_sorted = sorted(deps, key=lambda component: len(component.deps))
-            return [dep.lib for dep in deps_sorted if dep.lib is not None]
-        else:
-            return self._libs
+            self._libs = [dep.lib for dep in deps_sorted if dep.lib is not None]
+        return self._libs
 
     @libs.setter
     def libs(self, libs):
