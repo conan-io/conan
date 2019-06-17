@@ -1,4 +1,5 @@
 import os
+import six
 import unittest
 from collections import defaultdict, namedtuple
 
@@ -182,12 +183,12 @@ VAR2=23
         self.assertIn(component.name, "my_component")
         component.lib = "libhola"
         self.assertEqual(component.lib, "libhola")
-        with self.assertRaisesRegexp(ConanException, "'.lib' is already set for this Component"):
+        with six.assertRaisesRegex(self, ConanException, "'.lib' is already set for this Component"):
             component.exe = "hola.exe"
         component.lib = None
         component.exe = "hola.exe"
         self.assertEqual(component.lib, None)
-        with self.assertRaisesRegexp(ConanException, "'.exe' is already set for this Component"):
+        with six.assertRaisesRegex(self, ConanException, "'.exe' is already set for this Component"):
             component.lib = "libhola"
 
     def cpp_info_libs_components_fail_test(self):
@@ -198,14 +199,14 @@ VAR2=23
         info.name = "Greetings"
         self.assertIn(info.name, "Greetings")
         info.libs = ["libgreet"]
-        with self.assertRaisesRegexp(ConanException, "Usage of Components with '.libs' or '.exes' "
-                                                     "values is not allowed"):
+        with six.assertRaisesRegex(self, ConanException, "Usage of Components with '.libs' or "
+                                                         "'.exes' values is not allowed"):
             info["hola"].exe = "hola.exe"
 
         info.libs = []
         info["greet"].exe = "libgreet"
-        with self.assertRaisesRegexp(ConanException, "Setting first level libs is not supported "
-                                                     "when Components are already in use"):
+        with six.assertRaisesRegex(self, ConanException, "Setting first level libs is not supported "
+                                                         "when Components are already in use"):
             info.libs = ["libgreet"]
 
     def cpp_info_libs_system_deps_order_test(self):
