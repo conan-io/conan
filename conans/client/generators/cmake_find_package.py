@@ -84,6 +84,6 @@ def find_dependency_lines(name, cpp_info, find_modules):
             lines.append("endif()")
 
         lines.append(
-            'set_property(TARGET %s::%s APPEND PROPERTY INTERFACE_LINK_LIBRARIES %s::%s)'
+            'target_link_libraries(%s::%s INTERFACE %s::%s)'
             % (name, name, dep, dep))
     return ["    {}".format(l) for l in lines]
