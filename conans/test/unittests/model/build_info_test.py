@@ -208,10 +208,11 @@ VAR2=23
                                                          "when Components are already in use"):
             info.libs = ["libgreet"]
 
-    def cpp_info_system_test(self):
+    def cpp_info_system_deps_test(self):
         """
         System deps are composed in '.libs' attribute even if there are no '.lib' in the component.
-        Also make sure None values are discarded
+        Also make sure None values are discarded.
+        Same for '.system_deps' making sure that mixing Components and global use is not supported.
         """
         info = CppInfo(None)
         info["LIB1"].system_deps = ["sys1", "sys11"]
@@ -222,6 +223,12 @@ VAR2=23
         self.assertEqual(['sys2', 'sys3', 'sys1', 'sys11'], info.libs)
         info["LIB3"].system_deps = [None, "sys2"]
         self.assertEqual(['sys2', 'sys1', 'sys11'], info.libs)
+
+        with six.assertRaisesRegex(self, ConanException, "Setting first level system_deps is not "
+                                                         "supported when Components are already in "
+                                                         "use"):
+            info.system_deps = ["random_system"]
+        self.assertEqual(['sys2', 'sys1', 'sys11'], info.system_deps)
 
     def cpp_info_libs_system_deps_order_test(self):
         """
@@ -237,6 +244,7 @@ VAR2=23
         info["LIB3"].lib = "lib3"
         info["LIB3"].system_deps = ["sys3", "sys2"]
         self.assertEqual(['sys2', 'lib2', 'sys3', 'lib3', 'sys1', 'sys11', 'lib1'], info.libs)
+        self.assertEqual(['sys2', 'sys3', 'sys1', 'sys11'], info.system_deps)
 
     def cppinfo_dirs_test(self):
         folder = temp_folder()

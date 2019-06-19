@@ -20,7 +20,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.name = None
-        self.system_deps = []
+        self._system_deps = []
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
@@ -78,6 +78,28 @@ class _CppInfo(object):
             raise ConanException("Setting first level exes is not supported when Components are "
                                  "already in use")
         self._exes = exes
+
+    @property
+    def system_deps(self):
+        if self._deps:
+            deps = [v for v in self._deps.values()]
+            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
+            result = []
+            for dep in deps_sorted:
+                if dep.system_deps:
+                    for system_dep in dep.system_deps:
+                        if system_dep and system_dep not in result:
+                            result.append(system_dep)
+            return result
+        else:
+            return self._system_deps
+
+    @system_deps.setter
+    def system_deps(self, system_deps):
+        if self._deps:
+            raise ConanException("Setting first level system_deps is not supported when Components "
+                                 "are already in use")
+        self._system_deps = system_deps
 
     def __getitem__(self, key):
         if self._libs:
