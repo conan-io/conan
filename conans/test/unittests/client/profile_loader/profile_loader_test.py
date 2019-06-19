@@ -325,8 +325,8 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
 '''
 
         def assert_path(profile):
-            pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
-            self.assertEqual(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+            pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"]
+            self.assertEqual(pythonpath, os.path.join(tmp, "my_python_tools").replace('\\', '/'))
 
         abs_profile_path = os.path.join(tmp, "Myprofile.txt")
         save(abs_profile_path, txt)
