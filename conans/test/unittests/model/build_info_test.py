@@ -276,3 +276,15 @@ VAR2=23
                          info["Crypto"].bindirs)
         self.assertEqual(["different_res", "another_res", "another_other_res"],
                          info["Crypto"].resdirs)
+
+    def cppinfo_exes_test(self):
+        info = CppInfo(None)
+        info.name = "OpenSSL"
+        info["Exe1"].exe = "the_exe1"
+        info["Exe2"].exe = "the_exe2"
+        self.assertEqual(["the_exe1", "the_exe2"], info.exes)
+
+        with six.assertRaisesRegex(self, ConanException, "Setting first level exes is not supported "
+                                                         "when Components are already in use"):
+            info.exes = ["another_exe"]
+
