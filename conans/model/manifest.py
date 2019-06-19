@@ -19,33 +19,54 @@ def discarded_file(filename):
             filename.startswith("__conan"))
 
 
-def gather_files(folder):
+def gather_files(folder, output):
     assert not os.path.islink(folder), "The folder ('{}') passed to 'gather_files'" \
                                        " cannot be a symlink".format(folder)
+
+    def warn_broken_symlink(pointer_src, linkto, do_raise):
+        if do_raise and not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
+            raise ConanException("The file is a broken symlink, verify that "
+                                 "you are packaging the needed destination files: '%s'. "
+                                 "You can skip this check adjusting the "
+                                 "'general.skip_broken_symlinks_check' at the conan.conf "
+                                 "file." % pointer_src)
+        elif output:
+            output.warn("Broken symlink: '{}' points to '{}' which doesn't exists,"
+                        " it will be skipped".format(pointer_src, linkto))
+
     file_dict = {}
     symlinks = {}
     for root, dirs, files in walk(folder, followlinks=False):
         dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
+
+        # Gather symlinked folders
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
-                rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-                symlinks[rel_path] = os.readlink(abs_path)
+                linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
+                linkto = os.path.normpath(linkto)
+                if os.path.exists(linkto):
+                    relpath = os.path.relpath(abs_path, folder)
+                    symlinks[relpath] = os.path.relpath(linkto, folder)
+                else:
+                    warn_broken_symlink(abs_path, linkto, do_raise=False)
+
+        # Gather files
         for f in files:
             if discarded_file(f):
                 continue
             abs_path = os.path.join(root, f)
-            rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-            if os.path.exists(abs_path):
-                file_dict[rel_path] = abs_path
+            relpath = os.path.relpath(abs_path, folder)
+
+            if os.path.islink(abs_path):
+                linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
+                linkto = os.path.normpath(linkto)
+                if os.path.exists(linkto):
+                    file_dict[relpath] = abs_path  # FIXME: Not to symlinks!
+                else:
+                    warn_broken_symlink(abs_path, linkto, do_raise=True)
             else:
-                if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
-                    raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'."
-                                         "You can skip this check adjusting the "
-                                         "'general.skip_broken_symlinks_check' at the conan.conf "
-                                         "file."
-                                         % abs_path)
+                file_dict[relpath] = abs_path
 
     return file_dict, symlinks
 
@@ -112,11 +133,11 @@ class FileTreeManifest(object):
         save(path, repr(self))
 
     @classmethod
-    def create(cls, folder, exports_sources_folder=None):
+    def create(cls, folder, exports_sources_folder=None, output=None):
         """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
-        files, _ = gather_files(folder)
+        files, _ = gather_files(folder, output=output)
         for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
             files.pop(f, None)
 
@@ -125,7 +146,7 @@ class FileTreeManifest(object):
             file_dict[name] = md5sum(filepath)
 
         if exports_sources_folder:
-            export_files, _ = gather_files(exports_sources_folder)
+            export_files, _ = gather_files(exports_sources_folder, output=output)
             for name, filepath in export_files.items():
                 file_dict["export_source/%s" % name] = md5sum(filepath)
 
