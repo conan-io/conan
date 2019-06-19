@@ -9,8 +9,6 @@ import sys
 import tarfile
 import tempfile
 
-from os.path import abspath, join as joinpath, realpath
-
 import six
 
 from conans.util.log import logger
@@ -293,19 +291,21 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     return t
 
 
-def tar_extract(fileobj, destination_dir):
+def tar_extract(fileobj, destination_dir, output):
     """Extract tar file controlling not absolute paths and fixing the routes
     if the tar was zipped in windows"""
     def badpath(path, base):
         # joinpath will ignore base if path is absolute
-        return not realpath(abspath(joinpath(base, path))).startswith(base)
+        return not os.path.realpath(os.path.abspath(os.path.join(base, path))).startswith(base)
 
     def safemembers(members):
-        base = realpath(abspath(destination_dir))
+        base = os.path.realpath(os.path.abspath(destination_dir))
 
         for finfo in members:
             if badpath(finfo.name, base) or finfo.islnk():
-                continue
+                if output:
+                    output.warn("File '{}' inside the tar is a symlink pointing outside the"
+                                " tar, it will be skipped".format(finfo.name))
             else:
                 # Fixes unzip a windows zipped file in linux
                 finfo.name = finfo.name.replace("\\", "/")

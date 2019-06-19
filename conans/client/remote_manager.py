@@ -283,7 +283,7 @@ def uncompress_file(src_path, dest_folder, output):
     try:
         with progress_bar.open_binary(src_path, desc="Decompressing %s" % os.path.basename(src_path),
                                       output=output) as file_handler:
-            tar_extract(file_handler, dest_folder)
+            tar_extract(file_handler, dest_folder, output=output)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
         # try to remove the files

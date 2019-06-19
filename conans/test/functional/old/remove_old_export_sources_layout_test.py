@@ -37,7 +37,7 @@ class MyPkg(ConanFile):
         self.assertTrue(os.path.exists(sources_tgz))
         folder = temp_folder()
         with open(sources_tgz, 'rb') as file_handler:
-            tar_extract(file_handler, folder)
+            tar_extract(file_handler, folder, output=None)
         self.assertEqual(os.listdir(folder), ["myfile.txt"])
         # Now install again
         client.run("install Pkg/0.1@lasote/testing --build=missing")

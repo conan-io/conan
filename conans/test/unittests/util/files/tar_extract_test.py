@@ -52,12 +52,12 @@ class TarExtractTest(unittest.TestCase):
             # Unpack and check
             destination_dir = os.path.join(self.tmp_folder, "dest")
             with open(self.tgz_file, 'rb') as file_handler:
-                tar_extract(file_handler, destination_dir)
+                tar_extract(file_handler, destination_dir, output=None)
             check_files(destination_dir)
 
             # Unpack and check (now we have a symlinked local folder)
             os.symlink(temp_folder(), "folder")
             destination_dir = os.path.join(self.tmp_folder, "dest2")
             with open(self.tgz_file, 'rb') as file_handler:
-                tar_extract(file_handler, destination_dir)
+                tar_extract(file_handler, destination_dir, output=None)
             check_files(destination_dir)
