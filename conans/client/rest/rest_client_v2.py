@@ -181,17 +181,11 @@ class RestV2Methods(RestCommonMethods):
             self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
-                response = uploader.upload(resource_url, files[filename], auth=self.auth,
-                                           dedup=self._checksum_deploy, retry=retry,
-                                           retry_wait=retry_wait,
-                                           headers=self._put_headers)
+                uploader.upload(resource_url, files[filename], auth=self.auth,
+                                dedup=self._checksum_deploy, retry=retry,
+                                retry_wait=retry_wait,
+                                headers=self._put_headers)
                 self._output.writeln("")
-                if not response.ok:
-                    self._output.error("\nError uploading file: %s, '%s'" % (filename,
-                                                                             response.content))
-                    failed.append(filename)
-                else:
-                    pass
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:

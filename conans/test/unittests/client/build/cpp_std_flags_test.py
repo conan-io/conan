@@ -159,6 +159,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(cppstd_flag("apple-clang", "9.1", "17"), "-std=c++17")
 
         self.assertEqual(cppstd_flag("apple-clang", "10.0", "17"), "-std=c++17")
+        self.assertEqual(cppstd_flag("apple-clang", "11.0", "17"), "-std=c++17")
 
     def test_apple_clang_cppstd_defaults(self):
         self.assertEqual(cppstd_default("apple-clang", "2"), "gnu98")
@@ -170,6 +171,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(cppstd_default("apple-clang", "8"), "gnu98")
         self.assertEqual(cppstd_default("apple-clang", "9"), "gnu98")
         self.assertEqual(cppstd_default("apple-clang", "10"), "gnu98")
+        self.assertEqual(cppstd_default("apple-clang", "11"), "gnu98")
 
     def test_visual_cppstd_flags(self):
         self.assertEqual(cppstd_flag("Visual Studio", "12", "11"), None)
