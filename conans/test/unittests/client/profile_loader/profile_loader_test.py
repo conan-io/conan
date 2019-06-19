@@ -307,8 +307,10 @@ one/1.5@lasote/stable
 
         profile, variables = read_profile("./profile4.txt", tmp, None)
 
-        self.assertEqual(variables, {"MYVAR": "1", "OTHERVAR": "34", "PROFILE_DIR":
-                                      tmp, "ROOTVAR": "0"})
+        self.assertEqual(variables, {"MYVAR": "1",
+                                     "OTHERVAR": "34",
+                                     "PROFILE_DIR": tmp.replace('\\', '/'),
+                                     "ROOTVAR": "0"})
         self.assertEqual("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
         self.assertEqual("1", profile.env_values.data["package1"]["ENVY"])
         self.assertEqual(profile.settings, {"os": "1"})
