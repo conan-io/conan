@@ -97,21 +97,28 @@ class _CppInfo(object):
     def _get_paths(self, path_name):
         """
         Get the absolute paths either composing the lists from components or from the global
-        variables. Also filter the values checking if the folders exist or not. This paths are
-        calculated once and then the result is cached.
+        variables. Also filter the values checking if the folders exist or not and avoid repeated
+        values. The paths are calculated once and then the result is cached.
         :param path_name: name of the path variable to get (include_paths, res_paths...)
         :return: List of absolute paths
         """
-        if getattr(self, "_%s_paths" % path_name) is None:
+        def get_paths_value():
+            return getattr(self, "_%s_paths" % path_name)
+
+        if get_paths_value() is None:
             if self._deps:
                 self.__dict__["_%s_paths" % path_name] = []
                 for dep_value in self._deps.values():
-                    self.__dict__["_%s_paths" % path_name].extend(
-                            self._filter_paths(getattr(dep_value, "%s_paths" % path_name)))
+                    abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
+                    if not get_paths_value():
+                        self.__dict__["_%s_paths" % path_name].extend(abs_paths)
+                    for path in abs_paths:
+                        if path not in get_paths_value():
+                            self.__dict__["_%s_paths" % path_name].append(path)
             else:
-                self.__dict__["_%s_paths" % path_name] = self._filter_paths(
-                        getattr(self, "%sdirs" % path_name))
-        return getattr(self, "_%s_paths" % path_name)
+                abs_paths = self._filter_paths(getattr(self, "%sdirs" % path_name))
+                self.__dict__["_%s_paths" % path_name] = abs_paths
+        return get_paths_value()
 
     @property
     def include_paths(self):
@@ -228,6 +235,10 @@ class CppInfo(_CppInfo):
             self._deps[key] = Component(key, self.rootpath)
         return self._deps[key]
 
+    @property
+    def deps(self):
+        return self._deps
+
     def __getattr__(self, config):
 
         def _get_cpp_info():
@@ -253,11 +264,11 @@ class Component(object):
         self._lib = None
         self._exe = None
         self.system_deps = []
-        self.includedirs = []
-        self.libdirs = []
-        self.resdirs = []
-        self.bindirs = []
-        self.builddirs = []
+        self.includedirs = [DEFAULT_INCLUDE]
+        self.libdirs = [DEFAULT_LIB]
+        self.resdirs = [DEFAULT_RES]
+        self.bindirs = [DEFAULT_BIN]
+        self.builddirs = [DEFAULT_BUILD]
         self.srcdirs = []
         self.defines = []
         self.cflags = []
@@ -336,7 +347,8 @@ class _BaseDepsCppInfo(_CppInfo):
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
         self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
-        self.libs = merge_lists(self.libs, dep_cpp_info._libs)
+        self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.exes = merge_lists(self.exes, dep_cpp_info.exes)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order

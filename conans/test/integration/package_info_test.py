@@ -132,3 +132,104 @@ class HelloConan(ConanFile):
         client.run("create . name/1.0@us/ch", assert_error=True)
         self.assertIn("Setting first level libs is not supported when Components are already in use",
                       client.out)
+
+    def package_info_components_complete_test(self):
+        dep = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+
+        class Dep(ConanFile):
+            exports_sources = "*"
+
+            def package(self):
+                self.copy("*")
+
+            def package_info(self):
+                self.cpp_info.name = "Galaxy"
+                self.cpp_info["Starlight"].includedirs = [os.path.join("galaxy", "starlight")]
+                self.cpp_info["Starlight"].lib = "libstarlight"
+
+                self.cpp_info["Planet"].includedirs = [os.path.join("galaxy", "planet")]
+                self.cpp_info["Planet"].lib = "libplanet"
+                self.cpp_info["Planet"].deps = ["Starlight"]
+
+                self.cpp_info["Launcher"].exe = "exelauncher"
+                self.cpp_info["Launcher"].system_deps = ["ground"]
+
+                self.cpp_info["ISS"].includedirs = [os.path.join("galaxy", "iss")]
+                self.cpp_info["ISS"].lib = "libiss"
+                self.cpp_info["ISS"].libdirs = ["iss_libs"]
+                self.cpp_info["ISS"].system_deps = ["solar", "magnetism"]
+                self.cpp_info["ISS"].deps = ["Starlight", "Launcher"]
+        """)
+        consumer = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Consumer(ConanFile):
+            requires = "dep/1.0@us/ch"
+
+            def build(self):
+                # Global values
+                self.output.info("GLOBAL Include Paths: %s" % self.deps_cpp_info.include_paths)
+                self.output.info("GLOBAL Library Paths: %s" % self.deps_cpp_info.lib_paths)
+                self.output.info("GLOBAL Binary Paths: %s" % self.deps_cpp_info.bin_paths)
+                self.output.info("GLOBAL Libs: %s" % self.deps_cpp_info.libs)
+                self.output.info("GLOBAL Exes: %s" % self.deps_cpp_info.exes)
+                # Deps values
+                for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                    self.output.info("DEPS Include paths: %s" % dep_value.include_paths)
+                    self.output.info("DEPS Library paths: %s" % dep_value.lib_paths)
+                    self.output.info("DEPS Binary paths: %s" % dep_value.bin_paths)
+                    self.output.info("DEPS Libs: %s" % dep_value.libs)
+                    self.output.info("DEPS Exes: %s" % dep_value.exes)
+                # Components values
+                for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                    for comp_name, comp_value in dep_value.deps.items():
+                        self.output.info("COMP %s Include paths: %s" % (comp_name,
+                        comp_value.include_paths))
+                        self.output.info("COMP %s Library paths: %s" % (comp_name, comp_value.lib_paths))
+                        self.output.info("COMP %s Binary paths: %s" % (comp_name, comp_value.bin_paths))
+                        self.output.info("COMP %s Lib: %s" % (comp_name, comp_value.lib))
+                        self.output.info("COMP %s Exe: %s" % (comp_name, comp_value.exe))
+                        self.output.info("COMP %s Deps: %s" % (comp_name, comp_value.deps))
+        """)
+
+        client = TestClient()
+        client.save({"conanfile_dep.py": dep, "conanfile_consumer.py": consumer,
+                     "galaxy/starlight/starlight.h": "",
+                     "lib/libstarlight": "",
+                     "galaxy/planet/planet.h": "",
+                     "lib/libplanet": "",
+                     "galaxy/iss/iss.h": "",
+                     "iss_libs/libiss": "",
+                     "bin/exelauncher": ""})
+        dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
+        dep_pref = PackageReference(dep_ref, NO_SETTINGS_PACKAGE_ID)
+        client.run("create conanfile_dep.py dep/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        package_folder = client.cache.package_layout(dep_ref).package(dep_pref)
+
+        expected_global_include_paths = [os.path.join(package_folder, "galaxy", "starlight"),
+                                         os.path.join(package_folder, "galaxy", "planet"),
+                                         os.path.join(package_folder, "galaxy", "iss")]
+        expected_global_library_paths = [os.path.join(package_folder, "lib"),
+                                         os.path.join(package_folder, "iss_libs")]
+        expected_global_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_global_libs = ["libstarlight", "ground", "libplanet", "solar", "magnetism", "libiss"]
+        expected_global_exes = ["exelauncher"]
+        fromatted1 = "GLOBAL Include Paths: %s" % expected_global_include_paths
+        self.assertIn(fromatted1, client.out)
+        self.assertIn("GLOBAL Library Paths: %s" % expected_global_library_paths, client.out)
+        self.assertIn("GLOBAL Binary Paths: %s" % expected_global_binary_paths, client.out)
+        self.assertIn("GLOBAL Libs: %s" % expected_global_libs, client.out)
+        self.assertIn("GLOBAL Exes: %s" % expected_global_exes, client.out)
+
+        formatted = "GLOBAL Include Paths: {}".format(expected_global_include_paths)
+        print(formatted)
+        self.assertIn(formatted, client.out)
+        self.assertIn("DEPS Library Paths: %s" % expected_global_library_paths, client.out)
+        self.assertIn("DEPS Binary Paths: %s" % expected_global_binary_paths, client.out)
+        self.assertIn("DEPS Libs: %s" % expected_global_libs, client.out)
+        self.assertIn("DEPS Exes: %s" % expected_global_exes, client.out)
+
+        #TODO: Complete the test checking the output of the components
