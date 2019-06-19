@@ -171,7 +171,6 @@ VAR2=23
         info.libdirs.append(abs_lib)
         info.bindirs.append(abs_bin)
         info.bindirs.append("local_bindir")
-        print("result: ", info.include_paths, info.lib_paths, info.bin_paths)
         self.assertEqual(info.include_paths, [os.path.join(folder, "include"), abs_include])
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
         self.assertEqual(info.bin_paths, [abs_bin,
@@ -220,7 +219,6 @@ VAR2=23
         info["LIB3"].lib = "lib3"
         info["LIB3"].system_deps = ["sys3", "sys2"]
         self.assertEqual(['sys2', 'lib2', 'sys3', 'lib3', 'sys1', 'sys11', 'lib1'], info.libs)
-        print(info.libs)
 
     def cppinfo_dirs_test(self):
         folder = temp_folder()
