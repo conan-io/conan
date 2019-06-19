@@ -95,6 +95,13 @@ class _CppInfo(object):
             return abs_paths
 
     def _get_paths(self, path_name):
+        """
+        Get the absolute paths either composing the lists from components or from the global
+        variables. Also filter the values checking if the folders exist or not. This paths are
+        calculated once and then the result is cached.
+        :param path_name: name of the path variable to get (include_paths, res_paths...)
+        :return: List of absolute paths
+        """
         if getattr(self, "_%s_paths" % path_name) is None:
             if self._deps:
                 self.__dict__["_%s_paths" % path_name] = []
