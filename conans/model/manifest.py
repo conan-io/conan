@@ -46,7 +46,7 @@ def gather_files(folder, output):
                 linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
                 linkto = os.path.normpath(linkto)
                 if os.path.exists(linkto):
-                    relpath = os.path.relpath(abs_path, folder)
+                    relpath = os.path.relpath(abs_path, folder).replace("\\", "/")
                     symlinks[relpath] = os.path.relpath(linkto, folder)
                 else:
                     warn_broken_symlink(abs_path, linkto, do_raise=False)
@@ -56,7 +56,7 @@ def gather_files(folder, output):
             if discarded_file(f):
                 continue
             abs_path = os.path.join(root, f)
-            relpath = os.path.relpath(abs_path, folder)
+            relpath = os.path.relpath(abs_path, folder).replace("\\", "/")
 
             if os.path.islink(abs_path):
                 linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
