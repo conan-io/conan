@@ -20,9 +20,11 @@ def discarded_file(filename):
 
 
 def gather_files(folder):
+    assert not os.path.islink(folder), "The folder ('{}') passed to 'gather_files'" \
+                                       " cannot be a symlink".format(folder)
     file_dict = {}
     symlinks = {}
-    for root, dirs, files in walk(folder):
+    for root, dirs, files in walk(folder, followlinks=False):
         dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
         for d in dirs:
             abs_path = os.path.join(root, d)
