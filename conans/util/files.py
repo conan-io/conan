@@ -339,7 +339,7 @@ def exception_message_safe(exc):
         return decode_text(repr(exc))
 
 
-def copy_symlink(pointer_src, src, dst):
+def copy_symlink(pointer_src, src, dst, output=None):
     """
     Copy the symlink 'pointer_src' from the 'src' directory to the 'dst' one. It
     will warn if the linked file is outside the 'src' directory
@@ -347,6 +347,7 @@ def copy_symlink(pointer_src, src, dst):
     :param pointer_src: symlink inside 'src' directory
     :param src: source directory
     :param dst: destination directory
+    :param output:
     :return:
     """
 
@@ -356,8 +357,10 @@ def copy_symlink(pointer_src, src, dst):
 
     # Check if it is outside the sources
     out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
-    if out_of_source:
-        # May warn about out of sources symlink
+    if out_of_source and output:
+        output.warn("Symbolic link '{}' is pointing to '{}' outside the source folder"
+                    " and won't be copied".format(os.path.normpath(pointer_src),
+                                                  os.path.normpath(src)))
         return
 
     # Create the symlink
