@@ -208,7 +208,25 @@ VAR2=23
                                                          "when Components are already in use"):
             info.libs = ["libgreet"]
 
+    def cpp_info_system_test(self):
+        """
+        System deps are composed in '.libs' attribute even if there are no '.lib' in the component.
+        Also make sure None values are discarded
+        """
+        info = CppInfo(None)
+        info["LIB1"].system_deps = ["sys1", "sys11"]
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].system_deps = ["sys2"]
+        info["LIB1"].deps = ["LIB3"]
+        info["LIB3"].system_deps = ["sys3", "sys2"]
+        self.assertEqual(['sys2', 'sys3', 'sys1', 'sys11'], info.libs)
+        info["LIB3"].system_deps = [None, "sys2"]
+        self.assertEqual(['sys2', 'sys1', 'sys11'], info.libs)
+
     def cpp_info_libs_system_deps_order_test(self):
+        """
+        Check the order of libs and system_deps and discard repeated values
+        """
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
         info["LIB1"].system_deps = ["sys1", "sys11"]

@@ -68,7 +68,7 @@ class _CppInfo(object):
     def exes(self):
         if self._deps:
             deps = [v for v in self._deps.values()]
-            return [dep.exe for dep in deps if dep.exe is not None]
+            return [dep.exe for dep in deps if dep.exe]
         else:
             return self._exes
 
@@ -204,9 +204,10 @@ class CppInfo(_CppInfo):
             result = []
             for dep in deps_sorted:
                 for sys_dep in dep.system_deps:
-                    if sys_dep not in result:
+                    if sys_dep and sys_dep not in result:
                         result.append(sys_dep)
-                result.append(dep.lib)
+                if dep.lib:
+                    result.append(dep.lib)
             return result
         else:
             return self._libs
