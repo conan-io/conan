@@ -431,7 +431,7 @@ class ConanAPIV1(object):
                 for package_id in packages:
                     if "#" in package_id:
                         raise ConanException("It is needed to specify the recipe revision if you "
-                                             "specify a packages revision")
+                                             "specify a package revision")
             remotes = self._cache.registry.load_remotes()
             remotes.select(remote_name)
             self._python_requires.enable_remotes(remotes=remotes)
