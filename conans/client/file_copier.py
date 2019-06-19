@@ -32,7 +32,7 @@ class FileCopier(object):
     imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
-    def __init__(self, source_folders, root_destination_folder):
+    def __init__(self, source_folders, root_destination_folder, output):
         """
         Takes the base folders to copy resources src -> dst. These folders names
         will not be used in the relative names while copying
@@ -45,6 +45,7 @@ class FileCopier(object):
         self._src_folders = source_folders
         self._dst_folder = root_destination_folder
         self._copied = []
+        self._output = output
 
     def report(self, output):
         return report_copied_files(self._copied, output)
@@ -95,8 +96,7 @@ class FileCopier(object):
         self._copied.extend(files_to_copy)
         return copied_files
 
-    @staticmethod
-    def _filter_files(src, pattern, links, excludes, ignore_case, excluded_folders):
+    def _filter_files(self, src, pattern, links, excludes, ignore_case, excluded_folders):
 
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
@@ -138,7 +138,22 @@ class FileCopier(object):
                     subfolders[:] = []
                     files = []
                     break
+
             for f in files:
+                abs_path = os.path.join(root, f)
+
+                if os.path.islink(abs_path):
+                    linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
+                    linkto = os.path.normpath(linkto)
+                    if not os.path.exists(linkto):
+                        self._output.warn("File '{}' is pointing to '{}' that doesn't exists. It"
+                                          " will be skipped".format(abs_path, linkto))
+                        continue
+                    if os.path.relpath(linkto, src).startswith("."):
+                        self._output.warn("File '{}' points to '{}' which is outside the source"
+                                          " directory. It will be skipped".format(abs_path, linkto))
+                        continue
+
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
 
@@ -155,8 +170,7 @@ class FileCopier(object):
 
         return files_to_copy, linked_folders
 
-    @staticmethod
-    def link_folders(src, dst, linked_folders):
+    def link_folders(self, src, dst, linked_folders):
         created_links = []
         for linked_folder in linked_folders:
             src_link = os.path.join(src, linked_folder)
@@ -164,6 +178,9 @@ class FileCopier(object):
             abs_path = os.path.realpath(src_link)
             relpath = os.path.relpath(abs_path, os.path.realpath(src))
             if relpath.startswith("."):
+                if self._output:
+                    self._output.warn("Folder '{}' points to '{}', which is outside the"
+                                      " source directory, it is skipped".format(src_link, abs_path))
                 continue
 
             link = os.readlink(src_link)
