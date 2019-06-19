@@ -2,7 +2,7 @@ import os
 import stat
 import tarfile
 import time
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
@@ -23,6 +23,9 @@ UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
 UPLOAD_POLICY_NO_OVERWRITE_RECIPE = "no-overwrite-recipe"
 UPLOAD_POLICY_SKIP = "skip-upload"
+
+
+_GatheredFiles = namedtuple("GatheredFiles", ["base_folder", "files", "symlinks"])
 
 
 class CmdUpload(object):
@@ -298,11 +301,15 @@ class CmdUpload(object):
                 clean_dirty(tgz_path)
 
         files, symlinks = gather_files(export_folder, output=self._user_io.out)
+        export_files = _GatheredFiles(base_folder=export_folder, files=files, symlinks=symlinks)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
+
         export_src_folder = self._cache.package_layout(ref).export_sources()
         src_files, src_symlinks = gather_files(export_src_folder, output=self._user_io.out)
-        the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
+        export_src_files = _GatheredFiles(export_src_folder, src_files, src_symlinks)
+
+        the_files = _compress_recipe_files(export_files, export_src_files, export_folder,
                                            self._user_io.out)
         return the_files
 
@@ -324,6 +331,7 @@ class CmdUpload(object):
             clean_dirty(tgz_path)
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder, output=self._user_io.out)
+        package_files = _GatheredFiles(package_folder, files, symlinks)
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
@@ -335,7 +343,7 @@ class CmdUpload(object):
             logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
-        the_files = _compress_package_files(files, symlinks, package_folder, self._user_io.out)
+        the_files = _compress_package_files(package_files, package_folder, self._user_io.out)
         return the_files
 
     def _recipe_files_to_upload(self, ref, policy, the_files, remote, remote_manifest,
@@ -457,42 +465,49 @@ class CmdUpload(object):
             self._user_io.out.info("Error printing information about the diff: %s" % str(e))
 
 
-def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):
+def _compress_recipe_files(export_files, export_src_files, dest_folder, output):
     # This is the minimum recipe
-    result = {CONANFILE: files.pop(CONANFILE),
-              CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
+    result = {CONANFILE: export_files.files.pop(CONANFILE),
+              CONAN_MANIFEST: export_files.files.pop(CONAN_MANIFEST)}
 
-    export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
-    sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
+    export_tgz_path = export_files.files.pop(EXPORT_TGZ_NAME, None)
+    sources_tgz_path = export_files.files.pop(EXPORT_SOURCES_TGZ_NAME, None)
 
-    def add_tgz(tgz_name, tgz_path, tgz_files, tgz_symlinks, msg):
+    def add_tgz(tgz_name, tgz_path, tgz_files, msg):
         if tgz_path:
             result[tgz_name] = tgz_path
-        elif tgz_files:
+        elif tgz_files.files:
             output.rewrite_line(msg)
-            tgz_path = _compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
+            tgz_path = _compress_files(tgz_files, tgz_name, dest_folder, output)
             result[tgz_name] = tgz_path
 
-    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
-    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
+    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, export_files, "Compressing recipe...")
+    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, export_src_files,
             "Compressing recipe sources...")
 
     return result
 
 
-def _compress_package_files(files, symlinks, dest_folder, output):
-    tgz_path = files.get(PACKAGE_TGZ_NAME)
+def _compress_package_files(package_files, dest_folder, output):
+    result = {CONANINFO: package_files.files.pop(CONANINFO),
+              CONAN_MANIFEST: package_files.files.pop(CONAN_MANIFEST)}
+
+    tgz_path = package_files.files.get(PACKAGE_TGZ_NAME)
     if not tgz_path:
         output.writeln("Compressing package...")
-        tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = _compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
+        tgz_path = _compress_files(package_files, PACKAGE_TGZ_NAME, dest_folder, output)
 
-    return {PACKAGE_TGZ_NAME: tgz_path,
-            CONANINFO: files[CONANINFO],
-            CONAN_MANIFEST: files[CONAN_MANIFEST]}
+    result[PACKAGE_TGZ_NAME] = tgz_path
+    return result
 
 
-def _compress_files(files, symlinks, name, dest_dir, output=None):
+def _compress_files(gathered_files, name, dest_dir, output):
+
+    def warn_outside_sources(pointer_src, linkto):
+        if output:
+            output.warn("Symbolic link '{}' points to '{}' which is outside the tar. This file"
+                        " won't be availabe in the package".format(pointer_src, linkto))
+
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
@@ -501,8 +516,11 @@ def _compress_files(files, symlinks, name, dest_dir, output=None):
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-        for filename, dest in sorted(symlinks.items()):
-            info = tarfile.TarInfo(name=filename)
+        for relpath, dest in sorted(gathered_files.symlinks.items()):
+            if dest.startswith("."):
+                warn_outside_sources(os.path.join(gathered_files.base_folder, relpath), dest)
+
+            info = tarfile.TarInfo(name=relpath)
             info.type = tarfile.SYMTYPE
             info.linkname = dest
             info.size = 0  # A symlink shouldn't have size
@@ -510,22 +528,30 @@ def _compress_files(files, symlinks, name, dest_dir, output=None):
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
         i_file = 0
-        n_files = len(files)
+        n_files = len(gathered_files.files)
         last_progress = None
         if output and n_files > 1 and not output.is_terminal:
             output.write("[")
-        for filename, abs_path in sorted(files.items()):
+
+        for filename, abs_path in sorted(gathered_files.files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode & mask
             if os.path.islink(abs_path):
-                info.type = tarfile.SYMTYPE
-                info.size = 0  # A symlink shouldn't have size
-                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                tgz.addfile(tarinfo=info)
+                linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
+                linkto = os.path.normpath(linkto)
+                linkto_rel = os.path.relpath(linkto, gathered_files.base_folder)
+                if linkto_rel.startswith("."):
+                    warn_outside_sources(abs_path, linkto)
+                else:
+                    info.type = tarfile.SYMTYPE
+                    info.size = 0  # A symlink shouldn't have size
+                    info.linkname = linkto_rel  # @UndefinedVariable
+                    tgz.addfile(tarinfo=info)
             else:
                 with open(abs_path, 'rb') as file_handler:
                     tgz.addfile(tarinfo=info, fileobj=file_handler)
+
             if output and n_files > 1:
                 i_file = i_file + 1
                 units = min(50, int(50 * i_file / n_files))
@@ -546,6 +572,6 @@ def _compress_files(files, symlinks, name, dest_dir, output=None):
 
     clean_dirty(tgz_path)
     duration = time.time() - t1
-    log_compressed_files(files, duration, tgz_path)
+    log_compressed_files(gathered_files.files, duration, tgz_path)
 
     return tgz_path
