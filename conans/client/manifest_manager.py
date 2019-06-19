@@ -31,7 +31,8 @@ class ManifestManager(object):
         export = layout.export()
         exports_sources_folder = layout.export_sources()
         read_manifest = FileTreeManifest.load(export)
-        expected_manifest = FileTreeManifest.create(export, exports_sources_folder)
+        expected_manifest = FileTreeManifest.create(export, exports_sources_folder,
+                                                    output=self._user_io.out)
         self._check_not_corrupted(ref, read_manifest, expected_manifest)
         folder = os.path.join(self._target_folder, ref.dir_repr(), EXPORT_FOLDER)
         self._handle_folder(folder, ref, read_manifest, interactive, node.remote, verify)
@@ -41,7 +42,7 @@ class ManifestManager(object):
         pref = PackageReference(ref, node.package_id)
         package_folder = self._cache.package_layout(pref.ref).package(pref)
         read_manifest = FileTreeManifest.load(package_folder)
-        expected_manifest = FileTreeManifest.create(package_folder)
+        expected_manifest = FileTreeManifest.create(package_folder, output=self._user_io.out)
         self._check_not_corrupted(pref, read_manifest, expected_manifest)
         folder = os.path.join(self._target_folder, ref.dir_repr(), PACKAGES_FOLDER, pref.id)
         self._handle_folder(folder, pref, read_manifest, interactive, node.remote, verify)

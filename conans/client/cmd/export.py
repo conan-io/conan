@@ -29,7 +29,7 @@ class AliasConanfile(ConanFile):
 """ % (target_ref.full_repr(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
-    digest = FileTreeManifest.create(package_layout.export())
+    digest = FileTreeManifest.create(package_layout.export(), output=output)
     digest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
@@ -98,7 +98,8 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
-        digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources(),
+                                         output=output)
         modified_recipe = not previous_digest or previous_digest != digest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)

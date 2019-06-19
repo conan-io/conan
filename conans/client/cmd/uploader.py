@@ -297,11 +297,11 @@ class CmdUpload(object):
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
-        files, symlinks = gather_files(export_folder)
+        files, symlinks = gather_files(export_folder, output=self._user_io.out)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
         export_src_folder = self._cache.package_layout(ref).export_sources()
-        src_files, src_symlinks = gather_files(export_src_folder)
+        src_files, src_symlinks = gather_files(export_src_folder, output=self._user_io.out)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._user_io.out)
         return the_files
@@ -323,7 +323,7 @@ class CmdUpload(object):
             os.remove(tgz_path)
             clean_dirty(tgz_path)
         # Get all the files in that directory
-        files, symlinks = gather_files(package_folder)
+        files, symlinks = gather_files(package_folder, output=self._user_io.out)
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))

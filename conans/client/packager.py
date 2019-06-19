@@ -26,7 +26,7 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     copier("*", symlinks=True)
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
-    digest = FileTreeManifest.create(package_folder)
+    digest = FileTreeManifest.create(package_folder, output=conanfile.output)
     digest.save(package_folder)
 
     _report_files_from_manifest(output, package_folder)
@@ -103,7 +103,7 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
         save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
 
     # Create the digest for the package
-    digest = FileTreeManifest.create(package_folder)
+    digest = FileTreeManifest.create(package_folder, output=conanfile.output)
     digest.save(package_folder)
 
 
