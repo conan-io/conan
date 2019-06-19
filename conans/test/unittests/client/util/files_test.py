@@ -34,7 +34,7 @@ class FilesTest(unittest.TestCase):
 
         folder = temp_folder()
         gathered_files = _GatheredFiles("", files, {})
-        _compress_files(gathered_files, PACKAGE_TGZ_NAME, dest_dir=folder)
+        _compress_files(gathered_files, PACKAGE_TGZ_NAME, dest_dir=folder, output=None)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_b = md5sum(file_path)
