@@ -2,6 +2,9 @@ import os
 import textwrap
 import unittest
 
+import six
+
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
@@ -109,3 +112,23 @@ class HelloConan(ConanFile):
         self.assertIn("Accumulators: %s" % accumulators_expected, client.out)
         self.assertIn("Containers: %s" % containers_expected, client.out)
         self.assertIn("SuperContainers: %s" % supercontainers_expected, client.out)
+
+    def package_info_wrong_cpp_info_test(self):
+        conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile
+
+        class Dep(ConanFile):
+
+            def package_info(self):
+                self.cpp_info.name = "Boost"
+                self.cpp_info["Accumulators"].includedirs = [os.path.join("boost", "accumulators")]
+                self.cpp_info.libs = ["hello"]
+        """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . name/1.0@us/ch")  # Does NOT fail on export
+        client.run("create . name/1.0@us/ch", assert_error=True)
+        self.assertIn("Setting first level libs is not supported when Components are already in use",
+                      client.out)
