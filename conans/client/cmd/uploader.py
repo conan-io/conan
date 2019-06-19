@@ -470,7 +470,7 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
             result[tgz_name] = tgz_path
         elif tgz_files:
             output.rewrite_line(msg)
-            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
+            tgz_path = _compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
             result[tgz_name] = tgz_path
 
     add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
@@ -485,14 +485,14 @@ def _compress_package_files(files, symlinks, dest_folder, output):
     if not tgz_path:
         output.writeln("Compressing package...")
         tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
+        tgz_path = _compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
 
     return {PACKAGE_TGZ_NAME: tgz_path,
             CONANINFO: files[CONANINFO],
             CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
-def compress_files(files, symlinks, name, dest_dir, output=None):
+def _compress_files(files, symlinks, name, dest_dir, output=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)

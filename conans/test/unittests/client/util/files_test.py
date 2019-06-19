@@ -2,7 +2,7 @@ import os
 import time
 import unittest
 
-from conans.client.cmd.uploader import compress_files
+from conans.client.cmd.uploader import _compress_files
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import md5sum, mkdir, path_exists, save
@@ -23,7 +23,7 @@ class FilesTest(unittest.TestCase):
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
+        _compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_a = md5sum(file_path)
@@ -32,7 +32,7 @@ class FilesTest(unittest.TestCase):
         time.sleep(1)  # Timestamps change
 
         folder = temp_folder()
-        compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
+        _compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_b = md5sum(file_path)
