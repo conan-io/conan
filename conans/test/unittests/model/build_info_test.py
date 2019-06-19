@@ -8,6 +8,7 @@ from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo, Component
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 
@@ -288,3 +289,41 @@ VAR2=23
                                                          "when Components are already in use"):
             info.exes = ["another_exe"]
 
+    def cppinfo_public_interface_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        self.assertEqual([], info.exes)
+        self.assertEqual([], info.libs)
+        self.assertEqual([], info.system_deps)
+        self.assertEqual(["include"], info.includedirs)
+        self.assertEqual([], info.srcdirs)
+        self.assertEqual(["res"], info.resdirs)
+        self.assertEqual([], info.res_paths)  # filter_empty=True
+        self.assertEqual([""], info.builddirs)
+        self.assertEqual(["bin"], info.bindirs)
+        self.assertEqual(["lib"], info.libdirs)
+        self.assertEqual([], info.include_paths)
+        self.assertEqual([], info.bin_paths)
+        self.assertEqual([], info.lib_paths)
+        self.assertEqual(folder, info.rootpath)
+        self.assertEqual([], info.defines)
+        self.assertIsNone(info.version)
+        self.assertIsNone(info.name)
+        self.assertEqual("", info.sysroot)  # FIXME
+        self.assertEqual([os.path.join(folder, "")], info.build_paths)
+        self.assertEqual([], info.cflags)
+        self.assertEqual({}, info.configs)  # FIXME
+        with catch_deprecation_warning(self):
+            self.assertEqual([], info.cppflags)
+        self.assertEqual([], info.cxxflags)
+        self.assertIsNone(info.description)  # FIXME
+        self.assertEqual([], info.exelinkflags)
+        self.assertTrue(info.filter_empty)  # FIXME
+        with catch_deprecation_warning(self):
+            self.assertEqual([], info.get_cppflags())  # FIXME
+        self.assertEqual([], info.public_deps)  # FIXME
+        self.assertEqual([], info.rootpaths)  # WHAT?
+        with catch_deprecation_warning(self):
+            info.set_cppflags("kk") # FIXME
+        self.assertEqual([], info.sharedlinkflags)
+        self.assertEqual([], info.src_paths)
