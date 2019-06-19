@@ -337,3 +337,30 @@ def exception_message_safe(exc):
         return str(exc)
     except Exception:
         return decode_text(repr(exc))
+
+
+def copy_symlink(pointer_src, src, dst):
+    """
+    Copy the symlink 'pointer_src' from the 'src' directory to the 'dst' one. It
+    will warn if the linked file is outside the 'src' directory
+
+    :param pointer_src: symlink inside 'src' directory
+    :param src: source directory
+    :param dst: destination directory
+    :return:
+    """
+
+    linkto = os.readlink(pointer_src)
+    if not os.path.isabs(linkto):
+        linkto = os.path.join(os.path.dirname(pointer_src), linkto)
+
+    # Check if it is outside the sources
+    out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
+    if out_of_source:
+        # May warn about out of sources symlink
+        return
+
+    # Create the symlink
+    linkto_rel = os.path.relpath(linkto, os.path.dirname(pointer_src))
+    pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
+    os.symlink(linkto_rel, pointer_dst)
