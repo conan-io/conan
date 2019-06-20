@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from conans.test.utils.tools import TestClient
@@ -21,8 +22,9 @@ class ConfigTest(unittest.TestCase):
         self.assertIn("path = ./data", self.client.user_io.out)
 
         self.client.run("config get storage.path")
-        self.assertIn("./data", self.client.user_io.out)
-        self.assertNotIn("path:", self.client.user_io.out)
+        full_path = os.path.join(self.client.base_folder, "data")
+        self.assertIn(full_path, self.client.out)
+        self.assertNotIn("path:", self.client.out)
 
     def errors_test(self):
         self.client.run("config get whatever", assert_error=True)

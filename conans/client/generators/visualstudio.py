@@ -3,6 +3,7 @@ import re
 
 from conans.model import Generator
 from conans.paths import BUILD_INFO_VISUAL_STUDIO
+from conans.client.tools.files import VALID_LIB_EXTENSIONS
 
 
 class VisualStudioGenerator(Generator):
@@ -65,13 +66,17 @@ class VisualStudioGenerator(Generator):
         return BUILD_INFO_VISUAL_STUDIO
 
     def _format_properties(self, build_info, condition):
+        def has_valid_ext(lib):
+            ext = os.path.splitext(lib)[1]
+            return ext in VALID_LIB_EXTENSIONS
+
         fields = {
             'condition': condition,
             'bin_dirs': "".join("%s;" % p for p in build_info.bin_paths),
             'res_dirs': "".join("%s;" % p for p in build_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in build_info.include_paths),
             'lib_dirs': "".join("%s;" % p for p in build_info.lib_paths),
-            'libs': "".join(['%s.lib;' % lib if not os.path.splitext(lib)[1]  # No extension
+            'libs': "".join(['%s.lib;' % lib if not has_valid_ext(lib)
                              else '%s;' % lib for lib in build_info.libs]),
             'definitions': "".join("%s;" % d for d in build_info.defines),
             'compiler_flags': " ".join(build_info.cxxflags + build_info.cflags),
