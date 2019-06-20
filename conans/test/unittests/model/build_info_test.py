@@ -364,4 +364,3 @@ VAR2=23
         with six.assertRaisesRegex(self, ConanException, "Setting first level exes is not supported "
                                                          "when Components are already in use"):
             info.exes = ["another_exe"]
-
