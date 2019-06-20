@@ -49,13 +49,27 @@ class _CppInfo(object):
         self.filter_empty = True
         self._deps = OrderedDict()
 
+    def _get_components_sorted(self):
+        """
+        Sort components from less dependent to the most one (less items in .deps attribute)
+        :return: ordered list of components
+        """
+        components = [v for v in self._deps.values()]
+        return sorted(components, key=lambda component: len(component.deps))
+
     @property
     def libs(self):
         if self._deps:
-            deps = [v for v in self._deps.values()]
-            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
-            self._libs = [dep.lib for dep in deps_sorted if dep.lib is not None]
-        return self._libs
+            result = []
+            for component in self._get_components_sorted():
+                for sys_dep in component.system_deps:
+                    if sys_dep and sys_dep not in result:
+                        result.append(sys_dep)
+                if component.lib:
+                    result.append(component.lib)
+            return result
+        else:
+            return self._libs
 
     @libs.setter
     def libs(self, libs):
@@ -67,8 +81,7 @@ class _CppInfo(object):
     @property
     def exes(self):
         if self._deps:
-            deps = [v for v in self._deps.values()]
-            return [dep.exe for dep in deps if dep.exe]
+            return [component.exe for component in self._deps.values() if component.exe]
         else:
             return self._exes
 
@@ -82,12 +95,10 @@ class _CppInfo(object):
     @property
     def system_deps(self):
         if self._deps:
-            deps = [v for v in self._deps.values()]
-            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
             result = []
-            for dep in deps_sorted:
-                if dep.system_deps:
-                    for system_dep in dep.system_deps:
+            for component in self._get_components_sorted():
+                if component.system_deps:
+                    for system_dep in component.system_deps:
                         if system_dep and system_dep not in result:
                             result.append(system_dep)
             return result
@@ -109,8 +120,7 @@ class _CppInfo(object):
         return self._deps[key]
 
     def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self.rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
+        abs_paths = [os.path.join(self.rootpath, p) for p in paths]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -207,7 +217,7 @@ class CppInfo(_CppInfo):
             "srcdirs": []
         }
         msg_template = "Using Components and global '{}' values ('{}') is not supported"
-        for dir_name in ["includedirs", "libdirs", "bindirs", "builddirs"]:
+        for dir_name in default_dirs_mapping:
             dirs_value = getattr(self, dir_name)
             if dirs_value is not None and dirs_value != default_dirs_mapping[dir_name]:
                 raise ConanException(msg_template.format(dir_name, dirs_value))
@@ -221,32 +231,9 @@ class CppInfo(_CppInfo):
             "builddirs": [DEFAULT_BUILD],
             "srcdirs": []
         }
-        for dir_name in ["includedirs", "libdirs", "bindirs", "builddirs"]:
+        for dir_name in default_dirs_mapping:
             if getattr(self, dir_name) == default_dirs_mapping[dir_name]:
                 self.__dict__[dir_name] = None
-
-    @property
-    def libs(self):
-        if self._deps:
-            deps = [v for v in self._deps.values()]
-            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
-            result = []
-            for dep in deps_sorted:
-                for sys_dep in dep.system_deps:
-                    if sys_dep and sys_dep not in result:
-                        result.append(sys_dep)
-                if dep.lib:
-                    result.append(dep.lib)
-            return result
-        else:
-            return self._libs
-
-    @libs.setter
-    def libs(self, libs):
-        if self._deps:
-            raise ConanException("Setting first level libs is not supported when Components are "
-                                 "already in use")
-        self._libs = libs
 
     def __getitem__(self, key):
         if self._libs or self._exes:
@@ -271,7 +258,7 @@ class CppInfo(_CppInfo):
             result.libdirs.append(DEFAULT_LIB)
             result.bindirs.append(DEFAULT_BIN)
             result.resdirs.append(DEFAULT_RES)
-            result.builddirs.append("")
+            result.builddirs.append(DEFAULT_BUILD)
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
@@ -301,8 +288,7 @@ class Component(object):
         self._filter_empty = True
 
     def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self._rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
+        abs_paths = [os.path.join(self._rootpath, p) for p in paths]
         if self._filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -382,14 +368,6 @@ class _BaseDepsCppInfo(_CppInfo):
 
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
-
-    @property
-    def libs(self):
-        return self._libs
-
-    @libs.setter
-    def libs(self, libs):
-        self._libs = libs
 
     @property
     def include_paths(self):
