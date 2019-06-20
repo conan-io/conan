@@ -301,11 +301,11 @@ class MyLib(ConanFile):
         self.assertIn("MyTool/0.1@lasote/stable from local cache", client.out)
         self.assertIn("MyTool/0.1@lasote/stable: Calling build()", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (MyLib/0.1): Coverage True", client.user_io.out)
+        self.assertIn("conanfile.py (MyLib/0.1@None/None): Coverage True", client.user_io.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install . -o coverage=True")
         self.assertIn("MyTool/0.1@lasote/stable from local cache", client.out)
         self.assertIn("MyTool/0.1@lasote/stable: Already installed!", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (MyLib/0.1): Coverage True", client.user_io.out)
+        self.assertIn("conanfile.py (MyLib/0.1@None/None): Coverage True", client.user_io.out)

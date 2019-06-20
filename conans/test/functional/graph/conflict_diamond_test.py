@@ -52,7 +52,7 @@ class ConflictDiamondTest(unittest.TestCase):
                       "Hello0/0.1@lasote/stable"], export=False)
         self.client.run("install . --build missing", assert_error=False)
         self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
-                      " by Hello3/0.1 to Hello0/0.1@lasote/stable",
+                      " by Hello3/0.1@None/None to Hello0/0.1@lasote/stable",
                       self.client.user_io.out)
 
     def test_error_on_override(self):
@@ -66,7 +66,7 @@ class ConflictDiamondTest(unittest.TestCase):
                           "Hello0/0.1@lasote/stable"], export=False)
             self.client.run("install . --build missing", assert_error=True)
             self.assertIn("ERROR: Hello2/0.1@lasote/stable: requirement Hello0/0.2@lasote/stable"
-                          " overridden by Hello3/0.1 to Hello0/0.1@lasote/stable",
+                          " overridden by Hello3/0.1@None/None to Hello0/0.1@lasote/stable",
                           self.client.user_io.out)
 
     def test_override_explicit(self):
@@ -82,7 +82,7 @@ class ConflictDiamondTest(unittest.TestCase):
             self.client.save({CONANFILE: conanfile})
             self.client.run("install . --build missing")
             self.assertIn("Hello2/0.1@lasote/stable requirement Hello0/0.2@lasote/stable overridden"
-                          " by Hello3/0.1 to Hello0/0.1@lasote/stable",
+                          " by Hello3/0.1@None/None to Hello0/0.1@lasote/stable",
                           self.client.user_io.out)
 
             # ...but there is no way to tell Conan that 'Hello3' wants to depend also on 'Hello0'.

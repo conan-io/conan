@@ -185,10 +185,10 @@ class App(ConanFile):
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("install . -pr=myprofile")
-        self.assertIn("conanfile.py (consumer/None): Applying build-requirement: "
+        self.assertIn("conanfile.py (consumer/None@None/None): Applying build-requirement: "
                       "mingw/0.1@myuser/stable", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (consumer/None): APP PATH FOR BUILD mymingwpath",
+        self.assertIn("conanfile.py (consumer/None@None/None): APP PATH FOR BUILD mymingwpath",
                       client.out)
 
     def test_transitive(self):

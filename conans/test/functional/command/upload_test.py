@@ -1,7 +1,6 @@
 import os
 import platform
 import stat
-import textwrap
 import unittest
 from collections import OrderedDict
 
