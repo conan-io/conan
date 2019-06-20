@@ -1,7 +1,8 @@
 import os
 import unittest
 
-from conans.client.cmd.uploader import _compress_files, _GatheredFiles
+from conans.client.cmd.uploader import _compress_files
+from conans.model.manifest import _GatheredFiles
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save

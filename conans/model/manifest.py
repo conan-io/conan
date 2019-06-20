@@ -2,11 +2,14 @@ import calendar
 import datetime
 import os
 import time
+from collections import namedtuple
 
 from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, md5sum, save, walk
+
+_GatheredFiles = namedtuple("GatheredFiles", ["base_folder", "files", "symlinks"])
 
 
 def discarded_file(filename):
@@ -68,7 +71,7 @@ def gather_files(folder, output):
             else:
                 file_dict[relpath] = abs_path
 
-    return file_dict, symlinks
+    return _GatheredFiles(base_folder=folder, files=file_dict, symlinks=symlinks)
 
 
 class FileTreeManifest(object):
@@ -137,17 +140,17 @@ class FileTreeManifest(object):
         """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
-        files, _ = gather_files(folder, output=output)
+        gathered_files = gather_files(folder, output=output)
         for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
-            files.pop(f, None)
+            gathered_files.files.pop(f, None)
 
         file_dict = {}
-        for name, filepath in files.items():
+        for name, filepath in gathered_files.files.items():
             file_dict[name] = md5sum(filepath)
 
         if exports_sources_folder:
-            export_files, _ = gather_files(exports_sources_folder, output=output)
-            for name, filepath in export_files.items():
+            gathered_export_files = gather_files(exports_sources_folder, output=output)
+            for name, filepath in gathered_export_files.files.items():
                 file_dict["export_source/%s" % name] = md5sum(filepath)
 
         date = calendar.timegm(time.gmtime())
@@ -173,3 +176,5 @@ class FileTreeManifest(object):
             if h != h2:
                 result[f] = h2, h
         return result
+
+

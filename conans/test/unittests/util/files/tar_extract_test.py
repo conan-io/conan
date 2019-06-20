@@ -28,8 +28,8 @@ class TarExtractTest(unittest.TestCase):
             with open(self.tgz_file, "wb") as tgz_handle:
                 tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
 
-                files, _ = gather_files(ori_files_dir, output=None)
-                for filename, abs_path in files.items():
+                gathered_files = gather_files(ori_files_dir, output=None)
+                for filename, abs_path in gathered_files.files.items():
                     info = tarfile.TarInfo(name=filename)
                     with open(file1, 'rb') as file_handler:
                         tgz.addfile(tarinfo=info, fileobj=file_handler)

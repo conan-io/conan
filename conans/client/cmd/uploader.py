@@ -2,7 +2,7 @@ import os
 import stat
 import tarfile
 import time
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
 from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
@@ -18,14 +18,10 @@ from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
 
-
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_NO_OVERWRITE = "no-overwrite"
 UPLOAD_POLICY_NO_OVERWRITE_RECIPE = "no-overwrite-recipe"
 UPLOAD_POLICY_SKIP = "skip-upload"
-
-
-_GatheredFiles = namedtuple("GatheredFiles", ["base_folder", "files", "symlinks"])
 
 
 class CmdUpload(object):
@@ -300,14 +296,12 @@ class CmdUpload(object):
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
-        files, symlinks = gather_files(export_folder, output=self._user_io.out)
-        export_files = _GatheredFiles(base_folder=export_folder, files=files, symlinks=symlinks)
-        if CONANFILE not in files or CONAN_MANIFEST not in files:
+        export_files = gather_files(export_folder, output=self._user_io.out)
+        if CONANFILE not in export_files.files or CONAN_MANIFEST not in export_files.files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
 
         export_src_folder = self._cache.package_layout(ref).export_sources()
-        src_files, src_symlinks = gather_files(export_src_folder, output=self._user_io.out)
-        export_src_files = _GatheredFiles(export_src_folder, src_files, src_symlinks)
+        export_src_files = gather_files(export_src_folder, output=self._user_io.out)
 
         the_files = _compress_recipe_files(export_files, export_src_files, export_folder,
                                            self._user_io.out)
@@ -330,16 +324,15 @@ class CmdUpload(object):
             os.remove(tgz_path)
             clean_dirty(tgz_path)
         # Get all the files in that directory
-        files, symlinks = gather_files(package_folder, output=self._user_io.out)
-        package_files = _GatheredFiles(package_folder, files, symlinks)
+        package_files = gather_files(package_folder, output=self._user_io.out)
 
-        if CONANINFO not in files or CONAN_MANIFEST not in files:
-            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
+        if CONANINFO not in package_files.files or CONAN_MANIFEST not in package_files.files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(package_files.files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
 
         logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
         if integrity_check:
-            self._package_integrity_check(pref, files, package_folder)
+            self._package_integrity_check(pref, package_files.files, package_folder)
             logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
