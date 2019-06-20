@@ -222,41 +222,33 @@ class CppInfo(_CppInfo):
     def __init__(self, root_folder):
         super(CppInfo, self).__init__()
         self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self.includedirs.append(DEFAULT_INCLUDE)
-        self.libdirs.append(DEFAULT_LIB)
-        self.bindirs.append(DEFAULT_BIN)
-        self.resdirs.append(DEFAULT_RES)
-        self.builddirs.append(DEFAULT_BUILD)
+        self._default_dirs_values = {
+            "includedirs": [DEFAULT_INCLUDE],
+            "libdirs": [DEFAULT_LIB],
+            "bindirs": [DEFAULT_BIN],
+            "resdirs": [DEFAULT_RES],
+            "builddirs": [DEFAULT_BUILD],
+            "srcdirs": []
+        }
+        self.includedirs.extend(self._default_dirs_values["includedirs"])
+        self.libdirs.extend(self._default_dirs_values["libdirs"])
+        self.bindirs.extend(self._default_dirs_values["bindirs"])
+        self.resdirs.extend(self._default_dirs_values["resdirs"])
+        self.builddirs.extend(self._default_dirs_values["builddirs"])
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
 
     def _check_dirs_values(self):
-        default_dirs_mapping = {
-            "includedirs": [DEFAULT_INCLUDE],
-            "libdirs": [DEFAULT_LIB],
-            "bindirs": [DEFAULT_BIN],
-            "resdirs": [DEFAULT_RES],
-            "builddirs": [DEFAULT_BUILD],
-            "srcdirs": []
-        }
         msg_template = "Using Components and global '{}' values ('{}') is not supported"
-        for dir_name in default_dirs_mapping:
+        for dir_name in self._default_dirs_values:
             dirs_value = getattr(self, dir_name)
-            if dirs_value is not None and dirs_value != default_dirs_mapping[dir_name]:
+            if dirs_value is not None and dirs_value != self._default_dirs_values[dir_name]:
                 raise ConanException(msg_template.format(dir_name, dirs_value))
 
     def _clear_dirs_values(self):
-        default_dirs_mapping = {
-            "includedirs": [DEFAULT_INCLUDE],
-            "libdirs": [DEFAULT_LIB],
-            "bindirs": [DEFAULT_BIN],
-            "resdirs": [DEFAULT_RES],
-            "builddirs": [DEFAULT_BUILD],
-            "srcdirs": []
-        }
-        for dir_name in default_dirs_mapping:
-            if getattr(self, dir_name) == default_dirs_mapping[dir_name]:
+        for dir_name in self._default_dirs_values:
+            if getattr(self, dir_name) == self._default_dirs_values[dir_name]:
                 self.__dict__[dir_name] = None
 
     def __getitem__(self, key):
@@ -278,11 +270,11 @@ class CppInfo(_CppInfo):
             result = _CppInfo()
             result.rootpath = self.rootpath
             result.sysroot = self.sysroot
-            result.includedirs.append(DEFAULT_INCLUDE)
-            result.libdirs.append(DEFAULT_LIB)
-            result.bindirs.append(DEFAULT_BIN)
-            result.resdirs.append(DEFAULT_RES)
-            result.builddirs.append(DEFAULT_BUILD)
+            result.includedirs.extend(self._default_dirs_values["includedirs"])
+            result.libdirs.extend(self._default_dirs_values["libdirs"])
+            result.bindirs.extend(self._default_dirs_values["bindirs"])
+            result.resdirs.extend(self._default_dirs_values["resdirs"])
+            result.builddirs.extend(self._default_dirs_values["builddirs"])
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
