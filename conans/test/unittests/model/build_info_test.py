@@ -179,7 +179,7 @@ VAR2=23
     def basic_components_test(self):
         cpp_info = CppInfo(None)
         component = cpp_info["my_component"]
-        self.assertIn(component.name, "my_component")
+        self.assertEqual(component.name, "my_component")
         component.lib = "libhola"
         self.assertEqual(component.lib, "libhola")
         with six.assertRaisesRegex(self, ConanException, "'.lib' is already set for this Component"):
