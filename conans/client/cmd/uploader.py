@@ -536,11 +536,11 @@ def _compress_files(gathered_files, name, dest_dir, output):
                 linkto_rel = os.path.relpath(linkto, gathered_files.base_folder)
                 if linkto_rel.startswith("."):
                     warn_outside_sources(abs_path, linkto)
-                else:
-                    info.type = tarfile.SYMTYPE
-                    info.size = 0  # A symlink shouldn't have size
-                    info.linkname = linkto_rel  # @UndefinedVariable
-                    tgz.addfile(tarinfo=info)
+
+                info.type = tarfile.SYMTYPE
+                info.size = 0  # A symlink shouldn't have size
+                info.linkname = linkto_rel  # @UndefinedVariable
+                tgz.addfile(tarinfo=info)
             else:
                 with open(abs_path, 'rb') as file_handler:
                     tgz.addfile(tarinfo=info, fileobj=file_handler)
