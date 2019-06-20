@@ -130,51 +130,59 @@ class _CppInfo(object):
         """
         Get the absolute paths either composing the lists from components or from the global
         variables. Also filter the values checking if the folders exist or not and avoid repeated
-        values. The paths are calculated once and then the result is cached.
+        values.
         :param path_name: name of the path variable to get (include_paths, res_paths...)
         :return: List of absolute paths
         """
-        def get_paths_value():
-            return getattr(self, "_%s_paths" % path_name)
+        result = []
 
-        if get_paths_value() is None:
-            if self._components:
-                self.__dict__["_%s_paths" % path_name] = []
-                for dep_value in self._components.values():
-                    abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
-                    if not get_paths_value():
-                        self.__dict__["_%s_paths" % path_name].extend(abs_paths)
-                    for path in abs_paths:
-                        if path not in get_paths_value():
-                            self.__dict__["_%s_paths" % path_name].append(path)
-            else:
-                abs_paths = self._filter_paths(getattr(self, "%sdirs" % path_name))
-                self.__dict__["_%s_paths" % path_name] = abs_paths
-        return get_paths_value()
+        if self._components:
+            for dep_value in self._components.values():
+                abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
+                if not getattr(self, "_%s_paths" % path_name):
+                    result.extend(abs_paths)
+                for path in abs_paths:
+                    if path not in result:
+                        result.append(path)
+        else:
+            result = self._filter_paths(getattr(self, "%sdirs" % path_name))
+        return result
 
     @property
     def include_paths(self):
-        return self._get_paths("include")
+        if not self._include_paths:
+            self._include_paths = self._get_paths("include")
+        return self._include_paths
 
     @property
     def lib_paths(self):
-        return self._get_paths("lib")
+        if not self._lib_paths:
+            self._lib_paths = self._get_paths("lib")
+        return self._lib_paths
 
     @property
     def src_paths(self):
-        return self._get_paths("src")
+        if not self._src_paths:
+            self._src_paths = self._get_paths("src")
+        return self._src_paths
 
     @property
     def bin_paths(self):
-        return self._get_paths("bin")
+        if not self._bin_paths:
+            self._bin_paths = self._get_paths("bin")
+        return self._bin_paths
 
     @property
     def build_paths(self):
-        return self._get_paths("build")
+        if not self._build_paths:
+            self._build_paths = self._get_paths("build")
+        return self._build_paths
 
     @property
     def res_paths(self):
-        return self._get_paths("res")
+        if not self._res_paths:
+            self._res_paths = self._get_paths("res")
+        return self._res_paths
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
