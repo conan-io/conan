@@ -52,10 +52,26 @@ class _CppInfo(object):
     @property
     def _sorted_components(self):
         """
-        Sorted components from less dependent to the most one (less items in .deps attribute)
+        Sorted components from less dependent to the most one
         :return: ordered list of components
         """
-        return sorted(self._components.values(), key=lambda component: len(component.deps))
+        # Sort first elements with less items in .deps attribute
+        comps = sorted(self._components.values(), key=lambda component: len(component.deps))
+        # Save name of unsorted elements
+        unsorted_names = [comp.name for comp in comps]
+
+        sorted_comps = []
+        while unsorted_names:
+            for comp in comps:
+                # If element is already sorted, continue
+                if comp.name not in unsorted_names:
+                    continue
+                # If element does not have deps or all of its deps are already sorted, sort this
+                # element and remove it from the unsorted list
+                elif not comp.deps or not [dep for dep in comp.deps if dep in unsorted_names]:
+                    sorted_comps.append(comp)
+                    unsorted_names.remove(comp.name)
+        return sorted_comps
 
     @property
     def libs(self):

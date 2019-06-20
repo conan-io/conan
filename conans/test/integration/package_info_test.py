@@ -223,7 +223,7 @@ class HelloConan(ConanFile):
         self.assertIn("GLOBAL Libs: %s" % expected_global_libs, client.out)
         self.assertIn("GLOBAL Exes: %s" % expected_global_exes, client.out)
 
-        self.assertIn("DEPS Include Paths: {}".format(expected_global_include_paths), client.out)
+        self.assertIn("DEPS Include Paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("DEPS Library Paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("DEPS Binary Paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("DEPS Libs: %s" % expected_global_libs, client.out)

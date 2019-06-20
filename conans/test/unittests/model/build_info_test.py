@@ -246,6 +246,56 @@ VAR2=23
         self.assertEqual(['sys2', 'lib2', 'sys3', 'lib3', 'sys1', 'sys11', 'lib1'], info.libs)
         self.assertEqual(['sys2', 'sys3', 'sys1', 'sys11'], info.system_deps)
 
+    def cpp_info_link_order_test(self):
+
+        def _assert_link_order(sorted_libs):
+            for num, lib in enumerate(sorted_libs):
+                component_name = lib[-1]
+                for dep in info[component_name].deps:
+                    self.assertIn(info[dep].lib, sorted_libs[:num])
+
+        info = CppInfo(None)
+        info["F"].lib = "libF"
+        info["F"].deps = ["D", "E"]
+        info["E"].lib = "libE"
+        info["E"].deps = ["B"]
+        info["D"].lib = "libD"
+        info["D"].deps = ["A"]
+        info["C"].lib = "libC"
+        info["C"].deps = ["A"]
+        info["A"].lib = "libA"
+        info["A"].deps = ["B"]
+        info["B"].lib = "libB"
+        info["B"].deps = []
+        _assert_link_order(info.libs)
+
+        info = CppInfo(None)
+        info["K"].lib = "libK"
+        info["K"].deps = ["G", "H"]
+        info["J"].lib = "libJ"
+        info["J"].deps = ["F"]
+        info["G"].lib = "libG"
+        info["G"].deps = ["F"]
+        info["H"].lib = "libH"
+        info["H"].deps = ["F", "E"]
+        info["L"].lib = "libL"
+        info["L"].deps = ["I"]
+        info["F"].lib = "libF"
+        info["F"].deps = ["C", "D"]
+        info["I"].lib = "libI"
+        info["I"].deps = ["E"]
+        info["C"].lib = "libC"
+        info["C"].deps = ["A"]
+        info["D"].lib = "libD"
+        info["D"].deps = ["A"]
+        info["E"].lib = "libE"
+        info["E"].deps = ["A", "B"]
+        info["A"].lib = "libA"
+        info["A"].deps = []
+        info["B"].lib = "libB"
+        info["B"].deps = []
+        _assert_link_order(info.libs)
+
     def cppinfo_dirs_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
