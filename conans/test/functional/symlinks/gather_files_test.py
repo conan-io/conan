@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import platform
 import unittest
 
 import six
@@ -14,6 +15,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save, save_files
 
 
+@unittest.skipUnless(platform.system() != "Windows", "Symlinks not handled for Windows")
 class GatherFilesTestCase(unittest.TestCase):
 
     def setUp(self):
