@@ -55,42 +55,42 @@ class HelloConan(ConanFile):
 
     def package_info_components_test(self):
         dep = textwrap.dedent("""
-        import os
-        from conans import ConanFile
+            import os
+            from conans import ConanFile
 
-        class Dep(ConanFile):
-            exports_sources = "*"
+            class Dep(ConanFile):
+                exports_sources = "*"
 
-            def package(self):
-                self.copy("*")
+                def package(self):
+                    self.copy("*")
 
-            def package_info(self):
-                self.cpp_info.name = "Boost"
-                self.cpp_info["Accumulators"].includedirs = [os.path.join("boost", "accumulators")]
-                self.cpp_info["Accumulators"].lib = "libaccumulators"
-                self.cpp_info["Containers"].includedirs = [os.path.join("boost", "containers")]
-                self.cpp_info["Containers"].lib = "libcontainers"
-                self.cpp_info["Containers"].deps = ["Accumulators"]
-                self.cpp_info["SuperContainers"].includedirs = [os.path.join("boost",
-                                                                             "supercontainers")]
-                self.cpp_info["SuperContainers"].lib = "libsupercontainers"
-                self.cpp_info["SuperContainers"].deps = ["Containers"]
+                def package_info(self):
+                    self.cpp_info.name = "Boost"
+                    self.cpp_info["Accumulators"].includedirs = [os.path.join("boost", "accumulators")]
+                    self.cpp_info["Accumulators"].lib = "libaccumulators"
+                    self.cpp_info["Containers"].includedirs = [os.path.join("boost", "containers")]
+                    self.cpp_info["Containers"].lib = "libcontainers"
+                    self.cpp_info["Containers"].deps = ["Accumulators"]
+                    self.cpp_info["SuperContainers"].includedirs = [os.path.join("boost",
+                                                                                 "supercontainers")]
+                    self.cpp_info["SuperContainers"].lib = "libsupercontainers"
+                    self.cpp_info["SuperContainers"].deps = ["Containers"]
         """)
         consumer = textwrap.dedent("""
-        from conans import ConanFile
+            from conans import ConanFile
 
-        class Consumer(ConanFile):
-            requires = "dep/1.0@us/ch"
+            class Consumer(ConanFile):
+                requires = "dep/1.0@us/ch"
 
-            def build(self):
-                acc_includes = self.deps_cpp_info["dep"]["Accumulators"].include_paths
-                con_include = self.deps_cpp_info["dep"]["Containers"].include_paths
-                sup_include = self.deps_cpp_info["dep"]["SuperContainers"].include_paths
-                self.output.info("Name: %s" % self.deps_cpp_info["dep"].name)
-                self.output.info("Accumulators: %s" % acc_includes)
-                self.output.info("Containers: %s" % con_include)
-                self.output.info("SuperContainers: %s" % sup_include)
-                self.output.info("LIBS: %s" % self.deps_cpp_info["dep"].libs)
+                def build(self):
+                    acc_includes = self.deps_cpp_info["dep"]["Accumulators"].include_paths
+                    con_include = self.deps_cpp_info["dep"]["Containers"].include_paths
+                    sup_include = self.deps_cpp_info["dep"]["SuperContainers"].include_paths
+                    self.output.info("Name: %s" % self.deps_cpp_info["dep"].name)
+                    self.output.info("Accumulators: %s" % acc_includes)
+                    self.output.info("Containers: %s" % con_include)
+                    self.output.info("SuperContainers: %s" % sup_include)
+                    self.output.info("LIBS: %s" % self.deps_cpp_info["dep"].libs)
         """)
 
         client = TestClient()
@@ -115,15 +115,15 @@ class HelloConan(ConanFile):
 
     def package_info_wrong_cpp_info_test(self):
         conanfile = textwrap.dedent("""
-        import os
-        from conans import ConanFile
+            import os
+            from conans import ConanFile
 
-        class Dep(ConanFile):
+            class Dep(ConanFile):
 
-            def package_info(self):
-                self.cpp_info.name = "Boost"
-                self.cpp_info["Accumulators"].includedirs = [os.path.join("boost", "accumulators")]
-                self.cpp_info.libs = ["hello"]
+                def package_info(self):
+                    self.cpp_info.name = "Boost"
+                    self.cpp_info["Accumulators"].includedirs = [os.path.join("boost", "accumulators")]
+                    self.cpp_info.libs = ["hello"]
         """)
 
         client = TestClient()
@@ -135,32 +135,32 @@ class HelloConan(ConanFile):
 
     def package_info_components_complete_test(self):
         dep = textwrap.dedent("""
-        import os
-        from conans import ConanFile
+            import os
+            from conans import ConanFile
 
-        class Dep(ConanFile):
-            exports_sources = "*"
+            class Dep(ConanFile):
+                exports_sources = "*"
 
-            def package(self):
-                self.copy("*")
+                def package(self):
+                    self.copy("*")
 
-            def package_info(self):
-                self.cpp_info.name = "Galaxy"
-                self.cpp_info["Starlight"].includedirs = [os.path.join("galaxy", "starlight")]
-                self.cpp_info["Starlight"].lib = "libstarlight"
+                def package_info(self):
+                    self.cpp_info.name = "Galaxy"
+                    self.cpp_info["Starlight"].includedirs = [os.path.join("galaxy", "starlight")]
+                    self.cpp_info["Starlight"].lib = "libstarlight"
 
-                self.cpp_info["Planet"].includedirs = [os.path.join("galaxy", "planet")]
-                self.cpp_info["Planet"].lib = "libplanet"
-                self.cpp_info["Planet"].deps = ["Starlight"]
+                    self.cpp_info["Planet"].includedirs = [os.path.join("galaxy", "planet")]
+                    self.cpp_info["Planet"].lib = "libplanet"
+                    self.cpp_info["Planet"].deps = ["Starlight"]
 
-                self.cpp_info["Launcher"].exe = "exelauncher"
-                self.cpp_info["Launcher"].system_deps = ["ground"]
+                    self.cpp_info["Launcher"].exe = "exelauncher"
+                    self.cpp_info["Launcher"].system_deps = ["ground"]
 
-                self.cpp_info["ISS"].includedirs = [os.path.join("galaxy", "iss")]
-                self.cpp_info["ISS"].lib = "libiss"
-                self.cpp_info["ISS"].libdirs = ["iss_libs"]
-                self.cpp_info["ISS"].system_deps = ["solar", "magnetism"]
-                self.cpp_info["ISS"].deps = ["Starlight", "Launcher"]
+                    self.cpp_info["ISS"].includedirs = [os.path.join("galaxy", "iss")]
+                    self.cpp_info["ISS"].lib = "libiss"
+                    self.cpp_info["ISS"].libdirs = ["iss_libs"]
+                    self.cpp_info["ISS"].system_deps = ["solar", "magnetism"]
+                    self.cpp_info["ISS"].deps = ["Starlight", "Launcher"]
         """)
         consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -217,16 +217,13 @@ class HelloConan(ConanFile):
         expected_global_binary_paths = [os.path.join(package_folder, "bin")]
         expected_global_libs = ["libstarlight", "ground", "libplanet", "solar", "magnetism", "libiss"]
         expected_global_exes = ["exelauncher"]
-        fromatted1 = "GLOBAL Include Paths: %s" % expected_global_include_paths
-        self.assertIn(fromatted1, client.out)
+        self.assertIn("GLOBAL Include Paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("GLOBAL Library Paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("GLOBAL Binary Paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("GLOBAL Libs: %s" % expected_global_libs, client.out)
         self.assertIn("GLOBAL Exes: %s" % expected_global_exes, client.out)
 
-        formatted = "GLOBAL Include Paths: {}".format(expected_global_include_paths)
-        print(formatted)
-        self.assertIn(formatted, client.out)
+        self.assertIn("DEPS Include Paths: {}".format(expected_global_include_paths), client.out)
         self.assertIn("DEPS Library Paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("DEPS Binary Paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("DEPS Libs: %s" % expected_global_libs, client.out)
