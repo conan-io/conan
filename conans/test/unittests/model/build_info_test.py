@@ -184,7 +184,8 @@ VAR2=23
         self.assertEqual(component.lib, "libhola")
         with six.assertRaisesRegex(self, ConanException, "'.lib' is already set for this Component"):
             component.exe = "hola.exe"
-        component.lib = None
+
+        component = cpp_info["my_other_component"]
         component.exe = "hola.exe"
         self.assertEqual(component.lib, None)
         with six.assertRaisesRegex(self, ConanException, "'.exe' is already set for this Component"):

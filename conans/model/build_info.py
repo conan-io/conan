@@ -89,6 +89,7 @@ class _CppInfo(object):
 
     @libs.setter
     def libs(self, libs):
+        assert isinstance(libs, list), "'libs' attribute should be a list of strings"
         if self._components:
             raise ConanException("Setting first level libs is not supported when Components are "
                                  "already in use")
@@ -97,12 +98,13 @@ class _CppInfo(object):
     @property
     def exes(self):
         if self._components:
-            return [component.exe for component in self._components.values() if component.exe]
+            return [component.exe for component in self._sorted_components if component.exe]
         else:
             return self._exes
 
     @exes.setter
     def exes(self, exes):
+        assert isinstance(exes, list), "'exes' attribute should be a list of strings"
         if self._components:
             raise ConanException("Setting first level exes is not supported when Components are "
                                  "already in use")
@@ -123,6 +125,7 @@ class _CppInfo(object):
 
     @system_deps.setter
     def system_deps(self, system_deps):
+        assert isinstance(system_deps, list), "'system_deps' attribute should be a list of strings"
         if self._components:
             raise ConanException("Setting first level system_deps is not supported when Components "
                                  "are already in use")
@@ -323,6 +326,7 @@ class Component(object):
 
     @lib.setter
     def lib(self, name):
+        assert isinstance(name, str), "'lib' attribute should be a string"
         if self._exe:
             raise ConanException("'.exe' is already set for this Component")
         self._lib = name
@@ -333,6 +337,7 @@ class Component(object):
 
     @exe.setter
     def exe(self, name):
+        assert isinstance(name, str), "'exe' attribute should be a string"
         if self._lib:
             raise ConanException("'.lib' is already set for this Component")
         self._exe = name

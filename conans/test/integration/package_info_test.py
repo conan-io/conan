@@ -170,9 +170,9 @@ class HelloConan(ConanFile):
 
             def build(self):
                 # Global values
-                self.output.info("GLOBAL Include Paths: %s" % self.deps_cpp_info.include_paths)
-                self.output.info("GLOBAL Library Paths: %s" % self.deps_cpp_info.lib_paths)
-                self.output.info("GLOBAL Binary Paths: %s" % self.deps_cpp_info.bin_paths)
+                self.output.info("GLOBAL Include paths: %s" % self.deps_cpp_info.include_paths)
+                self.output.info("GLOBAL Library paths: %s" % self.deps_cpp_info.lib_paths)
+                self.output.info("GLOBAL Binary paths: %s" % self.deps_cpp_info.bin_paths)
                 self.output.info("GLOBAL Libs: %s" % self.deps_cpp_info.libs)
                 self.output.info("GLOBAL Exes: %s" % self.deps_cpp_info.exes)
                 # Deps values
@@ -217,13 +217,13 @@ class HelloConan(ConanFile):
         expected_global_binary_paths = [os.path.join(package_folder, "bin")]
         expected_global_libs = ["libstarlight", "ground", "libplanet", "solar", "magnetism", "libiss"]
         expected_global_exes = ["exelauncher"]
-        self.assertIn("GLOBAL Include Paths: %s" % expected_global_include_paths, client.out)
-        self.assertIn("GLOBAL Library Paths: %s" % expected_global_library_paths, client.out)
-        self.assertIn("GLOBAL Binary Paths: %s" % expected_global_binary_paths, client.out)
+        self.assertIn("GLOBAL Include paths: %s" % expected_global_include_paths, client.out)
+        self.assertIn("GLOBAL Library paths: %s" % expected_global_library_paths, client.out)
+        self.assertIn("GLOBAL Binary paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("GLOBAL Libs: %s" % expected_global_libs, client.out)
         self.assertIn("GLOBAL Exes: %s" % expected_global_exes, client.out)
 
-        self.assertIn("DEPS Include Paths: %s" % expected_global_include_paths, client.out)
+        self.assertIn("DEPS Include paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("DEPS Library paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("DEPS Binary paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("DEPS Libs: %s" % expected_global_libs, client.out)
