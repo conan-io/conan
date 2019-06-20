@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import platform
 import unittest
 
 from conans.client.cmd.uploader import _compress_files
@@ -12,6 +13,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import tar_extract, save, save_files
 
 
+@unittest.skipUnless(platform.system() != "Windows", "Symlinks not handled for Windows")
 class TarExtractTestSuite(unittest.TestCase):
 
     def setUp(self):
