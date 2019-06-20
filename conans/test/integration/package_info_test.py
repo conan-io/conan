@@ -184,7 +184,7 @@ class HelloConan(ConanFile):
                     self.output.info("DEPS Exes: %s" % dep_value.exes)
                 # Components values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                    for comp_name, comp_value in dep_value.deps.items():
+                    for comp_name, comp_value in dep_value.components.items():
                         self.output.info("COMP %s Include paths: %s" % (comp_name,
                         comp_value.include_paths))
                         self.output.info("COMP %s Library paths: %s" % (comp_name, comp_value.lib_paths))

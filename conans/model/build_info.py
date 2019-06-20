@@ -47,21 +47,21 @@ class _CppInfo(object):
         self.description = None  # Description of the conan package
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self.filter_empty = True
-        self._deps = OrderedDict()
+        self._components = OrderedDict()
 
-    def _get_components_sorted(self):
+    @property
+    def _sorted_components(self):
         """
-        Sort components from less dependent to the most one (less items in .deps attribute)
+        Sorted components from less dependent to the most one (less items in .deps attribute)
         :return: ordered list of components
         """
-        components = [v for v in self._deps.values()]
-        return sorted(components, key=lambda component: len(component.deps))
+        return sorted(self._components.values(), key=lambda component: len(component.deps))
 
     @property
     def libs(self):
-        if self._deps:
+        if self._components:
             result = []
-            for component in self._get_components_sorted():
+            for component in self._sorted_components:
                 for sys_dep in component.system_deps:
                     if sys_dep and sys_dep not in result:
                         result.append(sys_dep)
@@ -73,30 +73,30 @@ class _CppInfo(object):
 
     @libs.setter
     def libs(self, libs):
-        if self._deps:
+        if self._components:
             raise ConanException("Setting first level libs is not supported when Components are "
                                  "already in use")
         self._libs = libs
 
     @property
     def exes(self):
-        if self._deps:
-            return [component.exe for component in self._deps.values() if component.exe]
+        if self._components:
+            return [component.exe for component in self._components.values() if component.exe]
         else:
             return self._exes
 
     @exes.setter
     def exes(self, exes):
-        if self._deps:
+        if self._components:
             raise ConanException("Setting first level exes is not supported when Components are "
                                  "already in use")
         self._exes = exes
 
     @property
     def system_deps(self):
-        if self._deps:
+        if self._components:
             result = []
-            for component in self._get_components_sorted():
+            for component in self._sorted_components:
                 if component.system_deps:
                     for system_dep in component.system_deps:
                         if system_dep and system_dep not in result:
@@ -107,7 +107,7 @@ class _CppInfo(object):
 
     @system_deps.setter
     def system_deps(self, system_deps):
-        if self._deps:
+        if self._components:
             raise ConanException("Setting first level system_deps is not supported when Components "
                                  "are already in use")
         self._system_deps = system_deps
@@ -115,9 +115,9 @@ class _CppInfo(object):
     def __getitem__(self, key):
         if self._libs:
             raise ConanException("Usage of Components with '.libs' values is not allowed")
-        if key not in self._deps.keys():
-            self._deps[key] = Component(self, key)
-        return self._deps[key]
+        if key not in self._components.keys():
+            self._components[key] = Component(self, key)
+        return self._components[key]
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p) for p in paths]
@@ -138,9 +138,9 @@ class _CppInfo(object):
             return getattr(self, "_%s_paths" % path_name)
 
         if get_paths_value() is None:
-            if self._deps:
+            if self._components:
                 self.__dict__["_%s_paths" % path_name] = []
-                for dep_value in self._deps.values():
+                for dep_value in self._components.values():
                     abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
                     if not get_paths_value():
                         self.__dict__["_%s_paths" % path_name].extend(abs_paths)
@@ -205,7 +205,6 @@ class CppInfo(_CppInfo):
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
-        self._deps = OrderedDict()
 
     def _check_dirs_values(self):
         default_dirs_mapping = {
@@ -240,13 +239,13 @@ class CppInfo(_CppInfo):
             raise ConanException("Usage of Components with '.libs' or '.exes' values is not allowed")
         self._clear_dirs_values()
         self._check_dirs_values()
-        if key not in self._deps.keys():
-            self._deps[key] = Component(key, self.rootpath)
-        return self._deps[key]
+        if key not in self._components:
+            self._components[key] = Component(key, self.rootpath)
+        return self._components[key]
 
     @property
-    def deps(self):
-        return self._deps
+    def components(self):
+        return self._components
 
     def __getattr__(self, config):
 
