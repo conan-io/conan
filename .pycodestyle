@@ -1,4 +1,4 @@
-[pycodestyle]
+[pep8]
 count = False
 max-line-length = 100
 statistics = True
