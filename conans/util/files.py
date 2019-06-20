@@ -302,7 +302,8 @@ def tar_extract(fileobj, destination_dir, output):
         base = os.path.realpath(os.path.abspath(destination_dir))
 
         for finfo in members:
-            if badpath(finfo.name, base) or finfo.islnk():
+            if badpath(finfo.name, base) or \
+               (finfo.islnk() or finfo.issym() and badpath(finfo.linkname, base)):
                 if output:
                     output.warn("File '{}' inside the tar is a symlink pointing outside the"
                                 " tar, it will be skipped".format(finfo.name))
