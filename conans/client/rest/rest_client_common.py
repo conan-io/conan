@@ -3,6 +3,7 @@ import json
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
@@ -139,7 +140,7 @@ class RestCommonMethods(object):
 
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-            raise get_exception_from_error(response.status_code)(response.text)
+            raise get_exception_from_error(response.status_code)(response_to_str(response))
 
         content = decode_text(response.content)
         content_type = response.headers.get("Content-Type")

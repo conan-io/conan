@@ -1,20 +1,19 @@
 from six.moves.urllib.parse import urlencode
 
-from conans.model.ref import ConanFileReference, NONE_FOLDER_VALUE
+from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
 from conans.paths import CONAN_MANIFEST, CONANINFO
 
 
 def _format_ref(url, ref):
-    url = url.format(name=ref.name, version=ref.version, username=ref.user or NONE_FOLDER_VALUE,
-                     channel=ref.channel or NONE_FOLDER_VALUE, revision=ref.revision)
+    url = url.format(name=ref.name, version=ref.version, username=ref.user, channel=ref.channel,
+                     revision=ref.revision)
     return url
 
 
 def _format_pref(url, pref):
     ref = pref.ref
-    url = url.format(name=ref.name, version=ref.version, username=ref.user or NONE_FOLDER_VALUE,
-                     channel=ref.channel or NONE_FOLDER_VALUE,
+    url = url.format(name=ref.name, version=ref.version, username=ref.user, channel=ref.channel,
                      revision=ref.revision, package_id=pref.id,
                      p_revision=pref.revision)
     return url

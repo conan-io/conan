@@ -33,7 +33,7 @@ class LibCConan(ConanFile):
 
         conanfile = """from conans import ConanFile
 class LibCConan(ConanFile):
-    requires = ("LibB/0.1@user/channel", "private"), "LibC/0.1@user/channel"
+    requires = [("LibB/0.1@user/channel", "private"), "LibC/0.1@user/channel"]
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")

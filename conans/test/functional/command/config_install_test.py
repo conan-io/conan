@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import textwrap
 import unittest
 import zipfile
 
@@ -11,12 +12,12 @@ from conans.client import tools
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.uploader_downloader import Downloader
+from conans.client.rest.uploader_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
-import textwrap
+
 
 win_profile = """[settings]
     os: Windows
@@ -56,7 +57,6 @@ default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_
 # If don't want proxy at all, remove section [proxies]
 # As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
-no_proxy = mylocalhost
 https = None
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
@@ -165,23 +165,22 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
-        self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
-                         load(os.path.join(self.client.cache.conan_folder, "pylintrc")))
+                         load(os.path.join(self.client.cache.cache_folder, "pylintrc")))
         self.assertEqual("",
-                         load(os.path.join(self.client.cache.conan_folder, "python", "__init__.py")))
+                         load(os.path.join(self.client.cache.cache_folder, "python", "__init__.py")))
         self.assertEqual("#hook dummy",
-                         load(os.path.join(self.client.cache.conan_folder, "hooks", "dummy")))
+                         load(os.path.join(self.client.cache.cache_folder, "hooks", "dummy")))
         self.assertEqual("#hook foo",
-                         load(os.path.join(self.client.cache.conan_folder, "hooks", "foo.py")))
+                         load(os.path.join(self.client.cache.cache_folder, "hooks", "foo.py")))
         self.assertEqual("#hook custom",
-                         load(os.path.join(self.client.cache.conan_folder, "hooks", "custom",
+                         load(os.path.join(self.client.cache.cache_folder, "hooks", "custom",
                                            "custom.py")))
-        self.assertFalse(os.path.exists(os.path.join(self.client.cache.conan_folder, "hooks",
+        self.assertFalse(os.path.exists(os.path.join(self.client.cache.cache_folder, "hooks",
                                                      ".git")))
-        self.assertFalse(os.path.exists(os.path.join(self.client.cache.conan_folder, ".git")))
+        self.assertFalse(os.path.exists(os.path.join(self.client.cache.cache_folder, ".git")))
 
     def reuse_python_test(self):
         zippath = self._create_zip()
@@ -219,9 +218,9 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "hello",
                             "subf/subf/file2.txt": "bye"})
         self.client.run('config install "%s" -sf=subf -tf=newsubf' % folder)
-        content = load(os.path.join(self.client.cache.conan_folder, "newsubf/file.txt"))
+        content = load(os.path.join(self.client.cache.cache_folder, "newsubf/file.txt"))
         self.assertEqual(content, "hello")
-        content = load(os.path.join(self.client.cache.conan_folder, "newsubf/subf/file2.txt"))
+        content = load(os.path.join(self.client.cache.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
     def install_multiple_configs_test(self):
@@ -229,8 +228,8 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "hello",
                             "subf2/file2.txt": "bye"})
         self.client.run('config install "%s" -sf=subf' % folder)
-        content = load(os.path.join(self.client.cache.conan_folder, "file.txt"))
-        file2 = os.path.join(self.client.cache.conan_folder, "file2.txt")
+        content = load(os.path.join(self.client.cache.cache_folder, "file.txt"))
+        file2 = os.path.join(self.client.cache.cache_folder, "file2.txt")
         self.assertEqual(content, "hello")
         self.assertFalse(os.path.exists(file2))
         self.client.run('config install "%s" -sf=subf2' % folder)
@@ -239,7 +238,7 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "HELLO!!",
                             "subf2/file2.txt": "BYE!!"})
         self.client.run('config install')
-        content = load(os.path.join(self.client.cache.conan_folder, "file.txt"))
+        content = load(os.path.join(self.client.cache.cache_folder, "file.txt"))
         self.assertEqual(content, "HELLO!!")
         content = load(file2)
         self.assertEqual(content, "BYE!!")
@@ -301,7 +300,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -313,7 +312,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -330,6 +329,7 @@ class Pkg(ConanFile):
     def failed_install_http_test(self):
         """ should install from a http zip
         """
+        self.client.run("config set general.retry_wait=0")
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Error while installing config from httpnonexisting", self.client.out)
 
@@ -432,7 +432,7 @@ class Pkg(ConanFile):
             self.assertEqual(url, fake_url_with_credentials)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install %s" % fake_url_with_credentials)
 
             # Check credentials are not displayed in output
@@ -453,10 +453,10 @@ class Pkg(ConanFile):
             self.assertTrue(obj.verify)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=download_verify_false):
+        with patch.object(FileDownloader, 'download', new=download_verify_false):
             self.client.run("config install %s --verify-ssl=False" % fake_url)
 
-        with patch.object(Downloader, 'download', new=download_verify_true):
+        with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
     def test_git_checkout_is_possible(self):
@@ -497,7 +497,7 @@ class Pkg(ConanFile):
             self.client.runner('git add .')
             self.client.runner('git commit -m "my other file"')
             self.client.runner('git checkout master')
-        other_path = os.path.join(self.client.cache.conan_folder, "hooks", "other", "other.py")
+        other_path = os.path.join(self.client.cache.cache_folder, "hooks", "other", "other.py")
         self.assertFalse(os.path.exists(other_path))
         self.client.run('config install')
         check_path = os.path.join(folder, ".git")

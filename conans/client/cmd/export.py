@@ -11,7 +11,7 @@ from conans.client.remover import DiskRemover
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
 from conans.util.log import logger
@@ -208,11 +208,16 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     tree = ast.parse(content)
     to_replace = []
     comments = []
+    class_line = None
+    tab_size = 4
     for i_body, item in enumerate(tree.body):
         if isinstance(item, ast.ClassDef):
             statements = item.body
+            class_line = item.lineno
             for i, stmt in enumerate(item.body):
                 if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
+                    line = lines[stmt.lineno - 1]
+                    tab_size = len(line) - len(line.lstrip())
                     if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
                         try:
                             if i + 1 == len(statements):  # Last statement in my ClassDef
@@ -233,14 +238,24 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                         comments = [line.strip('\n') for line in replace
                                     if line.strip().startswith("#") or not line.strip()]
                         break
-    if len(to_replace) != 1:
+
+    if len(to_replace) > 1:
         raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
 
     new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
-    if comments:
-        new_text += '\n'.join(comments) + "\n"
-    content = content.replace(to_replace[0], new_text)
-    content = content if not headers else ''.join(headers) + content
+
+    if len(to_replace) == 0:
+        # SCM exists, but not found in the conanfile, probably inherited from superclass
+        # FIXME: This will inject the lines only the latest class declared in the conanfile
+        tmp = lines[0:class_line]
+        tmp.append("{}{}".format(" " * tab_size, new_text))
+        tmp.extend(lines[class_line:])
+        content = ''.join(tmp)
+    else:
+        if comments:
+            new_text += '\n'.join(comments) + "\n"
+        content = content.replace(to_replace[0], new_text)
+        content = content if not headers else ''.join(headers) + content
 
     remove(conanfile_path)
     save(conanfile_path, content)
@@ -335,6 +350,16 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports, )
 
+    output = conanfile.output
+    package_output = ScopedOutput("%s exports" % output.scope, output)
+
+    if os.path.exists(os.path.join(origin_folder, DATA_YML)):
+        package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
+        tmp = [DATA_YML]
+        if conanfile.exports:
+            tmp.extend(conanfile.exports)  # conanfile.exports could be a tuple (immutable)
+        conanfile.exports = tmp
+
     included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
     try:
@@ -345,6 +370,5 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    output = conanfile.output
-    package_output = ScopedOutput("%s exports" % output.scope, output)
+
     copier.report(package_output)

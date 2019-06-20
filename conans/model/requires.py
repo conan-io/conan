@@ -1,9 +1,10 @@
+import os
 from collections import OrderedDict
 
 import six
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.env_reader import get_env
 
 
@@ -88,7 +89,10 @@ class Requirements(OrderedDict):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
-        ref = ConanFileReference.loads(reference)
+        name, version, user, channel, revision = get_reference_fields(reference)
+        user = user or os.getenv("CONAN_USERNAME")
+        channel = channel or os.getenv("CONAN_CHANNEL")
+        ref = ConanFileReference(name, version, user, channel, revision)
         self.add_ref(ref, private, override)
 
     def add_ref(self, ref, private=False, override=False):

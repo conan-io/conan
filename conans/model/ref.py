@@ -6,8 +6,6 @@ from six import string_types
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
-NONE_FOLDER_VALUE = "none"
-
 
 def get_reference_fields(arg_reference, user_channel_allowed=False):
     """
@@ -18,11 +16,6 @@ def get_reference_fields(arg_reference, user_channel_allowed=False):
     :return: name, version, user and channel, in a tuple
     """
 
-    def convert_to_none(field):
-        if field == "None" or field == NONE_FOLDER_VALUE:
-            return None
-        return field
-
     def split_pair(pair, split_char, priority_first=True):
         if not pair:
             return None, None
@@ -31,24 +24,30 @@ def get_reference_fields(arg_reference, user_channel_allowed=False):
             if len(tmp) != 2:
                 raise ConanException("The reference has too many '%s'".format(split_char))
             else:
-                return convert_to_none(tmp[0]), convert_to_none(tmp[1])
+                return tmp
         else:
-            return (convert_to_none(pair), None) \
-                if priority_first else (None, convert_to_none(pair))
+            return (pair, None) if priority_first else (None, pair)
 
     if not arg_reference:
-        return None, None, None, None
+        return None, None, None, None, None
+
+    revision = None
+
+    if "#" in arg_reference:
+        tmp = arg_reference.split("#", 1)
+        revision = tmp[1]
+        arg_reference = tmp[0]
 
     if "@" in arg_reference:
         name_version, user_channel = split_pair(arg_reference, "@")
         name, version = split_pair(name_version, "/", priority_first=False)
         user, channel = split_pair(user_channel, "/")
 
-        return name, version, user, channel
+        return name, version, user, channel, revision
     else:
         if user_channel_allowed:
             el1, el2 = split_pair(arg_reference, "/")
-            return None, None, el1, el2
+            return None, None, el1, el2, revision
         else:
             raise ConanException("Invalid reference, specify something like zlib/1.2.11@ "
                                  "if you want to avoid the 'user/channel'")
@@ -127,7 +126,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """
     sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
-    def __new__(cls, name, version, user=None, channel=None, revision=None, validate=True):
+    def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
         @param name:        string containing the desired name
         @param version:     string containing the desired version
@@ -136,26 +135,16 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param revision:    string containing the revision (optional)
         """
         version = Version(version) if version is not None else None
-
-        # Convert "default" from a search or remote to None
-        if user == NONE_FOLDER_VALUE:
-            user = None
-        if channel == NONE_FOLDER_VALUE:
-            channel = None
-
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj._validate()
-
         return obj
 
     def _validate(self):
         ConanName.validate_name(self.name, reference_token="package name")
         ConanName.validate_name(self.version, True, reference_token="package version")
-        if self.user is not None:
-            ConanName.validate_name(self.user, reference_token="user name")
-        if self.channel is not None:
-            ConanName.validate_name(self.channel, reference_token="channel")
+        ConanName.validate_name(self.user, reference_token="user name")
+        ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
 
@@ -163,52 +152,25 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def loads(text, validate=True):
         """ Parses a text string to generate a ConanFileReference object
         """
-        try:
-            name, version, user, channel = get_reference_fields(text)
-            if user and not channel:
-                # TODO: or want we to allow lib/1.0@user ? Conan 2.0?
-                raise ConanException("Only default channel not allowed")
-        except ConanException as e:
-            raise ConanException("Wrong package recipe reference '%s': %s" % (text, str(e)))
-        revision = None
-        if channel and "#" in channel:
-            channel, revision = channel.split("#")
-
+        name, version, user, channel, revision = get_reference_fields(text)
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
     def __repr__(self):
-        if self.user is None and self.channel is None:
-            return "%s/%s" % (self.name, self.version)
-        if self.user is not None and self.channel is None:
-            return "%s/%s@%s" % (self.name, self.version, self.user)
-        return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
-
-    def full_str(self):
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
     def full_repr(self):
-        tmp = str(self)
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s%s" % (tmp, str_rev)
+        return "%s%s" % (str(self), str_rev)
 
     def dir_repr(self):
-        channel = self.channel or NONE_FOLDER_VALUE
-        user = self.user or NONE_FOLDER_VALUE
-        return "/".join([self.name, self.version, user, channel])
+        return "/".join(self[:-1])
 
     def copy_with_rev(self, revision):
         return ConanFileReference(self.name, self.version, self.user, self.channel, revision)
 
     def copy_clear_rev(self):
         return ConanFileReference(self.name, self.version, self.user, self.channel, None)
-
-    def __lt__(self, other):
-        # To compare (sort) refs with None user channel with others having it
-        def de_noneize(ref):
-            return ref.name, ref.version, ref.user or "", ref.channel or "", ref.revision or ""
-
-        return de_noneize(self) < de_noneize(other)
 
 
 class PackageReference(namedtuple("PackageReference", "ref id revision")):

@@ -174,7 +174,7 @@ build2/0.1@user/testing
         self.assertNotIn("Hello World!", client.user_io.out)
         client.run("build .")
         self.assertIn("Hello World!", client.user_io.out)
-        self.assertIn("conanfile.py (MyLib/0.1): Hello world from python tool!",
+        self.assertIn("conanfile.py (MyLib/0.1@None/None): Hello world from python tool!",
                       client.out)
 
     def test_build_mode_requires(self):

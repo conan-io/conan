@@ -129,7 +129,8 @@ def log_package_got_from_local_cache(pref):
 
 def log_package_built(pref, duration, log_run=None):
     assert(isinstance(pref, PackageReference))
-    _append_action("PACKAGE_BUILT_FROM_SOURCES", {"_id": str(pref), "duration": duration, "log": log_run})
+    _append_action("PACKAGE_BUILT_FROM_SOURCES",
+                   {"_id": str(pref), "duration": duration, "log": log_run})
 
 
 def log_client_rest_api_call(url, method, duration, headers):
@@ -148,7 +149,7 @@ def log_command(name, parameters):
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
     logger.debug("CONAN_API: %s(%s)" % (name, ",".join("%s=%s" % (k, v)
-                                                       for k,v in parameters.items())))
+                                                       for k, v in parameters.items())))
 
 
 def log_exception(exc, message):

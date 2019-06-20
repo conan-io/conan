@@ -2,15 +2,18 @@ import os
 import platform
 import shutil
 import tempfile
-import time
 
-from conans.client.tools.files import untargz
+import time
+from six import BytesIO
+
+from conans.client.tools.files import untargz, chdir
+from conans.client.tools.win import get_cased_path
 from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.test.utils.go_test_files import go_hello_conan_files, go_hello_source_files
-from conans.client.tools.win import get_cased_path
+from conans.util.files import mkdir_tmp
 
 
 def wait_until_removed(folder):
@@ -99,3 +102,17 @@ def hello_conan_files(ref, number=0, deps=None, language=0, lang='cpp'):
         return cpp_hello_conan_files(ref, number, deps, language)
     elif lang == 'go':
         return go_hello_conan_files(ref, number, deps)
+
+
+def tgz_with_contents(files):
+    with chdir(mkdir_tmp()):
+        import tarfile
+        file_path = os.path.abspath("myfile.tar.gz")
+        tar_file = tarfile.open(file_path, "w:gz")
+        for name, content in files.items():
+            info = tarfile.TarInfo(name=name)
+            data = content.encode('utf-8')
+            info.size = len(data)
+            tar_file.addfile(tarinfo=info, fileobj=BytesIO(data))
+            tar_file.close()
+        return file_path

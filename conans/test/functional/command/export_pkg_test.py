@@ -5,7 +5,7 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.model.ref import ConanFileReference, PackageReference, NONE_FOLDER_VALUE
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
@@ -579,6 +579,5 @@ class TestConan(ConanFile):
         ref = ConanFileReference.loads("Hello/0.1@")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
-        self.assertIn(NONE_FOLDER_VALUE, package_folder)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))

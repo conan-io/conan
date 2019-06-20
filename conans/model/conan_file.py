@@ -5,7 +5,7 @@ from conans.client import tools
 from conans.client.output import Color, ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -42,7 +42,7 @@ def create_requirements(conanfile):
         else:
             if not conanfile.requires:
                 return Requirements()
-            if isinstance(conanfile.requires, tuple):
+            if isinstance(conanfile.requires, (tuple, list)):
                 return Requirements(*conanfile.requires)
             else:
                 return Requirements(conanfile.requires, )
@@ -59,7 +59,7 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanException("Error while initializing settings. %s" % str(e))
+        raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
 
 
 @contextmanager

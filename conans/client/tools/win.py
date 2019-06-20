@@ -15,7 +15,7 @@ from conans.model.version import Version
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
-from conans.util.files import decode_text, mkdir_tmp, save
+from conans.util.files import mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
