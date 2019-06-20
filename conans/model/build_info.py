@@ -167,37 +167,37 @@ class _CppInfo(object):
 
     @property
     def include_paths(self):
-        if not self._include_paths:
+        if self._include_paths is None:
             self._include_paths = self._get_paths("include")
         return self._include_paths
 
     @property
     def lib_paths(self):
-        if not self._lib_paths:
+        if self._lib_paths is None:
             self._lib_paths = self._get_paths("lib")
         return self._lib_paths
 
     @property
     def src_paths(self):
-        if not self._src_paths:
+        if self._src_paths is None:
             self._src_paths = self._get_paths("src")
         return self._src_paths
 
     @property
     def bin_paths(self):
-        if not self._bin_paths:
+        if self._bin_paths is None:
             self._bin_paths = self._get_paths("bin")
         return self._bin_paths
 
     @property
     def build_paths(self):
-        if not self._build_paths:
+        if self._build_paths is None:
             self._build_paths = self._get_paths("build")
         return self._build_paths
 
     @property
     def res_paths(self):
-        if not self._res_paths:
+        if self._res_paths is None:
             self._res_paths = self._get_paths("res")
         return self._res_paths
 
