@@ -196,7 +196,7 @@ VAR2=23
         """
         info = CppInfo(None)
         info.name = "Greetings"
-        self.assertIn(info.name, "Greetings")
+        self.assertEqual(info.name, "Greetings")
         info.libs = ["libgreet"]
         with six.assertRaisesRegex(self, ConanException, "Usage of Components with '.libs' or "
                                                          "'.exes' values is not allowed"):
