@@ -158,8 +158,6 @@ class _CppInfo(object):
         if self._components:
             for dep_value in self._components.values():
                 abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
-                if not getattr(self, "_%s_paths" % path_name):
-                    result.extend(abs_paths)
                 for path in abs_paths:
                     if path not in result:
                         result.append(path)
