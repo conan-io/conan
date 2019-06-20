@@ -157,7 +157,9 @@ OpenCV/2.4.104phil/stable
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        with six.assertRaisesRegex(self, ConanException, "Wrong package recipe reference(.*)"):
+        with six.assertRaisesRegex(self, ConanException, "Invalid reference, specify something "
+                                                         "like zlib/1.2.11@ if you want to avoid "
+                                                         "the 'user/channel'"):
             loader.load_conanfile_txt(file_path, test_processed_profile())
 
         file_content = '''[requires]

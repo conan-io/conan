@@ -141,7 +141,7 @@ class MyTest(ConanFile):
             parent_reference = node_matches[0]
             deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
 
-            if parent_reference == "conanfile.py (Hello0/0.1)":
+            if parent_reference == "conanfile.py (Hello0/0.1@None/None)":
                 parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
             else:
                 parent_ref = ConanFileReference.loads(parent_reference)
@@ -251,14 +251,14 @@ class AConan(ConanFile):
 
         self.client.run("info . --only None")
         self.assertEqual(["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable",
-                          "conanfile.py (Hello2/0.1)"],
+                          "conanfile.py (Hello2/0.1@None/None)"],
                          str(self.client.out).splitlines()[-3:])
         self.client.run("info . --only=date")
         lines = [(line if "date" not in line else "Date")
                  for line in str(self.client.out).splitlines()]
         self.assertEqual(["Hello0/0.1@lasote/stable", "Date",
                           "Hello1/0.1@lasote/stable", "Date",
-                          "conanfile.py (Hello2/0.1)"], lines)
+                          "conanfile.py (Hello2/0.1@None/None)"], lines)
 
         self.client.run("info . --only=invalid", assert_error=True)
         self.assertIn("Invalid --only value", self.client.out)
@@ -283,7 +283,7 @@ class MyTest(ConanFile):
         self.client.run("export ./subfolder lasote/testing")
 
         self.client.run("info ./subfolder")
-        self.assertIn("conanfile.py (Pkg/0.1)", self.client.user_io.out)
+        self.assertIn("conanfile.py (Pkg/0.1@None/None)", self.client.user_io.out)
 
         self.client.run("info ./subfolder --build-order "
                         "Pkg/0.1@lasote/testing --json=jsonfile.txt")
@@ -329,10 +329,10 @@ class MyTest(ConanFile):
                 Binary: Missing
                 Binary remote: None
                 Required by:
-                    conanfile.py (Hello2/0.1)
+                    conanfile.py (Hello2/0.1@None/None)
                 Requires:
                     Hello0/0.1@lasote/stable
-            conanfile.py (Hello2/0.1)
+            conanfile.py (Hello2/0.1@None/None)
                 URL: myurl
                 Licenses: MIT, GPL
                 Requires:
@@ -363,7 +363,7 @@ class MyTest(ConanFile):
                 URL: myurl
             Hello1/0.1@lasote/stable
                 URL: myurl
-            conanfile.py (Hello2/0.1)
+            conanfile.py (Hello2/0.1@None/None)
                 URL: myurl""")
 
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
@@ -376,7 +376,7 @@ class MyTest(ConanFile):
             Hello1/0.1@lasote/stable
                 URL: myurl
                 License: MIT
-            conanfile.py (Hello2/0.1)
+            conanfile.py (Hello2/0.1@None/None)
                 URL: myurl
                 Licenses: MIT, GPL""")
 
@@ -402,7 +402,7 @@ class MyTest(ConanFile):
         self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
         self.assertEqual(content[1]["url"], "myurl")
-        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
+        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1@None/None)")
 
     def build_order_test(self):
         self.client = TestClient()
@@ -546,7 +546,7 @@ class MyTest(ConanFile):
 
         self.client.run("info ./subfolder")
 
-        self.assertIn("conanfile.py (Pkg/0.1)", self.client.user_io.out)
+        self.assertIn("conanfile.py (Pkg/0.1@None/None)", self.client.user_io.out)
         self.assertNotIn("License:", self.client.user_io.out)
         self.assertNotIn("Author:", self.client.user_io.out)
         self.assertNotIn("Topics:", self.client.user_io.out)
@@ -573,7 +573,7 @@ class MyTest(ConanFile):
         client.run("export ./subfolder lasote/testing")
         client.run("info ./subfolder")
 
-        self.assertIn("conanfile.py (Pkg/0.2)", client.out)
+        self.assertIn("conanfile.py (Pkg/0.2@None/None)", client.out)
         self.assertIn("License: MIT", client.out)
         self.assertIn("Author: John Doe", client.out)
         self.assertIn("Topics: foo, bar, qux", client.out)
@@ -622,7 +622,7 @@ class MyTest(ConanFile):
         graph_info.pop("root")
         save(path, json.dumps(graph_info))
         client.run("info .")
-        self.assertIn("conanfile.py (Hello/0.1)", client.out)
+        self.assertIn("conanfile.py (Hello/0.1@None/None)", client.out)
         save(path, "broken thing")
         client.run("info .", assert_error=True)
         self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)
