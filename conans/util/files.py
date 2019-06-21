@@ -294,13 +294,13 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
 def tar_extract(fileobj, destination_dir, output):
     """Extract tar file controlling not absolute paths and fixing the routes
     if the tar was zipped in windows"""
+    base = os.path.realpath(os.path.abspath(destination_dir))
+
     def badpath(path, base):
         # joinpath will ignore base if path is absolute
         return not os.path.realpath(os.path.abspath(os.path.join(base, path))).startswith(base)
 
     def safemembers(members):
-        base = os.path.realpath(os.path.abspath(destination_dir))
-
         for finfo in members:
             if badpath(finfo.name, base) or \
                (finfo.islnk() or finfo.issym() and badpath(finfo.linkname, base)):
