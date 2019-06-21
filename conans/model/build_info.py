@@ -56,7 +56,7 @@ class _CppInfo(object):
         :return: ordered list of components
         """
         # Save name of unsorted elements
-        unsorted_names = self._components.keys()
+        unsorted_names = list(self._components.keys())
         sorted_comps = []
         element = unsorted_names[0]
         while unsorted_names:
@@ -158,7 +158,7 @@ class _CppInfo(object):
         result = []
 
         if self._components:
-            for dep_value in self._components.values():
+            for dep_value in self._sorted_components:
                 abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
                 for path in abs_paths:
                     if path not in result:

@@ -243,8 +243,9 @@ class HelloConan(ConanFile):
             expected_comp_iss_library_paths
         expected_global_binary_paths = expected_comp_starlight_binary_paths
         expected_global_libs = expected_comp_starlight_system_deps + [expected_comp_starlight_lib]
-        expected_global_libs.extend(expected_comp_launcher_system_deps)
+        expected_global_libs.extend(expected_comp_planet_system_deps)
         expected_global_libs.append(expected_comp_planet_lib)
+        expected_global_libs.extend(expected_comp_launcher_system_deps)
         expected_global_libs.extend(expected_comp_iss_system_deps)
         expected_global_libs.append(expected_comp_iss_lib)
         expected_global_exes = [expected_comp_launcher_exe]
