@@ -122,8 +122,8 @@ class CMake(object):
                 args.append('-A "%s"' % self.generator_platform)
             else:
                 raise ConanException('CMake does not support generator platform with generator "%s:.'
-                                     'Please check your conan profile to either remove the generator platform,'
-                                     ' or change the CMake generator.' % self.generator)
+                                     'Please check your conan profile to either remove the generator'
+                                     ' platform, or change the CMake generator.' % self.generator)
         args.append(self.flags)
         args.append('-Wno-dev')
 

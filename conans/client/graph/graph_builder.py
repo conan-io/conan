@@ -9,8 +9,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
 
-REFERENCE_CONFLICT, REVISION_CONFLICT = 1, 2
-
 
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
@@ -96,7 +94,8 @@ class DepsGraphBuilder(object):
                                pr_build=processed_profile_build, pr_host=processed_profile_host)
 
         # Gather all build_requires into the same graph
-        new_nodes = set([n for n in graph.nodes if n.package_id is None])
+        new_nodes = set(n for n in graph.nodes if n.package_id is None)
+
         # This is to make sure that build_requires have precedence over the normal requires
         node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
 
@@ -109,12 +108,10 @@ class DepsGraphBuilder(object):
 
         return subgraph
 
-    def _resolve_ranges(self, graph, requires, scope, update, remotes):
+    def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
-            self._resolver.resolve(require, scope, update, remotes)
-
-        # After resolving ranges,
-        for require in requires:
+            self._resolver.resolve(require, consumer, update, remotes)
+            # if the range is resolved, check if it is an alias
             alias = graph.aliased.get(require.ref)
             if alias:
                 require.ref = alias
@@ -165,19 +162,25 @@ class DepsGraphBuilder(object):
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
                         remotes, processed_profile_host, processed_profile_build,
                         new_reqs, new_options, new_build_options):
+        # Handle a requirement of a node. There are 2 possibilities
+        #    node -(require)-> new_node (creates a new node in the graph)
+        #    node -(require)-> previous (creates a diamond with a previously existing node)
 
+        # If the required is found in the node ancestors a loop is being closed
+        # TODO: allow bootstrapping, use references instead of names
         if name in node.ancestors or name == node.name:
             raise ConanException("Loop detected: '%s' requires '%s' which is an ancestor too"
                                  % (node.ref, require.ref))
 
         build_context = require.build_context if node.build_context == CONTEXT_HOST else node.build_context
         new_options = new_options if node.build_context == CONTEXT_HOST else new_build_options
+        # If the requirement is found in the node public dependencies, it is a diamond
         previous = node.public_deps.get(name, build_context)
         previous_closure = node.public_closure.get(name, build_context)
+        # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
-            # new node, must be added and expanded
-            # node -> new_node
             processed_profile_host = processed_profile_host if require.build_context == CONTEXT_HOST else processed_profile_build
+            # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, dep_graph, require, name,
                                              check_updates, update, remotes,
                                              processed_profile_host, processed_profile_build)
@@ -188,48 +191,47 @@ class DepsGraphBuilder(object):
             new_node.inverse_closure.add(node)
             node.public_deps.add(new_node)
 
-            # If the parent node is a build-require, this new node will be a build-require
-            # If the requirement is a build-require, this node will also be a build-require
             new_node.build_require = node.build_require or require.build_require
             # New nodes will inherit the private property of its ancestor
             new_node.private = node.private or require.private
             if require.private or require.build_require:
-                # If the requirement is private (or build_require), a new public scope is defined
+                # If the requirement is private (or build_require), a new public_deps is defined
+                # the new_node doesn't propagate downstream the "node" consumer, so its public_deps
+                # will be a copy of the node.public_closure, i.e. it can only cause conflicts in the
+                # new_node.public_closure.
                 new_node.public_deps.add(new_node)
                 new_node.public_deps.prepend(node.public_closure)
             else:
+                # Normal requires propagate and can conflict with the parent "node.public_deps" too
                 new_node.public_deps.add(new_node)
                 new_node.public_deps.prepend(node.public_deps)
 
-                # Update the closure of each dependent
+                # All the dependents of "node" are also connected now to "new_node"
                 for dep_node in node.inverse_closure:
                     dep_node.public_closure.add(new_node)
                     new_node.inverse_closure.add(dep_node)
                     dep_node.public_deps.add(new_node)
 
-            # RECURSION!
+            # RECURSION, keep expanding (depth-first) the new node
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
                             new_options, new_build_options, check_updates, update,
                             remotes, processed_profile_host, processed_profile_build)
         else:  # a public node already exist with this name
-            # This is closing a diamond, the node is existing in the scope
+            # This is closing a diamond, the node already exists and is reachable
             alias_ref = dep_graph.aliased.get(require.ref)
             # Necessary to make sure that it is pointing to the correct aliased
             if alias_ref:
                 require.ref = alias_ref
-            conflict = self._conflicting_references(previous.ref, require.ref)
-            if conflict == REVISION_CONFLICT:  # Revisions conflict
-                raise ConanException("Conflict in %s\n"
-                                     "    Different revisions of %s has been requested"
-                                     % (node.ref, require.ref))
-            elif conflict == REFERENCE_CONFLICT:
-                raise ConanException("Conflict in %s\n"
-                                     "    Requirement %s conflicts with already defined %s\n"
-                                     "    To change it, override it in your base requirements"
-                                     % (node.ref, require.ref, previous.ref))
+            # As we are closing a diamond, there can be conflicts. This will raise if conflicts
+            self._conflicting_references(previous.ref, require.ref, node.ref)
 
-            # Add current ancestors to the previous node
-            previous.update_ancestors(node.ancestors.union([node.name]))
+            # Add current ancestors to the previous node and upstream deps
+            union = node.ancestors.union([node.name])
+            for n in previous.public_closure.values():
+                n.ancestors.update(union)
+
+            # Even if it was in private scope, if it is reached via a public require
+            # the previous node and its upstream becomes public
             if previous.private and not require.private:
                 previous.make_public()
 
@@ -237,7 +239,8 @@ class DepsGraphBuilder(object):
             previous.inverse_closure.add(node)
             node.public_deps.add(previous)
             dep_graph.add_edge(node, previous, require.private, require.build_require)
-            # Update the closure of each dependent
+            # All the upstream dependencies (public_closure) of the previously existing node
+            # now will be also connected to the node and to all its dependants
             for n in previous.public_closure:
                 if n.build_require or n.private:
                     continue
@@ -248,7 +251,8 @@ class DepsGraphBuilder(object):
                     dep_node.public_deps.add(n)
                     n.inverse_closure.add(dep_node)
 
-            # RECURSION!
+            # Recursion is only necessary if the inputs conflict with the current "previous"
+            # configuration of upstream versions and options
             if self._recurse(previous.public_closure, new_reqs, new_options,
                              build_context=previous.build_context):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref,
@@ -256,14 +260,23 @@ class DepsGraphBuilder(object):
                                 remotes, processed_profile_host, processed_profile_build)
 
     @staticmethod
-    def _conflicting_references(previous_ref, new_ref):
+    def _conflicting_references(previous_ref, new_ref, consumer_ref=None):
         if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
-            return REFERENCE_CONFLICT
+            if consumer_ref:
+                raise ConanException("Conflict in %s\n"
+                                     "    Requirement %s conflicts with already defined %s\n"
+                                     "    To change it, override it in your base requirements"
+                                     % (consumer_ref, new_ref, previous_ref))
+            return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
         if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
-            return REVISION_CONFLICT
+            if consumer_ref:
+                raise ConanException("Conflict in %s\n"
+                                     "    Different revisions of %s has been requested"
+                                     % (consumer_ref, new_ref))
+            return True
         return False
 
     def _recurse(self, closure, new_reqs, new_options, build_context):
@@ -388,8 +401,15 @@ class DepsGraphBuilder(object):
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
+        # Ancestors are a copy of the parent, plus the parent itself
         new_node.ancestors = current_node.ancestors.copy()
         new_node.ancestors.add(current_node.name)
+        # build-requires and private affect transitively. If "node" is already
+        # a build_require or a private one, its requirements will inherit that property
+        # Or if the require specify that property, then it will get it too
+        new_node.build_require = current_node.build_require or requirement.build_require
+        new_node.private = current_node.private or requirement.private
+
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement.private, requirement.build_require)
         return new_node

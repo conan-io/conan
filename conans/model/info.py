@@ -414,8 +414,8 @@ class ConanInfo(object):
         same as specifying None, packages are the same
         """
 
-        if self.full_settings.compiler and \
-            self.full_settings.compiler.version:
+        if (self.full_settings.compiler and
+                self.full_settings.compiler.version):
             default = cppstd_default(str(self.full_settings.compiler),
                                      str(self.full_settings.compiler.version))
 

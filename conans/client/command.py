@@ -79,10 +79,10 @@ class SmartFormatter(argparse.HelpFormatter):
         text = textwrap.dedent(text)
         return ''.join(indent + line for line in text.splitlines(True))
 
-
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
+_PREF_EXAMPLE = ("MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137")
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to current directory can also be specified")
@@ -91,7 +91,11 @@ _INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildin
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in local cache, even if the recipe changed. "
                      "Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
-                              "'%s'" % (_REFERENCE_EXAMPLE, _PATTERN_EXAMPLE))
+                              "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
+_PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
+                             "'%s', '%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE, _PREF_EXAMPLE))
+_REF_OR_PREF_HELP = ("Recipe reference or package reference e.g., '%s', "
+                     "'%s'" % (_REFERENCE_EXAMPLE, _PREF_EXAMPLE))
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
 _QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
@@ -159,7 +163,7 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method. '
                             'Useful in combination with "export-pkg" command')
-        parser.add_argument("-f", "--file",
+        parser.add_argument("-m", "--template",
                             help='Use the given template from the local cache for conanfile.py')
         parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
@@ -211,7 +215,7 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.file)
+                        template=args.template)
 
     def inspect(self, *args):
         """
@@ -374,7 +378,8 @@ class Command(object):
         parser.add_argument("reference",
                             help='pkg/version@user/channel')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='Force install specified package ID (ignore settings/options)')
+                            help='Force install specified package ID (ignore settings/options)'
+                                 ' [DEPRECATED: use full reference instead]')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
         parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
@@ -382,8 +387,25 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
+        try:
+            pref = PackageReference.loads(args.reference, validate=True)
+        except ConanException:
+            reference = args.reference
+            packages_list = args.package
+
+            if packages_list:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan download [...] {}:{}`".format(reference, packages_list[0]))
+        else:
+            reference = pref.ref.full_repr()
+            packages_list = [pref.id]
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
+
         self._warn_python2()
-        return self._conan.download(reference=args.reference, package=args.package,
+        return self._conan.download(reference=reference, packages=packages_list,
                                     remote_name=args.remote, recipe=args.recipe)
 
     def install(self, *args):
@@ -997,20 +1019,40 @@ class Command(object):
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel. e.g., lasote/testing')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='copy specified package ID')
+                            help='copy specified package ID [DEPRECATED: use full reference instead]')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Copy all packages from the specified package recipe')
         parser.add_argument("--force", action='store_true', default=False,
                             help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
 
-        if args.all and args.package:
-            raise ConanException("Cannot specify both --all and --package")
+        try:
+            pref = PackageReference.loads(args.reference, validate=True)
+        except ConanException:
+            reference = args.reference
+            packages_list = args.package
+
+            if packages_list:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan copy [...] {}:{}`".format(reference, packages_list[0]))
+
+            if args.all and packages_list:
+                raise ConanException("Cannot specify both --all and --package")
+        else:
+            reference = pref.ref.full_repr()
+            packages_list = [pref.id]
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
+
+            if args.all:
+                raise ConanException("'--all' argument cannot be used together with full reference")
 
         self._warn_python2()
 
-        return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
-                                force=args.force, packages=args.package or args.all)
+        return self._conan.copy(reference=reference, user_channel=args.user_channel,
+                                force=args.force, packages=packages_list or args.all)
 
     def user(self, *args):
         """
@@ -1198,9 +1240,10 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload",
                                          formatter_class=SmartFormatter)
-        parser.add_argument('pattern_or_reference', help=_PATTERN_OR_REFERENCE_HELP)
-        parser.add_argument("-p", "--package", default=None, action=OnceArgument,
-                            help='package ID to upload')
+        parser.add_argument('pattern_or_reference', help=_PATTERN_REF_OR_PREF_HELP)
+        parser.add_argument("-p", "--package", default=None,
+                            help="Package ID [DEPRECATED: use full reference instead]",
+                            action=OnceArgument)
         parser.add_argument('-q', '--query', default=None, action=OnceArgument,
                             help="Only upload packages matching a specific query. " + _QUERY_HELP)
         parser.add_argument("-r", "--remote", action=OnceArgument,
@@ -1227,11 +1270,28 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        if args.query and args.package:
-            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
+        try:
+            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+        except ConanException:
+            reference = args.pattern_or_reference
+            package_id = args.package
 
-        cwd = os.getcwd()
-        info = None
+            if package_id:
+                self._user_io.out.warn("Usage of `--package` argument is deprecated."
+                                       " Use a full reference instead: "
+                                       "`conan upload [...] {}:{}`".format(reference, package_id))
+
+            if args.query and package_id:
+                raise ConanException("'--query' argument cannot be used together with '--package'")
+        else:
+            reference = pref.ref.full_repr()
+            package_id = pref.id
+
+            if args.package:
+                raise ConanException("Use a full package reference (preferred) or the `--package`"
+                                     " command argument, but not both.")
+            if args.query:
+                raise ConanException("'--query' argument cannot be used together with full reference")
 
         if args.force and args.no_overwrite:
             raise ConanException("'--no-overwrite' argument cannot be used together with '--force'")
@@ -1254,18 +1314,20 @@ class Command(object):
         else:
             policy = None
 
+        info = None
         try:
-            info = self._conan.upload(pattern=args.pattern_or_reference, package=args.package,
+            info = self._conan.upload(pattern=reference, package=package_id,
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
                                       retry_wait=args.retry_wait, integrity_check=args.check)
+
         except ConanException as exc:
             info = exc.info
             raise
         finally:
             if args.json and info:
-                self._outputer.json_output(info, args.json, cwd)
+                self._outputer.json_output(info, args.json, os.getcwd())
 
     def remote(self, *args):
         """
@@ -1458,7 +1520,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.get.__doc__,
                                          prog="conan get",
                                          formatter_class=SmartFormatter)
-        parser.add_argument('reference', help='package recipe reference')
+        parser.add_argument('reference', help=_REF_OR_PREF_HELP)
         parser.add_argument('path',
                             help='Path to the file or directory. If not specified will get the '
                                  'conanfile if only a reference is specified and a conaninfo.txt '
@@ -1475,8 +1537,6 @@ class Command(object):
 
         try:
             pref = PackageReference.loads(args.reference, validate=True)
-            reference = pref.ref.full_repr()
-            package_id = pref.id
         except ConanException:
             reference = args.reference
             package_id = args.package
@@ -1486,6 +1546,8 @@ class Command(object):
                                        " Use a full reference instead: "
                                        "`conan get [...] {}:{}`".format(reference, package_id))
         else:
+            reference = pref.ref.full_repr()
+            package_id = pref.id
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
@@ -1839,6 +1901,10 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
     --build            Build all from sources, do not use binary packages.
     --build=never      Never build, use binary packages or fail if a binary package is not found.
     --build=missing    Build from code if a binary package is not found.
+    --build=cascade    Will build from code all the nodes with some dependency being built
+                       (for any reason). Can be used together with any other build policy.
+                       Useful to make sure that any new change introduced in a dependency is
+                       incorporated by building again the package.
     --build=outdated   Build from code if the binary is not built with the current recipe or
                        when missing binary package.
     --build=[pattern]  Build always these packages from source, but never build the others.

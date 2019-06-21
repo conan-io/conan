@@ -10,7 +10,7 @@ prefix=/usr
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
- 
+
 Name: my-project
 Description: Some brief but informative description
 Version: 1.2.3

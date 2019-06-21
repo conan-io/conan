@@ -80,10 +80,10 @@ compiler:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0",
                   "8"]
-        libcxx: [libstdc++, libstdc++11, libc++]
+        libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     qcc:
@@ -364,10 +364,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
-    def storage(self):
-        return dict(self.get_conf("storage"))
-
-    @property
     def request_timeout(self):
         timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
         if not timeout:
@@ -416,7 +412,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 current_dir = os.path.dirname(self.filename)
                 # if env var is declared, any specified path will be relative to CONAN_USER_HOME
                 # even with the ~/
-                result = self.storage["path"]
+                result = dict(self.get_conf("storage"))["path"]
                 if result.startswith("."):
                     result = os.path.abspath(os.path.join(current_dir, result))
                 elif result[:2] == "~/":
@@ -530,6 +526,34 @@ class ConanClientConfigParser(ConfigParser, object):
             return print_commands_to_output.lower() in ("1", "true")
         except ConanException:
             return False
+
+    @property
+    def retry(self):
+        retry = os.getenv("CONAN_RETRY")
+        if not retry:
+            try:
+                retry = self.get_item("general.retry")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry) if retry is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry'")
+
+    @property
+    def retry_wait(self):
+        retry_wait = os.getenv("CONAN_RETRY_WAIT")
+        if not retry_wait:
+            try:
+                retry_wait = self.get_item("general.retry_wait")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry_wait) if retry_wait is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry_wait'")
 
     @property
     def generate_run_log_file(self):

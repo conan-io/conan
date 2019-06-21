@@ -180,7 +180,7 @@ class ConanAPIV1(object):
 
         # Settings preprocessor
         if interactive is None:
-            interactive = config.non_interactive
+            interactive = not config.non_interactive
 
         runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
                              config.log_run_to_output)
@@ -414,15 +414,14 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def download(self, reference, remote_name=None, package=None, recipe=False):
-        # FIXME: The "package" parameter name is very bad, it is a list of package_ids
-        if package and recipe:
-            raise ConanException("recipe parameter cannot be used together with package")
+    def download(self, reference, remote_name=None, packages=None, recipe=False):
+        if packages and recipe:
+            raise ConanException("recipe parameter cannot be used together with packages")
         # Install packages without settings (fixed ids or all)
         ref = ConanFileReference.loads(reference)
         if check_valid_ref(ref, allow_pattern=False):
-            if package and ref.revision is None:
-                for package_id in package:
+            if packages and ref.revision is None:
+                for package_id in packages:
                     if "#" in package_id:
                         raise ConanException("It is needed to specify the recipe revision if you "
                                              "specify a package revision")
@@ -431,7 +430,7 @@ class ConanAPIV1(object):
             self._python_requires.enable_remotes(remotes=remotes)
             remote = remotes.get_remote(remote_name)
             recorder = ActionRecorder()
-            download(ref, package, remote, recipe, self._remote_manager,
+            download(ref, packages, remote, recipe, self._remote_manager,
                      self._cache, self._user_io.out, recorder, self._loader,
                      self._hook_manager, remotes=remotes)
         else:
@@ -561,8 +560,12 @@ class ConanAPIV1(object):
     @api_method
     def config_get(self, item):
         config_parser = ConanClientConfigParser(self._cache.conan_conf_path)
-        self._user_io.out.info(config_parser.get_item(item))
-        return config_parser.get_item(item)
+        if item == "storage.path":
+            result = config_parser.storage_path
+        else:
+            result = config_parser.get_item(item)
+        self._user_io.out.info(result)
+        return result
 
     @api_method
     def config_set(self, item, value):
@@ -850,11 +853,6 @@ class ConanAPIV1(object):
                retry=None, retry_wait=None, integrity_check=False, policy=None, query=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        if retry is None:
-            retry = get_env("CONAN_RETRY", 2)
-        if retry_wait is None:
-            retry_wait = get_env("CONAN_RETRY_WAIT", 5)
-
         upload_recorder = UploadRecorder()
         uploader = CmdUpload(self._cache, self._user_io, self._remote_manager,
                              self._loader, self._hook_manager)

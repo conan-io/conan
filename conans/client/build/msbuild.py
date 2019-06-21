@@ -37,35 +37,39 @@ class MSBuild(object):
         """
         :param project_file: Path to the .sln file.
         :param targets: List of targets to build.
-        :param upgrade_project: Will call devenv to upgrade the solution to your current Visual Studio.
-        :param build_type: Use a custom build type name instead of the default settings.build_type one.
+        :param upgrade_project: Will call devenv to upgrade the solution to your
+        current Visual Studio.
+        :param build_type: Use a custom build type instead of the default settings.build_type one.
         :param arch: Use a custom architecture name instead of the settings.arch one.
         It will be used to build the /p:Configuration= parameter of MSBuild.
-        It can be used as the key of the platforms parameter. E.g. arch="x86", platforms={"x86": "i386"}
-        :param parallel: Will use the configured number of cores in the conan.conf file or tools.cpu_count():
+        It can be used as the key of the platforms parameter.
+        E.g. arch="x86", platforms={"x86": "i386"}
+        :param parallel: Will use the configured number of cores in the conan.conf file or
+        tools.cpu_count():
         In the solution: Building the solution with the projects in parallel. (/m: parameter).
         CL compiler: Building the sources in parallel. (/MP: compiler flag)
-        :param force_vcvars: Will ignore if the environment is already set for a different Visual Studio version.
+        :param force_vcvars: Will ignore if the environment is already set for a different
+        Visual Studio version.
         :param toolset: Specify a toolset. Will append a /p:PlatformToolset option.
-        :param platforms: Dictionary with the mapping of archs/platforms from Conan naming to another one.
-        It is useful for Visual Studio solutions that have a different naming in architectures.
+        :param platforms: Dictionary with the mapping of archs/platforms from Conan naming to another
+        one. It is useful for Visual Studio solutions that have a different naming in architectures.
         Example: platforms={"x86":"Win32"} (Visual solution uses "Win32" instead of "x86").
         This dictionary will update the default one:
         msvc_arch = {'x86': 'x86', 'x86_64': 'x64', 'armv7': 'ARM', 'armv8': 'ARM64'}
         :param use_env: Applies the argument /p:UseEnv=true to the MSBuild call.
         :param vcvars_ver: Specifies the Visual Studio compiler toolset to use.
         :param winsdk_version: Specifies the version of the Windows SDK to use.
-        :param properties: Dictionary with new properties, for each element in the dictionary {name: value}
-        it will append a /p:name="value" option.
-        :param output_binary_log: If set to True then MSBuild will output a binary log file called msbuild.binlog in
-        the working directory. It can also be used to set the name of log file like this
-        output_binary_log="my_log.binlog".
+        :param properties: Dictionary with new properties, for each element in the dictionary
+        {name: value} it will append a /p:name="value" option.
+        :param output_binary_log: If set to True then MSBuild will output a binary log file
+        called msbuild.binlog in the working directory. It can also be used to set the name of
+        log file like this output_binary_log="my_log.binlog".
         This parameter is only supported starting from MSBuild version 15.3 and onwards.
         :param property_file_name: When None it will generate a file named conan_build.props.
         You can specify a different name for the generated properties file.
         :param verbosity: Specifies verbosity level (/verbosity: parameter)
-        :param definitions: Dictionary with additional compiler definitions to be applied during the build.
-        Use value of None to set compiler definition with no value.
+        :param definitions: Dictionary with additional compiler definitions to be applied during
+        the build. Use value of None to set compiler definition with no value.
         :return: status code of the MSBuild command invocation
         """
 

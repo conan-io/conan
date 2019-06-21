@@ -62,7 +62,7 @@ def create_requirements(conanfile):
         else:
             if not conanfile.requires:
                 return Requirements()
-            if isinstance(conanfile.requires, tuple):
+            if isinstance(conanfile.requires, (tuple, list)):
                 return Requirements(*conanfile.requires)
             else:
                 return Requirements(conanfile.requires, )

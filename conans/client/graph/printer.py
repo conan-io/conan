@@ -10,7 +10,7 @@ from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 
 def _get_python_requires(conanfile):
     result = set()
-    for name, py_require in getattr(conanfile, "python_requires", {}).items():
+    for _, py_require in getattr(conanfile, "python_requires", {}).items():
         result.add(py_require.ref)
         result.update(_get_python_requires(py_require.conanfile))
     return result
