@@ -2,7 +2,7 @@ import os
 from collections import namedtuple
 
 from conans import Options
-from conans.client.graph.graph import CONTEXT_BUILD
+from conans.client.graph.graph import CONTEXT_DEFAULT
 from conans.model.conan_file import ConanFile
 from conans.model.options import PackageOptions
 from conans.test.utils.tools import TestBufferConanOutput
@@ -106,7 +106,7 @@ class {name}Conan(ConanFile):
                 if isinstance(it, (list, tuple)):
                     br, build_context = it
                 else:
-                    br, build_context = it, CONTEXT_BUILD  # By default, a build_requires is 'build'
+                    br, build_context = it, CONTEXT_DEFAULT  # By default, a build_requires is 'build'
                 base += '        self.build_requires("%s", context="%s")\n' % (br, build_context)
 
         if self.package_id:

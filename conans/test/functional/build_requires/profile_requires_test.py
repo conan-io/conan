@@ -36,8 +36,8 @@ class BuildRequireParent(ConanFile):
         # Assert settings inherited from profile
         assert_msg(self.settings.os, "Windows")
         assert_msg(self.settings.compiler, "gcc")
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_BUILD")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "1_BUILD")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "1")
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE_PARENT")
@@ -66,8 +66,8 @@ class BuildRequire(ConanFile):
         assert_msg(self.settings.compiler, "gcc")
         assert_msg(os.environ["ENV_VAR"], "ENV_VALUE_FROM_BUILD_REQUIRE_PARENT")
         assert_msg(os.environ["ENV_VAR_MULTI"], "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_BUILD")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0_BUILD")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0")
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE")
@@ -95,7 +95,7 @@ class BuildRequire2(ConanFile):
     def build(self):
         assert_msg(self.settings.os, "Windows")
         assert_msg(self.settings.compiler, "gcc")
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_BUILD")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE2")
@@ -119,7 +119,7 @@ class MyLibParent(ConanFile):
 
     def build(self):
         # only from BuildRequire
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_HOST")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
         assert_msg(os.environ.get("ENV_VAR", None), "ENV_VALUE_FROM_BUILD_REQUIRE")
         assert_msg(os.environ.get("ENV_VAR_MULTI", None), "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
         assert_msg(os.environ.get("ENV_VAR_REQ2", None), None)
@@ -145,15 +145,15 @@ class MyLib(ConanFile):
     generators = "cmake"
 
     def config_options(self):
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_HOST")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
 
     def requirements(self):
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_HOST")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
 
     def build(self):
         # only from BuildRequire
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_HOST")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0_HOST")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0")
         assert_msg(os.environ["ENV_VAR"], "ENV_VALUE_FROM_BUILD_REQUIRE")
         assert_msg(os.environ.get("ENV_VAR_REQ2", None), None)
         
@@ -184,8 +184,8 @@ class MyLib2(ConanFile):
 
     def build(self):
         # From BuildRequire and BuildRequire2
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE_HOST")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0_HOST")
+        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0")
         assert_msg(os.environ["ENV_VAR"], "ENV_VALUE_FROM_BUILD_REQUIRE")
         assert_msg(os.environ["ENV_VAR_REQ2"], "ENV_VALUE_FROM_BUILD_REQUIRE2")
         
@@ -203,7 +203,7 @@ class MyLib2(ConanFile):
 """
 
 
-profile_host = """
+profile = """
 [build_requires]
 *: BuildRequire/0.1@lasote/stable
 MyLib2/*: BuildRequire2/0.1@lasote/stable
@@ -216,22 +216,9 @@ compiler.libcxx=libstdc++
 arch=x86
 
 [env]
-PROFILE_VAR_ENV=PROFILE_VAR_VALUE_HOST
-ENV_VAR_ONLY_PARENT=0_HOST
-"""
-
-profile_build = """
-[settings]
-os=Windows
-compiler=gcc
-compiler.version=4.8
-compiler.libcxx=libstdc++
-arch=x86
-
-[env]
-PROFILE_VAR_ENV=PROFILE_VAR_VALUE_BUILD
-BuildRequireParent:ENV_VAR_ONLY_PARENT=1_BUILD
-ENV_VAR_ONLY_PARENT=0_BUILD
+PROFILE_VAR_ENV=PROFILE_VAR_VALUE
+BuildRequireParent:ENV_VAR_ONLY_PARENT=1
+ENV_VAR_ONLY_PARENT=0
 
 [options]
 BuildRequire:activate_foo=True
@@ -263,9 +250,5 @@ MyLib2/0.1@lasote/stable
 cmake
 gcc
 """
-        self.client.save({"profile_host.txt": profile_host,
-                          "profile_build.txt": profile_build,
-                          "conanfile.txt": reuse}, clean_first=True)
-        self.client.run("install . --build missing"
-                        " --profile:host ./profile_host.txt"
-                        " --profile:build ./profile_build.txt")
+        self.client.save({"profile.txt": profile, "conanfile.txt": reuse}, clean_first=True)
+        self.client.run("install . --profile ./profile.txt --build missing")

@@ -63,7 +63,7 @@ class NoWayBackToHost(GraphManagerTest):
             settings = "os"
 
             def build_requirements(self):
-                self.build_requires("build_tool/testing@user/channel")
+                self.build_requires("build_tool/testing@user/channel", context="build")
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))

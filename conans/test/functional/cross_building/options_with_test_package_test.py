@@ -36,6 +36,7 @@ class OptionsWithTestPackage(unittest.TestCase):
             pass
     """)
 
+    @unittest.expectedFailure
     def test_option_cli(self):
         self.t = TestClient()
         self.t.save({'binutils.py': self.binutils,

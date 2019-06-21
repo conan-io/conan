@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import six
 
-from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_DEFAULT
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.env_reader import get_env
@@ -28,7 +28,7 @@ class Requirement(object):
     def build_require(self):
         return self._build_require
 
-    def set_build_require(self, value, build_context=CONTEXT_BUILD):
+    def set_build_require(self, value, build_context=CONTEXT_DEFAULT):
         self._build_require = value
         self.build_context = build_context
 
