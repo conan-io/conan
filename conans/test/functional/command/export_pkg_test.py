@@ -2,16 +2,17 @@ import json
 import os
 import platform
 import unittest
+from textwrap import dedent
 
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
-from textwrap import dedent
 
 
 class ExportPkgTest(unittest.TestCase):
@@ -63,7 +64,8 @@ class PkgA(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("install . -if=build")
         client.run("build . -bf=build")
-        client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
+        with catch_deprecation_warning(self, n=2):
+            client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
         self.assertIn("PkgA/0.1@user/testing: Package "
                       "'8f97510bcea8206c1c046cc8d71cc395d4146547' created",
                       client.out)
