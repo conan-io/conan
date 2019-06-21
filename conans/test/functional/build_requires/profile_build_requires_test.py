@@ -291,9 +291,8 @@ from conans import ConanFile, tools
 class MyLib(ConanFile):
     name = "MyLib"
     version = "0.1"
+    build_requires = "MyTool/0.1@lasote/stable"
     options = {"coverage": [True, False]}
-    def build_requirements(self):
-        self.build_requires("MyTool/0.1@lasote/stable", context="host")
     def build(self):
         self.output.info("Coverage %s" % self.options.coverage)
 """

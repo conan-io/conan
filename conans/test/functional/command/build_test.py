@@ -7,6 +7,7 @@ from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load, mkdir
 
+
 conanfile_scope_env = """
 from conans import ConanFile
 

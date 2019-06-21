@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 from collections import OrderedDict
 from collections import namedtuple
 
@@ -44,6 +45,7 @@ from conans.client.rest.rest_client import RestApiClient
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
+from conans.client.tools.env import no_op
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
@@ -1196,14 +1198,24 @@ def get_graph_info(profile_build, profile_host, cwd, install_folder, cache, outp
         try:
             ph = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
                                    profile_host.env, cwd, cache)
-            ph.process_settings(cache)
+            with warnings.catch_warnings(record=True) if not profile_host.profiles else no_op():
+                # Only catch the warnings if we are using the default profile (usually autodetected
+                #  with os_build and arch_build deprecated settings
+                if not profile_host.profiles:
+                    warnings.filterwarnings("always")
+                ph.process_settings(cache)
         except ConanException as e:
             raise ConanException("Host profile: {}".format(e))
 
         try:
             pb = profile_from_args(profile_build.profiles, profile_build.settings, profile_build.options,
                                    profile_build.env, cwd, cache)
-            pb.process_settings(cache)
+            with warnings.catch_warnings(record=True) if not profile_build.profiles else no_op():
+                # Only catch the warnings if we are using the default profile (usually autodetected
+                #  with os_build and arch_build deprecated settings
+                if not profile_build.profiles:
+                    warnings.filterwarnings("always")
+                pb.process_settings(cache)
         except ConanException as e:
             raise ConanException("Build profile: {}".format(e))
 

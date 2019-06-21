@@ -418,8 +418,7 @@ class Pkg(ConanFile):
         message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
         with catch_deprecation_warning(self, n=2):
-            self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows"
-                            " -s arch_build=x86_64 -s arch=x86_64",
+            self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
                             assert_error=True)
         self.assertIn(message, self.client.user_io.out)
 
@@ -470,7 +469,7 @@ class TestConan(ConanFile):
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
 
-    def install_with_profile_test(self):
+    def test_install_with_profile_test(self):
         # Test for https://github.com/conan-io/conan/pull/2043
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
