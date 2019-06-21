@@ -1200,10 +1200,13 @@ def get_graph_info(profile_build, profile_host, cwd, install_folder, cache, outp
         try:
             ph = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
                                    profile_host.env, cwd, cache)
-            with warnings.catch_warnings(record=True) if not profile_host.profiles else no_op():
+            warn_user = profile_host.profiles or (profile_host.settings and (
+                        any(["os_build=" in it for it in profile_host.settings]) or
+                        any(["arch_build=" in it for it in profile_host.settings])))
+            with warnings.catch_warnings(record=True) if not warn_user else no_op():
                 # Only catch the warnings if we are using the default profile (usually autodetected
                 #  with os_build and arch_build deprecated settings
-                if not profile_host.profiles:
+                if not warn_user:
                     warnings.filterwarnings("always")
                 ph.process_settings(cache)
         except ConanException as e:
@@ -1212,10 +1215,13 @@ def get_graph_info(profile_build, profile_host, cwd, install_folder, cache, outp
         try:
             pb = profile_from_args(profile_build.profiles, profile_build.settings, profile_build.options,
                                    profile_build.env, cwd, cache)
-            with warnings.catch_warnings(record=True) if not profile_build.profiles else no_op():
+            warn_user = profile_build.profiles or (profile_build.settings and (
+                        any(["os_build=" in it for it in profile_build.settings]) or
+                        any(["arch_build=" in it for it in profile_build.settings])))
+            with warnings.catch_warnings(record=True) if not warn_user else no_op():
                 # Only catch the warnings if we are using the default profile (usually autodetected
                 #  with os_build and arch_build deprecated settings
-                if not profile_build.profiles:
+                if not warn_user:
                     warnings.filterwarnings("always")
                 pb.process_settings(cache)
         except ConanException as e:
