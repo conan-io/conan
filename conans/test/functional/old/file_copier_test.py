@@ -4,6 +4,7 @@ import unittest
 
 from conans.client.file_copier import FileCopier
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import load, save
 
 
@@ -48,19 +49,25 @@ class FileCopierTest(unittest.TestCase):
 
         for links in (False, True):
             folder2 = temp_folder()
-            copier = FileCopier([folder1], folder2, output=None)
+            output = TestBufferConanOutput()
+            copier = FileCopier([folder1], folder2, output=output)
             copier("*.txt", "texts", links=links)
+            self.assertEqual(str(output), "")
             if links:
-                self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1") # @UndefinedVariable
+                self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1")  # @UndefinedVariable
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
-            self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
+            self.assertEqual("Hello1 sub",
+                             load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
-            self.assertEqual(['file1.txt', 'sub1'].sort(), os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
+            self.assertEqual(['file1.txt', 'sub1'].sort(),
+                             os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
 
         for links in (False, True):
             folder2 = temp_folder()
-            copier = FileCopier([folder1], folder2, output=None)
+            output = TestBufferConanOutput()
+            copier = FileCopier([folder1], folder2, output=output)
             copier("*.txt", "texts", "subdir1", links=links)
+            self.assertEqual(str(output), "")
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/file1.txt")))
             self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
             self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
@@ -77,10 +84,19 @@ class FileCopierTest(unittest.TestCase):
         save(os.path.join(sub1, "sub1/file1.txt"), "Hello1 sub")
 
         folder2 = temp_folder()
-        copier = FileCopier([folder1], folder2, output=None)
+        output = TestBufferConanOutput()
+        copier = FileCopier([folder1], folder2, output=output)
+
         copier("*.cpp", links=True)
+        self.assertIn("WARN: File '{}' is pointing to '{}' that doesn't exists. It will be"
+                      " skipped".format(os.path.join(folder2, "subdir2"),
+                                        os.path.join(folder2, "subdir1")), output)
         self.assertEqual(os.listdir(folder2), [])
+
         copier("*.txt", links=True)
+        self.assertIn("WARN: File '{}' is pointing to '{}' that doesn't exists. It will be"
+                      " skipped".format(os.path.join(folder2, "subdir2"),
+                                        os.path.join(folder2, "subdir1")), output)
         self.assertEqual(sorted(os.listdir(folder2)), sorted(["subdir1", "subdir2"]))
         self.assertEqual(os.readlink(os.path.join(folder2, "subdir2")), "subdir1")  # @UndefinedVariable
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir1/file1.txt")))
@@ -95,11 +111,32 @@ class FileCopierTest(unittest.TestCase):
         os.symlink("other/file", sub2)  # @UndefinedVariable
 
         folder2 = temp_folder()
-        copier = FileCopier([folder1], folder2, output=None)
+        output = TestBufferConanOutput()
+        copier = FileCopier([folder1], folder2, output=output)
         copier("*", links=True)
+        self.assertEqual(str(output), "")
         symlink = os.path.join(folder2, "foo", "symlink")
         self.assertTrue(os.path.islink(symlink))
         self.assertTrue(load(os.path.join(symlink, "file.txt")), "Hello")
+
+    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    def linked_outside_sources_test(self):
+        folder1 = temp_folder()
+        foo1 = os.path.join(folder1, "foo/symlink")
+        other1 = os.path.join(folder1, "other/file")
+        save(other1, "whatever")
+
+        os.makedirs(os.path.join(folder1, "foo"))
+        os.symlink(other1, foo1)  # @UndefinedVariable
+
+        folder2 = temp_folder()
+        output = TestBufferConanOutput()
+        copier = FileCopier([os.path.join(folder1, "foo")], folder2, output=output)
+        copier("*", links=True)
+        self.assertIn("File '{}' points to '{}' which is outside the source directory. It will be"
+                      " skipped".format(foo1, other1), output)
+        symlink = os.path.join(folder2, "foo", "symlink")
+        self.assertFalse(os.path.islink(symlink))
 
     @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
     def linked_folder_nested_test(self):
@@ -111,8 +148,12 @@ class FileCopierTest(unittest.TestCase):
         os.symlink("60.2", sub2)  # @UndefinedVariable
 
         folder2 = temp_folder()
-        copier = FileCopier([folder1], folder2, output=None)
+        output = TestBufferConanOutput()
+        copier = FileCopier([folder1], folder2, output=output)
         copied = copier("*.cpp", links=True)
+        self.assertIn("WARN: File '{}' is pointing to '{}' that doesn't exists. It will be"
+                      " skipped".format(os.path.join(folder2, "lib/icu/current"),
+                                        os.path.join(folder2, "lib/icu/60.2")), output)
         self.assertEqual(copied, [])
 
     @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
@@ -140,8 +181,10 @@ class FileCopierTest(unittest.TestCase):
         save(src_dir_file, "file")
         os.symlink(src_dir, src_dir_link)
 
+        output = TestBufferConanOutput()
         copier = FileCopier([src], dst, output=None)
         copied = copier("*", symlinks=True)
+        self.assertEqual(str(output), "")
 
         self.assertEqual(copied, [dst_dir_file])
         self.assertEqual(os.listdir(dst), os.listdir(src))

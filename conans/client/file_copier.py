@@ -206,6 +206,11 @@ class FileCopier(object):
             if not os.path.exists(abs_path):
                 base_path = os.path.dirname(dst_link)
                 os.remove(dst_link)
+
+                if self._output:
+                    self._output.warn("File '{}' is pointing to '{}' that doesn't exists. It"
+                                      " will be skipped".format(dst_link, abs_path))
+
                 while base_path.startswith(dst):
                     try:  # Take advantage that os.rmdir does not delete non-empty dirs
                         os.rmdir(base_path)
