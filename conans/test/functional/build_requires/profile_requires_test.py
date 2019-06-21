@@ -24,9 +24,6 @@ build_require_parent = """
 import os
 from conans import ConanFile
 
-def assert_msg(lhs, rhs):
-    assert lhs == rhs, "{} != {}".format(lhs, rhs)
-
 class BuildRequireParent(ConanFile):
     name = "BuildRequireParent"
     version = "0.1"
@@ -34,10 +31,10 @@ class BuildRequireParent(ConanFile):
 
     def build(self):
         # Assert settings inherited from profile
-        assert_msg(self.settings.os, "Windows")
-        assert_msg(self.settings.compiler, "gcc")
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "1")
+        assert(self.settings.os == "Windows")
+        assert(self.settings.compiler == "gcc")
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+        assert(os.environ["ENV_VAR_ONLY_PARENT"] == "1")
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE_PARENT")
@@ -50,9 +47,6 @@ build_require = """
 import os
 from conans import ConanFile
 
-def assert_msg(lhs, rhs):
-    assert lhs == rhs, "{} != {}".format(lhs, rhs)
-    
 class BuildRequire(ConanFile):
     name = "BuildRequire"
     version = "0.1"
@@ -62,12 +56,12 @@ class BuildRequire(ConanFile):
     default_options = "activate_foo=False"
 
     def build(self):
-        assert_msg(self.settings.os, "Windows")
-        assert_msg(self.settings.compiler, "gcc")
-        assert_msg(os.environ["ENV_VAR"], "ENV_VALUE_FROM_BUILD_REQUIRE_PARENT")
-        assert_msg(os.environ["ENV_VAR_MULTI"], "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0")
+        assert(self.settings.os == "Windows")
+        assert(self.settings.compiler == "gcc")
+        assert(os.environ["ENV_VAR"] == "ENV_VALUE_FROM_BUILD_REQUIRE_PARENT")
+        assert(os.environ["ENV_VAR_MULTI"] == "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+        assert(os.environ["ENV_VAR_ONLY_PARENT"] == "0")
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE")
@@ -84,18 +78,15 @@ build_require2 = """
 import os
 from conans import ConanFile
 
-def assert_msg(lhs, rhs):
-    assert lhs == rhs, "{} != {}".format(lhs, rhs)
-    
 class BuildRequire2(ConanFile):
     name = "BuildRequire2"
     version = "0.1"
     settings = "os", "compiler", "arch"
 
     def build(self):
-        assert_msg(self.settings.os, "Windows")
-        assert_msg(self.settings.compiler, "gcc")
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert(self.settings.os == "Windows")
+        assert(self.settings.compiler == "gcc")
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE2")
@@ -109,9 +100,6 @@ my_lib_parent = """
 import os
 from conans import ConanFile
 
-def assert_msg(lhs, rhs):
-    assert lhs == rhs, "{} != {}".format(lhs, rhs)
-    
 class MyLibParent(ConanFile):
     name = "MyLibParent"
     version = "0.1"
@@ -119,10 +107,11 @@ class MyLibParent(ConanFile):
 
     def build(self):
         # only from BuildRequire
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
-        assert_msg(os.environ.get("ENV_VAR", None), "ENV_VALUE_FROM_BUILD_REQUIRE")
-        assert_msg(os.environ.get("ENV_VAR_MULTI", None), "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
-        assert_msg(os.environ.get("ENV_VAR_REQ2", None), None)
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+        assert(os.environ.get("ENV_VAR", None) == "ENV_VALUE_FROM_BUILD_REQUIRE")
+        assert(os.environ.get("ENV_VAR_MULTI", None) == "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE"
+               + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
+        assert(os.environ.get("ENV_VAR_REQ2", None) == None)
 
     def package_info(self):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_MYLIB_PARENT")
@@ -134,9 +123,6 @@ my_lib = """
 import os
 from conans import ConanFile
 
-def assert_msg(lhs, rhs):
-    assert lhs == rhs, "{} != {}".format(lhs, rhs)
-
 class MyLib(ConanFile):
     name = "MyLib"
     version = "0.1"
@@ -145,28 +131,28 @@ class MyLib(ConanFile):
     generators = "cmake"
 
     def config_options(self):
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
 
     def requirements(self):
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
 
     def build(self):
         # only from BuildRequire
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0")
-        assert_msg(os.environ["ENV_VAR"], "ENV_VALUE_FROM_BUILD_REQUIRE")
-        assert_msg(os.environ.get("ENV_VAR_REQ2", None), None)
-        
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+        assert(os.environ["ENV_VAR_ONLY_PARENT"] == "0")
+        assert(os.environ["ENV_VAR"] == "ENV_VALUE_FROM_BUILD_REQUIRE")
+        assert(os.environ.get("ENV_VAR_REQ2", None) == None)
         tmp = os.pathsep.join(["ENV_VALUE_MULTI_FROM_BUILD_REQUIRE",
                                "ENV_VALUE_MULTI_FROM_MYLIB_PARENT",
                                "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT"])
-        assert_msg(os.environ["ENV_VAR_MULTI"], tmp)
+        assert(os.environ["ENV_VAR_MULTI"] == tmp)
+        assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",
+                                             "A_C_FLAG_FROM_MYLIB_PARENT",
+                                             "A_C_FLAG_FROM_BUILD_REQUIRE"])
+        assert(self.deps_cpp_info.sysroot == "path/to/folder")
 
-        assert_msg(self.deps_cpp_info.cflags, ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",
-                                               "A_C_FLAG_FROM_MYLIB_PARENT",
-                                               "A_C_FLAG_FROM_BUILD_REQUIRE"])
-        assert_msg(self.deps_cpp_info.sysroot, "path/to/folder")
-        assert_msg(os.environ["FOO_VAR"], "1")
+        assert(os.environ["FOO_VAR"] == "1")
+
 """
 
 
@@ -174,9 +160,6 @@ my_lib2 = """
 import os
 from conans import ConanFile
 
-def assert_msg(lhs, rhs):
-    assert lhs == rhs, "{} != {}".format(lhs, rhs)
-    
 class MyLib2(ConanFile):
     name = "MyLib2"
     version = "0.1"
@@ -184,22 +167,23 @@ class MyLib2(ConanFile):
 
     def build(self):
         # From BuildRequire and BuildRequire2
-        assert_msg(os.environ["PROFILE_VAR_ENV"], "PROFILE_VAR_VALUE")
-        assert_msg(os.environ["ENV_VAR_ONLY_PARENT"], "0")
-        assert_msg(os.environ["ENV_VAR"], "ENV_VALUE_FROM_BUILD_REQUIRE")
-        assert_msg(os.environ["ENV_VAR_REQ2"], "ENV_VALUE_FROM_BUILD_REQUIRE2")
-        
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+        assert(os.environ["ENV_VAR_ONLY_PARENT"] == "0")
+        assert(os.environ["ENV_VAR"] == "ENV_VALUE_FROM_BUILD_REQUIRE")
+        assert(os.environ["ENV_VAR_REQ2"] == "ENV_VALUE_FROM_BUILD_REQUIRE2")
+
         tmp = os.pathsep.join(["ENV_VALUE_MULTI_FROM_BUILD_REQUIRE",
                                "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE2",
                                "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT"])
-        assert_msg(os.environ.get("ENV_VAR_MULTI", None), tmp)
 
-        assert_msg(self.deps_cpp_info.cflags, ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",
-                                               "A_C_FLAG_FROM_BUILD_REQUIRE2",
-                                               "A_C_FLAG_FROM_BUILD_REQUIRE"])
-        assert_msg(os.environ["FOO_VAR"], "1")
+        assert(os.environ.get("ENV_VAR_MULTI", None) == tmp)
+        assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",
+                                             "A_C_FLAG_FROM_BUILD_REQUIRE2",
+                                             "A_C_FLAG_FROM_BUILD_REQUIRE"])
+
+        assert(os.environ["FOO_VAR"] == "1")
         # Applied in order, so it takes the first value from BuildRequire
-        # FIXME assert_msg(self.deps_cpp_info.sysroot, "path/to/other/folder")
+        # FIXME assert(self.deps_cpp_info.sysroot == "path/to/other/folder")
 """
 
 
@@ -222,6 +206,8 @@ ENV_VAR_ONLY_PARENT=0
 
 [options]
 BuildRequire:activate_foo=True
+
+
 """
 
 
