@@ -1219,7 +1219,7 @@ def get_graph_info(profile_build, profile_host, cwd, install_folder, cache, outp
             warn_user = profile_build.profiles or (profile_build.settings and (
                         any(["os_build=" in it for it in profile_build.settings]) or
                         any(["arch_build=" in it for it in profile_build.settings]) or
-                        any([it.startswith("cppstd=") for it in profile_host.settings])))
+                        any([it.startswith("cppstd=") for it in profile_build.settings])))
             with warnings.catch_warnings(record=True) if not warn_user else no_op():
                 # Only catch the warnings if we are using the default profile (usually autodetected
                 #  with os_build and arch_build deprecated settings

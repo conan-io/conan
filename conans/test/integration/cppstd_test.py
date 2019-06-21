@@ -19,7 +19,7 @@ class TestConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             client.run('create . user/testing -s compiler="gcc" '
                        '-s compiler.libcxx="libstdc++11" '
                        '-s compiler.version="4.6" -s cppstd=17', assert_error=True)
@@ -43,7 +43,7 @@ class TestConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             client.run('create . user/testing -s compiler="gcc" '
                        '-s compiler.libcxx="libstdc++11" '
                        '-s compiler.version="8" -s cppstd=20')
@@ -69,7 +69,7 @@ class TestConan(ConanFile):
 
         # Add the setting but with the default value, should not build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
                        '-s compiler.libcxx="libstdc++" '
                        '-s cppstd=gnu14 '
