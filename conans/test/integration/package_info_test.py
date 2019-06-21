@@ -209,14 +209,44 @@ class HelloConan(ConanFile):
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
         package_folder = client.cache.package_layout(dep_ref).package(dep_pref)
 
-        expected_global_include_paths = [os.path.join(package_folder, "galaxy", "starlight"),
-                                         os.path.join(package_folder, "galaxy", "planet"),
-                                         os.path.join(package_folder, "galaxy", "iss")]
-        expected_global_library_paths = [os.path.join(package_folder, "lib"),
-                                         os.path.join(package_folder, "iss_libs")]
-        expected_global_binary_paths = [os.path.join(package_folder, "bin")]
-        expected_global_libs = ["libstarlight", "ground", "libplanet", "solar", "magnetism", "libiss"]
-        expected_global_exes = ["exelauncher"]
+        expected_comp_starlight_include_paths = [os.path.join(package_folder, "galaxy", "starlight")]
+        expected_comp_planet_include_paths = [os.path.join(package_folder, "galaxy", "planet")]
+        expected_comp_launcher_include_paths = []
+        expected_comp_iss_include_paths = [os.path.join(package_folder, "galaxy", "iss")]
+        expected_comp_starlight_library_paths = [os.path.join(package_folder, "lib")]
+        expected_comp_launcher_library_paths = [os.path.join(package_folder, "lib")]
+        expected_comp_planet_library_paths = [os.path.join(package_folder, "lib")]
+        expected_comp_iss_library_paths = [os.path.join(package_folder, "iss_libs")]
+        expected_comp_starlight_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_launcher_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_planet_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_iss_binary_paths = [os.path.join(package_folder, "bin")]
+        expected_comp_starlight_lib = "libstarlight"
+        expected_comp_planet_lib = "libplanet"
+        expected_comp_launcher_lib = None
+        expected_comp_iss_lib = "libiss"
+        expected_comp_starlight_system_deps = []
+        expected_comp_planet_system_deps = []
+        expected_comp_launcher_system_deps = ["ground"]
+        expected_comp_iss_system_deps = ["solar", "magnetism"]
+        expected_comp_starlight_exe = ""
+        expected_comp_planet_exe = ""
+        expected_comp_launcher_exe = "exelauncher"
+        expected_comp_iss_exe = ""
+
+        expected_global_include_paths = expected_comp_starlight_include_paths + \
+            expected_comp_planet_include_paths + expected_comp_iss_include_paths
+        expected_global_library_paths = expected_comp_starlight_library_paths + \
+            expected_comp_iss_library_paths
+        expected_global_binary_paths = expected_comp_starlight_binary_paths
+        expected_global_libs = expected_comp_starlight_system_deps
+        expected_global_libs.append(expected_comp_starlight_lib)
+        expected_global_libs.extend(expected_comp_launcher_system_deps)
+        expected_global_libs.append(expected_comp_planet_lib)
+        expected_global_libs.extend(expected_comp_iss_system_deps)
+        expected_global_libs.append(expected_comp_iss_lib)
+        expected_global_exes = [expected_comp_launcher_exe]
+
         self.assertIn("GLOBAL Include paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("GLOBAL Library paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("GLOBAL Binary paths: %s" % expected_global_binary_paths, client.out)
@@ -229,4 +259,30 @@ class HelloConan(ConanFile):
         self.assertIn("DEPS Libs: %s" % expected_global_libs, client.out)
         self.assertIn("DEPS Exes: %s" % expected_global_exes, client.out)
 
-        #TODO: Complete the test checking the output of the components
+        self.assertIn("COMP Starlight Include paths: %s" % expected_comp_starlight_include_paths,
+                      client.out)
+        self.assertIn("COMP Planet Include paths: %s" % expected_comp_planet_include_paths,
+                      client.out)
+        self.assertIn("COMP Launcher Include paths: %s" % expected_comp_launcher_include_paths,
+                      client.out)
+        self.assertIn("COMP ISS Include paths: %s" % expected_comp_iss_include_paths, client.out)
+        self.assertIn("COMP Starlight Library paths: %s" % expected_comp_starlight_library_paths,
+                      client.out)
+        self.assertIn("COMP Planet Library paths: %s" % expected_comp_planet_library_paths,
+                      client.out)
+        self.assertIn("COMP Launcher Library paths: %s" % expected_comp_launcher_library_paths,
+                      client.out)
+        self.assertIn("COMP ISS Library paths: %s" % expected_comp_iss_library_paths, client.out)
+        self.assertIn("COMP Starlight Binary paths: %s" % expected_comp_iss_binary_paths, client.out)
+        self.assertIn("COMP Planet Binary paths: %s" % expected_comp_planet_binary_paths, client.out)
+        self.assertIn("COMP Launcher Binary paths: %s" % expected_comp_launcher_binary_paths,
+                      client.out)
+        self.assertIn("COMP ISS Binary paths: %s" % expected_comp_iss_binary_paths, client.out)
+        self.assertIn("COMP Starlight Lib: %s" % expected_comp_starlight_lib, client.out)
+        self.assertIn("COMP Planet Lib: %s" % expected_comp_planet_lib, client.out)
+        self.assertIn("COMP Launcher Lib: %s" % expected_comp_launcher_lib, client.out)
+        self.assertIn("COMP ISS Lib: %s" % expected_comp_iss_lib, client.out)
+        self.assertIn("COMP Starlight Exe: %s" % expected_comp_starlight_exe, client.out)
+        self.assertIn("COMP Planet Exe: %s" % expected_comp_planet_exe, client.out)
+        self.assertIn("COMP Launcher Exe: %s" % expected_comp_launcher_exe, client.out)
+        self.assertIn("COMP ISS Exe: %s" % expected_comp_iss_exe, client.out)
