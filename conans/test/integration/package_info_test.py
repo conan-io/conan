@@ -175,6 +175,7 @@ class HelloConan(ConanFile):
                 self.output.info("GLOBAL Binary paths: %s" % self.deps_cpp_info.bin_paths)
                 self.output.info("GLOBAL Libs: %s" % self.deps_cpp_info.libs)
                 self.output.info("GLOBAL Exes: %s" % self.deps_cpp_info.exes)
+                self.output.info("GLOBAL System deps: %s" % self.deps_cpp_info.system_deps)
                 # Deps values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
                     self.output.info("DEPS Include paths: %s" % dep_value.include_paths)
@@ -182,6 +183,7 @@ class HelloConan(ConanFile):
                     self.output.info("DEPS Binary paths: %s" % dep_value.bin_paths)
                     self.output.info("DEPS Libs: %s" % dep_value.libs)
                     self.output.info("DEPS Exes: %s" % dep_value.exes)
+                    self.output.info("DEPS System deps: %s" % dep_value.system_deps)
                 # Components values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
                     for comp_name, comp_value in dep_value.components.items():
@@ -192,6 +194,7 @@ class HelloConan(ConanFile):
                         self.output.info("COMP %s Lib: %s" % (comp_name, comp_value.lib))
                         self.output.info("COMP %s Exe: %s" % (comp_name, comp_value.exe))
                         self.output.info("COMP %s Deps: %s" % (comp_name, comp_value.deps))
+                        self.output.info("COMP %s System deps: %s" % (comp_name, comp_value.system_deps))
         """)
 
         client = TestClient()
@@ -239,25 +242,27 @@ class HelloConan(ConanFile):
         expected_global_library_paths = expected_comp_starlight_library_paths + \
             expected_comp_iss_library_paths
         expected_global_binary_paths = expected_comp_starlight_binary_paths
-        expected_global_libs = expected_comp_starlight_system_deps
-        expected_global_libs.append(expected_comp_starlight_lib)
+        expected_global_libs = expected_comp_starlight_system_deps + [expected_comp_starlight_lib]
         expected_global_libs.extend(expected_comp_launcher_system_deps)
         expected_global_libs.append(expected_comp_planet_lib)
         expected_global_libs.extend(expected_comp_iss_system_deps)
         expected_global_libs.append(expected_comp_iss_lib)
         expected_global_exes = [expected_comp_launcher_exe]
+        expected_global_system_deps = expected_comp_launcher_system_deps + expected_comp_iss_system_deps
 
         self.assertIn("GLOBAL Include paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("GLOBAL Library paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("GLOBAL Binary paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("GLOBAL Libs: %s" % expected_global_libs, client.out)
         self.assertIn("GLOBAL Exes: %s" % expected_global_exes, client.out)
+        self.assertIn("GLOBAL System deps: %s" % expected_global_system_deps, client.out)
 
         self.assertIn("DEPS Include paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("DEPS Library paths: %s" % expected_global_library_paths, client.out)
         self.assertIn("DEPS Binary paths: %s" % expected_global_binary_paths, client.out)
         self.assertIn("DEPS Libs: %s" % expected_global_libs, client.out)
         self.assertIn("DEPS Exes: %s" % expected_global_exes, client.out)
+        self.assertIn("DEPS System deps: %s" % expected_global_system_deps, client.out)
 
         self.assertIn("COMP Starlight Include paths: %s" % expected_comp_starlight_include_paths,
                       client.out)
@@ -286,3 +291,9 @@ class HelloConan(ConanFile):
         self.assertIn("COMP Planet Exe: %s" % expected_comp_planet_exe, client.out)
         self.assertIn("COMP Launcher Exe: %s" % expected_comp_launcher_exe, client.out)
         self.assertIn("COMP ISS Exe: %s" % expected_comp_iss_exe, client.out)
+        self.assertIn("COMP Starlight System deps: %s" % expected_comp_starlight_system_deps,
+                      client.out)
+        self.assertIn("COMP Planet System deps: %s" % expected_comp_planet_system_deps, client.out)
+        self.assertIn("COMP Launcher System deps: %s" % expected_comp_launcher_system_deps,
+                      client.out)
+        self.assertIn("COMP ISS System deps: %s" % expected_comp_iss_system_deps, client.out)
