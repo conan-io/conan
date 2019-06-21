@@ -122,18 +122,19 @@ class BuildRequiresInProfileExample(GraphManagerTest):
         self.assertEqual(str(lib_host.conanfile.settings_build.os), profile_build.settings['os'])
 
         # Check BUILD packages
+        # TODO: As the default for the build_requires is HOST, here there is no context switch
         cmake_application_build = application.dependencies[1].dst
         self.assertEqual(cmake_application_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_application_build.build_context, CONTEXT_BUILD)
+        self.assertEqual(cmake_application_build.build_context, CONTEXT_HOST)
         self.assertEqual(str(cmake_application_build.conanfile.settings.os),
-                         profile_build.settings['os'])
-        self.assertEqual(str(cmake_application_build.conanfile.settings_host.os), profile_build.settings['os'])
+                         profile_host.settings['os'])
+        self.assertEqual(str(cmake_application_build.conanfile.settings_host.os), profile_host.settings['os'])
         self.assertEqual(str(cmake_application_build.conanfile.settings_build.os), profile_build.settings['os'])
 
         cmake_lib_build = lib_host.dependencies[0].dst
         self.assertNotEqual(cmake_application_build, cmake_lib_build)  # TODO: Different node/graph, bug or feature?
         self.assertEqual(cmake_lib_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_lib_build.build_context, CONTEXT_BUILD)
-        self.assertEqual(str(cmake_lib_build.conanfile.settings.os), profile_build.settings['os'])
-        self.assertEqual(str(cmake_lib_build.conanfile.settings_host.os), profile_build.settings['os'])
+        self.assertEqual(cmake_lib_build.build_context, CONTEXT_HOST)
+        self.assertEqual(str(cmake_lib_build.conanfile.settings.os), profile_host.settings['os'])
+        self.assertEqual(str(cmake_lib_build.conanfile.settings_host.os), profile_host.settings['os'])
         self.assertEqual(str(cmake_lib_build.conanfile.settings_build.os), profile_build.settings['os'])
