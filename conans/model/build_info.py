@@ -304,6 +304,16 @@ class Component(object):
         self.exelinkflags = []
         self._filter_empty = True
 
+    def as_dict(self):
+        result = {}
+        for key, value in vars(self).items():
+            if key.startswith("_"):
+                continue
+            result[key] = value
+        result["lib"] = self.lib
+        result["exe"] = self.exe
+        return result
+
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self._rootpath, p) for p in paths]
         if self._filter_empty:
