@@ -446,13 +446,52 @@ class Command(object):
         args = parser.parse_args(*args)
         cwd = get_cwd()
 
+        path_is_reference = False
+        path_is_complete_reference = False  # Like lib/1.0@
+        try:
+            get_reference_fields(args.path_or_reference)
+            path_is_reference = True
+            ConanFileReference.loads(args.path_or_reference)
+            path_is_complete_reference = True
+        except ConanException:
+            pass
+
+        if path_is_reference and args.reference:
+            raise ConanException("A full reference was provided as first argument, second "
+                                 "argument not allowed")
+
         info = None
         try:
-            try:
+            if path_is_complete_reference:
                 ref = ConanFileReference.loads(args.path_or_reference)
-            except ConanException:
-                name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                                       user_channel_allowed=True)
+                info = self._conan.install_reference(
+                                    ref,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    remote_name=args.remote,
+                                    verify=args.verify, manifests=args.manifests,
+                                    manifests_interactive=args.manifests_interactive,
+                                    build=args.build, profile_names=args.profile,
+                                    update=args.update,
+                                    generators=args.generator,
+                                    install_folder=args.install_folder)
+            elif path_is_reference:
+                name, version, user, channel, rev = get_reference_fields(args.path_or_reference)
+                info = self._conan.install_reference_by_fields(
+                                    name, version, user, channel, rev,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    remote_name=args.remote,
+                                    verify=args.verify, manifests=args.manifests,
+                                    manifests_interactive=args.manifests_interactive,
+                                    build=args.build, profile_names=args.profile,
+                                    update=args.update,
+                                    generators=args.generator,
+                                    install_folder=args.install_folder)
+            else:
+                name, version, user, channel, _ = get_reference_fields(args.reference)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
@@ -464,22 +503,6 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder)
-            else:
-                if args.reference:
-                    raise ConanException("A full reference was provided as first argument, second "
-                                         "argument not allowed")
-
-                manifest_interactive = args.manifests_interactive
-                info = self._conan.install_reference(ref, settings=args.settings,
-                                                     options=args.options,
-                                                     env=args.env,
-                                                     remote_name=args.remote,
-                                                     verify=args.verify, manifests=args.manifests,
-                                                     manifests_interactive=manifest_interactive,
-                                                     build=args.build, profile_names=args.profile,
-                                                     update=args.update,
-                                                     generators=args.generator,
-                                                     install_folder=args.install_folder)
         except ConanException as exc:
             info = exc.info
             raise

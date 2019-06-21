@@ -7,10 +7,11 @@ from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, mkdir, rmdir
-from conans.test.utils.conanfile import TestConanFile
 
 
 class InstallTest(unittest.TestCase):
@@ -595,11 +596,20 @@ class TestConan(ConanFile):
                     version = "1.0"
                 """)
         client.save({"conanfile.py": conanfile})
+
+        client.run("config set general.default_username=foo")
+        client.run("config set general.default_channel=bar")
+
         client.run('create .')
+        self.assertIn("lib/1.0@foo/bar: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+
         client.run('upload lib/1.0 -c --all')
+        self.assertIn("Uploaded conan recipe 'lib/1.0@foo/bar' to 'default'", client.out)
+
         client.run('remove "*" -f')
         client.run('install lib/1.0@')
-        self.assertIn("lib/1.0: Downloaded", client.out)
+        self.assertIn("lib/1.0@foo/bar: Downloaded", client.out)
 
         # This fails, Conan thinks this is a path
         client.run('install lib/1.0', assert_error=True)

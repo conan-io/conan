@@ -105,9 +105,19 @@ class ConanLib(ConanFile):
 
         # Without the reference
         client.run('remove "Hello*" -f')
+        client.run("create .", assert_error=True)
+        self.assertIn("The reference doesn't have the 'user' field and "
+                      "there is no default one configured", client.out)
+
+        client.run("config set general.default_username=foo")
+        client.run("create .", assert_error=True)
+        self.assertIn("The reference doesn't have the 'channel' field and "
+                      "there is no default one configured", client.out)
+
+        client.run("config set general.default_channel=bar")
         client.run("create .")
-        self.assertIn("Hello/0.1: Configuring sources", client.user_io.out)
-        self.assertIn("Hello/0.1: Generated conaninfo.txt", client.user_io.out)
+        self.assertIn("Hello/0.1@foo/bar: Configuring sources", client.user_io.out)
+        self.assertIn("Hello/0.1@foo/bar: Generated conaninfo.txt", client.user_io.out)
 
     def test_with_path_errors_test(self):
         client = TestClient()

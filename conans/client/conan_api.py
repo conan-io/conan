@@ -487,6 +487,12 @@ class ConanAPIV1(object):
         workspace.generate(install_folder, deps_graph, self._user_io.out)
 
     @api_method
+    def install_reference_by_fields(self, name, version, user, channel, revision, **kwargs):
+        user, channel = self._default_user_channel(user, channel)
+        ref = ConanFileReference(name, version, user, channel, revision)
+        return self.install_reference(ref, **kwargs)
+
+    @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
@@ -754,14 +760,17 @@ class ConanAPIV1(object):
             try:
                 user = self._cache.config.get_item("general.default_username")
             except ConanException:
-                raise ConanException("User not specified and no default user is configured:\n "
+                raise ConanException("The reference doesn't have the 'user' field and there is no "
+                                     "default one configured. You can adjust a default running:\n "
                                      "conan config set general.default_username=foo")
         if not channel:
             try:
                 channel = self._cache.config.get_item("general.default_channel")
             except ConanException:
-                raise ConanException("Channel not specified and no default channel is configured:"
-                                     "\n conan config set general.default_channel=bar")
+                raise ConanException("The reference doesn't have the 'channel' field and there is "
+                                     "no default one configured. You can adjust a default "
+                                     "running:\n "
+                                     "conan config set general.default_channel=bar")
         return user, channel
 
     @api_method

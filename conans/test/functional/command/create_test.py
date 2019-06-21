@@ -523,8 +523,10 @@ class TestConanLib(ConanFile):
                     version = "1.0"
                 """)
         client.save({"conanfile.py": conanfile})
+        client.run("config set general.default_username=foo")
+        client.run("config set general.default_channel=bar")
         client.run('create .')
-        self.assertIn("lib/1.0: Created package revision", client.out)
+        self.assertIn("lib/1.0@foo/bar: Created package revision", client.out)
 
     def create_with_name_and_version_test(self):
         client = TestClient()
@@ -535,8 +537,10 @@ class TestConanLib(ConanFile):
                     pass
                 """)
         client.save({"conanfile.py": conanfile})
+        client.run("config set general.default_username=foo")
+        client.run("config set general.default_channel=bar")
         client.run('create . lib/1.0@')
-        self.assertIn("lib/1.0: Created package revision", client.out)
+        self.assertIn("lib/1.0@foo/bar: Created package revision", client.out)
 
     def create_with_only_user_channel_test(self):
         """This should be the recommended way and only from Conan 2.0"""
