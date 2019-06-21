@@ -8,6 +8,25 @@ from conans.util.log import logger
 def preprocess(settings):
     _fill_runtime(settings)
     _check_cppstd(settings)
+    _check_xbuild(settings)
+
+
+def _check_xbuild(settings):
+    os_build = settings.get_safe("os_build")
+    arch_build = settings.get_safe("arch_build")
+
+    if os_build or arch_build:
+        warnings.warn("Settings 'os_build' and 'arch_build' are deprecated in favor of the new"
+                      " cross-compiling model. Please, refer to the docs and"
+                      " actualize your recipe.")
+
+    os_target = settings.get_safe("os_target")
+    arch_target = settings.get_safe("arch_target")
+
+    if os_target or arch_target:
+        warnings.warn("Settings 'os_target' and 'arch_target' are deprecated in favor of the new"
+                      " cross-compiling model. Please, refer to the docs and"
+                      " actualize your recipe.")
 
 
 def _check_cppstd(settings):
