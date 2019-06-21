@@ -510,7 +510,7 @@ def _compress_files(gathered_files, name, dest_dir, output):
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
         for relpath, dest in sorted(gathered_files.symlinks.items()):
-            if dest.startswith("."):
+            if dest.startswith("../"):
                 warn_outside_sources(os.path.join(gathered_files.base_folder, relpath), dest)
 
             info = tarfile.TarInfo(name=relpath)
@@ -534,7 +534,7 @@ def _compress_files(gathered_files, name, dest_dir, output):
                 linkto = os.path.join(os.path.dirname(abs_path), os.readlink(abs_path))
                 linkto = os.path.normpath(linkto)
                 linkto_rel = os.path.relpath(linkto, gathered_files.base_folder)
-                if linkto_rel.startswith("."):
+                if linkto_rel.startswith("../"):
                     warn_outside_sources(abs_path, linkto)
 
                 info.type = tarfile.SYMTYPE

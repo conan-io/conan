@@ -149,7 +149,7 @@ class FileCopier(object):
                         self._output.warn("File '{}' is pointing to '{}' that doesn't exists. It"
                                           " will be skipped".format(abs_path, linkto))
                         continue
-                    if os.path.relpath(linkto, src).startswith("."):
+                    if os.path.relpath(linkto, src).startswith("../"):
                         self._output.warn("File '{}' points to '{}' which is outside the source"
                                           " directory. It will be skipped".format(abs_path, linkto))
                         continue
@@ -177,7 +177,7 @@ class FileCopier(object):
             # Discard symlinks that go out of the src folder
             abs_path = os.path.realpath(src_link)
             relpath = os.path.relpath(abs_path, os.path.realpath(src))
-            if relpath.startswith("."):
+            if relpath.startswith("../"):
                 if self._output:
                     self._output.warn("Folder '{}' points to '{}', which is outside the"
                                       " source directory, it is skipped".format(src_link, abs_path))

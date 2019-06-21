@@ -139,6 +139,33 @@ class FileCopierTest(unittest.TestCase):
         self.assertFalse(os.path.islink(symlink))
 
     @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    def test_linked_inside_sources_with_dot_test(self):
+        folder1 = temp_folder()
+        foo1 = os.path.join(folder1, ".symlink_file")
+        other1 = os.path.join(folder1, ".file")
+        save(other1, "whatever")
+        os.symlink(other1, foo1)  # @UndefinedVariable
+
+        foo2 = os.path.join(folder1, ".symlink_folder")
+        other2 = os.path.join(folder1, ".folder")
+        save(os.path.join(other2, "file"), "whatever")
+        os.symlink(other2, foo2)  # @UndefinedVariable
+
+        folder2 = temp_folder()
+        output = TestBufferConanOutput()
+        copier = FileCopier([folder1], folder2, output=output)
+        copier("*", links=True)
+        self.assertEqual(str(output), "")
+
+        symlink = os.path.join(folder2, ".symlink_file")
+        self.assertTrue(os.path.islink(symlink))
+        self.assertTrue(os.path.exists(symlink))
+
+        symlink = os.path.join(folder2, ".symlink_folder")
+        self.assertTrue(os.path.islink(symlink))
+        self.assertTrue(os.path.exists(symlink))
+
+    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
     def linked_folder_nested_test(self):
         # https://github.com/conan-io/conan/issues/2959
         folder1 = temp_folder()

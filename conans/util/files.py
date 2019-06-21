@@ -357,7 +357,7 @@ def copy_symlink(pointer_src, src, dst, output=None):
         linkto = os.path.join(os.path.dirname(pointer_src), linkto)
 
     # Check if it is outside the sources
-    out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
+    out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith("../")
     if out_of_source and output:
         output.warn("Symbolic link '{}' is pointing to '{}' outside the source folder"
                     " and won't be copied".format(os.path.normpath(pointer_src),
