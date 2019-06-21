@@ -109,7 +109,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
         def validate_additional_dependencies(lib, additional_dep):
             conanfile = ConanFile(TestBufferConanOutput(), None)
-            conanfile.initialize(Settings({}), EnvValues())
+            conanfile.initialize(Settings({}), Settings({}), EnvValues())
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
             cpp_info = CppInfo("dummy_root_folder1")
             cpp_info.libs = [lib]

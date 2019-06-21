@@ -370,17 +370,17 @@ class Pkg(ConanFile):
                      channel="user/testing",
                      settings='"compiler", "cppstd"')
 
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
                             '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
                             '-s cppstd=gnu14')
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
 
         # Should NOT have binary available
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu11',
@@ -397,7 +397,7 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu14',

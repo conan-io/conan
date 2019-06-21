@@ -27,7 +27,7 @@ class TestConan(ConanFile):
         self.assertIn("The specified 'cppstd=17' is not available for 'gcc 4.6'", client.out)
         self.assertIn("Possible values are ['11', '98', 'gnu11', 'gnu98']", client.out)
 
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
                        '-s compiler.version="6.3" -s cppstd=17')
 
@@ -84,7 +84,7 @@ class TestConan(ConanFile):
 
         # Add the setting but with a non-default value, should build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=3):
             client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
                        '-s compiler.libcxx="libstdc++" '
                        '-s cppstd=gnu17 '

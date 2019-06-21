@@ -3,6 +3,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 
 conanfile = """
@@ -81,7 +82,8 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertNotIn("Test0/0.1@lasote/stable", client.out)
         self.assertNotIn("Test1/0.1@lasote/stable", client.out)
 
-        client.run("install MyLib/0.1@lasote/stable -pr=./profile.txt --build")
+        with catch_deprecation_warning(self, n=2):
+            client.run("install MyLib/0.1@lasote/stable -pr=./profile.txt --build")
         self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.out)
         self.assertIn("Test0/0.1@lasote/stable", client.out)
         self.assertIn("Test1/0.1@lasote/stable", client.out)

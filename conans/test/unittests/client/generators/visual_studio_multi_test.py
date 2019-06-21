@@ -93,7 +93,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             tempdir = temp_folder()
             with chdir(tempdir):
                 conanfile = ConanFile(TestBufferConanOutput(), None)
-                conanfile.initialize(Settings({}), EnvValues())
+                conanfile.initialize(Settings({}), Settings({}), EnvValues())
 
                 ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
                 cpp_info = CppInfo("dummy_root_folder1")
