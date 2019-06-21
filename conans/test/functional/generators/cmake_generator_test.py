@@ -51,7 +51,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                      "dummy.cpp": CPP_CONTENT,
                      "my_profile": PROFILE.format(os_build=os_build)
                      })
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run("install . -pr my_profile")
             client.run("build .")
 

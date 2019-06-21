@@ -9,6 +9,7 @@ from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
 from conans.util.files import save
+from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 class MockSetting(str):
@@ -156,7 +157,8 @@ class ProfilesEnvironmentTest(unittest.TestCase):
         self.client.run("export . lasote/testing")
 
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        self.client.run("install . --build=missing -pr scopes_env")
+        with catch_deprecation_warning(self, n=2):
+            self.client.run("install . --build=missing -pr scopes_env")
         self.client.run("build .")
         six.assertRegex(self, str(self.client.user_io.out), "PATH=['\"]*/path/to/my/folder")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
