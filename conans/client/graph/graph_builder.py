@@ -227,7 +227,7 @@ class DepsGraphBuilder(object):
 
             # Add current ancestors to the previous node and upstream deps
             union = node.ancestors.union([node.name])
-            for n in previous.public_closure.values():
+            for n in previous.public_closure:
                 n.ancestors.update(union)
 
             # Even if it was in private scope, if it is reached via a public require
