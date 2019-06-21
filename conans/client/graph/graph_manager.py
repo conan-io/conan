@@ -1,11 +1,12 @@
 import fnmatch
 import os
+import warnings
 from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, \
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, CONTEXT_DEFAULT,\
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, CONTEXT_DEFAULT, \
     CONTEXT_DEFAULT_PROFILE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -70,12 +71,16 @@ class GraphManager(object):
             name, version, user, channel, _ = graph_info.root
 
             profile_host = graph_info.profile_host
-            profile_host.process_settings(self._cache, preprocess=False)
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                profile_host.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile_host.options.update(graph_info.options)
 
             profile_build = graph_info.profile_build
-            profile_build.process_settings(self._cache, preprocess=False)
+            with warnings.catch_warnings(record=True):
+                warnings.filterwarnings("always")
+                profile_build.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile_build.options.update(graph_info.build_options)
 
