@@ -350,9 +350,7 @@ class package(ConanFile):
     name            = "second"
     version         = "0.0.0"
     default_options = "first:coverage=True"
-    
-    def build_requirements(self):
-        self.build_requires("first/0.0.0@lasote/stable", context="host")
+    build_requires = "first/0.0.0@lasote/stable"
 """
         client.save({"conanfile.py": consumer})
         client.run("install . --build=missing -o Pkg:someoption=3")
