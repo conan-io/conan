@@ -47,8 +47,7 @@ class Pkg(ConanFile):
     settings = "compiler", "cppstd"
 """
         client.save({"conanfile.py": conanfile})
-        with catch_deprecation_warning(self, n=2):
-            client.run("create . Pkg/0.1@lasote/testing")
+        client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("""Configuration (host machine):
 [settings]
 compiler=mycomp
