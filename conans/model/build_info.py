@@ -244,23 +244,19 @@ class CppInfo(_CppInfo):
         self.public_deps = []
         self.configs = {}
 
-    def _check_dirs_values(self):
-        msg_template = "Using Components and global '{}' values ('{}') is not supported"
+    def _check_and_clear_dirs_values(self):
         for dir_name in self._default_dirs_values:
             dirs_value = getattr(self, dir_name)
             if dirs_value is not None and dirs_value != self._default_dirs_values[dir_name]:
+                msg_template = "Using Components and global '{}' values ('{}') is not supported"
                 raise ConanException(msg_template.format(dir_name, dirs_value))
-
-    def _clear_dirs_values(self):
-        for dir_name in self._default_dirs_values:
-            if getattr(self, dir_name) == self._default_dirs_values[dir_name]:
+            else:
                 self.__dict__[dir_name] = None
 
     def __getitem__(self, key):
         if self._libs or self._exes:
             raise ConanException("Usage of Components with '.libs' or '.exes' values is not allowed")
-        self._clear_dirs_values()
-        self._check_dirs_values()
+        self._check_and_clear_dirs_values()
         if key not in self._components:
             self._components[key] = Component(key, self.rootpath)
         return self._components[key]
