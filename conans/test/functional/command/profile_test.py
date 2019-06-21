@@ -26,7 +26,7 @@ class ProfileTest(unittest.TestCase):
         profile = str(client.out).splitlines()[2:]
         client.save({"conanfile.txt": "",
                      "mylocalprofile": "\n".join(profile)})
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run("install . -pr=mylocalprofile")
         self.assertIn("conanfile.txt: Generated conaninfo.txt", client.out)
 

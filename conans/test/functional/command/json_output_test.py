@@ -161,7 +161,7 @@ AA*: CC/1.0@private_user/channel
         files = cpp_hello_conan_files("PROJECT", "1.0",
                                       deps=["AA/1.0@private_user/channel"], build=False)
         self.client.save(files, clean_first=True)
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install . --profile mybr --json=myfile.json --build AA --build BB")
         my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
         my_json = json.loads(my_json)

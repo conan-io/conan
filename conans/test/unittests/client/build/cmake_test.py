@@ -223,8 +223,7 @@ class CMakeTest(unittest.TestCase):
     def cmake_generator_platform_gcc_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
-        with catch_deprecation_warning(self):
-            settings.os_build = "Linux"
+        settings.os_build = "Linux"
         settings.compiler = "gcc"
         settings.compiler.version = "8"
         settings.compiler.libcxx = "libstdc++"
@@ -857,8 +856,7 @@ build_type: [ Release]
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Android"
-        with catch_deprecation_warning(self):
-            settings.os_build = "Windows"  # Here we are declaring we are cross building
+        settings.os_build = "Windows"  # Here we are declaring we are cross building
         settings.os.api_level = 16
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
@@ -1234,8 +1232,7 @@ build_type: [ Release]
     def test_missing_settings(self):
         def instance_with_os_build(os_build):
             settings = Settings.loads(default_settings_yml)
-            with catch_deprecation_warning(self):
-                settings.os_build = os_build
+            settings.os_build = os_build
             conan_file = ConanFileMock()
             conan_file.settings = settings
             conan_file.settings_build = settings

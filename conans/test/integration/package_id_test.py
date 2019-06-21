@@ -23,7 +23,7 @@ class Pkg(ConanFile):
     settings = "os", "arch", "compiler", "os_build", "arch_build"
         """
         client.save({"conanfile.py": conanfile})
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run('install . -s os=Windows -s compiler="Visual Studio" '
                        '-s compiler.version=15 -s compiler.runtime=MD '
                        '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
@@ -289,7 +289,7 @@ class Pkg(ConanFile):
             self._export("Hello", "1.2.0", package_id_text=package_id_text,
                          channel="user/testing",
                          settings='"os", "os_build", "arch", "arch_build"')
-            with catch_deprecation_warning(self, n=2):
+            with catch_deprecation_warning(self):
                 self.client.run('install Hello/1.2.0@user/testing '
                                 ' -s os="Windows" '
                                 ' -s os_build="Linux"'
@@ -309,7 +309,7 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.arch_build), "None")
 
         # Package has to be present with different build settings
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os="Windows" '
                             ' -s arch="x86_64"'
@@ -322,7 +322,7 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.arch_build), "x86")
 
         # Now the build settings matter
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             err = self.client.run('install Hello/1.2.0@user/testing '
                                   ' -s os="Windows" '
                                   ' -s arch="x86_64"'
@@ -331,7 +331,7 @@ class Pkg(ConanFile):
         self.assertTrue(err)
         self.assertIn("Can't find", self.client.out)
 
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os="Windows" '
                             ' -s arch="x86_64"'
@@ -343,7 +343,7 @@ class Pkg(ConanFile):
         self._export("Hello", "1.2.0",
                      channel="user/testing",
                      settings='"os_build", "arch_build"')
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self ):
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os_build="Linux"'
                             ' -s arch_build="x86"'
@@ -370,17 +370,17 @@ class Pkg(ConanFile):
                      channel="user/testing",
                      settings='"compiler", "cppstd"')
 
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self, n=2):
             self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
                             '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
                             '-s cppstd=gnu14')
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self, n=2):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
 
         # Should NOT have binary available
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self, n=2):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu11',
@@ -397,7 +397,7 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self, n=2):
             self.client.run('install Hello/1.2.0@user/testing'
                             ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                             ' -s compiler.version=7.2 -s cppstd=gnu14',

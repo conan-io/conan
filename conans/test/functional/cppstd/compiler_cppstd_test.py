@@ -137,7 +137,7 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
                       " please update your recipe.", self.t.out)
 
     def test_only_cppstd(self):
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self, n=2):
             self.t.run("info . -s cppstd=14")
         self.assertNotIn(">>> compiler.cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: 14", self.t.out)
@@ -152,7 +152,6 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     def test_both(self):
         settings_str = "-s cppstd=14 -s compiler.cppstd=14"
-        with catch_deprecation_warning(self, n=2):
-            self.t.run("info . {}".format(settings_str), assert_error=True)
+        self.t.run("info . {}".format(settings_str), assert_error=True)
         self.assertIn("Do not use settings 'compiler.cppstd' together with 'cppstd'."
                       " Use only the former one.", self.t.out)

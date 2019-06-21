@@ -127,8 +127,7 @@ class CompilerArgsTest(unittest.TestCase):
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
-        with catch_deprecation_warning(self):
-            settings.os_build = "Macos"
+        settings.os_build = "Macos"
         settings.compiler = "apple-clang"
         settings.compiler.version = "9.0"
         settings.arch = "x86"

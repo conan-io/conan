@@ -417,7 +417,7 @@ class Pkg(ConanFile):
         # Explicit with os_build and os_arch settings
         message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
                             assert_error=True)
         self.assertIn(message, self.client.user_io.out)
@@ -441,12 +441,12 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run("install . --build=missing -s os=Windows -s os_build=Windows "
                        "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)

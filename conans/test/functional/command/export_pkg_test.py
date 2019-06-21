@@ -64,7 +64,7 @@ class PkgA(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("install . -if=build")
         client.run("build . -bf=build")
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
         self.assertIn("PkgA/0.1@user/testing: Package "
                       "'8f97510bcea8206c1c046cc8d71cc395d4146547' created",

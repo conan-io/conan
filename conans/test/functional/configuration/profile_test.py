@@ -53,7 +53,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install . -pr envs -g virtualenv")
         content = load(os.path.join(self.client.current_folder, "activate.sh"))
         self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
@@ -75,7 +75,7 @@ class ProfileTest(unittest.TestCase):
          even when you run a create with a profile"""
         self.client.save({CONANFILE: conanfile_scope_env,
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("create . conan/testing --profile myprofile")
 
     def bad_syntax_test(self):
@@ -138,7 +138,7 @@ class ProfileTest(unittest.TestCase):
         ENV_VAR =   a value
         '''
         save(clang_profile_path, profile)
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
@@ -150,7 +150,7 @@ class ProfileTest(unittest.TestCase):
         ENV_VAR =   a value
         '''
         save(clang_profile_path, profile)
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
@@ -172,7 +172,7 @@ class ProfileTest(unittest.TestCase):
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
         self._assert_env_variable_printed("PREPEND_VAR", os.pathsep.join(["new_path", "other_path"]))
         self.assertEqual(1, str(self.client.out).count("PREPEND_VAR=new_path"))  # prepended once
@@ -180,21 +180,21 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
         # Override with package var
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build "
                             "-pr envs -e Hello0:A_VAR=OTHER_VALUE")
         self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
         # Override package var with package var
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build -pr envs "
                             "-e Hello0:A_VAR=OTHER_VALUE -e Hello0:OTHER_VAR=3")
         self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "3")
 
         # Pass a variable with "=" symbol
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build -pr envs "
                             "-e Hello0:A_VAR=Valuewith=equal -e Hello0:OTHER_VAR=3")
         self._assert_env_variable_printed("A_VAR", "Valuewith=equal")
@@ -219,14 +219,14 @@ class ProfileTest(unittest.TestCase):
 
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install . --build missing -pr vs_12_86")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         for setting, value in profile_settings.items():
             self.assertIn("%s=%s" % (setting, value), info)
 
         # Try to override some settings in install command
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=14")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         for setting, value in profile_settings.items():
@@ -245,7 +245,7 @@ class ProfileTest(unittest.TestCase):
                        "vs_12_86_Hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
         # Try to override some settings in install command
-        with catch_deprecation_warning(self, n=4):
+        with catch_deprecation_warning(self, n=2):
             self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         self.assertIn("compiler=gcc", info)
@@ -257,7 +257,7 @@ class ProfileTest(unittest.TestCase):
                        "vs_12_86_Hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
         # Try to override some settings in install command
-        with catch_deprecation_warning(self, n=4):
+        with catch_deprecation_warning(self, n=2):
             self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         self.assertIn("compiler=Visual Studio", info)
@@ -269,7 +269,7 @@ class ProfileTest(unittest.TestCase):
                        settings=profile_settings, package_settings=package_settings)
 
         # Try to override some settings in install command
-        with catch_deprecation_warning(self, n=4):
+        with catch_deprecation_warning(self, n=2):
             self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc"
                             " -s compiler.version=14 -s Hello0:compiler.libcxx=libstdc++")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
@@ -285,7 +285,7 @@ class ProfileTest(unittest.TestCase):
                                 ("Hello0:static", False)])
 
         self.client.save(files)
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install . --build missing -pr vs_12_86")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         self.assertIn("language=1", info)
@@ -297,7 +297,7 @@ class ProfileTest(unittest.TestCase):
                        env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export . lasote/stable")
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("install Hello0/0.1@lasote/stable --build missing -pr scopes_env")
 
         self._assert_env_variable_printed("CC", "/path/tomy/gcc")
@@ -352,7 +352,7 @@ class DefaultNameConan(ConanFile):
                        env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("create . lasote/stable --profile scopes_env")
 
         self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
@@ -363,14 +363,14 @@ class DefaultNameConan(ConanFile):
                        package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
                                     "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("create . lasote/stable --profile scopes_env2")
 
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
         self.assertIn("My var is IN_TEST_PACKAGE", str(self.client.user_io.out))
 
         # Try now overriding some variables with command line
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("create . lasote/stable --profile scopes_env2 "
                             "-e DefaultName:ONE_VAR=InTestPackageOverride "
                             "-e Hello0:ONE_VAR=PackageValueOverride ")
@@ -379,7 +379,7 @@ class DefaultNameConan(ConanFile):
         self.assertIn("My var is InTestPackageOverride", str(self.client.user_io.out))
 
         # A global setting in command line won't override a scoped package variable
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("create . lasote/stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
 
@@ -427,7 +427,7 @@ class DefaultNameConan(ConanFile):
                        settings={"os": "Linux"})
 
         # Install with the previous profile
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
         self.assertNotIn('''Requires:
                 WinRequire/0.1@lasote/stable''', self.client.user_io.out)
@@ -437,7 +437,7 @@ class DefaultNameConan(ConanFile):
                        settings={"os": "Windows"})
 
         # Install with the previous profile
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
         self.assertIn('''Requires:
         WinRequire/0.1@lasote/stable''', self.client.user_io.out)
