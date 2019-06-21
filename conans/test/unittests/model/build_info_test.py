@@ -221,7 +221,7 @@ VAR2=23
         info["LIB2"].system_deps = ["sys2"]
         info["LIB1"].deps = ["LIB3"]
         info["LIB3"].system_deps = ["sys3", "sys2"]
-        self.assertEqual(['sys2', 'sys3', 'sys1', 'sys11'], info.libs)
+        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.libs)
         info["LIB3"].system_deps = [None, "sys2"]
         self.assertEqual(['sys2', 'sys1', 'sys11'], info.libs)
 
@@ -241,15 +241,16 @@ VAR2=23
         info["LIB1"].deps = ["LIB2"]
         info["LIB2"].lib = "lib2"
         info["LIB2"].system_deps = ["sys2"]
-        info["LIB1"].deps = ["LIB3"]
+        info["LIB2"].deps = ["LIB3"]
         info["LIB3"].lib = "lib3"
         info["LIB3"].system_deps = ["sys3", "sys2"]
-        self.assertEqual(['sys2', 'lib2', 'sys3', 'lib3', 'sys1', 'sys11', 'lib1'], info.libs)
-        self.assertEqual(['sys2', 'sys3', 'sys1', 'sys11'], info.system_deps)
+        self.assertEqual(['sys3', 'sys2', 'lib3', 'lib2', 'sys1', 'sys11', 'lib1'], info.libs)
+        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.system_deps)
 
     def cpp_info_link_order_test(self):
 
         def _assert_link_order(sorted_libs):
+            assert sorted_libs, "'sorted_libs' is empty"
             for num, lib in enumerate(sorted_libs):
                 component_name = lib[-1]
                 for dep in info[component_name].deps:
@@ -296,6 +297,14 @@ VAR2=23
         info["B"].lib = "libB"
         info["B"].deps = []
         _assert_link_order(info.libs)
+
+    def cppinfo_inexistent_component_dep_test(self):
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB2"]
+        with six.assertRaisesRegex(self, ConanException, "Component 'LIB2' not found in cpp_info "
+                                                         "object"):
+            info.libs
 
     def cppinfo_dirs_test(self):
         folder = temp_folder()

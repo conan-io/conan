@@ -55,22 +55,24 @@ class _CppInfo(object):
         Sorted components from less dependent to the most one
         :return: ordered list of components
         """
-        # Sort first elements with less items in .deps attribute
-        comps = sorted(self._components.values(), key=lambda component: len(component.deps))
         # Save name of unsorted elements
-        unsorted_names = [comp.name for comp in comps]
-
+        unsorted_names = self._components.keys()
         sorted_comps = []
+        element = unsorted_names[0]
         while unsorted_names:
-            for comp in comps:
-                # If element is already sorted, continue
-                if comp.name not in unsorted_names:
-                    continue
-                # If element does not have deps or all of its deps are already sorted, sort this
-                # element and remove it from the unsorted list
-                elif not comp.deps or not [dep for dep in comp.deps if dep in unsorted_names]:
-                    sorted_comps.append(comp)
-                    unsorted_names.remove(comp.name)
+            try:
+                deps = self._components[element].deps
+            except KeyError as e:
+                raise ConanException("Component %s not found in cpp_info object" % e)
+            if all(dep in [c.name for c in sorted_comps] for dep in deps):
+                sorted_comps.append(self._components[element])
+                unsorted_names.remove(element)
+                element = unsorted_names[0] if unsorted_names else None
+            else:
+                for dep in deps:
+                    if dep not in [c.name for c in sorted_comps]:
+                        element = dep
+                        break
         return sorted_comps
 
     @property
