@@ -219,17 +219,18 @@ VAR2=23
         info["LIB1"].system_deps = ["sys1", "sys11"]
         info["LIB1"].deps = ["LIB2"]
         info["LIB2"].system_deps = ["sys2"]
-        info["LIB1"].deps = ["LIB3"]
+        info["LIB2"].deps = ["LIB3"]
         info["LIB3"].system_deps = ["sys3", "sys2"]
         self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.libs)
+        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.system_deps)
         info["LIB3"].system_deps = [None, "sys2"]
         self.assertEqual(['sys2', 'sys1', 'sys11'], info.libs)
+        self.assertEqual(['sys2', 'sys1', 'sys11'], info.system_deps)
 
         with six.assertRaisesRegex(self, ConanException, "Setting first level system_deps is not "
                                                          "supported when Components are already in "
                                                          "use"):
             info.system_deps = ["random_system"]
-        self.assertEqual(['sys2', 'sys1', 'sys11'], info.system_deps)
 
     def cpp_info_libs_system_deps_order_test(self):
         """
