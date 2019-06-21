@@ -1668,6 +1668,7 @@ class Command(object):
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile folder')
+        build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?", help="nodes to build")
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
@@ -1686,7 +1687,7 @@ class Command(object):
         if args.subcommand == "update-lock":
             self._conan.update_lock(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
-            build_order = self._conan.build_order(args.lockfile)
+            build_order = self._conan.build_order(args.lockfile, args.build)
             self._user_io.out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)

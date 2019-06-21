@@ -45,6 +45,7 @@ class Node(object):
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
         self._id = None
+        self.locked = None
 
     @property
     def id(self):
@@ -259,6 +260,16 @@ class DepsGraph(object):
                 dst = result_node
                 result.add_edge(src, dst, dep.private, dep.build_require)
 
+        return result
+
+    def new_build_order(self):
+        levels = self.inverse_levels()
+        result = []
+        for level in reversed(levels):
+            new_level = [(n.id, n.pref.full_repr())
+                         for n in level if n.binary == BINARY_BUILD]
+            if new_level:
+                result.append(new_level)
         return result
 
     def build_order(self, references):

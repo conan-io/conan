@@ -103,6 +103,14 @@ class GraphLock(object):
                 self._nodes[node.id] = graph_node
                 self._edges[node.id] = dependencies
 
+    def root_node(self):
+        total = []
+        for list_ids in self._edges.values():
+            total.extend(list_ids)
+        roots = set(self._edges).difference(total)
+        assert len(roots) == 1
+        return self._nodes[roots.pop()]
+
     @staticmethod
     def from_dict(graph_json):
         graph_lock = GraphLock()
@@ -134,16 +142,6 @@ class GraphLock(object):
         for _, node in self._nodes.items():
             node.modified = False
 
-    def build_order(self):
-        levels = self._inverse_levels()
-        affected = self._closure_affected()
-        result = []
-        for level in levels:
-            partial = [(id_, node.pref.full_repr()) for id_, node in level if id_ in affected]
-            if partial:
-                result.append(partial)
-        return result
-
     def _closure_affected(self):
         closure = set()
         current = [id_ for id_, node in self._nodes.items() if node.modified]
@@ -166,45 +164,26 @@ class GraphLock(object):
                 result.append(id_)
         return result
 
-    def _inverse_levels(self):
-        current_level = []
-        result = [current_level]
-        opened = list(self._nodes.keys())
-        while opened:
-            current = opened[:]
-            for o in opened:
-                o_neighs = self._edges[o]
-                if not any(n in opened for n in o_neighs):
-                    current_level.append((o, self._nodes[o]))
-                    current.remove(o)
-            current_level.sort()
-            opened = current
-            if opened:
-                current_level = []
-                result.append(current_level)
-        return result
-
     def update_check_graph(self, deps_graph, output):
+        affected = self._closure_affected()
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
                 continue
             lock_node = self._nodes[node.id]
-            if node.binary == BINARY_BUILD:
-                if lock_node.pref != node.pref:
+            if lock_node.pref.full_repr() != node.pref.full_repr():
+                if node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
-                    lock_node.modified = True
-            else:
-                lock_node_pref = self._nodes[node.id].pref
-                if (lock_node_pref and node.ref and
-                        lock_node_pref.full_repr() != node.pref.full_repr()):
-                    raise ConanException("Mistmatch between lock and graph:\nLock %s\nGraph: %s"
-                                         % (lock_node_pref.full_repr(), node.pref.full_repr()))
+                else:
+                    raise ConanException("Mistmatch between lock and graph:\nLock:  %s\nGraph: %s"
+                                         % (lock_node.pref.full_repr(), node.pref.full_repr()))
 
     def lock_node(self, node, requires):
         if node.recipe == RECIPE_VIRTUAL:
             return
+        locked_node = self._nodes[node.id]
         prefs = self._dependencies(node.id)
-        options = self._nodes[node.id].options
+        options = locked_node.options
+        node.locked = locked_node
         node.conanfile.options.values = options
         for require in requires:
             # Not new unlocked dependencies at this stage

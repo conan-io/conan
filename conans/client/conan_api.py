@@ -1222,11 +1222,25 @@ class ConanAPIV1(object):
         old_lock.save(old_lockfile)
 
     @api_method
-    def build_order(self, lockfile, cwd=None):
+    def build_order(self, lockfile, build=None, cwd=None):
         cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-        lock = GraphLockFile.load(lockfile)
-        return lock.graph_lock.build_order()
+        lock_folder = _make_abs_path(lockfile, cwd)
+
+        recorder = ActionRecorder()
+        remotes = self._cache.registry.load_remotes()
+        self._python_requires.enable_remotes(remotes=remotes)
+
+        graph_info = get_graph_info(None, None, None, None,
+                                    cwd=cwd, install_folder=None,
+                                    cache=self._cache, output=self._user_io.out,
+                                    lock_folder=lock_folder, use_lock=True)
+        reference = graph_info.graph_lock.root_node().pref.ref.copy_clear_rev()
+        deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
+                                                       False, False, remotes, recorder)
+
+        print_graph(deps_graph, self._user_io.out)
+        graph_info.save(lock_folder)
+        return deps_graph.new_build_order()
 
     @api_method
     def lock_clean_modified(self, lockfile, cwd=None):
