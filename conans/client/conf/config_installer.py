@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import datetime
 
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
@@ -34,7 +35,8 @@ def _handle_remotes(cache, remote_file):
 
 @contextmanager
 def tmp_config_install_folder(cache):
-    tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install")
+    now = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
+    tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install_%s" % now)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
     mkdir(tmp_folder)
