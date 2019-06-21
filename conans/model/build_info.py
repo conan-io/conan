@@ -134,6 +134,9 @@ class _CppInfo(object):
         self._system_deps = system_deps
 
     def __getitem__(self, key):
+        """
+        This is called when the user accesses to a component: self.cpp_info["whatever"]
+        """
         if self._libs:
             raise ConanException("Usage of Components with '.libs' values is not allowed")
         if key not in self._components.keys():
