@@ -441,12 +441,12 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             client.run("install . --build=missing -s os=Windows -s os_build=Windows "
                        "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
-        with catch_deprecation_warning(self):
+        with catch_deprecation_warning(self, n=2):
             client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
@@ -469,7 +469,7 @@ class TestConan(ConanFile):
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
 
-    def test_install_with_profile_test(self):
+    def install_with_profile_test(self):
         # Test for https://github.com/conan-io/conan/pull/2043
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):

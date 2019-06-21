@@ -1,10 +1,11 @@
 import os
+import platform
 import unittest
 
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.profiles import create_profile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import platform
 
 
 class ProfileTest(unittest.TestCase):
@@ -25,7 +26,8 @@ class ProfileTest(unittest.TestCase):
         profile = str(client.out).splitlines()[2:]
         client.save({"conanfile.txt": "",
                      "mylocalprofile": "\n".join(profile)})
-        client.run("install . -pr=mylocalprofile")
+        with catch_deprecation_warning(self, n=2):
+            client.run("install . -pr=mylocalprofile")
         self.assertIn("conanfile.txt: Generated conaninfo.txt", client.out)
 
     def empty_test(self):

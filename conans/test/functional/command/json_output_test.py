@@ -6,6 +6,7 @@ import unittest
 from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
@@ -160,7 +161,8 @@ AA*: CC/1.0@private_user/channel
         files = cpp_hello_conan_files("PROJECT", "1.0",
                                       deps=["AA/1.0@private_user/channel"], build=False)
         self.client.save(files, clean_first=True)
-        self.client.run("install . --profile mybr --json=myfile.json --build AA --build BB")
+        with catch_deprecation_warning(self, n=2):
+            self.client.run("install . --profile mybr --json=myfile.json --build AA --build BB")
         my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
         my_json = json.loads(my_json)
 
