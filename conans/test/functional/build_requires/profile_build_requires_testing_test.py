@@ -82,7 +82,7 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertNotIn("Test0/0.1@lasote/stable", client.out)
         self.assertNotIn("Test1/0.1@lasote/stable", client.out)
 
-        with catch_deprecation_warning(self, n=2):
+        with catch_deprecation_warning(self):
             client.run("install MyLib/0.1@lasote/stable -pr=./profile.txt --build")
         self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.out)
         self.assertIn("Test0/0.1@lasote/stable", client.out)
