@@ -42,10 +42,10 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         client.save(files)
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self):
             client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
                        'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
-        with catch_deprecation_warning(self, n=3):
+        with catch_deprecation_warning(self):
             client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
                        '-s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)

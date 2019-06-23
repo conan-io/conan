@@ -52,8 +52,7 @@ class VCVarsArchTest(unittest.TestCase):
             with catch_deprecation_warning(self):
                 tools.vcvars_command(settings, output=self.output)
 
-        with catch_deprecation_warning(self):
-            settings.arch_build = 'x86_64'
+        settings.arch_build = 'x86_64'
         settings.arch = 'x86'
         self.assert_vcvars_command(settings, "amd64_x86")
 
