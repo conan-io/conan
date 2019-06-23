@@ -12,7 +12,6 @@ import json
 class GraphLockCITest(unittest.TestCase):
 
     def test(self):
-        return
         conanfile = textwrap.dedent("""
             from conans import ConanFile, load
             import os
@@ -92,7 +91,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
                       lock_fileb)
-
+        self.assertIn('"modified": true', lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -102,7 +101,6 @@ class GraphLockCITest(unittest.TestCase):
         to_build = json.loads(load(json_file))
         lock_fileaux = lock_file_order
         while to_build:
-            print "TO BUILD ", to_build
             for _, pkg_ref in to_build[0]:
                 pkg_ref = PackageReference.loads(pkg_ref)
                 client_aux = TestClient(base_folder=client.base_folder,

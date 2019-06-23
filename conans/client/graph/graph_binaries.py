@@ -9,7 +9,6 @@ from conans.errors import NoRemoteAvailable, NotFoundException, \
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.util.files import is_dirty, rmdir
-from platform import node
 
 
 class GraphBinariesAnalyzer(object):
@@ -35,7 +34,8 @@ class GraphBinariesAnalyzer(object):
 
         ref, conanfile = node.ref, node.conanfile
         pref = node.pref
-        locked = node.locked
+        # If it has lock
+        locked = node.graph_lock_node
         if locked:
             if locked.pref.id == pref.id:
                 # Keep the locked revision
@@ -61,10 +61,14 @@ class GraphBinariesAnalyzer(object):
 
         with_deps_to_build = False
         if build_mode.cascade:
-            for dep in node.dependencies:
-                if dep.dst.binary == BINARY_BUILD or (dep.dst.locked and dep.dst.locked.modified):
-                    with_deps_to_build = True
-                    break
+            if node.graph_lock_node and node.graph_lock_node.modified:
+                pass
+            else:
+                for dep in node.dependencies:
+                    if (dep.dst.binary == BINARY_BUILD or
+                            (dep.dst.graph_lock_node and dep.dst.graph_lock_node.modified)):
+                        with_deps_to_build = True
+                        break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             output.info('Forced build from source')
             node.binary = BINARY_BUILD

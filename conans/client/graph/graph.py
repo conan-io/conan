@@ -45,7 +45,7 @@ class Node(object):
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
         self._id = None
-        self.locked = None
+        self.graph_lock_node = None
 
     @property
     def id(self):

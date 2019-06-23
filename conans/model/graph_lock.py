@@ -183,7 +183,7 @@ class GraphLock(object):
         locked_node = self._nodes[node.id]
         prefs = self._dependencies(node.id)
         options = locked_node.options
-        node.locked = locked_node
+        node.graph_lock_node = locked_node
         node.conanfile.options.values = options
         for require in requires:
             # Not new unlocked dependencies at this stage
