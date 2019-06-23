@@ -439,8 +439,7 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
-        with catch_deprecation_warning(self):
-            settings.arch_build = "x86_64"
+        settings.arch_build = "x86_64"
 
         # Set the env with a PATH containing the vcvars paths
         with catch_deprecation_warning(self):
@@ -465,8 +464,7 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
-        with catch_deprecation_warning(self):
-            settings.arch_build = "x86_64"
+        settings.arch_build = "x86_64"
         with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
             with catch_deprecation_warning(self):
                 tmp = tools.vcvars_dict(settings, only_diff=False,
@@ -489,15 +487,13 @@ class HelloConan(ConanFile):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
-        with catch_deprecation_warning(self):
-            settings.arch_build = "x86_64"
+        settings.arch_build = "x86_64"
         with catch_deprecation_warning(self):
             cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" amd64_x86', cmd)
 
         # It follows arch_build first
-        with catch_deprecation_warning(self):
-            settings.arch_build = "x86"
+        settings.arch_build = "x86"
         with catch_deprecation_warning(self):
             cmd = tools.vcvars_command(settings, output=self.output)
         self.assertIn('vcvarsall.bat" x86', cmd)
