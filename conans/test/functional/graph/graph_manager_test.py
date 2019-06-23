@@ -557,7 +557,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(libd_ref, TestConanFile("libd", "0.1", requires=[liba_ref]))
         deps_graph = self.build_graph(TestConanFile("app", "0.1",
                                                     requires=[libb_ref, libc_ref],
-                                                    build_requires=[(libd_ref, "host")]))
+                                                    build_requires=[(libd_ref, CONTEXT_HOST)]))
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root

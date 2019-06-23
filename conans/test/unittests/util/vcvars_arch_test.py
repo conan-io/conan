@@ -13,7 +13,6 @@ from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.test.utils.deprecation import catch_deprecation_warning
 
 
 @attr('visual_studio')

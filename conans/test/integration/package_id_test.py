@@ -308,7 +308,12 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.os_build), "None")
         self.assertEqual(str(info.settings.arch_build), "None")
 
-        # Package has to be present with different build settings
+        # Package has to be present with only os and arch settings
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s os="Windows" '
+                        ' -s arch="x86_64"')
+
+        # Even with wrong build settings
         with catch_deprecation_warning(self):
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os="Windows" '
@@ -343,7 +348,7 @@ class Pkg(ConanFile):
         self._export("Hello", "1.2.0",
                      channel="user/testing",
                      settings='"os_build", "arch_build"')
-        with catch_deprecation_warning(self ):
+        with catch_deprecation_warning(self):
             self.client.run('install Hello/1.2.0@user/testing '
                             ' -s os_build="Linux"'
                             ' -s arch_build="x86"'

@@ -106,7 +106,7 @@ class {name}Conan(ConanFile):
                 if isinstance(it, (list, tuple)):
                     br, build_context = it
                 else:
-                    br, build_context = it, CONTEXT_DEFAULT  # By default, a build_requires is 'build'
+                    br, build_context = it, CONTEXT_DEFAULT
                 base += '        self.build_requires("%s", context="%s")\n' % (br, build_context)
 
         if self.package_id:
