@@ -307,6 +307,32 @@ VAR2=23
                                                          "object"):
             info.libs
 
+    def cpp_info_components_dep_loop_test(self):
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB1"]
+        msg_template = "Detected loop calculating the link order of components. Please check the " \
+                       "'.deps' and resolve the circular depency of '{}' with {}"
+        with six.assertRaisesRegex(self, ConanException, msg_template.format("LIB1", ["LIB1"])):
+            info.libs
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].lib = "lib2"
+        info["LIB2"].deps = ["LIB1", "LIB2"]
+        with six.assertRaisesRegex(self, ConanException, msg_template.format("LIB2", ["LIB1"])):
+            info.libs
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].lib = "lib2"
+        info["LIB2"].deps = ["LIB3"]
+        info["LIB3"].lib = "lib3"
+        info["LIB3"].deps = ["LIB1"]
+        with six.assertRaisesRegex(self, ConanException,
+                                   msg_template.format("LIB3", ["LIB1", "LIB2"])):
+            info.libs
+
     def cppinfo_dirs_test(self):
         folder = temp_folder()
         info = CppInfo(folder)

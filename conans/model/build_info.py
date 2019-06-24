@@ -59,6 +59,7 @@ class _CppInfo(object):
         unsorted_names = list(self._components.keys())
         sorted_comps = []
         element = unsorted_names[0]
+        search_buffer = []
         while unsorted_names:
             try:
                 deps = self._components[element].deps
@@ -67,10 +68,19 @@ class _CppInfo(object):
             if all(dep in [c.name for c in sorted_comps] for dep in deps):
                 sorted_comps.append(self._components[element])
                 unsorted_names.remove(element)
+                search_buffer = []
                 element = unsorted_names[0] if unsorted_names else None
             else:
                 for dep in deps:
                     if dep not in [c.name for c in sorted_comps]:
+                        if dep in search_buffer:
+                            if len(search_buffer) > 1:
+                                search_buffer.remove(dep)
+                            raise ConanException("Detected loop calculating the link order of "
+                                                 "components. Please check the '.deps' and resolve "
+                                                 "the circular depency of '%s' with %s" %
+                                                 (dep, search_buffer))
+                        search_buffer.append(dep)
                         element = dep
                         break
         return sorted_comps
