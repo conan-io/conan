@@ -185,7 +185,7 @@ class YumTool(BaseTool):
         raise ConanException("YumTool::add_repository not implemented")
 
     def update(self):
-        _run(self._runner, "%syum update -y" % self._sudo_str, accepted_returns=[0, 100],
+        _run(self._runner, "%syum check-update -y" % self._sudo_str, accepted_returns=[0, 100],
              output=self._output)
 
     def install(self, package_name):
