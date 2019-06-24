@@ -144,9 +144,8 @@ class Node(object):
     def connect_closure(self, other_node):
         # When 2 nodes of the graph become connected, their closures information has
         # has to remain consistent. This method manages this.
-        name = other_node.name
-        self.public_closure[name] = other_node
-        self.public_deps[name] = other_node
+        self.public_closure.add(other_node)
+        self.public_deps.add(other_node)
         other_node.inverse_closure.add(self)
 
     def inverse_neighbors(self):

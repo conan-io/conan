@@ -143,9 +143,7 @@ class DepsGraphBuilder(object):
             # The closure of a new node starts with just itself
             # The new created node is connected to the parent one
             new_node.public_closure.add(new_node)
-            node.public_closure.add(new_node)
-            new_node.inverse_closure.add(node)
-            node.public_deps.add(new_node)
+            node.connect_closure(new_node)
 
             new_node.build_require = node.build_require or require.build_require
             new_node.private = node.private or require.private
@@ -162,11 +160,9 @@ class DepsGraphBuilder(object):
 
                 # All the dependents of "node" are also connected now to "new_node"
                 for dep_node in node.inverse_closure:
-                    dep_node.public_closure.add(new_node)
-                    new_node.inverse_closure.add(dep_node)
-                    dep_node.public_deps.add(new_node)
+                    dep_node.connect_closure(new_node)
 
-            # RECURSION!
+            # RECURSION, keep expanding (depth-first) the new node
             self._load_deps(dep_graph, new_node, new_reqs, node.ref,
                             new_options, check_updates, update,
                             remotes, processed_profile)
@@ -198,12 +194,9 @@ class DepsGraphBuilder(object):
             for n in previous.public_closure:
                 if n.build_require or n.private:
                     continue
-                node.public_closure.add(n)
-                n.inverse_closure.add(node)
+                node.connect_closure(n)
                 for dep_node in node.inverse_closure:
-                    dep_node.public_closure.add(n)
-                    dep_node.public_deps.add(n)
-                    n.inverse_closure.add(dep_node)
+                    dep_node.connect_closure(n)
 
             # Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
