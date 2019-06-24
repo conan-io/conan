@@ -146,7 +146,7 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
                          profile_build.settings['os'])
 
         breq_lib_build = lib_host.dependencies[0].dst
-        self.assertNotEqual(breq_application_build, breq_lib_build)  # TODO: bug or feature?
+        self.assertNotEqual(breq_application_build, breq_lib_build)
         self.assertEqual(breq_lib_build.conanfile.name, "breq")
         self.assertEqual(breq_lib_build.build_context, CONTEXT_BUILD)
         self.assertEqual(str(breq_lib_build.conanfile.settings.os), profile_build.settings['os'])

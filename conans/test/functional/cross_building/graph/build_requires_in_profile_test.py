@@ -127,7 +127,7 @@ class BuildRequiresInProfileExample(GraphManagerTest):
                          profile_host.settings['os'])
 
         cmake_lib_build = lib_host.dependencies[0].dst
-        self.assertNotEqual(cmake_application_build, cmake_lib_build)  # TODO: bug or feature?
+        self.assertNotEqual(cmake_application_build, cmake_lib_build)
         self.assertEqual(cmake_lib_build.conanfile.name, "cmake")
         self.assertEqual(cmake_lib_build.build_context, CONTEXT_HOST)
         self.assertEqual(str(cmake_lib_build.conanfile.settings.os), profile_host.settings['os'])
