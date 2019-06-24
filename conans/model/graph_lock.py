@@ -170,7 +170,7 @@ class GraphLock(object):
             if node.recipe == RECIPE_VIRTUAL:
                 continue
             lock_node = self._nodes[node.id]
-            if lock_node.pref.full_repr() != node.pref.full_repr():
+            if lock_node.pref and lock_node.pref.full_repr() != node.pref.full_repr():
                 if node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
