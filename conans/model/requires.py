@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import six
 
-from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conans.client.graph.graph import CONTEXT_DEFAULT_REQUIRES
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.env_reader import get_env
@@ -22,7 +22,7 @@ class Requirement(object):
         self.override = override
         self.private = private
         self.build_require = False
-        self.build_context = CONTEXT_HOST
+        self.build_context = CONTEXT_DEFAULT_REQUIRES
 
     @property
     def version_range(self):

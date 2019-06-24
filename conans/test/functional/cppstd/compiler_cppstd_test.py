@@ -59,8 +59,8 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                    " -s hh:cppstd=11"
                    " -s hh:compiler=gcc"
                    " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
-                      " use settings 'compiler.cppstd' together with 'cppstd'", self.t.out)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
     def test_value_different_with_general_setting(self):
         deprecation_number = 1 if self.recipe_cppstd else 0
@@ -69,8 +69,8 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                        " -s cppstd=17"
                        " -s hh:compiler=gcc"
                        " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
-                      " use settings 'compiler.cppstd' together with 'cppstd'", self.t.out)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
     def test_conanfile_without_compiler(self):
         conanfile = textwrap.dedent("""
@@ -88,8 +88,8 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
-                      " use settings 'compiler.cppstd' together with 'cppstd'", t.out)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", t.out)
 
     def test_conanfile_without_compiler_but_cppstd(self):
         conanfile = textwrap.dedent("""
@@ -110,8 +110,8 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
-                      " use settings 'compiler.cppstd' together with 'cppstd'", t.out)
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
+                      " 'compiler.cppstd' together with 'cppstd'", t.out)
 
 
 class UseCompilerCppStdSettingTests(unittest.TestCase):
