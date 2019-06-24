@@ -2,7 +2,6 @@ import os
 from collections import namedtuple
 
 from conans import Options
-from conans.client.graph.graph import CONTEXT_BUILD
 from conans.model.conan_file import ConanFile
 from conans.model.options import PackageOptions
 from conans.test.utils.tools import TestBufferConanOutput
@@ -91,6 +90,9 @@ class {name}Conan(ConanFile):
                 reqs_list.extend(["('%s', 'private')" % r for r in self.private_requires or []])
             reqs_list.append("")
             base += "    requires = %s\n" % (", ".join(reqs_list))
+        if self.build_requires:
+            base += "    build_requires = %s\n" % (", ".join('"%s"' % r
+                                                             for r in self.build_requires))
         if self.options:
             base += "    options = %s\n" % str(self.options)
         if self.default_options:
@@ -98,16 +100,6 @@ class {name}Conan(ConanFile):
                 base += "    default_options = '%s'\n" % str(self.default_options)
             else:
                 base += "    default_options = %s\n" % str(self.default_options)
-
-        if self.build_requires:
-            base += "    def build_requirements(self):\n"
-            for it in self.build_requires:
-                if isinstance(it, (list, tuple)):
-                    br, build_context = it
-                else:
-                    br, build_context = it, CONTEXT_BUILD  # By default, a build_requires is 'build'
-                base += '        self.build_requires("%s", context="%s")\n' % (br, build_context)
-
         if self.package_id:
             base += "    def package_id(self):\n        %s\n" % self.package_id
         if self.info:
