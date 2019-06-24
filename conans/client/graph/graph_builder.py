@@ -198,9 +198,7 @@ class DepsGraphBuilder(object):
             if previous.private and not require.private:
                 previous.make_public()
 
-            node.public_closure.add(previous)
-            previous.inverse_closure.add(node)
-            node.public_deps.add(previous)
+            node.connect_closure(previous)
             dep_graph.add_edge(node, previous, require.private, require.build_require)
             # All the upstream dependencies (public_closure) of the previously existing node
             # now will be also connected to the node and to all its dependants
