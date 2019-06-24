@@ -9,6 +9,7 @@ class VirtualEnvGenerator(Generator):
     append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL", "_LINK_"]
 
     def __init__(self, conanfile):
+        super(VirtualEnvGenerator, self).__init__(conanfile)
         self.conanfile = conanfile
         self.env = conanfile.env
         self.venv_name = "conanenv"

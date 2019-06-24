@@ -70,7 +70,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
         if use_repo_file:
             files["mylayout"] = self.conan_package_layout % ""
         else:
-            file_path = os.path.join(self.cache.conan_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
+            file_path = os.path.join(self.cache.cache_folder, LAYOUTS_FOLDER, DEFAULT_LAYOUT_FILE)
             save(file_path,
                  self.conan_package_layout % "MyLib/0.1@user/editable:")
 

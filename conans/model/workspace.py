@@ -19,7 +19,7 @@ class LocalPackage(object):
         self._conanfile_folder = data.pop("path", None)  # The folder with the conanfile
         layout = data.pop("layout", None)
         if layout:
-            self.layout = get_editable_abs_path(layout, self._base_folder, cache.conan_folder)
+            self.layout = get_editable_abs_path(layout, self._base_folder, cache.cache_folder)
         else:
             self.layout = ws_layout
 
@@ -40,6 +40,24 @@ class LocalPackage(object):
 
 class Workspace(object):
     default_filename = "conanws.yml"
+
+    def __init__(self, path, cache):
+        self._cache = cache
+        self._ws_generator = None
+        self._workspace_packages = OrderedDict()  # {reference: LocalPackage}
+
+        if not os.path.isfile(path):
+            path = os.path.join(path, self.default_filename)
+
+        self._base_folder = os.path.dirname(path)
+        try:
+            content = load(path)
+        except IOError:
+            raise ConanException("Couldn't load workspace file in %s" % path)
+        try:
+            self._loads(content)
+        except Exception as e:
+            raise ConanException("There was an error parsing %s: %s" % (path, str(e)))
 
     def generate(self, install_folder, graph, output):
         if self._ws_generator == "cmake":
@@ -87,24 +105,6 @@ class Workspace(object):
             cmake_path = os.path.join(install_folder, "conanworkspace.cmake")
             save(cmake_path, cmake)
 
-    def __init__(self, path, cache):
-        self._cache = cache
-        self._ws_generator = None
-        self._workspace_packages = OrderedDict()  # {reference: LocalPackage}
-
-        if not os.path.isfile(path):
-            path = os.path.join(path, self.default_filename)
-
-        self._base_folder = os.path.dirname(path)
-        try:
-            content = load(path)
-        except IOError:
-            raise ConanException("Couldn't load workspace file in %s" % path)
-        try:
-            self._loads(content)
-        except Exception as e:
-            raise ConanException("There was an error parsing %s: %s" % (path, str(e)))
-
     def get_editable_dict(self):
         return {ref: {"path": ws_package.root_folder, "layout": ws_package.layout}
                 for ref, ws_package in self._workspace_packages.items()}
@@ -123,12 +123,17 @@ class Workspace(object):
         ws_layout = yml.pop("layout", None)
         if ws_layout:
             ws_layout = get_editable_abs_path(ws_layout, self._base_folder,
-                                              self._cache.conan_folder)
+                                              self._cache.cache_folder)
         generators = yml.pop("generators", None)
         if isinstance(generators, str):
             generators = [generators]
+
+        root_list = yml.pop("root", [])
+        if isinstance(root_list, str):
+            root_list = root_list.split(",")
+
         self._root = [ConanFileReference.loads(s.strip())
-                      for s in yml.pop("root", "").split(",") if s.strip()]
+                      for s in root_list if s.strip()]
         if not self._root:
             raise ConanException("Conan workspace needs at least 1 root conanfile")
 

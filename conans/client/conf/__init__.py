@@ -8,17 +8,18 @@ from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
+import logging
 
 
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x]
+os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
+arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
-os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
-arch_target: [x86, x86_64, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm]
+os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
+arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
 
 # Rest of the settings are "host" settings:
 # - For native building/cross building: Where the library/program will run.
@@ -44,10 +45,13 @@ os:
         version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1"]
     FreeBSD:
     SunOS:
+    AIX:
     Arduino:
         board: ANY
     Emscripten:
-arch: [x86, x86_64, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm]
+    Neutrino:
+        version: ["6.4", "6.5", "6.6", "7.0"]
+arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -76,12 +80,15 @@ compiler:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0",
                   "8"]
-        libcxx: [libstdc++, libstdc++11, libc++]
+        libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0"]
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+    qcc:
+        version: ["4.4", "5.4"]
+        libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
 
 build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
@@ -101,6 +108,8 @@ compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 request_timeout = 60                  # environment CONAN_REQUEST_TIMEOUT (seconds)
 default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
+# retry = 2                             # environment CONAN_RETRY
+# retry_wait = 5                        # environment CONAN_RETRY_WAIT (seconds)
 # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
 # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
@@ -150,10 +159,14 @@ path = ./data
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies - but see below
+# for proxies to specific hosts
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# To specify a proxy for a specific host or hosts, use multiple lines each specifying host = proxy-spec
+# http =
+#   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
@@ -192,6 +205,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
                "CONAN_REQUEST_TIMEOUT": self._env_c("general.request_timeout", "CONAN_REQUEST_TIMEOUT", None),
+               "CONAN_RETRY": self._env_c("general.retry", "CONAN_RETRY", None),
+               "CONAN_RETRY_WAIT": self._env_c("general.retry_wait", "CONAN_RETRY_WAIT", None),
                "CONAN_VS_INSTALLATION_PREFERENCE": self._env_c("general.vs_installation_preference", "CONAN_VS_INSTALLATION_PREFERENCE", None),
                "CONAN_RECIPE_LINTER": self._env_c("general.recipe_linter", "CONAN_RECIPE_LINTER", "True"),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
@@ -349,15 +364,18 @@ class ConanClientConfigParser(ConfigParser, object):
             return False
 
     @property
-    def storage(self):
-        return dict(self.get_conf("storage"))
-
-    @property
     def request_timeout(self):
+        timeout = os.getenv("CONAN_REQUEST_TIMEOUT")
+        if not timeout:
+            try:
+                timeout = self.get_item("general.request_timeout")
+            except ConanException:
+                return None
+
         try:
-            return self.get_item("general.request_timeout")
-        except ConanException:
-            return None
+            return float(timeout) if timeout is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'request_timeout'")
 
     @property
     def revisions_enabled(self):
@@ -394,7 +412,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 current_dir = os.path.dirname(self.filename)
                 # if env var is declared, any specified path will be relative to CONAN_USER_HOME
                 # even with the ~/
-                result = self.storage["path"]
+                result = dict(self.get_conf("storage"))["path"]
                 if result.startswith("."):
                     result = os.path.abspath(os.path.join(current_dir, result))
                 elif result[:2] == "~/":
@@ -411,28 +429,26 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def proxies(self):
-        """ optional field, might not exist
-        """
-        try:
+        try:  # optional field, might not exist
             proxies = self.get_conf("proxies")
-            # If there is proxies section, but empty, it will try to use system proxy
-            if not proxies:
-                # We don't have evidences that this following line is necessary.
-                # If the proxies has been
-                # configured at system level, conan will use it, and shouldn't be necessary
-                # to return here the proxies read from the system.
-                # Furthermore, the urls excluded for use proxies at system level do not work in
-                # this case, then the only way is to remove the [proxies] section with
-                # conan config remote proxies, then this method will return None and the proxies
-                # dict passed to requests will be empty.
-                # We don't remove this line because we are afraid to break something, but maybe
-                # until now is working because no one is using system-wide proxies or those proxies
-                # rules don't contain excluded urls.c #1777
-                return urllib.request.getproxies()
-            result = {k: (None if v == "None" else v) for k, v in proxies}
-            return result
-        except:
+        except Exception:
             return None
+        result = {}
+        # Handle proxy specifications of the form:
+        # http = http://proxy.xyz.com
+        #   special-host.xyz.com = http://special-proxy.xyz.com
+        # (where special-proxy.xyz.com is only used as a proxy when special-host.xyz.com)
+        for scheme, proxy_string in proxies or []:
+            if proxy_string is None or proxy_string == "None":
+                result[scheme] = None
+            else:
+                for line in proxy_string.splitlines():
+                    proxy_value = [t.strip() for t in line.split("=", 1)]
+                    if len(proxy_value) == 2:
+                        result[scheme+"://"+proxy_value[0]] = proxy_value[1]
+                    elif proxy_value[0]:
+                        result[scheme] = proxy_value[0]
+        return result
 
     @property
     def cacert_path(self):
@@ -448,3 +464,113 @@ class ConanClientConfigParser(ConfigParser, object):
                 raise ConanException("Configured file for 'cacert_path'"
                                      " doesn't exists: '{}'".format(cacert_path))
         return cacert_path
+
+    @property
+    def client_cert_path(self):
+        # TODO: Really parameterize the client cert location
+        folder = os.path.dirname(self.filename)
+        CLIENT_CERT = "client.crt"
+        return os.path.normpath(os.path.join(folder, CLIENT_CERT))
+
+    @property
+    def client_cert_key_path(self):
+        CLIENT_KEY = "client.key"
+        folder = os.path.dirname(self.filename)
+        return os.path.normpath(os.path.join(folder, CLIENT_KEY))
+
+    @property
+    def hooks(self):
+        hooks = get_env("CONAN_HOOKS", list())
+        if not hooks:
+            try:
+                hooks = self.get_conf("hooks")
+                hooks = [k for k, _ in hooks]
+            except Exception:
+                hooks = []
+        return hooks
+
+    @property
+    def non_interactive(self):
+        try:
+            non_interactive = get_env("CONAN_NON_INTERACTIVE")
+            if non_interactive is None:
+                non_interactive = self.get_item("general.non_interactive")
+            return non_interactive.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def logging_level(self):
+        try:
+            level = get_env("CONAN_LOGGING_LEVEL")
+            if level is None:
+                level = self.get_item("log.level")
+            try:
+                level = int(level)
+            except Exception:
+                level = logging.CRITICAL
+            return level
+        except ConanException:
+            return logging.CRITICAL
+
+    @property
+    def logging_file(self):
+        return get_env('CONAN_LOGGING_FILE', None)
+
+    @property
+    def print_commands_to_output(self):
+        try:
+            print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS")
+            if print_commands_to_output is None:
+                print_commands_to_output = self.get_item("log.print_run_commands")
+            return print_commands_to_output.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def retry(self):
+        retry = os.getenv("CONAN_RETRY")
+        if not retry:
+            try:
+                retry = self.get_item("general.retry")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry) if retry is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry'")
+
+    @property
+    def retry_wait(self):
+        retry_wait = os.getenv("CONAN_RETRY_WAIT")
+        if not retry_wait:
+            try:
+                retry_wait = self.get_item("general.retry_wait")
+            except ConanException:
+                return None
+
+        try:
+            return int(retry_wait) if retry_wait is not None else None
+        except ValueError:
+            raise ConanException("Specify a numeric parameter for 'retry_wait'")
+
+    @property
+    def generate_run_log_file(self):
+        try:
+            generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE")
+            if generate_run_log_file is None:
+                generate_run_log_file = self.get_item("log.run_to_file")
+            return generate_run_log_file.lower() in ("1", "true")
+        except ConanException:
+            return False
+
+    @property
+    def log_run_to_output(self):
+        try:
+            log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT")
+            if log_run_to_output is None:
+                log_run_to_output = self.get_item("log.run_to_output")
+            return log_run_to_output.lower() in ("1", "true")
+        except ConanException:
+            return True

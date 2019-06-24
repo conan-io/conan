@@ -115,6 +115,38 @@ class UploadTest(unittest.TestCase):
         client.run("upload Pkg/0.1@user/channel -p hash1", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
+    def deprecated_p_arg_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing -p {} -c".format(NO_SETTINGS_PACKAGE_ID))
+        self.assertIn("WARN: Usage of `--package` argument is deprecated. "
+                      "Use a full reference instead: `conan upload [...] "
+                      "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+    def upload_with_pref_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing:{} -c".format(NO_SETTINGS_PACKAGE_ID))
+        self.assertNotIn("WARN: Usage of `--package` argument is deprecated. "
+                         "Use a full reference instead: `conan upload [...] "
+                         "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID),
+                         client.out)
+        self.assertIn("Uploading package 1/1: {} to 'default'".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+
+    def upload_with_pref_and_p_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing:{} -c -p {}".format(NO_SETTINGS_PACKAGE_ID,
+                                                                         NO_SETTINGS_PACKAGE_ID),
+                   assert_error=True)
+
+        self.assertIn("Use a full package reference (preferred) or the "
+                      "`--package` command argument, but not both.", client.out)
+
     def _client(self):
         if not hasattr(self, "_servers"):
             servers = {}
@@ -668,3 +700,21 @@ class Pkg(ConanFile):
             client2.run("upload lib/1.0@conan/testing")
             self.assertIn("Recipe is up to date, upload skipped", client2.out)
             self.assertNotIn("WARN", client2.out)
+
+    def upload_with_pref_and_query_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing:{} -q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
+                   assert_error=True)
+
+        self.assertIn("'--query' argument cannot be used together with full reference", client.out)
+
+    def upload_with_package_id_and_query_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . user/testing")
+        client.run("upload Hello0/1.2.1@user/testing -p {} -q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
+                   assert_error=True)
+
+        self.assertIn("'--query' argument cannot be used together with '--package'", client.out)

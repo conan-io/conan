@@ -15,6 +15,8 @@ from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
 UNIT_SIZE = 1000.0
+# Library extensions supported by collect_libs
+VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 @contextmanager
@@ -148,7 +150,7 @@ def untargz(filename, destination=".", pattern=None):
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature:
+    if real_signature != signature.lower():
         raise ConanException("%s signature failed for '%s' file. \n"
                              " Provided signature: %s  \n"
                              " Computed signature: %s" % (algorithm_name,
@@ -176,7 +178,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     class PatchLogHandler(logging.Handler):
         def __init__(self):
             logging.Handler.__init__(self, logging.DEBUG)
-            self.output = output or ConanOutput(sys.stdout, True)
+            self.output = output or ConanOutput(sys.stdout, sys.stderr, color=True)
             self.patchname = patch_file if patch_file else "patch"
 
         def emit(self, record):
@@ -208,7 +210,9 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         return path
 
     def strip_path(path):
-        tokens = path.split("/")[strip:]
+        tokens = path.split("/")
+        if len(tokens) > 1:
+            tokens = tokens[strip:]
         path = "/".join(tokens)
         if base_path:
             path = os.path.join(base_path, path)
@@ -321,7 +325,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib", ".bc"):
+            if ext in VALID_LIB_EXTENSIONS:
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:
