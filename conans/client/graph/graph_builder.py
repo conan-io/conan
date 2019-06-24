@@ -60,7 +60,7 @@ class DepsGraphBuilder(object):
 
         for require in requires:
             name = require.ref.name
-            require.set_build_require(True, require.build_context)
+            require.build_require = True
             self._handle_require(name, node, require, graph, check_updates, update,
                                  remotes, processed_profile_build=processed_profile_build,
                                  processed_profile_host=processed_profile_host,
