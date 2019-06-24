@@ -1195,7 +1195,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
 
         profile_host = profile_from_args(profile_names, settings, options, env, cwd, cache)
         profile_host.process_settings(cache)
-        profile_build = profile_host
+        profile_build = profile_host  # TODO: This requires actual values for BUILD context
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         graph_info = GraphInfo(profile_build=profile_build, profile_host=profile_host,
