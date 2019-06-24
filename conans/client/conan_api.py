@@ -458,7 +458,10 @@ class ConanAPIV1(object):
         graph_info = get_graph_info(profile_name, settings, options, env, cwd, None,
                                     self._cache, self._user_io.out)
 
-        self._user_io.out.info("Configuration:")
+        if graph_info.profile_build != graph_info.profile_host:
+            self._user_io.out.info("Configuration (build machine):")
+            self._user_io.out.writeln(graph_info.profile_build.dumps())
+        self._user_io.out.info("Configuration (host machine):")
         self._user_io.out.writeln(graph_info.profile_host.dumps())
 
         self._cache.editable_packages.override(workspace.get_editable_dict())
