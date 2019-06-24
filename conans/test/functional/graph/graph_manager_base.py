@@ -27,18 +27,19 @@ from conans.client.cache.remote_registry import Remotes
 class GraphManagerTest(unittest.TestCase):
 
     def setUp(self):
-        output = TestBufferConanOutput()
+        self.output = TestBufferConanOutput()
         cache_folder = temp_folder()
-        self.cache = ClientCache(cache_folder, output)
+        cache = ClientCache(cache_folder, self.output)
+        self.cache = cache
         self.remote_manager = MockRemoteManager()
-        self.resolver = RangeResolver(self.cache, self.remote_manager)
-        proxy = ConanProxy(self.cache, output, self.remote_manager)
-        self.loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
-        self.manager = GraphManager(output, self.cache, self.remote_manager, self.loader, proxy,
+        self.resolver = RangeResolver(cache, self.remote_manager)
+        proxy = ConanProxy(cache, self.output, self.remote_manager)
+        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver)
         hook_manager = Mock()
         recorder = Mock()
-        self.binary_installer = BinaryInstaller(self.cache, output, self.remote_manager, recorder,
+        self.binary_installer = BinaryInstaller(cache, self.output, self.remote_manager, recorder,
                                                 hook_manager)
 
     def _cache_recipe(self, reference, test_conanfile, revision=None):
@@ -93,7 +94,7 @@ class GraphManagerTest(unittest.TestCase):
             self.assertEqual(conanfile.requires[dep.name].ref,
                              dep.ref)
 
-        self.assertListEqual(closure, list(node.public_closure))
+        self.assertEqual(closure, list(node.public_closure))
         libs = []
         envs = []
         for n in closure:
