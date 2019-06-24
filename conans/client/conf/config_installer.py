@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import uuid
 
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
@@ -35,10 +34,10 @@ def _handle_remotes(cache, remote_file):
 
 @contextmanager
 def tmp_config_install_folder(cache):
-    unique_id = uuid.uuid4()
-    tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install_%s" % unique_id)
+    tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
+    rmdir(tmp_folder)
     mkdir(tmp_folder)
     try:
         yield tmp_folder

@@ -1,6 +1,9 @@
 # coding=utf-8
 
 import unittest
+import os
+from os import listdir
+from os.path import isfile, join
 
 from conans.client.conf.config_installer import tmp_config_install_folder
 from conans.test.utils.tools import TestClient
@@ -12,5 +15,8 @@ class InstallFolderTests(unittest.TestCase):
         client = TestClient()
 
         with tmp_config_install_folder(client.cache) as tmp_folder_first:
+            open(os.path.join(tmp_folder_first, "foobar.txt"), "w+")
             with tmp_config_install_folder(client.cache) as tmp_folder_second:
-                self.assertNotEqual(tmp_folder_first, tmp_folder_second)
+                first = [f for f in listdir(tmp_folder_first) if isfile(join(tmp_folder_first, f))]
+                second = [f for f in listdir(tmp_folder_second) if isfile(join(tmp_folder_second, f))]
+                self.assertEqual(first, second)
