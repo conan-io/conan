@@ -23,6 +23,7 @@ BINARY_EDITABLE = "Editable"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
+CONTEXT_DEFAULT_BUILD_REQUIRE = CONTEXT_HOST
 
 
 class _NodeOrderedDict(object):

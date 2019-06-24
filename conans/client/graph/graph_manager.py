@@ -4,8 +4,8 @@ from collections import OrderedDict
 
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import BINARY_BUILD, Node, \
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
+from conans.client.graph.graph import BINARY_BUILD, Node, RECIPE_CONSUMER, RECIPE_VIRTUAL, \
+    BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, CONTEXT_DEFAULT_BUILD_REQUIRE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.loader import ProcessedProfile
@@ -24,7 +24,7 @@ class _RecipeBuildRequires(OrderedDict):
         if not isinstance(build_requires, (list, tuple)):
             build_requires = [build_requires]
         for build_require in build_requires:
-            self.add(build_require, context=CONTEXT_BUILD)
+            self.add(build_require, context=CONTEXT_DEFAULT_BUILD_REQUIRE)
         self._conanfile = conanfile
 
     def add(self, build_require, context):
@@ -32,7 +32,7 @@ class _RecipeBuildRequires(OrderedDict):
             build_require = ConanFileReference.loads(build_require)
         self[(build_require.name, context)] = build_require
 
-    def __call__(self, build_require, context=CONTEXT_BUILD):
+    def __call__(self, build_require, context=CONTEXT_DEFAULT_BUILD_REQUIRE):
         assert context in [CONTEXT_BUILD, CONTEXT_HOST],\
             "Invalid context for build_require: '{}' in" \
             " conanfile '{}'".format(context, self._conanfile)
@@ -201,22 +201,26 @@ class GraphManager(object):
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
-                                if (build_require.name, CONTEXT_BUILD) in package_build_requires:
+                                if (build_require.name, CONTEXT_DEFAULT_BUILD_REQUIRE)\
+                                        in package_build_requires:
                                     # Override existing
                                     # this is a way to have only one package Name for all versions
                                     # (no conflicts)
                                     # but the dict key is not used at all
-                                    package_build_requires[(build_require.name, CONTEXT_BUILD)] = \
+                                    package_build_requires[(build_require.name,
+                                                            CONTEXT_DEFAULT_BUILD_REQUIRE)] =\
                                         build_require
                                 elif build_require.name != node.name:  # Profile one
-                                    new_profile_build_requires.append((build_require, CONTEXT_BUILD))
+                                    new_profile_build_requires.append(
+                                        (build_require, CONTEXT_DEFAULT_BUILD_REQUIRE))
                                 else:
                                     # We are recursing build_requires, we can arrive here with a
                                     #  build_require from the profile (itself will be the 'node')
                                     pass
 
             if package_build_requires:
-                build_requires_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
+                build_requires_list = [(it, ctxt)
+                                       for (_, ctxt), it in package_build_requires.items()]
                 subgraph = builder.extend_build_requires(graph, node,
                                                          build_requires_list,
                                                          check_updates, update, remotes,
