@@ -27,7 +27,7 @@ class RunSCMTest(unittest.TestCase):
         conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
 
         # Mock functions called from inside _run_scm (tests will be here)
-        def merge_directories(src, dst, excluded=None, symlinks=True):
+        def merge_directories(src, dst, excluded=None):
             self.assertEqual(src, local_sources_path)
             self.assertEqual(dst, self.src_folder)
 
@@ -87,7 +87,7 @@ class RunSCMTest(unittest.TestCase):
         conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
 
         # Mock functions called from inside _run_scm (tests will be here)
-        def merge_directories(src, dst, excluded=None, symlinks=True):
+        def merge_directories(src, dst, excluded=None):
             src = os.path.normpath(src)
             dst = os.path.normpath(dst)
             self.assertEqual(src.replace('\\', '/'), local_sources_path)

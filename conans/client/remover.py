@@ -3,7 +3,7 @@ import os
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.search.search import filter_outdated, search_packages, search_recipes
 from conans.util.log import logger
@@ -168,7 +168,7 @@ class ConanRemover(object):
             else:
                 refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            if input_ref:
+            if input_ref and check_valid_ref(input_ref, allow_pattern=False):
                 refs = []
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))

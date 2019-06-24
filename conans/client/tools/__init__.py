@@ -1,7 +1,8 @@
-
 # noinspection PyUnresolvedReferences
+from .android import *
 # noinspection PyUnresolvedReferences
 from .apple import *
+# noinspection PyUnresolvedReferences
 from .env import *
 # noinspection PyUnresolvedReferences
 from .files import *
@@ -17,4 +18,3 @@ from .scm import *
 from .system_pm import *
 # noinspection PyUnresolvedReferences
 from .win import *
-

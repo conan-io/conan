@@ -1,6 +1,8 @@
 import os
 import re
 
+from jinja2 import Template
+
 from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -280,12 +282,14 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}
     elif template:
-        path_template = os.path.join(cache.cache_folder, template)
-        if not os.path.isfile(path_template):
-            raise ConanException("Template doesn't exist: %s" % path_template)
-        conanfile_template = load(path_template)
-        files = {"conanfile.py": conanfile_template.format(name=name, version=version,
-                                                           package_name=package_name)}
+        if not os.path.isabs(template):
+            template = os.path.join(cache.cache_folder, "templates", template)
+        if not os.path.isfile(template):
+            raise ConanException("Template doesn't exist: %s" % template)
+        conanfile_template = load(template)
+        t = Template(conanfile_template)
+        replaced = t.render(name=name, version=version, package_name=package_name)
+        files = {"conanfile.py": replaced}
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}

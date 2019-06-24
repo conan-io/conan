@@ -63,7 +63,6 @@ from conans.client.migrations import ClientMigrator
 from conans.model.version import Version
 
 
-
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
@@ -1004,8 +1003,8 @@ class TurboTestClient(TestClient):
     def init_svn_repo(self, subpath, files=None, repo_url=None):
         if not repo_url:
             repo_url = create_remote_svn_repo(temp_folder())
-        url, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                             rel_project_path=subpath, delete_checkout=False)
+        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
+                                           rel_project_path=subpath, delete_checkout=False)
         return rev
 
 

@@ -350,6 +350,10 @@ endfunction()
 
 function(check_compiler_version)
     conan_split_version(${CMAKE_CXX_COMPILER_VERSION} VERSION_MAJOR VERSION_MINOR)
+    if(DEFINED CONAN_SETTINGS_COMPILER_TOOLSET)
+       conan_message(STATUS "Conan: Skipping compiler check: Declared 'compiler.toolset'")
+       return()
+    endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
         # MSVC_VERSION is defined since 2.8.2 at least
         # https://cmake.org/cmake/help/v2.8.2/cmake.html#variable:MSVC_VERSION
