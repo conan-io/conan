@@ -35,8 +35,10 @@ class GraphInfo(object):
     @staticmethod
     def loads(text):
         graph_json = json.loads(text)
-        profile_build = graph_json.get("profile_build", graph_json["profile"])
-        profile_host = graph_json.get("profile_host", graph_json["profile"])
+        profile_build = graph_json.get("profile_build", graph_json.get("profile", None))
+        profile_host = graph_json.get("profile_host", graph_json.get("profile", None))
+        if not profile_host or not profile_build:
+            raise KeyError("'profile' not found")
         # FIXME: Reading private very ugly
         profile_build, _ = _load_profile(profile_build, None, None)
         profile_host, _ = _load_profile(profile_host, None, None)
