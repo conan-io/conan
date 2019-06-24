@@ -35,8 +35,8 @@ class GraphInfo(object):
     @staticmethod
     def loads(text):
         graph_json = json.loads(text)
-        profile_build = graph_json.get("profile_build", "profile")
-        profile_host = graph_json.get("profile_host", "profile")
+        profile_build = graph_json.get("profile_build", graph_json["profile"])
+        profile_host = graph_json.get("profile_host", graph_json["profile"])
         # FIXME: Reading private very ugly
         profile_build, _ = _load_profile(profile_build, None, None)
         profile_host, _ = _load_profile(profile_host, None, None)
