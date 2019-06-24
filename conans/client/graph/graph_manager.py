@@ -213,10 +213,6 @@ class GraphManager(object):
                                 elif build_require.name != node.name:  # Profile one
                                     new_profile_build_requires.append(
                                         (build_require, CONTEXT_DEFAULT_BUILD_REQUIRE))
-                                else:
-                                    # We are recursing build_requires, we can arrive here with a
-                                    #  build_require from the profile (itself will be the 'node')
-                                    pass
 
             if package_build_requires:
                 build_requires_list = [(it, ctxt)

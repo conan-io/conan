@@ -168,6 +168,7 @@ class DepsGraphBuilder(object):
                 new_node.public_deps.add(new_node)
                 new_node.public_deps.prepend(node.public_closure)
             else:
+                # Normal requires propagate and can conflict with the parent "node.public_deps" too
                 new_node.public_deps.add(new_node)
                 new_node.public_deps.prepend(node.public_deps)
 
