@@ -152,7 +152,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEqual(runner.command_called, "sudo -A yum update -y")
+            self.assertEqual(runner.command_called, "sudo -A yum check-update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -224,7 +224,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEqual(runner.command_called, "yum update -y")
+            self.assertEqual(runner.command_called, "yum check-update -y")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -414,7 +414,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if os_info.with_apt:
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
-                update_command = "sudo -A yum update -y"
+                update_command = "sudo -A yum check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:

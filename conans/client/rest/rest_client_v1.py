@@ -148,15 +148,10 @@ class RestV1Methods(RestCommonMethods):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
-                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait,
-                                           headers=self._put_headers)
+                uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
+                                retry=retry, retry_wait=retry_wait,
+                                headers=self._put_headers)
                 output.writeln("")
-                if not response.ok:
-                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
-                    failed.append(filename)
-                else:
-                    pass
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
