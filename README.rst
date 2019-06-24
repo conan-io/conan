@@ -29,11 +29,11 @@ Conan is a package manager for C and C++ developers:
 
 
 
-+------------------------+-------------------------+-------------------------+
-| **master**             | **develop**             |  **Coverage**           |
-+========================+=========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |
-+------------------------+-------------------------+-------------------------+
++------------------------+-------------------------+-------------------------+-------------------------+
+| **master**             | **develop**             |  **Coverage**           |    **Code Climate**     |
++========================+=========================+=========================+=========================+
+| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |   |Develop climate|     |
++------------------------+-------------------------+-------------------------+-------------------------+
 
 
 Setup
@@ -137,7 +137,7 @@ Contributing to the project
 ===========================
 
 Feedback and contribution is always welcome in this project.
-Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+Please read our `contributing guide <https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md>`_.
 
 Running the tests
 =================
@@ -271,6 +271,9 @@ License
    :height: 50px
    :width: 50 px
    :alt: Conan develop coverage
+
+.. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
+   :target: https://codeclimate.com/github/conan-io/conan/maintainability
    
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 

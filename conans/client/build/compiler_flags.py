@@ -44,6 +44,7 @@ def architecture_flag(compiler, arch, os=None):
                 return '-maix64'
     return ""
 
+
 def libcxx_define(compiler, libcxx):
 
     if not compiler or not libcxx:

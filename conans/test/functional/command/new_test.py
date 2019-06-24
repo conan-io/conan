@@ -1,10 +1,11 @@
 import os
+import textwrap
 import unittest
 
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 from conans.tools import save
-import textwrap
+from conans.util.files import load
 
 
 class NewTest(unittest.TestCase):
@@ -12,12 +13,12 @@ class NewTest(unittest.TestCase):
     def template_test(self):
         client = TestClient()
         template1 = textwrap.dedent("""
-            class {package_name}Conan(ConanFile):
-                name = "{name}"
-                version = "{version}"
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
         """)
-        save(os.path.join(client.base_folder, "mytemplate.py"), template1)
-        client.run("new hello/0.1 --f=mytemplate.py")
+        save(os.path.join(client.base_folder, "templates/mytemplate.py"), template1)
+        client.run("new hello/0.1 --template=mytemplate.py")
         conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('name = "hello"', conanfile)
@@ -26,22 +27,36 @@ class NewTest(unittest.TestCase):
     def template_test_package_test(self):
         client = TestClient()
         template2 = textwrap.dedent("""
-            class {package_name}Conan(ConanFile):
+            class {{package_name}}Conan(ConanFile):
                 version = "fixed"
         """)
-        save(os.path.join(client.base_folder, "subfolder", "mytemplate.py"), template2)
-        client.run("new hello/0.1 --file=subfolder/mytemplate.py")
+        save(os.path.join(client.base_folder, "templates", "subfolder", "mytemplate.py"), template2)
+        client.run("new hello/0.1 -m=subfolder/mytemplate.py")
+        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('version = "fixed"', conanfile)
+
+    def template_abs_path_test_package_test(self):
+        client = TestClient()
+        template2 = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                version = "fixed"
+        """)
+        tmp = temp_folder()
+        full_path = os.path.join(tmp, "templates", "subfolder", "mytemplate.py")
+        save(full_path, template2)
+        client.run('new hello/0.1 --template="%s"' % full_path)
         conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
         self.assertIn("class HelloConan(ConanFile):", conanfile)
         self.assertIn('version = "fixed"', conanfile)
 
     def template_errors_test(self):
         client = TestClient()
-        client.run("new hello/0.1 --file=mytemplate.py", assert_error=True)
+        client.run("new hello/0.1 -m=mytemplate.py", assert_error=True)
         self.assertIn("ERROR: Template doesn't exist", client.out)
-        client.run("new hello/0.1 --f=mytemplate.py --bare", assert_error=True)
+        client.run("new hello/0.1 --template=mytemplate.py --bare", assert_error=True)
         self.assertIn("ERROR: 'template' argument incompatible", client.out)
-        client.run("new hello/0.1 --file", assert_error=True)
+        client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
     def new_test(self):

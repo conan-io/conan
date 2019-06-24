@@ -1,12 +1,8 @@
 #!/usr/bin/python
-import argparse
 import os
 
-from conans import SERVER_CAPABILITIES
-from conans import __version__ as SERVER_VERSION, REVISIONS
-from conans.model.version import Version
+from conans import SERVER_CAPABILITIES, REVISIONS
 from conans.paths import conan_expand_user
-from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.server.conf import get_server_store
 
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager

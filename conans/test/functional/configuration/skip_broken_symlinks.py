@@ -1,14 +1,16 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer, TurboTestClient
 
 
+@unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
 class TestSkipBrokenSymlinks(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
     def test_package_broken_symlinks(self):
         server = TestServer()
         client = TurboTestClient(servers={"default": server})
@@ -53,5 +55,27 @@ class HelloConan(ConanFile):
         client2.run("install {}".format(ref))
         self.assertIn("Downloaded package", client2.out)
 
+    def test_broken_in_local_sources(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
 
+            class SymlinksConan(ConanFile):
+                name = "symlinks"
+                version = "1.0.0"
+                exports_sources = "src/*"
+            """)
 
+        t = TestClient()
+        t.save({'conanfile.py': conanfile, 'src/file': "content"})
+
+        # Create a broken symlink
+        broken_symlink = os.path.join(t.current_folder, 'src', 'link')
+        os.symlink('not-existing', broken_symlink)
+
+        # Check the bronken symlink locally
+        self.assertTrue(os.path.islink(broken_symlink))
+        self.assertFalse(os.path.exists(broken_symlink))
+        self.assertFalse(os.path.exists(os.path.realpath(broken_symlink)))
+
+        t.run("export . user/channel", assert_error=True)
+        self.assertIn("ERROR: The file is a broken symlink", t.out)

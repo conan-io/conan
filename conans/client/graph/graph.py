@@ -81,20 +81,13 @@ class Node(object):
         assert build_context in [CONTEXT_BUILD, CONTEXT_HOST],\
             "Invalid build context: '{}' for node '{}'".format(build_context, self.ref)
         self._build_context = build_context
-
-        # The dependencies that can conflict to downstream consumers
+        # A subset of the graph that will conflict by package name
         self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
         self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
-
-    def update_ancestors(self, ancestors):
-        # When a diamond is closed, it is necessary to update all upstream ancestors, recursively
-        self.ancestors.update(ancestors)
-        for n in self.neighbors():
-            n.update_ancestors(ancestors)
 
     @property
     def build_context(self):
@@ -158,6 +151,14 @@ class Node(object):
         for edge in self.dependencies:
             if not edge.private:
                 edge.dst.make_public()
+
+    def connect_closure(self, other_node):
+        # When 2 nodes of the graph become connected, their closures information has
+        # has to remain consistent. This method manages this.
+        name = other_node.name
+        self.public_closure[name] = other_node
+        self.public_deps[name] = other_node
+        other_node.inverse_closure.add(self)
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
@@ -340,21 +341,18 @@ class DepsGraph(object):
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
-        current_level = []
-        result = [current_level]
-        opened = self.nodes.copy()
+        result = []
+        opened = self.nodes
         while opened:
-            current = opened.copy()
+            current_level = []
             for o in opened:
                 o_neighs = o.neighbors() if direct else o.inverse_neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
-                    current.discard(o)
+
             current_level.sort()
+            result.append(current_level)
             # now initialize new level
-            opened = current
-            if opened:
-                current_level = []
-                result.append(current_level)
+            opened = opened.difference(current_level)
 
         return result

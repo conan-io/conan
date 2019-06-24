@@ -39,7 +39,7 @@ class {name}Conan(ConanFile):
         self.cpp_info.debug.libs = ["hello{name}_d"]
         self.cpp_info.relwithdebinfo.libs = ["hello{name}_relwithdebinfo"]
         self.cpp_info.minsizerel.libs = ["hello{name}_minsizerel"]
-        
+
         self.cpp_info.release.defines = ['HELLO{name}DEFINE="Release"',
                                          'HELLO{name}BUILD="Release"']
         self.cpp_info.debug.defines = ['HELLO{name}DEFINE="Debug"',

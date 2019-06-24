@@ -176,12 +176,12 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Can't connect because of the evil mock", client.user_io.out)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
 
-        # but not with 1
+        # but not with 0
         client = self._get_client(BadConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm --retry 1 --retry-wait=1", assert_error=True)
+        client.run("upload Hello* --confirm --retry 0 --retry-wait=1", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
                       "conan_export.tgz. [Remote: default]", client.user_io.out)
@@ -218,12 +218,12 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Can't connect because of the evil mock", client.user_io.out)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
 
-        # but not with 1
+        # but not with 0
         client = self._get_client(BadConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
-        client.run('config set general.retry=1')
+        client.run('config set general.retry=0')
         client.run('config set general.retry_wait=1')
         client.run("upload Hello* --confirm", assert_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
@@ -251,7 +251,6 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
-
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")

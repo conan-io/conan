@@ -18,6 +18,8 @@ class ConanRequester(object):
         self._cacert_path = config.cacert_path
         self._client_cert_path = config.client_cert_path
         self._client_cert_key_path = config.client_cert_key_path
+        self._retry = config.retry
+        self._retry_wait = config.retry_wait
 
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -42,6 +44,14 @@ class ConanRequester(object):
                                              self._client_cert_key_path)
             else:
                 self._client_certificates = self._client_cert_path
+
+    @property
+    def retry(self):
+        return self._retry
+
+    @property
+    def retry_wait(self):
+        return self._retry_wait
 
     def _should_skip_proxy(self, url):
 

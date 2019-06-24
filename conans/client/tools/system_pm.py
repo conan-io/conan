@@ -48,7 +48,8 @@ class SystemPackageTool(object):
         mode = get_env("CONAN_SYSREQUIRES_MODE", "enabled")
         mode_lower = mode.lower()
         if mode_lower not in allowed_modes:
-            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r" % (mode, allowed_modes))
+            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r"
+                                 % (mode, allowed_modes))
         return mode_lower
 
     @staticmethod
@@ -97,14 +98,15 @@ class SystemPackageTool(object):
         if mode in ("verify", "disabled"):
             # Report to output packages need to be installed
             if mode == "disabled":
-                self._output.info("The following packages need to be installed:\n %s" % "\n".join(packages))
+                self._output.info("The following packages need to be installed:\n %s"
+                                  % "\n".join(packages))
                 return
 
             if mode == "verify" and not self._installed(packages):
-                self._output.error("The following packages need to be installed:\n %s" % "\n".join(packages))
-                raise ConanException(
-                    "Aborted due to CONAN_SYSREQUIRES_MODE=%s. Some system packages need to be installed" % mode
-                )
+                self._output.error("The following packages need to be installed:\n %s"
+                                   % "\n".join(packages))
+                raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                                     "Some system packages need to be installed" % mode)
 
         if not force and self._installed(packages):
             return
@@ -168,11 +170,13 @@ class AptTool(BaseTool):
 
     def install(self, package_name):
         recommends_str = '' if self._recommends else '--no-install-recommends '
-        _run(self._runner, "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name),
+        _run(self._runner,
+             "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name),
              output=self._output)
 
     def installed(self, package_name):
-        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\"" % package_name, None)
+        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\""
+                                 % package_name, None)
         return exit_code == 0
 
 
@@ -181,7 +185,7 @@ class YumTool(BaseTool):
         raise ConanException("YumTool::add_repository not implemented")
 
     def update(self):
-        _run(self._runner, "%syum update -y" % self._sudo_str, accepted_returns=[0, 100],
+        _run(self._runner, "%syum check-update -y" % self._sudo_str, accepted_returns=[0, 100],
              output=self._output)
 
     def install(self, package_name):
