@@ -2,8 +2,6 @@
 
 import unittest
 import os
-from os import listdir
-from os.path import isfile, join
 
 from conans.client.conf.config_installer import tmp_config_install_folder
 from conans.test.utils.tools import TestClient
@@ -12,11 +10,16 @@ from conans.test.utils.tools import TestClient
 class InstallFolderTests(unittest.TestCase):
 
     def test_unique_install_folder(self):
+        """ Validate if tmp_config_install_folder is removing old folder before creating a new one
+
+        tmp_config_install_folder must create the same folder, but all items must be exclude when a
+        new folder is created.
+        """
         client = TestClient()
 
         with tmp_config_install_folder(client.cache) as tmp_folder_first:
-            open(os.path.join(tmp_folder_first, "foobar.txt"), "w+")
+            temp_file = os.path.join(tmp_folder_first, "foobar.txt")
+            open(temp_file, "w+")
             with tmp_config_install_folder(client.cache) as tmp_folder_second:
-                first = [f for f in listdir(tmp_folder_first) if isfile(join(tmp_folder_first, f))]
-                second = [f for f in listdir(tmp_folder_second) if isfile(join(tmp_folder_second, f))]
-                self.assertEqual(first, second)
+                self.assertEqual(tmp_folder_first, tmp_folder_second)
+                self.assertFalse(os.path.exists(temp_file))
