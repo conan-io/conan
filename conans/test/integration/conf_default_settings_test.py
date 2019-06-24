@@ -39,10 +39,10 @@ os=Windows
         save(client.cache.default_profile_path, default_profile)
         client.save({CONANFILE_TXT: ""})
         client.run("install Any/0.2@user/channel", assert_error=True)
-        self.assertIn("ERROR: Host profile: Invalid setting '42' is not a valid"
+        self.assertIn("ERROR: Invalid setting '42' is not a valid"
                       " 'settings.compiler.version' value", client.user_io.out)
         client.run('install . -s compiler="Visual Studio" -s compiler.version=14', assert_error=True)
-        self.assertIn("ERROR: Build profile: Invalid setting '42' is not a valid"
+        self.assertIn("ERROR: Invalid setting '42' is not a valid"
                       " 'settings.compiler.version' value", client.user_io.out)
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "14"}):

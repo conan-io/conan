@@ -59,7 +59,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                    " -s hh:cppstd=11"
                    " -s hh:compiler=gcc"
                    " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Host profile: Error in resulting settings for package 'hh': Do not"
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
                       " use settings 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
     def test_value_different_with_general_setting(self):
@@ -69,7 +69,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                        " -s cppstd=17"
                        " -s hh:compiler=gcc"
                        " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Host profile: Error in resulting settings for package 'hh': Do not"
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
                       " use settings 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
     def test_conanfile_without_compiler(self):
@@ -88,7 +88,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Host profile: Error in resulting settings for package 'hh': Do not"
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
                       " use settings 'compiler.cppstd' together with 'cppstd'", t.out)
 
     def test_conanfile_without_compiler_but_cppstd(self):
@@ -110,7 +110,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                   " -s cppstd=17"
                   " -s hh:compiler=gcc"
                   " -s hh:compiler.cppstd=14", assert_error=True)
-        self.assertIn("ERROR: Host profile: Error in resulting settings for package 'hh': Do not"
+        self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not"
                       " use settings 'compiler.cppstd' together with 'cppstd'", t.out)
 
 

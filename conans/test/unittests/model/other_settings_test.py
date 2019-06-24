@@ -26,7 +26,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
-        self.assertIn("ERROR: Host profile: settings.yml: None setting can't have subsettings", client.out)
+        self.assertIn("ERROR: settings.yml: None setting can't have subsettings", client.out)
 
     def custom_compiler_preprocessor_test(self):
         # https://github.com/conan-io/conan/issues/3842
