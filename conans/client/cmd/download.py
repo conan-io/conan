@@ -13,12 +13,9 @@ def download(ref, package_ids, remote, recipe, remote_manager,
 
     try:
         ref = remote_manager.get_recipe(ref, remote)
-    except NotFoundException as exc:
-        if exc.args and "404" in exc.args[0]:
-            raise NotFoundException("Reference %s not found on %s remote" % (ref.full_repr(),
-                                                                             remote.name))
-        else:
-            raise
+    except NotFoundException:
+        raise NotFoundException("Reference %s not found on %s remote" % (ref.full_repr(),
+                                                                         remote.name))
 
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.remote = remote.name
