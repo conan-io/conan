@@ -51,39 +51,23 @@ class _CppInfo(object):
 
     @property
     def _sorted_components(self):
-        """
-        Sorted components from less dependent to the most one
-        :return: ordered list of components
-        """
-        # Save name of unsorted elements
-        unsorted_names = list(self._components.keys())
-        sorted_comps = []
-        element = unsorted_names[0]
-        search_buffer = []
-        while unsorted_names:
-            try:
-                deps = self._components[element].deps
-            except KeyError as e:
-                raise ConanException("Component %s not found in cpp_info object" % e)
-            if all(dep in [c.name for c in sorted_comps] for dep in deps):
-                sorted_comps.append(self._components[element])
-                unsorted_names.remove(element)
-                search_buffer = []
-                element = unsorted_names[0] if unsorted_names else None
+        ordered = OrderedDict()
+        while len(ordered) != len(self._components):
+            # Search for next element to be processed
+            for comp_name, comp in self._components.items():
+                if comp_name in ordered:
+                    continue
+                # check if all the deps are declared
+                if not all([dep in self._components for dep in comp.deps]):
+                    raise ConanException("Component '%s' declares a missing dependency" % comp.name)
+                # check if all the deps are already added to ordered
+                if all([dep in ordered for dep in comp.deps]):
+                    break
             else:
-                for dep in deps:
-                    if dep not in [c.name for c in sorted_comps]:
-                        if dep in search_buffer:
-                            if len(search_buffer) > 1:
-                                search_buffer.remove(dep)
-                            raise ConanException("Detected loop calculating the link order of "
-                                                 "components. Please check the '.deps' and resolve "
-                                                 "the circular depency of '%s' with %s" %
-                                                 (dep, search_buffer))
-                        search_buffer.append(dep)
-                        element = dep
-                        break
-        return sorted_comps
+                raise ConanException("There is a loop between your cpp_info declared components")
+
+            ordered[comp_name] = comp
+        return ordered.values()
 
     @property
     def libs(self):
