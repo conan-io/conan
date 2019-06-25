@@ -293,7 +293,6 @@ class Component(object):
         self.srcdirs = []
         self.defines = []
         self.cflags = []
-        self.cppflags = []
         self.cxxflags = []
         self.sharedlinkflags = []
         self.exelinkflags = []
