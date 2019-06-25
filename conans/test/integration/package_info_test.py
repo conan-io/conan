@@ -2,9 +2,6 @@ import os
 import textwrap
 import unittest
 
-import six
-
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID

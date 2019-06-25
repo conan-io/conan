@@ -24,7 +24,7 @@ INSTALL_ERROR_BUILDING = "building"
 
 def _cpp_info_to_dict(cpp_info):
     doc = {}
-    items = vars(cpp_info).items()
+    items = list(vars(cpp_info).items())
     if not cpp_info._components:
         items = items + [("libs", cpp_info.libs), ("exes", cpp_info.exes),
                          ("system_deps", cpp_info.system_deps)]

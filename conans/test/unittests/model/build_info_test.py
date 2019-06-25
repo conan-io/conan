@@ -303,24 +303,23 @@ VAR2=23
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
         info["LIB1"].deps = ["LIB2"]
-        with six.assertRaisesRegex(self, ConanException, "Component 'LIB2' not found in cpp_info "
-                                                         "object"):
+        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
+                                                         "declares a missing dependency"):
             info.libs
 
     def cpp_info_components_dep_loop_test(self):
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
         info["LIB1"].deps = ["LIB1"]
-        msg_template = "Detected loop calculating the link order of components. Please check the " \
-                       "'.deps' and resolve the circular depency of '{}' with {}"
-        with six.assertRaisesRegex(self, ConanException, msg_template.format("LIB1", ["LIB1"])):
+        msg = "There is a loop between your cpp_info declared components"
+        with six.assertRaisesRegex(self, ConanException, msg):
             info.libs
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
         info["LIB1"].deps = ["LIB2"]
         info["LIB2"].lib = "lib2"
         info["LIB2"].deps = ["LIB1", "LIB2"]
-        with six.assertRaisesRegex(self, ConanException, msg_template.format("LIB2", ["LIB1"])):
+        with six.assertRaisesRegex(self, ConanException, msg):
             info.libs
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
@@ -329,8 +328,7 @@ VAR2=23
         info["LIB2"].deps = ["LIB3"]
         info["LIB3"].lib = "lib3"
         info["LIB3"].deps = ["LIB1"]
-        with six.assertRaisesRegex(self, ConanException,
-                                   msg_template.format("LIB3", ["LIB1", "LIB2"])):
+        with six.assertRaisesRegex(self, ConanException, msg):
             info.libs
 
     def cppinfo_dirs_test(self):
