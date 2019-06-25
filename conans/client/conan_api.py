@@ -74,6 +74,13 @@ def api_method(f):
             with tools.environment_append(api._cache.config.env_vars):
                 # Patch the globals in tools
                 return f(*args, **kwargs)
+        except NotFoundException as exc:
+            if exc.args and "404" in exc.args[0]:
+                remote_name = kwargs['remote_name'] if kwargs['remote_name'] else "default"
+                msg = "Reference %s not found on %s remote" % (kwargs['reference'], remote_name)
+                raise NotFoundException(msg)
+            else:
+                raise
         except Exception as exc:
             msg = exception_message_safe(exc)
             try:
