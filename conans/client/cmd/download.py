@@ -1,7 +1,7 @@
 from conans.client.output import ScopedOutput
 from conans.client.source import complete_recipe_sources
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, RecipeNotFoundException
 
 def download(ref, package_ids, remote, recipe, remote_manager,
              cache, out, recorder, loader, hook_manager, remotes):
@@ -14,8 +14,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
     try:
         ref = remote_manager.get_recipe(ref, remote)
     except NotFoundException:
-        raise NotFoundException("Reference %s not found on %s remote" % (ref.full_repr(),
-                                                                         remote.name))
+        raise RecipeNotFoundException(ref)
 
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.remote = remote.name
