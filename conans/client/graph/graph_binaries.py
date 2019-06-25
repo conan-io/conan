@@ -8,6 +8,7 @@ from conans.errors import NoRemoteAvailable, NotFoundException, \
     conanfile_exception_formatter
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
+from conans.model.ref import PackageReference
 from conans.util.files import is_dirty, rmdir
 
 
@@ -36,10 +37,12 @@ class GraphBinariesAnalyzer(object):
         pref = node.pref
         # If it has lock
         locked = node.graph_lock_node
-        if locked:
-            if locked.pref.id == pref.id:
-                # Keep the locked revision
-                pref = locked.pref
+        if locked and locked.pref.id == node.package_id:
+            pref = locked.pref  # Keep the locked with PREV
+            assert pref.revision, "Locked node should have PREV for evaluate_node"
+        else:
+            assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
+            pref = PackageReference(ref, node.package_id)
 
         # Check that this same reference hasn't already been checked
         previous_nodes = evaluated_nodes.get(pref)
@@ -60,15 +63,15 @@ class GraphBinariesAnalyzer(object):
             return
 
         with_deps_to_build = False
-        if build_mode.cascade:
-            if node.graph_lock_node and node.graph_lock_node.modified:
-                pass
-            else:
-                for dep in node.dependencies:
-                    if (dep.dst.binary == BINARY_BUILD or
-                            (dep.dst.graph_lock_node and dep.dst.graph_lock_node.modified)):
-                        with_deps_to_build = True
-                        break
+        # For cascade mode, we need to check also the "modified" status of the lockfile if exists
+        # modified nodes have already been built, so they shouldn't be built again
+        if build_mode.cascade and not (node.graph_lock_node and node.graph_lock_node.modified):
+            for dep in node.dependencies:
+                dep_node = dep.dst
+                if (dep_node.binary == BINARY_BUILD or
+                        (dep_node.graph_lock_node and dep_node.graph_lock_node.modified)):
+                    with_deps_to_build = True
+                    break
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             output.info('Forced build from source')
             node.binary = BINARY_BUILD

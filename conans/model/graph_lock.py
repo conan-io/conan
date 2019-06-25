@@ -182,9 +182,8 @@ class GraphLock(object):
             return
         locked_node = self._nodes[node.id]
         prefs = self._dependencies(node.id)
-        options = locked_node.options
         node.graph_lock_node = locked_node
-        node.conanfile.options.values = options
+        node.conanfile.options.values = locked_node.options
         for require in requires:
             # Not new unlocked dependencies at this stage
             locked_pref, locked_id = prefs[require.ref.name]
@@ -232,8 +231,7 @@ class GraphLock(object):
 
         raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_repr())
 
-    def update_ref(self, ref):
-        node_id = self.get_node(ref)
+    def update_exported_ref(self, node_id, ref):
         lock_node = self._nodes[node_id]
         if lock_node.pref.ref != ref:
             lock_node.pref = PackageReference(ref, lock_node.pref.id)

@@ -59,11 +59,12 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     pref = PackageReference(pref.ref, pref.id, readed_manifest.summary_hash)
     output.info("Package revision %s" % pref.revision)
 
-    nodes[0].prev = pref.revision
     with layout.update_metadata() as metadata:
         metadata.packages[package_id].revision = pref.revision
         metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 
     if graph_info.graph_lock:
+        # after the package has been created we need to update the node PREV
+        nodes[0].prev = pref.revision
         graph_info.graph_lock.update_check_graph(deps_graph, output)
     recorder.package_exported(pref)
