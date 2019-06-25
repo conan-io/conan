@@ -64,7 +64,8 @@ class _CppInfo(object):
                 if all([dep in ordered for dep in comp.deps]):
                     break
             else:
-                raise ConanException("There is a loop between your cpp_info declared components")
+                raise ConanException("There is a dependency loop in the components declared in "
+                                     "'self.cpp_info'")
 
             ordered[comp_name] = comp
         return ordered.values()

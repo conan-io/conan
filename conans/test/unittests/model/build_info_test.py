@@ -311,7 +311,7 @@ VAR2=23
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
         info["LIB1"].deps = ["LIB1"]
-        msg = "There is a loop between your cpp_info declared components"
+        msg = "There is a dependency loop in the components declared in 'self.cpp_info'"
         with six.assertRaisesRegex(self, ConanException, msg):
             info.libs
         info = CppInfo(None)
