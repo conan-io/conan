@@ -218,3 +218,40 @@ AA*: CC/1.0@private_user/channel
         for dupe in dupe_nodes:
             self.assertEqual(cpp_info[dupe], cpp_info_debug[dupe])
             self.assertEqual(cpp_info[dupe], cpp_info_release[dupe])
+
+    def test_json_create_cpp_info_components(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+                def package_info(self):
+                    self.cpp_info.name = "Boost"
+                    self.cpp_info["whatever"].lib = "libwhaterver"
+                    self.cpp_info["whatever"].system_deps = ["sysdep1", "sysdep2"]
+                    self.cpp_info["whenever"].lib = "libwhenever"
+                    self.cpp_info["whenever"].deps = ["whatever"]
+                    self.cpp_info["however"].exe = "exehowever"
+                    self.cpp_info["however"].system_deps = ["pthread"]
+                    self.cpp_info["however"].deps = ["whenever"]
+            """)
+        self.client.save({'conanfile.py': conanfile})
+        self.client.run("create . name/version@user/channel --json=myfile.json")
+        my_json = load(os.path.join(self.client.current_folder, "myfile.json"))
+        my_json = json.loads(my_json)
+
+        # Nodes with cpp_info
+        cpp_info = my_json["installed"][0]["packages"][0]["cpp_info"]
+
+        self.assertEqual("Boost", cpp_info["name"])
+        self.assertFalse("includedirs" in cpp_info)
+        self.assertFalse("includedirs" in cpp_info)
+        self.assertFalse("includedirs" in cpp_info)
+        self.assertFalse("includedirs" in cpp_info)
+        self.assertFalse("libs" in cpp_info)
+        self.assertFalse("exes" in cpp_info)
+        self.assertFalse("system_deps" in cpp_info)
+        self.assertEqual("libwhaterver", cpp_info["components"]["whatever"]["lib"])
+        self.assertEqual("libwhenever", cpp_info["components"]["whenever"]["lib"])
+        self.assertEqual("exehowever", cpp_info["components"]["however"]["exe"])
+        self.assertEqual(["pthread"], cpp_info["components"]["however"]["system_deps"])
+        self.assertEqual(["sysdep1", "sysdep2"], cpp_info["components"]["whatever"]["system_deps"])

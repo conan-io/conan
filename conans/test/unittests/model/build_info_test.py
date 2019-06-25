@@ -180,12 +180,13 @@ VAR2=23
     def basic_components_test(self):
         cpp_info = CppInfo(None)
         component = cpp_info["my_component"]
-        self.assertIn(component.name, "my_component")
+        self.assertEqual(component.name, "my_component")
         component.lib = "libhola"
         self.assertEqual(component.lib, "libhola")
         with six.assertRaisesRegex(self, ConanException, "'.lib' is already set for this Component"):
             component.exe = "hola.exe"
-        component.lib = None
+
+        component = cpp_info["my_other_component"]
         component.exe = "hola.exe"
         self.assertEqual(component.lib, None)
         with six.assertRaisesRegex(self, ConanException, "'.exe' is already set for this Component"):
@@ -197,7 +198,7 @@ VAR2=23
         """
         info = CppInfo(None)
         info.name = "Greetings"
-        self.assertIn(info.name, "Greetings")
+        self.assertEqual(info.name, "Greetings")
         info.libs = ["libgreet"]
         with six.assertRaisesRegex(self, ConanException, "Usage of Components with '.libs' or "
                                                          "'.exes' values is not allowed"):
@@ -209,17 +210,127 @@ VAR2=23
                                                          "when Components are already in use"):
             info.libs = ["libgreet"]
 
+    def cpp_info_system_deps_test(self):
+        """
+        System deps are composed in '.libs' attribute even if there are no '.lib' in the component.
+        Also make sure None values are discarded.
+        Same for '.system_deps' making sure that mixing Components and global use is not supported.
+        """
+        info = CppInfo(None)
+        info["LIB1"].system_deps = ["sys1", "sys11"]
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].system_deps = ["sys2"]
+        info["LIB2"].deps = ["LIB3"]
+        info["LIB3"].system_deps = ["sys3", "sys2"]
+        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.libs)
+        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.system_deps)
+        info["LIB3"].system_deps = [None, "sys2"]
+        self.assertEqual(['sys2', 'sys1', 'sys11'], info.libs)
+        self.assertEqual(['sys2', 'sys1', 'sys11'], info.system_deps)
+
+        with six.assertRaisesRegex(self, ConanException, "Setting first level system_deps is not "
+                                                         "supported when Components are already in "
+                                                         "use"):
+            info.system_deps = ["random_system"]
+
     def cpp_info_libs_system_deps_order_test(self):
+        """
+        Check the order of libs and system_deps and discard repeated values
+        """
         info = CppInfo(None)
         info["LIB1"].lib = "lib1"
         info["LIB1"].system_deps = ["sys1", "sys11"]
         info["LIB1"].deps = ["LIB2"]
         info["LIB2"].lib = "lib2"
         info["LIB2"].system_deps = ["sys2"]
-        info["LIB1"].deps = ["LIB3"]
+        info["LIB2"].deps = ["LIB3"]
         info["LIB3"].lib = "lib3"
         info["LIB3"].system_deps = ["sys3", "sys2"]
-        self.assertEqual(['sys2', 'lib2', 'sys3', 'lib3', 'sys1', 'sys11', 'lib1'], info.libs)
+        self.assertEqual(['sys3', 'sys2', 'lib3', 'lib2', 'sys1', 'sys11', 'lib1'], info.libs)
+        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], info.system_deps)
+
+    def cpp_info_link_order_test(self):
+
+        def _assert_link_order(sorted_libs):
+            assert sorted_libs, "'sorted_libs' is empty"
+            for num, lib in enumerate(sorted_libs):
+                component_name = lib[-1]
+                for dep in info[component_name].deps:
+                    self.assertIn(info[dep].lib, sorted_libs[:num])
+
+        info = CppInfo(None)
+        info["F"].lib = "libF"
+        info["F"].deps = ["D", "E"]
+        info["E"].lib = "libE"
+        info["E"].deps = ["B"]
+        info["D"].lib = "libD"
+        info["D"].deps = ["A"]
+        info["C"].lib = "libC"
+        info["C"].deps = ["A"]
+        info["A"].lib = "libA"
+        info["A"].deps = ["B"]
+        info["B"].lib = "libB"
+        info["B"].deps = []
+        _assert_link_order(info.libs)
+
+        info = CppInfo(None)
+        info["K"].lib = "libK"
+        info["K"].deps = ["G", "H"]
+        info["J"].lib = "libJ"
+        info["J"].deps = ["F"]
+        info["G"].lib = "libG"
+        info["G"].deps = ["F"]
+        info["H"].lib = "libH"
+        info["H"].deps = ["F", "E"]
+        info["L"].lib = "libL"
+        info["L"].deps = ["I"]
+        info["F"].lib = "libF"
+        info["F"].deps = ["C", "D"]
+        info["I"].lib = "libI"
+        info["I"].deps = ["E"]
+        info["C"].lib = "libC"
+        info["C"].deps = ["A"]
+        info["D"].lib = "libD"
+        info["D"].deps = ["A"]
+        info["E"].lib = "libE"
+        info["E"].deps = ["A", "B"]
+        info["A"].lib = "libA"
+        info["A"].deps = []
+        info["B"].lib = "libB"
+        info["B"].deps = []
+        _assert_link_order(info.libs)
+
+    def cppinfo_inexistent_component_dep_test(self):
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB2"]
+        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' "
+                                                         "declares a missing dependency"):
+            info.libs
+
+    def cpp_info_components_dep_loop_test(self):
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB1"]
+        msg = "There is a dependency loop in the components declared in 'self.cpp_info'"
+        with six.assertRaisesRegex(self, ConanException, msg):
+            info.libs
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].lib = "lib2"
+        info["LIB2"].deps = ["LIB1", "LIB2"]
+        with six.assertRaisesRegex(self, ConanException, msg):
+            info.libs
+        info = CppInfo(None)
+        info["LIB1"].lib = "lib1"
+        info["LIB1"].deps = ["LIB2"]
+        info["LIB2"].lib = "lib2"
+        info["LIB2"].deps = ["LIB3"]
+        info["LIB3"].lib = "lib3"
+        info["LIB3"].deps = ["LIB1"]
+        with six.assertRaisesRegex(self, ConanException, msg):
+            info.libs
 
     def cppinfo_dirs_test(self):
         folder = temp_folder()

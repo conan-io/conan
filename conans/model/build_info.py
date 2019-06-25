@@ -20,7 +20,7 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.name = None
-        self.system_deps = []
+        self._system_deps = []
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
@@ -47,48 +47,99 @@ class _CppInfo(object):
         self.description = None  # Description of the conan package
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self.filter_empty = True
-        self._deps = OrderedDict()
+        self._components = OrderedDict()
+
+    @property
+    def _sorted_components(self):
+        ordered = OrderedDict()
+        while len(ordered) != len(self._components):
+            # Search for next element to be processed
+            for comp_name, comp in self._components.items():
+                if comp_name in ordered:
+                    continue
+                # check if all the deps are declared
+                if not all([dep in self._components for dep in comp.deps]):
+                    raise ConanException("Component '%s' declares a missing dependency" % comp.name)
+                # check if all the deps are already added to ordered
+                if all([dep in ordered for dep in comp.deps]):
+                    break
+            else:
+                raise ConanException("There is a dependency loop in the components declared in "
+                                     "'self.cpp_info'")
+
+            ordered[comp_name] = comp
+        return ordered.values()
 
     @property
     def libs(self):
-        if self._deps:
-            deps = [v for v in self._deps.values()]
-            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
-            self._libs = [dep.lib for dep in deps_sorted if dep.lib is not None]
-        return self._libs
+        if self._components:
+            result = []
+            for component in self._sorted_components:
+                for sys_dep in component.system_deps:
+                    if sys_dep and sys_dep not in result:
+                        result.append(sys_dep)
+                if component.lib:
+                    result.append(component.lib)
+            return result
+        else:
+            return self._libs
 
     @libs.setter
     def libs(self, libs):
-        if self._deps:
+        assert isinstance(libs, list), "'libs' attribute should be a list of strings"
+        if self._components:
             raise ConanException("Setting first level libs is not supported when Components are "
                                  "already in use")
         self._libs = libs
 
     @property
     def exes(self):
-        if self._deps:
-            deps = [v for v in self._deps.values()]
-            return [dep.exe for dep in deps if dep.exe is not None]
+        if self._components:
+            return [component.exe for component in self._sorted_components if component.exe]
         else:
             return self._exes
 
     @exes.setter
     def exes(self, exes):
-        if self._deps:
+        assert isinstance(exes, list), "'exes' attribute should be a list of strings"
+        if self._components:
             raise ConanException("Setting first level exes is not supported when Components are "
                                  "already in use")
         self._exes = exes
 
+    @property
+    def system_deps(self):
+        if self._components:
+            result = []
+            for component in self._sorted_components:
+                if component.system_deps:
+                    for system_dep in component.system_deps:
+                        if system_dep and system_dep not in result:
+                            result.append(system_dep)
+            return result
+        else:
+            return self._system_deps
+
+    @system_deps.setter
+    def system_deps(self, system_deps):
+        assert isinstance(system_deps, list), "'system_deps' attribute should be a list of strings"
+        if self._components:
+            raise ConanException("Setting first level system_deps is not supported when Components "
+                                 "are already in use")
+        self._system_deps = system_deps
+
     def __getitem__(self, key):
+        """
+        This is called when the user accesses to a component: self.cpp_info["whatever"]
+        """
         if self._libs:
             raise ConanException("Usage of Components with '.libs' values is not allowed")
-        if key not in self._deps.keys():
-            self._deps[key] = Component(self, key)
-        return self._deps[key]
+        if key not in self._components.keys():
+            self._components[key] = Component(self, key)
+        return self._components[key]
 
     def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self.rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
+        abs_paths = [os.path.join(self.rootpath, p) for p in paths]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -97,45 +148,58 @@ class _CppInfo(object):
     def _get_paths(self, path_name):
         """
         Get the absolute paths either composing the lists from components or from the global
-        variables. Also filter the values checking if the folders exist or not. This paths are
-        calculated once and then the result is cached.
+        variables. Also filter the values checking if the folders exist or not and avoid repeated
+        values.
         :param path_name: name of the path variable to get (include_paths, res_paths...)
         :return: List of absolute paths
         """
-        if getattr(self, "_%s_paths" % path_name) is None:
-            if self._deps:
-                self.__dict__["_%s_paths" % path_name] = []
-                for dep_value in self._deps.values():
-                    self.__dict__["_%s_paths" % path_name].extend(
-                            self._filter_paths(getattr(dep_value, "%s_paths" % path_name)))
-            else:
-                self.__dict__["_%s_paths" % path_name] = self._filter_paths(
-                        getattr(self, "%sdirs" % path_name))
-        return getattr(self, "_%s_paths" % path_name)
+        result = []
+
+        if self._components:
+            for dep_value in self._sorted_components:
+                abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
+                for path in abs_paths:
+                    if path not in result:
+                        result.append(path)
+        else:
+            result = self._filter_paths(getattr(self, "%sdirs" % path_name))
+        return result
 
     @property
     def include_paths(self):
-        return self._get_paths("include")
+        if self._include_paths is None:
+            self._include_paths = self._get_paths("include")
+        return self._include_paths
 
     @property
     def lib_paths(self):
-        return self._get_paths("lib")
+        if self._lib_paths is None:
+            self._lib_paths = self._get_paths("lib")
+        return self._lib_paths
 
     @property
     def src_paths(self):
-        return self._get_paths("src")
+        if self._src_paths is None:
+            self._src_paths = self._get_paths("src")
+        return self._src_paths
 
     @property
     def bin_paths(self):
-        return self._get_paths("bin")
+        if self._bin_paths is None:
+            self._bin_paths = self._get_paths("bin")
+        return self._bin_paths
 
     @property
     def build_paths(self):
-        return self._get_paths("build")
+        if self._build_paths is None:
+            self._build_paths = self._get_paths("build")
+        return self._build_paths
 
     @property
     def res_paths(self):
-        return self._get_paths("res")
+        if self._res_paths is None:
+            self._res_paths = self._get_paths("res")
+        return self._res_paths
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
@@ -158,74 +222,43 @@ class CppInfo(_CppInfo):
     def __init__(self, root_folder):
         super(CppInfo, self).__init__()
         self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self.includedirs.append(DEFAULT_INCLUDE)
-        self.libdirs.append(DEFAULT_LIB)
-        self.bindirs.append(DEFAULT_BIN)
-        self.resdirs.append(DEFAULT_RES)
-        self.builddirs.append(DEFAULT_BUILD)
+        self._default_dirs_values = {
+            "includedirs": [DEFAULT_INCLUDE],
+            "libdirs": [DEFAULT_LIB],
+            "bindirs": [DEFAULT_BIN],
+            "resdirs": [DEFAULT_RES],
+            "builddirs": [DEFAULT_BUILD],
+            "srcdirs": []
+        }
+        self.includedirs.extend(self._default_dirs_values["includedirs"])
+        self.libdirs.extend(self._default_dirs_values["libdirs"])
+        self.bindirs.extend(self._default_dirs_values["bindirs"])
+        self.resdirs.extend(self._default_dirs_values["resdirs"])
+        self.builddirs.extend(self._default_dirs_values["builddirs"])
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
-        self._deps = OrderedDict()
 
-    def _check_dirs_values(self):
-        default_dirs_mapping = {
-            "includedirs": [DEFAULT_INCLUDE],
-            "libdirs": [DEFAULT_LIB],
-            "bindirs": [DEFAULT_BIN],
-            "resdirs": [DEFAULT_RES],
-            "builddirs": [DEFAULT_BUILD],
-            "srcdirs": []
-        }
-        msg_template = "Using Components and global '{}' values ('{}') is not supported"
-        for dir_name in ["includedirs", "libdirs", "bindirs", "builddirs"]:
+    def _check_and_clear_dirs_values(self):
+        for dir_name in self._default_dirs_values:
             dirs_value = getattr(self, dir_name)
-            if dirs_value is not None and dirs_value != default_dirs_mapping[dir_name]:
+            if dirs_value is not None and dirs_value != self._default_dirs_values[dir_name]:
+                msg_template = "Using Components and global '{}' values ('{}') is not supported"
                 raise ConanException(msg_template.format(dir_name, dirs_value))
-
-    def _clear_dirs_values(self):
-        default_dirs_mapping = {
-            "includedirs": [DEFAULT_INCLUDE],
-            "libdirs": [DEFAULT_LIB],
-            "bindirs": [DEFAULT_BIN],
-            "resdirs": [DEFAULT_RES],
-            "builddirs": [DEFAULT_BUILD],
-            "srcdirs": []
-        }
-        for dir_name in ["includedirs", "libdirs", "bindirs", "builddirs"]:
-            if getattr(self, dir_name) == default_dirs_mapping[dir_name]:
+            else:
                 self.__dict__[dir_name] = None
-
-    @property
-    def libs(self):
-        if self._deps:
-            deps = [v for v in self._deps.values()]
-            deps_sorted = sorted(deps, key=lambda component: len(component.deps))
-            result = []
-            for dep in deps_sorted:
-                for sys_dep in dep.system_deps:
-                    if sys_dep not in result:
-                        result.append(sys_dep)
-                result.append(dep.lib)
-            return result
-        else:
-            return self._libs
-
-    @libs.setter
-    def libs(self, libs):
-        if self._deps:
-            raise ConanException("Setting first level libs is not supported when Components are "
-                                 "already in use")
-        self._libs = libs
 
     def __getitem__(self, key):
         if self._libs or self._exes:
             raise ConanException("Usage of Components with '.libs' or '.exes' values is not allowed")
-        self._clear_dirs_values()
-        self._check_dirs_values()
-        if key not in self._deps.keys():
-            self._deps[key] = Component(key, self.rootpath)
-        return self._deps[key]
+        self._check_and_clear_dirs_values()
+        if key not in self._components:
+            self._components[key] = Component(key, self.rootpath)
+        return self._components[key]
+
+    @property
+    def components(self):
+        return self._components
 
     def __getattr__(self, config):
 
@@ -233,11 +266,11 @@ class CppInfo(_CppInfo):
             result = _CppInfo()
             result.rootpath = self.rootpath
             result.sysroot = self.sysroot
-            result.includedirs.append(DEFAULT_INCLUDE)
-            result.libdirs.append(DEFAULT_LIB)
-            result.bindirs.append(DEFAULT_BIN)
-            result.resdirs.append(DEFAULT_RES)
-            result.builddirs.append("")
+            result.includedirs.extend(self._default_dirs_values["includedirs"])
+            result.libdirs.extend(self._default_dirs_values["libdirs"])
+            result.bindirs.extend(self._default_dirs_values["bindirs"])
+            result.resdirs.extend(self._default_dirs_values["resdirs"])
+            result.builddirs.extend(self._default_dirs_values["builddirs"])
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
@@ -252,23 +285,31 @@ class Component(object):
         self._lib = None
         self._exe = None
         self.system_deps = []
-        self.includedirs = []
-        self.libdirs = []
-        self.resdirs = []
-        self.bindirs = []
-        self.builddirs = []
+        self.includedirs = [DEFAULT_INCLUDE]
+        self.libdirs = [DEFAULT_LIB]
+        self.resdirs = [DEFAULT_RES]
+        self.bindirs = [DEFAULT_BIN]
+        self.builddirs = [DEFAULT_BUILD]
         self.srcdirs = []
         self.defines = []
         self.cflags = []
-        self.cppflags = []
         self.cxxflags = []
         self.sharedlinkflags = []
         self.exelinkflags = []
         self._filter_empty = True
 
+    def as_dict(self):
+        result = {}
+        for key, value in vars(self).items():
+            if key.startswith("_"):
+                continue
+            result[key] = value
+        result["lib"] = self.lib
+        result["exe"] = self.exe
+        return result
+
     def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self._rootpath, p)
-                     if not os.path.isabs(p) else p for p in paths]
+        abs_paths = [os.path.join(self._rootpath, p) for p in paths]
         if self._filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -280,6 +321,7 @@ class Component(object):
 
     @lib.setter
     def lib(self, name):
+        assert isinstance(name, str), "'lib' attribute should be a string"
         if self._exe:
             raise ConanException("'.exe' is already set for this Component")
         self._lib = name
@@ -290,6 +332,7 @@ class Component(object):
 
     @exe.setter
     def exe(self, name):
+        assert isinstance(name, str), "'exe' attribute should be a string"
         if self._lib:
             raise ConanException("'.lib' is already set for this Component")
         self._exe = name
@@ -335,7 +378,8 @@ class _BaseDepsCppInfo(_CppInfo):
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
         self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
-        self.libs = merge_lists(self.libs, dep_cpp_info._libs)
+        self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.exes = merge_lists(self.exes, dep_cpp_info.exes)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order
@@ -344,17 +388,10 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+        self.system_deps = merge_lists(dep_cpp_info.system_deps, self.system_deps)
 
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
-
-    @property
-    def libs(self):
-        return self._libs
-
-    @libs.setter
-    def libs(self, libs):
-        self._libs = libs
 
     @property
     def include_paths(self):

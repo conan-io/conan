@@ -1,10 +1,12 @@
 import os
-import time
 import traceback
 
+import time
+
+from conans.client.rest import response_to_str
 from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException, ForbiddenException
+    NotFoundException, ForbiddenException, RequestErrorException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
@@ -34,13 +36,16 @@ class FileUploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 400:
+                raise RequestErrorException(response_to_str(response))
+
             if response.status_code == 401:
-                raise AuthenticationException(response.content)
+                raise AuthenticationException(response_to_str(response))
 
             if response.status_code == 403:
                 if auth.token is None:
-                    raise AuthenticationException(response.content)
-                raise ForbiddenException(response.content)
+                    raise AuthenticationException(response_to_str(response))
+                raise ForbiddenException(response_to_str(response))
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
@@ -62,13 +67,17 @@ class FileUploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+
+            if response.status_code == 400:
+                raise RequestErrorException(response_to_str(response))
+
             if response.status_code == 401:
-                raise AuthenticationException(response.content)
+                raise AuthenticationException(response_to_str(response))
 
             if response.status_code == 403:
                 if auth.token is None:
-                    raise AuthenticationException(response.content)
-                raise ForbiddenException(response.content)
+                    raise AuthenticationException(response_to_str(response))
+                raise ForbiddenException(response_to_str(response))
 
             response.raise_for_status()  # Raise HTTPError for bad http response status
 
@@ -178,8 +187,8 @@ class FileDownloader(object):
                 raise NotFoundException("Not found: %s" % url)
             elif response.status_code == 403:
                 if auth.token is None:
-                    raise AuthenticationException(response.content)
-                raise ForbiddenException(response.content)
+                    raise AuthenticationException(response_to_str(response))
+                raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
                 raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
@@ -275,7 +284,8 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
     for counter in range(retry + 1):
         try:
             return method(*args, **kwargs)
-        except (NotFoundException, ForbiddenException, AuthenticationException):
+        except (NotFoundException, ForbiddenException, AuthenticationException,
+                RequestErrorException):
             raise
         except ConanException as exc:
             if counter == retry:
