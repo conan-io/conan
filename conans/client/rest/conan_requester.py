@@ -13,9 +13,10 @@ from conans.util.tracer import log_client_rest_api_call
 class ConanRequester(object):
 
     def __init__(self, config, http_requester=None):
-        self._http_requester = http_requester if http_requester else requests.Session()
-
-        if not http_requester:
+        if http_requester:
+            self._http_requester = http_requester
+        else:
+            self._http_requester = requests.Session()
             adapter = HTTPAdapter(max_retries=config.retry)
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
