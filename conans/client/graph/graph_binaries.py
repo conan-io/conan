@@ -39,7 +39,6 @@ class GraphBinariesAnalyzer(object):
         locked = node.graph_lock_node
         if locked and locked.pref.id == node.package_id:
             pref = locked.pref  # Keep the locked with PREV
-            assert pref.revision, "Locked node should have PREV for evaluate_node"
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             pref = PackageReference(ref, node.package_id)
