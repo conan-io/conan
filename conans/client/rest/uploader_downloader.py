@@ -1,7 +1,8 @@
 import os
 import traceback
-
 import time
+
+from tqdm import tqdm
 
 from conans.client.rest import response_to_str
 from conans.client.tools.files import human_size
@@ -210,14 +211,24 @@ class FileDownloader(object):
         ret = bytearray()
         total_length = response.headers.get('content-length')
 
+        if self.output and self.output.is_terminal:
+            progress_bar = tqdm(unit='B', unit_scale=True,
+                                unit_divisor=1024, ncols=84,
+                                leave=True)
+        else:
+            progress_bar = None
+
         if total_length is None:  # no content length header
             if not file_path:
                 ret += response.content
             else:
                 if self.output:
                     total_length = len(response.content)
-                    progress = human_readable_progress(total_length, total_length)
-                    print_progress(self.output, 50, progress)
+                    if progress_bar is not None:
+                        progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
+                        progress_bar.total = total_length
+                        progress_bar.update(total_length)
+
                 save_append(file_path, response.content)
         else:
             total_length = int(total_length)
@@ -226,24 +237,25 @@ class FileDownloader(object):
             # chunked can be a problem:
             # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
             # It will not send content-length or should be ignored
+            if progress_bar is not None:
+                progress_bar.total = total_length
 
             def download_chunks(file_handler=None, ret_buffer=None):
                 """Write to a buffer or to a file handler"""
                 chunk_size = 1024 if not file_path else 1024 * 100
                 download_size = 0
-                last_progress = None
+                if progress_bar is not None:
+                    progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
+
                 for data in response.iter_content(chunk_size):
                     download_size += len(data)
                     if ret_buffer is not None:
                         ret_buffer.extend(data)
                     if file_handler is not None:
                         file_handler.write(to_file_bytes(data))
-                    if self.output:
-                        units = progress_units(download_size, total_length)
-                        progress = human_readable_progress(download_size, total_length)
-                        if last_progress != units:  # Avoid screen refresh if nothing has change
-                            print_progress(self.output, units, progress)
-                            last_progress = units
+                    if progress_bar is not None:
+                        progress_bar.update(len(data))
+
                 return download_size
 
             if file_path:
@@ -258,6 +270,9 @@ class FileDownloader(object):
             if dl_size != total_length and not gzip:
                 raise ConanException("Transfer interrupted before "
                                      "complete: %s < %s" % (dl_size, total_length))
+
+        if progress_bar is not None:
+            progress_bar.close()
 
         if not file_path:
             return bytes(ret)
