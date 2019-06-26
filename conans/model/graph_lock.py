@@ -62,6 +62,9 @@ class GraphLockNode(object):
         self.options = options
         self.modified = modified
 
+    def locked_require_id(self, requirement):
+        return self.requires[requirement.ref.name]
+
     @staticmethod
     def from_dict(node_json):
         json_pref = node_json["pref"]
@@ -187,8 +190,7 @@ class GraphLock(object):
         for require in requires:
             # Not new unlocked dependencies at this stage
             locked_pref, locked_id = prefs[require.ref.name]
-            require.ref = require.range_ref = locked_pref.ref
-            require._locked_id = locked_id
+            require.lock(locked_pref.ref, locked_id)
 
     def pref(self, node_id):
         return self._nodes[node_id].pref
@@ -198,7 +200,8 @@ class GraphLock(object):
 
     def _dependencies(self, node_id):
         # return {pkg_name: PREF}
-        return {self._nodes[i].pref.ref.name: (self._nodes[i].pref, i) for i in self._edges[node_id]}
+        return {self._nodes[i].pref.ref.name: (self._nodes[i].pref, i)
+                for i in self._edges[node_id]}
 
     def get_node(self, ref):
         # None reference
@@ -237,7 +240,7 @@ class GraphLock(object):
             lock_node.pref = PackageReference(ref, lock_node.pref.id)
             lock_node.modified = True
 
-    def find_node(self, node, reference):
+    def find_consumer_node(self, node, reference):
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self.get_node(reference)
@@ -246,8 +249,7 @@ class GraphLock(object):
             # python_requires
 
             for require in node.conanfile.requires.values():
-                require._locked_id = node_id
-                require.ref = require.range_ref = pref.ref
+                require.lock(pref.ref, node_id)
             return
 
         assert node.recipe == RECIPE_CONSUMER

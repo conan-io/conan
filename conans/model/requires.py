@@ -21,6 +21,16 @@ class Requirement(object):
         self.override = override
         self.private = private
         self.build_require = False
+        self._locked_id = None
+
+    def lock(self, locked_ref, locked_id):
+        # When a requirment is locked it doesn't has ranges
+        self.ref = self.range_ref = locked_ref
+        self._locked_id = locked_id  # And knows the ID of the locked node that is pointing to
+
+    @property
+    def locked_id(self):
+        return self._locked_id
 
     @property
     def version_range(self):

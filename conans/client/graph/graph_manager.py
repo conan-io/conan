@@ -132,7 +132,7 @@ class GraphManager(object):
             conanfile = self._loader.load_virtual([reference], processed_profile)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
             if graph_lock:  # Find the Node ID in the lock of current root
-                graph_lock.find_node(root_node, reference)
+                graph_lock.find_consumer_node(root_node, reference)
         else:
             path = reference
             if path.endswith(".py"):
@@ -161,7 +161,7 @@ class GraphManager(object):
             root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
 
             if graph_lock:  # Find the Node ID in the lock of current root
-                graph_lock.find_node(root_node, create_reference)
+                graph_lock.find_consumer_node(root_node, create_reference)
 
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
