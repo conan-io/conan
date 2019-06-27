@@ -4,6 +4,8 @@ import tarfile
 import time
 from collections import defaultdict
 
+from tqdm import tqdm
+
 from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
@@ -469,7 +471,7 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
         if tgz_path:
             result[tgz_name] = tgz_path
         elif tgz_files:
-            output.rewrite_line(msg)
+            output.writeln(msg)
             tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
             result[tgz_name] = tgz_path
 
@@ -514,6 +516,10 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         last_progress = None
         if output and n_files > 1 and not output.is_terminal:
             output.write("[")
+        elif output and n_files > 1 and output.is_terminal:
+            progress_bar = tqdm(total=len(files), desc="Compressing files...", 
+                                unit="files", leave=True, ncols=84)
+
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
@@ -530,16 +536,16 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                 i_file = i_file + 1
                 units = min(50, int(50 * i_file / n_files))
                 if last_progress != units:  # Avoid screen refresh if nothing has change
-                    if output.is_terminal:
-                        text = "%s/%s files" % (i_file, n_files)
-                        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), text))
-                    else:
+                    if not output.is_terminal:
                         output.write('=' * (units - (last_progress or 0)))
                     last_progress = units
+                if output.is_terminal:
+                    progress_bar.set_description("%s/%s files" % (i_file, n_files))
+                    progress_bar.update()                    
 
         if output and n_files > 1:
             if output.is_terminal:
-                output.writeln("")
+                progress_bar.close()
             else:
                 output.writeln("]")
         tgz.close()
