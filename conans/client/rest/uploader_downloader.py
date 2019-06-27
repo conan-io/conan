@@ -118,19 +118,20 @@ class upload_with_progress(object):
             self.progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
                                      unit_divisor=1024, desc="Uploading {}".format(file_name),
                                      leave=True, ncols=84)
-
         else:
             self.progress_bar = None
 
     def __iter__(self):
         for index, chunk in enumerate(self.groups):
             if self.progress_bar is not None:
-                self.progress_bar.update(self.chunk_size)
+                update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
+                    else self.totalsize - self.chunk_size * index
+                self.progress_bar.update(update_size)
             yield chunk
 
         if self.progress_bar is not None:
             self.progress_bar.close()
-    
+
     def __len__(self):
         return self.totalsize
 
