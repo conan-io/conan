@@ -27,6 +27,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
+from conans.model.graph_info import GraphInfo
 
 
 def build_id(conan_file):
@@ -211,6 +212,7 @@ class _PackageBuilder(object):
 
                 prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
                                      package_folder)
+                assert prev
                 node.prev = prev
                 log_file = os.path.join(build_folder, RUN_LOG_NAME)
                 log_file = log_file if os.path.exists(log_file) else None
@@ -363,7 +365,10 @@ class BinaryInstaller(object):
                 write_generators(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
-                graph_info.save(build_folder)
+                graph_info_node = GraphInfo(graph_info.profile, root_ref=node.ref)
+                graph_info_node.options = node.conanfile.options.values
+                graph_info_node.graph_lock = graph_info.graph_lock
+                graph_info_node.save(build_folder)
                 output.info("Generated graphinfo")
                 save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
                 output.info("Generated %s" % BUILD_INFO)
@@ -429,6 +434,8 @@ class BinaryInstaller(object):
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
+        if node.graph_lock_node:
+            node.graph_lock_node.modified = True
         return pref
 
     @staticmethod
