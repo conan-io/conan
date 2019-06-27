@@ -92,22 +92,22 @@ class BuildInfoTest(unittest.TestCase):
         one_dep_folder = temp_folder()
         one_dep = CppInfo(one_dep_folder)
         one_dep._filter_empty = False  # For testing: Do not filter paths
-        one_dep.includedirs.append("C:/whatever")
-        one_dep.includedirs.append("C:/whenever")
-        one_dep.libdirs.append("C:/other")
+        one_dep.includedirs.append("whatever")
+        one_dep.includedirs.append("whenever")
+        one_dep.libdirs.append("other")
         one_dep.libs.extend(["math", "winsock", "boost"])
         deps_cpp_info.update(one_dep, "global")
         child_folder = temp_folder()
         child = CppInfo(child_folder)
         child._filter_empty = False  # For testing: Do not filter paths
-        child.includedirs.append("F:/ChildrenPath")
+        child.includedirs.append("ChildrenPath")
         child.cxxflags.append("cxxmyflag")
         deps_cpp_info.update(child, "Boost")
         self.assertEqual([os.path.join(one_dep_folder, "include"),
-                          "C:/whatever",
-                          "C:/whenever",
+                          os.path.join(one_dep_folder, "whatever"),
+                          os.path.join(one_dep_folder, "whenever"),
                           os.path.join(child_folder, "include"),
-                          "F:/ChildrenPath"], deps_cpp_info.include_paths)
+                          os.path.join(child_folder, "ChildrenPath")], deps_cpp_info.include_paths)
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {}, defaultdict(dict))).content
         deps_cpp_info2, _, _ = TXTGenerator.loads(output)
