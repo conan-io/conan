@@ -26,11 +26,11 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_bindirs = {{"{bin1}",
     "{bin2}"}}
     conan_libs = {{"libfoo", "libbar"}}
-    conan_defines = {{"MYDEFINE2", "MYDEFINE1"}}
-    conan_cxxflags = {{"-march=native", "-fPIE"}}
-    conan_cflags = {{"-mtune=native", "-fPIC"}}
-    conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\"", "-framework Cocoa"}}
-    conan_exelinkflags = {{"-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\"", "-framework QuartzCore"}}
+    conan_defines = {{"MYDEFINE1", "MYDEFINE2"}}
+    conan_cxxflags = {{"-fPIE", "-march=native"}}
+    conan_cflags = {{"-fPIC", "-mtune=native"}}
+    conan_sharedlinkflags = {{"-framework Cocoa", "-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\""}}
+    conan_exelinkflags = {{"-framework QuartzCore", "-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\""}}
 
     conan_includedirs_MyPkg1 = {{"{include1}"}}
     conan_libdirs_MyPkg1 = {{"{lib1}"}}
@@ -79,6 +79,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         self.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(self.tmp_folder1)
+        cpp_info._filter_empty = False
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.includedirs = ['include1']
         cpp_info.libdirs = ['lib1']
@@ -92,6 +93,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo(self.tmp_folder2)
+        cpp_info._filter_empty = False
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.includedirs = ['include2']
         cpp_info.libdirs = ['lib2']
