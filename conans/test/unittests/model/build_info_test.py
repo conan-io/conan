@@ -272,10 +272,6 @@ class BuildInfoTest(unittest.TestCase):
 
         info.libs = []
         info["greet"].exe = "exegreet"
-        # FIXME
-        # with six.assertRaisesRegex(self, ConanException, "Setting first level libs is not supported "
-        #                                                  "when Components are already in use"):
-        #     info.libs = ["libgreet"]
 
     def cpp_info_system_deps_test(self):
         """
@@ -294,11 +290,6 @@ class BuildInfoTest(unittest.TestCase):
         info["LIB3"].system_deps = [None, "sys2"]
         self.assertEqual(['sys2', 'sys1', 'sys11'], DepCppInfo(info).libs)
         self.assertEqual(['sys2', 'sys1', 'sys11'], DepCppInfo(info).system_deps)
-        # FIXME
-        # with six.assertRaisesRegex(self, ConanException, "Setting first level system_deps is not "
-        #                                                  "supported when Components are already in "
-        #                                                  "use"):
-        #     info.system_deps = ["random_system"]
 
     def cpp_info_libs_system_deps_order_test(self):
         """
@@ -464,11 +455,6 @@ class BuildInfoTest(unittest.TestCase):
         info["Exe2"].exe = "the_exe2"
         dep_info = DepCppInfo(info)
         self.assertEqual(["the_exe1", "the_exe2"], dep_info.exes)
-
-        # FIXME
-        # with six.assertRaisesRegex(self, ConanException, "Setting first level exes is not supported "
-        #                                                  "when Components are already in use"):
-        #     info.exes = ["another_exe"]
 
     def cppinfo_public_interface_test(self):
         folder = temp_folder()
