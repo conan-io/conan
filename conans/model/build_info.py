@@ -34,6 +34,8 @@ class CppInfo(object):
         self.exelinkflags = []  # linker flags
         self._rootpath = root_folder
         self._sysroot = root_folder
+        self._version = None
+        self._description = None
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self._filter_empty = True
         self._components = OrderedDict()
@@ -54,6 +56,14 @@ class CppInfo(object):
             "sharedlinkflags": [],
             "exelinkflags": []
         }
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def description(self):
+        return self._description
 
     @property
     def rootpath(self):
@@ -109,6 +119,8 @@ class DepCppInfo(object):
 
     def __init__(self, cpp_info):
         self._name = cpp_info.name
+        self._version = cpp_info.version
+        self._description = cpp_info.description
         self._rootpath = cpp_info.rootpath
         self._system_deps = cpp_info.system_deps
         self._includedirs = cpp_info.includedirs
@@ -227,6 +239,10 @@ class DepCppInfo(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def version(self):
+        return self._version
 
     @property
     def rootpath(self):
@@ -373,7 +389,7 @@ class DepsCppInfo(object):
         self.configs = {}
 
     def __getattr__(self, config):
-        if config not in self.configs:  #FIXME: Fo we want to support this? try removing
+        if config not in self.configs:  #FIXME: Do we want to support this? try removing
             self.configs[config] = DepsCppInfo()
         return self.configs[config]
 
@@ -394,7 +410,6 @@ class DepsCppInfo(object):
 
     def update_dep_cpp_info(self, dep_cpp_info, pkg_name):
         assert isinstance(dep_cpp_info, DepCppInfo)
-        print("CONFIGS: ", dep_cpp_info.configs)
         self._dependencies[pkg_name] = dep_cpp_info
         if dep_cpp_info.configs:
             for config, sub_dep_cpp_info in dep_cpp_info.configs.items():
