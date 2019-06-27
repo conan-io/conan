@@ -284,7 +284,8 @@ class Command(object):
         self._warn_python2()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
                                 args.options, args.env, args.remote, args.update,
-                                build_modes=args.build, test_build_folder=args.test_build_folder)
+                                build_modes=args.build, test_build_folder=args.test_build_folder,
+                                lockfile=args.lockfile)
 
     def create(self, *args):
         """
@@ -341,8 +342,7 @@ class Command(object):
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
-                                      install_folder=args.install_folder,
-                                      use_lock=args.use_lock)
+                                      lockfile=args.lockfile)
         except ConanException as exc:
             info = exc.info
             raise
@@ -455,7 +455,7 @@ class Command(object):
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
-                                           use_lock=args.use_lock)
+                                           lockfile=args.lockfile)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -472,7 +472,7 @@ class Command(object):
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
-                                                     use_lock=args.use_lock)
+                                                     lockfile=args.lockfile)
         except ConanException as exc:
             info = exc.info
             raise
@@ -633,7 +633,7 @@ class Command(object):
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    use_lock=args.use_lock)
+                                    lockfile=args.lockfile)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -868,8 +868,8 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
-        parser.add_argument("-l", "--use-lock", action='store_true', default=False,
-                            help="Use lock dependencies in lockfile")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Use lockfile. Lockfile will be updated")
 
         args = parser.parse_args(*args)
 
@@ -893,7 +893,7 @@ class Command(object):
                                           force=args.force,
                                           user=user,
                                           channel=channel,
-                                          use_lock=args.use_lock)
+                                          lockfile=args.lockfile)
         except ConanException as exc:
             info = exc.info
             raise
@@ -917,18 +917,15 @@ class Command(object):
                                               "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help='Use files from a previous conan installation')
-        parser.add_argument("-l", "--use-lock", action='store_true', default=False,
-                            help="Use lock dependencies in lockfile")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Use lockfile. Lockfile will be updated")
 
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, install_folder=args.install_folder,
-                                  use_lock=args.use_lock)
+                                  keep_source=args.keep_source, lockfile=args.lockfile)
 
     def remove(self, *args):
         """
@@ -1903,8 +1900,8 @@ def _add_common_install_arguments(parser, build_help):
                         help="Check updates exist from upstream remotes")
     parser.add_argument("-if", "--install-folder", action=OnceArgument,
                         help='Origin and destination of conan generated files')
-    parser.add_argument("-l", "--use-lock", action='store_true', default=False,
-                        help="Use lock dependencies in lockfile")
+    parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                        help="Use lockfile. Lockfile will be updated")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
