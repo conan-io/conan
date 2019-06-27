@@ -39,7 +39,7 @@ class CppInfo(object):
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self._filter_empty = True
         self._components = OrderedDict()
-        self.public_deps = []  # FIXME: Should not be part of the public interface
+        self._public_deps = []
         self.configs = {}    # FIXME: Should not be part of the public interface
         self._default_values = {
             "includedirs": [DEFAULT_INCLUDE],
@@ -64,6 +64,10 @@ class CppInfo(object):
     @property
     def description(self):
         return self._description
+
+    @property
+    def public_deps(self):
+        return self._public_deps
 
     @property
     def rootpath(self):
@@ -142,7 +146,7 @@ class DepCppInfo(object):
         self._build_paths = None
         self._res_paths = None
         self._src_paths = None
-        self.public_deps = cpp_info.public_deps
+        self._public_deps = cpp_info.public_deps
         self.configs = {}
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self._filter_empty = cpp_info._filter_empty
@@ -243,6 +247,10 @@ class DepCppInfo(object):
     @property
     def version(self):
         return self._version
+
+    @property
+    def public_deps(self):
+        return self._public_deps
 
     @property
     def rootpath(self):
