@@ -124,6 +124,30 @@ class DepsComponent(object):
         return self._system_deps
 
     @property
+    def includedirs(self):
+        return self._includedirs
+
+    @property
+    def srcdirs(self):
+        return self._srcdirs
+
+    @property
+    def libdirs(self):
+        return self._libdirs
+
+    @property
+    def resdirs(self):
+        return self._resdirs
+
+    @property
+    def bindirs(self):
+        return self._bindirs
+
+    @property
+    def builddirs(self):
+        return self._builddirs
+
+    @property
     def include_paths(self):
         return self._filter_paths(self._includedirs)
 

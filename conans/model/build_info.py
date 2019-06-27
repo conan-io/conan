@@ -179,6 +179,17 @@ class DepCppInfo(object):
             result = self._filter_paths(getattr(self, "_%sdirs" % path_name))
         return result
 
+    def _get_dirs(self, name):
+        result = []
+        if self._components:
+            for dep_value in self._sorted_components:
+                for _dir in getattr(dep_value, name):
+                    if _dir not in result:
+                        result.append(_dir)
+        else:
+            result = getattr(self, "_%s" % name)
+        return result
+
     def _get_flags(self, name):
         if self._components:
             result = []
@@ -237,6 +248,30 @@ class DepCppInfo(object):
             return result
         else:
             return self._system_deps
+
+    @property
+    def includedirs(self):
+        return self._get_dirs("includedirs")
+
+    @property
+    def srcdirs(self):
+        return self._get_dirs("srcdirs")
+
+    @property
+    def libdirs(self):
+        return self._get_dirs("libdirs")
+
+    @property
+    def resdirs(self):
+        return self._get_dirs("resdirs")
+
+    @property
+    def bindirs(self):
+        return self._get_dirs("bindirs")
+
+    @property
+    def builddirs(self):
+        return self._get_dirs("builddirs")
 
     @property
     def include_paths(self):
@@ -366,6 +401,30 @@ class DepsCppInfo(object):
                 if config not in self.configs:
                     self.configs[config] = DepsCppInfo()
                 self.configs[config].update_dep_cpp_info(sub_dep_cpp_info, pkg_name)
+
+    @property
+    def includedirs(self):
+        return self._get_global("includedirs")
+
+    @property
+    def srcdirs(self):
+        return self._get_global("srcdirs")
+
+    @property
+    def libdirs(self):
+        return self._get_global("libdirs")
+
+    @property
+    def bindirs(self):
+        return self._get_global("bindirs")
+
+    @property
+    def builddirs(self):
+        return self._get_global("builddirs")
+
+    @property
+    def resdirs(self):
+        return self._get_global("resdirs")
 
     @property
     def system_deps(self):

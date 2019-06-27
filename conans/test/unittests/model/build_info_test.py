@@ -503,3 +503,16 @@ class BuildInfoTest(unittest.TestCase):
         deps_cpp_info.update(info, "my_lib")
         self.assertEqual("libcomp", deps_cpp_info["my_lib"]["Component"].lib)
         self.assertEqual([os.path.join(folder, "include")], deps_cpp_info.include_paths)
+
+    def deps_cpp_info_dirs_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info["Component"]
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "my_lib")
+        self.assertEqual(["include"], deps_cpp_info.includedirs)
+        self.assertEqual([], deps_cpp_info.srcdirs)
+        self.assertEqual(["lib"], deps_cpp_info.libdirs)
+        self.assertEqual(["bin"], deps_cpp_info.bindirs)
+        self.assertEqual([""], deps_cpp_info.builddirs)
+        self.assertEqual(["res"], deps_cpp_info.resdirs)
