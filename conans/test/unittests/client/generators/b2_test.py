@@ -27,30 +27,31 @@ class B2GeneratorTest(unittest.TestCase):
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info._filter_empty = False  # For testing purposes
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
-        cpp_info.version = "1.3"
-        cpp_info.description = "My cool description"
+        cpp_info._version = "1.3"
+        cpp_info._description = "My cool description"
         cpp_info.libs = ["MyLib1"]
 
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info._filter_empty = False  # For testing purposes
         cpp_info.libs = ["MyLib2"]
         cpp_info.defines = ["MYDEFINE2"]
-        cpp_info.version = "2.3"
+        cpp_info._version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
         cpp_info.cxxflags = ["-cxxflag"]
-        cpp_info.public_deps = ["MyPkg"]
-        cpp_info.lib_paths.extend(["Path\\with\\slashes", "regular/path/to/dir"])
-        cpp_info.include_paths.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
+        cpp_info._public_deps = ["MyPkg"]
+        cpp_info.libdirs.extend(["Path\\with\\slashes", "regular/path/to/dir"])
+        cpp_info.includedirs.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = B2Generator(conanfile)
 
         content = {
-'conanbuildinfo.jam':
-'''#|
+            "conanbuildinfo.jam": """#|
     B2 definitions for Conan packages. This is a generated file.
     Edit the corresponding conanfile.txt instead.
 |#
@@ -154,31 +155,36 @@ project-define mypkg2 ;
         call-in-project : include-conanbuildinfo $(__cbi__) ;
     }
 }
-''',
-'conanbuildinfo-316f2f0b155dc874a672d40d98d93f95.jam':
-'''#|
+""",
+
+
+            "conanbuildinfo-316f2f0b155dc874a672d40d98d93f95.jam": """#|
     B2 definitions for Conan packages. This is a generated file.
     Edit the corresponding conanfile.txt instead.
 |#
 
 # global
 constant-if rootpath(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    ""
+    "dummy_root_folder2"
     ;
 
 constant-if includedirs(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "other/Path/with/slashes"
-    "other/regular/path/to/dir"
+    "dummy_root_folder1/include"
+    "dummy_root_folder2/include"
+    "dummy_root_folder2/other/Path/with/slashes"
+    "dummy_root_folder2/other/regular/path/to/dir"
     ;
 
 constant-if libdirs(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "Path/with/slashes"
-    "regular/path/to/dir"
+    "dummy_root_folder1/lib"
+    "dummy_root_folder2/lib"
+    "dummy_root_folder2/Path/with/slashes"
+    "dummy_root_folder2/regular/path/to/dir"
     ;
 
 constant-if defines(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "MYDEFINE2"
     "MYDEFINE1"
+    "MYDEFINE2"
     ;
 
 constant-if cppflags(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -220,6 +226,14 @@ constant-if rootpath(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     "dummy_root_folder1"
     ;
 
+constant-if includedirs(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+    "dummy_root_folder1/include"
+    ;
+
+constant-if libdirs(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
+    "dummy_root_folder1/lib"
+    ;
+
 constant-if defines(mypkg,32,x86,17,gnu,linux,gcc-6.3,release) :
     "MYDEFINE1"
     ;
@@ -252,13 +266,15 @@ constant-if rootpath(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if includedirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "other/Path/with/slashes"
-    "other/regular/path/to/dir"
+    "dummy_root_folder2/include"
+    "dummy_root_folder2/other/Path/with/slashes"
+    "dummy_root_folder2/other/regular/path/to/dir"
     ;
 
 constant-if libdirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "Path/with/slashes"
-    "regular/path/to/dir"
+    "dummy_root_folder2/lib"
+    "dummy_root_folder2/Path/with/slashes"
+    "dummy_root_folder2/regular/path/to/dir"
     ;
 
 constant-if defines(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -328,7 +344,7 @@ if $(__define_targets__) {
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
     call-in-project $(mypkg2-mod) : explicit libs ; }
-''',
+"""
         }
 
         for ck, cv in generator.content.items():
