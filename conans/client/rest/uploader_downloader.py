@@ -5,7 +5,6 @@ import time
 from tqdm import tqdm
 
 from conans.client.rest import response_to_str
-from conans.client.tools.files import human_size
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
