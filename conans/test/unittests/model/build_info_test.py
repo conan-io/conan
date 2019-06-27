@@ -9,7 +9,7 @@ from conans.model.build_info import CppInfo, DepsCppInfo, Component, DepCppInfo
 from conans.model.build_info_components import DepComponent
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
-from conans.test.utils.deprecation import catch_deprecation_warning
+from conans.test.utils.deprecation import catch_deprecation_warning, catch_real_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir, save
 
@@ -484,14 +484,14 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual(folder, info.sysroot)
         self.assertEqual([], info.cflags)
         self.assertEqual({}, info.configs)  # FIXME
-        with catch_deprecation_warning(self):
+        with catch_real_deprecation_warning(self):
             self.assertEqual([], info.cppflags)
         self.assertEqual([], info.cxxflags)
         self.assertEqual([], info.exelinkflags)
-        with catch_deprecation_warning(self):
+        with catch_real_deprecation_warning(self):
             self.assertEqual([], info.get_cppflags())  # FIXME
         self.assertEqual([], info.public_deps)  # FIXME
-        with catch_deprecation_warning(self):
+        with catch_real_deprecation_warning(self):
             info.set_cppflags("kk") # FIXME
         self.assertEqual([], info.sharedlinkflags)
 
