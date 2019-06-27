@@ -463,7 +463,7 @@ class BinaryInstaller(object):
 
         # Get deps_cpp_info from upstream nodes
         public_deps = [name for name, req in conanfile.requires.items() if not req.private]
-        conanfile.cpp_info._public_deps = public_deps
+        conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
         with pythonpath(conanfile):  # Minimal pythonpath, not the whole context, make it 50% slower

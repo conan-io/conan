@@ -21,8 +21,8 @@ class BoostJamGeneratorTest(unittest.TestCase):
         cpp_info._filter_empty = False  # For testing purposes
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
-        cpp_info._version = "1.3"
-        cpp_info._description = "My cool description"
+        cpp_info.version = "1.3"
+        cpp_info.description = "My cool description"
         cpp_info.libs = ["MyLib1"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
@@ -31,11 +31,11 @@ class BoostJamGeneratorTest(unittest.TestCase):
         cpp_info._filter_empty = False  # For testing purposes
         cpp_info.libs = ["MyLib2"]
         cpp_info.defines = ["MYDEFINE2"]
-        cpp_info._version = "2.3"
+        cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
         cpp_info.cxxflags = ["-cxxflag"]
-        cpp_info._public_deps = ["MyPkg"]
+        cpp_info.public_deps = ["MyPkg"]
         cpp_info.libdirs.extend(["Path\\with\\slashes", "regular/path/to/dir"])
         cpp_info.includedirs.extend(["other\\Path\\with\\slashes", "other/regular/path/to/dir"])
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
