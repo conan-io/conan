@@ -5,10 +5,9 @@ from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
     BINARY_BUILD
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
+from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
-from conans.model.options import OptionsValues
-from platform import node
 
 
 LOCKFILE = "conan.lock"
@@ -64,21 +63,23 @@ class GraphLockNode(object):
         self.options = options
         self.modified = modified
 
-    def locked_require_id(self, requirement):
-        return self.requires[requirement.ref.name]
-
     @staticmethod
-    def from_dict(node_json):
-        json_pref = node_json["pref"]
+    def from_dict(data):
+        """ constructs a GraphLockNode from a json like dict
+        """
+        json_pref = data["pref"]
         pref = PackageReference.loads(json_pref) if json_pref else None
-        python_requires = node_json.get("python_requires")
+        python_requires = data.get("python_requires")
         if python_requires:
             python_requires = [ConanFileReference.loads(ref) for ref in python_requires]
-        options = OptionsValues.loads(node_json["options"])
-        modified = node_json.get("modified")
+        options = OptionsValues.loads(data["options"])
+        modified = data.get("modified")
         return GraphLockNode(pref, python_requires, options, modified)
 
     def as_dict(self):
+        """ returns the object serialized as a dict of plain python types
+        that can be converted to json
+        """
         result = {}
         result["pref"] = self.pref.full_repr() if self.pref else None
         result["options"] = self.options.dumps()
@@ -109,6 +110,9 @@ class GraphLock(object):
                 self._edges[node.id] = dependencies
 
     def root_node(self):
+        """ obtain the node in the graph that is not depended by anyone else,
+        i.e. the root or downstream consumer
+        """
         total = []
         for list_ids in self._edges.values():
             total.extend(list_ids)
@@ -117,16 +121,21 @@ class GraphLock(object):
         return self._nodes[roots.pop()]
 
     @staticmethod
-    def from_dict(graph_json):
+    def from_dict(data):
+        """ constructs a GraphLock from a json like dict
+        """
         graph_lock = GraphLock()
-        for id_, node in graph_json["nodes"].items():
+        for id_, node in data["nodes"].items():
             graph_lock._nodes[id_] = GraphLockNode.from_dict(node)
-        for id_, dependencies in graph_json["edges"].items():
+        for id_, dependencies in data["edges"].items():
             graph_lock._edges[id_] = dependencies
 
         return graph_lock
 
     def as_dict(self):
+        """ returns the object serialized as a dict of plain python types
+        that can be converted to json
+        """
         result = {}
         nodes = {}
         for id_, node in self._nodes.items():
@@ -136,6 +145,11 @@ class GraphLock(object):
         return result
 
     def update_lock(self, new_lock):
+        """ update the lockfile with the contents of other one that was branched from this
+        one and had some node re-built. Only nodes marked as "modified" in the new one are
+        processed, and if the current lockfile already has it modified, it is a conflict,
+        and raise
+        """
         for id_, node in new_lock._nodes.items():
             if node.modified:
                 old_node = self._nodes[id_]
@@ -144,10 +158,15 @@ class GraphLock(object):
                 self._nodes[id_] = node
 
     def clean_modified(self):
+        """ remove all the "modified" flags from the lockfile
+        """
         for _, node in self._nodes.items():
             node.modified = False
 
     def _closure_affected(self):
+        """ returns all the IDs of the nodes that depend directly or indirectly of some
+        package marked as "modified"
+        """
         closure = set()
         current = [id_ for id_, node in self._nodes.items() if node.modified]
         # closure.update(current)
@@ -163,6 +182,9 @@ class GraphLock(object):
         return closure
 
     def _inverse_neighbors(self, node_id):
+        """ return all the nodes that have an edge to the "node_id". Useful for computing
+        the set of nodes affected downstream by a change in one package
+        """
         result = []
         for id_, nodes_ids in self._edges.items():
             if node_id in nodes_ids:
@@ -170,6 +192,10 @@ class GraphLock(object):
         return result
 
     def update_check_graph(self, deps_graph, output):
+        """ update the lockfile, checking for security that only nodes that are being built
+        from sources can change their PREF, or nodes that depend on some other "modified"
+        package, because their binary-id can change too
+        """
         affected = self._closure_affected()
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
@@ -183,6 +209,9 @@ class GraphLock(object):
                                          % (lock_node.pref.full_repr(), node.pref.full_repr()))
 
     def lock_node(self, node, requires):
+        """ apply options and constraints on requirements of a node, given the information from
+        the lockfile. Requires remove their version ranges.
+        """
         if node.recipe == RECIPE_VIRTUAL:
             return
         locked_node = self._nodes[node.id]
@@ -206,6 +235,10 @@ class GraphLock(object):
                 for i in self._edges[node_id]}
 
     def get_node(self, ref):
+        """ given a REF, return the Node of the package in the lockfile that correspond to that
+        REF, or raise if it cannot find it.
+        First, search with REF without revisions is done, then approximate search by just name
+        """
         # None reference
         if ref is None:
             try:
@@ -237,12 +270,20 @@ class GraphLock(object):
         raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_repr())
 
     def update_exported_ref(self, node_id, ref):
+        """ when the recipe is exported, it will change its reference, typically the RREV, and
+        the lockfile needs to be updated. The lockfile reference will lose PREV information and
+        be marked as modified
+        """
         lock_node = self._nodes[node_id]
         if lock_node.pref.ref != ref:
             lock_node.pref = PackageReference(ref, lock_node.pref.id)
             lock_node.modified = True
 
     def find_consumer_node(self, node, reference):
+        """ similar to get_node(), but taking into account that the consumer node can be a virtual
+        one for some cases of commands, like "conan install <ref>"
+        It will lock the found node, or raise if not found
+        """
         if node.recipe == RECIPE_VIRTUAL:
             assert reference
             node_id = self.get_node(reference)

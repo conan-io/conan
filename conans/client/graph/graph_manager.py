@@ -12,10 +12,10 @@ from conans.client.loader import ProcessedProfile
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
+from conans.model.graph_lock import GraphLock, GraphLockFile
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
-from conans.model.graph_lock import GraphLock, GraphLockFile
 
 
 class _RecipeBuildRequires(OrderedDict):
