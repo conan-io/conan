@@ -214,7 +214,7 @@ AA*: CC/1.0@private_user/channel
 
         # FIXME: Default information is duplicated in all the nodes
         dupe_nodes = ["rootpath", "includedirs", "resdirs",
-                      "bindirs", "builddirs", "filter_empty"]
+                      "bindirs", "builddirs"]
         for dupe in dupe_nodes:
             self.assertEqual(cpp_info[dupe], cpp_info_debug[dupe])
             self.assertEqual(cpp_info[dupe], cpp_info_release[dupe])

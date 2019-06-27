@@ -4,6 +4,7 @@ from collections import OrderedDict
 import deprecation
 
 from conans.errors import ConanException
+from conans.model.component import Component, DepsComponent
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -13,41 +14,183 @@ DEFAULT_SHARE = "share"
 DEFAULT_BUILD = ""
 
 
-class _CppInfo(object):
-    """ Object that stores all the necessary information to build in C/C++.
-    It is intended to be system independent, translation to
-    specific systems will be produced from this info
-    """
-    def __init__(self):
+class CppInfo(object):
+
+    def __init__(self, root_folder):
         self.name = None
-        self._system_deps = []
-        self.includedirs = []  # Ordered list of include paths
+        self.system_deps = []
+        self.includedirs = [DEFAULT_INCLUDE]  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
-        self.libdirs = []  # Directories to find libraries
-        self.resdirs = []  # Directories to find resources, data, etc
-        self.bindirs = []  # Directories to find executables and shared libs
-        self.builddirs = []
-        self.rootpaths = []
-        self._libs = []  # The libs to link against
-        self._exes = []
+        self.libdirs = [DEFAULT_LIB]  # Directories to find libraries
+        self.resdirs = [DEFAULT_RES]  # Directories to find resources, data, etc
+        self.bindirs = [DEFAULT_BIN]  # Directories to find executables and shared libs
+        self.builddirs = [DEFAULT_BUILD]
+        self.libs = []  # The libs to link against
+        self.exes = []  # The exes
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.rootpath = ""
-        self.sysroot = ""
+        self._rootpath = root_folder
+        self._sysroot = root_folder
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self._filter_empty = True
+        self._components = OrderedDict()
+        self.public_deps = []  # FIXME: Should not be part of the public interface
+        self.configs = {}    # FIXME: Should not be part of the public interface
+        self._default_values = {
+            "includedirs": [DEFAULT_INCLUDE],
+            "libdirs": [DEFAULT_LIB],
+            "bindirs": [DEFAULT_BIN],
+            "resdirs": [DEFAULT_RES],
+            "builddirs": [DEFAULT_BUILD],
+            "srcdirs": [],
+            "libs": [],
+            "exes": [],
+            "defines": [],
+            "cflags": [],
+            "cxxflags": [],
+            "sharedlinkflags": [],
+            "exelinkflags": []
+        }
+
+    @property
+    def rootpath(self):
+        return self._rootpath
+
+    @property
+    def sysroot(self):
+        return self._sysroot
+
+    # Compatibility for 'cppflags'
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0",
+                            details="Use 'cxxflags' instead")
+    def get_cppflags(self):
+        return self.cxxflags
+
+    # Compatibility for 'cppflags'
+    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0",
+                            details="Use 'cxxflags' instead")
+    def set_cppflags(self, value):
+        self.cxxflags = value
+
+    # Old style property to allow deprecation decorators
+    cppflags = property(get_cppflags, set_cppflags)
+
+    def _check_and_clear_default_values(self):
+        for dir_name in self._default_values:
+            dirs_value = getattr(self, dir_name)
+            if dirs_value is not None and dirs_value != self._default_values[dir_name]:
+                msg_template = "Using Components and global '{}' values ('{}') is not supported"
+                raise ConanException(msg_template.format(dir_name, dirs_value))
+            else:
+                self.__dict__[dir_name] = None
+
+    def __getitem__(self, key):
+        self._check_and_clear_default_values()
+        if key not in self._components:
+            self._components[key] = Component(key, self.rootpath)
+        return self._components[key]
+
+    @property
+    def components(self):
+        return self._components
+
+    def __getattr__(self, config):
+        if config not in self.configs:
+            sub_cpp_info = CppInfo(self.rootpath)
+            sub_cpp_info._filter_empty = self._filter_empty
+            self.configs[config] = sub_cpp_info
+        return self.configs[config]
+
+
+class DepCppInfo(object):
+
+    def __init__(self, cpp_info):
+        self._name = cpp_info.name
+        self._rootpath = cpp_info.rootpath
+        self._system_deps = cpp_info.system_deps
+        self._includedirs = cpp_info.includedirs
+        self._srcdirs = cpp_info.srcdirs
+        self._libdirs = cpp_info.libdirs
+        self._resdirs = cpp_info.resdirs
+        self._bindirs = cpp_info.bindirs
+        self._builddirs = cpp_info.builddirs
+        self._libs = cpp_info.libs
+        self._exes = cpp_info.exes
+        self._defines = cpp_info.defines
+        self._cflags = cpp_info.cflags
+        self._cxxflags = cpp_info.cxxflags
+        self._sharedlinkflags = cpp_info.sharedlinkflags
+        self._exelinkflags = cpp_info.exelinkflags
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None
         self._build_paths = None
         self._res_paths = None
         self._src_paths = None
-        self.version = None  # Version of the conan package
-        self.description = None  # Description of the conan package
+        self.public_deps = cpp_info.public_deps
+        self.configs = {}
         # When package is editable, filter_empty=False, so empty dirs are maintained
-        self.filter_empty = True
+        self._filter_empty = cpp_info._filter_empty
         self._components = OrderedDict()
+        for comp_name, comp_value in cpp_info.components.items():
+            self._components[comp_name] = DepsComponent(comp_value)
+        for config, sub_cpp_info in cpp_info.configs.items():
+            sub_dep_cpp_info = DepCppInfo(sub_cpp_info)
+            sub_dep_cpp_info._filter_empty = self._filter_empty
+            self.configs[config] = sub_dep_cpp_info
+
+    def __getattr__(self, config):
+        if config not in self.configs:
+            sub_dep_cpp_info = DepCppInfo(CppInfo(self.rootpath))
+            sub_dep_cpp_info._filter_empty = self._filter_empty
+            self.configs[config] = sub_dep_cpp_info
+        return self.configs[config]
+
+    def __getitem__(self, key):
+        return self._components[key]
+
+    def _filter_paths(self, paths):
+        abs_paths = [os.path.join(self.rootpath, p) for p in paths]
+        if self._filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
+
+    def _get_paths(self, path_name):
+        """
+        Get the absolute paths either composing the lists from components or from the global
+        variables. Also filter the values checking if the folders exist or not and avoid repeated
+        values.
+        :param path_name: name of the path variable to get (include_paths, res_paths...)
+        :return: List of absolute paths
+        """
+        result = []
+
+        if self._components:
+            for dep_value in self._sorted_components:
+                abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
+                for path in abs_paths:
+                    if path not in result:
+                        result.append(path)
+        else:
+            result = self._filter_paths(getattr(self, "_%sdirs" % path_name))
+        return result
+
+    def _get_flags(self, name):
+        if self._components:
+            result = []
+            for component in self._sorted_components:
+                items = getattr(component, name)
+                if items:
+                    for item in items:
+                        if item and item not in result:
+                            result.extend(item)
+            return result
+        else:
+            return getattr(self, "_%s" % name)
 
     @property
     def _sorted_components(self):
@@ -71,41 +214,16 @@ class _CppInfo(object):
         return ordered.values()
 
     @property
-    def libs(self):
-        if self._components:
-            result = []
-            for component in self._sorted_components:
-                for sys_dep in component.system_deps:
-                    if sys_dep and sys_dep not in result:
-                        result.append(sys_dep)
-                if component.lib:
-                    result.append(component.lib)
-            return result
-        else:
-            return self._libs
-
-    @libs.setter
-    def libs(self, libs):
-        assert isinstance(libs, list), "'libs' attribute should be a list of strings"
-        if self._components:
-            raise ConanException("Setting first level libs is not supported when Components are "
-                                 "already in use")
-        self._libs = libs
+    def name(self):
+        return self._name
 
     @property
-    def exes(self):
-        if self._components:
-            return [component.exe for component in self._sorted_components if component.exe]
-        else:
-            return self._exes
+    def rootpath(self):
+        return self._rootpath
 
-    @exes.setter
-    def exes(self, exes):
-        assert isinstance(exes, list), "'exes' attribute should be a list of strings"
-        if self._components:
-            raise ConanException("Setting first level exes is not supported when Components are "
-                                 "already in use")
-        self._exes = exes
+    @property
+    def sysroot(self):
+        return self._rootpath
 
     @property
     def system_deps(self):
@@ -119,51 +237,6 @@ class _CppInfo(object):
             return result
         else:
             return self._system_deps
-
-    @system_deps.setter
-    def system_deps(self, system_deps):
-        assert isinstance(system_deps, list), "'system_deps' attribute should be a list of strings"
-        if self._components:
-            raise ConanException("Setting first level system_deps is not supported when Components "
-                                 "are already in use")
-        self._system_deps = system_deps
-
-    def __getitem__(self, key):
-        """
-        This is called when the user accesses to a component: self.cpp_info["whatever"]
-        """
-        if self._libs:
-            raise ConanException("Usage of Components with '.libs' values is not allowed")
-        if key not in self._components.keys():
-            self._components[key] = Component(self, key)
-        return self._components[key]
-
-    def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self.rootpath, p) for p in paths]
-        if self.filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
-        else:
-            return abs_paths
-
-    def _get_paths(self, path_name):
-        """
-        Get the absolute paths either composing the lists from components or from the global
-        variables. Also filter the values checking if the folders exist or not and avoid repeated
-        values.
-        :param path_name: name of the path variable to get (include_paths, res_paths...)
-        :return: List of absolute paths
-        """
-        result = []
-
-        if self._components:
-            for dep_value in self._sorted_components:
-                abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
-                for path in abs_paths:
-                    if path not in result:
-                        result.append(path)
-        else:
-            result = self._filter_paths(getattr(self, "%sdirs" % path_name))
-        return result
 
     @property
     def include_paths(self):
@@ -201,224 +274,59 @@ class _CppInfo(object):
             self._res_paths = self._get_paths("res")
         return self._res_paths
 
-    # Compatibility for 'cppflags' (old style property to allow decoration)
+    @property
+    def libs(self):
+        if self._components:
+            result = []
+            for component in self._sorted_components:
+                for sys_dep in component.system_deps:
+                    if sys_dep and sys_dep not in result:
+                        result.append(sys_dep)
+                if component.lib:
+                    result.append(component.lib)
+            return result
+        else:
+            return self._libs
+
+    @property
+    def exes(self):
+        if self._components:
+            return [component.exe for component in self._sorted_components if component.exe]
+        else:
+            return self._exes
+
+    @property
+    def defines(self):
+        return self._get_flags("defines")
+
+    @property
+    def cflags(self):
+        return self._get_flags("cflags")
+
+    @property
+    def cxxflags(self):
+        return self._get_flags("cxxflags")
+
+    @property
+    def sharedlinkflags(self):
+        return self._get_flags("sharedlinkflags")
+
+    @property
+    def exelinkflags(self):
+        return self._get_flags("exelinkflags")
+
+    # Compatibility for 'cppflags'
+    @property
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
-    def get_cppflags(self):
+    def cppflags(self):
         return self.cxxflags
-
-    @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
-    def set_cppflags(self, value):
-        self.cxxflags = value
-
-    cppflags = property(get_cppflags, set_cppflags)
-
-
-class CppInfo(_CppInfo):
-    """ Build Information declared to be used by the CONSUMERS of a
-    conans. That means that consumers must use this flags and configs i order
-    to build properly.
-    Defined in user CONANFILE, directories are relative at user definition time
-    """
-    def __init__(self, root_folder):
-        super(CppInfo, self).__init__()
-        self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self._default_dirs_values = {
-            "includedirs": [DEFAULT_INCLUDE],
-            "libdirs": [DEFAULT_LIB],
-            "bindirs": [DEFAULT_BIN],
-            "resdirs": [DEFAULT_RES],
-            "builddirs": [DEFAULT_BUILD],
-            "srcdirs": []
-        }
-        self.includedirs.extend(self._default_dirs_values["includedirs"])
-        self.libdirs.extend(self._default_dirs_values["libdirs"])
-        self.bindirs.extend(self._default_dirs_values["bindirs"])
-        self.resdirs.extend(self._default_dirs_values["resdirs"])
-        self.builddirs.extend(self._default_dirs_values["builddirs"])
-        # public_deps is needed to accumulate list of deps for cmake targets
-        self.public_deps = []
-        self.configs = {}
-
-    def _check_and_clear_dirs_values(self):
-        for dir_name in self._default_dirs_values:
-            dirs_value = getattr(self, dir_name)
-            if dirs_value is not None and dirs_value != self._default_dirs_values[dir_name]:
-                msg_template = "Using Components and global '{}' values ('{}') is not supported"
-                raise ConanException(msg_template.format(dir_name, dirs_value))
-            else:
-                self.__dict__[dir_name] = None
-
-    def __getitem__(self, key):
-        if self._libs or self._exes:
-            raise ConanException("Usage of Components with '.libs' or '.exes' values is not allowed")
-        self._check_and_clear_dirs_values()
-        if key not in self._components:
-            self._components[key] = Component(key, self.rootpath)
-        return self._components[key]
 
     @property
     def components(self):
         return self._components
 
-    def __getattr__(self, config):
 
-        def _get_cpp_info():
-            result = _CppInfo()
-            result.rootpath = self.rootpath
-            result.sysroot = self.sysroot
-            result.includedirs.extend(self._default_dirs_values["includedirs"])
-            result.libdirs.extend(self._default_dirs_values["libdirs"])
-            result.bindirs.extend(self._default_dirs_values["bindirs"])
-            result.resdirs.extend(self._default_dirs_values["resdirs"])
-            result.builddirs.extend(self._default_dirs_values["builddirs"])
-            return result
-
-        return self.configs.setdefault(config, _get_cpp_info())
-
-
-class Component(object):
-
-    def __init__(self, name, root_folder):
-        self._rootpath = root_folder
-        self.name = name
-        self.deps = []
-        self._lib = None
-        self._exe = None
-        self.system_deps = []
-        self.includedirs = [DEFAULT_INCLUDE]
-        self.libdirs = [DEFAULT_LIB]
-        self.resdirs = [DEFAULT_RES]
-        self.bindirs = [DEFAULT_BIN]
-        self.builddirs = [DEFAULT_BUILD]
-        self.srcdirs = []
-        self.defines = []
-        self.cflags = []
-        self.cxxflags = []
-        self.sharedlinkflags = []
-        self.exelinkflags = []
-        self._filter_empty = True
-
-    def as_dict(self):
-        result = {}
-        for key, value in vars(self).items():
-            if key.startswith("_"):
-                continue
-            result[key] = value
-        result["lib"] = self.lib
-        result["exe"] = self.exe
-        return result
-
-    def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self._rootpath, p) for p in paths]
-        if self._filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
-        else:
-            return abs_paths
-
-    @property
-    def lib(self):
-        return self._lib
-
-    @lib.setter
-    def lib(self, name):
-        assert isinstance(name, str), "'lib' attribute should be a string"
-        if self._exe:
-            raise ConanException("'.exe' is already set for this Component")
-        self._lib = name
-
-    @property
-    def exe(self):
-        return self._exe
-
-    @exe.setter
-    def exe(self, name):
-        assert isinstance(name, str), "'exe' attribute should be a string"
-        if self._lib:
-            raise ConanException("'.lib' is already set for this Component")
-        self._exe = name
-
-    @property
-    def include_paths(self):
-        return self._filter_paths(self.includedirs)
-
-    @property
-    def lib_paths(self):
-        return self._filter_paths(self.libdirs)
-
-    @property
-    def bin_paths(self):
-        return self._filter_paths(self.bindirs)
-
-    @property
-    def build_paths(self):
-        return self._filter_paths(self.builddirs)
-
-    @property
-    def res_paths(self):
-        return self._filter_paths(self.resdirs)
-
-    @property
-    def src_paths(self):
-        return self._filter_paths(self.srcdirs)
-
-
-class _BaseDepsCppInfo(_CppInfo):
-
-    def __init__(self):
-        super(_BaseDepsCppInfo, self).__init__()
-
-    def update(self, dep_cpp_info):
-
-        def merge_lists(seq1, seq2):
-            return [s for s in seq1 if s not in seq2] + seq2
-
-        self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
-        self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
-        self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
-        self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
-        self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
-        self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
-        self.libs = merge_lists(self.libs, dep_cpp_info.libs)
-        self.exes = merge_lists(self.exes, dep_cpp_info.exes)
-        self.rootpaths.append(dep_cpp_info.rootpath)
-
-        # Note these are in reverse order
-        self.defines = merge_lists(dep_cpp_info.defines, self.defines)
-        self.cxxflags = merge_lists(dep_cpp_info.cxxflags, self.cxxflags)
-        self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
-        self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
-        self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
-        self.system_deps = merge_lists(dep_cpp_info.system_deps, self.system_deps)
-
-        if not self.sysroot:
-            self.sysroot = dep_cpp_info.sysroot
-
-    @property
-    def include_paths(self):
-        return self.includedirs
-
-    @property
-    def lib_paths(self):
-        return self.libdirs
-
-    @property
-    def src_paths(self):
-        return self.srcdirs
-
-    @property
-    def bin_paths(self):
-        return self.bindirs
-
-    @property
-    def build_paths(self):
-        return self.builddirs
-
-    @property
-    def res_paths(self):
-        return self.resdirs
-
-
-class DepsCppInfo(_BaseDepsCppInfo):
+class DepsCppInfo(object):
     """ Build Information necessary to build a given conans. It contains the
     flags, directories and options if its dependencies. The conans CONANFILE
     should use these flags to pass them to the underlaying build system (Cmake, make),
@@ -426,12 +334,13 @@ class DepsCppInfo(_BaseDepsCppInfo):
     """
 
     def __init__(self):
-        super(DepsCppInfo, self).__init__()
         self._dependencies = OrderedDict()
         self.configs = {}
 
     def __getattr__(self, config):
-        return self.configs.setdefault(config, _BaseDepsCppInfo())
+        if config not in self.configs:  #FIXME: Fo we want to support this? try removing
+            self.configs[config] = DepsCppInfo()
+        return self.configs[config]
 
     @property
     def dependencies(self):
@@ -444,15 +353,98 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __getitem__(self, item):
         return self._dependencies[item]
 
-    def update(self, dep_cpp_info, pkg_name):
-        assert isinstance(dep_cpp_info, CppInfo)
+    def update(self, cpp_info, pkg_name):
+        assert isinstance(cpp_info, CppInfo)
+        self.update_dep_cpp_info(DepCppInfo(cpp_info), pkg_name)
+
+    def update_dep_cpp_info(self, dep_cpp_info, pkg_name):
+        assert isinstance(dep_cpp_info, DepCppInfo)
+        print("CONFIGS: ", dep_cpp_info.configs)
         self._dependencies[pkg_name] = dep_cpp_info
-        super(DepsCppInfo, self).update(dep_cpp_info)
-        for config, cpp_info in dep_cpp_info.configs.items():
-            self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
+        if dep_cpp_info.configs:
+            for config, sub_dep_cpp_info in dep_cpp_info.configs.items():
+                if config not in self.configs:
+                    self.configs[config] = DepsCppInfo()
+                self.configs[config].update_dep_cpp_info(sub_dep_cpp_info, pkg_name)
 
-    def update_deps_cpp_info(self, dep_cpp_info):
-        assert isinstance(dep_cpp_info, DepsCppInfo)
-        for pkg_name, cpp_info in dep_cpp_info.dependencies:
-            self.update(cpp_info, pkg_name)
+    @property
+    def system_deps(self):
+        return self._get_global("system_deps")
 
+    @property
+    def include_paths(self):
+        return self._get_global("include_paths")
+
+    @property
+    def lib_paths(self):
+        return self._get_global("lib_paths")
+
+    @property
+    def src_paths(self):
+        return self._get_global("src_paths")
+
+    @property
+    def bin_paths(self):
+        return self._get_global("bin_paths")
+
+    @property
+    def build_paths(self):
+        return self._get_global("build_paths")
+
+    @property
+    def res_paths(self):
+        return self._get_global("res_paths")
+
+    @property
+    def libs(self):
+        return self._get_global("libs")
+
+    @property
+    def exes(self):
+        return self._get_global("exes")
+
+    @property
+    def defines(self):
+        return self._get_global("defines")
+
+    @property
+    def cflags(self):
+        return self._get_global("cflags")
+
+    @property
+    def cxxflags(self):
+        return self._get_global("cxxflags")
+
+    @property
+    def sharedlinkflags(self):
+        return self._get_global("sharedlinkflags")
+
+    @property
+    def exelinkflags(self):
+        return self._get_global("exelinkflags")
+
+    @property
+    def sysroot(self):
+        result = ""
+        if self.dependencies:
+            last_dep_name, last_dep = list(self.dependencies)[-1]
+            if last_dep:
+                result = last_dep.sysroot
+        return result
+
+    @property
+    def rootpath(self):
+        result = ""
+        if self.dependencies:
+            last_dep_name, last_dep = list(self.dependencies)[-1]
+            if last_dep:
+                result = last_dep.rootpath
+        return result
+
+    def _get_global(self, name):
+        result = []
+        for dep_cpp_info in self._dependencies.values():
+            for item in getattr(dep_cpp_info, name, []):
+                if item not in result:
+                    result.append(item)
+        return result
