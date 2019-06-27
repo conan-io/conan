@@ -6,6 +6,7 @@ from collections import defaultdict, namedtuple
 from conans.client.generators import TXTGenerator
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo, Component, DepCppInfo
+from conans.model.build_info_components import DepComponent
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.deprecation import catch_deprecation_warning
@@ -516,3 +517,36 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual(["bin"], deps_cpp_info.bindirs)
         self.assertEqual([""], deps_cpp_info.builddirs)
         self.assertEqual(["res"], deps_cpp_info.resdirs)
+
+    def components_json_test(self):
+        component = Component("com1", "folder")
+        component._filter_empty = False
+        dep_component = DepComponent(component)
+        expected = {"name": "com1",
+                    "rootpath": "folder",
+                    "deps": [],
+                    "lib": None,
+                    "exe": None,
+                    "system_deps": [],
+                    "includedirs": ["include"],
+                    "srcdirs": [],
+                    "libdirs": ["lib"],
+                    "bindirs": ["bin"],
+                    "builddirs": [""],
+                    "resdirs": ["res"],
+                    "defines": [],
+                    "cflags": [],
+                    "cxxflags": [],
+                    "sharedlinkflags": [],
+                    "exelinkflags": []
+                    }
+        self.assertEqual(expected, component.as_dict())
+        expected.update({
+            "include_paths": [os.path.join("folder", "include")],
+            "src_paths": [],
+            "lib_paths": [os.path.join("folder", "lib")],
+            "bin_paths": [os.path.join("folder", "bin")],
+            "build_paths": [os.path.join("folder", "")],
+            "res_paths": [os.path.join("folder", "res")],
+        })
+        self.assertEqual(expected, dep_component.as_dict())

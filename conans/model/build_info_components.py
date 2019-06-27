@@ -35,12 +35,10 @@ class Component(object):
 
     def as_dict(self):
         result = {}
-        for key, value in vars(self).items():
-            if key.startswith("_"):
-                continue
-            result[key] = value
-        result["lib"] = self.lib
-        result["exe"] = self.exe
+        for name in ["name", "rootpath", "deps", "lib", "exe", "system_deps",
+                     "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
+                     "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags"]:
+            result[name] = getattr(self, name)
         return result
 
     @property
@@ -74,7 +72,7 @@ class Component(object):
         self._exe = name
 
 
-class DepsComponent(object):
+class DepComponent(object):
 
     def __init__(self, component):
         self._rootpath = component.rootpath
@@ -94,7 +92,7 @@ class DepsComponent(object):
         self._cxxflags = component.cxxflags
         self._sharedlinkflags = component.sharedlinkflags
         self._exelinkflags = component.exelinkflags
-        self._filter_empty = True
+        self._filter_empty = component._filter_empty
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self._rootpath, p) for p in paths]
@@ -106,6 +104,10 @@ class DepsComponent(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def rootpath(self):
+        return self._rootpath
 
     @property
     def deps(self):
@@ -192,12 +194,10 @@ class DepsComponent(object):
         return self._exelinkflags
 
     def as_dict(self):
-        # FIXME: Include properties
         result = {}
-        for key, value in vars(self).items():
-            if key.startswith("_"):
-                continue
-            result[key] = value
-        result["lib"] = self.lib
-        result["exe"] = self.exe
+        for name in ["name", "rootpath", "deps", "lib", "exe", "system_deps",
+                     "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
+                     "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
+                     "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags"]:
+            result[name] = getattr(self, name)
         return result

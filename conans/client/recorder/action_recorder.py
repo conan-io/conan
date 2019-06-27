@@ -22,33 +22,6 @@ INSTALL_ERROR_MISSING_BUILD_FOLDER = "missing_build_folder"
 INSTALL_ERROR_BUILDING = "building"
 
 
-def _cpp_info_to_dict(cpp_info):
-    doc = {}
-    items = list(vars(cpp_info).items())
-    if not cpp_info._components:
-        items = items + [("libs", cpp_info.libs), ("exes", cpp_info.exes),
-                         ("system_deps", cpp_info.system_deps)]
-    for key, value in items:
-        if key.startswith("_components") and value:
-            doc["components"] = {}
-            for comp_key, comp_value in value.items():
-                doc["components"][comp_key] = comp_value.as_dict()
-                continue
-
-        if key.startswith("_") or not value:
-            continue
-
-        if key == "configs":
-            configs_data = {}
-            for cfg_name, cfg_cpp_info in value.items():
-                configs_data[cfg_name] = _cpp_info_to_dict(cfg_cpp_info)
-            doc["configs"] = configs_data
-            continue
-
-        doc[key] = value
-    return doc
-
-
 class Action(namedtuple("Action", "type, full_ref, doc, time")):
 
     def __new__(cls, the_type, full_ref, doc=None):
@@ -122,7 +95,7 @@ class ActionRecorder(object):
     def package_cpp_info(self, pref, cpp_info):
         assert isinstance(pref, PackageReference)
         # assert isinstance(cpp_info, CppInfo)
-        self._inst_packages_info[pref.copy_clear_revs()]['cpp_info'] = _cpp_info_to_dict(cpp_info)
+        self._inst_packages_info[pref.copy_clear_revs()]['cpp_info'] = cpp_info.as_dict()
 
     @property
     def install_errored(self):

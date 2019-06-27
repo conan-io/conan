@@ -17,25 +17,27 @@ class JsonTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = ref.name
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
-        cpp_info.version = "1.3"
-        cpp_info.description = "My cool description"
+        cpp_info._version = "1.3"
+        cpp_info._description = "My cool description"
 
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]
-        cpp_info.version = "2.3"
+        cpp_info._version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
         cpp_info.sharedlinkflags = ["-sharedlinkflag"]
         cpp_info.cxxflags = ["-cxxflag"]
-        cpp_info.public_deps = ["MyPkg"]
+        cpp_info._public_deps = ["MyPkg"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = JsonGenerator(conanfile)
         json_out = generator.content
 
         parsed = json.loads(json_out)
+        print(parsed)
         dependencies = parsed["dependencies"]
         self.assertEqual(len(dependencies), 2)
         my_pkg = dependencies[0]

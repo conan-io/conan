@@ -4,7 +4,7 @@ from collections import OrderedDict
 import deprecation
 
 from conans.errors import ConanException
-from conans.model.component import Component, DepsComponent
+from conans.model.build_info_components import Component, DepComponent
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -118,6 +118,21 @@ class CppInfo(object):
             self.configs[config] = sub_cpp_info
         return self.configs[config]
 
+    def as_dict(self):
+        result = {}
+        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes",
+                     "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
+                     "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]:
+            attr_name = "cxxflags" if name == "cppflags" else name  # Backwards compatibility
+            result[name] = getattr(self, attr_name)
+        result["components"] = {}
+        for name, component in self.components.items():
+            result["components"][name] = component.as_dict()
+        result["configs"] = {}
+        for config, cpp_info in self.configs.items():
+            result["configs"][config] = cpp_info.as_dict()
+        return result
+
 
 class DepCppInfo(object):
 
@@ -152,7 +167,7 @@ class DepCppInfo(object):
         self._filter_empty = cpp_info._filter_empty
         self._components = OrderedDict()
         for comp_name, comp_value in cpp_info.components.items():
-            self._components[comp_name] = DepsComponent(comp_value)
+            self._components[comp_name] = DepComponent(comp_value)
         for config, sub_cpp_info in cpp_info.configs.items():
             sub_dep_cpp_info = DepCppInfo(sub_cpp_info)
             sub_dep_cpp_info._filter_empty = self._filter_empty
@@ -247,6 +262,10 @@ class DepCppInfo(object):
     @property
     def version(self):
         return self._version
+
+    @property
+    def description(self):
+        return self._description
 
     @property
     def public_deps(self):
@@ -384,6 +403,22 @@ class DepCppInfo(object):
     def components(self):
         return self._components
 
+    def as_dict(self):
+        result = {}
+        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes",
+                     "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
+                     "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
+                     "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]:
+            attr_name = "cxxflags" if name == "cppflags" else name  # Backwards compatibility
+            result[name] = getattr(self, attr_name)
+        result["components"] = {}
+        for name, component in self.components.items():
+            result["components"][name] = component.as_dict()
+        result["configs"] = {}
+        for config, dep_cpp_info in self.configs.items():
+            result["configs"][config] = dep_cpp_info.as_dict()
+        return result
+
 
 class DepsCppInfo(object):
     """ Build Information necessary to build a given conans. It contains the
@@ -507,22 +542,15 @@ class DepsCppInfo(object):
 
     @property
     def sysroot(self):
-        result = ""
-        if self.dependencies:
-            last_dep_name, last_dep = list(self.dependencies)[-1]
-            if last_dep:
-                result = last_dep.sysroot
-        return result
+        # FIXME: Makes no sense
+        return self.rootpath
 
     @property
     def rootpath(self):
-        # TODO: needed?
-        result = ""
-        if self.dependencies:
-            last_dep_name, last_dep = list(self.dependencies)[-1]
-            if last_dep:
-                result = last_dep.rootpath
-        return result
+        # FIXME: Makes no sense
+        if self.rootpaths:
+            return self.rootpaths[-1]
+        return ""
 
     @property
     def rootpaths(self):
