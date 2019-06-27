@@ -178,7 +178,7 @@ class RestV1Methods(RestCommonMethods):
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
             downloader.download(resource_url, abs_path, auth=auth)
-            if self._output:
+            if self._output and not self._output.is_terminal:
                 self._output.writeln("")
             ret[filename] = abs_path
         return ret
