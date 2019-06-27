@@ -24,14 +24,16 @@ class GraphLockFile(object):
     def load(path):
         if not path:
             raise IOError("Invalid path")
-        p = os.path.join(path, LOCKFILE)
-        if not os.path.isfile(p):
-            raise ConanException("Missing conan.lock file: %s" % p)
-        content = load(p)
+        if not os.path.isfile(path):
+            p = os.path.join(path, LOCKFILE)
+            if not os.path.isfile(p):
+                raise ConanException("Missing lockfile in: %s" % path)
+            path = p
+        content = load(path)
         try:
             return GraphLockFile.loads(content)
         except Exception as e:
-            raise ConanException("Error parsing lockfile '{}': {}".format(p, e))
+            raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
     @staticmethod
     def loads(text):
@@ -43,11 +45,11 @@ class GraphLockFile(object):
         graph_lock_file = GraphLockFile(profile, graph_lock)
         return graph_lock_file
 
-    def save(self, folder):
-        filename = LOCKFILE
-        p = os.path.join(folder, filename)
+    def save(self, path):
+        if not path.endswith(".lock"):
+            path = os.path.join(path, LOCKFILE)
         serialized_graph_str = self.dumps()
-        save(p, serialized_graph_str)
+        save(path, serialized_graph_str)
 
     def dumps(self):
         result = {"profile": self.profile.dumps(),

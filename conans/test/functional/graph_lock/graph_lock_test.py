@@ -14,7 +14,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": str(TestConanFile("PkgA", "0.1"))})
         client.run("install . --lockfile", assert_error=True)
-        self.assertIn("ERROR: Missing conan.lock file", client.out)
+        self.assertIn("ERROR: Missing lockfile in", client.out)
 
 
 class GraphLockVersionRangeTest(unittest.TestCase):
@@ -22,6 +22,8 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     pkg_b_revision = "180919b324d7823f2683af9381d11431"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
     pkg_b_package_revision = "#2913f67cea630aee496fe70fd38b5b0f"
+    modified_pkg_b_revision = "e161d0bf1cd009d1815961619854119d"
+    modified_pkg_b_package_revision = "#a986ef401af61f8fc9f32695f475123e"
     graph_lock_command = "install ."
 
     def setUp(self):
@@ -107,12 +109,20 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
+        # Same, but modifying also PkgB Recipe
+        client.save({"conanfile.py": str(self.consumer) + "\n#comment"})
+        client.run("export-pkg . PkgB/0.1@user/channel --lockfile --force")
+        self._check_lock("PkgB/0.1@user/channel#%s" % self.modified_pkg_b_revision,
+                         self.modified_pkg_b_package_revision)
+
 
 class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
     consumer = TestConanFile("PkgB", "0.1", build_requires=["PkgA/[>=0.1]@user/channel"])
     pkg_b_revision = "4e4df18e796d2a1bfc7bbce7f8865ecd"
     pkg_b_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
     pkg_b_package_revision = "#4d2f336ae4c2979e2e56d28aed4c2ebb"
+    modified_pkg_b_revision = "e171fce5bb7af66e2315f78ea104c638"
+    modified_pkg_b_package_revision = "#7e88c21f05a1fd1f8529e7fad0d7a2e3"
 
 
 class GraphLockVersionRangeInfoTest(GraphLockVersionRangeTest):
@@ -201,7 +211,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client = self.client
         # Necessary to clean previous revision
         client.run("remove * -f")
-        client.run("export-pkg . PkgB/0.1@user/channel --install-folder=. --lockfile")
+        client.run("export-pkg . PkgB/0.1@user/channel --lockfile")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 

@@ -37,13 +37,16 @@ class GraphLockCITest(unittest.TestCase):
         client.save({"conanfile.py": conanfile.format(requires=""),
                      "myfile.txt": "HelloA"})
         client.run("create . PkgA/0.1@user/channel")
-        client.save({"conanfile.py": conanfile.format(requires='requires = "PkgA/0.1@user/channel"'),
+        client.save({"conanfile.py": conanfile.format(
+            requires='requires = "PkgA/0.1@user/channel"'),
                      "myfile.txt": "HelloB"})
         client.run("create . PkgB/0.1@user/channel")
-        client.save({"conanfile.py": conanfile.format(requires='requires = "PkgB/0.1@user/channel"'),
+        client.save({"conanfile.py": conanfile.format(
+            requires='requires = "PkgB/0.1@user/channel"'),
                      "myfile.txt": "HelloC"})
         client.run("create . PkgC/0.1@user/channel")
-        client.save({"conanfile.py": conanfile.format(requires='requires = "PkgC/0.1@user/channel"'),
+        client.save({"conanfile.py": conanfile.format(
+            requires='requires = "PkgC/0.1@user/channel"'),
                      "myfile.txt": "HelloD"})
         client.run("create . PkgD/0.1@user/channel")
         self.assertIn("PkgD/0.1@user/channel: SELF FILE: HelloD", client.out)
@@ -55,7 +58,7 @@ class GraphLockCITest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
         # FIXME: We need to do this with info, to avoid installing the binaries when we want info
-        client.run("info PkgD/0.1@user/channel -if=.")
+        client.run("graph lock PkgD/0.1@user/channel")
         lock_file = load(os.path.join(client.current_folder, LOCKFILE))
         initial_lock_file = lock_file
         self.assertIn("PkgB/0.1@user/channel#c51f99a8622d6c837cd9dcd2595e43e4:"
@@ -177,7 +180,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         # FIXME: We need to do this with info, to avoid installing the binaries when we want info
-        client.run("info PkgD/0.1@user/channel -if=.")
+        client.run("graph lock PkgD/0.1@user/channel")
         lock_file = load(os.path.join(client.current_folder, LOCKFILE))
         initial_lock_file = lock_file
         self.assertIn("PkgB/0.1@user/channel", lock_file)
@@ -278,20 +281,23 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel: BUILDING WITH OPTION: 5!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
-        client2.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"')})
+        client2.save({"conanfile.py": conanfile.format(
+            requires='requires="PkgA/0.1@user/channel"')})
         client2.run("create . PkgB/0.1@user/channel --lockfile")
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgB/0.1@user/channel: BUILDING WITH OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
-        client2.save({"conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"')})
+        client2.save({"conanfile.py": conanfile.format(
+            requires='requires="PkgB/0.1@user/channel"')})
         client2.run("create . PkgC/0.1@user/channel --lockfile")
         self.assertIn("PkgC/0.1@user/channel: PACKAGE_INFO OPTION: 3!!", client2.out)
         self.assertIn("PkgC/0.1@user/channel: BUILDING WITH OPTION: 3!!", client2.out)
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
-        client2.save({"conanfile.py": conanfile.format(requires='requires="PkgC/0.1@user/channel"')})
+        client2.save({"conanfile.py": conanfile.format(
+            requires='requires="PkgC/0.1@user/channel"')})
         client2.run("create . PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgD/0.1@user/channel: PACKAGE_INFO OPTION: 2!!", client2.out)
         self.assertIn("PkgD/0.1@user/channel: BUILDING WITH OPTION: 2!!", client2.out)

@@ -424,7 +424,9 @@ class Command(object):
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
-
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                            help='Use this directory as the directory where to put the generator'
+                                 'files. e.g., conaninfo/conanbuildinfo.txt')
         _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
@@ -566,6 +568,12 @@ class Command(object):
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                            "files (from a previous conan install execution). Defaulted to "
+                            "current folder, unless --profile, -s or -o is specified. If you "
+                            "specify both install-folder and any setting/option "
+                            "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
@@ -869,7 +877,8 @@ class Command(object):
                             help='Path to a json file where the install information will be '
                             'written')
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Use lockfile. Lockfile will be updated")
+                            help="Path to lockfile. Lockfile will be updated with "
+                            "the exported package")
 
         args = parser.parse_args(*args)
 
@@ -918,7 +927,8 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Use lockfile. Lockfile will be updated")
+                            help="Path to lockfile. Lockfile will be updated with "
+                            "the exported package")
 
         args = parser.parse_args(*args)
         self._warn_python2()
@@ -1592,6 +1602,9 @@ class Command(object):
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
         _add_common_install_arguments(install_parser, build_help=_help_build_policies)
+        install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                                    help="Folder where the workspace files will be created"
+                                         " (default to current working directory)")
 
         args = parser.parse_args(*args)
 
@@ -1660,23 +1673,28 @@ class Command(object):
 
         # create the parser for the "a" command
         merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
-        merge_cmd.add_argument('old_lockfile', help='previous lockfile folder')
-        merge_cmd.add_argument('new_lockfile', help='modified lockfile folder')
+        merge_cmd.add_argument('old_lockfile', help='path to previous lockfile')
+        merge_cmd.add_argument('new_lockfile', help='path to modified lockfile')
 
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile folder')
-        build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?", help="nodes to build")
+        build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?",
+                                     help="nodes to build")
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
         clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
         clean_cmd.add_argument('lockfile', help='lockfile folder')
 
-        lock_cmd = subparsers.add_parser('lock', help='create a lock file')
+        lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                               " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                               "./my_project/conanfile.txt. It could also be a reference")
-        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source")
+        lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
+                              help="Path to lockfile to be created. If not specified 'conan.lock'"
+                              " will be created in current folder")
+        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source",
+                                      lockfile=False)
 
         args = parser.parse_args(*args)
         self._warn_python2()
@@ -1699,7 +1717,7 @@ class Command(object):
                                     env=args.env,
                                     profile_names=args.profile,
                                     update=args.update,
-                                    install_folder=args.install_folder,
+                                    lockfile=args.lockfile,
                                     build=args.build)
 
     def _show_help(self):
@@ -1880,7 +1898,7 @@ def _add_manifests_arguments(parser):
                         action=OnceArgument)
 
 
-def _add_common_install_arguments(parser, build_help):
+def _add_common_install_arguments(parser, build_help, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
@@ -1898,10 +1916,9 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
-    parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                        help='Origin and destination of conan generated files')
-    parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                        help="Use lockfile. Lockfile will be updated")
+    if lockfile:
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Path to lockfile. Lockfile can be updated if packages change")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

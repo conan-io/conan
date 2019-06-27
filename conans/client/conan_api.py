@@ -59,7 +59,7 @@ from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.graph_lock import GraphLockFile
+from conans.model.graph_lock import GraphLockFile, LOCKFILE
 
 
 default_manifest_folder = '.conan_manifests'
@@ -369,7 +369,7 @@ class ConanAPIV1(object):
                    test_build_folder, test_folder, conanfile_path)
 
             if lockfile:
-                graph_info.save(lockfile)
+                graph_info.save_lock(lockfile)
             return recorder.get_info(self._cache.config.revisions_enabled)
 
         except ConanException as exc:
@@ -1247,8 +1247,8 @@ class ConanAPIV1(object):
 
     @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
-                    profile_names=None, update=False, install_folder=None, build=None,):
-        reference, graph_info = self._info_args(reference, install_folder, profile_names,
+                    profile_names=None, update=False, lockfile=None, build=None,):
+        reference, graph_info = self._info_args(reference, None, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
         remotes = self._cache.registry.load_remotes()
@@ -1259,9 +1259,9 @@ class ConanAPIV1(object):
                                                        False, remotes, recorder)
 
         print_graph(deps_graph, self._user_io.out)
-        output_folder = _make_abs_path(install_folder)
-        graph_info.save(output_folder)
-        self._user_io.out.info("Generated graphinfo and lockfile")
+        lockfile = _make_abs_path(lockfile)
+        graph_info.save_lock(lockfile)
+        self._user_io.out.info("Generated lockfile")
 
 
 Conan = ConanAPIV1
@@ -1277,6 +1277,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
             graph_info = GraphInfo()
             root_ref = ConanFileReference(name, version, user, channel, validate=False)
             graph_info.root = root_ref
+        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile)
         graph_info.profile = graph_lock_file.profile
         graph_info.profile.process_settings(cache, preprocess=False)
