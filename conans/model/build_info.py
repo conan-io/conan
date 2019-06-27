@@ -404,83 +404,83 @@ class DepsCppInfo(object):
 
     @property
     def includedirs(self):
-        return self._get_global("includedirs")
+        return self._get_global_list("includedirs")
 
     @property
     def srcdirs(self):
-        return self._get_global("srcdirs")
+        return self._get_global_list("srcdirs")
 
     @property
     def libdirs(self):
-        return self._get_global("libdirs")
+        return self._get_global_list("libdirs")
 
     @property
     def bindirs(self):
-        return self._get_global("bindirs")
+        return self._get_global_list("bindirs")
 
     @property
     def builddirs(self):
-        return self._get_global("builddirs")
+        return self._get_global_list("builddirs")
 
     @property
     def resdirs(self):
-        return self._get_global("resdirs")
+        return self._get_global_list("resdirs")
 
     @property
     def system_deps(self):
-        return self._get_global("system_deps")
+        return self._get_global_list("system_deps")
 
     @property
     def include_paths(self):
-        return self._get_global("include_paths")
+        return self._get_global_list("include_paths")
 
     @property
     def lib_paths(self):
-        return self._get_global("lib_paths")
+        return self._get_global_list("lib_paths")
 
     @property
     def src_paths(self):
-        return self._get_global("src_paths")
+        return self._get_global_list("src_paths")
 
     @property
     def bin_paths(self):
-        return self._get_global("bin_paths")
+        return self._get_global_list("bin_paths")
 
     @property
     def build_paths(self):
-        return self._get_global("build_paths")
+        return self._get_global_list("build_paths")
 
     @property
     def res_paths(self):
-        return self._get_global("res_paths")
+        return self._get_global_list("res_paths")
 
     @property
     def libs(self):
-        return self._get_global("libs")
+        return self._get_global_list("libs")
 
     @property
     def exes(self):
-        return self._get_global("exes")
+        return self._get_global_list("exes")
 
     @property
     def defines(self):
-        return self._get_global("defines")
+        return self._get_global_list("defines")
 
     @property
     def cflags(self):
-        return self._get_global("cflags")
+        return self._get_global_list("cflags")
 
     @property
     def cxxflags(self):
-        return self._get_global("cxxflags")
+        return self._get_global_list("cxxflags")
 
     @property
     def sharedlinkflags(self):
-        return self._get_global("sharedlinkflags")
+        return self._get_global_list("sharedlinkflags")
 
     @property
     def exelinkflags(self):
-        return self._get_global("exelinkflags")
+        return self._get_global_list("exelinkflags")
 
     @property
     def sysroot(self):
@@ -493,6 +493,7 @@ class DepsCppInfo(object):
 
     @property
     def rootpath(self):
+        # TODO: needed?
         result = ""
         if self.dependencies:
             last_dep_name, last_dep = list(self.dependencies)[-1]
@@ -500,7 +501,14 @@ class DepsCppInfo(object):
                 result = last_dep.rootpath
         return result
 
-    def _get_global(self, name):
+    @property
+    def rootpaths(self):
+        result = []
+        for dep_cpp_info in self._dependencies.values():
+            result.append(dep_cpp_info.rootpath)
+        return result
+
+    def _get_global_list(self, name):
         result = []
         for dep_cpp_info in self._dependencies.values():
             for item in getattr(dep_cpp_info, name, []):
