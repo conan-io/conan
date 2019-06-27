@@ -151,7 +151,8 @@ class RestV1Methods(RestCommonMethods):
                 uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                 retry=retry, retry_wait=retry_wait,
                                 headers=self._put_headers)
-                output.writeln("")
+                if output and not output.is_terminal:
+                    output.writeln("")
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
