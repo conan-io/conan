@@ -4,7 +4,7 @@ from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dep
                                                    cmake_package_info, cmake_user_info_vars,
                                                    generate_targets_section)
 from conans.model import Generator
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, DepCppInfo
 
 
 def extend(cpp_info, config):
@@ -26,7 +26,7 @@ def extend(cpp_info, config):
         result.cxxflags = cpp_info.cxxflags + config_info.cxxflags
         result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
-        return result
+        return DepCppInfo(result)
     return cpp_info
 
 
