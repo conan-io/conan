@@ -679,6 +679,8 @@ class ConanAPIV1(object):
               should_configure=should_configure, should_build=should_build,
               should_install=should_install, should_test=should_test)
 
+    # some dummy change
+
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
                 cwd=None):
