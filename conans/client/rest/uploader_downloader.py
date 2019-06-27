@@ -281,22 +281,7 @@ class FileDownloader(object):
             return bytes(ret)
         else:
             return
-
-
-def progress_units(progress, total):
-    if total == 0:
-        return 0
-    return min(50, int(50 * progress / total))
-
-
-def human_readable_progress(bytes_transferred, total_bytes):
-    return "%s/%s" % (human_size(bytes_transferred), human_size(total_bytes))
-
-
-def print_progress(output, units, progress=""):
-    if output.is_terminal:
-        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), progress))
-
+        
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
     for counter in range(retry + 1):
