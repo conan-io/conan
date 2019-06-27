@@ -13,7 +13,7 @@ class _FileReaderWithProgressBar(object):
                      'unit_scale': True,
                      'unit_divisor': 1024,
                      'ascii': False,  # Fancy output (forces unicode progress bar)
-                     }
+                     'ncols': 84}
 
     def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
