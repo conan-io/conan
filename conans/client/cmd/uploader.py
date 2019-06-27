@@ -518,7 +518,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             output.write("[")
         elif output and n_files > 1 and output.is_terminal:
             progress_bar = tqdm(total=len(files), desc="Compressing files...", 
-                                unit="files", leave=True, ncols=84)
+                                unit="files", leave=False, ncols=84, ascii=False)
 
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
@@ -540,12 +540,13 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                         output.write('=' * (units - (last_progress or 0)))
                     last_progress = units
                 if output.is_terminal:
-                    progress_bar.set_description("%s/%s files" % (i_file, n_files))
+                    progress_bar.set_description("Compressing %s/%s files" % (i_file, n_files))
                     progress_bar.update()                    
 
         if output and n_files > 1:
             if output.is_terminal:
                 progress_bar.close()
+                output.writeln("{} [done]".format(progress_bar.desc))
             else:
                 output.writeln("]")
         tgz.close()
