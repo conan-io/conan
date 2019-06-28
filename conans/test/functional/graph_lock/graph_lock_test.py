@@ -103,6 +103,23 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
                          self.pkg_b_package_revision)
 
+    def create_test_lock_test(self):
+        # Create is also possible
+        client = self.client
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Test(ConanFile):
+                def test(self):
+                    pass
+            """)
+        client.save({"conanfile.py": str(self.consumer),
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . PkgB/0.1@user/channel --lockfile")
+        self.assertIn("PkgA/0.1@user/channel", client.out)
+        self.assertNotIn("PkgA/0.2/user/channel", client.out)
+        self._check_lock("PkgB/0.1@user/channel#%s" % self.pkg_b_revision,
+                         self.pkg_b_package_revision)
+
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . PkgB/0.1@user/channel --lockfile")

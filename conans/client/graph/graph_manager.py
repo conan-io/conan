@@ -77,7 +77,7 @@ class GraphManager(object):
         processed_profile = ProcessedProfile(profile, None)
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
-            if graph_lock:
+            if graph_lock and not test:  # Only lock python requires if it is not test_package
                 node_id = graph_lock.get_node(graph_info.root)
                 lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
@@ -138,7 +138,8 @@ class GraphManager(object):
             if path.endswith(".py"):
                 test = str(create_reference) if create_reference else None
                 lock_python_requires = None
-                if graph_lock:
+                # do not try apply lock_python_requires for test_package/conanfile.py consumer
+                if graph_lock and not create_reference:
                     node_id = graph_lock.get_node(graph_info.root)
                     lock_python_requires = graph_lock.python_requires(node_id)
 

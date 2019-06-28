@@ -199,7 +199,12 @@ class GraphLock(object):
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
                 continue
-            lock_node = self._nodes[node.id]
+            try:
+                lock_node = self._nodes[node.id]
+            except KeyError:
+                if node.recipe == RECIPE_CONSUMER:
+                    continue  # If the consumer node is not found, could be a test_package
+                raise
             if lock_node.pref and lock_node.pref.full_repr() != node.pref.full_repr():
                 if node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
@@ -213,7 +218,13 @@ class GraphLock(object):
         """
         if node.recipe == RECIPE_VIRTUAL:
             return
-        locked_node = self._nodes[node.id]
+        try:
+            locked_node = self._nodes[node.id]
+        except KeyError:  # If the consumer node is not found, could be a test_package
+            if node.recipe == RECIPE_CONSUMER:
+                return
+            raise ConanException("The node ID %s was not found in the lock" % node.id)
+
         locked_requires = locked_node.requires or {}
         prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref, id_)
                  for id_ in locked_requires.values()}
@@ -281,17 +292,15 @@ class GraphLock(object):
         one for some cases of commands, like "conan install <ref>"
         It will lock the found node, or raise if not found
         """
-        if node.recipe == RECIPE_VIRTUAL:
-            assert reference
+        if reference:
+            assert node.recipe in [RECIPE_CONSUMER, RECIPE_VIRTUAL]
             node_id = self.get_node(reference)
             pref = self._nodes[node_id].pref
-            # Adding a new node, has the problem of
-            # python_requires
-
             for require in node.conanfile.requires.values():
-                require.lock(pref.ref, node_id)
-            return
-
-        assert node.recipe == RECIPE_CONSUMER
-        node_id = self.get_node(node.ref)
-        node.id = node_id
+                if require.ref.name == pref.ref.name:
+                    require.lock(pref.ref, node_id)
+                    break
+        else:
+            assert node.recipe == RECIPE_CONSUMER
+            node_id = self.get_node(node.ref)
+            node.id = node_id
