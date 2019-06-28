@@ -626,7 +626,7 @@ class ConanAPIV1(object):
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                        check_updates, False, remotes,
                                                        recorder)
-        return deps_graph.build_order(build_order)
+        return deps_graph.build_order(build_order), deps_graph
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
