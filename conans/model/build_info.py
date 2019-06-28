@@ -33,7 +33,7 @@ class CppInfo(object):
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self._rootpath = root_folder
-        self._sysroot = root_folder
+        self.sysroot = ""
         self.version = None
         self.description = None
         # When package is editable, filter_empty=False, so empty dirs are maintained
@@ -60,10 +60,6 @@ class CppInfo(object):
     @property
     def rootpath(self):
         return self._rootpath
-
-    @property
-    def sysroot(self):
-        return self._sysroot
 
     # Compatibility for 'cppflags'
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0",
@@ -129,6 +125,7 @@ class DepCppInfo(object):
         self._version = cpp_info.version
         self._description = cpp_info.description
         self._rootpath = cpp_info.rootpath
+        self._sysroot = cpp_info.sysroot
         self._system_deps = cpp_info.system_deps
         self._includedirs = cpp_info.includedirs
         self._srcdirs = cpp_info.srcdirs
@@ -265,7 +262,7 @@ class DepCppInfo(object):
 
     @property
     def sysroot(self):
-        return self._rootpath
+        return self._sysroot
 
     @property
     def system_deps(self):
@@ -530,12 +527,12 @@ class DepsCppInfo(object):
 
     @property
     def sysroot(self):
-        # FIXME: Makes no sense
-        return self.rootpath
+        if self.sysroots:
+            return self.sysroots[-1]
+        return ""
 
     @property
     def rootpath(self):
-        # FIXME: Makes no sense
         if self.rootpaths:
             return self.rootpaths[-1]
         return ""
@@ -545,6 +542,13 @@ class DepsCppInfo(object):
         result = []
         for dep_cpp_info in self._dependencies.values():
             result.append(dep_cpp_info.rootpath)
+        return result
+
+    @property
+    def sysroots(self):
+        result = []
+        for dep_cpp_info in self._dependencies.values():
+            result.append(dep_cpp_info.sysroot)
         return result
 
     def _get_global_list(self, name):
