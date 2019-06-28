@@ -544,7 +544,6 @@ class BuildInfoTest(unittest.TestCase):
     def deps_cpp_info_sysroot_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
-        info["Component"]
         info.sysroot = "hola"
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "my_lib")
@@ -553,3 +552,15 @@ class BuildInfoTest(unittest.TestCase):
         other_info.sysroot = "kk"
         deps_cpp_info.update(other_info, "my_other_lib")
         self.assertEqual("kk", deps_cpp_info.sysroot)
+
+    def deps_cpp_info_cflags_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.cflags = ["my_lib_flag"]
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "my_lib")
+        self.assertEqual(["my_lib_flag"], deps_cpp_info.cflags)
+        other_info = CppInfo(folder)
+        other_info.cflags = ["my_other_lib_flag"]
+        deps_cpp_info.update(other_info, "my_other_lib")
+        self.assertEqual(["my_lib_flag", "my_other_lib_flag"], deps_cpp_info.cflags)
