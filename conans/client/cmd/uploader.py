@@ -392,6 +392,7 @@ class CmdUpload(object):
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
         url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
         msg += ": %s" % url
+        self._user_io.out.writeln("")
         self._user_io.out.info(msg)
 
     def _package_integrity_check(self, pref, files, package_folder):
@@ -471,7 +472,8 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
         if tgz_path:
             result[tgz_name] = tgz_path
         elif tgz_files:
-            output.writeln(msg)
+            if output and not output.is_terminal:
+                output.writeln(msg)
             tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
             result[tgz_name] = tgz_path
 
@@ -485,7 +487,8 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
 def _compress_package_files(files, symlinks, dest_folder, output):
     tgz_path = files.get(PACKAGE_TGZ_NAME)
     if not tgz_path:
-        output.writeln("Compressing package...")
+        if output and not output.is_terminal:
+            output.writeln("Compressing package...")
         tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
         tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
 
@@ -517,8 +520,8 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         if output and n_files > 1 and not output.is_terminal:
             output.write("[")
         elif output and n_files > 1 and output.is_terminal:
-            progress_bar = tqdm(total=len(files), desc="Compressing files...", 
-                                unit="files", leave=False, dynamic_ncols=True, 
+            progress_bar = tqdm(total=len(files), desc="Compressing package...", 
+                                unit="files", leave=False, dynamic_ncols=True,
                                 ascii=False)
 
         for filename, abs_path in sorted(files.items()):
@@ -541,7 +544,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                         output.write('=' * (units - (last_progress or 0)))
                     last_progress = units
                 if output.is_terminal:
-                    progress_bar.set_description("Compressing %s/%s files" % (i_file, n_files))
+                    progress_bar.set_description("Compressing package: %s/%s files" % (i_file, n_files))
                     progress_bar.update()                    
 
         if output and n_files > 1:

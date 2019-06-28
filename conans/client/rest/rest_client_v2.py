@@ -203,7 +203,7 @@ class RestV2Methods(RestCommonMethods):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):
-            if self._output:
+            if self._output and not self._output.is_terminal:
                 self._output.writeln("Downloading %s" % filename)
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
