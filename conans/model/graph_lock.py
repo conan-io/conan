@@ -57,11 +57,12 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    def __init__(self, pref, python_requires, options, modified):
+    def __init__(self, pref, python_requires, options, modified, requires):
         self.pref = pref
         self.python_requires = python_requires
         self.options = options
         self.modified = modified
+        self.requires = requires
 
     @staticmethod
     def from_dict(data):
@@ -74,7 +75,8 @@ class GraphLockNode(object):
             python_requires = [ConanFileReference.loads(ref) for ref in python_requires]
         options = OptionsValues.loads(data["options"])
         modified = data.get("modified")
-        return GraphLockNode(pref, python_requires, options, modified)
+        requires = data.get("requires", {})
+        return GraphLockNode(pref, python_requires, options, modified, requires)
 
     def as_dict(self):
         """ returns the object serialized as a dict of plain python types
@@ -87,6 +89,8 @@ class GraphLockNode(object):
             result["python_requires"] = [r.full_repr() for r in self.python_requires]
         if self.modified:
             result["modified"] = True
+        if self.requires:
+            result["requires"] = self.requires
         return result
 
 
@@ -94,29 +98,27 @@ class GraphLock(object):
 
     def __init__(self, graph=None):
         self._nodes = {}  # {numeric id: PREF or None}
-        self._edges = {}  # {numeric_id: [numeric_ids]}
         if graph:
             for node in graph.nodes:
                 if node.recipe == RECIPE_VIRTUAL:
                     continue
-                dependencies = []
+                requires = {}
                 for edge in node.dependencies:
-                    dependencies.append(edge.dst.id)
+                    requires[edge.require.ref.full_repr()] = edge.dst.id
                 python_reqs = getattr(node.conanfile, "python_requires", {})
                 python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                           node.conanfile.options.values, False)
+                                           node.conanfile.options.values, False, requires)
                 self._nodes[node.id] = graph_node
-                self._edges[node.id] = dependencies
 
     def root_node(self):
         """ obtain the node in the graph that is not depended by anyone else,
         i.e. the root or downstream consumer
         """
         total = []
-        for list_ids in self._edges.values():
-            total.extend(list_ids)
-        roots = set(self._edges).difference(total)
+        for node in self._nodes.values():
+            total.extend(node.requires.values())
+        roots = set(self._nodes).difference(total)
         assert len(roots) == 1
         return self._nodes[roots.pop()]
 
@@ -127,8 +129,6 @@ class GraphLock(object):
         graph_lock = GraphLock()
         for id_, node in data["nodes"].items():
             graph_lock._nodes[id_] = GraphLockNode.from_dict(node)
-        for id_, dependencies in data["edges"].items():
-            graph_lock._edges[id_] = dependencies
 
         return graph_lock
 
@@ -141,7 +141,6 @@ class GraphLock(object):
         for id_, node in self._nodes.items():
             nodes[id_] = node.as_dict()
         result["nodes"] = nodes
-        result["edges"] = self._edges
         return result
 
     def update_lock(self, new_lock):
@@ -186,8 +185,8 @@ class GraphLock(object):
         the set of nodes affected downstream by a change in one package
         """
         result = []
-        for id_, nodes_ids in self._edges.items():
-            if node_id in nodes_ids:
+        for id_, node in self._nodes.items():
+            if node_id in node.requires:
                 result.append(id_)
         return result
 
@@ -215,7 +214,10 @@ class GraphLock(object):
         if node.recipe == RECIPE_VIRTUAL:
             return
         locked_node = self._nodes[node.id]
-        prefs = self._dependencies(node.id)
+        locked_requires = locked_node.requires or {}
+        prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref, id_)
+                 for id_ in locked_requires.values()}
+
         node.graph_lock_node = locked_node
         node.conanfile.options.values = locked_node.options
         for require in requires:
@@ -228,11 +230,6 @@ class GraphLock(object):
 
     def python_requires(self, node_id):
         return self._nodes[node_id].python_requires
-
-    def _dependencies(self, node_id):
-        # return {pkg_name: PREF}
-        return {self._nodes[i].pref.ref.name: (self._nodes[i].pref, i)
-                for i in self._edges[node_id]}
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that

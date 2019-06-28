@@ -173,11 +173,18 @@ class Node(object):
 
 
 class Edge(object):
-    def __init__(self, src, dst, private=False, build_require=False):
+    def __init__(self, src, dst, require):
         self.src = src
         self.dst = dst
-        self.private = private
-        self.build_require = build_require
+        self.require = require
+
+    @property
+    def private(self):
+        return self.require.private
+
+    @property
+    def build_require(self):
+        return self.require.build_require
 
     def __eq__(self, other):
         return self.src == self.src and self.dst == other.dst
@@ -202,9 +209,9 @@ class DepsGraph(object):
             self.root = node
         self.nodes.add(node)
 
-    def add_edge(self, src, dst, private=False, build_require=False):
+    def add_edge(self, src, dst, require):
         assert src in self.nodes and dst in self.nodes
-        edge = Edge(src, dst, private, build_require)
+        edge = Edge(src, dst, require)
         src.add_edge(edge)
         dst.add_edge(edge)
 
@@ -256,11 +263,11 @@ class DepsGraph(object):
             for dep in node.dependencies:
                 src = result_node
                 dst = nodes_map[dep.dst]
-                result.add_edge(src, dst, dep.private, dep.build_require)
+                result.add_edge(src, dst, dep.require)
             for dep in node.dependants:
                 src = nodes_map[dep.src]
                 dst = result_node
-                result.add_edge(src, dst, dep.private, dep.build_require)
+                result.add_edge(src, dst, dep.require)
 
         return result
 
