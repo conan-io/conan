@@ -278,8 +278,8 @@ class ConanAPIV1(object):
             try:
                 attr = getattr(conanfile, attribute)
                 result[attribute] = attr
-            except AttributeError as e:
-                raise ConanException(str(e))
+            except AttributeError:
+                result[attribute] = ''
         return result
 
     @api_method
