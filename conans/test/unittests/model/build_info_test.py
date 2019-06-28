@@ -471,7 +471,7 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual(folder, info.rootpath)
         self.assertEqual([], info.defines)
         self.assertIsNone(info.name)
-        self.assertEqual(folder, info.sysroot)
+        self.assertEqual("", info.sysroot)
         self.assertEqual([], info.cflags)
         self.assertEqual({}, info.configs)  # FIXME
         with catch_real_deprecation_warning(self):
