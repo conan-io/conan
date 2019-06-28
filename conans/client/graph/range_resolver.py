@@ -88,7 +88,6 @@ class RangeResolver(object):
         self._cache = cache
         self._remote_manager = remote_manager
         self._cached_remote_found = {}
-        self._cached_local_found = {}
         self._result = []
 
     @property
@@ -135,13 +134,11 @@ class RangeResolver(object):
                                  "could not be resolved" % (version_range, require, base_conanref))
 
     def _resolve_local(self, search_ref, version_range):
-        local_found = self._cached_local_found.get(search_ref)
-        if local_found is None:
-            local_found = search_recipes(self._cache, search_ref)
-            if local_found:
-                self._result.append("%s resolved in cache" % (search_ref, ))
+        local_found = search_recipes(self._cache, search_ref)
         if local_found:
-            return self._resolve_version(version_range, local_found)
+            resolved = self._resolve_version(version_range, local_found)
+            if resolved:
+                self._result.append("%s resolved in cache" % (search_ref, ))
 
     def _search_remotes(self, pattern, remotes):
         remote = remotes.selected
