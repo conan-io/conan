@@ -119,7 +119,7 @@ class upload_with_progress(object):
         if self.output and self.output.is_terminal:
             progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
                                 unit_divisor=1024, desc="{}".format(self.file_name),
-                                leave=False, ncols=84, ascii=False)
+                                leave=False, dynamic_ncols=True, ascii=False)
         for index, chunk in enumerate(self.groups):
             if progress_bar is not None:
                 update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
@@ -216,7 +216,7 @@ class FileDownloader(object):
         progress_bar = None
         if self.output and self.output.is_terminal:
             progress_bar = tqdm(unit='B', unit_scale=True,
-                                unit_divisor=1024, ncols=84,
+                                unit_divisor=1024, dynamic_ncols=True,
                                 leave=False, ascii=False)
 
         if total_length is None:  # no content length header

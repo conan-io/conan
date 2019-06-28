@@ -12,7 +12,7 @@ class _FileReaderWithProgressBar(object):
     tqdm_defaults = {'unit': 'B',
                      'unit_scale': True,
                      'unit_divisor': 1024,
-                     'ncols': 84,
+                     'dynamic_ncols': True,
                      'leave': False,
                      'ascii': False}
 
