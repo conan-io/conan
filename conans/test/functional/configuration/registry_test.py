@@ -68,33 +68,33 @@ other/1.0@lasote/testing conan.io
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True)])
         # Add
-        registry.add("new", "new_url", False)
+        registry.add("new", "http://new_url", False)
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True),
-                          ("new", "new_url", False)])
+                          ("new", "http://new_url", False)])
         with self.assertRaises(ConanException):
-            registry.add("new", "new_url")
+            registry.add("new", "http://new_url")
         # Update
-        registry.update("new", "other_url")
+        registry.update("new", "http://other_url")
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True),
-                          ("new", "other_url", True)])
+                          ("new", "http://other_url", True)])
         with self.assertRaises(ConanException):
-            registry.update("new2", "new_url")
+            registry.update("new2", "http://new_url")
 
-        registry.update("new", "other_url", False)
+        registry.update("new", "http://other_url", False)
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan-center", "https://conan.bintray.com", True),
                           ("local", "http://localhost:9300", True),
-                          ("new", "other_url", False)])
+                          ("new", "http://other_url", False)])
 
         # Remove
         registry.remove("local")
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan-center", "https://conan.bintray.com", True),
-                          ("new", "other_url", False)])
+                          ("new", "http://other_url", False)])
         with self.assertRaises(ConanException):
             registry.remove("new2")
 
@@ -115,15 +115,52 @@ other/1.0@lasote/testing conan.io
         output = TestBufferConanOutput()
         cache = ClientCache(tmp_folder, output)
         registry = RemoteRegistry(cache, output)
-        registry.add("repo1", "url1", True, insert=0)
-        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
+        registry.add("repo1", "http://url1", True, insert=0)
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "http://url1", True),
                          Remote("conan.io", "https://server.conan.io", True)])
-        registry.add("repo2", "url2", True, insert=1)
-        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
-                         Remote("repo2", "url2", True),
+        registry.add("repo2", "http://url2", True, insert=1)
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "http://url1", True),
+                         Remote("repo2", "http://url2", True),
                          Remote("conan.io", "https://server.conan.io", True)])
-        registry.add("repo3", "url3", True, insert=5)
-        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
-                         Remote("repo2", "url2", True),
+        registry.add("repo3", "http://url3", True, insert=5)
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "http://url1", True),
+                         Remote("repo2", "http://url2", True),
                          Remote("conan.io", "https://server.conan.io", True),
-                         Remote("repo3", "url3", True)])
+                         Remote("repo3", "http://url3", True)])
+
+
+    def test_add_update_invalid_url(self):
+        """ Remotes() must not accept invalid URL
+        """
+        f = os.path.join(temp_folder(), "aux_file")
+        Remotes().save(f)
+        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        registry = cache.registry
+
+        with self.assertRaises(ConanException) as context:
+            registry.add(remote_name="local", url="localhost:9300")
+        self.assertIn("The url 'localhost:9300' is invalid. It must contain scheme and host.",
+                      str(context.exception))
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True)])
+
+        with self.assertRaises(ConanException) as context:
+            registry.add(remote_name="new", url="new_url", verify_ssl=False)
+        self.assertIn("The url 'new_url' is invalid. It must contain scheme and host.",
+                      str(context.exception))
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True)])
+
+        with self.assertRaises(ConanException) as context:
+            registry.add(remote_name="other", url="other.com", force=True)
+        self.assertIn("The url 'other.com' is invalid. It must contain scheme and host.",
+                      str(context.exception))
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True)])
+
+        with self.assertRaises(ConanException) as context:
+            registry.update(remote_name="conan-center", url="new-conan-center.com")
+        self.assertIn("The url 'new-conan-center.com' is invalid. It must contain scheme and host.",
+                      str(context.exception))
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True)])

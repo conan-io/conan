@@ -303,7 +303,7 @@ class HelloConan(ConanFile):
         self.assertEqual(data["remotes"], [])
 
     def errors_test(self):
-        self.client.run("remote update origin url", assert_error=True)
+        self.client.run("remote update origin http://url", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
@@ -379,3 +379,13 @@ class HelloConan(ConanFile):
     def missing_subarguments_test(self):
         self.client.run("remote", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+    def test_invalid_url(self):
+        self.client.run("remote add foobar foobar.com", assert_error=True)
+        self.assertIn("ERROR: The url 'foobar.com' is invalid. It must contain scheme and host.",
+                      self.client.user_io.out)
+
+        self.client.run("remote add foobar https://foobar.com")
+        self.client.run("remote update foobar pepe.org", assert_error=True)
+        self.assertIn("ERROR: The url 'pepe.org' is invalid. It must contain scheme and host.",
+                      self.client.user_io.out)
