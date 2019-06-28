@@ -14,7 +14,7 @@ from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool,\
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.conanfile import MockSettings, MockConanfile
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -169,8 +169,9 @@ class SystemPackageToolTest(unittest.TestCase):
 
             settings = MockSettings({"arch": "x86", "arch_build": "x86_64", "os": "Linux",
                                      "os_build": "Linux"})
+            conanfile = MockConanfile(settings)
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
-                                    settings=settings)
+                                    conanfile=conanfile)
             spt.install("a_package", force=False)
             self.assertEqual(runner.command_called, "rpm -q a_package.i?86")
             spt.install("a_package", force=True)
@@ -252,8 +253,9 @@ class SystemPackageToolTest(unittest.TestCase):
                                          "arch_build": "x86_64",
                                          "os": "Linux",
                                          "os_build": "Linux"})
+                conanfile = MockConanfile(settings)
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
-                                        settings=settings)
+                                        conanfile=conanfile)
                 spt.install("a_package", force=True)
                 self.assertEqual(runner.command_called,
                             "apt-get install -y --no-install-recommends a_package%s" % distro_arch)
@@ -263,8 +265,9 @@ class SystemPackageToolTest(unittest.TestCase):
                                          "arch_build": "x86_64",
                                          "os": "Linux",
                                          "os_build": "Linux"})
+                conanfile = MockConanfile(settings)
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
-                                        settings=settings)
+                                        conanfile=conanfile)
                 spt.install("a_package", force=True, arch_names={"x86": "all"})
                 self.assertEqual(runner.command_called,
                             "apt-get install -y --no-install-recommends a_package%s" % distro_arch)

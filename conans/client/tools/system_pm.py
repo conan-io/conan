@@ -11,7 +11,7 @@ from conans.util.fallbacks import default_output
 
 class SystemPackageTool(object):
 
-    def __init__(self, runner=None, os_info=None, tool=None, recommends=False, output=None, settings=None):
+    def __init__(self, runner=None, os_info=None, tool=None, recommends=False, output=None, conanfile=None):
 
         self._output = default_output(output, 'conans.client.tools.system_pm.SystemPackageTool')
         os_info = os_info or OSInfo()
@@ -20,7 +20,7 @@ class SystemPackageTool(object):
         self._tool._sudo_str = self._get_sudo_str()
         self._tool._runner = runner or ConanRunner(output=self._output)
         self._tool._recommends = recommends
-        self._settings = settings
+        self._conanfile = conanfile
 
     @staticmethod
     def _get_sudo_str():
@@ -128,8 +128,8 @@ class SystemPackageTool(object):
         :param arch_names: Package suffix/prefix name used by installer tool
         :return: list with all parsed names e.g. ["libusb-dev:armhf libfoobar-dev:armhf"]
         """
-        if self._settings and cross_building(self._settings):
-            _, build_arch, _, host_arch = get_cross_building_settings(self._settings)
+        if self._conanfile and self._conanfile.settings and cross_building(self._conanfile.settings):
+            _, build_arch, _, host_arch = get_cross_building_settings(self._conanfile.settings)
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
