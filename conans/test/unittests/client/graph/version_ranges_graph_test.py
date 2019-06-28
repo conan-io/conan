@@ -86,7 +86,7 @@ class VersionRangesTest(GraphTest):
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/[%s]@myuser/testing" % v)
             remote_packages.append(say_ref)
-        self.remotes.add("myremote", "myurl")
+        self.remotes.add("myremote", "http://myurl")
         self.remote_manager.packages = remote_packages
         for expr, solution in [(">0.0", "2.2.1"),
                                (">0.1,<1", "0.3"),
@@ -117,7 +117,7 @@ class VersionRangesTest(GraphTest):
     def test_remote_optimized(self):
         self.resolver._local_search = None
         remote_packages = []
-        self.remotes.add("myremote", "myurl")
+        self.remotes.add("myremote", "http://myurl")
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             remote_packages.append(say_ref)

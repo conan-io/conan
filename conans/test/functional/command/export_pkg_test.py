@@ -18,7 +18,7 @@ class ExportPkgTest(unittest.TestCase):
 
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
-        client = TestClient(servers={"default": None},
+        client = TestClient(servers={"default": "http://url"},
                             requester_class=None,
                             users={"default": [("lasote", "mypass")]})
 
@@ -27,7 +27,7 @@ class ExportPkgTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@user/testing")
 
     def test_dont_touch_server_build_require(self):
-        client = TestClient(servers={"default": None},
+        client = TestClient(servers={"default": "http://url"},
                             requester_class=None,
                             users={"default": [("lasote", "mypass")]})
         profile = dedent("""

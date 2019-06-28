@@ -47,7 +47,7 @@ class DownloadTest(unittest.TestCase):
         installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
 
         remotes = Remotes()
-        remotes.add("remotename", "url")
+        remotes.add("remotename", "http://url")
         with self.assertRaises(NotFoundException):
             installer.get_recipe(ref, False, False, remotes, ActionRecorder())
 
