@@ -540,3 +540,16 @@ class BuildInfoTest(unittest.TestCase):
             "res_paths": [os.path.join("folder", "res")],
         })
         self.assertEqual(expected, dep_component.as_dict())
+
+    def deps_cpp_info_sysroot_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info["Component"]
+        info.sysroot = "hola"
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "my_lib")
+        self.assertEqual("hola", deps_cpp_info.sysroot)
+        other_info = CppInfo(folder)
+        other_info.sysroot = "kk"
+        deps_cpp_info.update(other_info, "my_other_lib")
+        self.assertEqual("kk", deps_cpp_info.sysroot)
