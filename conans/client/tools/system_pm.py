@@ -12,8 +12,7 @@ from conans.util.fallbacks import default_output
 class SystemPackageTool(object):
 
     def __init__(self, runner=None, os_info=None, tool=None, recommends=False, output=None, conanfile=None):
-
-output = output if output else conanfile.output if conanfile else None
+        output = output if output else conanfile.output if conanfile else None
         self._output = default_output(output, 'conans.client.tools.system_pm.SystemPackageTool')
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
