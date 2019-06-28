@@ -69,7 +69,7 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/path/to/include1 cxx_flag1 c_flag1 -m32 -O3 -s '
                          '-DNDEBUG -Wl,-rpath="/root/path/to/lib1" -L/root/path/to/lib1 -lmylib '
-                         '-std=gnu++17 --sysroot=/root', gcc.content)
+                         '-std=gnu++17', gcc.content)
 
         settings.arch = "x86_64"
         settings.build_type = "Debug"
@@ -78,15 +78,13 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/path/to/include1 cxx_flag1 c_flag1 -m64 -g '
                          '-Wl,-rpath="/root/path/to/lib1" -L/root/path/to/lib1 -lmylib '
-                         '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17 --sysroot=/root',
-                         gcc.content)
+                         '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++17', gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/path/to/include1 cxx_flag1 c_flag1 -m64 -g '
                          '-Wl,-rpath="/root/path/to/lib1" -L/root/path/to/lib1 -lmylib '
-                         '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++17 --sysroot=/root',
-                         gcc.content)
+                         '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++17', gcc.content)
 
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -96,8 +94,8 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         # GCC generator ignores the compiler setting, it is always gcc
         self.assertEqual('-Dmydefine1 -I/root/path/to/include1 cxx_flag1 c_flag1 -m32 -O3 -s '
-                         '-DNDEBUG -Wl,-rpath="/root/path/to/lib1" -L/root/path/to/lib1 -lmylib '
-                         '--sysroot=/root', gcc.content)
+                         '-DNDEBUG -Wl,-rpath="/root/path/to/lib1" -L/root/path/to/lib1 -lmylib',
+                         gcc.content)
 
     def compiler_args_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -121,8 +119,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/path/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
-                         '-Wl,-rpath,"/root/path/to/lib1" -L/root/path/to/lib1 -lmylib '
-                         '--sysroot=/root', gen.content)
+                         '-Wl,-rpath,"/root/path/to/lib1" -L/root/path/to/lib1 -lmylib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
@@ -135,5 +132,5 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/path/to/include1 cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG '
-                         '-Wl,-rpath,"/root/path/to/lib1" -L/root/path/to/lib1 -lmylib '
-                         '--sysroot=/root', args.content)
+                         '-Wl,-rpath,"/root/path/to/lib1" -L/root/path/to/lib1 -lmylib',
+                         args.content)
