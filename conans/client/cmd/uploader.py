@@ -550,7 +550,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         if output and n_files > 1:
             if output.is_terminal:
                 progress_bar.close()
-                output.writeln("{} [done]".format(progress_bar.desc))
+                output.rewrite_line("{} [done]".format(progress_bar.desc))
             else:
                 output.writeln("]")
         tgz.close()

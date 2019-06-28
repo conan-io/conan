@@ -178,14 +178,14 @@ class RestV2Methods(RestCommonMethods):
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
-            self._output.rewrite_line("Uploading %s" % filename)
+            if self._output and not self._output.is_terminal:
+                self._output.rewrite_line("Uploading %s" % filename)
             resource_url = urls[filename]
             try:
                 uploader.upload(resource_url, files[filename], auth=self.auth,
                                 dedup=self._checksum_deploy, retry=retry,
                                 retry_wait=retry_wait,
                                 headers=self._put_headers)
-                self._output.writeln("")
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
@@ -208,8 +208,6 @@ class RestV2Methods(RestCommonMethods):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             downloader.download(resource_url, abs_path, auth=self.auth)
-            if self._output:
-                self._output.writeln("")
 
     def _remove_conanfile_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed

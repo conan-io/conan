@@ -129,7 +129,7 @@ class upload_with_progress(object):
 
         if progress_bar is not None:
             progress_bar.close()
-            self.output.writeln("{} [done]".format(progress_bar.desc))
+            self.output.rewrite_line("{} [done]".format(progress_bar.desc))
 
     def __len__(self):
         return self.totalsize
