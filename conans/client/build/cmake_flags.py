@@ -144,10 +144,7 @@ class CMakeDefinitionsBuilder(object):
         return self._conanfile.settings.get_safe(setname)
 
     def _get_cpp_standard_vars(self):
-        defines = OrderedDict([
-            ("CONAN_CMAKE_CXX_STANDARD", None),
-            ("CONAN_CMAKE_CXX_EXTENSIONS", None),
-            ("CONAN_STD_CXX_FLAG", None)])
+        defines = OrderedDict()
 
         cppstd = cppstd_from_settings(self._conanfile.settings)
         compiler = self._ss("compiler")
@@ -184,24 +181,7 @@ class CMakeDefinitionsBuilder(object):
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", op_system_version)
         toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
 
-        defines = OrderedDict([
-            ("TOOLCHAIN_FILE", None),
-            ("CMAKE_SYSTEM_NAME", None),
-            ("CMAKE_SYSTEM_VERSION", None),
-            ("CMAKE_OSX_DEPLOYMENT_TARGET", None),
-            ("CMAKE_SYSTEM_PROCESSOR", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY", None),
-            ("CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE", None),
-            ("CMAKE_SYSROOT", None),
-            ("CMAKE_ANDROID_ARCH_ABI", None),
-            ("ANDROID_ABI", None),
-            ("ANDROID_NDK", None),
-            ("ANDROID_PLATFORM", None),
-            ("ANDROID_TOOLCHAIN", None),
-            ("ANDROID_STL", None)
-        ])
+        defines = OrderedDict()
 
         if toolchain_file != "":
             logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
@@ -280,7 +260,7 @@ class CMakeDefinitionsBuilder(object):
         return result
 
     def _get_make_program_definition(self):
-        defines = OrderedDict([("CMAKE_MAKE_PROGRAM", None)])
+        defines = OrderedDict()
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or self._make_program
         if make_program:
             if not tools.which(make_program):
@@ -289,10 +269,9 @@ class CMakeDefinitionsBuilder(object):
             else:
                 self._output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
                 defines["CMAKE_MAKE_PROGRAM"] = make_program
-        return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
+        return defines
 
     def get_definitions(self):
-
         compiler = self._ss("compiler")
         compiler_version = self._ss("compiler.version")
         arch = self._ss("arch")
@@ -303,28 +282,6 @@ class CMakeDefinitionsBuilder(object):
 
         defines = OrderedDict([
             ("CONAN_EXPORTED", "1"),
-            ("CMAKE_OSX_ARCHITECTURES", None),
-            ("CONAN_COMPILER", None),
-            ("CONAN_COMPILER_VERSION", None),
-            ("CONAN_CXX_FLAGS", None),
-            ("CONAN_C_FLAGS", None),
-            ("CONAN_SHARED_LINKER_FLAGS", None),
-            ("CMAKE_C_FLAGS", None),
-            ("CMAKE_CXX_FLAGS", None),
-            ("CMAKE_SHARED_LINKER_FLAGS", None),
-            ("CONAN_LIBCXX", None),
-            ("BUILD_SHARED_LIBS", None),
-            ("CMAKE_INSTALL_PREFIX", None),
-            ("CMAKE_INSTALL_BINDIR", None),
-            ("CMAKE_INSTALL_SBINDIR", None),
-            ("CMAKE_INSTALL_LIBEXECDIR", None),
-            ("CMAKE_INSTALL_LIBDIR", None),
-            ("CMAKE_INSTALL_INCLUDEDIR", None),
-            ("CMAKE_INSTALL_OLDINCLUDEDIR", None),
-            ("CMAKE_INSTALL_DATAROOTDIR", None),
-            ("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", None),
-            ("CMAKE_MODULE_PATH", None),
-            ("CMAKE_PREFIX_PATH", None),
             # Disable CMake export registry #3070 (CMake installing modules in user home's)
             ("CMAKE_EXPORT_NO_PACKAGE_REGISTRY", "ON")
         ])
@@ -408,4 +365,4 @@ class CMakeDefinitionsBuilder(object):
         defines.update(self._get_cpp_standard_vars())
         defines.update(self._get_make_program_definition())
         defines.update(runtime_definition(runtime))
-        return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
+        return defines
