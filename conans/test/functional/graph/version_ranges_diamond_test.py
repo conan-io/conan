@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -8,7 +9,6 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 from conans.util.files import load
-import textwrap
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
@@ -33,19 +33,19 @@ class VersionRangesUpdatingTest(unittest.TestCase):
             boost/[>=1.68.0]@lasote/stable
             """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install .")
-        self.assertIn("boost/*@lasote/stable resolved in 'default' remote", client.out)
-        self.assertIn("boost/1.70.0", client.out)
+        client.run("install .")   
+        self.assertIn("boost/*@lasote/stable versions found in 'default' remote", client.out)
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
         self.assertNotIn("boost/1.68.0", client.out)
         client.run("install .")
-        self.assertIn("boost/*@lasote/stable resolved in cache", client.out)
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in local cache", client.out)
         self.assertIn("boost/1.70.0", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
         self.assertNotIn("boost/1.68.0", client.out)
 
         client.run("install . --update")
-        self.assertIn("boost/*@lasote/stable resolved in 'default' remote", client.out)
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
         self.assertIn("boost/1.70.0", client.out)
         self.assertNotIn("boost/1.69.0", client.out)
         self.assertNotIn("boost/1.68.0", client.out)
