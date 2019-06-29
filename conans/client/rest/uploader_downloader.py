@@ -11,6 +11,7 @@ from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
+BYTES_UPLOADED_PRINT_DOT = 1000
 
 class FileUploader(object):
 
@@ -125,11 +126,15 @@ class upload_with_progress(object):
                 update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
                     else self.totalsize - self.chunk_size * index
                 progress_bar.update(update_size)
+            elif index % BYTES_UPLOADED_PRINT_DOT == 0:
+                self.output.write(".")                
             yield chunk
 
         if progress_bar is not None:
             progress_bar.close()
             self.output.rewrite_line("{} [done]".format(progress_bar.desc))
+        else:
+            self.output.writeln("")                
 
     def __len__(self):
         return self.totalsize
