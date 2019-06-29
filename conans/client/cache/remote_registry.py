@@ -136,19 +136,6 @@ class Remotes(object):
 
         return result
 
-    @staticmethod
-    def _is_valid_url(url):
-        """ Check if URL contains protocol and address
-
-        :param address: URL to be validated
-        :return: True if the address is valid. Otherwise, False.
-        """
-        try:
-            address = urlparse(url)
-            return all([address.scheme, address.netloc])
-        except:
-            return False
-
     def dumps(self):
         result = []
         for remote in self._remotes.values():
@@ -229,9 +216,6 @@ class Remotes(object):
         return renamed
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
-        if not Remotes._is_valid_url(url):
-            raise ConanException("The url '%s' is invalid. It must contain scheme and host." % url)
-
         if force:
             return self._upsert(remote_name, url, verify_ssl, insert)
 
@@ -241,8 +225,6 @@ class Remotes(object):
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
-        if not Remotes._is_valid_url(url):
-            raise ConanException("The url '%s' is invalid. It must contain scheme and host." % url)
         if remote_name not in self._remotes:
             raise ConanException("Remote '%s' not found in remotes" % remote_name)
         self._add_update(remote_name, url, verify_ssl, insert)
@@ -272,6 +254,15 @@ class RemoteRegistry(object):
         self._output = output
         self._filename = cache.registry_path
 
+    def _validate_url(self, url):
+        """ Check if URL contains protocol and address
+
+        :param url: URL to be validated
+        """
+        address = urlparse(url)
+        if not all([address.scheme, address.netloc]):
+            self._output.warn("The url '%s' is invalid. It must contain scheme and host." % url)
+
     def load_remotes(self):
         if not os.path.exists(self._filename):
             self._output.warn("Remotes registry file missing, "
@@ -284,6 +275,7 @@ class RemoteRegistry(object):
         return remotes
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
+        self._validate_url(url)
         remotes = self.load_remotes()
         renamed = remotes.add(remote_name, url, verify_ssl, insert, force)
         remotes.save(self._filename)
@@ -297,6 +289,7 @@ class RemoteRegistry(object):
                             pkg_metadata.remote = remote_name
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
+        self._validate_url(url)
         remotes = self.load_remotes()
         remotes.update(remote_name, url, verify_ssl, insert)
         remotes.save(self._filename)
