@@ -188,7 +188,7 @@ class CMakeDefinitionsBuilder(object):
             defines["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
 
         if cmake_system_name is False:
-            return OrderedDict([(key, value) for key, value in defines.items() if value is not None])
+            return defines
 
         # System name and system version
         if cmake_system_name is not True:  # String not empty
@@ -213,7 +213,7 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_processor:
             defines["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
 
-        if OrderedDict([(key, value) for key, value in defines.items() if value is not None]):
+        if defines:
             for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
@@ -254,10 +254,9 @@ class CMakeDefinitionsBuilder(object):
                 else:
                     defines["ANDROID_STL"] = "none"
 
-        result = OrderedDict([(key, value) for key, value in defines.items() if value is not None])
         logger.info("Setting Cross build flags: %s"
-                    % ", ".join(["%s=%s" % (k, v) for k, v in result.items()]))
-        return result
+                    % ", ".join(["%s=%s" % (k, v) for k, v in defines.items()]))
+        return defines
 
     def _get_make_program_definition(self):
         defines = OrderedDict()
