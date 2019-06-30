@@ -232,12 +232,11 @@ class DepCppInfo(object):
                     raise ConanException("Component '%s' declares a missing dependency" % comp.name)
                 # check if all the deps are already added to ordered
                 if all([dep in ordered for dep in comp.deps]):
+                    ordered[comp_name] = comp
                     break
             else:
                 raise ConanException("There is a dependency loop in the components declared in "
                                      "'self.cpp_info'")
-
-            ordered[comp_name] = comp
         return ordered.values()
 
     @property
@@ -345,7 +344,7 @@ class DepCppInfo(object):
                 for sys_dep in component.system_deps:
                     if sys_dep and sys_dep not in result:
                         result.append(sys_dep)
-                if component.lib:
+                if component.lib and component.lib not in result:
                     result.append(component.lib)
             return result
         else:
@@ -444,6 +443,10 @@ class DepsCppInfo(object):
                 if config not in self.configs:
                     self.configs[config] = DepsCppInfo()
                 self.configs[config].update_dep_cpp_info(sub_dep_cpp_info, pkg_name)
+
+    @property
+    def version(self):
+        return None  # Backwards compatibility: Do not brake scons generator
 
     @property
     def includedirs(self):
