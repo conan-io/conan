@@ -310,8 +310,8 @@ class CMakeDefinitionsBuilder(object):
             arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
             if arch_flag:
                 defines["CONAN_CXX_FLAGS"] = arch_flag
-                defines["CONAN_SHARED_LINKER_FLAGS"] = arch_flag
                 defines["CONAN_C_FLAGS"] = arch_flag
+                defines["CONAN_SHARED_LINKER_FLAGS"] = arch_flag
                 if self._set_cmake_flags:
                     defines["CMAKE_CXX_FLAGS"] = arch_flag
                     defines["CMAKE_SHARED_LINKER_FLAGS"] = arch_flag

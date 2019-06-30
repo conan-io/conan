@@ -411,10 +411,11 @@ class CMakeTest(unittest.TestCase):
                           if platform.system() != "Linux" else ""
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
-            flags = '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
+            flags = '-DCONAN_EXPORTED="1" -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" ' \
+                    '-DCONAN_COMPILER="gcc" ' \
                     '-DCONAN_COMPILER_VERSION="6.3" ' \
                     '-DCONAN_CXX_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" ' \
-                    '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" ' \
+                    '-DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
                     '-DCMAKE_BUILD_TYPE="Release"{}'
             flags_in_local_cache = flags.format(' -D' + cmake_in_local_cache_var_name + '="ON"')
             flags_no_local_cache = flags.format(' -D' + cmake_in_local_cache_var_name + '="OFF"')
