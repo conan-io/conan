@@ -25,7 +25,6 @@ class ExportPkgTest(unittest.TestCase):
         client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
-        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", client.out)
 
     def test_dont_touch_server_build_require(self):
         client = TestClient(servers={"default": None},
@@ -38,7 +37,6 @@ class ExportPkgTest(unittest.TestCase):
         client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1")),
                      "myprofile": profile})
         client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
-        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", client.out)
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
