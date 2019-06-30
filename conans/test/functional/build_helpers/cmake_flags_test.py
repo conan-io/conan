@@ -475,8 +475,10 @@ conan_basic_setup()
         client.run("create . danimtb/testing")
         if platform.system() == "Windows":
             self.assertIn("WARN: CMake generator could not be deduced from settings", client.out)
-            self.assertIn('Configure command: -DCONAN_EXPORTED="1" -DCMAKE_INSTALL_PREFIX=',
+            self.assertIn('Configure command: -DCONAN_EXPORTED="1" '
+                          '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCMAKE_INSTALL_PREFIX=',
                           client.out)
         else:
             self.assertIn('Configure command: -G "Unix Makefiles" -DCONAN_EXPORTED="1" '
-                          '-DCMAKE_INSTALL_PREFIX=', client.out)
+                          '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCMAKE_INSTALL_PREFIX=',
+                          client.out)
