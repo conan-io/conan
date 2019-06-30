@@ -151,7 +151,7 @@ class CMakeDefinitionsBuilder(object):
         compiler_version = self._ss("compiler.version")
 
         if not cppstd:
-            return OrderedDict()
+            return defines
 
         if cppstd.startswith("gnu"):
             defines["CONAN_CMAKE_CXX_STANDARD"] = cppstd[3:]
@@ -213,7 +213,7 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_processor:
             defines["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
 
-        if defines:
+        if defines:  # If enabled cross compile
             for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
