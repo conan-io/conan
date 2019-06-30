@@ -382,9 +382,9 @@ class HelloConan(ConanFile):
 
     def test_invalid_url(self):
         self.client.run("remote add foobar foobar.com")
-        self.assertIn("WARN: The url 'foobar.com' is invalid. It must contain scheme and host.",
+        self.assertIn("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname.",
                       self.client.user_io.out)
 
         self.client.run("remote update foobar pepe.org")
-        self.assertIn("WARN: The url 'pepe.org' is invalid. It must contain scheme and host.",
+        self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
                       self.client.user_io.out)
