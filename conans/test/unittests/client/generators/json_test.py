@@ -37,7 +37,6 @@ class JsonTest(unittest.TestCase):
         json_out = generator.content
 
         parsed = json.loads(json_out)
-        print(parsed)
         dependencies = parsed["dependencies"]
         self.assertEqual(len(dependencies), 2)
         my_pkg = dependencies[0]
