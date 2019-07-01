@@ -9,6 +9,7 @@ from conans.model.build_info import CppInfo, DepsCppInfo, Component, DepCppInfo
 from conans.model.build_info_components import DepComponent
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
+from conans.test.utils.conanfile import MockConanfile
 from conans.test.utils.deprecation import catch_deprecation_warning, catch_real_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir, save
@@ -20,71 +21,109 @@ def _normpaths(paths):
 
 class BuildInfoTest(unittest.TestCase):
 
-#     def parse_test(self):
-#         text = """
-# [rootpath_Boost]
-# C:/this_path
-# [rootpath_My_Lib]
-# C:/this_path
-# [rootpath_My_Other_Lib]
-# C:/this_path
-# [rootpath_My.Component.Lib]
-# C:/this_path
-# [rootpath_My-Component-Tool]
-# C:/this_path
-# [includedirs]
-# C:/Whenever
-# [includedirs_Boost]
-# F:/ChildrenPath
-# [includedirs_My_Lib]
-# mylib_path
-# [includedirs_My_Other_Lib]
-# otherlib_path
-# [includedirs_My.Component.Lib]
-# my_component_lib
-# [includedirs_My-Component-Tool]
-# my-component-tool
-#         """
-#         deps_cpp_info, _, _ = TXTGenerator.loads(text)
-#
-#         def assert_cpp(deps_cpp_info_test):
-#             self.assertEqual(deps_cpp_info_test.include_paths, ['C:/Whenever'])
-#             self.assertEqual(deps_cpp_info_test["Boost"].include_paths, ['F:/ChildrenPath'])
-#             self.assertEqual(deps_cpp_info_test["My_Lib"].include_paths, ['mylib_path'])
-#             self.assertEqual(deps_cpp_info_test["My_Other_Lib"].include_paths, ['otherlib_path'])
-#             self.assertEqual(deps_cpp_info_test["My-Component-Tool"].include_paths, ['my-component-tool'])
-#
-#         assert_cpp(deps_cpp_info)
-#         # Now adding env_info
-#         text2 = text + """
-# [ENV_LIBA]
-# VAR2=23
-# """
-#         deps_cpp_info, _, deps_env_info = TXTGenerator.loads(text2)
-#         assert_cpp(deps_cpp_info)
-#         self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
-#
-#         # Now only with user info
-#         text3 = text + """
-# [USER_LIBA]
-# VAR2=23
-# """
-#         deps_cpp_info, deps_user_info, _ = TXTGenerator.loads(text3)
-#         assert_cpp(deps_cpp_info)
-#         self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
-#
-#         # Now with all
-#         text4 = text + """
-# [USER_LIBA]
-# VAR2=23
-#
-# [ENV_LIBA]
-# VAR2=23
-# """
-#         deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(text4)
-#         assert_cpp(deps_cpp_info)
-#         self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
-#         self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
+    def parse_test(self):
+        items = [
+"""
+[rootpath_Boost]
+C:/this_boost_path
+""",
+"""
+[rootpath_My_Lib]
+C:/this_my_lib_path
+""",
+"""
+[rootpath_My_Other_Lib]
+C:/this_my_other_lib_path
+""",
+"""
+[rootpath_My.Component.Lib]
+C:/this_my_component_lib_path
+""",
+"""
+[rootpath_My-Component-Tool]
+C:/this_my_component_tool_path
+""",
+"""
+[includedirs_Boost]
+C:/this_boost_path/boost_include
+""",
+"""
+[includedirs_My_Lib]
+C:/this_my_lib_path/mylib_path
+""",
+"""
+[includedirs_My_Other_Lib]
+C:/this_my_other_lib_path/otherlib_path
+""",
+"""
+[includedirs_My.Component.Lib]
+C:/this_my_component_lib_path/my_component_lib
+""",
+"""
+[includedirs_My-Component-Tool]
+C:/this_my_component_tool_path/my-component-tool
+"""]
+        text = "".join(items)
+        deps_cpp_info, _, _ = TXTGenerator.loads(text)
+
+        def assert_cpp(deps_cpp_info_test):
+            self.assertEqual(['C:/this_my_lib_path/mylib_path',
+                              'C:/this_my_component_lib_path/my_component_lib',
+                              'C:/this_my_component_tool_path/my-component-tool',
+                              'C:/this_boost_path/boost_include',
+                              'C:/this_my_other_lib_path/otherlib_path'],
+                             deps_cpp_info_test.include_paths)
+            self.assertEqual(['C:/this_boost_path/boost_include'],
+                             deps_cpp_info_test["Boost"].include_paths)
+            self.assertEqual(['C:/this_my_lib_path/mylib_path'],
+                             deps_cpp_info_test["My_Lib"].include_paths)
+            self.assertEqual(['C:/this_my_other_lib_path/otherlib_path'],
+                             deps_cpp_info_test["My_Other_Lib"].include_paths)
+            self.assertEqual(['C:/this_my_component_tool_path/my-component-tool'],
+                             deps_cpp_info_test["My-Component-Tool"].include_paths)
+
+        assert_cpp(deps_cpp_info)
+        # Test generated content is the same
+        conanfile = MockConanfile(None)
+        conanfile.display_name = "name"
+        conanfile.deps_cpp_info = deps_cpp_info
+        conanfile.deps_env_info = DepsEnvInfo()
+        conanfile.deps_user_info = DepsUserInfo()
+        conanfile.env_info = EnvInfo()
+        txt_generator = TXTGenerator(conanfile)
+        for item in items:
+            self.assertIn(item, txt_generator.content)
+
+        # Now adding env_info
+        text2 = text + """
+[ENV_LIBA]
+VAR2=23
+"""
+        deps_cpp_info, _, deps_env_info = TXTGenerator.loads(text2)
+        assert_cpp(deps_cpp_info)
+        self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
+
+        # Now only with user info
+        text3 = text + """
+[USER_LIBA]
+VAR2=23
+"""
+        deps_cpp_info, deps_user_info, _ = TXTGenerator.loads(text3)
+        assert_cpp(deps_cpp_info)
+        self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
+
+        # Now with all
+        text4 = text + """
+[USER_LIBA]
+VAR2=23
+
+[ENV_LIBA]
+VAR2=23
+"""
+        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(text4)
+        assert_cpp(deps_cpp_info)
+        self.assertEqual(deps_user_info["LIBA"].VAR2, "23")
+        self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
 
     def help_test(self):
         deps_env_info = DepsEnvInfo()
