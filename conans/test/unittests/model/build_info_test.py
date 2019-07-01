@@ -582,6 +582,9 @@ VAR2=23
         self.assertEqual(expected, dep_component.as_dict())
 
     def deps_cpp_info_sysroot_test(self):
+        """
+        Sysroot should have the value set by the most direct dependency
+        """
         folder = temp_folder()
         info = CppInfo(folder)
         info.sysroot = "hola"
@@ -591,7 +594,7 @@ VAR2=23
         other_info = CppInfo(folder)
         other_info.sysroot = "kk"
         deps_cpp_info.update(other_info, "my_other_lib")
-        self.assertEqual("kk", deps_cpp_info.sysroot)
+        self.assertEqual("hola", deps_cpp_info.sysroot)
 
     def deps_cpp_info_cflags_test(self):
         """
