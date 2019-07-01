@@ -451,6 +451,7 @@ class DepsCppInfo(object):
 
     def update(self, cpp_info, pkg_name):
         assert isinstance(cpp_info, CppInfo)
+        cpp_info.name = pkg_name
         self.update_dep_cpp_info(DepCppInfo(cpp_info), pkg_name)
 
     def update_dep_cpp_info(self, dep_cpp_info, pkg_name):
