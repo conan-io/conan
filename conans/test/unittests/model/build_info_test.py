@@ -554,7 +554,7 @@ class BuildInfoTest(unittest.TestCase):
 
     def deps_cpp_info_cflags_test(self):
         """
-        Order od nodes in the graph is computed from bottom (node with more depdendencies) to top
+        Order of nodes in the graph is computed from bottom (node with more depdendencies) to top
         (node with no dependencies). O rder od flags should be from less dependent to the most
         dependent one.
         """

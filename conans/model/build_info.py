@@ -1,5 +1,6 @@
 import os
 from collections import OrderedDict
+from copy import deepcopy
 
 import deprecation
 
@@ -556,7 +557,7 @@ class DepsCppInfo(object):
 
     def _get_global_list(self, name, reverse=False):
         result = []
-        deps_cpp_info = self._dependencies.values()
+        deps_cpp_info = list(self._dependencies.values())
         if reverse:
             deps_cpp_info.reverse()
         for dep_cpp_info in deps_cpp_info:
