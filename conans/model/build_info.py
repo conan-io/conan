@@ -41,8 +41,8 @@ class CppInfo(object):
         self.sysroot = ""
         self.version = None
         self.description = None
-        # When package is editable, _filter_empty=False, so empty dirs are maintained
-        self._filter_empty = True
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = True   # FIXME: Should not be part of the public interface
         self._components = OrderedDict()
         self.public_deps = []
         self.configs = {}    # FIXME: Should not be part of the public interface
@@ -103,7 +103,7 @@ class CppInfo(object):
     def __getattr__(self, config):
         if config not in self.configs:
             sub_cpp_info = CppInfo(self.rootpath)
-            sub_cpp_info._filter_empty = self._filter_empty
+            sub_cpp_info.filter_empty = self.filter_empty
             self.configs[config] = sub_cpp_info
         return self.configs[config]
 
@@ -158,8 +158,8 @@ class DepCppInfo(object):
         self._src_paths = None
         self._public_deps = cpp_info.public_deps
         self.configs = {}
-        # When package is editable, _filter_empty=False, so empty dirs are maintained
-        self._filter_empty = cpp_info._filter_empty
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = cpp_info.filter_empty
         self._components = OrderedDict()
         # Copy Components
         for comp_name, comp_value in cpp_info.components.items():
@@ -167,13 +167,13 @@ class DepCppInfo(object):
         # Copy Configurations
         for config, sub_cpp_info in cpp_info.configs.items():
             sub_dep_cpp_info = DepCppInfo(sub_cpp_info)
-            sub_dep_cpp_info._filter_empty = self._filter_empty
+            sub_dep_cpp_info.filter_empty = self.filter_empty
             self.configs[config] = sub_dep_cpp_info
 
     def __getattr__(self, config):
         if config not in self.configs:
             sub_dep_cpp_info = DepCppInfo(CppInfo(self.rootpath))
-            sub_dep_cpp_info._filter_empty = self._filter_empty
+            sub_dep_cpp_info.filter_empty = self.filter_empty
             self.configs[config] = sub_dep_cpp_info
         return self.configs[config]
 
@@ -182,7 +182,7 @@ class DepCppInfo(object):
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p) for p in paths]
-        if self._filter_empty:
+        if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
             return abs_paths

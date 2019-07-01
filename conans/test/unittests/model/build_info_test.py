@@ -132,7 +132,7 @@ VAR2=23
         deps_cpp_info = DepsCppInfo()
         one_dep_folder = temp_folder()
         one_dep = CppInfo(one_dep_folder)
-        one_dep._filter_empty = False  # For testing: Do not filter paths
+        one_dep.filter_empty = False  # For testing: Do not filter paths
         one_dep.includedirs.append("whatever")
         one_dep.includedirs.append("whenever")
         one_dep.libdirs.append("other")
@@ -140,7 +140,7 @@ VAR2=23
         deps_cpp_info.update(one_dep, "global")
         child_folder = temp_folder()
         child = CppInfo(child_folder)
-        child._filter_empty = False  # For testing: Do not filter paths
+        child.filter_empty = False  # For testing: Do not filter paths
         child.includedirs.append("ChildrenPath")
         child.cxxflags.append("cxxmyflag")
         deps_cpp_info.update(child, "Boost")
@@ -172,7 +172,7 @@ VAR2=23
         deps_cpp_info = DepsCppInfo()
         parent_folder = temp_folder()
         parent = CppInfo(parent_folder)
-        parent._filter_empty = False  # For testing: Do not remove empty paths
+        parent.filter_empty = False  # For testing: Do not remove empty paths
         parent.includedirs.append("whatever")
         self.assertEqual({}, parent.configs)
         parent.debug.includedirs.append("whenever")
@@ -193,7 +193,7 @@ VAR2=23
 
         child_folder = temp_folder()
         child = CppInfo(child_folder)
-        child._filter_empty = False  # For testing: Do not remove empty paths
+        child.filter_empty = False  # For testing: Do not remove empty paths
         child.includedirs.append("ChildrenPath")
         child.debug.includedirs.append("ChildrenDebugPath")
         child.cxxflags.append("cxxmyflag")
@@ -550,7 +550,7 @@ VAR2=23
 
     def components_json_test(self):
         component = Component("com1", "folder")
-        component._filter_empty = False
+        component.filter_empty = False
         dep_component = DepComponent(component)
         expected = {"name": "com1",
                     "rootpath": "folder",

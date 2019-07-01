@@ -345,7 +345,7 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
         self._call_package_info(node.conanfile, package_folder=base_path, ref=node.ref)
 
-        node.conanfile.cpp_info._filter_empty = False
+        node.conanfile.cpp_info.filter_empty = False
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
         if editable_cpp_info:

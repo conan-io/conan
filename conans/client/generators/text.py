@@ -118,7 +118,7 @@ class TXTGenerator(Generator):
                     continue
                 else:
                     cpp_info = CppInfo(configs_cpp_info[None]["rootpath"][0])  # Get general rootpath
-                    cpp_info._filter_empty = False
+                    cpp_info.filter_empty = False
 
                 for config, fields in configs_cpp_info.items():
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)

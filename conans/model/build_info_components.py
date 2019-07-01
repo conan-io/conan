@@ -31,7 +31,7 @@ class Component(object):
         self.cxxflags = []
         self.sharedlinkflags = []
         self.exelinkflags = []
-        self._filter_empty = True
+        self.filter_empty = True
 
     def as_dict(self):
         result = {}
@@ -92,7 +92,7 @@ class DepComponent(object):
         self._cxxflags = component.cxxflags
         self._sharedlinkflags = component.sharedlinkflags
         self._exelinkflags = component.exelinkflags
-        self._filter_empty = component._filter_empty
+        self._filter_empty = component.filter_empty
 
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self._rootpath, p) for p in paths]

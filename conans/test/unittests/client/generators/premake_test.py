@@ -79,7 +79,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         self.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(self.tmp_folder1)
-        cpp_info._filter_empty = False
+        cpp_info.filter_empty = False
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.includedirs = ['include1']
         cpp_info.libdirs = ['lib1']
@@ -93,7 +93,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         self.conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo(self.tmp_folder2)
-        cpp_info._filter_empty = False
+        cpp_info.filter_empty = False
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.includedirs = ['include2']
         cpp_info.libdirs = ['lib2']

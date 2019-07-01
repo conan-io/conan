@@ -18,7 +18,7 @@ class BoostJamGeneratorTest(unittest.TestCase):
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
-        cpp_info._filter_empty = False  # For testing purposes
+        cpp_info.filter_empty = False  # For testing purposes
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
@@ -28,7 +28,7 @@ class BoostJamGeneratorTest(unittest.TestCase):
 
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
-        cpp_info._filter_empty = False  # For testing purposes
+        cpp_info.filter_empty = False  # For testing purposes
         cpp_info.libs = ["MyLib2"]
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.version = "2.3"

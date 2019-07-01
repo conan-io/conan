@@ -43,7 +43,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file.deps_user_info = DepsUserInfo()
         conan_file.deps_cpp_info = DepsCppInfo()
         cpp_info = CppInfo("/root")
-        cpp_info._filter_empty = False  # For testing purposes
+        cpp_info.filter_empty = False  # For testing purposes
         cpp_info.includedirs = ["path/to/include1"]
         cpp_info.libdirs = ["path/to/lib1"]
         cpp_info.libs.append("mylib")
