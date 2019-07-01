@@ -510,23 +510,23 @@ class DepsCppInfo(object):
 
     @property
     def defines(self):
-        return self._get_global_list("defines")
+        return self._get_global_list("defines", reverse=True)
 
     @property
     def cflags(self):
-        return self._get_global_list("cflags")
+        return self._get_global_list("cflags", reverse=True)
 
     @property
     def cxxflags(self):
-        return self._get_global_list("cxxflags")
+        return self._get_global_list("cxxflags", reverse=True)
 
     @property
     def sharedlinkflags(self):
-        return self._get_global_list("sharedlinkflags")
+        return self._get_global_list("sharedlinkflags", reverse=True)
 
     @property
     def exelinkflags(self):
-        return self._get_global_list("exelinkflags")
+        return self._get_global_list("exelinkflags", reverse=True)
 
     @property
     def sysroot(self):
@@ -554,9 +554,12 @@ class DepsCppInfo(object):
             result.append(dep_cpp_info.sysroot)
         return result
 
-    def _get_global_list(self, name):
+    def _get_global_list(self, name, reverse=False):
         result = []
-        for dep_cpp_info in self._dependencies.values():
+        deps_cpp_info = self._dependencies.values()
+        if reverse:
+            deps_cpp_info.reverse()
+        for dep_cpp_info in deps_cpp_info:
             for item in getattr(dep_cpp_info, name, []):
                 if item not in result:
                     result.append(item)

@@ -136,7 +136,6 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual({}, parent.configs)
         parent.debug.includedirs.append("whenever")
         self.assertEqual(["debug"], list(parent.configs))
-        parent.debug.resdirs.append("C:/KKKKKKKKKK")
         parent.libs.extend(["math"])
         parent.debug.libs.extend(["debug_Lib"])
         self.assertEqual(["debug"], list(parent.configs))
@@ -554,6 +553,11 @@ class BuildInfoTest(unittest.TestCase):
         self.assertEqual("kk", deps_cpp_info.sysroot)
 
     def deps_cpp_info_cflags_test(self):
+        """
+        Order od nodes in the graph is computed from bottom (node with more depdendencies) to top
+        (node with no dependencies). O rder od flags should be from less dependent to the most
+        dependent one.
+        """
         folder = temp_folder()
         info = CppInfo(folder)
         info.cflags = ["my_lib_flag"]
@@ -563,4 +567,4 @@ class BuildInfoTest(unittest.TestCase):
         other_info = CppInfo(folder)
         other_info.cflags = ["my_other_lib_flag"]
         deps_cpp_info.update(other_info, "my_other_lib")
-        self.assertEqual(["my_lib_flag", "my_other_lib_flag"], deps_cpp_info.cflags)
+        self.assertEqual(["my_other_lib_flag", "my_lib_flag"], deps_cpp_info.cflags)

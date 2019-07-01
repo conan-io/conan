@@ -116,3 +116,31 @@ class HelloReuseConan(ConanFile):
         conanbuildinfo = load(os.path.join(self.client.current_folder, "conanbuildinfo.cmake"))
         libs = " ".join(expected_libs)
         self.assertIn(libs, conanbuildinfo)
+
+    def graph_order_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+
+class Conan(ConanFile):
+
+        def build(self):
+            self.output.info("Lib %s deps: %s" % (self.name, self.deps_cpp_info.deps))
+            self.output.info("Lib %s cflags: %s" % (self.name, self.deps_cpp_info.cflags))
+
+        def package_info(self):
+            self.cpp_info.cflags = ["%s_flag" % self.name]
+        """
+
+        def _export(name, dep=None):
+            content = conanfile + "requires = \"%s/1.0@conan/stable\"" % dep if dep else conanfile
+            client.save({"conanfile.py": content})
+            client.run("create . %s/1.0@conan/stable" % name)
+        _export("aaa")
+        self.assertIn("Lib aaa deps: %s" % [], client.out)
+        self.assertIn("Lib aaa cflags: %s" % [], client.out)
+        _export("bbb", "aaa")
+        self.assertIn("Lib bbb deps: %s" % ["aaa"], client.out)
+        self.assertIn("Lib bbb cflags: %s" % ["aaa_flag"], client.out)
+        _export("ccc", "bbb")
+        self.assertIn("Lib ccc deps: %s" % ["bbb", "aaa"], client.out)
+        self.assertIn("Lib ccc cflags: %s" % ["aaa_flag", "bbb_flag"], client.out)
