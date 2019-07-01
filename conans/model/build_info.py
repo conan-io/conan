@@ -104,7 +104,7 @@ class CppInfo(object):
 
     def as_dict(self):
         result = {}
-        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes",
+        for name in ["name", "rootpath", "sysroot", "system_deps", "libs", "exes",
                      "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
                      "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]:
             attr_name = "cxxflags" if name == "cppflags" else name  # Backwards compatibility
@@ -389,7 +389,7 @@ class DepCppInfo(object):
 
     def as_dict(self):
         result = {}
-        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes",
+        for name in ["name", "rootpath", "sysroot", "system_deps", "libs", "exes",
                      "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
                      "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
                      "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]:

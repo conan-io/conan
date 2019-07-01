@@ -202,13 +202,12 @@ AA*: CC/1.0@private_user/channel
         cpp_info_release = cpp_info["configs"]["release"]
 
         # Each node should have its own information
-        # FIXME? self.assertFalse("libs" in cpp_info)
+        self.assertEqual([], cpp_info["libs"])
         self.assertEqual(cpp_info_debug["libs"], ["hello_d"])
         self.assertEqual(cpp_info_release["libs"], ["hello"])
         self.assertEqual(cpp_info_debug["libdirs"], ["lib-debug"])
         self.assertEqual(cpp_info_release["libdirs"], [DEFAULT_LIB])
 
-        # FIXME: There are _empty_ nodes
         self.assertEqual(cpp_info_debug["builddirs"], [""])
         self.assertEqual(cpp_info_release["builddirs"], [""])
 

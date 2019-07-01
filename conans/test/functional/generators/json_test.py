@@ -103,6 +103,11 @@ class HelloConan(ConanFile):
         self.assertEqual(deps_info_debug["libs"], ["Hello_d"])
         self.assertEqual(deps_info_release["libs"], ["Hello"])
 
+        self.assertNotIn("version", deps_info_debug)
+        self.assertNotIn("version", deps_info_release)
+        self.assertNotIn("description", deps_info_debug)
+        self.assertNotIn("description", deps_info_release)
+
         # FIXME: Empty (and rootpath) information is duplicated in all the nodes
         dupe_nodes = ["rootpath", "sysroot", "include_paths", "lib_paths", "bin_paths",
                       "build_paths", "res_paths", "cflags", "cppflags", "sharedlinkflags",
