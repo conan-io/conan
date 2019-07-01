@@ -303,7 +303,7 @@ class HelloConan(ConanFile):
         self.assertEqual(data["remotes"], [])
 
     def errors_test(self):
-        self.client.run("remote update origin http://url", assert_error=True)
+        self.client.run("remote update origin url", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
@@ -384,7 +384,11 @@ class HelloConan(ConanFile):
         self.client.run("remote add foobar foobar.com")
         self.assertIn("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname.",
                       self.client.user_io.out)
+        self.client.run("remote list")
+        self.assertIn("foobar.com", self.client.out)
 
         self.client.run("remote update foobar pepe.org")
         self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
                       self.client.user_io.out)
+        self.client.run("remote list")
+        self.assertIn("pepe.org", self.client.out)
