@@ -4,7 +4,10 @@ import os
 import platform
 from contextlib import contextmanager
 
-from conans.errors import NotFoundException
+
+import fasteners
+
+from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.manifest import discarded_file
@@ -15,6 +18,7 @@ from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDE
     BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SCM_FOLDER, PACKAGE_METADATA
 from conans.util.files import load, save, rmdir
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
+from conans.util.log import logger
 
 
 def short_path(func):
@@ -44,7 +48,7 @@ class PackageCacheLayout(object):
     def ref(self):
         return self._ref
 
-    def conan(self):
+    def base_folder(self):
         """ Returns the base folder for this package reference """
         return self._base_folder
 
@@ -79,6 +83,18 @@ class PackageCacheLayout(object):
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
+
+    def remove_system_reqs(self):
+        system_reqs_folder = os.path.join(self._base_folder, SYSTEM_REQS_FOLDER)
+        if not os.path.exists(self._base_folder):
+            raise ValueError("%s does not exist" % repr(self._ref))
+        if not os.path.exists(system_reqs_folder):
+            return
+        try:
+            rmdir(system_reqs_folder)
+        except Exception as e:
+            raise ConanException("Unable to remove system requirements at %s: %s"
+                                 % (system_reqs_folder, str(e)))
 
     def packages(self):
         return os.path.join(self._base_folder, PACKAGES_FOLDER)
@@ -155,12 +171,14 @@ class PackageCacheLayout(object):
 
     @contextmanager
     def update_metadata(self):
-        try:
-            metadata = self.load_metadata()
-        except RecipeNotFoundException:
-            metadata = PackageMetadata()
-        yield metadata
-        save(self.package_metadata(), metadata.dumps())
+        lockfile = self.package_metadata() + ".lock"
+        with fasteners.InterProcessLock(lockfile, logger=logger):
+            try:
+                metadata = self.load_metadata()
+            except RecipeNotFoundException:
+                metadata = PackageMetadata()
+            yield metadata
+            save(self.package_metadata(), metadata.dumps())
 
     # Revisions
     def package_summary_hash(self, pref):
@@ -175,25 +193,25 @@ class PackageCacheLayout(object):
     def conanfile_read_lock(self, output):
         if self._no_lock:
             return NoLock()
-        return ReadLock(self.conan(), self._ref, output)
+        return ReadLock(self._base_folder, self._ref, output)
 
     def conanfile_write_lock(self, output):
         if self._no_lock:
             return NoLock()
-        return WriteLock(self.conan(), self._ref, output)
+        return WriteLock(self._base_folder, self._ref, output)
 
     def conanfile_lock_files(self, output):
         if self._no_lock:
             return ()
-        return WriteLock(self.conan(), self._ref, output).files
+        return WriteLock(self._base_folder, self._ref, output).files
 
     def package_lock(self, pref):
         if self._no_lock:
             return NoLock()
-        return SimpleLock(os.path.join(self.conan(), "locks", pref.id))
+        return SimpleLock(os.path.join(self._base_folder, "locks", pref.id))
 
     def remove_package_locks(self):
-        conan_folder = self.conan()
+        conan_folder = self._base_folder
         Lock.clean(conan_folder)
         rmdir(os.path.join(conan_folder, "locks"))
 

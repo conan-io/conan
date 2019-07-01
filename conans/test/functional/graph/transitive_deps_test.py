@@ -41,7 +41,7 @@ class TransitiveDepsTest(unittest.TestCase):
         pref_c = PackageReference.loads(
             "CCCC/1.0@user/channel:aef99e6ca67e3d2da47927c4ec1ec7129129943f")
         self.assertIn("{} - Build".format(pref_c), self.t.out)
-        build_folder = self.t.cache.build(pref=pref_c)
+        build_folder = self.t.cache.package_layout(pref_c.ref).build(pref_c)
 
         # It contains information about AAAA
         conanbuildinfo = load(os.path.join(build_folder, "conanbuildinfo.cmake"))

@@ -20,7 +20,6 @@ set(CONAN_C_FLAGS_{dep}{build_type}_LIST "{deps.cflags_list}")
 set(CONAN_CXX_FLAGS_{dep}{build_type}_LIST "{deps.cxxflags_list}")
 set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.sharedlinkflags_list}")
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
-
 """
 
 
@@ -116,32 +115,36 @@ _target_template = """
                                   CONAN_PACKAGE_TARGETS_{uname}_DEBUG "{deps}" "debug" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
                                   CONAN_PACKAGE_TARGETS_{uname}_RELEASE "{deps}" "release" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "{deps}" "relwithdebinfo" {pkg_name})
+    conan_package_library_targets("${{CONAN_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
+                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "{deps}" "minsizerel" {pkg_name})
 
     add_library({name} INTERFACE IMPORTED)
 
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_PACKAGE_TARGETS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
                                                                  $<$<CONFIG:Release>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                 $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                 $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                 $<$<CONFIG:RelWithDebInfo>:${{CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                 $<$<CONFIG:MinSizeRel>:${{CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_MINSIZEREL_LIST}}>
                                                                  $<$<CONFIG:Debug>:${{CONAN_PACKAGE_TARGETS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
                                                                  {deps})
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
-                                                                      $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
-                                                                      $<$<CONFIG:MinSizeRel>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELWITHDEBINFO}}>
+                                                                      $<$<CONFIG:MinSizeRel>:${{CONAN_INCLUDE_DIRS_{uname}_MINSIZEREL}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
-                                                                      $<$<CONFIG:RelWithDebInfo>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
-                                                                      $<$<CONFIG:MinSizeRel>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:RelWithDebInfo>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELWITHDEBINFO}}>
+                                                                      $<$<CONFIG:MinSizeRel>:${{CONAN_COMPILE_DEFINITIONS_{uname}_MINSIZEREL}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_C_FLAGS_{uname}_LIST}} ${{CONAN_CXX_FLAGS_{uname}_LIST}}
                                                                   $<$<CONFIG:Release>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
-                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
+                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELWITHDEBINFO_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELWITHDEBINFO_LIST}}>
+                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_MINSIZEREL_LIST}} ${{CONAN_CXX_FLAGS_{uname}_MINSIZEREL_LIST}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>)
- """
+"""
 
 
 def generate_targets_section(dependencies):
@@ -168,7 +171,6 @@ def generate_targets_section(dependencies):
 
 
 _cmake_common_macros = """
-
 function(conan_message MESSAGE_OUTPUT)
     if(NOT CONAN_CMAKE_SILENT_OUTPUT)
         message(${ARGV${0}})
@@ -246,7 +248,7 @@ endmacro()
 macro(conan_set_std)
     # Do not warn "Manually-specified variables were not used by the project"
     set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}")
-    if (CMAKE_VERSION VERSION_LESS "3.1" OR 
+    if (CMAKE_VERSION VERSION_LESS "3.1" OR
         (CMAKE_VERSION VERSION_LESS "3.12" AND ("${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "20" OR "${CONAN_CMAKE_CXX_STANDARD}" STREQUAL "gnu20")))
     if(CONAN_STD_CXX_FLAG)
         conan_message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
@@ -348,15 +350,34 @@ endfunction()
 
 function(check_compiler_version)
     conan_split_version(${CMAKE_CXX_COMPILER_VERSION} VERSION_MAJOR VERSION_MINOR)
+    if(DEFINED CONAN_SETTINGS_COMPILER_TOOLSET)
+       conan_message(STATUS "Conan: Skipping compiler check: Declared 'compiler.toolset'")
+       return()
+    endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
-        # https://cmake.org/cmake/help/v3.2/variable/MSVC_VERSION.html
-        if( (CONAN_COMPILER_VERSION STREQUAL "14" AND NOT VERSION_MAJOR STREQUAL "19") OR
+        # MSVC_VERSION is defined since 2.8.2 at least
+        # https://cmake.org/cmake/help/v2.8.2/cmake.html#variable:MSVC_VERSION
+        # https://cmake.org/cmake/help/v3.14/variable/MSVC_VERSION.html
+        if(
+            # 1920-1929 = VS 16.0 (v142 toolset)
+            (CONAN_COMPILER_VERSION STREQUAL "16" AND NOT((MSVC_VERSION GREATER 1919) AND (MSVC_VERSION LESS 1930))) OR
+            # 1910-1919 = VS 15.0 (v141 toolset)
+            (CONAN_COMPILER_VERSION STREQUAL "15" AND NOT((MSVC_VERSION GREATER 1909) AND (MSVC_VERSION LESS 1920))) OR
+            # 1900      = VS 14.0 (v140 toolset)
+            (CONAN_COMPILER_VERSION STREQUAL "14" AND NOT(MSVC_VERSION EQUAL 1900)) OR
+            # 1800      = VS 12.0 (v120 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "12" AND NOT VERSION_MAJOR STREQUAL "18") OR
+            # 1700      = VS 11.0 (v110 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "11" AND NOT VERSION_MAJOR STREQUAL "17") OR
+            # 1600      = VS 10.0 (v100 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "10" AND NOT VERSION_MAJOR STREQUAL "16") OR
+            # 1500      = VS  9.0 (v90 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "9" AND NOT VERSION_MAJOR STREQUAL "15") OR
+            # 1400      = VS  8.0 (v80 toolset)
             (CONAN_COMPILER_VERSION STREQUAL "8" AND NOT VERSION_MAJOR STREQUAL "14") OR
+            # 1310      = VS  7.1, 1300      = VS  7.0
             (CONAN_COMPILER_VERSION STREQUAL "7" AND NOT VERSION_MAJOR STREQUAL "13") OR
+            # 1200      = VS  6.0
             (CONAN_COMPILER_VERSION STREQUAL "6" AND NOT VERSION_MAJOR STREQUAL "12") )
             conan_error_compiler_version()
         endif()
@@ -474,14 +495,14 @@ macro(conan_global_flags)
     if(CONAN_SYSTEM_INCLUDES)
         include_directories(SYSTEM ${CONAN_INCLUDE_DIRS}
                                    "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                                   "$<$<CONFIG:RelWithDebInfo>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                                   "$<$<CONFIG:MinSizeRel>:${CONAN_INCLUDE_DIRS_RELEASE}>"
+                                   "$<$<CONFIG:RelWithDebInfo>:${CONAN_INCLUDE_DIRS_RELWITHDEBINFO}>"
+                                   "$<$<CONFIG:MinSizeRel>:${CONAN_INCLUDE_DIRS_MINSIZEREL}>"
                                    "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
     else()
         include_directories(${CONAN_INCLUDE_DIRS}
                             "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                            "$<$<CONFIG:RelWithDebInfo>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                            "$<$<CONFIG:MinSizeRel>:${CONAN_INCLUDE_DIRS_RELEASE}>"
+                            "$<$<CONFIG:RelWithDebInfo>:${CONAN_INCLUDE_DIRS_RELWITHDEBINFO}>"
+                            "$<$<CONFIG:MinSizeRel>:${CONAN_INCLUDE_DIRS_MINSIZEREL}>"
                             "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
     endif()
 
@@ -491,12 +512,16 @@ macro(conan_global_flags)
                                   CONAN_LIBS_DEBUG)
     conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
                                   CONAN_LIBS_RELEASE)
+    conan_find_libraries_abs_path("${CONAN_LIBS_RELWITHDEBINFO}" "${CONAN_LIB_DIRS_RELWITHDEBINFO}"
+                                  CONAN_LIBS_RELWITHDEBINFO)
+    conan_find_libraries_abs_path("${CONAN_LIBS_MINSIZEREL}" "${CONAN_LIB_DIRS_MINSIZEREL}"
+                                  CONAN_LIBS_MINSIZEREL)
 
     add_compile_options(${CONAN_DEFINES}
                         "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
                         "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>"
-                        "$<$<CONFIG:RelWithDebInfo>:${CONAN_DEFINES_RELEASE}>"
-                        "$<$<CONFIG:MinSizeRel>:${CONAN_DEFINES_RELEASE}>")
+                        "$<$<CONFIG:RelWithDebInfo>:${CONAN_DEFINES_RELWITHDEBINFO}>"
+                        "$<$<CONFIG:MinSizeRel>:${CONAN_DEFINES_MINSIZEREL}>")
 
     conan_set_flags("")
     conan_set_flags("_RELEASE")
@@ -519,21 +544,33 @@ macro(conan_target_link_libraries target)
 endmacro()
 """
 
-cmake_macros = """
+
+def _conan_basic_setup_common(addtional_macros, cmake_multi=False):
+    output_dirs_section = """
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(STATUS "Conan: Adjusting output directories")
+        conan_output_dirs_setup()
+    endif()"""
+
+    output_dirs_multi_section = """
+    if(ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_message(WARNING "Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator")
+    endif()"""
+
+    main_section = """
 macro(conan_basic_setup)
     set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD SKIP_FPIC)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
     if(CONAN_EXPORTED)
         conan_message(STATUS "Conan: called by CMake conan helper")
     endif()
+
     if(CONAN_IN_LOCAL_CACHE)
         conan_message(STATUS "Conan: called inside local cache")
     endif()
-    conan_check_compiler()
-    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
-        conan_output_dirs_setup()
-    endif()
-    conan_set_find_library_paths()
+%%OUTPUT_DIRS_SECTION%%
+
     if(NOT ARGUMENTS_TARGETS)
         conan_message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
@@ -541,27 +578,41 @@ macro(conan_basic_setup)
         conan_message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
+
     if(ARGUMENTS_SKIP_RPATH)
         # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
         conan_message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
+
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         conan_message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()
+
     if(NOT ARGUMENTS_SKIP_STD)
         conan_message(STATUS "Conan: Adjusting language standard")
         conan_set_std()
     endif()
+
     if(NOT ARGUMENTS_SKIP_FPIC)
         conan_set_fpic()
     endif()
-    conan_set_vs_runtime()
-    conan_set_libcxx()
-    conan_set_find_paths()
-endmacro()
 
+    conan_check_compiler()
+    conan_set_libcxx()
+    conan_set_vs_runtime()
+    conan_set_find_paths()
+    %%INVOKE_MACROS%%
+endmacro()
+"""
+    result = main_section.replace("%%OUTPUT_DIRS_SECTION%%",
+                                  output_dirs_multi_section if cmake_multi else output_dirs_section)
+    result = result.replace("%%INVOKE_MACROS%%", "\n    ".join(addtional_macros))
+    return result
+
+
+cmake_macros = _conan_basic_setup_common(["conan_set_find_library_paths()"]) + """
 macro(conan_set_find_paths)
     # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
     # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
@@ -617,9 +668,7 @@ macro(conan_flags_setup)
     conan_set_vs_runtime()
     conan_set_libcxx()
 endmacro()
-
 """ + _cmake_common_macros
-
 
 cmake_macros_multi = """
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
@@ -627,36 +676,20 @@ if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
 else()
     message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
 endif()
+
 if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
     include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
 else()
     message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
 endif()
 
-macro(conan_basic_setup)
-    set(options TARGETS)
-    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-    if(CONAN_EXPORTED)
-        conan_message(STATUS "Conan: called by CMake conan helper")
-    endif()
-    if(CONAN_IN_LOCAL_CACHE)
-        conan_message(STATUS "Conan: called inside local cache")
-    endif()
-    conan_check_compiler()
-    # conan_output_dirs_setup()
-    if(NOT ARGUMENTS_TARGETS)
-        conan_message(STATUS "Conan: Using cmake global configuration")
-        conan_global_flags()
-    else()
-        conan_message(STATUS "Conan: Using cmake targets configuration")
-        conan_define_targets()
-    endif()
-    conan_set_rpath()
-    conan_set_vs_runtime()
-    conan_set_libcxx()
-    conan_set_find_paths()
-    conan_set_fpic()
-endmacro()
+if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
+endif()
+
+if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
+endif()
 
 macro(conan_set_vs_runtime)
     # This conan_set_vs_runtime is MORE opinionated than the regular one. It will
@@ -681,13 +714,20 @@ endmacro()
 
 macro(conan_set_find_paths)
     if(CMAKE_BUILD_TYPE)
+        MESSAGE("BUILD TYPE: ${CMAKE_BUILD_TYPE}")
         if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
             set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_PREFIX_PATH})
             set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_DEBUG} ${CMAKE_MODULE_PATH})
-        else()
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "Release")
             set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_PREFIX_PATH})
             set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELEASE} ${CMAKE_MODULE_PATH})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "RelWithDebInfo")
+            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_PREFIX_PATH})
+            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_RELWITHDEBINFO} ${CMAKE_MODULE_PATH})
+        elseif(${CMAKE_BUILD_TYPE} MATCHES "MinSizeRel")
+            set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_PREFIX_PATH})
+            set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH_MINSIZEREL} ${CMAKE_MODULE_PATH})
         endif()
     endif()
 endmacro()
-""" + _cmake_common_macros
+""" + _conan_basic_setup_common([], cmake_multi=True) + _cmake_common_macros

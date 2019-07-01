@@ -8,7 +8,7 @@ if(causeClass == "jenkins.branch.BranchIndexingCause"){
 
 // ########## CONFIGURATION ##################
 def full_py_vers = false
-def test_revisions = false
+def test_revisions = true
 // ###########################################
 def is_pr = false
 def excluded_tags = []
@@ -159,11 +159,60 @@ for (n in ["Windows", "Linux"]) {
 }
 parallel rest_builders
 
-
 try{
     for (flavor in flavors){
+        def linux_builders = [:]
+        def slave_linux = "Linux"
+        def pyvers_linux = all_pyvers[slave_linux]
+        for (y in pyvers_linux) {
+            def pyver = y
+            def name = "${slave_linux} - ${flavor} - ${pyver} - '${e_tags}'"
+            linux_builders[name] = {
+                node(slave_linux) {
+                    stage(name){
+                        def workdir
+                        def sourcedir
+                        def base_source
+                        lock('source_code') { // Prepare a clean new directory with the sources
+                            try{
+                                step ([$class: 'WsCleanup'])
+                            }
+                            catch(e){
+                                echo "Cannot clean WS"
+                            }
+
+                            def vars = checkout scm
+                            commit = vars["GIT_COMMIT"].substring(0, 4)
+                            branch = vars["GIT_BRANCH"]
+                            echo "Starting ${env.JOB_NAME} with branch ${env.BRANCH_NAME}"
+                            def base_dir = (slave_linux == "Windows") ? win_tmp_base : rest_tmp_base
+                            workdir = "${base_dir}${commit}/${pyver}/${flavor}"
+                            base_source = "${base_dir}source/${commit}"
+                            sourcedir = "${base_source}/${pyver}/${flavor}"
+                            while(fileExists(sourcedir)){
+                                sourcedir = sourcedir + "_"
+                            }
+
+                            dir(base_source){ // Trick to create the parent
+                                def escaped_ws = "${WORKSPACE}".replace("\\", "/")
+                                def cmd = "python -c \"import shutil; shutil.copytree('${escaped_ws}', '${sourcedir}')\""
+                                sh(script: cmd)
+                            }
+                        }
+
+                        sh "docker pull conanio/conantests"
+                        docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
+                            sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} ${e_tags}")
+                        }
+                    }
+                }
+            }
+        }
+        parallel linux_builders
+
+        //Now Windows and Mac, much slower
         def builders = [:]
-        for (x in slaves) {
+        for (x in ['Windows', 'Macos']) {
             def slave = x
             def pyvers = all_pyvers[slave]
             for (y in pyvers) {
@@ -209,13 +258,7 @@ try{
                                     }
                                 }
                             }
-                            if(slave == "Linux"){
-                                sh "docker pull conanio/conantests"
-                                docker.image('conanio/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
-                                    sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores} --flavor ${flavor} ${e_tags}")
-                                }
-                            }
-                            else if(slave == "Windows"){
+                            if(slave == "Windows"){
                                 try{
 
                                   withEnv(["CONAN_TEST_FOLDER=${workdir}"]){

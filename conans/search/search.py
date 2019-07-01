@@ -129,7 +129,7 @@ def search_packages(package_layout, query):
                            settings: {os: Windows}}}
     param package_layout: Layout for the given reference
     """
-    if not os.path.exists(package_layout.conan()) or (
+    if not os.path.exists(package_layout.base_folder()) or (
             package_layout.ref.revision and
             package_layout.recipe_revision() != package_layout.ref.revision):
         raise RecipeNotFoundException(package_layout.ref, print_rev=True)

@@ -193,10 +193,10 @@ class CMakeTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.settings = Settings()
 
-        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator",
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "Green Hills MULTI",
                                        "CONAN_CMAKE_GENERATOR_PLATFORM": "My CMake Platform"}):
             cmake = CMake(conan_file)
-            self.assertIn('-G "My CMake Generator" -A "My CMake Platform"', cmake.command_line)
+            self.assertIn('-G "Green Hills MULTI" -A "My CMake Platform"', cmake.command_line)
 
     def cmake_generator_platform_override_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -249,7 +249,7 @@ class CMakeTest(unittest.TestCase):
                            ('x86_64', 'x64'),
                            ('armv7', 'ARM'),
                            ('armv8', 'ARM64')])
-    def cmake_generator_platform_vs2019_test(self, arch, platform):
+    def cmake_generator_platform_vs2019_test(self, arch, pf):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -260,7 +260,21 @@ class CMakeTest(unittest.TestCase):
         conan_file.settings = settings
 
         cmake = CMake(conan_file)
-        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % platform, cmake.command_line)
+        self.assertIn('-G "Visual Studio 16 2019" -A "%s"' % pf, cmake.command_line)
+
+    def cmake_generator_platform_vs2019_with_ninja_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "16"
+        settings.arch = "x86_64"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file, generator="Ninja")
+        self.assertIn('-G "Ninja"', cmake.command_line)
+        self.assertNotIn("-A", cmake.command_line)
 
     @parameterized.expand([('arm',),
                            ('ppc',),
@@ -273,6 +287,25 @@ class CMakeTest(unittest.TestCase):
                                        "CONAN_CMAKE_GENERATOR_PLATFORM": platform}):
             cmake = CMake(conan_file)
             self.assertIn('-G "Green Hills MULTI" -A "%s"' % platform, cmake.command_line)
+
+    @parameterized.expand([('Ninja',),
+                           ('NMake Makefiles',),
+                           ('NMake Makefiles JOM',)
+                           ])
+    def test_generator_platform_with_unsupported_generator(self, generator):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.compiler.toolset = "v140"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        with self.assertRaises(ConanException):
+            cmake = CMake(conan_file, generator=generator, generator_platform="x64")
+            cmake.command_line
 
     def cmake_fpic_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -298,7 +331,7 @@ class CMakeTest(unittest.TestCase):
             cmake.configure()
             if expected_option is not None:
                 self.assertEqual(cmake.definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"],
-                                  expected_option)
+                                 expected_option)
             else:
                 self.assertNotIn("CONAN_CMAKE_POSITION_INDEPENDENT_CODE", cmake.definitions)
 
@@ -691,6 +724,32 @@ class CMakeTest(unittest.TestCase):
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
               "--config Debug")
 
+        settings.compiler.version = "15"
+        settings.arch = "armv8"
+        check('-G "Visual Studio 15 2017 ARM" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.arch = "x86_64"
+        check('-G "Visual Studio 15 2017 Win64" -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="15" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "9"
+        settings.os = "WindowsCE"
+        settings.os.platform = "Your platform name (ARMv4I)"
+        settings.os.version = "7.0"
+        settings.build_type = "Debug"
+        check('-G "Visual Studio 9 2008" '
+              '-A "Your platform name (ARMv4I)" '
+              '-DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="9" '
+              '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -Wno-dev',
+              "--config Debug")
+
     def deleted_os_test(self):
         partial_settings = """
 os: [Linux]
@@ -774,6 +833,7 @@ build_type: [ Release]
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Android"
+        settings.os.api_level = 16
         settings.os_build = "Windows"  # Here we are declaring we are cross building
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
@@ -792,17 +852,23 @@ build_type: [ Release]
         cmake = CMake(conan_file)
 
         cross = '-DCMAKE_SYSTEM_NAME="Android"' \
+                ' -DCMAKE_SYSTEM_VERSION="{0}"' \
                 ' -DCMAKE_SYSROOT="/path/to/sysroot"' \
-                ' -DCMAKE_ANDROID_ARCH_ABI="armeabi-v7a"'
+                ' -DCMAKE_ANDROID_ARCH_ABI="armeabi-v7a"' \
+                ' -DANDROID_ABI="armeabi-v7a"' \
+                ' -DANDROID_PLATFORM="android-{0}"' \
+                ' -DANDROID_TOOLCHAIN="{1}"' \
+                ' -DANDROID_STL="none"'.format(settings.os.api_level, settings.compiler)
         target_test = CMakeTest.scape('--target test')
 
         cmake.configure()
 
         self.assertEqual('cd {0} && cmake -G "MinGW Makefiles" '
                          '{1} -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF"'
-                         ' -DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4"'
+                         ' -DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}"'
                          ' -DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON"'
-                         ' -Wno-dev {0}'.format(dot_dir, cross),
+                         ' -Wno-dev {0}'.format(dot_dir, cross, settings.compiler,
+                                                settings.compiler.version),
                          conan_file.command)
 
         cmake.build()
@@ -837,11 +903,12 @@ build_type: [ Release]
         else:
             escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
 
-        self.assertEqual('cd %s && cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug" '
-                         '%s -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
-                         '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4" '
+        self.assertEqual('cd {0} && cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug" '
+                         '{1} -DCONAN_EXPORTED="1" -DCONAN_IN_LOCAL_CACHE="OFF" '
+                         '-DCONAN_COMPILER="{2}" -DCONAN_COMPILER_VERSION="{3}" '
                          '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" '
-                         '-Wno-dev %s' % (tempdir, cross, escaped_args),
+                         '-Wno-dev {4}'.format(tempdir, cross, settings.compiler,
+                                               settings.compiler.version, escaped_args),
                          conan_file.command)
 
         cmake.build(args=["--bar 'foo'"], target="install")
@@ -1108,6 +1175,25 @@ build_type: [ Release]
         cmake = CMake(conan_file)
         self.assertIn('-T "v140"', cmake.command_line)
 
+    @parameterized.expand([('Ninja',),
+                           ('NMake Makefiles',),
+                           ('NMake Makefiles JOM',)
+                           ])
+    def test_toolset_with_unsupported_generator(self, generator):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.compiler.toolset = "v140"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        with self.assertRaises(ConanException):
+            cmake = CMake(conan_file, generator=generator)
+            cmake.command_line
+
     def test_missing_settings(self):
         def instance_with_os_build(os_build):
             settings = Settings.loads(default_settings_yml)
@@ -1293,6 +1379,10 @@ build_type: [ Release]
         cmake.build()
         self.assertIn("/verbosity:quiet", conan_file.command)
 
+        cmake = CMake(conan_file, msbuild_verbosity=None)
+        cmake.build()
+        self.assertNotIn("/verbosity", conan_file.command)
+
         with tools.environment_append({"CONAN_MSBUILD_VERBOSITY": "detailed"}):
             cmake = CMake(conan_file)
             cmake.build()
@@ -1328,3 +1418,13 @@ build_type: [ Release]
         self.assertIn("WARN: CMake generator could not be deduced from settings", conanfile.output)
         cmake.configure()
         cmake.build()
+
+    def test_cmake_system_version_windowsce(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "WindowsCE"
+        settings.os.version = "8.0"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_VERSION"], "8.0")

@@ -1,9 +1,9 @@
 import os
 import platform
-import subprocess
 import unittest
 
 from conans import load
+from conans.client.tools.oss import check_output
 from conans.test.utils.tools import TestClient
 
 
@@ -21,6 +21,7 @@ class TestConan(ConanFile):
         client.run('install . -g virtualbuildenv -s os=Windows -s compiler="Visual Studio"'
                    ' -s compiler.runtime=MD -s compiler.version=15')
         bat = load(os.path.join(client.current_folder, "activate_build.bat"))
+        self.assertIn("SET UseEnv=True", bat)
         self.assertIn('SET CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
     def environment_deactivate_test(self):
@@ -32,7 +33,7 @@ class TestConan(ConanFile):
         def env_output_to_dict(env_output):
             env = {}
             for line in env_output.splitlines():
-                tmp = line.decode().split("=")
+                tmp = line.split("=")
                 # OLDPWD is cleared when a child script is started
                 if tmp[0] not in ["SHLVL", "_", "PS1", "OLDPWD"]:
                     env[tmp[0]] = tmp[1].replace("\\", "/")
@@ -56,7 +57,7 @@ class TestConan(ConanFile):
         client = TestClient(path_with_spaces=False)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
-        output = subprocess.check_output(env_cmd, shell=True)
+        output = check_output(env_cmd)
         normal_environment = env_output_to_dict(output)
         client.run("install .")
         act_build_file = os.path.join(client.current_folder, "activate_build.%s" % extension)
@@ -67,9 +68,9 @@ class TestConan(ConanFile):
             act_build_content_len = len(load(act_build_file).splitlines())
             deact_build_content_len = len(load(deact_build_file).splitlines())
             self.assertEqual(act_build_content_len, deact_build_content_len)
-        output = subprocess.check_output(get_cmd(act_build_file), shell=True)
+        output = check_output(get_cmd(act_build_file))
         activate_environment = env_output_to_dict(output)
         self.assertNotEqual(normal_environment, activate_environment)
-        output = subprocess.check_output(get_cmd(deact_build_file), shell=True)
+        output = check_output(get_cmd(deact_build_file))
         deactivate_environment = env_output_to_dict(output)
         self.assertEqual(normal_environment, deactivate_environment)

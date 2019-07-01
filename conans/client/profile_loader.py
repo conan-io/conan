@@ -130,7 +130,7 @@ def _load_profile(text, profile_path, default_folder):
 
         # Apply the automatic PROFILE_DIR variable
         if cwd:
-            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)
+            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
             # Allows PYTHONPATH=$PROFILE_DIR/pythontools
 
         # Replace the variables from parents in the current profile
@@ -144,7 +144,7 @@ def _load_profile(text, profile_path, default_folder):
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
 
-        # Return the intherited vars to apply them in the parent profile if exists
+        # Return the inherited vars to apply them in the parent profile if exists
         inherited_vars.update(profile_parser.vars)
         return inherited_profile, inherited_vars
 

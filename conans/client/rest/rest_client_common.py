@@ -3,6 +3,7 @@ import json
 from requests.auth import AuthBase, HTTPBasicAuth
 
 from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
@@ -139,7 +140,7 @@ class RestCommonMethods(object):
 
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-            raise get_exception_from_error(response.status_code)(response.text)
+            raise get_exception_from_error(response.status_code)(response_to_str(response))
 
         content = decode_text(response.content)
         content_type = response.headers.get("Content-Type")
@@ -162,15 +163,15 @@ class RestCommonMethods(object):
             self._remove_conanfile_files(ref, deleted)
 
     def get_recipe_snapshot(self, ref):
-        self.check_credentials()
-
+        # this method is used only for UPLOADING, then it requires the credentials
+        # Check of credentials is done in the uploader
         url = self.router.recipe_snapshot(ref)
         snap = self._get_snapshot(url)
         return snap
 
     def get_package_snapshot(self, pref):
-        self.check_credentials()
-
+        # this method is also used to check the integrity of the package upstream
+        # while installing, so check_credentials is done in uploader.
         url = self.router.package_snapshot(pref)
         snap = self._get_snapshot(url)
         return snap

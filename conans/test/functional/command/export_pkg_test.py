@@ -8,30 +8,35 @@ from parameterized import parameterized
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir
+from textwrap import dedent
 
 
 class ExportPkgTest(unittest.TestCase):
 
     def test_dont_touch_server(self):
         # https://github.com/conan-io/conan/issues/3432
-        class RequesterMock(object):
-            def __init__(self, *args, **kwargs):
-                pass
-
-        # https://github.com/conan-io/conan/issues/3432
-        client = TestClient(servers={"default": TestServer()},
-                            requester_class=RequesterMock,
+        client = TestClient(servers={"default": None},
+                            requester_class=None,
                             users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
+
+    def test_dont_touch_server_build_require(self):
+        client = TestClient(servers={"default": None},
+                            requester_class=None,
+                            users={"default": [("lasote", "mypass")]})
+        profile = dedent("""
+            [build_requires]
+            some/other@pkg/notexists
+            """)
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1")),
+                     "myprofile": profile})
+        client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
@@ -104,7 +109,7 @@ class HelloPythonConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkg_folder = client.cache.packages(ref)
+        pkg_folder = client.cache.package_layout(ref).packages()
         folders = os.listdir(pkg_folder)
         pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
@@ -150,6 +155,25 @@ class HelloPythonConan(ConanFile):
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertIn("optionOne: 123", client.out)
+
+    def test_profile_environment(self):
+        # https://github.com/conan-io/conan/issues/4832
+        conanfile = dedent("""
+            import os
+            from conans import ConanFile
+            class HelloPythonConan(ConanFile):
+                def package(self):
+                    self.output.info("ENV-VALUE: %s!!!" % os.getenv("MYCUSTOMVAR"))
+            """)
+        profile = dedent("""
+            [env]
+            MYCUSTOMVAR=MYCUSTOMVALUE
+            """)
+        client = TestClient()
+        client.save({CONANFILE: conanfile,
+                     "myprofile": profile})
+        client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
+        self.assertIn("Hello/0.1@lasote/stable: ENV-VALUE: MYCUSTOMVALUE!!!", client.out)
 
     def test_options_install(self):
         # https://github.com/conan-io/conan/issues/2242
@@ -201,13 +225,15 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(win_pref, short_paths=short_paths)
+        package_folder = client.cache.package_layout(win_pref.ref,
+                                                     short_paths=short_paths).package(win_pref)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.cache.package(win_pref),
+            self.assertEqual(load(os.path.join(client.cache.package_layout(win_pref.ref, False).package(win_pref),
                                                ".conan_link")),
                              package_folder)
         else:
-            self.assertEqual(client.cache.package(win_pref), package_folder)
+            self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
+                             package_folder)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header")
         self._consume(client, ". -s os=Windows")
@@ -312,7 +338,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -335,7 +361,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -362,7 +388,7 @@ class TestConan(ConanFile):
                    "--source-folder=src")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -385,7 +411,8 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . conan/stable")
-        self.assertIn("Hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt", client.out)
+        self.assertIn("Hello/0.1@conan/stable package(): Packaged 1 '.txt' file: file.txt",
+                      client.out)
 
         # Specify different name or version is not working
         client.run("export-pkg . lib/1.0@conan/stable -f", assert_error=True)

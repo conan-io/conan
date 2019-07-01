@@ -23,7 +23,7 @@ def rpath_flags(os_build, compiler, lib_paths):
     return []
 
 
-def architecture_flag(compiler, arch):
+def architecture_flag(compiler, arch, os=None):
     """
     returns flags specific to the target architecture and compiler
     """
@@ -37,6 +37,11 @@ def architecture_flag(compiler, arch):
             return '-m32'
         elif str(arch) in ['s390']:
             return '-m31'
+        elif os == 'AIX':
+            if str(arch) in ['ppc32']:
+                return '-maix32'
+            elif str(arch) in ['ppc64']:
+                return '-maix64'
     return ""
 
 
@@ -69,6 +74,8 @@ def libcxx_flag(compiler, libcxx):
                             "libstdcxx": "-library=stdcxx4",
                             "libstlport": "-library=stlport4",
                             "libstdc++": "-library=stdcpp"}.get(libcxx, ""))
+    elif str(compiler) == "qcc":
+        return "-Y _%s" % str(libcxx)
     return ""
 
 
@@ -110,7 +117,7 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang"]:
+        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.
@@ -129,7 +136,6 @@ def build_type_flags(compiler, build_type, vs_toolset=None):
                      "MinSizeRel": ["-xO2", "-xspace"],
                      }.get(build_type, [])
             return flags
-
     return ""
 
 

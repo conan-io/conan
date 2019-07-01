@@ -8,13 +8,36 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.errors import ConanException
+
+
+class _MockSettings(object):
+    build_type = None
+    os = None
+    os_build = None
+    fields = []
+
+    def __init__(self, build_type=None):
+        self.build_type = build_type
+
+    @property
+    def compiler(self):
+        raise ConanException("mock: not available")
+
+    def constraint(self, _):
+        return self
+
+    def get_safe(self, _):
+        return None
+
+    def items(self):
+        return {}
 
 
 class CMakePathsGeneratorTest(unittest.TestCase):
 
     def cmake_vars_unit_test(self):
-        settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        settings = settings_mock("Release", None, None, lambda x: x)
+        settings = _MockSettings("Release")
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
@@ -28,8 +51,8 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         path = tmp.replace('\\', '/')
         custom_dir = custom_dir.replace('\\', '/')
         cmake_lines = generator.content.replace('\\', '/').replace("\n\t\t\t", " ").splitlines()
-        self.assertEquals('set(CONAN_MYLIB_ROOT "%s")' % path, cmake_lines[0])
-        self.assertEquals('set(CMAKE_MODULE_PATH "%s/" "%s" ${CMAKE_MODULE_PATH} '
-                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[1])
-        self.assertEquals('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CMAKE_PREFIX_PATH} '
-                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])
+        self.assertEqual('set(CONAN_MYLIB_ROOT "%s")' % path, cmake_lines[0])
+        self.assertEqual('set(CMAKE_MODULE_PATH "%s/" "%s" ${CMAKE_MODULE_PATH} '
+                         '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[1])
+        self.assertEqual('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CMAKE_PREFIX_PATH} '
+                         '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])

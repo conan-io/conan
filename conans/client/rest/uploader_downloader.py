@@ -1,16 +1,20 @@
 import os
-import time
 import traceback
+import time
 
-from conans.client.tools.files import human_size
+from tqdm import tqdm
+
+from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException
+    NotFoundException, ForbiddenException, RequestErrorException
 from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
+TIMEOUT_BEAT_SECONDS = 30
+TIMEOUT_BEAT_CHARACTER = '.'
 
-class Uploader(object):
+class FileUploader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
         self.chunk_size = chunk_size
@@ -18,7 +22,13 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
+               headers=None):
+        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else 1
+        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else 5
+
         # Send always the header with the Sha1
         headers = headers or {}
         headers["X-Checksum-Sha1"] = sha1sum(abs_path)
@@ -28,10 +38,16 @@ class Uploader(object):
                 dedup_headers.update(headers)
             response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
+            if response.status_code == 400:
+                raise RequestErrorException(response_to_str(response))
+
+            if response.status_code == 401:
+                raise AuthenticationException(response_to_str(response))
+
             if response.status_code == 403:
                 if auth.token is None:
-                    raise AuthenticationException(response.content)
-                raise ForbiddenException(response.content)
+                    raise AuthenticationException(response_to_str(response))
+                raise ForbiddenException(response_to_str(response))
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
@@ -40,7 +56,8 @@ class Uploader(object):
         it = load_in_chunks(abs_path, self.chunk_size)
         # Now it is a chunked read file
         file_size = os.stat(abs_path).st_size
-        it = upload_with_progress(file_size, it, self.chunk_size, self.output)
+        file_name = os.path.basename(abs_path)
+        it = upload_with_progress(file_size, it, self.chunk_size, self.output, file_name)
         # Now it will print progress in each iteration
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
@@ -53,10 +70,20 @@ class Uploader(object):
         try:
             response = self.requester.put(url, data=data, verify=self.verify,
                                           headers=headers, auth=auth)
+
+            if response.status_code == 400:
+                raise RequestErrorException(response_to_str(response))
+
+            if response.status_code == 401:
+                raise AuthenticationException(response_to_str(response))
+
             if response.status_code == 403:
                 if auth.token is None:
-                    raise AuthenticationException(response.content)
-                raise ForbiddenException(response.content)
+                    raise AuthenticationException(response_to_str(response))
+                raise ForbiddenException(response_to_str(response))
+
+            response.raise_for_status()  # Raise HTTPError for bad http response status
+
         except ConanException:
             raise
         except Exception as exc:
@@ -81,28 +108,36 @@ class IterableToFileAdapter(object):
 
 
 class upload_with_progress(object):
-    def __init__(self, totalsize, iterator, chunk_size, output):
+    def __init__(self, totalsize, iterator, chunk_size, output, file_name):
         self.totalsize = totalsize
         self.output = output
         self.chunk_size = chunk_size
         self.aprox_chunks = self.totalsize * 1.0 / chunk_size
         self.groups = iterator
+        self.file_name = file_name
+        self.last_time = 0
 
     def __iter__(self):
-        last_progress = None
+        progress_bar = None
+        if self.output and self.output.is_terminal:
+            progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
+                                unit_divisor=1024, desc="Uploading {}".format(self.file_name),
+                                leave=False, dynamic_ncols=True, ascii=False)
         for index, chunk in enumerate(self.groups):
-            if self.aprox_chunks == 0:
-                index = self.aprox_chunks
-
-            units = progress_units(index, self.aprox_chunks)
-            progress = human_readable_progress(index * self.chunk_size, self.totalsize)
-            if last_progress != units:  # Avoid screen refresh if nothing has change
-                print_progress(self.output, units, progress)
-                last_progress = units
+            if progress_bar is not None:
+                update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
+                    else self.totalsize - self.chunk_size * index
+                progress_bar.update(update_size)
+            elif self.output and time.time() - self.last_time > TIMEOUT_BEAT_SECONDS:
+                self.last_time = time.time()
+                self.output.write(TIMEOUT_BEAT_CHARACTER)
             yield chunk
 
-        progress = human_readable_progress(self.totalsize, self.totalsize)
-        print_progress(self.output, progress_units(100, 100), progress)
+        if progress_bar is not None:
+            progress_bar.close()
+            self.output.rewrite_line("{} [done]".format(progress_bar.desc))
+        elif self.output:
+            self.output.writeln(TIMEOUT_BEAT_CHARACTER)
 
     def __len__(self):
         return self.totalsize
@@ -119,7 +154,7 @@ def load_in_chunks(path, chunk_size=1024):
             yield data
 
 
-class Downloader(object):
+class FileDownloader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
         self.chunk_size = chunk_size
@@ -127,8 +162,12 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=3, retry_wait=0, overwrite=False,
+    def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
+        retry = retry if retry is not None else self.requester.retry
+        retry = retry if retry is not None else 2
+        retry_wait = retry_wait if retry_wait is not None else self.requester.retry_wait
+        retry_wait = retry_wait if retry_wait is not None else 0
 
         if file_path and not os.path.isabs(file_path):
             file_path = os.path.abspath(file_path)
@@ -157,6 +196,10 @@ class Downloader(object):
         if not response.ok:
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
+            elif response.status_code == 403:
+                if auth.token is None:
+                    raise AuthenticationException(response_to_str(response))
+                raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
                 raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
@@ -178,39 +221,54 @@ class Downloader(object):
         ret = bytearray()
         total_length = response.headers.get('content-length')
 
+        progress_bar = None
+        if self.output and self.output.is_terminal:
+            progress_bar = tqdm(unit='B', unit_scale=True,
+                                unit_divisor=1024, dynamic_ncols=True,
+                                leave=False, ascii=False)
+
         if total_length is None:  # no content length header
             if not file_path:
                 ret += response.content
             else:
                 if self.output:
                     total_length = len(response.content)
-                    progress = human_readable_progress(total_length, total_length)
-                    print_progress(self.output, 50, progress)
+                    if progress_bar is not None:
+                        progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
+                        progress_bar.total = total_length
+                        progress_bar.update(total_length)
+
                 save_append(file_path, response.content)
         else:
             total_length = int(total_length)
             encoding = response.headers.get('content-encoding')
             gzip = (encoding == "gzip")
-            # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+            # chunked can be a problem:
+            # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
             # It will not send content-length or should be ignored
+            if progress_bar is not None:
+                progress_bar.total = total_length
 
             def download_chunks(file_handler=None, ret_buffer=None):
                 """Write to a buffer or to a file handler"""
                 chunk_size = 1024 if not file_path else 1024 * 100
                 download_size = 0
-                last_progress = None
+                last_time = 0
+                if progress_bar is not None:
+                    progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
+
                 for data in response.iter_content(chunk_size):
                     download_size += len(data)
                     if ret_buffer is not None:
                         ret_buffer.extend(data)
                     if file_handler is not None:
                         file_handler.write(to_file_bytes(data))
-                    if self.output:
-                        units = progress_units(download_size, total_length)
-                        progress = human_readable_progress(download_size, total_length)
-                        if last_progress != units:  # Avoid screen refresh if nothing has change
-                            print_progress(self.output, units, progress)
-                            last_progress = units
+                    if progress_bar is not None:
+                        progress_bar.update(len(data))
+                    elif self.output and time.time() - last_time > TIMEOUT_BEAT_SECONDS:
+                        last_time = time.time()
+                        self.output.write(TIMEOUT_BEAT_CHARACTER)
+
                 return download_size
 
             if file_path:
@@ -226,20 +284,16 @@ class Downloader(object):
                 raise ConanException("Transfer interrupted before "
                                      "complete: %s < %s" % (dl_size, total_length))
 
+        if progress_bar is not None:
+            progress_bar.close()
+            self.output.writeln("{} [done]".format(progress_bar.desc))
+        elif self.output:
+            self.output.writeln(TIMEOUT_BEAT_CHARACTER)
+
         if not file_path:
             return bytes(ret)
         else:
             return
-
-
-def progress_units(progress, total):
-    if total == 0:
-        return 0
-    return min(50, int(50 * progress / total))
-
-
-def human_readable_progress(bytes_transferred, total_bytes):
-    return "%s/%s" % (human_size(bytes_transferred), human_size(total_bytes))
 
 
 def print_progress(output, units, progress=""):
@@ -248,13 +302,14 @@ def print_progress(output, units, progress=""):
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
-    for counter in range(retry):
+    for counter in range(retry + 1):
         try:
             return method(*args, **kwargs)
-        except NotFoundException:
+        except (NotFoundException, ForbiddenException, AuthenticationException,
+                RequestErrorException):
             raise
         except ConanException as exc:
-            if counter == (retry - 1):
+            if counter == retry:
                 raise
             else:
                 if out:

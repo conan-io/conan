@@ -1,12 +1,8 @@
 #!/usr/bin/python
-import argparse
 import os
 
-from conans import SERVER_CAPABILITIES
-from conans import __version__ as SERVER_VERSION, REVISIONS
-from conans.model.version import Version
+from conans import SERVER_CAPABILITIES, REVISIONS
 from conans.paths import conan_expand_user
-from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.server.conf import get_server_store
 
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
@@ -24,7 +20,7 @@ class ServerLauncher(object):
         user_folder = conan_expand_user("~")
         server_folder = os.path.join(user_folder, '.conan_server')
 
-        server_config = migrate_and_get_server_config(user_folder, None, self.force_migration)
+        server_config = migrate_and_get_server_config(user_folder, self.force_migration)
         custom_auth = server_config.custom_authenticator
         if custom_auth:
             authenticator = load_authentication_plugin(server_folder, custom_auth)

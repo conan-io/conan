@@ -5,6 +5,7 @@ from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
+from conans.client.cache.remote_registry import Remotes
 
 myconan1 = """
 from conans import ConanFile
@@ -45,8 +46,10 @@ class DownloadTest(unittest.TestCase):
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
 
+        remotes = Remotes()
+        remotes.add("remotename", "url")
         with self.assertRaises(NotFoundException):
-            installer.get_recipe(ref, False, False, None, ActionRecorder())
+            installer.get_recipe(ref, False, False, remotes, ActionRecorder())
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
@@ -56,7 +59,7 @@ class DownloadTest(unittest.TestCase):
         installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
 
         try:
-            installer.get_recipe(ref, False, False, None, ActionRecorder())
+            installer.get_recipe(ref, False, False, remotes, ActionRecorder())
         except NotFoundException:
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:

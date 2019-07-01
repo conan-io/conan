@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from conans.test.utils.tools import TestClient
@@ -13,16 +14,17 @@ class ConfigTest(unittest.TestCase):
         # show the full file
         self.client.run("config get")
         self.assertIn("default_profile = default", self.client.user_io.out)
-        self.assertIn("path = ~/.conan/data", self.client.user_io.out)
+        self.assertIn("path = ./data", self.client.user_io.out)
 
     def storage_test(self):
         # show the full file
         self.client.run("config get storage")
-        self.assertIn("path = ~/.conan/data", self.client.user_io.out)
+        self.assertIn("path = ./data", self.client.user_io.out)
 
         self.client.run("config get storage.path")
-        self.assertIn("~/.conan/data", self.client.user_io.out)
-        self.assertNotIn("path:", self.client.user_io.out)
+        full_path = os.path.join(self.client.base_folder, "data")
+        self.assertIn(full_path, self.client.out)
+        self.assertNotIn("path:", self.client.out)
 
     def errors_test(self):
         self.client.run("config get whatever", assert_error=True)
@@ -84,3 +86,7 @@ class ConfigTest(unittest.TestCase):
         self.client.run('config rm env.MY_VAR')
         conf_file = load(self.client.cache.conan_conf_path)
         self.assertNotIn('MY_VAR', conf_file)
+
+    def missing_subarguments_test(self):
+        self.client.run("config", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)

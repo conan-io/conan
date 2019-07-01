@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -11,6 +12,43 @@ from conans.util.files import load
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
+
+    def update_remote_test(self):
+        # https://github.com/conan-io/conan/issues/5333
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Boost(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . boost/1.68.0@lasote/stable")
+        client.run("create . boost/1.69.0@lasote/stable")
+        client.run("create . boost/1.70.0@lasote/stable")
+        client.run("upload * -r=default --all --confirm")
+        client.run("remove * -f")
+        conanfile = textwrap.dedent("""
+            [requires]
+            boost/[>=1.68.0]@lasote/stable
+            """)
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install .")   
+        self.assertIn("boost/*@lasote/stable versions found in 'default' remote", client.out)
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+        client.run("install .")
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in local cache", client.out)
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+
+        client.run("install . --update")
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
 
     def update_test(self):
         client = TestClient(servers={"default": TestServer()},

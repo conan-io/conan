@@ -97,3 +97,11 @@ class VCVarsArchTest(unittest.TestCase):
         command = tools.vcvars_command(settings, winsdk_version='8.1', output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('8.1', command)
+
+    def test_windows_ce(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = 'WindowsCE'
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = '15'
+        settings.arch = 'armv4i'
+        self.assert_vcvars_command(settings, "x86")

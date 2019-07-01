@@ -158,14 +158,14 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
             files["%s/metadata.json" % folder] = fake_metadata.dumps()
-            exports_sources_dir = client.cache.export_sources(ref)
+            exports_sources_dir = client.cache.package_layout(ref).export_sources()
             os.makedirs(exports_sources_dir)
 
         client.save(files, client.cache.store)
 
         # Create the manifests to be able to upload
         for pref in prefs:
-            pkg_folder = client.cache.package(pref)
+            pkg_folder = client.cache.package_layout(pref.ref).package(pref)
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
@@ -275,12 +275,50 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
+
+    def _validate_remove_all_hello_packages(self):
+        self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": False, "H2": False, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        six.assertCountEqual(self, ["Other", "Bye"], folders)
+
+    def test_remove_any_package_version(self):
+        self.client.run("remove Hello/*@myuser/testing -f")
+        self._validate_remove_all_hello_packages()
+
+    def test_remove_any_package_version_channel(self):
+        self.client.run("remove Hello/*@*/testing -f")
+        self._validate_remove_all_hello_packages()
+
+    def test_remove_any_package_version_channel(self):
+        self.client.run("remove Hello/*@*/* -f")
+        self._validate_remove_all_hello_packages()
+
+    def _validate_remove_hello_1_4_10(self):
+        self.assert_folders(local_folders={"H1": None, "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": None, "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": False, "H2": True, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
+
+    def test_remove_any_package_channel(self):
+        self.client.run("remove Hello/1.4.10@*/testing -f")
+        self._validate_remove_hello_1_4_10()
+
+    def test_remove_any_package_channel(self):
+        self.client.run("remove Hello/1.4.10@myuser/* -f")
+        self._validate_remove_hello_1_4_10()
 
     def builds_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -293,11 +331,11 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["package", "source", "export", "export_source",
-                                    "metadata.json"],
+                                    "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
         six.assertCountEqual(self, ["package", "source", "export", "export_source",
-                                    "metadata.json"],
+                                    "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
@@ -311,10 +349,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json"],
+        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
+                                    "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 

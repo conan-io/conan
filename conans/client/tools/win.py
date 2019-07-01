@@ -9,13 +9,13 @@ import deprecation
 
 from conans.client.tools import which
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, detected_architecture
+from conans.client.tools.oss import OSInfo, detected_architecture, check_output
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.unicode import get_cwd
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
-from conans.util.files import decode_text, mkdir_tmp, save
+from conans.util.files import mkdir_tmp, save
 
 
 def _visual_compiler_cygwin(output, version):
@@ -303,8 +303,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
         arguments.append("-nologo")
 
     try:
-        output = subprocess.check_output(arguments)
-        output = decode_text(output).strip()
+        output = check_output(arguments).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
@@ -371,7 +370,9 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False, vcva
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
     arch_setting = arch_setting or 'x86_64'
     arch_build = settings.get_safe("arch_build") or detected_architecture()
-    if arch_build == 'x86_64':
+    if os_setting == 'WindowsCE':
+        vcvars_arch = "x86"
+    elif arch_build == 'x86_64':
         # Only uses x64 tooling if arch_build explicitly defines it, otherwise
         # Keep the VS default, which is x86 toolset
         # This will probably be changed in conan 2.0
@@ -447,16 +448,11 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force,
                          vcvars_ver=vcvars_ver, winsdk_version=winsdk_version, output=output)
-    cmd += " && echo __BEGINS__ && set"
-    ret = decode_text(subprocess.check_output(cmd, shell=True))
+    cmd += " && set"
+    ret = check_output(cmd)
     new_env = {}
-    start_reached = False
     for line in ret.splitlines():
         line = line.strip()
-        if not start_reached:
-            if "__BEGINS__" in line:
-                start_reached = True
-            continue
 
         if line == "\n" or not line:
             continue

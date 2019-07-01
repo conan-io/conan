@@ -17,8 +17,7 @@ class SynchronizeTest(unittest.TestCase):
     def upload_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" %
-                                                   DEFAULT_REVISION_V1)
+        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["to_be_deleted.txt"] = "delete me"
         files["to_be_deleted2.txt"] = "delete me2"
@@ -83,7 +82,7 @@ class SynchronizeTest(unittest.TestCase):
 
         client.run("install %s --build missing" % str(ref))
         # Upload package
-        package_ids = client.cache.conan_packages(ref)
+        package_ids = client.cache.package_layout(ref).conan_packages()
         client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
 
         # Check that conans exists on server
@@ -94,7 +93,7 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        pack_path = client.cache.package(pref)
+        pack_path = client.cache.package_layout(pref.ref).package(pref)
         new_file_source_path = os.path.join(pack_path, "newlib.lib")
         save(new_file_source_path, "newlib")
         os.unlink(os.path.join(pack_path, PACKAGE_TGZ_NAME))  # Force new tgz
@@ -130,6 +129,6 @@ class SynchronizeTest(unittest.TestCase):
 
     def _create_manifest(self, client, package_reference):
         # Create the manifest to be able to upload the package
-        pack_path = client.cache.package(package_reference)
+        pack_path = client.cache.package_layout(package_reference.ref).package(package_reference)
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)
