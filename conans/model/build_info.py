@@ -548,14 +548,15 @@ class DepsCppInfo(object):
 
     @property
     def sysroot(self):
-        if self.sysroots:
-            return self.sysroots[-1]
+        sysroot_values = [sysroot for sysroot in self.sysroots if sysroot]
+        if sysroot_values:
+            return sysroot_values[0]
         return ""
 
     @property
     def rootpath(self):
         if self.rootpaths:
-            return self.rootpaths[-1]
+            return self.rootpaths[0]
         return ""
 
     @property

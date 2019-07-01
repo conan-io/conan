@@ -124,8 +124,10 @@ class TXTGenerator(Generator):
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)
 
                     for key, value in fields.items():
-                        if key in ['rootpath', 'sysroot']:
+                        if key == 'rootpath':
                             continue
+                        if key == 'sysroot':
+                            value = value[0]
                         setattr(item_to_apply, key, value)
                 deps_cpp_info.update(cpp_info, dep)
             return deps_cpp_info
