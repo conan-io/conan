@@ -67,12 +67,14 @@ C:/this_my_component_tool_path/my-component-tool
         deps_cpp_info, _, _ = TXTGenerator.loads(text)
 
         def assert_cpp(deps_cpp_info_test):
-            self.assertEqual(['C:/this_my_lib_path/mylib_path',
-                              'C:/this_my_component_lib_path/my_component_lib',
-                              'C:/this_my_component_tool_path/my-component-tool',
-                              'C:/this_boost_path/boost_include',
-                              'C:/this_my_other_lib_path/otherlib_path'],
-                             deps_cpp_info_test.include_paths)
+            self.assertIn('C:/this_my_lib_path/mylib_path', deps_cpp_info_test.include_paths)
+            self.assertIn('C:/this_my_component_lib_path/my_component_lib',
+                          deps_cpp_info_test.include_paths)
+            self.assertIn('C:/this_my_component_tool_path/my-component-tool',
+                          deps_cpp_info_test.include_paths)
+            self.assertIn('C:/this_boost_path/boost_include', deps_cpp_info_test.include_paths)
+            self.assertIn('C:/this_my_other_lib_path/otherlib_path',
+                          deps_cpp_info_test.include_paths)
             self.assertEqual(['C:/this_boost_path/boost_include'],
                              deps_cpp_info_test["Boost"].include_paths)
             self.assertEqual(['C:/this_my_lib_path/mylib_path'],
