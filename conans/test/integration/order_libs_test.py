@@ -124,8 +124,8 @@ class HelloReuseConan(ConanFile):
 class Conan(ConanFile):
 
         def build(self):
-            self.output.info("Lib %s deps: %s" % (self.name, self.deps_cpp_info.deps))
-            self.output.info("Lib %s cflags: %s" % (self.name, self.deps_cpp_info.cflags))
+            self.output.info("Lib %s deps: %s" % (self.name, list(self.deps_cpp_info.deps)))
+            self.output.info("Lib %s cflags: %s" % (self.name, list(self.deps_cpp_info.cflags)))
 
         def package_info(self):
             self.cpp_info.cflags = ["%s_flag" % self.name]
