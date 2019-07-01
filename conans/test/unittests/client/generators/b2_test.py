@@ -183,8 +183,8 @@ constant-if libdirs(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
     ;
 
 constant-if defines(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
-    "MYDEFINE1"
     "MYDEFINE2"
+    "MYDEFINE1"
     ;
 
 constant-if cppflags(conan,32,x86,17,gnu,linux,gcc-6.3,release) :
@@ -348,6 +348,8 @@ if $(__define_targets__) {
         }
 
         for ck, cv in generator.content.items():
+            print("FILEEEEEEEE: ", ck)
+            print(cv)
             self.assertEqual(cv, content[ck])
 
     def b2_empty_settings_test(self):

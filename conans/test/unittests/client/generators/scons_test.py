@@ -29,7 +29,7 @@ class SConsGeneratorTest(unittest.TestCase):
         generator = SConsGenerator(conanfile)
         content = generator.content
         scons_lines = content.splitlines()
-        self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE1\', \'MYDEFINE2\'],", scons_lines)
+        self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE2\', \'MYDEFINE1\'],", scons_lines)
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE1\'],", scons_lines)
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE2\'],", scons_lines)
         self.assertIn('    "conan_version" : "None",', scons_lines)

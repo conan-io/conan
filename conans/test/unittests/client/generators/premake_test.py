@@ -26,11 +26,11 @@ class PremakeGeneratorTest(unittest.TestCase):
     conan_bindirs = {{"{bin1}",
     "{bin2}"}}
     conan_libs = {{"libfoo", "libbar"}}
-    conan_defines = {{"MYDEFINE1", "MYDEFINE2"}}
-    conan_cxxflags = {{"-fPIE", "-march=native"}}
-    conan_cflags = {{"-fPIC", "-mtune=native"}}
-    conan_sharedlinkflags = {{"-framework Cocoa", "-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\""}}
-    conan_exelinkflags = {{"-framework QuartzCore", "-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\""}}
+    conan_defines = {{"MYDEFINE2", "MYDEFINE1"}}
+    conan_cxxflags = {{"-march=native", "-fPIE"}}
+    conan_cflags = {{"-mtune=native", "-fPIC"}}
+    conan_sharedlinkflags = {{"-framework AudioFoundation", "-framework \\\"Some Spaced Framework\\\"", "-framework Cocoa"}}
+    conan_exelinkflags = {{"-framework VideoToolbox", "-framework \\\"Other Spaced Framework\\\"", "-framework QuartzCore"}}
 
     conan_includedirs_MyPkg1 = {{"{include1}"}}
     conan_libdirs_MyPkg1 = {{"{lib1}"}}
