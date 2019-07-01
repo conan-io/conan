@@ -348,8 +348,6 @@ if $(__define_targets__) {
         }
 
         for ck, cv in generator.content.items():
-            print("FILEEEEEEEE: ", ck)
-            print(cv)
             self.assertEqual(cv, content[ck])
 
     def b2_empty_settings_test(self):
