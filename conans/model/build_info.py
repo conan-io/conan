@@ -16,6 +16,10 @@ DEFAULT_BUILD = ""
 
 
 class CppInfo(object):
+    """
+    Build information about a dependency in the graph. Provide access to flags and relative
+    paths. Information in this object can be modified and should be the input for the user
+    """
 
     def __init__(self, root_folder):
         self.name = None
@@ -120,6 +124,11 @@ class CppInfo(object):
 
 
 class DepCppInfo(object):
+    """
+    Freezed build information about a dependency in the graph. Provide access to flags, relative
+    paths and abslute paths. The information on this object should not be modified, so the interface
+    to access values is done exposing them as properties.
+    """
 
     def __init__(self, cpp_info):
         self._name = cpp_info.name
@@ -408,10 +417,13 @@ class DepCppInfo(object):
 
 
 class DepsCppInfo(object):
-    """ Build Information necessary to build a given conans. It contains the
-    flags, directories and options if its dependencies. The conans CONANFILE
-    should use these flags to pass them to the underlaying build system (Cmake, make),
-    so deps info is managed
+    """
+    List of build information about each of the nodes in the graph.
+    It contains the flags, directories and options if its dependencies.
+    Provides properties to access aggregated information of directories and flags.
+    The access to the information of each node can also be accessed.
+    Should use these flags to pass them to the underlaying build system (Cmake, make),
+    so deps info is managed.
     """
 
     def __init__(self):
