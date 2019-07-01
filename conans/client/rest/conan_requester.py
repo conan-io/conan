@@ -2,6 +2,7 @@ import fnmatch
 import os
 import platform
 import requests
+from requests.adapters import HTTPAdapter
 import time
 
 from conans import __version__ as client_version
@@ -12,7 +13,14 @@ from conans.util.tracer import log_client_rest_api_call
 class ConanRequester(object):
 
     def __init__(self, config, http_requester=None):
-        self._http_requester = http_requester if http_requester else requests.Session()
+        if http_requester:
+            self._http_requester = http_requester
+        else:
+            self._http_requester = requests.Session()
+            adapter = HTTPAdapter(max_retries=config.retry)
+            self._http_requester.mount("http://", adapter)
+            self._http_requester.mount("https://", adapter)
+
         self._timeout_seconds = config.request_timeout
         self.proxies = config.proxies or {}
         self._cacert_path = config.cacert_path
