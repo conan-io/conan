@@ -11,7 +11,8 @@ from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
-BYTES_UPLOADED_PRINT_DOT = 1000
+TIMEOUT_BEAT_SECONDS = 30
+TIMEOUT_BEAT_CHARACTER = '.'
 
 class FileUploader(object):
 
@@ -114,6 +115,7 @@ class upload_with_progress(object):
         self.aprox_chunks = self.totalsize * 1.0 / chunk_size
         self.groups = iterator
         self.file_name = file_name
+        self.last_time = 0
 
     def __iter__(self):
         progress_bar = None
@@ -126,15 +128,16 @@ class upload_with_progress(object):
                 update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
                     else self.totalsize - self.chunk_size * index
                 progress_bar.update(update_size)
-            elif index % BYTES_UPLOADED_PRINT_DOT == 0:
-                self.output.write(".")                
+            elif self.output and time.time() - self.last_time > TIMEOUT_BEAT_SECONDS:
+                self.last_time = time.time()
+                self.output.write(TIMEOUT_BEAT_CHARACTER)
             yield chunk
 
         if progress_bar is not None:
             progress_bar.close()
             self.output.rewrite_line("{} [done]".format(progress_bar.desc))
-        else:
-            self.output.writeln("")                
+        elif self.output:
+            self.output.writeln(TIMEOUT_BEAT_CHARACTER)
 
     def __len__(self):
         return self.totalsize
@@ -250,6 +253,7 @@ class FileDownloader(object):
                 """Write to a buffer or to a file handler"""
                 chunk_size = 1024 if not file_path else 1024 * 100
                 download_size = 0
+                last_time = 0
                 if progress_bar is not None:
                     progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
 
@@ -261,6 +265,9 @@ class FileDownloader(object):
                         file_handler.write(to_file_bytes(data))
                     if progress_bar is not None:
                         progress_bar.update(len(data))
+                    elif self.output and time.time() - last_time > TIMEOUT_BEAT_SECONDS:
+                        last_time = time.time()
+                        self.output.write(TIMEOUT_BEAT_CHARACTER)
 
                 return download_size
 
@@ -280,7 +287,9 @@ class FileDownloader(object):
         if progress_bar is not None:
             progress_bar.close()
             self.output.writeln("{} [done]".format(progress_bar.desc))
-        
+        elif self.output:
+            self.output.writeln(TIMEOUT_BEAT_CHARACTER)
+
         if not file_path:
             return bytes(ret)
         else:
