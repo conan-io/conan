@@ -511,16 +511,16 @@ VAR2=23
         self.assertIsNone(info.name)
         self.assertEqual("", info.sysroot)
         self.assertEqual([], info.cflags)
-        self.assertEqual({}, info.configs)  # FIXME
+        self.assertEqual({}, info.configs)  # FIXME: Make attr protected
         with catch_real_deprecation_warning(self):
             self.assertEqual([], info.cppflags)
         self.assertEqual([], info.cxxflags)
         self.assertEqual([], info.exelinkflags)
         with catch_real_deprecation_warning(self):
-            self.assertEqual([], info.get_cppflags())  # FIXME
-        self.assertEqual([], info.public_deps)  # FIXME
+            self.assertEqual([], info.get_cppflags())  # FIXME: : Make method protected
+        self.assertEqual([], info.public_deps)  # FIXME: Make attr protected
         with catch_real_deprecation_warning(self):
-            info.set_cppflags("kk") # FIXME
+            info.set_cppflags("kk")  # FIXME: Make method protected
         self.assertEqual([], info.sharedlinkflags)
 
     def deps_cpp_info_components_test(self):

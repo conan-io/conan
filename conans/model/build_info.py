@@ -37,7 +37,7 @@ class CppInfo(object):
         self.sysroot = ""
         self.version = None
         self.description = None
-        # When package is editable, filter_empty=False, so empty dirs are maintained
+        # When package is editable, _filter_empty=False, so empty dirs are maintained
         self._filter_empty = True
         self._components = OrderedDict()
         self.public_deps = []
@@ -149,11 +149,13 @@ class DepCppInfo(object):
         self._src_paths = None
         self._public_deps = cpp_info.public_deps
         self.configs = {}
-        # When package is editable, filter_empty=False, so empty dirs are maintained
+        # When package is editable, _filter_empty=False, so empty dirs are maintained
         self._filter_empty = cpp_info._filter_empty
         self._components = OrderedDict()
+        # Copy Components
         for comp_name, comp_value in cpp_info.components.items():
             self._components[comp_name] = DepComponent(comp_value)
+        # Copy Configurations
         for config, sub_cpp_info in cpp_info.configs.items():
             sub_dep_cpp_info = DepCppInfo(sub_cpp_info)
             sub_dep_cpp_info._filter_empty = self._filter_empty
@@ -417,7 +419,10 @@ class DepsCppInfo(object):
         self.configs = {}
 
     def __getattr__(self, config):
-        if config not in self.configs:  #FIXME: Do we want to support this? try removing
+        # If the configuration does not exist, return an empty list
+        if config not in self.configs:
+            # FIXME: This could create unintended empty configurations for those generators/libs
+            # that access unexisting configs with self.deps_cpp_info.whatever.includedirs
             self.configs[config] = DepsCppInfo()
         return self.configs[config]
 
