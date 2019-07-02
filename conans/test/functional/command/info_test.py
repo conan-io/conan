@@ -626,15 +626,3 @@ class MyTest(ConanFile):
         save(path, "broken thing")
         client.run("info .", assert_error=True)
         self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)
-
-    def test_build_order_and_graph(self):
-        self.client = TestClient()
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info ./conanfile.py -bo=Hello0/0.1@lasote/stable --graph hello.html")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]", self.client.user_io.out)
-        html_path = os.path.join(self.client.current_folder, "hello.html")
-        html_content = load(html_path)
-        self.assertIn("<h3>Hello1/0.1@lasote/stable</h3>", html_content)

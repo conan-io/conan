@@ -595,7 +595,7 @@ class Command(object):
 
         # BUILD ORDER ONLY
         if args.build_order:
-            build_orded, deps_graph = self._conan.info_build_order(args.path_or_reference,
+            ret = self._conan.info_build_order(args.path_or_reference,
                                                settings=args.settings,
                                                options=args.options,
                                                env=args.env,
@@ -604,13 +604,11 @@ class Command(object):
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder)
-            if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd())
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_build_order(build_orded, json_arg, get_cwd())
+                self._outputer.json_build_order(ret, json_arg, get_cwd())
             else:
-                self._outputer.build_order(build_orded)
+                self._outputer.build_order(ret)
 
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
