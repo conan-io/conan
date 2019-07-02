@@ -39,7 +39,7 @@ class HelloConan(ConanFile):
 from conans import ConanFile
 
 class HelloTestConan(ConanFile):
-    requires = "Hello/0.1@conan/stable"
+    requires = ["Hello/0.1@conan/stable", ]
     def test(self):
         self.output.warn("Tested ok!")
 ''', "Hello/0.1@conan/stable")

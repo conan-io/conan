@@ -14,6 +14,7 @@ from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool,\
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.conanfile import MockSettings, MockConanfile
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -152,7 +153,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.linux_distro = "fedora"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
-            self.assertEqual(runner.command_called, "sudo -A yum update -y")
+            self.assertEqual(runner.command_called, "sudo -A yum check-update -y")
 
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -165,6 +166,16 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEqual(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called, "sudo -A yum install -y a_package")
+
+            settings = MockSettings({"arch": "x86", "arch_build": "x86_64", "os": "Linux",
+                                     "os_build": "Linux"})
+            conanfile = MockConanfile(settings)
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
+                                    conanfile=conanfile)
+            spt.install("a_package", force=False)
+            self.assertEqual(runner.command_called, "rpm -q a_package.i?86")
+            spt.install("a_package", force=True)
+            self.assertEqual(runner.command_called, "sudo -A yum install -y a_package.i?86")
 
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -224,7 +235,7 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called, "yum install -y a_package")
             spt.update()
-            self.assertEqual(runner.command_called, "yum update -y")
+            self.assertEqual(runner.command_called, "yum check-update -y")
 
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -234,6 +245,32 @@ class SystemPackageToolTest(unittest.TestCase):
 
             spt.update()
             self.assertEqual(runner.command_called, "apt-get update")
+
+            for arch, distro_arch in {"x86_64": "", "x86": ":i386", "ppc32": ":powerpc",
+                                      "ppc64le": ":ppc64el", "armv7": ":arm", "armv7hf": ":armhf",
+                                      "armv8": ":arm64", "s390x": ":s390x"}.items():
+                settings = MockSettings({"arch": arch,
+                                         "arch_build": "x86_64",
+                                         "os": "Linux",
+                                         "os_build": "Linux"})
+                conanfile = MockConanfile(settings)
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
+                                        conanfile=conanfile)
+                spt.install("a_package", force=True)
+                self.assertEqual(runner.command_called,
+                            "apt-get install -y --no-install-recommends a_package%s" % distro_arch)
+
+            for arch, distro_arch in {"x86_64": "", "x86": ":all"}.items():
+                settings = MockSettings({"arch": arch,
+                                         "arch_build": "x86_64",
+                                         "os": "Linux",
+                                         "os_build": "Linux"})
+                conanfile = MockConanfile(settings)
+                spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
+                                        conanfile=conanfile)
+                spt.install("a_package", force=True, arch_names={"x86": "all"})
+                self.assertEqual(runner.command_called,
+                            "apt-get install -y --no-install-recommends a_package%s" % distro_arch)
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -414,7 +451,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if os_info.with_apt:
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
-                update_command = "sudo -A yum update -y"
+                update_command = "sudo -A yum check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:

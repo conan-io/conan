@@ -51,6 +51,16 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
 
+    def target_triple_test(self):
+        conan_file = ConanFileMock()
+        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
+                                           "cxxflags, sharedlinkflags, exelinkflags, sysroot")
+        conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
+        conan_file.settings = MockSettings({"os_target":"Linux", "arch_target":"x86_64"})
+        be = AutoToolsBuildEnvironment(conan_file)
+        expected = "x86_64-linux-gnu"
+        self.assertEqual(be.target, expected)
+
     def partial_build_test(self):
         conan_file = ConanFileMock()
         deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
