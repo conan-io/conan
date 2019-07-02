@@ -24,7 +24,7 @@ class RequirementInfo(object):
         self.full_version = pref.ref.version
         self.full_user = pref.ref.user
         self.full_channel = pref.ref.channel
-        self.full_revision = pref.ref.revision
+        self.full_recipe_revision = pref.ref.revision
         self.full_package_id = pref.id
         self.full_package_revision = pref.revision
         self._indirect = indirect
@@ -51,8 +51,12 @@ class RequirementInfo(object):
         result = ["%s/%s" % (self.name, self.version)]
         if self.user or self.channel:
             result.append("@%s/%s" % (self.user, self.channel))
+        if self.recipe_revision:
+            result.append("#%s" % self.recipe_revision)
         if self.package_id:
             result.append(":%s" % self.package_id)
+        if self.package_revision:
+            result.append("#%s" % self.package_revision)
         return "".join(result)
 
     @property
@@ -61,8 +65,8 @@ class RequirementInfo(object):
             return None
         vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
         # This is done later to NOT affect existing package-IDs (before revisions)
-        if self.revision:
-            vals.append(self.revision)
+        if self.recipe_revision:
+            vals.append(self.recipe_revision)
         if self.package_revision:
             # A package revision is required = True, but didn't get a real value
             vals.append(self.package_revision)
@@ -70,7 +74,7 @@ class RequirementInfo(object):
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def semver_direct_mode(self):
         if self._indirect:
@@ -82,7 +86,7 @@ class RequirementInfo(object):
         self.name = self.full_name
         self.version = self.full_version.stable()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     semver = semver_mode  # Remove Conan 2.0
 
@@ -90,31 +94,31 @@ class RequirementInfo(object):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def patch_mode(self):
         self.name = self.full_name
         self.version = self.full_version.patch()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def base_mode(self):
         self.name = self.full_name
         self.version = self.full_version.base
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def minor_mode(self):
         self.name = self.full_name
         self.version = self.full_version.minor()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def major_mode(self):
         self.name = self.full_name
         self.version = self.full_version.major()
         self.user = self.channel = self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def full_recipe_mode(self):
         self.name = self.full_name
@@ -122,7 +126,7 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = None
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def full_package_mode(self):
         self.name = self.full_name
@@ -130,14 +134,14 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = self.full_package_id
-        self.revision = self.package_revision = None
+        self.recipe_revision = self.package_revision = None
 
     def recipe_revision_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
-        self.revision = self.full_revision
+        self.recipe_revision = self.full_recipe_revision
         self.package_id = None
         self.package_revision = None
 
@@ -147,7 +151,7 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = self.full_package_id
-        self.revision = self.full_revision
+        self.recipe_revision = self.full_recipe_revision
         # It is requested to use, but not defined (binary not build yet)
         self.package_revision = self.full_package_revision or PREV_UNKNOWN
 
@@ -260,6 +264,14 @@ class RequirementsInfo(object):
     def full_package_mode(self):
         for r in self._data.values():
             r.full_package_mode()
+
+    def recipe_revision_mode(self):
+        for r in self._data.values():
+            r.recipe_revision_mode()
+
+    def package_revision_mode(self):
+        for r in self._data.values():
+            r.package_revision_mode()
 
 
 class _PackageReferenceList(list):
