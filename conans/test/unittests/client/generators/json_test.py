@@ -17,12 +17,15 @@ class JsonTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = ref.name  # 'name' value in CppInfo has to be assigned before
+                                  # deps_cpp_info.update() so the value can be changed by the user
+                                  #  and preserved when propagated
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
-
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]

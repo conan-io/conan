@@ -317,7 +317,6 @@ VAR2=23
         """
         System deps are composed in '.libs' attribute even if there are no '.lib' in the component.
         Also make sure None values are discarded.
-        Same for '.system_deps' making sure that mixing Components and global use is not supported.
         """
         info = CppInfo(None)
         info["LIB1"].system_deps = ["sys1", "sys11"]
@@ -325,11 +324,11 @@ VAR2=23
         info["LIB2"].system_deps = ["sys2"]
         info["LIB2"].deps = ["LIB3"]
         info["LIB3"].system_deps = ["sys3", "sys2"]
-        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], DepCppInfo(info).libs)
-        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], DepCppInfo(info).system_deps)
+        self.assertEqual(['sys1', 'sys11', 'sys2', 'sys3', 'sys2'], DepCppInfo(info).libs)
+        self.assertEqual(['sys1', 'sys11', 'sys2', 'sys3', 'sys2'], DepCppInfo(info).system_deps)
         info["LIB3"].system_deps = [None, "sys2"]
-        self.assertEqual(['sys2', 'sys1', 'sys11'], DepCppInfo(info).libs)
-        self.assertEqual(['sys2', 'sys1', 'sys11'], DepCppInfo(info).system_deps)
+        self.assertEqual(['sys1', 'sys11', 'sys2', 'sys2'], DepCppInfo(info).libs)
+        self.assertEqual(['sys1', 'sys11', 'sys2', 'sys2'], DepCppInfo(info).system_deps)
 
     def cpp_info_libs_system_deps_order_test(self):
         """
@@ -345,17 +344,21 @@ VAR2=23
         info["LIB3"].lib = "lib3"
         info["LIB3"].system_deps = ["sys3", "sys2"]
         dep_info = DepCppInfo(info)
-        self.assertEqual(['sys3', 'sys2', 'lib3', 'lib2', 'sys1', 'sys11', 'lib1'], dep_info.libs)
-        self.assertEqual(['sys3', 'sys2', 'sys1', 'sys11'], dep_info.system_deps)
+        self.assertEqual(['lib1', 'sys1', 'sys11', 'lib2', 'sys2', 'lib3', 'sys3', 'sys2'],
+                         dep_info.libs)
+        self.assertEqual(['sys1', 'sys11', 'sys2', 'sys3', 'sys2'], dep_info.system_deps)
 
     def cpp_info_link_order_test(self):
 
         def _assert_link_order(sorted_libs):
+            """
+            Assert that dependent libs of a component are always found later in the list
+            """
             assert sorted_libs, "'sorted_libs' is empty"
             for num, lib in enumerate(sorted_libs):
                 component_name = lib[-1]
                 for dep in info[component_name].deps:
-                    self.assertIn(info[dep].lib, sorted_libs[:num])
+                    self.assertIn(info[dep].lib, sorted_libs[num:])
 
         info = CppInfo(None)
         info["F"].lib = "libF"

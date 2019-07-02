@@ -106,6 +106,7 @@ class HelloConan(ConanFile):
         # FIXME: There are _null_ nodes
         self.assertEqual(deps_info_debug["version"], None)
         self.assertEqual(deps_info_release["version"], None)
+
         self.assertEqual(deps_info_debug["description"], None)
         self.assertEqual(deps_info_release["description"], None)
 

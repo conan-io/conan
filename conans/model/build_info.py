@@ -279,10 +279,12 @@ class DepCppInfo(object):
     def system_deps(self):
         if self._components:
             result = []
-            for component in self._sorted_components:
+            components = self._sorted_components
+            components.reverse()
+            for component in components:
                 if component.system_deps:
                     for system_dep in component.system_deps:
-                        if system_dep and system_dep not in result:
+                        if system_dep and system_dep:
                             result.append(system_dep)
             return result
         else:
@@ -352,12 +354,14 @@ class DepCppInfo(object):
     def libs(self):
         if self._components:
             result = []
-            for component in self._sorted_components:
-                for sys_dep in component.system_deps:
-                    if sys_dep and sys_dep not in result:
-                        result.append(sys_dep)
+            components = self._sorted_components
+            components.reverse()
+            for component in components:
                 if component.lib and component.lib not in result:
                     result.append(component.lib)
+                for sys_dep in component.system_deps:
+                    if sys_dep and sys_dep:
+                        result.append(sys_dep)
             return result
         else:
             return self._libs
@@ -451,7 +455,6 @@ class DepsCppInfo(object):
 
     def update(self, cpp_info, pkg_name):
         assert isinstance(cpp_info, CppInfo)
-        cpp_info.name = pkg_name
         self.update_dep_cpp_info(DepCppInfo(cpp_info), pkg_name)
 
     def update_dep_cpp_info(self, dep_cpp_info, pkg_name):

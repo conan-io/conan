@@ -455,6 +455,7 @@ class BinaryInstaller(object):
 
     def _call_package_info(self, conanfile, package_folder, ref):
         conanfile.cpp_info = CppInfo(package_folder)
+        conanfile.cpp_info.name = conanfile.name
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
         conanfile.env_info = EnvInfo()
