@@ -101,7 +101,7 @@ class VersionRangesTest(GraphTest):
             deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
                                                         requires=["Say/[%s]@myuser/testing" % expr]),
                                           update=True)
-            self.assertEqual(self.remote_manager.count, {'Say/*@myuser/testing': 1})
+            self.assertEqual(self.remote_manager.count, {'Say': 1})
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
             say = _get_nodes(deps_graph, "Say")[0]
@@ -147,7 +147,7 @@ class HelloConan(ConanFile):
                                                   Edge(dep1, say), Edge(dep2, say)})
 
         # Most important check: counter of calls to remote
-        self.assertEqual(self.remote_manager.count, {'Say/*@myuser/testing': 1})
+        self.assertEqual(self.remote_manager.count, {'Say': 1})
 
     @parameterized.expand([("", "0.3", None, None),
                            ('"Say/1.1@myuser/testing"', "1.1", False, False),
