@@ -5,7 +5,7 @@ import six
 from mock import patch
 
 from conans.client import tools
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, DATA_YML
 from conans.test.utils.tools import TestClient
 
 conanfile = """
@@ -153,3 +153,24 @@ class BaseConan(ConanFile):
                          client.out)
         self.assertNotIn("WARN: Linter. Line 8: self.copy_deps is not callable",
                          client.out)
+
+    def test_conan_data(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class ExampleConan(ConanFile):
+    name = "example"
+
+    def build(self):
+        print(self.conan_data["sources"][float(self.version)])
+"""
+        conandata = """sources:
+  2.3:
+    url: "https://github.com/google/cctz/archive/v2.3.tar.gz"
+    sha256: "8615b20d4e33e02a271c3b93a3b208e3d7d5d66880f5f6208b03426e448f32db"
+"""
+        client.save({DATA_YML: conandata})
+        client.save({CONANFILE: conanfile})
+        client.run("export . 2.3@conan/stable")
+        self.assertNotIn("Linter.", client.user_io.out)
+        self.assertNotIn("Instance of 'ExampleConan' has no 'conan_data' member", client.user_io.out)

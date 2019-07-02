@@ -5,7 +5,6 @@ import six
 
 from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
-from conans.client.file_copier import FileCopier
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
@@ -40,7 +39,7 @@ def complete_recipe_sources(remote_manager, layout, conanfile, remotes):
     remote_manager.get_recipe_sources(layout.ref, export_path, sources_folder, current_remote)
 
 
-def merge_directories(src, dst, excluded=None, symlinks=True):
+def merge_directories(src, dst, excluded=None):
     src = os.path.normpath(src)
     dst = os.path.normpath(dst)
     excluded = excluded or []
@@ -54,16 +53,30 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
             return True
         return False
 
-    linked_folders = []
-    for src_dir, dirs, files in walk(src, followlinks=True):
+    def link_to_rel(pointer_src):
+        linkto = os.readlink(pointer_src)
+        if not os.path.isabs(linkto):
+            linkto = os.path.join(os.path.dirname(pointer_src), linkto)
 
+        # Check if it is outside the sources
+        out_of_source = os.path.relpath(linkto, os.path.realpath(src)).startswith(".")
+        if out_of_source:
+            # May warn about out of sources symlink
+            return
+
+        # Create the symlink
+        linkto_rel = os.path.relpath(linkto, os.path.dirname(pointer_src))
+        pointer_dst = os.path.normpath(os.path.join(dst, os.path.relpath(pointer_src, src)))
+        os.symlink(linkto_rel, pointer_dst)
+
+    for src_dir, dirs, files in walk(src, followlinks=True):
         if is_excluded(src_dir):
             dirs[:] = []
             continue
 
         if os.path.islink(src_dir):
-            rel_link = os.path.relpath(src_dir, src)
-            linked_folders.append(rel_link)
+            link_to_rel(src_dir)
+            dirs[:] = []  # Do not enter subdirectories
             continue
 
         # Overwriting the dirs will prevents walk to get into them
@@ -75,13 +88,10 @@ def merge_directories(src, dst, excluded=None, symlinks=True):
         for file_ in files:
             src_file = os.path.join(src_dir, file_)
             dst_file = os.path.join(dst_dir, file_)
-            if os.path.islink(src_file) and symlinks:
-                linkto = os.readlink(src_file)
-                os.symlink(linkto, dst_file)
+            if os.path.islink(src_file):
+                link_to_rel(src_file)
             else:
                 shutil.copy2(src_file, dst_file)
-
-    FileCopier.link_folders(src, dst, linked_folders)
 
 
 def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):

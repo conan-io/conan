@@ -280,3 +280,46 @@ class ConanSymlink(ConanFile):
         bf_symlink = os.path.join(bf, "debug")
         self.assertTrue(os.path.islink(bf_symlink))
         self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))
+
+
+@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+class SymlinkExportSources(unittest.TestCase):
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile, CMake
+
+        class SymlinksConan(ConanFile):
+            name = "symlinks"
+            version = "1.0.0"
+            exports_sources = "src/*"
+        """)
+
+    def test_create_source(self):
+        # Reproduces issue: https://github.com/conan-io/conan/issues/5329
+        t = TestClient()
+        relpath_v1 = os.path.join('src', 'framework', 'Versions', 'v1')
+        t.save({'conanfile.py': self.conanfile,
+                os.path.join(relpath_v1, 'headers', 'content'): "whatever",
+                os.path.join(relpath_v1, 'file'): "content"})
+
+        # Add two levels of symlinks
+        os.symlink('v1', os.path.join(t.current_folder, 'src', 'framework', 'Versions', 'Current'))
+        os.symlink('Versions/Current/headers',
+                   os.path.join(t.current_folder, 'src', 'framework', 'headers'))
+        os.symlink('Versions/Current/file',
+                   os.path.join(t.current_folder, 'src', 'framework', 'file'))
+
+        # Check that things are in place (locally): file exists and points to local directory
+        relpath_content = os.path.join('src', 'framework', 'headers', 'content')
+        local_content = os.path.join(t.current_folder, relpath_content)
+        self.assertTrue(os.path.exists(local_content))
+        self.assertEqual(os.path.realpath(local_content),
+                         os.path.join(t.current_folder, relpath_v1, 'headers', 'content'))
+
+        t.run("create . user/channel")
+
+        # Check that things are in place (in the cache): exists and points to 'source' directory
+        layout = t.cache.package_layout(ConanFileReference.loads("symlinks/1.0.0@user/channel"))
+        cache_content = os.path.join(layout.source(), relpath_content)
+        self.assertTrue(os.path.exists(cache_content))
+        self.assertEqual(os.path.realpath(cache_content),
+                         os.path.join(layout.source(), relpath_v1, 'headers', 'content'))
