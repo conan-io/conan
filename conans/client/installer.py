@@ -427,7 +427,8 @@ class BinaryInstaller(object):
             python_conanfile = python_require.conanfile
             python_layout = self._cache.package_layout(python_require.ref,
                                                        short_paths=python_conanfile.short_paths)
-            complete_recipe_sources(self._remote_manager, python_layout, python_conanfile, remotes)
+            complete_recipe_sources(self._remote_manager, python_layout, python_require.ref,
+                                    python_conanfile, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(layout, node, keep_build, self._recorder, remotes)
