@@ -249,7 +249,7 @@ class DepCppInfo(object):
             else:
                 raise ConanException("There is a dependency loop in the components declared in "
                                      "'self.cpp_info'")
-        return ordered.values()
+        return list(ordered.values())
 
     @property
     def name(self):
