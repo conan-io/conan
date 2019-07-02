@@ -25,63 +25,63 @@ class BuildInfoTest(unittest.TestCase):
         items = [
 """
 [rootpath_Boost]
-C:/this_boost_path
+/this_boost_path
 """,
 """
 [rootpath_My_Lib]
-C:/this_my_lib_path
+/this_my_lib_path
 """,
 """
 [rootpath_My_Other_Lib]
-C:/this_my_other_lib_path
+/this_my_other_lib_path
 """,
 """
 [rootpath_My.Component.Lib]
-C:/this_my_component_lib_path
+/this_my_component_lib_path
 """,
 """
 [rootpath_My-Component-Tool]
-C:/this_my_component_tool_path
+/this_my_component_tool_path
 """,
 """
 [includedirs_Boost]
-C:/this_boost_path/boost_include
+/this_boost_path/boost_include
 """,
 """
 [includedirs_My_Lib]
-C:/this_my_lib_path/mylib_path
+/this_my_lib_path/mylib_path
 """,
 """
 [includedirs_My_Other_Lib]
-C:/this_my_other_lib_path/otherlib_path
+/this_my_other_lib_path/otherlib_path
 """,
 """
 [includedirs_My.Component.Lib]
-C:/this_my_component_lib_path/my_component_lib
+/this_my_component_lib_path/my_component_lib
 """,
 """
 [includedirs_My-Component-Tool]
-C:/this_my_component_tool_path/my-component-tool
+/this_my_component_tool_path/my-component-tool
 """]
         text = "".join(items)
         deps_cpp_info, _, _ = TXTGenerator.loads(text)
 
         def assert_cpp(deps_cpp_info_test):
-            self.assertIn('C:/this_my_lib_path/mylib_path', deps_cpp_info_test.include_paths)
-            self.assertIn('C:/this_my_component_lib_path/my_component_lib',
+            self.assertIn('/this_my_lib_path/mylib_path', deps_cpp_info_test.include_paths)
+            self.assertIn('/this_my_component_lib_path/my_component_lib',
                           deps_cpp_info_test.include_paths)
-            self.assertIn('C:/this_my_component_tool_path/my-component-tool',
+            self.assertIn('/this_my_component_tool_path/my-component-tool',
                           deps_cpp_info_test.include_paths)
-            self.assertIn('C:/this_boost_path/boost_include', deps_cpp_info_test.include_paths)
-            self.assertIn('C:/this_my_other_lib_path/otherlib_path',
+            self.assertIn('/this_boost_path/boost_include', deps_cpp_info_test.include_paths)
+            self.assertIn('/this_my_other_lib_path/otherlib_path',
                           deps_cpp_info_test.include_paths)
-            self.assertEqual(['C:/this_boost_path/boost_include'],
+            self.assertEqual(['/this_boost_path/boost_include'],
                              deps_cpp_info_test["Boost"].include_paths)
-            self.assertEqual(['C:/this_my_lib_path/mylib_path'],
+            self.assertEqual(['/this_my_lib_path/mylib_path'],
                              deps_cpp_info_test["My_Lib"].include_paths)
-            self.assertEqual(['C:/this_my_other_lib_path/otherlib_path'],
+            self.assertEqual(['/this_my_other_lib_path/otherlib_path'],
                              deps_cpp_info_test["My_Other_Lib"].include_paths)
-            self.assertEqual(['C:/this_my_component_tool_path/my-component-tool'],
+            self.assertEqual(['/this_my_component_tool_path/my-component-tool'],
                              deps_cpp_info_test["My-Component-Tool"].include_paths)
 
         assert_cpp(deps_cpp_info)
