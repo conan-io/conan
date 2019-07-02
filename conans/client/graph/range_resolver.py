@@ -116,7 +116,7 @@ class RangeResolver(object):
 
         ref = require.ref
         # The search pattern must be a string
-        search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
+        search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
 
         if update:
             resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
@@ -130,13 +130,14 @@ class RangeResolver(object):
                 resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
 
         origin = ("remote '%s'" % remote_name) if remote_name else "local cache"
-        if resolved_ref:    
+        if resolved_ref:
             self._result.append("Version range '%s' required by '%s' resolved to '%s' in %s"
                                 % (version_range, base_conanref, str(resolved_ref), origin))
             require.ref = resolved_ref
         else:
             raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
-                                 "could not be resolved in %s" % (version_range, require, base_conanref, origin))
+                                 "could not be resolved in %s"
+                                 % (version_range, require, base_conanref, origin))
 
     def _resolve_local(self, search_ref, version_range):
         local_found = search_recipes(self._cache, search_ref)
@@ -159,7 +160,11 @@ class RangeResolver(object):
         # We should use ignorecase=False, we want the exact case!
         found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
         if found_refs is None:
-            found_refs, remote_name = self._search_remotes(search_ref, remotes)
+            simplified_ref = "%s/*" % search_ref.name
+            found_refs, remote_name = self._search_remotes(simplified_ref, remotes)
+            if found_refs:
+                found_refs = [r for r in found_refs
+                              if r.user == search_ref.user and r.channel == search_ref.channel]
             if found_refs:
                 self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
             else:
