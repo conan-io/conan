@@ -16,13 +16,11 @@ class SConsGeneratorTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("")
-        cpp_info.filter_empty = False  # For testing purposes
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.version = "0.1"
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo("")
-        cpp_info.filter_empty = False  # For testing purposes
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.version = "3.2.3"
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
