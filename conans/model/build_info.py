@@ -590,7 +590,7 @@ class DepsCppInfo(object):
         if reverse:
             deps_cpp_info.reverse()
         for dep_cpp_info in deps_cpp_info:
-            for item in getattr(dep_cpp_info, name, []):
-                if item not in result:
-                    result.append(item)
+            seq2 = getattr(dep_cpp_info, name, [])
+            # FIXME: Complex logic to keep backwards compatibility of the order
+            result = [s for s in result if s not in seq2] + seq2
         return result
