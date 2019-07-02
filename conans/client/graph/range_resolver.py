@@ -160,8 +160,8 @@ class RangeResolver(object):
         # We should use ignorecase=False, we want the exact case!
         found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
         if found_refs is None:
-            simplified_ref = "%s/*" % search_ref.name
-            found_refs, remote_name = self._search_remotes(simplified_ref, remotes)
+            # Searching for just the name is much faster in remotes like Artifactory
+            found_refs, remote_name = self._search_remotes(search_ref.name, remotes)
             if found_refs:
                 found_refs = [r for r in found_refs
                               if r.user == search_ref.user and r.channel == search_ref.channel]
