@@ -16,7 +16,7 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     # get the right revision sources, not latest
     layout = cache.package_layout(ref)
     conanfile, _, ref = layout.init_from_metadata(loader)
-    complete_recipe_sources(remote_manager, layout, conanfile, remotes)
+    complete_recipe_sources(remote_manager, layout, ref, conanfile, remotes)
 
     # package_ids = True means get all
     package_ids = layout.packages_ids() if package_ids is True else (package_ids or [])

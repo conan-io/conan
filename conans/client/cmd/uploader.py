@@ -207,7 +207,7 @@ class CmdUpload(object):
         current_remote_name = metadata.recipe.remote
 
         if remote.name != current_remote_name:
-            complete_recipe_sources(self._remote_manager, layout, conanfile, remotes)
+            complete_recipe_sources(self._remote_manager, layout, ref, conanfile, remotes)
 
         conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,

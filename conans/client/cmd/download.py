@@ -24,7 +24,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
     conanfile, metadata, ref = layout.init_from_metadata(loader)
 
     # Download the sources too, don't be lazy
-    complete_recipe_sources(remote_manager, layout, conanfile, remotes)
+    complete_recipe_sources(remote_manager, layout, ref, conanfile, remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
