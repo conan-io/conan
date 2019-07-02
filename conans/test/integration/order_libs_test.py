@@ -126,8 +126,10 @@ class Conan(ConanFile):
         def build(self):
             self.output.info("Lib %s deps: %s" % (self.name, list(self.deps_cpp_info.deps)))
             self.output.info("Lib %s cflags: %s" % (self.name, list(self.deps_cpp_info.cflags)))
+            self.output.info("Lib %s libs: %s" % (self.name, list(self.deps_cpp_info.libs)))
 
         def package_info(self):
+            self.cpp_info.libs = ["lib%s" % self.name]
             self.cpp_info.cflags = ["%s_flag" % self.name]
         """
 
@@ -138,9 +140,12 @@ class Conan(ConanFile):
         _export("aaa")
         self.assertIn("Lib aaa deps: %s" % [], client.out)
         self.assertIn("Lib aaa cflags: %s" % [], client.out)
+        self.assertIn("Lib aaa libs: %s" % [], client.out)
         _export("bbb", "aaa")
         self.assertIn("Lib bbb deps: %s" % ["aaa"], client.out)
         self.assertIn("Lib bbb cflags: %s" % ["aaa_flag"], client.out)
+        self.assertIn("Lib bbb libs: %s" % ["libaaa"], client.out)
         _export("ccc", "bbb")
         self.assertIn("Lib ccc deps: %s" % ["bbb", "aaa"], client.out)
         self.assertIn("Lib ccc cflags: %s" % ["aaa_flag", "bbb_flag"], client.out)
+        self.assertIn("Lib ccc libs: %s" % ["libbbb", "libaaa"], client.out)
