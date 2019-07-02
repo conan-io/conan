@@ -37,7 +37,7 @@ class RequirementInfo(object):
     def copy(self):
         # Useful for build_id()
         result = RequirementInfo(self.package, "unrelated_mode")
-        for f in ("name", "version", "user", "channel", "revision", "package_id",
+        for f in ("name", "version", "user", "channel", "recipe_revision", "package_id",
                   "package_revision"):
 
             setattr(result, f, getattr(self, f))
