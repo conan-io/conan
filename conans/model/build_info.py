@@ -401,7 +401,7 @@ class DepCppInfo(object):
 
     def as_dict(self):
         result = {}
-        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes",
+        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes", "version",
                      "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
                      "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
                      "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]:
@@ -466,6 +466,10 @@ class DepsCppInfo(object):
     @property
     def version(self):
         return None  # Backwards compatibility: Do not brake scons generator
+
+    @property
+    def description(self):
+        return None  # Backwards compatibility
 
     @property
     def includedirs(self):
