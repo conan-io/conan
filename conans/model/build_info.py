@@ -196,9 +196,10 @@ class DepCppInfo(object):
         :return: List of absolute paths
         """
         result = []
-
         if self._components:
-            for dep_value in self._sorted_components:
+            components = self._sorted_components
+            components.reverse()
+            for dep_value in components:
                 abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
                 for path in abs_paths:
                     if path not in result:
@@ -210,7 +211,9 @@ class DepCppInfo(object):
     def _get_dirs(self, name):
         result = []
         if self._components:
-            for dep_value in self._sorted_components:
+            components = self._sorted_components
+            components.reverse()
+            for dep_value in components:
                 for _dir in getattr(dep_value, name):
                     if _dir not in result:
                         result.append(_dir)

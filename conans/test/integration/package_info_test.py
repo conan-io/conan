@@ -177,10 +177,10 @@ class HelloConan(ConanFile):
         expected_comp_launcher_exe = "exelauncher"
         expected_comp_iss_exe = ""
 
-        expected_global_include_paths = expected_comp_starlight_include_paths + \
-            expected_comp_planet_include_paths + expected_comp_iss_include_paths
-        expected_global_library_paths = expected_comp_starlight_library_paths + \
-            expected_comp_iss_library_paths
+        expected_global_include_paths = expected_comp_iss_include_paths + \
+            expected_comp_planet_include_paths + expected_comp_starlight_include_paths
+        expected_global_library_paths = expected_comp_iss_library_paths + \
+            expected_comp_starlight_library_paths
         expected_global_binary_paths = expected_comp_starlight_binary_paths
         expected_global_libs = [expected_comp_iss_lib]
         expected_global_libs.extend(expected_comp_iss_system_deps)
@@ -190,8 +190,8 @@ class HelloConan(ConanFile):
         expected_global_libs.append(expected_comp_starlight_lib)
         expected_global_libs.extend(expected_comp_starlight_system_deps)
         expected_global_exes = [expected_comp_launcher_exe]
-        expected_global_system_deps = expected_comp_iss_system_deps +\
-                                      expected_comp_launcher_system_deps
+        expected_global_system_deps = expected_comp_iss_system_deps + \
+            expected_comp_launcher_system_deps
 
         self.assertIn("GLOBAL Include paths: %s" % expected_global_include_paths, client.out)
         self.assertIn("GLOBAL Library paths: %s" % expected_global_library_paths, client.out)
