@@ -127,3 +127,23 @@ other/1.0@lasote/testing conan.io
                          Remote("repo2", "url2", True),
                          Remote("conan.io", "https://server.conan.io", True),
                          Remote("repo3", "url3", True)])
+
+    def test_remote_none(self):
+        """ RemoteRegistry should be able to deal when the URL is None
+        """
+        f = os.path.join(temp_folder(), "add_none_test")
+        Remotes().save(f)
+        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        registry = cache.registry
+
+        registry.add("foobar", None)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("foobar", None, True)])
+        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
+        registry.remove("foobar")
+
+        registry.update("conan-center", None)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", None, True)])
+        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
