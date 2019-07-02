@@ -49,6 +49,7 @@ class PackageCacheLayout(object):
         """
         metadata = self.load_metadata()
         ref = self._ref.copy_with_rev(metadata.recipe.revision)
+        self._ref = ref
         conanfile_path = self.conanfile()
         conanfile = loader.load_class(conanfile_path)
         self._short_paths = conanfile.short_paths
