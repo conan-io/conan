@@ -602,7 +602,7 @@ VAR2=23
     def deps_cpp_info_cflags_test(self):
         """
         Order of nodes in the graph is computed from bottom (node with more depdendencies) to top
-        (node with no dependencies). O rder od flags should be from less dependent to the most
+        (node with no dependencies). Order of flags should be from less dependent to the most
         dependent one.
         """
         folder = temp_folder()
@@ -618,7 +618,7 @@ VAR2=23
 
     def components_with_configs_test(self):
         """
-        Cmponents can be part of only one configuration
+        Components can be part of only one configuration
         """
         folder = temp_folder()
         info = CppInfo(folder)
