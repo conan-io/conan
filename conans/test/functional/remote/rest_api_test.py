@@ -66,7 +66,7 @@ class RestApiTest(unittest.TestCase):
             filename = os.path.join(temp_folder(), "conan.conf")
             save(filename, "")
             config = ConanClientConfigParser(filename)
-            requester = ConanRequester(config, requests)
+            requester = ConanRequester(config, TestBufferConanOutput(), requests)
             cls.api = RestApiClient(TestBufferConanOutput(), requester=requester,
                                     revisions_enabled=False)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
