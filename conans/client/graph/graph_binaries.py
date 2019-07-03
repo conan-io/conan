@@ -220,3 +220,16 @@ class GraphBinariesAnalyzer(object):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated, remotes)
             self._handle_private(node)
+
+    def _handle_private_graph(self, deps_graph):
+        current = set([deps_graph.root])
+        while current:
+            current_node = current.pop()
+            if current_node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
+                # Can skip its private
+                for n in current_node.neighbors():
+                    if n.private:
+                        n.binary = BINARY_SKIP
+                        current.add(n)
+            else:
+                current.update(current_node.neighbors())
