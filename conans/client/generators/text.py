@@ -1,6 +1,6 @@
 import re
 import traceback
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
 from conans.model import Generator
@@ -9,6 +9,13 @@ from conans.model.env_info import DepsEnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
 from conans.util.log import logger
+
+
+class OrderedDefaultDict(OrderedDict):
+
+    def __missing__(self, key):
+        self[key] = value = defaultdict(dict)
+        return value
 
 
 class DepsCppTXT(object):
@@ -87,7 +94,7 @@ class TXTGenerator(Generator):
 
         try:
             # Parse the text
-            data = defaultdict(lambda: defaultdict(dict))
+            data = OrderedDefaultDict()
             for m in pattern.finditer(text):
                 var_name = m.group(1)
                 lines = []

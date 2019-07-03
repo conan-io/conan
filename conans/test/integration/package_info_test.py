@@ -259,7 +259,8 @@ class HelloConan(ConanFile):
                 {requires}
 
                 def build(self):
-                    self.output.info("%s: %s" % (self.name, self.deps_cpp_info.libs))
+                    self.output.info("%s's deps: %s" % (self.name,
+                                                        ", ".join(self.deps_cpp_info.libs)))
 
                 def package_info(self):
                     self.cpp_info.libs = [self.name]
@@ -276,7 +277,9 @@ class HelloConan(ConanFile):
         client.run("create . three/1.0@us/ch")
         client.save({"conanfile.py": dep.format(requires="requires = 'three/1.0@us/ch'")})
         client.run("create . four/1.0@us/ch")
-        self.assertIn("four/1.0@us/ch: four: %s" % ["three", "one", "two", "zero"], client.out)
+        self.assertIn("four/1.0@us/ch: four's deps: %s" % ", ".join(["three", "one", "two", "zero"]),
+                      client.out)
         client.run("install .")
         client.run("build .")
-        self.assertIn("conanfile.py: None: %s" % ["three", "one", "two", "zero"], client.out)
+        self.assertIn("conanfile.py: None's deps: %s" % ", ".join(["three", "one", "two", "zero"]),
+                      client.out)
