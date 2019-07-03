@@ -6,7 +6,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     conanfile_exception_formatter
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.files import is_dirty, rmdir
@@ -32,6 +32,11 @@ class GraphBinariesAnalyzer(object):
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
+        assert node.prev is None, "Node.prev should be None"
+
+        if node.package_id == PACKAGE_ID_UNKNOWN:
+            node.binary = BINARY_MISSING
+            return
 
         ref, conanfile = node.ref, node.conanfile
         pref = PackageReference(ref, node.package_id)
