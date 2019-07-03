@@ -61,7 +61,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         save(file_path, "")
         cache.invalidate()
 
-        requester = ConanRequester(cache.config, TestBufferConanOutput())
+        requester = ConanRequester(cache.config)
         mocked_requester = MockRequesterGet()
         requester._http_requester = mocked_requester
         requester.get(url="bbbb", verify=True)

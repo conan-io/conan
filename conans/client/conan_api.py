@@ -161,7 +161,7 @@ class ConanAPIV1(object):
 
         hook_manager = HookManager(cache.hooks_path, config.hooks, user_io.out)
         # Wraps an http_requester to inject proxies, certs, etc
-        requester = ConanRequester(config, user_io.out)
+        requester = ConanRequester(config)
         # To handle remote connections
         put_headers = cache.read_put_headers()
         rest_api_client = RestApiClient(user_io.out, requester,

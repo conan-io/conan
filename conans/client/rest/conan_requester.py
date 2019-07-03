@@ -12,7 +12,7 @@ from conans.util.tracer import log_client_rest_api_call
 
 class ConanRequester(object):
 
-    def __init__(self, config, output, http_requester=None):
+    def __init__(self, config, http_requester=None):
         if http_requester:
             self._http_requester = http_requester
         else:
@@ -28,7 +28,6 @@ class ConanRequester(object):
         self._client_cert_key_path = config.client_cert_key_path
         self._retry = config.retry
         self._retry_wait = config.retry_wait
-        self._output = output
 
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -37,8 +36,6 @@ class ConanRequester(object):
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
         no_proxy = self.proxies.pop("no_proxy", None)
         if no_proxy:
-            self._output.warn("proxies.no_proxy has been deprecated." \
-                                 " Use proxies.no_proxy_match instead")
             os.environ["NO_PROXY"] = no_proxy
 
         if not os.path.exists(self._cacert_path):

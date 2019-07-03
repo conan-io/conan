@@ -23,7 +23,7 @@ http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = ConanRequester(client.cache.config, client.out)
+        requester = ConanRequester(client.cache.config)
 
         def verify_proxies(url, **kwargs):
             self.assertEqual(kwargs["proxies"], {"https": None, "http": "http://conan.url"})
@@ -33,7 +33,6 @@ http=http://conan.url
         self.assertEqual(os.environ["NO_PROXY"], "http://someurl,http://otherurl.com")
 
         self.assertEqual(requester.get("MyUrl"), "mocked ok!")
-        self.assertIn("WARN: proxies.no_proxy has been deprecated. Use proxies.no_proxy_match instead", client.out)
 
     def test_requester_with_host_specific_proxies(self):
         client = TestClient()
@@ -47,7 +46,7 @@ http=http://conan.url
                     """)
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = ConanRequester(client.cache.config, client.out)
+        requester = ConanRequester(client.cache.config)
 
         def verify_proxies(url, **kwargs):
             self.assertEqual(kwargs["proxies"],
@@ -95,7 +94,7 @@ http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = ConanRequester(client.cache.config, client.out)
+        requester = ConanRequester(client.cache.config)
 
         def verify_env(url, **kwargs):
             self.assertTrue("HTTP_PROXY" in os.environ)
@@ -113,7 +112,7 @@ no_proxy_match=MyExcludedUrl*
 """
         save(client.cache.conan_conf_path, conf)
         client.cache.invalidate()
-        requester = ConanRequester(client.cache.config, client.out)
+        requester = ConanRequester(client.cache.config)
 
         def verify_env(url, **kwargs):
             self.assertFalse("HTTP_PROXY" in os.environ)

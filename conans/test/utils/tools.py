@@ -807,7 +807,7 @@ servers["r2"] = TestServer()
             self.runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
                                       config.log_run_to_output, output=output)
 
-        self.requester = ConanRequester(config, output, http_requester=http_requester)
+        self.requester = ConanRequester(config, http_requester)
         self.hook_manager = HookManager(self.cache.hooks_path, config.hooks, self.user_io.out)
 
         put_headers = self.cache.read_put_headers()
