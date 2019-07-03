@@ -43,7 +43,7 @@ class SCMData(object):
         raise ConanException("Not implemented recipe revision for %s" % self.type)
 
     def __repr__(self):
-        invalid_values = [None, "", {}, []]
+        invalid_values = [None, "", {}, []]  # Discard not used/empty values but keep the False ones
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
              "subfolder": self.subfolder, "submodule": self.submodule}
