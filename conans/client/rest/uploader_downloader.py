@@ -14,6 +14,7 @@ from conans.util.tracer import log_download
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
+
 class FileUploader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
@@ -51,7 +52,8 @@ class FileUploader(object):
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
-        self.output.info("")
+        if not self.output.is_terminal:
+            self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
         # Now it is a chunked read file
@@ -122,7 +124,7 @@ class upload_with_progress(object):
         if self.output and self.output.is_terminal:
             progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
                                 unit_divisor=1024, desc="Uploading {}".format(self.file_name),
-                                leave=False, dynamic_ncols=True, ascii=False)
+                                leave=True, dynamic_ncols=False, ascii=True, file=self.output)
         for index, chunk in enumerate(self.groups):
             if progress_bar is not None:
                 update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
@@ -135,7 +137,6 @@ class upload_with_progress(object):
 
         if progress_bar is not None:
             progress_bar.close()
-            self.output.rewrite_line("{} [done]".format(progress_bar.desc))
         elif self.output:
             self.output.writeln(TIMEOUT_BEAT_CHARACTER)
 
@@ -224,8 +225,8 @@ class FileDownloader(object):
         progress_bar = None
         if self.output and self.output.is_terminal:
             progress_bar = tqdm(unit='B', unit_scale=True,
-                                unit_divisor=1024, dynamic_ncols=True,
-                                leave=False, ascii=False)
+                                unit_divisor=1024, dynamic_ncols=False,
+                                leave=True, ascii=True, file=self.output)
 
         if total_length is None:  # no content length header
             if not file_path:
@@ -286,7 +287,6 @@ class FileDownloader(object):
 
         if progress_bar is not None:
             progress_bar.close()
-            self.output.writeln("{} [done]".format(progress_bar.desc))
         elif self.output:
             self.output.writeln(TIMEOUT_BEAT_CHARACTER)
 

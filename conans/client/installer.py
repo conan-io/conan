@@ -378,6 +378,7 @@ class BinaryInstaller(object):
 
         conanfile = node.conanfile
         output = conanfile.output
+
         package_folder = self._cache.package_layout(pref.ref, conanfile.short_paths).package(pref)
 
         with self._cache.package_layout(pref.ref).package_lock(pref):
@@ -386,12 +387,15 @@ class BinaryInstaller(object):
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     set_dirty(package_folder)
-                    pref = self._build_package(node, pref, output, keep_build, remotes)
+                    pref = self._build_package(node, output, keep_build, remotes)
                     clean_dirty(package_folder)
+                    assert node.prev, "Node PREV shouldn't be empty"
+                    assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert node.prev is not None, "PREV for %s to be built is None" % str(pref)
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     assert node.prev, "PREV for %s is None" % str(pref)
+                    # not really concurrently, but a different node with same pref
                     if not self._node_concurrently_installed(node, package_folder):
                         set_dirty(package_folder)
                         assert pref.revision is not None, "Installer should receive #PREV always"
@@ -416,10 +420,8 @@ class BinaryInstaller(object):
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-    def _build_package(self, node, pref, output, keep_build, remotes):
+    def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile
-        assert pref.id, "Package-ID without value"
-
         # It is necessary to complete the sources of python requires, which might be used
         for python_require in conanfile.python_requires.values():
             assert python_require.ref.revision is not None, \

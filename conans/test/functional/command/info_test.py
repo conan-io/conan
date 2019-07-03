@@ -434,6 +434,10 @@ class MyTest(ConanFile):
         self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
                       self.client.out)
 
+        self.client.run("info Hello1/0.1@lasote/stable --build-order=Hello0/0.1@lasote/stable "
+                        "--graph=index.html", assert_error=True)
+        self.assertIn("--build-order cannot be used together with --graph", self.client.out)
+
     def build_order_build_requires_test(self):
         # https://github.com/conan-io/conan/issues/3267
         client = TestClient()

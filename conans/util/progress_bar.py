@@ -12,9 +12,9 @@ class _FileReaderWithProgressBar(object):
     tqdm_defaults = {'unit': 'B',
                      'unit_scale': True,
                      'unit_divisor': 1024,
-                     'dynamic_ncols': True,
-                     'leave': False,
-                     'ascii': False}
+                     'dynamic_ncols': False,
+                     'leave': True,
+                     'ascii': True}
 
     def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
@@ -71,5 +71,3 @@ def open_binary(path, output, **kwargs):
         file_wrapped.pb_close()
         if not output.is_terminal:
             output.writeln("\n")
-        else:
-            output.writeln("{} [done]".format(file_wrapped.description()))

@@ -54,7 +54,8 @@ class ConfigParser(object):
                 if current_lines is None:
                     raise ConanException("ConfigParser: Unexpected line '%s'" % line)
                 if parse_lines:
-                    line = line.split('#')[0]
+                    line = line.split(' #', 1)[0]
+                    line = line.split('    #', 1)[0]
                     line = line.strip()
                 current_lines.append(line)
 
