@@ -68,7 +68,6 @@ def set_dirty_context_manager(folder, force_clean=False):
             clean_dirty(folder)
 
 
-
 def decode_text(text):
     decoders = ["utf-8", "Windows-1252"]
     for decoder in decoders:
