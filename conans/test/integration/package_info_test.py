@@ -245,3 +245,38 @@ class HelloConan(ConanFile):
         self.assertIn("COMP Launcher System deps: %s" % expected_comp_launcher_system_deps,
                       client.out)
         self.assertIn("COMP ISS System deps: %s" % expected_comp_iss_system_deps, client.out)
+
+    def package_info_diaomond_order_consumer_test(self):
+        """
+        Check that the value order in deps_cpp_info is the same one when those are recovered from
+        conanbuildinfo.txt (consumer case)
+        """
+        dep = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class Conanfile(ConanFile):
+                {requires}
+
+                def build(self):
+                    self.output.info("%s: %s" % (self.name, self.deps_cpp_info.libs))
+
+                def package_info(self):
+                    self.cpp_info.libs = [self.name]
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": dep.format(requires="")})
+        client.run("create . zero/1.0@us/ch")
+        client.save({"conanfile.py": dep.format(requires="requires = 'zero/1.0@us/ch'")})
+        client.run("create . one/1.0@us/ch")
+        client.save({"conanfile.py": dep.format(requires="requires = 'zero/1.0@us/ch'")})
+        client.run("create . two/1.0@us/ch")
+        client.save({
+            "conanfile.py": dep.format(requires="requires = 'one/1.0@us/ch', 'two/1.0@us/ch'")})
+        client.run("create . three/1.0@us/ch")
+        client.save({"conanfile.py": dep.format(requires="requires = 'three/1.0@us/ch'")})
+        client.run("create . four/1.0@us/ch")
+        self.assertIn("four/1.0@us/ch: four: %s" % ["three", "one", "two", "zero"], client.out)
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("conanfile.py: None: %s" % ["three", "one", "two", "zero"], client.out)
