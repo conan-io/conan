@@ -42,8 +42,8 @@ class PackageIDGraphTests(GraphManagerTest):
             with environment_append({"CONAN_DEFAULT_PACKAGE_ID_MODE": package_id_mode}):
                 _assert_recipe_mode(ref, package_id)
 
-    def test_full_package_revision_mode(self):
-        self.cache.config.set_item("general.default_package_id_mode", "full_package_revision_mode")
+    def test_package_revision_mode(self):
+        self.cache.config.set_item("general.default_package_id_mode", "package_revision_mode")
         liba_ref1 = "liba/0.1.1@user/testing"
         libb_ref = "libb/0.1@user/testing"
         self._cache_recipe(liba_ref1, TestConanFile("liba", "0.1.1"))

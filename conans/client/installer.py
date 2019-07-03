@@ -381,7 +381,6 @@ class BinaryInstaller(object):
 
         conanfile = node.conanfile
         output = conanfile.output
-        pref = node.pref
 
         if node.package_id == PACKAGE_ID_UNKNOWN:
             assert node.binary is None
@@ -395,6 +394,7 @@ class BinaryInstaller(object):
             pref = node.pref
 
         assert pref.id and pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
+
         package_folder = self._cache.package_layout(pref.ref, conanfile.short_paths).package(pref)
 
         with self._cache.package_layout(pref.ref).package_lock(pref):

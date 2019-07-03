@@ -7,9 +7,9 @@ from conans.test.utils.conanfile import TestConanFile
 
 class FullRevisionModeTest(unittest.TestCase):
 
-    def full_revision_mode_test(self):
+    def recipe_revision_mode_test(self):
         clienta = TestClient()
-        clienta.run("config set general.default_package_id_mode=full_revision_mode")
+        clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
         conanfilea = dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -44,7 +44,7 @@ class FullRevisionModeTest(unittest.TestCase):
         # Now change only the package revision of liba
         clienta.run("create . liba/0.1@user/testing")
         clientc.run("install . user/testing")
-        clientc.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientc.run("config set general.default_package_id_mode=package_revision_mode")
         clientc.run("install . user/testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
         clientc.run("install . user/testing --build=libb")
@@ -59,7 +59,7 @@ class FullRevisionModeTest(unittest.TestCase):
 
     def binary_id_recomputation_after_build_test(self):
         clienta = TestClient()
-        clienta.run("config set general.default_package_id_mode=full_revision_mode")
+        clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -75,16 +75,16 @@ class FullRevisionModeTest(unittest.TestCase):
 
         clientb = TestClient(base_folder=clienta.base_folder)
         clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
-        clientb.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientb.run("config set general.default_package_id_mode=package_revision_mode")
         clientb.run("create . libb/0.1@user/testing")
 
         clientc = TestClient(base_folder=clienta.base_folder)
         clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
-        clientc.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientc.run("config set general.default_package_id_mode=package_revision_mode")
         clientc.run("create . libc/0.1@user/testing")
 
         clientd = TestClient(base_folder=clienta.base_folder)
-        clientd.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientd.run("config set general.default_package_id_mode=package_revision_mode")
         clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
         clientd.run("install . libd/0.1@user/testing")
 
@@ -103,7 +103,7 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta = TestClient()
         clienta.save({"conanfile.py": str(TestConanFile("Tool", "0.1", info=True))})
         clienta.run("create . user/testing")
-        clienta.run("config set general.default_package_id_mode=full_revision_mode")
+        clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
         conanfile = dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -122,16 +122,16 @@ class FullRevisionModeTest(unittest.TestCase):
 
         clientb = TestClient(base_folder=clienta.base_folder)
         clientb.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
-        clientb.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientb.run("config set general.default_package_id_mode=package_revision_mode")
         clientb.run("create . libb/0.1@user/testing")
 
         clientc = TestClient(base_folder=clienta.base_folder)
         clientc.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
-        clientc.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientc.run("config set general.default_package_id_mode=package_revision_mode")
         clientc.run("create . libc/0.1@user/testing")
 
         clientd = TestClient(base_folder=clienta.base_folder)
-        clientd.run("config set general.default_package_id_mode=full_package_revision_mode")
+        clientd.run("config set general.default_package_id_mode=package_revision_mode")
         clientd.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
         clientd.run("install . libd/0.1@user/testing")
 
@@ -150,7 +150,7 @@ class FullRevisionModeTest(unittest.TestCase):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream
         client = TestClient()
-        client.run("config set general.default_package_id_mode=full_package_revision_mode")
+        client.run("config set general.default_package_id_mode=package_revision_mode")
         conanfile = dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):

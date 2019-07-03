@@ -35,6 +35,10 @@ class GraphBinariesAnalyzer(object):
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
         assert node.prev is None, "Node.prev should be None"
 
+        if node.package_id == PACKAGE_ID_UNKNOWN:
+            node.binary = BINARY_MISSING
+            return
+
         ref, conanfile = node.ref, node.conanfile
         pref = PackageReference(ref, node.package_id)
         output = conanfile.output

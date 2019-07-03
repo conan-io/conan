@@ -379,3 +379,16 @@ class HelloConan(ConanFile):
     def missing_subarguments_test(self):
         self.client.run("remote", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+    def test_invalid_url(self):
+        self.client.run("remote add foobar foobar.com")
+        self.assertIn("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname.",
+                      self.client.user_io.out)
+        self.client.run("remote list")
+        self.assertIn("foobar.com", self.client.out)
+
+        self.client.run("remote update foobar pepe.org")
+        self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
+                      self.client.user_io.out)
+        self.client.run("remote list")
+        self.assertIn("pepe.org", self.client.out)
