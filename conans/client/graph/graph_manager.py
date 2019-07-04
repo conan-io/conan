@@ -140,6 +140,14 @@ class GraphManager(object):
                 lock_python_requires = None
                 # do not try apply lock_python_requires for test_package/conanfile.py consumer
                 if graph_lock and not create_reference:
+                    if graph_info.root.name is None:
+                        # If the graph_info information is not there, better get what we can from
+                        # the conanfile
+                        conanfile = self._loader.load_class(path)
+                        graph_info.root = ConanFileReference(graph_info.root.name or conanfile.name,
+                                                             graph_info.root.version or conanfile.version,
+                                                             graph_info.root.user,
+                                                             graph_info.root.channel, validate=False)
                     node_id = graph_lock.get_node(graph_info.root)
                     lock_python_requires = graph_lock.python_requires(node_id)
 

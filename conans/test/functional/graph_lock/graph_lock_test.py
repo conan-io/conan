@@ -16,6 +16,50 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("ERROR: Missing lockfile in", client.out)
 
+    def update_different_profile_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": str(TestConanFile("PkgA", "0.1"))})
+        client.run("install . -if=conf1 -s os=Windows")
+        client.run("install . -if=conf2 -s os=Linux")
+        client.run("graph update-lock conf1 conf2", assert_error=True)
+        self.assertIn("Profiles of lockfiles are different", client.out)
+        self.assertIn("os=Windows", client.out)
+        self.assertIn("os=Linux", client.out)
+
+
+class GraphLockCustomFilesTest(unittest.TestCase):
+    consumer = TestConanFile("PkgB", "0.1", requires=["PkgA/[>=0.1]@user/channel"])
+    pkg_b_revision = "180919b324d7823f2683af9381d11431"
+    pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
+    pkg_b_package_revision = "#2913f67cea630aee496fe70fd38b5b0f"
+
+    def _check_lock(self, ref_b, rev_b=""):
+        lock_file = load(os.path.join(self.client.current_folder, "custom.lock"))
+        lock_file_json = json.loads(lock_file)
+        self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
+        self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#6d56ca1040e37a13b75bc286f3e1a5ad",
+                      lock_file)
+        self.assertIn('"%s:%s%s"' % (str(ref_b), self.pkg_b_id, rev_b), lock_file)
+
+    def test(self):
+        client = TestClient()
+        self.client = client
+        client.save({"conanfile.py": str(TestConanFile("PkgA", "0.1"))})
+        client.run("create . PkgA/0.1@user/channel")
+
+        # Use a consumer with a version rang
+        client.save({"conanfile.py": self.consumer})
+        client.run("graph lock . --lockfile=custom.lock")
+        self._check_lock("PkgB/0.1@None/None")
+
+        # If we create a new PkgA version
+        client.save({"conanfile.py": str(TestConanFile("PkgA", "0.2"))})
+        client.run("create . PkgA/0.2@user/channel")
+        client.save({"conanfile.py": self.consumer})
+        client.run("install . --lockfile=custom.lock")
+        self._check_lock("PkgB/0.1@None/None")
+
 
 class GraphLockVersionRangeTest(unittest.TestCase):
     consumer = TestConanFile("PkgB", "0.1", requires=["PkgA/[>=0.1]@user/channel"])
@@ -144,6 +188,10 @@ class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
 
 class GraphLockVersionRangeInfoTest(GraphLockVersionRangeTest):
     graph_lock_command = "info . --install-folder=."
+
+
+class GraphLockVersionRangeGraphLockTest(GraphLockVersionRangeTest):
+    graph_lock_command = "graph lock ."
 
 
 class GraphLockRevisionTest(unittest.TestCase):
