@@ -439,11 +439,9 @@ class DepsCppInfo(object):
 
     def __getattr__(self, config):
         # If the configuration does not exist, return an empty list
-        if config not in self.configs:
-            # FIXME: This could create unintended empty configurations for those generators/libs
-            # that access unexisting configs with self.deps_cpp_info.whatever.includedirs
-            self.configs[config] = DepsCppInfo()
-        return self.configs[config]
+        # FIXME: This could create unintended empty configurations for those generators/libs
+        # that access unexisting configs with self.deps_cpp_info.whatever.includedirs
+        return self.configs.setdefault(config, DepsCppInfo())
 
     @property
     def dependencies(self):
@@ -465,9 +463,8 @@ class DepsCppInfo(object):
         self._dependencies[pkg_name] = dep_cpp_info
         if dep_cpp_info.configs:
             for config, sub_dep_cpp_info in dep_cpp_info.configs.items():
-                if config not in self.configs:
-                    self.configs[config] = DepsCppInfo()
-                self.configs[config].update_dep_cpp_info(sub_dep_cpp_info, pkg_name)
+                self.configs.setdefault(config, DepsCppInfo()).update_dep_cpp_info(sub_dep_cpp_info,
+                                                                                   pkg_name)
 
     @property
     def version(self):
