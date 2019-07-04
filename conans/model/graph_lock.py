@@ -186,7 +186,7 @@ class GraphLock(object):
         """
         result = []
         for id_, node in self._nodes.items():
-            if node_id in node.requires:
+            if node_id in node.requires.values():
                 result.append(id_)
         return result
 
