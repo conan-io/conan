@@ -595,6 +595,9 @@ class Command(object):
         if args.install_folder and (args.profile or args.settings or args.options or args.env):
             raise ArgumentError(None,
                                 "--install-folder cannot be used together with -s, -o, -e or -pr")
+        if args.build_order and args.graph:
+            raise ArgumentError(None,
+                                "--build-order cannot be used together with --graph")
 
         # BUILD ORDER ONLY
         if args.build_order:

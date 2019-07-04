@@ -3,6 +3,7 @@ from conans.client.source import complete_recipe_sources
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import NotFoundException, RecipeNotFoundException
 
+
 def download(ref, package_ids, remote, recipe, remote_manager,
              cache, out, recorder, loader, hook_manager, remotes):
 
@@ -46,5 +47,6 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
     for package_id in package_ids:
         pref = PackageReference(ref, package_id)
         package_folder = cache.package_layout(pref.ref, short_paths=short_paths).package(pref)
-        output.info("Downloading %s" % str(pref))
+        if output and not output.is_terminal:
+            output.info("Downloading %s" % str(pref))
         remote_manager.get_package(pref, package_folder, remote, output, recorder)

@@ -146,6 +146,8 @@ class ConanFileLoader(object):
             processed_profile._user_options.clear_unscoped_options()
 
             return conanfile
+        except ConanInvalidConfiguration:
+            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 

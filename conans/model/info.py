@@ -12,15 +12,21 @@ from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
 
+PREV_UNKNOWN = "PREV unknown"
+PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
+
 
 class RequirementInfo(object):
+
     def __init__(self, pref, default_package_id_mode, indirect=False):
         self.package = pref
         self.full_name = pref.ref.name
         self.full_version = pref.ref.version
         self.full_user = pref.ref.user
         self.full_channel = pref.ref.channel
+        self.full_recipe_revision = pref.ref.revision
         self.full_package_id = pref.id
+        self.full_package_revision = pref.revision
         self._indirect = indirect
 
         try:
@@ -31,7 +37,9 @@ class RequirementInfo(object):
     def copy(self):
         # Useful for build_id()
         result = RequirementInfo(self.package, "unrelated_mode")
-        for f in ("name", "version", "user", "channel", "package_id"):
+        for f in ("name", "version", "user", "channel", "recipe_revision", "package_id",
+                  "package_revision"):
+
             setattr(result, f, getattr(self, f))
             f = "full_%s" % f
             setattr(result, f, getattr(self, f))
@@ -43,18 +51,30 @@ class RequirementInfo(object):
         result = ["%s/%s" % (self.name, self.version)]
         if self.user or self.channel:
             result.append("@%s/%s" % (self.user, self.channel))
+        if self.recipe_revision:
+            result.append("#%s" % self.recipe_revision)
         if self.package_id:
             result.append(":%s" % self.package_id)
+        if self.package_revision:
+            result.append("#%s" % self.package_revision)
         return "".join(result)
 
     @property
     def sha(self):
+        if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
+            return None
         vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
         # This is done later to NOT affect existing package-IDs (before revisions)
+        if self.recipe_revision:
+            vals.append(self.recipe_revision)
+        if self.package_revision:
+            # A package revision is required = True, but didn't get a real value
+            vals.append(self.package_revision)
         return "/".join(vals)
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def semver_direct_mode(self):
         if self._indirect:
@@ -66,6 +86,7 @@ class RequirementInfo(object):
         self.name = self.full_name
         self.version = self.full_version.stable()
         self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     semver = semver_mode  # Remove Conan 2.0
 
@@ -73,26 +94,31 @@ class RequirementInfo(object):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def patch_mode(self):
         self.name = self.full_name
         self.version = self.full_version.patch()
         self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def base_mode(self):
         self.name = self.full_name
         self.version = self.full_version.base
         self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def minor_mode(self):
         self.name = self.full_name
         self.version = self.full_version.minor()
         self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def major_mode(self):
         self.name = self.full_name
         self.version = self.full_version.major()
         self.user = self.channel = self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def full_recipe_mode(self):
         self.name = self.full_name
@@ -100,6 +126,7 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = None
+        self.recipe_revision = self.package_revision = None
 
     def full_package_mode(self):
         self.name = self.full_name
@@ -107,9 +134,30 @@ class RequirementInfo(object):
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = self.full_package_id
+        self.recipe_revision = self.package_revision = None
+
+    def recipe_revision_mode(self):
+        self.name = self.full_name
+        self.version = self.full_version
+        self.user = self.full_user
+        self.channel = self.full_channel
+        self.recipe_revision = self.full_recipe_revision
+        self.package_id = None
+        self.package_revision = None
+
+    def package_revision_mode(self):
+        self.name = self.full_name
+        self.version = self.full_version
+        self.user = self.full_user
+        self.channel = self.full_channel
+        self.package_id = self.full_package_id
+        self.recipe_revision = self.full_recipe_revision
+        # It is requested to use, but not defined (binary not build yet)
+        self.package_revision = self.full_package_revision or PREV_UNKNOWN
 
 
 class RequirementsInfo(object):
+
     def __init__(self, prefs, default_package_id_mode):
         # {PackageReference: RequirementInfo}
         self._data = {pref: RequirementInfo(pref, default_package_id_mode=default_package_id_mode)
@@ -165,6 +213,8 @@ class RequirementsInfo(object):
         data = {k: v for k, v in self._data.items() if v.name}
         for key in sorted(data):
             s = data[key].sha
+            if s is None:
+                return None
             result.append(s)
         return sha1('\n'.join(result).encode())
 
@@ -214,6 +264,14 @@ class RequirementsInfo(object):
     def full_package_mode(self):
         for r in self._data.values():
             r.full_package_mode()
+
+    def recipe_revision_mode(self):
+        for r in self._data.values():
+            r.recipe_revision_mode()
+
+    def package_revision_mode(self):
+        for r in self._data.values():
+            r.package_revision_mode()
 
 
 class _PackageReferenceList(list):
@@ -341,6 +399,8 @@ class ConanInfo(object):
         self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha)
         requires_sha = self.requires.sha
+        if requires_sha is None:
+            return PACKAGE_ID_UNKNOWN
         result.append(requires_sha)
 
         package_id = sha1('\n'.join(result).encode())
