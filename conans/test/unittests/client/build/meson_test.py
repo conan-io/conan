@@ -5,7 +5,7 @@ from parameterized.parameterized import parameterized
 
 import six
 
-from conans.client import defs_to_string
+from conans.client.build import defs_to_string
 from conans.client.build.meson import Meson
 from conans.client.conf import default_settings_yml
 from conans.client.tools import args_to_string
@@ -134,7 +134,8 @@ class MesonTest(unittest.TestCase):
         build_expected = os.path.join(self.tempdir, "my_cache_build_folder", "build")
         source_expected = os.path.join(self.tempdir, "my_cache_source_folder", "source")
         cmd_expected = 'meson "%s" "%s" --backend=ninja %s %s --buildtype=release' \
-                       % (source_expected, build_expected, args_to_string(args), defs_to_string(defs))
+                       % (source_expected, build_expected, args_to_string(args),
+                          defs_to_string(defs))
         self._check_commands(cmd_expected, conan_file.command)
 
         # Raise mixing
@@ -142,10 +143,12 @@ class MesonTest(unittest.TestCase):
             meson.configure(source_folder="source", build_dir="build")
 
         meson.test()
-        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["test"])),
+                         conan_file.command)
 
         meson.install()
-        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])), conan_file.command)
+        self.assertEqual("ninja -C \"%s\" %s" % (build_expected, args_to_string(["install"])),
+                         conan_file.command)
 
     def prefix_test(self):
         conan_file = ConanFileMock()

@@ -111,7 +111,8 @@ class DepsGraphBuilder(object):
         param down_ref: ConanFileReference of who is depending on current node for this expansion
         """
         # basic node configuration: calling configure() and requirements()
-        new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref, down_options)
+        new_reqs, new_options = self._config_node(dep_graph, node, down_reqs, down_ref,
+                                                  down_options)
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         self._resolve_deps(dep_graph, node, update, remotes)
@@ -274,7 +275,7 @@ class DepsGraphBuilder(object):
                     # If re-evaluating the recipe, in a diamond graph, with different options,
                     # it could happen that one execution path of requirements() defines a package
                     # and another one a different package raising Duplicate dependency error
-                    # Or the two consecutive calls, adding 2 different dependencies for the two paths
+                    # Or the two consecutive calls, adding 2 different dependencies for the 2 paths
                     # So it is necessary to save the "requires" state and restore it before a second
                     # execution of requirements(). It is a shallow copy, if first iteration is
                     # RequireResolve'd or overridden, the inner requirements are modified
