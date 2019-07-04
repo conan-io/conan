@@ -880,8 +880,8 @@ class Command(object):
                             help='Path to a json file where the install information will be '
                             'written')
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to lockfile. Lockfile will be updated with "
-                            "the exported package")
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                            "Lockfile will be updated with the exported package")
 
         args = parser.parse_args(*args)
 
@@ -930,8 +930,8 @@ class Command(object):
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to lockfile. Lockfile will be updated with "
-                            "the exported package")
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                            "Lockfile will be updated with the exported package")
 
         args = parser.parse_args(*args)
         self._warn_python2()
@@ -1921,7 +1921,8 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
                         help="Check updates exist from upstream remotes")
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
-                            help="Path to lockfile. Lockfile can be updated if packages change")
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                            "Lockfile can be updated if packages change")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
