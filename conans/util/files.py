@@ -58,14 +58,10 @@ def is_dirty(folder):
 
 
 @contextmanager
-def set_dirty_context_manager(folder, force_clean=False):
+def set_dirty_context_manager(folder):
     set_dirty(folder)
-    try:
-        yield
-        clean_dirty(folder)
-    except:
-        if force_clean:
-            clean_dirty(folder)
+    yield
+    clean_dirty(folder)
 
 
 def decode_text(text):
