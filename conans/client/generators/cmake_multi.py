@@ -4,7 +4,7 @@ from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dep
                                                    cmake_package_info, cmake_user_info_vars,
                                                    generate_targets_section)
 from conans.model import Generator
-from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.build_info import CppInfo, DepCppInfo, DepsCppInfo
 
 
 def extend(cpp_info, config):
@@ -45,14 +45,18 @@ class CMakeMultiGenerator(Generator):
 
     def _content_type(self, build_type):
         sections = []
+        global_deps_cpp_info = DepsCppInfo()
 
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=build_type)
             sections.append(dep_flags)
+            # Store the extended DepCppInfos for global variables
+            global_deps_cpp_info.update_dep_cpp_info(dep_cpp_info, dep_name)
 
         # GENERAL VARIABLES
         sections.append("\n### Definition of global aggregated variables ###\n")
@@ -60,8 +64,7 @@ class CMakeMultiGenerator(Generator):
                                        build_type=build_type)
         sections.append(all_flags)
 
-        dep_cpp_info = extend(self.deps_build_info, build_type)
-        deps = DepsCppCmake(dep_cpp_info)
+        deps = DepsCppCmake(global_deps_cpp_info)
         all_flags = cmake_global_vars(deps=deps, build_type=build_type)
         sections.append(all_flags)
 
