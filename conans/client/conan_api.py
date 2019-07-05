@@ -901,8 +901,8 @@ class ConanAPIV1(object):
         remotes.select(remote_name)
         self._python_requires.enable_remotes(remotes=remotes)
         try:
-            uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm, retry,
-                            retry_wait, integrity_check, policy, query=query)
+            uploader.upload(pattern, remotes, upload_recorder, package, all_packages, confirm,
+                            retry, retry_wait, integrity_check, policy, query=query)
             return upload_recorder.get_info()
         except ConanException as exc:
             upload_recorder.error = True
@@ -1075,8 +1075,8 @@ class ConanAPIV1(object):
             conanfile_class = self._loader.load_class(alias_conanfile_path)
             conanfile = conanfile_class(self._user_io.out, None, str(ref))
             if not getattr(conanfile, 'alias', None):
-                raise ConanException("Reference '{}' is already a package, remove it before creating"
-                                     " and alias with the same name".format(ref))
+                raise ConanException("Reference '{}' is already a package, remove it before "
+                                     "creating and alias with the same name".format(ref))
 
         package_layout = self._cache.package_layout(ref)
         return export_alias(package_layout, target_ref,

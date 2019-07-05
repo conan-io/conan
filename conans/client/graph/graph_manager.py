@@ -182,7 +182,7 @@ class GraphManager(object):
                                       graph_lock=graph_lock)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
-        # FIXME: This is a hack. Might dissapear if the graph for local commands is always recomputed
+        # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
         graph_info.options = root_node.conanfile.options.values
         if ref:
             graph_info.root = ref
@@ -236,7 +236,7 @@ class GraphManager(object):
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
-                                if build_require.name in package_build_requires:  # Override existing
+                                if build_require.name in package_build_requires:  # Override defined
                                     # this is a way to have only one package Name for all versions
                                     # (no conflicts)
                                     # but the dict key is not used at all
@@ -289,7 +289,7 @@ class GraphManager(object):
             closure = node.public_closure
             closure.pop(node.name)
             node_order = list(closure.values())
-            # List sort is stable, will keep the original order of the closure, but prioritize levels
+            # List sort is stable, will keep the original order of closure, but prioritize levels
             node_order.sort(key=lambda n: inverse_levels[n])
             node.public_closure = node_order
 

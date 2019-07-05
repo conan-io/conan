@@ -165,8 +165,8 @@ class CmdUpload(object):
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
                         if ref.revision != rec_rev:
-                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the "
-                                                   "current recipe revision" % package_id)
+                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the"
+                                                   " current recipe revision" % package_id)
                             continue
                     package_revision = metadata.packages[package_id].revision
                     assert package_revision is not None, "PREV cannot be None to upload"
@@ -383,8 +383,8 @@ class CmdUpload(object):
             if remote_manifest == local_manifest:
                 return None, None
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. Forbidden "
-                                     "overwrite.")
+                raise ConanException("Local package is different from the remote package. Forbidden"
+                                     " overwrite.")
         deleted = set(remote_snapshot).difference(the_files)
         return the_files, deleted
 
