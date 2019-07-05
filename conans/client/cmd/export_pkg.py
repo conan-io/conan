@@ -19,10 +19,10 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
 
     # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
     # to be downloaded from remotes
-    deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
-                                             check_updates=False, update=False,
-                                             remotes=remotes, recorder=recorder,
-                                             apply_build_requires=False)
+    deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info,
+                                             build_mode=[ref.name], check_updates=False,
+                                             update=False, remotes=remotes,
+                                             recorder=recorder, apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()

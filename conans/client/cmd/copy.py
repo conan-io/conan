@@ -41,7 +41,8 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     package_copy(ref, user_channel, package_ids, cache, user_io, short_paths, force)
 
 
-def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths=False, force=False):
+def package_copy(src_ref, user_channel, package_ids, cache, user_io, short_paths=False,
+                 force=False):
     dest_ref = ConanFileReference.loads("%s/%s@%s" % (src_ref.name,
                                                       src_ref.version,
                                                       user_channel))

@@ -79,6 +79,7 @@ class SmartFormatter(argparse.HelpFormatter):
         text = textwrap.dedent(text)
         return ''.join(indent + line for line in text.splitlines(True))
 
+
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
@@ -383,7 +384,8 @@ class Command(object):
             if packages_list:
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
-                                       "`conan download [...] {}:{}`".format(reference, packages_list[0]))
+                                       "`conan download [...] {}:{}`".format(reference,
+                                                                             packages_list[0]))
         else:
             reference = pref.ref.full_repr()
             packages_list = [pref.id]
@@ -580,8 +582,8 @@ class Command(object):
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
 
-        dry_build_help = ("Apply the --build argument to output the information, as it would be done"
-                          " by the install command")
+        dry_build_help = ("Apply the --build argument to output the information, "
+                          "as it would be done by the install command")
         parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
@@ -730,10 +732,10 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="Directory to install the package (when the build system or build()"
-                                 " method does it). Defaulted to the '{build_folder}/package' folder"
-                                 ". A relative path can be specified, relative to the current "
-                                 " folder. Also an absolute path is allowed.")
+                            help="Directory to install the package (when the build system or "
+                            "build() method does it). Defaulted to the '{build_folder}/package' "
+                            "folder. A relative path can be specified, relative to the current "
+                            "folder. Also an absolute path is allowed.")
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         args = parser.parse_args(*args)
 
@@ -812,8 +814,8 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path",
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
-                            "containing the conan_imports_manifest.txt file generated in a previous "
-                            "execution. e.g.: conan imports ./imported_files --undo ")
+                            "containing the conan_imports_manifest.txt file generated in a previous"
+                            " execution. e.g.: conan imports ./imported_files --undo ")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
@@ -1011,7 +1013,8 @@ class Command(object):
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel. e.g., lasote/testing')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='copy specified package ID [DEPRECATED: use full reference instead]')
+                            help='copy specified package ID '
+                            '[DEPRECATED: use full reference instead]')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Copy all packages from the specified package recipe')
         parser.add_argument("--force", action='store_true', default=False,
@@ -1027,7 +1030,8 @@ class Command(object):
             if packages_list:
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
-                                       "`conan copy [...] {}:{}`".format(reference, packages_list[0]))
+                                       "`conan copy [...] {}:{}`".format(reference,
+                                                                         packages_list[0]))
 
             if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
@@ -1283,7 +1287,8 @@ class Command(object):
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
             if args.query:
-                raise ConanException("'--query' argument cannot be used together with full reference")
+                raise ConanException("'--query' argument cannot be used together with "
+                                     "full reference")
 
         if args.force and args.no_overwrite:
             raise ConanException("'--no-overwrite' argument cannot be used together with '--force'")
