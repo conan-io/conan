@@ -869,7 +869,7 @@ class ConanLib(ConanFile):
 
     def test_scm_serialization(self):
         data = {"url": "myurl", "revision": "23", "username": "myusername",
-                "password": "mypassword", "type": "svn", "verify_ssl": True,
+                "password": "mypassword", "type": "svn", "verify_ssl": False,
                 "subfolder": "mysubfolder"}
         conanfile = namedtuple("ConanfileMock", "scm")(data)
         scm_data = SCMData(conanfile)
