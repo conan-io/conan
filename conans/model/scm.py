@@ -46,7 +46,7 @@ class SCMData(object):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
              "subfolder": self.subfolder, "submodule": self.submodule}
-        d = {k: v for k, v in d.items() if v is not None}
+        d = {k: v for k, v in d.items() if v is not None and v is not ""}
         return json.dumps(d, sort_keys=True)
 
 
