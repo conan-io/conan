@@ -309,7 +309,6 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
-        # FIXME: We need to do this with info, to avoid installing the binaries when we want info
         client.run("graph lock PkgD/0.1@user/channel")
         lock_file = load(os.path.join(client.current_folder, LOCKFILE))
         initial_lock_file = lock_file
@@ -371,6 +370,111 @@ class GraphLockCITest(unittest.TestCase):
         client.run("install PkgD/0.1@user/channel --lockfile")
         self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!", client.out)
+
+    def test_version_ranges_diamond(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            import os
+            class Pkg(ConanFile):
+                {requires}
+                exports_sources = "myfile.txt"
+                keep_imports = True
+                def imports(self):
+                    self.copy("myfile.txt", folder=True)
+                def package(self):
+                    self.copy("*myfile.txt")
+                def package_info(self):
+                    self.output.info("SELF FILE: %s"
+                        % load(os.path.join(self.package_folder, "myfile.txt")))
+                    for d in os.listdir(self.package_folder):
+                        p = os.path.join(self.package_folder, d, "myfile.txt")
+                        if os.path.isfile(p):
+                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
+                """)
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        client.save({"conanfile.py": conanfile.format(requires=""),
+                     "myfile.txt": "HelloA"})
+        client.run("create . PkgA/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgA/[*]@user/channel"'),
+                     "myfile.txt": "HelloB"})
+        client.run("create . PkgB/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgA/[*]@user/channel"'),
+                     "myfile.txt": "HelloC"})
+        client.run("create . PkgC/0.1@user/channel")
+        client.save({"conanfile.py": conanfile.format(requires='requires="PkgB/[*]@user/channel",'
+                                                      ' "PkgC/[*]@user/channel"'),
+                     "myfile.txt": "HelloD"})
+        client.run("create . PkgD/0.1@user/channel")
+        self.assertIn("PkgD/0.1@user/channel: SELF FILE: HelloD", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgB: HelloB", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
+
+        client.run("graph lock PkgD/0.1@user/channel")
+        lock_file = load(os.path.join(client.current_folder, LOCKFILE))
+        initial_lock_file = lock_file
+        self.assertIn("PkgB/0.1@user/channel", lock_file)
+        self.assertIn("PkgA/0.1@user/channel", lock_file)
+        self.assertIn("PkgC/0.1@user/channel", lock_file)
+        self.assertIn("PkgD/0.1@user/channel", lock_file)
+
+        # Do a change in A
+        clientb = TestClient(base_folder=client.base_folder)
+        clientb.run("config set general.default_package_id_mode=full_package_mode")
+        clientb.save({"conanfile.py": conanfile.format(requires=''),
+                     "myfile.txt": "ByeA World!!",
+                      LOCKFILE: lock_file})
+        clientb.run("create . PkgA/0.2@user/channel --lockfile")
+        lock_fileb = load(os.path.join(clientb.current_folder, LOCKFILE))
+        self.assertIn("PkgB/0.1@user/channel", lock_fileb)
+        self.assertIn("PkgA/0.2@user/channel", lock_fileb)
+        self.assertIn("PkgC/0.1@user/channel", lock_fileb)
+        self.assertIn("PkgD/0.1@user/channel", lock_fileb)
+
+        # Go back to main orchestrator
+        client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
+        client.run("graph update-lock . new_lock")
+        client.run("graph build-order . --json=build_order.json --build=missing")
+        lock_fileb = load(os.path.join(client.current_folder, LOCKFILE))
+        json_file = os.path.join(client.current_folder, "build_order.json")
+        to_build = json.loads(load(json_file))
+        lock_fileaux = lock_fileb
+        while to_build:
+            _, pkg_ref = to_build[0].pop(0)
+            pkg_ref = PackageReference.loads(pkg_ref)
+            client_aux = TestClient(base_folder=client.base_folder)
+            client_aux.run("config set general.default_package_id_mode=full_package_mode")
+            client_aux.save({LOCKFILE: lock_fileaux})
+            client_aux.run("graph clean-modified .")
+            client_aux.run("install %s --build=%s --lockfile"
+                           % (pkg_ref.ref, pkg_ref.ref.name))
+            lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
+            client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
+            client.run("graph update-lock . new_lock")
+
+            client.run("graph build-order . --build=missing")
+            lock_fileaux = load(os.path.join(client.current_folder, LOCKFILE))
+            output = str(client.out).splitlines()[-1]
+            to_build = eval(output)
+
+        new_lockfile = load(os.path.join(client.current_folder, LOCKFILE))
+        client.run("install PkgD/0.1@user/channel --lockfile")
+        self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
+        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
+
+        client.save({LOCKFILE: initial_lock_file})
+        client.run("install PkgD/0.1@user/channel --lockfile")
+        self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
+        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: HelloA", client.out)
+
+        client.save({LOCKFILE: new_lockfile})
+        client.run("install PkgD/0.1@user/channel --lockfile")
+        self.assertIn("PkgB/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
+        self.assertIn("PkgC/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
+        self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
 
     def test_options(self):
         conanfile = textwrap.dedent("""
