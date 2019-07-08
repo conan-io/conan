@@ -65,10 +65,9 @@ class HelloConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("export . name/1.0@us/ch")  # Does NOT fail on export
-        # FIXME: Now this is not raising
-        # client.run("create . name/1.0@us/ch", assert_error=True)
-        # self.assertIn("Setting first level libs is not supported when Components are already in use",
-        #               client.out)
+        client.run("create . name/1.0@us/ch", assert_error=True)
+        self.assertIn("Setting cpp_info.libs or cpp_info.exes and Components is not supported",
+                      client.out)
 
     def package_info_components_complete_test(self):
         dep = textwrap.dedent("""

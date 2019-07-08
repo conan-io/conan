@@ -131,6 +131,9 @@ class DepCppInfo(object):
     """
 
     def __init__(self, cpp_info):
+        if cpp_info.components and (cpp_info.libs or cpp_info.exes):
+            raise ConanException("Setting cpp_info.libs or cpp_info.exes and Components is not "
+                                 "supported")
         self._name = cpp_info.name
         self._version = cpp_info.version
         self._description = cpp_info.description
