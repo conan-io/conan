@@ -10,7 +10,8 @@ from argparse import ArgumentError
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder)
+from conans.client.conan_api import (Conan, default_manifest_folder,
+    _make_abs_path)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -78,6 +79,7 @@ class SmartFormatter(argparse.HelpFormatter):
         import textwrap
         text = textwrap.dedent(text)
         return ''.join(indent + line for line in text.splitlines(True))
+
 
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
 _PATTERN_EXAMPLE = ("boost/*")
@@ -283,7 +285,8 @@ class Command(object):
         self._warn_python2()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
                                 args.options, args.env, args.remote, args.update,
-                                build_modes=args.build, test_build_folder=args.test_build_folder)
+                                build_modes=args.build, test_build_folder=args.test_build_folder,
+                                lockfile=args.lockfile)
 
     def create(self, *args):
         """
@@ -339,7 +342,8 @@ class Command(object):
                                       args.build, args.keep_source, args.keep_build, args.verify,
                                       args.manifests, args.manifests_interactive,
                                       args.remote, args.update,
-                                      test_build_folder=args.test_build_folder)
+                                      test_build_folder=args.test_build_folder,
+                                      lockfile=args.lockfile)
         except ConanException as exc:
             info = exc.info
             raise
@@ -383,7 +387,8 @@ class Command(object):
             if packages_list:
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
-                                       "`conan download [...] {}:{}`".format(reference, packages_list[0]))
+                                       "`conan download [...] {}:{}`".format(reference,
+                                                                             packages_list[0]))
         else:
             reference = pref.ref.full_repr()
             packages_list = [pref.id]
@@ -424,7 +429,6 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
-
         _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
@@ -454,7 +458,8 @@ class Command(object):
                                            build=args.build, profile_names=args.profile,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
-                                           install_folder=args.install_folder)
+                                           install_folder=args.install_folder,
+                                           lockfile=args.lockfile)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -470,7 +475,8 @@ class Command(object):
                                                      build=args.build, profile_names=args.profile,
                                                      update=args.update,
                                                      generators=args.generator,
-                                                     install_folder=args.install_folder)
+                                                     install_folder=args.install_folder,
+                                                     lockfile=args.lockfile)
         except ConanException as exc:
             info = exc.info
             raise
@@ -579,9 +585,8 @@ class Command(object):
         parser.add_argument("--package-filter", nargs='?',
                             help='Print information only for packages that match the filter pattern'
                                  ' e.g., MyPackage/1.2@user/channel or MyPackage*')
-
-        dry_build_help = ("Apply the --build argument to output the information, as it would be done"
-                          " by the install command")
+        dry_build_help = ("Apply the --build argument to output the information, "
+                          "as it would be done by the install command")
         parser.add_argument("-db", "--dry-build", action=Extender, nargs="?", help=dry_build_help)
         build_help = ("Given a build policy, return an ordered list of packages that would be built"
                       " from sources during the install command")
@@ -640,7 +645,8 @@ class Command(object):
                                     profile_names=args.profile,
                                     update=args.update,
                                     install_folder=args.install_folder,
-                                    build=args.dry_build)
+                                    build=args.dry_build,
+                                    lockfile=args.lockfile)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -730,10 +736,10 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="Directory to install the package (when the build system or build()"
-                                 " method does it). Defaulted to the '{build_folder}/package' folder"
-                                 ". A relative path can be specified, relative to the current "
-                                 " folder. Also an absolute path is allowed.")
+                            help="Directory to install the package (when the build system or "
+                            "build() method does it). Defaulted to the '{build_folder}/package' "
+                            "folder. A relative path can be specified, relative to the current "
+                            "folder. Also an absolute path is allowed.")
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         args = parser.parse_args(*args)
 
@@ -812,8 +818,8 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path",
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
-                            "containing the conan_imports_manifest.txt file generated in a previous "
-                            "execution. e.g.: conan imports ./imported_files --undo ")
+                            "containing the conan_imports_manifest.txt file generated in a previous"
+                            " execution. e.g.: conan imports ./imported_files --undo ")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
@@ -875,6 +881,10 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                            "Lockfile will be updated with the exported package")
+
         args = parser.parse_args(*args)
 
         self._warn_python2()
@@ -896,7 +906,8 @@ class Command(object):
                                           options=args.options,
                                           force=args.force,
                                           user=user,
-                                          channel=channel)
+                                          channel=channel,
+                                          lockfile=args.lockfile)
         except ConanException as exc:
             info = exc.info
             raise
@@ -920,13 +931,16 @@ class Command(object):
                                               "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                            "Lockfile will be updated with the exported package")
 
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel = get_reference_fields(args.reference)
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source)
+                                  keep_source=args.keep_source, lockfile=args.lockfile)
 
     def remove(self, *args):
         """
@@ -1011,7 +1025,8 @@ class Command(object):
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel. e.g., lasote/testing')
         parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='copy specified package ID [DEPRECATED: use full reference instead]')
+                            help='copy specified package ID '
+                            '[DEPRECATED: use full reference instead]')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Copy all packages from the specified package recipe')
         parser.add_argument("--force", action='store_true', default=False,
@@ -1027,7 +1042,8 @@ class Command(object):
             if packages_list:
                 self._user_io.out.warn("Usage of `--package` argument is deprecated."
                                        " Use a full reference instead: "
-                                       "`conan copy [...] {}:{}`".format(reference, packages_list[0]))
+                                       "`conan copy [...] {}:{}`".format(reference,
+                                                                         packages_list[0]))
 
             if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
@@ -1283,7 +1299,8 @@ class Command(object):
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
             if args.query:
-                raise ConanException("'--query' argument cannot be used together with full reference")
+                raise ConanException("'--query' argument cannot be used together with "
+                                     "full reference")
 
         if args.force and args.no_overwrite:
             raise ConanException("'--no-overwrite' argument cannot be used together with '--force'")
@@ -1653,6 +1670,64 @@ class Command(object):
                 self._user_io.out.writeln("    Path: %s" % v["path"])
                 self._user_io.out.writeln("    Layout: %s" % v["layout"])
 
+    def graph(self, *args):
+        """
+        """
+        parser = argparse.ArgumentParser(description=self.remote.__doc__,
+                                         prog="conan graph",
+                                         formatter_class=SmartFormatter)
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers.required = True
+
+        # create the parser for the "a" command
+        merge_cmd = subparsers.add_parser('update-lock', help='merge two lockfiles')
+        merge_cmd.add_argument('old_lockfile', help='path to previous lockfile')
+        merge_cmd.add_argument('new_lockfile', help='path to modified lockfile')
+
+        build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
+        build_order_cmd.add_argument('lockfile', help='lockfile folder')
+        build_order_cmd.add_argument("-b", "--build", action=Extender, nargs="?",
+                                     help="nodes to build")
+        build_order_cmd.add_argument("--json", action=OnceArgument,
+                                     help="generate output file in json format")
+
+        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
+        clean_cmd.add_argument('lockfile', help='lockfile folder')
+
+        lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
+        lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
+                              " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                              "./my_project/conanfile.txt. It could also be a reference")
+        lock_cmd.add_argument("-l", "--lockfile", action=OnceArgument,
+                              help="Path to lockfile to be created. If not specified 'conan.lock'"
+                              " will be created in current folder")
+        _add_common_install_arguments(lock_cmd, build_help="Packages to build from source",
+                                      lockfile=False)
+
+        args = parser.parse_args(*args)
+        self._warn_python2()
+
+        if args.subcommand == "update-lock":
+            self._conan.update_lock(args.old_lockfile, args.new_lockfile)
+        elif args.subcommand == "build-order":
+            build_order = self._conan.build_order(args.lockfile, args.build)
+            self._user_io.out.writeln(build_order)
+            if args.json:
+                json_file = _make_abs_path(args.json)
+                save(json_file, json.dumps(build_order, indent=True))
+        elif args.subcommand == "clean-modified":
+            self._conan.lock_clean_modified(args.lockfile)
+        elif args.subcommand == "lock":
+            self._conan.create_lock(args.path_or_reference,
+                                    remote_name=args.remote,
+                                    settings=args.settings,
+                                    options=args.options,
+                                    env=args.env,
+                                    profile_names=args.profile,
+                                    update=args.update,
+                                    lockfile=args.lockfile,
+                                    build=args.build)
+
     def _show_help(self):
         """
         Prints a summary of all commands.
@@ -1662,7 +1737,7 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help"))]
+                                   "alias", "download", "inspect", "help", "graph"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -1831,7 +1906,7 @@ def _add_manifests_arguments(parser):
                         action=OnceArgument)
 
 
-def _add_common_install_arguments(parser, build_help):
+def _add_common_install_arguments(parser, build_help, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
@@ -1849,6 +1924,10 @@ def _add_common_install_arguments(parser, build_help):
                              '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
+    if lockfile:
+        parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
+                            help="Path to a lockfile or folder containing 'conan.lock' file. "
+                            "Lockfile can be updated if packages change")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
