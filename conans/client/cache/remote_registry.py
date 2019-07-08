@@ -302,6 +302,8 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.clear()
         for ref in self._cache.all_refs():
+            if ref in self._cache.editable_packages.edited_refs:
+                continue  # Skip editable packages
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 metadata.recipe.remote = None
                 for pkg_metadata in metadata.packages.values():
@@ -313,6 +315,8 @@ class RemoteRegistry(object):
         del remotes[remote_name]
 
         for ref in self._cache.all_refs():
+            if ref in self._cache.editable_packages.edited_refs:
+                continue  # Skip editable packages
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 if metadata.recipe.remote == remote_name:
                     metadata.recipe.remote = None
@@ -339,6 +343,8 @@ class RemoteRegistry(object):
         remotes.rename(remote_name, new_remote_name)
 
         for ref in self._cache.all_refs():
+            if ref in self._cache.editable_packages.edited_refs:
+                continue  # Skip editable packages
             with self._cache.package_layout(ref).update_metadata() as metadata:
                 if metadata.recipe.remote == remote_name:
                     metadata.recipe.remote = new_remote_name

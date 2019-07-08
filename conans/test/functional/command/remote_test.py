@@ -392,3 +392,20 @@ class HelloConan(ConanFile):
                       self.client.user_io.out)
         self.client.run("remote list")
         self.assertIn("pepe.org", self.client.out)
+
+    def test_metadata_editable_packages(self):
+        """
+        conan remote remove fails with editable packages
+        """
+        self.client.save({"conanfile.py": """from conans import ConanFile
+class Conan(ConanFile):
+    pass"""})
+        self.client.run("create . pkg/1.1@lasote/stable")
+        self.client.run("upload pkg/1.1@lasote/stable --all -c --remote remote1")
+        self.client.run("remove -f pkg/1.1@lasote/stable")
+        self.client.run("install pkg/1.1@lasote/stable")
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        self.client.run("remote update remote1 %sfake" % self.servers["remote1"].fake_url)
+        self.client.run("remote rename remote1 remote-fake")
+        self.client.run("remote remove remote-fake")
+        self.client.run("remote clean")
