@@ -1,3 +1,3 @@
 @Library('conan_ci') _
 
-c3iManager.runBuild(this)
+conanCI.runBuild(this)
