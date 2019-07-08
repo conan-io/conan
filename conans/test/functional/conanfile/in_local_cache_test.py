@@ -65,5 +65,3 @@ class OtherConan(ConanFile):
         client.run("install Hello1/0.1@lasote/stable --build")
         self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
         self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)
-
-

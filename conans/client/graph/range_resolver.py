@@ -57,7 +57,6 @@ def satisfying(list_versions, versionexpr, result):
     This provides some workaround for failing comparisons like "2.1" not matching "<=2.1"
     """
     from semver import SemVer, Range, max_satisfying
-
     version_range, loose, include_prerelease = _parse_versionexpr(versionexpr, result)
 
     # Check version range expression

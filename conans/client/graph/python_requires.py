@@ -21,6 +21,7 @@ class ConanPythonRequire(object):
         self._check_updates = False
         self._update = False
         self._remote_name = None
+        self.locked_versions = None
 
     def enable_remotes(self, check_updates=False, update=False, remotes=None):
         self._check_updates = check_updates
@@ -39,11 +40,12 @@ class ConanPythonRequire(object):
         yield self._requires
         self._requires = old_requires
 
-    def _look_for_require(self, require):
+    def _look_for_require(self, reference):
+        ref = ConanFileReference.loads(reference)
+        ref = self.locked_versions[ref.name] if self.locked_versions is not None else ref
         try:
-            python_require = self._cached_requires[require]
+            python_require = self._cached_requires[ref]
         except KeyError:
-            ref = ConanFileReference.loads(require)
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "python_require", update=self._update,
                                          remotes=self._remotes)
@@ -64,16 +66,16 @@ class ConanPythonRequire(object):
                 exports_folder = package_layout.export()
                 python_require = PythonRequire(new_ref, module, conanfile,
                                                exports_folder, exports_sources_folder)
-            self._cached_requires[require] = python_require
+            self._cached_requires[ref] = python_require
 
         return python_require
 
-    def __call__(self, require):
+    def __call__(self, reference):
         if not self.valid:
-            raise ConanException("Invalid use of python_requires(%s)" % require)
+            raise ConanException("Invalid use of python_requires(%s)" % reference)
         try:
-            python_req = self._look_for_require(require)
+            python_req = self._look_for_require(reference)
             self._requires.append(python_req)
             return python_req.module
         except NotFoundException:
-            raise ConanException('Unable to find python_requires("{}") in remotes'.format(require))
+            raise ConanException('Unable to find python_requires("{}") in remotes'.format(reference))
