@@ -24,8 +24,8 @@ class JsonTest(unittest.TestCase):
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
-        conanfile.deps_cpp_info.update(cpp_info, ref.name)
 
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]

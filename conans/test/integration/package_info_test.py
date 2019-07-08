@@ -32,7 +32,6 @@ class HelloConan(ConanFile):
         else:
             self.env_info.MYVAR = "bar"
 '''
-
         for index in range(4):
             requires = "requires = 'Lib%s/1.0@conan/stable'" % index if index > 0 else ""
             conanfile = conanfile_tmp % ("Lib%s" % (index + 1), requires)
