@@ -214,7 +214,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
     if not scm_data:
         return
 
-    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
+    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
     if cache:
         # When in cache, capturing the sources from user space is done only if exists
         if not local_sources_path or not os.path.exists(local_sources_path):
