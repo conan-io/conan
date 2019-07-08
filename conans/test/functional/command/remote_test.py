@@ -409,3 +409,6 @@ class Conan(ConanFile):
         self.client.run("remote rename remote1 remote-fake")
         self.client.run("remote remove remote-fake")
         self.client.run("remote clean")
+        self.client.run("editable remove pkg/1.1@lasote/stable")
+        self.client.run("remote list")
+        print(self.client.out)
