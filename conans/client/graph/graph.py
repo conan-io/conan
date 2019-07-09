@@ -1,4 +1,7 @@
+import uuid
+
 from conans.model.ref import PackageReference
+
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -36,13 +39,25 @@ class Node(object):
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
 
-        # The dependencies that can conflict to downstream consumers
+        # A subset of the graph that will conflict by package name
         self.public_deps = None  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
         self.public_closure = None  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
+        self._id = None  # Unique ID (uuid at the moment) of a node in the graph
+        self.graph_lock_node = None  # the locking information can be None
+
+    @property
+    def id(self):
+        if self._id is None:
+            self._id = str(uuid.uuid1())
+        return self._id
+
+    @id.setter
+    def id(self, id_):
+        self._id = id_
 
     @property
     def package_id(self):
@@ -59,6 +74,7 @@ class Node(object):
 
     @property
     def pref(self):
+        assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
         return PackageReference(self.ref, self.package_id, self.prev)
 
     def partial_copy(self):
@@ -91,6 +107,14 @@ class Node(object):
         for edge in self.dependencies:
             if not edge.private:
                 edge.dst.make_public()
+
+    def connect_closure(self, other_node):
+        # When 2 nodes of the graph become connected, their closures information has
+        # has to remain consistent. This method manages this.
+        name = other_node.name
+        self.public_closure[name] = other_node
+        self.public_deps[name] = other_node
+        other_node.inverse_closure.add(self)
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
@@ -149,11 +173,18 @@ class Node(object):
 
 
 class Edge(object):
-    def __init__(self, src, dst, private=False, build_require=False):
+    def __init__(self, src, dst, require):
         self.src = src
         self.dst = dst
-        self.private = private
-        self.build_require = build_require
+        self.require = require
+
+    @property
+    def private(self):
+        return self.require.private
+
+    @property
+    def build_require(self):
+        return self.require.build_require
 
     def __eq__(self, other):
         return self.src == self.src and self.dst == other.dst
@@ -178,9 +209,9 @@ class DepsGraph(object):
             self.root = node
         self.nodes.add(node)
 
-    def add_edge(self, src, dst, private=False, build_require=False):
+    def add_edge(self, src, dst, require):
         assert src in self.nodes and dst in self.nodes
-        edge = Edge(src, dst, private, build_require)
+        edge = Edge(src, dst, require)
         src.add_edge(edge)
         dst.add_edge(edge)
 
@@ -232,12 +263,31 @@ class DepsGraph(object):
             for dep in node.dependencies:
                 src = result_node
                 dst = nodes_map[dep.dst]
-                result.add_edge(src, dst, dep.private, dep.build_require)
+                result.add_edge(src, dst, dep.require)
             for dep in node.dependants:
                 src = nodes_map[dep.src]
                 dst = result_node
-                result.add_edge(src, dst, dep.private, dep.build_require)
+                result.add_edge(src, dst, dep.require)
 
+        return result
+
+    def new_build_order(self):
+        """ returns an ordered list of lists, with tuples (node_id, pref)
+        of the nodes of the graph to be built. Duplicates of pref will be ommitted
+        It will return all the nodes with BINARY_BUILD status, i.e. those that have
+        been processed according to rules like --build=missing and really need re-building
+        """
+        levels = self.inverse_levels()
+        result = []
+        total_prefs = set()  # to remove duplicates, same pref shouldn't build twice
+        for level in reversed(levels):
+            new_level = []
+            for n in level:
+                if n.binary == BINARY_BUILD and n.pref not in total_prefs:
+                    new_level.append((n.id, n.pref.full_repr()))
+                    total_prefs.add(n.pref)
+            if new_level:
+                result.append(new_level)
         return result
 
     def build_order(self, references):
@@ -272,21 +322,18 @@ class DepsGraph(object):
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
-        current_level = []
-        result = [current_level]
-        opened = self.nodes.copy()
+        result = []
+        opened = self.nodes
         while opened:
-            current = opened.copy()
+            current_level = []
             for o in opened:
                 o_neighs = o.neighbors() if direct else o.inverse_neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
-                    current.discard(o)
+
             current_level.sort()
+            result.append(current_level)
             # now initialize new level
-            opened = current
-            if opened:
-                current_level = []
-                result.append(current_level)
+            opened = opened.difference(current_level)
 
         return result

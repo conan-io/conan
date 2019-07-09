@@ -37,7 +37,8 @@ def print_graph(deps_graph, out):
             if node.recipe == RECIPE_EDITABLE:
                 from_text = "from user folder"
             else:
-                from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
+                from_text = ("from local cache" if not node.remote
+                             else "from '%s'" % node.remote.name)
             out.writeln("    %s %s - %s" % (repr(node.ref), from_text, node.recipe),
                         Color.BRIGHT_CYAN)
 

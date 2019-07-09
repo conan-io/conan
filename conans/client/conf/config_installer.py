@@ -37,6 +37,7 @@ def tmp_config_install_folder(cache):
     tmp_folder = os.path.join(cache.cache_folder, "tmp_config_install")
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     tmp_folder = os.path.realpath(tmp_folder)
+    rmdir(tmp_folder)
     mkdir(tmp_folder)
     try:
         yield tmp_folder

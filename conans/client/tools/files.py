@@ -150,7 +150,7 @@ def untargz(filename, destination=".", pattern=None):
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature:
+    if real_signature != signature.lower():
         raise ConanException("%s signature failed for '%s' file. \n"
                              " Provided signature: %s  \n"
                              " Computed signature: %s" % (algorithm_name,
@@ -210,7 +210,9 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         return path
 
     def strip_path(path):
-        tokens = path.split("/")[strip:]
+        tokens = path.split("/")
+        if len(tokens) > 1:
+            tokens = tokens[strip:]
         path = "/".join(tokens)
         if base_path:
             path = os.path.join(base_path, path)
