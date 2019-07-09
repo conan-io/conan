@@ -4,6 +4,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+import math
 from subprocess import CalledProcessError, PIPE
 import six
 from conans.client.tools.env import environment_append
@@ -24,12 +25,32 @@ def args_to_string(args):
 
 def cpu_count(output=None):
     output = default_output(output, 'conans.client.tools.oss.cpu_count')
+
+    def is_running_in_docker():
+        cgroup = os.path.join(os.path.sep, "proc", "self", "cgroup")
+        return (os.path.exists('/.dockerenv') or
+                (os.path.isfile(cgroup) and any('docker' in line for line in open(cgroup))))
+
+    def docker_cpu_count():
+        base_cpus = "/sys/fs/cgroup/cpu"
+        with open(os.path.join(base_cpus, "cpu.cfs_quota_us"), 'r') as quota_fd:
+            cfs_quota_us = int(quota_fd.read())
+        with open(os.path.join(base_cpus, "cpu.cfs_period_us"), 'r') as period_fd:
+            cfs_period_us = int(period_fd.read())
+        if cfs_quota_us > -1 and cfs_period_us > 0:
+            return math.ceil(cfs_quota_us / cfs_period_us)
+        return multiprocessing.cpu_count()
+
+    def get_cpus():
+        if is_running_in_docker():
+            return docker_cpu_count()
+        return multiprocessing.cpu_count()
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         if env_cpu_count is not None and not env_cpu_count.isdigit():
             raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
                                  "please specify a positive integer" % env_cpu_count)
-        return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
+        return int(env_cpu_count) if env_cpu_count else get_cpus()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
