@@ -1,6 +1,7 @@
 import json
 import os
 from collections import OrderedDict, namedtuple
+from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
 
 from conans.errors import ConanException, NoRemoteAvailable
@@ -267,6 +268,16 @@ class RemoteRegistry(object):
         else:
             self._output.warn("The URL is empty. It must contain scheme and hostname.")
 
+    @contextmanager
+    def _editables_metadata_from_cache(self):
+        """
+        Hide editable packages to get the cache layout instead of the editable one
+        """
+        editables = self._cache.editable_packages
+        self._cache.editable_packages = {}
+        yield
+        self._cache.editable_packages = editables
+
     def load_remotes(self):
         if not os.path.exists(self._filename):
             self._output.warn("Remotes registry file missing, "
@@ -284,16 +295,14 @@ class RemoteRegistry(object):
         renamed = remotes.add(remote_name, url, verify_ssl, insert, force)
         remotes.save(self._filename)
         if renamed:
-            editables = self._cache.editable_packages
-            self._cache.editable_packages = {}  # Avoid raising with editable packages
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote == renamed:
-                        metadata.recipe.remote = remote_name
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote == renamed:
-                            pkg_metadata.remote = remote_name
-            self._cache.editable_packages = editables
+            with self._editables_metadata_from_cache():
+                for ref in self._cache.all_refs():
+                    with self._cache.package_layout(ref).update_metadata() as metadata:
+                        if metadata.recipe.remote == renamed:
+                            metadata.recipe.remote = remote_name
+                        for pkg_metadata in metadata.packages.values():
+                            if pkg_metadata.remote == renamed:
+                                pkg_metadata.remote = remote_name
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         self._validate_url(url)
@@ -304,62 +313,54 @@ class RemoteRegistry(object):
     def clear(self):
         remotes = self.load_remotes()
         remotes.clear()
-        editables = self._cache.editable_packages
-        self._cache.editable_packages = {}  # Avoid raising with editable packages
-        for ref in self._cache.all_refs():
-            with self._cache.package_layout(ref).update_metadata() as metadata:
-                metadata.recipe.remote = None
-                for pkg_metadata in metadata.packages.values():
-                    pkg_metadata.remote = None
-        remotes.save(self._filename)
-        self._cache.editable_packages = editables
+        with self._editables_metadata_from_cache():
+            for ref in self._cache.all_refs():
+                with self._cache.package_layout(ref).update_metadata() as metadata:
+                    metadata.recipe.remote = None
+                    for pkg_metadata in metadata.packages.values():
+                        pkg_metadata.remote = None
+            remotes.save(self._filename)
 
     def remove(self, remote_name):
         remotes = self.load_remotes()
         del remotes[remote_name]
-        editables = self._cache.editable_packages
-        self._cache.editable_packages = {}  # Avoid raising with editable packages
-        for ref in self._cache.all_refs():
-            with self._cache.package_layout(ref).update_metadata() as metadata:
-                if metadata.recipe.remote == remote_name:
-                    metadata.recipe.remote = None
-                for pkg_metadata in metadata.packages.values():
-                    if pkg_metadata.remote == remote_name:
-                        pkg_metadata.remote = None
+        with self._editables_metadata_from_cache():
+            for ref in self._cache.all_refs():
+                with self._cache.package_layout(ref).update_metadata() as metadata:
+                    if metadata.recipe.remote == remote_name:
+                        metadata.recipe.remote = None
+                    for pkg_metadata in metadata.packages.values():
+                        if pkg_metadata.remote == remote_name:
+                            pkg_metadata.remote = None
 
-        remotes.save(self._filename)
-        self._cache.editable_packages = editables
+            remotes.save(self._filename)
 
     def define(self, remotes):
         # For definition from conan config install
-        editables = self._cache.editable_packages
-        self._cache.editable_packages = {}  # Avoid raising with editable packages
-        for ref in self._cache.all_refs():
-            with self._cache.package_layout(ref).update_metadata() as metadata:
-                if metadata.recipe.remote not in remotes:
-                    metadata.recipe.remote = None
-                for pkg_metadata in metadata.packages.values():
-                    if pkg_metadata.remote not in remotes:
-                        pkg_metadata.remote = None
+        with self._editables_metadata_from_cache:
+            for ref in self._cache.all_refs():
+                with self._cache.package_layout(ref).update_metadata() as metadata:
+                    if metadata.recipe.remote not in remotes:
+                        metadata.recipe.remote = None
+                    for pkg_metadata in metadata.packages.values():
+                        if pkg_metadata.remote not in remotes:
+                            pkg_metadata.remote = None
 
-        remotes.save(self._filename)
-        self._cache.editable_packages = editables
+            remotes.save(self._filename)
 
     def rename(self, remote_name, new_remote_name):
         remotes = self.load_remotes()
         remotes.rename(remote_name, new_remote_name)
-        editables = self._cache.editable_packages
-        self._cache.editable_packages = {}  # Avoid raising with editable packages
-        for ref in self._cache.all_refs():
-            with self._cache.package_layout(ref).update_metadata() as metadata:
-                if metadata.recipe.remote == remote_name:
-                    metadata.recipe.remote = new_remote_name
-                for pkg_metadata in metadata.packages.values():
-                    if pkg_metadata.remote == remote_name:
-                        pkg_metadata.remote = new_remote_name
+        with self._editables_metadata_from_cache():
+            for ref in self._cache.all_refs():
+                with self._cache.package_layout(ref).update_metadata() as metadata:
+                    if metadata.recipe.remote == remote_name:
+                        metadata.recipe.remote = new_remote_name
+                    for pkg_metadata in metadata.packages.values():
+                        if pkg_metadata.remote == remote_name:
+                            pkg_metadata.remote = new_remote_name
 
-        remotes.save(self._filename)
-        self._cache.editable_packages = editables
+            remotes.save(self._filename)
 
     @property
     def refs_list(self):
