@@ -405,18 +405,23 @@ class Conan(ConanFile):
         self.client.run("remove -f pkg/1.1@lasote/stable")
         self.client.run("install pkg/1.1@lasote/stable")
         self.assertIn("pkg/1.1@lasote/stable: Package installed", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertIn("pkg/1.1@lasote/stable: remote1", self.client.out)
         self.client.run("editable add . pkg/1.1@lasote/stable")
         # Check add --force, update and rename
         self.client.run("remote add remote2 %s --force" % self.servers["remote1"].fake_url)
         self.client.run("remote update remote2 %sfake" % self.servers["remote1"].fake_url)
         self.client.run("remote rename remote2 remote-fake")
         self.client.run("editable remove pkg/1.1@lasote/stable")
-        self.client.run("remote list_ref")
         # Check associated remote has changed name
+        self.client.run("remote list_ref")
         self.assertIn("pkg/1.1@lasote/stable: remote-fake", self.client.out)
         # Check remove
         self.client.run("editable add . pkg/1.1@lasote/stable")
         self.client.run("remote remove remote-fake")
+        self.client.run("remote list")
+        self.assertIn("remote0: %s" % self.servers["remote0"].fake_url, self.client.out)
+        self.assertNotIn("remote-fake", self.client.out)
         # Check clean
         self.client.run("editable remove pkg/1.1@lasote/stable")
         self.client.run("remove -f pkg/1.1@lasote/stable")
@@ -424,3 +429,6 @@ class Conan(ConanFile):
         self.client.run("install pkg/1.1@lasote/stable")
         self.client.run("editable add . pkg/1.1@lasote/stable")
         self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertNotIn("remote0", self.client.out)
