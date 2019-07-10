@@ -501,56 +501,55 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    with set_dirty_context_manager(tgz_path):
-        with open(tgz_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
+    with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
+        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-            for filename, dest in sorted(symlinks.items()):
-                info = tarfile.TarInfo(name=filename)
+        for filename, dest in sorted(symlinks.items()):
+            info = tarfile.TarInfo(name=filename)
+            info.type = tarfile.SYMTYPE
+            info.linkname = dest
+            info.size = 0  # A symlink shouldn't have size
+            tgz.addfile(tarinfo=info)
+
+        mask = ~(stat.S_IWOTH | stat.S_IWGRP)
+        i_file = 0
+        n_files = len(files)
+        last_progress = None
+        if output and n_files > 1 and not output.is_terminal:
+            output.write("[")
+        elif output and n_files > 1 and output.is_terminal:
+            progress_bar = tqdm(total=len(files), desc="Compressing %s" % name,
+                                unit="files", leave=True, dynamic_ncols=False,
+                                ascii=True, file=output)
+
+        for filename, abs_path in sorted(files.items()):
+            info = tarfile.TarInfo(name=filename)
+            info.size = os.stat(abs_path).st_size
+            info.mode = os.stat(abs_path).st_mode & mask
+            if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
-                info.linkname = dest
                 info.size = 0  # A symlink shouldn't have size
+                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
                 tgz.addfile(tarinfo=info)
-
-            mask = ~(stat.S_IWOTH | stat.S_IWGRP)
-            i_file = 0
-            n_files = len(files)
-            last_progress = None
-            if output and n_files > 1 and not output.is_terminal:
-                output.write("[")
-            elif output and n_files > 1 and output.is_terminal:
-                progress_bar = tqdm(total=len(files), desc="Compressing %s" % name,
-                                    unit="files", leave=True, dynamic_ncols=False,
-                                    ascii=True, file=output)
-
-            for filename, abs_path in sorted(files.items()):
-                info = tarfile.TarInfo(name=filename)
-                info.size = os.stat(abs_path).st_size
-                info.mode = os.stat(abs_path).st_mode & mask
-                if os.path.islink(abs_path):
-                    info.type = tarfile.SYMTYPE
-                    info.size = 0  # A symlink shouldn't have size
-                    info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                    tgz.addfile(tarinfo=info)
-                else:
-                    with open(abs_path, 'rb') as file_handler:
-                        tgz.addfile(tarinfo=info, fileobj=file_handler)
-                if output and n_files > 1:
-                    i_file = i_file + 1
-                    units = min(50, int(50 * i_file / n_files))
-                    if last_progress != units:  # Avoid screen refresh if nothing has change
-                        if not output.is_terminal:
-                            output.write('=' * (units - (last_progress or 0)))
-                        last_progress = units
-                    if output.is_terminal:
-                        progress_bar.update()
-
+            else:
+                with open(abs_path, 'rb') as file_handler:
+                    tgz.addfile(tarinfo=info, fileobj=file_handler)
             if output and n_files > 1:
+                i_file = i_file + 1
+                units = min(50, int(50 * i_file / n_files))
+                if last_progress != units:  # Avoid screen refresh if nothing has change
+                    if not output.is_terminal:
+                        output.write('=' * (units - (last_progress or 0)))
+                    last_progress = units
                 if output.is_terminal:
-                    progress_bar.close()
-                else:
-                    output.writeln("]")
-            tgz.close()
+                    progress_bar.update()
+
+        if output and n_files > 1:
+            if output.is_terminal:
+                progress_bar.close()
+            else:
+                output.writeln("]")
+        tgz.close()
 
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
