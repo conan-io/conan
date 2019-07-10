@@ -30,17 +30,15 @@ def cpu_count(output=None):
         try:
             cgroup = "/proc/self/cgroup"
             return (os.path.exists('/.dockerenv') or
-                    (os.path.isfile(cgroup) and any('docker' in line for line in open(cgroup))))
+                    (os.path.isfile(cgroup) and 'docker' in load(cgroup)))
         except:
             return False
 
     def docker_cpu_count():
         base_cpus = "/sys/fs/cgroup/cpu"
         try:
-            with open(os.path.join(base_cpus, "cpu.cfs_quota_us"), 'r') as quota_fd:
-                cfs_quota_us = int(quota_fd.read())
-            with open(os.path.join(base_cpus, "cpu.cfs_period_us"), 'r') as period_fd:
-                cfs_period_us = int(period_fd.read())
+            cfs_quota_us = int(load(os.path.join(base_cpus, "cpu.cfs_quota_us")))
+            cfs_period_us = int(load(os.path.join(base_cpus, "cpu.cfs_period_us")))
             if cfs_quota_us > -1 and cfs_period_us > 0:
                 return int(math.ceil(cfs_quota_us / cfs_period_us))
         except:
