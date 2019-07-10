@@ -206,11 +206,14 @@ class GraphLock(object):
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
                 raise
-            if lock_node.pref and lock_node.pref.full_repr() != node.pref.full_repr():
-                if node.binary == BINARY_BUILD or node.id in affected:
+            if lock_node.pref:
+                # If the update is compatible (resolved complete PREV) or if the node has
+                # been build, then update the graph
+                if lock_node.pref.is_compatible_with(node.pref) or \
+                        node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
-                    raise ConanException("Mistmatch between lock and graph:\nLock:  %s\nGraph: %s"
+                    raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (lock_node.pref.full_repr(), node.pref.full_repr()))
 
     def lock_node(self, node, requires):
