@@ -177,3 +177,15 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
 
     def copy_clear_revs(self):
         return self.copy_with_revs(None, None)
+
+    def is_compatible_with(self, new_ref):
+        """Returns true if the new_ref is completing the PREV field of this object but
+         having the rest equal """
+        if self == new_ref:
+            return True
+        if self.ref != new_ref.ref or self.package_id != new_ref.package_id:
+            return False
+        if self.revision is None:
+            return True
+
+        return False

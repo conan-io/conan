@@ -153,7 +153,8 @@ class GraphLock(object):
             if node.modified:
                 old_node = self._nodes[id_]
                 if old_node.modified:
-                    raise ConanException("Lockfile had already modified %s" % str(node.pref))
+                    if not old_node.pref.is_compatible_with(node.pref):
+                        raise ConanException("Lockfile had already modified %s" % str(node.pref))
                 self._nodes[id_] = node
 
     def clean_modified(self):

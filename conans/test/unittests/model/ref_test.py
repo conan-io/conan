@@ -152,3 +152,11 @@ class CheckValidRefTest(unittest.TestCase):
         ref_pattern = ConanFileReference.loads("package/*@user/channel")
         self.assertFalse(check_valid_ref(ref_pattern, allow_pattern=False))
         self.assertTrue(check_valid_ref(ref_pattern, allow_pattern=True))
+
+
+class CompatiblePrefTest(unittest.TestCase):
+
+    def test_compatible(self):
+        pref1 = PackageReference.loads("package/1.0@user/channel#RREV1:packageid1#PREV1")
+        pref2 = PackageReference.loads("package/1.0@user/channel#RREV1:packageid1#PREV1")
+
