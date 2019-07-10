@@ -131,6 +131,16 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def copy_clear_rev(self):
         return ConanFileReference(self.name, self.version, self.user, self.channel, None)
 
+    def is_compatible_with(self, new_ref):
+        """Returns true if the new_ref is completing the RREV field of this object but
+         having the rest equal """
+        if self == new_ref:
+            return True
+        if self.copy_clear_rev() != new_ref.copy_clear_rev():
+            return False
+
+        return self.revision is None
+
 
 class PackageReference(namedtuple("PackageReference", "ref id revision")):
     """ Full package reference, e.g.:
@@ -183,9 +193,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
          having the rest equal """
         if self == new_ref:
             return True
-        if self.ref != new_ref.ref or self.id != new_ref.id:
+        if not self.ref.is_compatible_with(new_ref.ref) or self.id != new_ref.id:
             return False
-        if self.revision is None:
-            return True
 
-        return False
+        return self.revision is None  # Only the revision is different and we don't have one

@@ -191,3 +191,10 @@ class CompatiblePrefTest(unittest.TestCase):
         self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
                             "packageA/1.0@user/channel#RREV1:packageid1"))
 
+        # Completing RREV is also OK
+        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
+                           "packageA/1.0@user/channel#RREV1:packageid1"))
+
+        # Completing RREV and PREV is also OK
+        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
+                           "packageA/1.0@user/channel#RREV:packageid1#PREV"))
