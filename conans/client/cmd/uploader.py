@@ -503,7 +503,6 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     tgz_path = os.path.join(dest_dir, name)
     with set_dirty_context_manager(tgz_path):
         with open(tgz_path, "wb") as tgz_handle:
-            # tgz_contents = BytesIO()
             tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
             for filename, dest in sorted(symlinks.items()):
