@@ -42,7 +42,7 @@ def cpu_count(output=None):
             with open(os.path.join(base_cpus, "cpu.cfs_period_us"), 'r') as period_fd:
                 cfs_period_us = int(period_fd.read())
             if cfs_quota_us > -1 and cfs_period_us > 0:
-                return math.ceil(cfs_quota_us / cfs_period_us)
+                return int(math.ceil(cfs_quota_us / cfs_period_us))
         except:
             pass
         return multiprocessing.cpu_count()
