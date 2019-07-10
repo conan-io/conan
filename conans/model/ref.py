@@ -183,7 +183,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
          having the rest equal """
         if self == new_ref:
             return True
-        if self.ref != new_ref.ref or self.package_id != new_ref.package_id:
+        if self.ref != new_ref.ref or self.id != new_ref.id:
             return False
         if self.revision is None:
             return True
