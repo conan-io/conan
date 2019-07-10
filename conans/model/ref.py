@@ -134,7 +134,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def is_compatible_with(self, new_ref):
         """Returns true if the new_ref is completing the RREV field of this object but
          having the rest equal """
-        if self == new_ref:
+        if self.full_repr() == new_ref.full_repr():
             return True
         if self.copy_clear_rev() != new_ref.copy_clear_rev():
             return False
@@ -191,7 +191,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
     def is_compatible_with(self, new_ref):
         """Returns true if the new_ref is completing the PREV field of this object but
          having the rest equal """
-        if self == new_ref:
+        if self.full_repr() == new_ref.full_repr():
             return True
         if not self.ref.is_compatible_with(new_ref.ref) or self.id != new_ref.id:
             return False
