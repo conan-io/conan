@@ -26,15 +26,7 @@ def args_to_string(args):
 def cpu_count(output=None):
     output = default_output(output, 'conans.client.tools.oss.cpu_count')
 
-    def is_running_in_docker():
-        try:
-            cgroup = "/proc/self/cgroup"
-            return (os.path.exists('/.dockerenv') or
-                    (os.path.isfile(cgroup) and 'docker' in load(cgroup)))
-        except:
-            return False
-
-    def docker_cpu_count():
+    def get_cpus():
         base_cpus = "/sys/fs/cgroup/cpu"
         try:
             cfs_quota_us = int(load(os.path.join(base_cpus, "cpu.cfs_quota_us")))
@@ -45,10 +37,6 @@ def cpu_count(output=None):
             pass
         return multiprocessing.cpu_count()
 
-    def get_cpus():
-        if is_running_in_docker():
-            return docker_cpu_count()
-        return multiprocessing.cpu_count()
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         if env_cpu_count is not None and not env_cpu_count.isdigit():
