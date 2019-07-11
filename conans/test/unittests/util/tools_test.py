@@ -144,6 +144,19 @@ class ToolsTest(unittest.TestCase):
             with six.assertRaisesRegex(self, ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
+    def test_cpu_count_in_container(self):
+        def load_mock(path):
+            if path == "/sys/fs/cgroup/cpu/cpu.cfs_quota_us":
+                return "5000"
+            elif path == "/sys/fs/cgroup/cpu/cpu.cfs_period_us":
+                return "1000"
+
+        with patch("conans.client.tools.files.load", new=load_mock):
+            output = ConanOutput(sys.stdout)
+            cpus = tools.cpu_count(output=output)
+            self.assertIsInstance(cpus, int)
+            self.assertEqual(5, cpus)
+
     def get_env_unit_test(self):
         """
         Unit tests tools.get_env
