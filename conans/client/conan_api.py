@@ -179,7 +179,8 @@ class ConanApp(object):
 
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
-                                            self.config.log_run_to_output)
+                                            self.config.log_run_to_output,
+                                            self.out)
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         resolver = RangeResolver(self.cache, self.remote_manager)
@@ -591,13 +592,11 @@ class ConanAPIV1(object):
     def config_set(self, item, value):
         config_parser = ConanClientConfigParser(self.app.cache.conan_conf_path)
         config_parser.set_item(item, value)
-        self.app.cache.invalidate()
 
     @api_method
     def config_rm(self, item):
         config_parser = ConanClientConfigParser(self.app.cache.conan_conf_path)
         config_parser.rm_item(item)
-        self.app.cache.invalidate()
 
     @api_method
     def config_install(self, path_or_url, verify_ssl, config_type=None, args=None,

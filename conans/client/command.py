@@ -10,8 +10,7 @@ from argparse import ArgumentError
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder,
-    _make_abs_path)
+from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -114,6 +113,7 @@ class Command(object):
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
+        self._out = conan_api.out
 
     @property
     def _outputer(self):
@@ -1820,7 +1820,6 @@ class Command(object):
         """HIDDEN: entry point for executing commands, dispatcher to class
         methods
         """
-        out = self._conan.out
         ret_code = SUCCESS
         try:
             try:
@@ -1829,7 +1828,7 @@ class Command(object):
                 method = commands[command]
             except KeyError as exc:
                 if command in ["-v", "--version"]:
-                    out.success("Conan version %s" % client_version)
+                    self._out.success("Conan version %s" % client_version)
                     return False
                 self._warn_python2()
                 self._show_help()
@@ -1846,20 +1845,20 @@ class Command(object):
         except SystemExit as exc:
             if exc.code != 0:
                 logger.error(exc)
-                out.error("Exiting with code: %d" % exc.code)
+                self._out.error("Exiting with code: %d" % exc.code)
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            out.error(exc)
+            self._out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            out.error(exc)
+            self._out.error(exc)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
-            out.error(msg)
+            self._out.error(msg)
 
         return ret_code
 

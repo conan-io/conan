@@ -769,10 +769,6 @@ servers["r2"] = TestServer()
         settings = self.cache.default_profile.settings
         return settings.get("compiler", None) == "Visual Studio"
 
-    @property
-    def out(self):
-        return self.user_io.out
-
     @contextmanager
     def chdir(self, newdir):
         old_dir = self.current_folder
@@ -792,10 +788,10 @@ servers["r2"] = TestServer()
         """
         if user_io:
             self.app_factory.user_io = user_io
-            output = user_io.out
+            self.out = user_io.out
         else:
-            output = TestBufferConanOutput()
-        conan = Conan(output=output, app_factory=self.app_factory)
+            self.out = TestBufferConanOutput()
+        conan = Conan(output=self.out, app_factory=self.app_factory)
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
@@ -823,7 +819,7 @@ servers["r2"] = TestServer()
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
                 cmd=command_line,
-                output=self.user_io.out
+                output=self.out
             )
             raise Exception(exc_message)
 
