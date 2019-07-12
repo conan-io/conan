@@ -16,11 +16,11 @@ class UserTest(unittest.TestCase):
         client = TestClient()
         with self.assertRaises(Exception):
             client.run("user")
-        self.assertIn("ERROR: No remotes defined", client.user_io.out)
+        self.assertIn("ERROR: No remotes defined", client.out)
 
         with self.assertRaises(Exception):
             client.run("user -r wrong_remote")
-        self.assertIn("ERROR: No remote 'wrong_remote' defined", client.user_io.out)
+        self.assertIn("ERROR: No remote 'wrong_remote' defined", client.out)
 
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
@@ -141,7 +141,7 @@ class ConanLib(ConanFile):
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
         client.run("upload lib/0.1@lasote/stable")
         client.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", client.out)
 
     def test_command_user_with_interactive_password(self):
         test_server = TestServer()

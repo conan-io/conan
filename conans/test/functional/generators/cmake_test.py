@@ -84,7 +84,7 @@ CONAN_BASIC_SETUP()
         replace_in_file(cmakelists_path,
                         "conan_basic_setup()",
                         "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
-                        output=client.user_io.out)
+                        output=client.out)
         client.run("build . --configure")
         self.assertNotIn("Conan: Using cmake global configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
@@ -92,7 +92,7 @@ CONAN_BASIC_SETUP()
 
         # Use TARGETS
         replace_in_file(cmakelists_path, "conan_basic_setup()", "conan_basic_setup(TARGETS)",
-                        output=client.user_io.out)
+                        output=client.out)
         client.run("build . --configure")
         self.assertNotIn("Conan: Using cmake targets configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)

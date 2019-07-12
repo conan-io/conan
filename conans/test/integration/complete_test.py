@@ -63,11 +63,11 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s" % str(ref))
-        self.assertIn("Compressing recipe", str(self.client.user_io.out))
+        self.assertIn("Compressing recipe", str(self.client.out))
 
         # Not needed to tgz again
         self.client.run("upload %s" % str(ref))
-        self.assertNotIn("Compressing exported", str(self.client.user_io.out))
+        self.assertNotIn("Compressing exported", str(self.client.out))
 
         # Check that recipe exists on server
         server_paths = self.servers["default"].server_store
@@ -77,17 +77,17 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertIn("Compressing package", str(self.client.user_io.out))
+        self.assertIn("Compressing package", str(self.client.out))
 
         # Not needed to tgz again
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertNotIn("Compressing package", str(self.client.out))
 
         # If we install the package again will be removed and re tgz
         self.client.run("install %s" % str(ref))
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertNotIn("Compressing package", str(self.client.out))
 
         # Check library on server
         self._assert_library_exists_in_server(pref, server_paths)

@@ -48,17 +48,17 @@ class GoDiamondTest(unittest.TestCase):
         client.runner(command, cwd=os.path.join(client.current_folder, 'bin'))
 
         self.assertEqual(['Hello 4', 'Hello 3', 'Hello 1', 'Hello 0', 'Hello 2', 'Hello 0'],
-                         str(client.user_io.out).splitlines()[-6:])
+                         str(client.out).splitlines()[-6:])
 
         # Try to upload and reuse the binaries
         client.run("upload hello3/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
         client.run("upload hello1/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
         client.run("upload hello2/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
         client.run("upload hello0/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
 #
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("hello4/0.2@lasote/stable")

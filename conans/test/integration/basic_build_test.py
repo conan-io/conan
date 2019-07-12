@@ -47,7 +47,7 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
     command = os.sep.join([".", "bin", "say_hello"])
     client.runner("%s %s" % (ld_path, command), cwd=client.current_folder)
     msg = "Hello" if lang == 0 else "Hola"
-    tester.assertIn("%s Hello0" % msg, client.user_io.out)
+    tester.assertIn("%s Hello0" % msg, client.out)
     conan_info_path = os.path.join(client.current_folder, CONANINFO)
     conan_info = ConanInfo.loads(load(conan_info_path))
     tester.assertTrue(conan_info.full_options.language == lang)

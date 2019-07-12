@@ -79,10 +79,10 @@ class DevConanFile(HelloConan2):
         self.assertNotIn("otherlib/0.2@user/channel", conaninfo)
         self.assertNotIn("otherlib:otherlib_option=1", conaninfo)
         client.run("build .")
-        self.assertIn("MyFlag False", client.user_io.out)
+        self.assertIn("MyFlag False", client.out)
         client.run("info .")
-        self.assertIn("lib/0.1@user/channel", client.user_io.out)
-        self.assertNotIn("otherlib/0.2@user/channel", client.user_io.out)
+        self.assertIn("lib/0.1@user/channel", client.out)
+        self.assertNotIn("otherlib/0.2@user/channel", client.out)
 
         client.run("install conanfile_dev.py --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
@@ -91,10 +91,10 @@ class DevConanFile(HelloConan2):
         self.assertIn("otherlib/0.2@user/channel", conaninfo)
         self.assertIn("otherlib:otherlib_option=1", conaninfo)
         client.run("build ./conanfile_dev.py")
-        self.assertIn("MyFlag True", client.user_io.out)
+        self.assertIn("MyFlag True", client.out)
         client.run("info conanfile_dev.py")
-        self.assertIn("lib/0.1@user/channel", client.user_io.out)
-        self.assertIn("otherlib/0.2@user/channel", client.user_io.out)
+        self.assertIn("lib/0.1@user/channel", client.out)
+        self.assertIn("otherlib/0.2@user/channel", client.out)
 
     def conanfile_subclass_test(self):
         base = '''

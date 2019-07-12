@@ -45,4 +45,4 @@ class SharedChainTest(unittest.TestCase):
 
         client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],
-                         str(client.user_io.out).splitlines()[-3:])
+                         str(client.out).splitlines()[-3:])

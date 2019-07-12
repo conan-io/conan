@@ -261,23 +261,23 @@ class PrivateDepsTest(unittest.TestCase):
         # Install them without force build, private is not retrieved
         self.client.run('install Hello1/0.1@lasote/stable --build missing')
         # FIXME: recipe should not be retrieved either
-        # self.assertNotIn("Hello0/0.1@lasote/stable", self.client.user_io.out)
-        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+        # self.assertNotIn("Hello0/0.1@lasote/stable", self.client.out)
+        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.out)
 
         # Remove local recipes and packages
         self.client.run('remove Hello* -f')
 
         # Install them without force build, private is not retrieved
         self.client.run('install Hello1/0.1@lasote/stable ')
-        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.out)
 
         # Remove local recipes and packages
         self.client.run('remove Hello* -f')
 
         # Install them without forcing build
         self.client.run('install Hello1/0.1@lasote/stable --build Hello1')
-        self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.user_io.out)
+        self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.out)
 
     def consumer_private_test(self):
         self._export_upload("Hello0", "0.1", build=False, upload=False)
@@ -290,24 +290,24 @@ class PrivateDepsTest(unittest.TestCase):
                             build=False, upload=False)
 
         self.client.run('install . --build missing')
-        self.assertIn("Hello0/0.1@lasote/stable: Generating the package", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Generating the package", self.client.user_io.out)
-        self.assertIn("Hello2/0.1@lasote/stable: Generating the package", self.client.user_io.out)
+        self.assertIn("Hello0/0.1@lasote/stable: Generating the package", self.client.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Generating the package", self.client.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Generating the package", self.client.out)
 
         self.client.run("remove Hello0* -p -f ")
         self.client.run("remove Hello1* -p -f")
         self.client.run("search Hello0/0.1@lasote/stable")
         self.assertIn("There are no packages for reference 'Hello0/0.1@lasote/stable', but package recipe found.",
-                      self.client.user_io.out)
+                      self.client.out)
         self.client.run("search Hello1/0.1@lasote/stable")
         self.assertIn("There are no packages for reference 'Hello1/0.1@lasote/stable', but package recipe found.",
-                      self.client.user_io.out)
+                      self.client.out)
 
         self.client.run('install . --build missing')
         self.assertNotIn("Hello0/0.1@lasote/stable: Generating the package",
-                         self.client.user_io.out)
+                         self.client.out)
         self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",
-                         self.client.user_io.out)
+                         self.client.out)
 
     def reuse_test(self):
         self._export_upload("Hello0", "0.1")
@@ -329,14 +329,14 @@ class PrivateDepsTest(unittest.TestCase):
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
-                         str(client.user_io.out).splitlines()[-3:])
+                         str(client.out).splitlines()[-3:])
 
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
 
         # Try to upload and reuse the binaries
         client.run("upload Hello1/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
 
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client2.save(files3)

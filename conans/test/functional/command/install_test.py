@@ -201,13 +201,13 @@ class Pkg(ConanFile):
         self._create("Hello0", "0.1", export=False)
         self.client.run("install . --build never --build missing", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options",
-                      self.client.user_io.out)
+                      self.client.out)
         self.client.run("install conanfile.py --build never --build Hello", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options",
-                      self.client.user_io.out)
+                      self.client.out)
         self.client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options",
-                      self.client.user_io.out)
+                      self.client.out)
 
     def install_combined_test(self):
         self._create("Hello0", "0.1")
@@ -217,9 +217,9 @@ class Pkg(ConanFile):
 
         self.client.run("install . %s --build=missing --build Hello1" % (self.settings))
         self.assertIn("Hello0/0.1@lasote/stable: Already installed!",
-                      self.client.user_io.out)
+                      self.client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Forced build from source",
-                      self.client.user_io.out)
+                      self.client.out)
 
     def install_transitive_cache_test(self):
         self._create("Hello0", "0.1")
@@ -227,11 +227,11 @@ class Pkg(ConanFile):
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"])
         self.client.run("install Hello2/0.1@lasote/stable %s --build=missing" % (self.settings))
         self.assertIn("Hello0/0.1@lasote/stable: Generating the package",
-                      self.client.user_io.out)
+                      self.client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Generating the package",
-                      self.client.user_io.out)
+                      self.client.out)
         self.assertIn("Hello2/0.1@lasote/stable: Generating the package",
-                      self.client.user_io.out)
+                      self.client.out)
 
     def partials_test(self):
         self._create("Hello0", "0.1")
@@ -241,11 +241,11 @@ class Pkg(ConanFile):
         self.client.run("install . %s --build=missing" % self.settings)
 
         self.client.run("install ./ %s --build=Bye" % self.settings)
-        self.assertIn("No package matching 'Bye' pattern", self.client.user_io.out)
+        self.assertIn("No package matching 'Bye' pattern", self.client.out)
 
         for package in ["Hello0", "Hello1"]:
             self.client.run("install . %s --build=%s" % (self.settings, package))
-            self.assertNotIn("No package matching", self.client.user_io.out)
+            self.assertNotIn("No package matching", self.client.out)
 
     def reuse_test(self):
         self._create("Hello0", "0.1")
@@ -418,14 +418,14 @@ class Pkg(ConanFile):
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
         self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
                         assert_error=True)
-        self.assertIn(message, self.client.user_io.out)
+        self.assertIn(message, self.client.out)
 
         # Implicit detection when not available (retrocompatibility)
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
         message = "Cross-build from '%s:x86_64' to '%s:x86_64'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, assert_error=True)
-        self.assertIn(message, self.client.user_io.out)
+        self.assertIn(message, self.client.out)
 
     def install_cwd_test(self):
         conanfile = """from conans import ConanFile
