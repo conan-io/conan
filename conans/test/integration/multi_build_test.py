@@ -35,8 +35,8 @@ class CollectLibsTest(unittest.TestCase):
 
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
-        self.assertIn("Hello Hello1", client.user_io.out)
-        self.assertIn("Hello Hello0", client.user_io.out)
+        self.assertIn("Hello Hello1", client.out)
+        self.assertIn("Hello Hello0", client.out)
 
         # rebuilding the binary in cache
         client.run('remove "*" -p -f')
@@ -45,5 +45,5 @@ class CollectLibsTest(unittest.TestCase):
 
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
-        self.assertIn("Hello Hello1", client.user_io.out)
-        self.assertIn("Hello Hello0", client.user_io.out)
+        self.assertIn("Hello Hello1", client.out)
+        self.assertIn("Hello Hello0", client.out)

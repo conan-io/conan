@@ -182,24 +182,24 @@ class HelloConan(ConanFile):
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator,
                           cwd=client.current_folder)
-            self.assertIn("FIND HELLO DEBUG!", client.user_io.out)
-            self.assertNotIn("FIND HELLO RELEASE!", client.user_io.out)
+            self.assertIn("FIND HELLO DEBUG!", client.out)
+            self.assertNotIn("FIND HELLO RELEASE!", client.out)
 
             client.init_dynamic_vars()  # to reset output
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator,
                           cwd=client.current_folder)
-            self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
-            self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
+            self.assertIn("FIND HELLO RELEASE!", client.out)
+            self.assertNotIn("FIND HELLO DEBUG!", client.out)
 
             client.init_dynamic_vars()  # to reset output
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=RelWithDebInfo' % generator,
                           cwd=client.current_folder)
-            self.assertIn("FIND HELLO RELWITHDEBINFO!", client.user_io.out)
+            self.assertIn("FIND HELLO RELWITHDEBINFO!", client.out)
 
             client.init_dynamic_vars()  # to reset output
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=MinSizeRel' % generator,
                           cwd=client.current_folder)
-            self.assertIn("FIND HELLO MINSIZEREL!", client.user_io.out)
+            self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
     @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
     def cmake_multi_test(self):
@@ -231,52 +231,52 @@ class HelloConan(ConanFile):
             client.run('install . -s build_type=MinSizeRel %s --build=missing' % release_install)
 
             client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
-            self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
-            self.assertNotIn("', skipping the version check...", client.user_io.out)
+            self.assertNotIn("WARN: Unknown compiler '", client.out)
+            self.assertNotIn("', skipping the version check...", client.out)
 
             # Debug
             client.runner('cmake --build . --config Debug', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "Debug", "say_hello"])
             client.runner(hello_comand, cwd=client.current_folder)
 
-            self.assertIn("Hello0:Debug Hello1:Debug", client.user_io.out)
-            self.assertIn("Hello0Def:Debug Hello1Def:Debug", client.user_io.out)
-            self.assertIn("Hello Debug Hello1", client.user_io.out)
-            self.assertIn("Hello Debug Hello0", client.user_io.out)
+            self.assertIn("Hello0:Debug Hello1:Debug", client.out)
+            self.assertIn("Hello0Def:Debug Hello1Def:Debug", client.out)
+            self.assertIn("Hello Debug Hello1", client.out)
+            self.assertIn("Hello Debug Hello0", client.out)
 
             # Release
             client.runner('cmake --build . --config Release', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "Release", "say_hello"])
             client.runner(hello_comand, cwd=client.current_folder)
 
-            self.assertIn("Hello0:Release Hello1:Release", client.user_io.out)
-            self.assertIn("Hello0Def:Release Hello1Def:Release", client.user_io.out)
-            self.assertIn("Hello Release Hello1", client.user_io.out)
-            self.assertIn("Hello Release Hello0", client.user_io.out)
+            self.assertIn("Hello0:Release Hello1:Release", client.out)
+            self.assertIn("Hello0Def:Release Hello1Def:Release", client.out)
+            self.assertIn("Hello Release Hello1", client.out)
+            self.assertIn("Hello Release Hello0", client.out)
             if cmake_file == cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
+                self.assertIn("Conan: Using cmake targets configuration", client.out)
             else:
-                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
+                self.assertIn("Conan: Using cmake global configuration", client.out)
 
             # RelWithDebInfo
             client.runner('cmake --build . --config RelWithDebInfo', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "RelWithDebInfo", "say_hello"])
             client.runner(hello_comand, cwd=client.current_folder)
 
-            self.assertIn("Hello0:RelWithDebInfo Hello1:RelWithDebInfo", client.user_io.out)
-            self.assertIn("Hello0Def:RelWithDebInfo Hello1Def:RelWithDebInfo", client.user_io.out)
-            self.assertIn("Hello Release Hello1", client.user_io.out)
-            self.assertIn("Hello Release Hello0", client.user_io.out)
+            self.assertIn("Hello0:RelWithDebInfo Hello1:RelWithDebInfo", client.out)
+            self.assertIn("Hello0Def:RelWithDebInfo Hello1Def:RelWithDebInfo", client.out)
+            self.assertIn("Hello Release Hello1", client.out)
+            self.assertIn("Hello Release Hello0", client.out)
 
             # MinSizeRel
             client.runner('cmake --build . --config MinSizeRel', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "MinSizeRel", "say_hello"])
             client.runner(hello_comand, cwd=client.current_folder)
 
-            self.assertIn("Hello0:MinSizeRel Hello1:MinSizeRel", client.user_io.out)
-            self.assertIn("Hello0Def:MinSizeRel Hello1Def:MinSizeRel", client.user_io.out)
-            self.assertIn("Hello Release Hello1", client.user_io.out)
-            self.assertIn("Hello Release Hello0", client.user_io.out)
+            self.assertIn("Hello0:MinSizeRel Hello1:MinSizeRel", client.out)
+            self.assertIn("Hello0Def:MinSizeRel Hello1Def:MinSizeRel", client.out)
+            self.assertIn("Hello Release Hello1", client.out)
+            self.assertIn("Hello Release Hello0", client.out)
 
 
 class CMakeMultiSyntaxTest(unittest.TestCase):

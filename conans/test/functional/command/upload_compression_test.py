@@ -27,14 +27,14 @@ class UploadCompressionTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(ref))
         self.client.run("upload %s --all" % str(ref))
-        self.assertIn("Compressing recipe", self.client.user_io.out)
-        self.assertIn("Compressing package", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.out)
+        self.assertIn("Compressing package", self.client.out)
 
         # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
         self.client.run("copy %s lasote/testing" % str(ref))
         self.client.run("upload Hello0/0.1@lasote/testing --all")
-        self.assertNotIn("Compressing recipe", self.client.user_io.out)
-        self.assertNotIn("Compressing package", self.client.user_io.out)
+        self.assertNotIn("Compressing recipe", self.client.out)
+        self.assertNotIn("Compressing package", self.client.out)
 
     def reuse_downloaded_tgz_test(self):
         '''Download packages from a remote, then copy to another channel
@@ -48,8 +48,8 @@ class UploadCompressionTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(ref))
         self.client.run("upload %s --all" % str(ref))
-        self.assertIn("Compressing recipe", self.client.user_io.out)
-        self.assertIn("Compressing package", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.out)
+        self.assertIn("Compressing package", self.client.out)
 
         # Other user downloads the package
         # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
@@ -57,8 +57,8 @@ class UploadCompressionTest(unittest.TestCase):
         other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_client.run("download Hello0/0.1@lasote/stable")
         other_client.run("upload Hello0/0.1@lasote/stable --all")
-        self.assertIn("Compressing recipe", self.client.user_io.out)
-        self.assertIn("Compressing package", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.out)
+        self.assertIn("Compressing package", self.client.out)
 
     def upload_only_tgz_if_needed_test(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -70,11 +70,11 @@ class UploadCompressionTest(unittest.TestCase):
 
         # Upload conans
         self.client.run("upload %s" % str(ref))
-        self.assertIn("Compressing recipe", str(self.client.user_io.out))
+        self.assertIn("Compressing recipe", str(self.client.out))
 
         # Not needed to tgz again
         self.client.run("upload %s" % str(ref))
-        self.assertNotIn("Compressing recipe", str(self.client.user_io.out))
+        self.assertNotIn("Compressing recipe", str(self.client.out))
 
         # Check that conans exists on server
         server_paths = self.servers["default"].server_store
@@ -85,17 +85,17 @@ class UploadCompressionTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertIn("Compressing package", str(self.client.user_io.out))
+        self.assertIn("Compressing package", str(self.client.out))
 
         # Not needed to tgz again
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertNotIn("Compressing package", str(self.client.out))
 
         # If we install the package again will be removed and re tgz
         self.client.run("install %s --build missing" % str(ref))
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertNotIn("Compressing package", str(self.client.out))
 
         # Check library on server
         self._assert_library_exists_in_server(pref, server_paths)

@@ -50,28 +50,28 @@ class DefaultNameConan(ConanFile):
         # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build it from sources with "--build Hello0"', client.user_io.out)
+        self.assertIn('Try to build it from sources with "--build Hello0"', client.out)
 
         # We generate the package for Hello0/0.0
         client.run("install Hello0/0.0@lasote/stable --build Hello0")
 
         # Still missing Hello1/1.1
         client.run("create . lasote/stable", assert_error=True)
-        self.assertIn('Try to build it from sources with "--build Hello1"', client.user_io.out)
+        self.assertIn('Try to build it from sources with "--build Hello1"', client.out)
 
         # We generate the package for Hello1/1.1
         client.run("install Hello1/1.1@lasote/stable --build Hello1")
 
         # Now Hello2 should be built and not fail
         client.run("create . lasote/stable")
-        self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.user_io.out)
+        self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.out)
         self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
-                      client.user_io.out)
+                      client.out)
 
         # Now package is generated but should be built again
         client.run("create . lasote/stable")
         self.assertIn('Hello2/2.2@lasote/stable: Forced build from source',
-                      client.user_io.out)
+                      client.out)
 
     def build_policies_update_test(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
@@ -95,11 +95,11 @@ class MyPackage(ConanFile):
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install test/1.9@lasote/stable")
-        self.assertIn("Getting sources", client.user_io.out)
-        self.assertIn("Building sources", client.user_io.out)
-        self.assertIn("Packaging this test package", client.user_io.out)
+        self.assertIn("Getting sources", client.out)
+        self.assertIn("Building sources", client.out)
+        self.assertIn("Packaging this test package", client.out)
         self.assertIn("Building package from source as defined by build_policy='always'",
-                      client.user_io.out)
+                      client.out)
         client.run("upload test/1.9@lasote/stable")
 
     def build_policies_in_conanfile_test(self):
@@ -114,13 +114,13 @@ class MyPackage(ConanFile):
 
         # Install, it will build automatically if missing (without the --build missing option)
         client.run("install Hello0/1.0@lasote/stable")
-        self.assertIn("Building", client.user_io.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
+        self.assertIn("Building", client.out)
+        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try to do it again, now we have the package, so no build is done
         client.run("install Hello0/1.0@lasote/stable")
-        self.assertNotIn("Building", client.user_io.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
+        self.assertNotIn("Building", client.out)
+        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
         client.run("upload Hello0/1.0@lasote/stable --all")
@@ -133,20 +133,20 @@ class MyPackage(ConanFile):
         # Install, it will build automatically if missing (without the --build missing option)
         client.run("install Hello0/1.0@lasote/stable")
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
-                      client.user_io.out)
-        self.assertIn("Building", client.user_io.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
+                      client.out)
+        self.assertIn("Building", client.out)
+        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try to do it again, now we have the package, but we build again
         client.run("install Hello0/1.0@lasote/stable")
-        self.assertIn("Building", client.user_io.out)
+        self.assertIn("Building", client.out)
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
-                      client.user_io.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
+                      client.out)
+        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try now to upload all packages, should crash because of the "always" build policy
         client.run("upload Hello0/1.0@lasote/stable --all", assert_error=True)
-        self.assertIn("no packages can be uploaded", client.user_io.out)
+        self.assertIn("no packages can be uploaded", client.out)
 
     def reuse_test(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})

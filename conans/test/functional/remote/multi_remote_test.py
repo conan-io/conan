@@ -121,9 +121,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.client.run("remote add_ref Hello0/0.1@lasote/stable remote1")
         self.client.run("install Hello0/0.1@lasote/stable --build=missing")
         self.assertIn("Hello0/0.1@lasote/stable: Retrieving from predefined remote 'remote1'",
-                      self.client.user_io.out)
+                      self.client.out)
         self.client.run("remote list_ref")
-        self.assertIn(": remote1", self.client.user_io.out)
+        self.assertIn(": remote1", self.client.out)
 
     def upload_test(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -133,12 +133,12 @@ class MultiRemoteTest(unittest.TestCase):
         self.client.run("upload %s" % str(ref))
 
         self.client.run("info %s" % str(ref))
-        self.assertIn("remote0=http://", self.client.user_io.out)
+        self.assertIn("remote0=http://", self.client.out)
 
         # The remote, once fixed does not change
         self.client.run("upload %s -r=remote1" % str(ref))
         self.client.run("info %s" % str(ref))
-        self.assertIn("remote0=http://", self.client.user_io.out)
+        self.assertIn("remote0=http://", self.client.out)
 
         # Now install it in other machine from remote 0
         client2 = TestClient(servers=self.servers, users=self.users)
@@ -190,7 +190,7 @@ class MultiRemoteTest(unittest.TestCase):
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
 
             self.client.run("info %s" % str(ref))
-            self.assertIn("remote%d=http://" % i, self.client.user_io.out)
+            self.assertIn("remote%d=http://" % i, self.client.out)
 
         # Now install it in other machine from remote 0
         client2 = TestClient(servers=self.servers, users=self.users)

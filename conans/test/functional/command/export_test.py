@@ -28,10 +28,10 @@ class TestConan(ConanFile):
         files = {CONANFILE: conanfile}
         client.save(files)
         client.run("export . lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", assert_error=True)
-        self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
-        self.assertIn("Possible values are ['Linux']", client.user_io.out)
+        self.assertIn("'Windows' is not a valid 'settings.os' value", client.out)
+        self.assertIn("Possible values are ['Linux']", client.out)
 
     def export_without_full_reference_test(self):
         client = TestClient()
@@ -96,7 +96,7 @@ class TestConan(ConanFile):
             save(os.path.join(export_path, "file1.txt"), "")
         with self.assertRaises(IOError):
             save(os.path.join(export_src_path, "file2.txt"), "")
-        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
         files = {CONANFILE: conanfile,
                  "file1.txt": "file1",
                  "file2.txt": "file2"}
@@ -199,7 +199,7 @@ class TestConan(ConanFile):
         client.save({filename: conanfile})
         client.run("export %s lasote/stable" % filename)
         self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
-                      client.user_io.out)
+                      client.out)
         ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
         export_path = client.cache.package_layout(ref).export()
         conanfile = load(os.path.join(export_path, "conanfile.py"))
