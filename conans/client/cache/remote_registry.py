@@ -337,7 +337,7 @@ class RemoteRegistry(object):
 
     def define(self, remotes):
         # For definition from conan config install
-        with self._editables_metadata_from_cache:
+        with self._editables_metadata_from_cache():
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote not in remotes:
