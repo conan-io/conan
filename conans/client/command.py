@@ -1672,8 +1672,9 @@ class Command(object):
 
     def graph(self, *args):
         """
+        Generates and manipulates lock files.
         """
-        parser = argparse.ArgumentParser(description=self.remote.__doc__,
+        parser = argparse.ArgumentParser(description=self.graph.__doc__,
                                          prog="conan graph",
                                          formatter_class=SmartFormatter)
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
