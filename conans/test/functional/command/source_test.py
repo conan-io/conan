@@ -22,7 +22,7 @@ class ScmtestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.runner("git init .", cwd=client.current_folder)
+        client.run_command("git init .")
         client.run("source .")
         self.assertEqual(sorted(["conanfile.py", '.git']),
                          sorted(os.listdir(client.current_folder)))

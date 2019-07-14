@@ -142,5 +142,5 @@ class ConanReuseLib(ConanFile):
         client.save(reuse, clean_first=True)
         client.run("install .")
         client.run("build .")
-        client.runner("main.exe", cwd=client.current_folder)
+        client.run_command("main.exe")
         self.assertIn("Hello app;Hello hello2;Hello hello", ";".join(str(client.out).splitlines()))

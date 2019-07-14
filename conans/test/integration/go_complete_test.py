@@ -53,7 +53,7 @@ func TestReverse(t *testing.T) {
 }
 '''
 
-reuse_conanfile = '''
+client_reusefile = '''
 from conans import ConanFile
 
 class Hello(ConanFile):
@@ -127,20 +127,21 @@ class GoCompleteTest(unittest.TestCase):
         # Lib should exist
         self._assert_package_exists(pref, other_conan.cache, files_without_conanfile)
 
-        reuse_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files = {'conanfile.py': reuse_conanfile,
+        client_reuse = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        files = {'conanfile.py': client_reusefile,
                  'src/hello/main.go': main}
-        reuse_conan.save(files)
-        reuse_conan.run("install . --build missing")
+        client_reuse.save(files)
+        client_reuse.run("install . --build missing")
 
-        with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': reuse_conan.current_folder}):
+        with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': client_reuse.current_folder}):
             if platform.system() == "Windows":
                 command = "hello"
             else:
                 command = './hello'
-            reuse_conan.runner('go install hello', cwd=reuse_conan.current_folder)
-            reuse_conan.runner(command, cwd=os.path.join(reuse_conan.current_folder, 'bin'))
-        self.assertIn("Hello, Go!", reuse_conan.user_io.out)
+            client_reuse.run_command('go install hello')
+            with client_reuse.chdir("bin"):
+                client_reuse.run_command(command)
+        self.assertIn("Hello, Go!", client_reuse.out)
 
     def _assert_package_exists(self, pref, paths, files):
         package_path = paths.package_layout(pref.ref).package(pref)

@@ -181,4 +181,4 @@ class LibAConan(ConanFile):
         client.run("install .")
         client.run("build .")
 
-        subprocess.Popen("./main", cwd=client.current_folder)
+        subprocess.Popen("./main")

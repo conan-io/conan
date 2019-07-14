@@ -44,7 +44,7 @@ class PythonDiamondTest(unittest.TestCase):
             command = "activate && python main.py"
         else:
             command = 'bash -c "source activate.sh && python main.py"'
-        self.client.runner(command, cwd=self.client.current_folder)
+        self.client.run_command(command, cwd=self.client.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
                          str(self.client.out).splitlines()[-6:])

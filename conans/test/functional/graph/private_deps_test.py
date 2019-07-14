@@ -327,7 +327,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client.runner(command, cwd=client.current_folder)
+        client.run_command(command)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
 
@@ -342,17 +342,17 @@ class PrivateDepsTest(unittest.TestCase):
         client2.save(files3)
 
         client2.run("install .")
-        self.assertNotIn("Package installed in Hello0/0.1", client2.user_io.out)
-        self.assertNotIn("Building", client2.user_io.out)
+        self.assertNotIn("Package installed in Hello0/0.1", client2.out)
+        self.assertNotIn("Building", client2.out)
         client2.run("build .")
 
-        self.assertNotIn("libhello0.a", client2.user_io.out)
-        self.assertNotIn("libhello1.a", client2.user_io.out)
-        self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, cwd=client2.current_folder)
+        self.assertNotIn("libhello0.a", client2.out)
+        self.assertNotIn("libhello1.a", client2.out)
+        self.assertNotIn("libhello3.a", client2.out)
+        client2.run_command(command)
 
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
-                         str(client2.user_io.out).splitlines()[-3:])
+                         str(client2.out).splitlines()[-3:])
 
         # Issue 79, fixing private deps from current project
         files3 = cpp_hello_conan_files("Hello3", "0.2", ["Hello1/0.1@lasote/stable",
@@ -362,10 +362,10 @@ class PrivateDepsTest(unittest.TestCase):
         client2.save(files3, clean_first=True)
         client2.run('install . -o language=1 --build missing')
         client2.run('build .')
-        self.assertNotIn("libhello0.a", client2.user_io.out)
-        self.assertNotIn("libhello1.a", client2.user_io.out)
-        self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, cwd=client2.current_folder)
+        self.assertNotIn("libhello0.a", client2.out)
+        self.assertNotIn("libhello1.a", client2.out)
+        self.assertNotIn("libhello3.a", client2.out)
+        client2.run_command(command)
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
                           'Hola Hello0', 'Hola Hello0'],
-                         str(client2.user_io.out).splitlines()[-4:])
+                         str(client2.out).splitlines()[-4:])

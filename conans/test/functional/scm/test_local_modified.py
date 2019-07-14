@@ -31,7 +31,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         url, _ = create_local_git_repo(files={'conanfile.py': self.conanfile,
                                               'file.txt': self.reference},
                                        folder=self.t.current_folder)
-        self.t.runner('git remote add origin {}'.format(url), cwd=self.t.current_folder)
+        self.t.run_command('git remote add origin {}'.format(url))
         self.t.run("create . {}".format(self.reference))
         self.assertIn(">>>> I'm {}".format(self.reference), self.t.out)
         self.assertIn(">>>> content: {}".format(self.reference), self.t.out)

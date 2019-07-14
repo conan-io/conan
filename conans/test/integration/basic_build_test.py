@@ -45,7 +45,7 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
     if platform.system() == "Darwin":
         ld_path += ' DYLD_LIBRARY_PATH="%s"' % os.path.join(client.current_folder, 'lib')
     command = os.sep.join([".", "bin", "say_hello"])
-    client.runner("%s %s" % (ld_path, command), cwd=client.current_folder)
+    client.run_command("%s %s" % (ld_path, command))
     msg = "Hello" if lang == 0 else "Hola"
     tester.assertIn("%s Hello0" % msg, client.out)
     conan_info_path = os.path.join(client.current_folder, CONANINFO)

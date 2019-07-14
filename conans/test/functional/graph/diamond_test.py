@@ -101,7 +101,7 @@ class DiamondTest(unittest.TestCase):
 
         def check_run_output(client):
             command = os.sep.join([".", "bin", "say_hello"])
-            client.runner(command, cwd=client.current_folder)
+            client.run_command(command)
             if language == 0:
                 self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                                   'Hello Hello2', 'Hello Hello0'],

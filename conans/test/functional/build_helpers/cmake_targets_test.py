@@ -88,9 +88,9 @@ class Alpha(ConanFile):
 
         client.run('install . -g cmake')
         if platform.system() == "Windows":
-            client.runner('cmake . -G "Visual Studio 15 Win64"', cwd=client.current_folder)
+            client.run_command('cmake . -G "Visual Studio 15 Win64"')
         else:
-            client.runner('cmake .', cwd=client.current_folder)
+            client.run_command('cmake .')
         self.assertNotIn("WARN: Unknown compiler '", client.out)
         self.assertNotIn("', skipping the version check...", client.out)
         self.assertIn("Configuring done", client.out)
@@ -107,7 +107,7 @@ class Alpha(ConanFile):
 
             client.run('install . %s -s build_type=Debug -g cmake_multi' % debug_install)
             client.run('install . %s -s build_type=Release -g cmake_multi' % release_install)
-            client.runner('cmake . -G "Visual Studio 14 Win64"', cwd=client.current_folder)
+            client.run_command('cmake . -G "Visual Studio 14 Win64"')
             self.assertNotIn("WARN: Unknown compiler '", client.out)
             self.assertNotIn("', skipping the version check...", client.out)
             self.assertIn("Configuring done", client.out)
@@ -237,5 +237,5 @@ int main(){
         client.save(files, clean_first=True)
         client.run("install . ")
         client.run("build . ")
-        client.runner("bin/say_hello", cwd=client.current_folder)
+        client.run_command("bin/say_hello")
         self.assertIn("HELLO FRAMEWORK!", client.out)

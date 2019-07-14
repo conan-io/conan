@@ -34,7 +34,7 @@ class CollectLibsTest(unittest.TestCase):
         client.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client.runner(command, cwd=client.current_folder)
+        client.run_command(command)
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)
 
@@ -44,6 +44,6 @@ class CollectLibsTest(unittest.TestCase):
         client.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client.runner(command, cwd=client.current_folder)
+        client.run_command(command)
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)
