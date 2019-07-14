@@ -288,7 +288,7 @@ class UploadTest(unittest.TestCase):
         manifest.time += 10
         manifest.save(client2.cache.package_layout(ref).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
-        self.assertIn("Uploading conanmanifest.txt", client2.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client2.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
                       client2.out)
 

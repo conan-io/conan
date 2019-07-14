@@ -526,7 +526,6 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
         with client.chdir("build_debug"):
             client.run("workspace install ../conanws.yml -s build_type=Debug")
-        client.init_dynamic_vars()
 
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
@@ -561,7 +560,6 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World A Release!", client.out)
 
         self.assertNotIn("Debug", client.out)
-        client.init_dynamic_vars()
 
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=base_debug)
         client.runner('cmake --build . --config Debug', cwd=base_debug)
@@ -643,7 +641,6 @@ class WorkspaceTest(unittest.TestCase):
             client.run("workspace install ../conanws.yml")
             client.run("workspace install ../conanws.yml -s build_type=Debug")
 
-        client.init_dynamic_vars()
         generator = "Visual Studio 15 Win64"
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=build)
         client.runner('cmake --build . --config Release', cwd=build)
@@ -679,7 +676,6 @@ class WorkspaceTest(unittest.TestCase):
         client.runner('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=build)
         # CMake configure will find the Release libraries, as we are in cmake-multi mode
         # Need to reset the output after that
-        client.init_dynamic_vars()  # Reset output
         client.runner('cmake --build . --config Debug', cwd=build)
         client.runner(cmd_debug, cwd=client.current_folder)
         self.assertIn("Bye Moon C Debug!", client.out)

@@ -77,4 +77,4 @@ class GoDiamondTest(unittest.TestCase):
         client2.runner(command, cwd=os.path.join(client2.current_folder, 'bin'))
 
         self.assertEqual(['Hello 4', 'Hello 3', 'Hello 1', 'Hello 0', 'Hello 2', 'Hello 0'],
-                         str(client2.user_io.out).splitlines()[-6:])
+                         str(client2.out).splitlines()[-6:])

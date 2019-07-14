@@ -371,7 +371,7 @@ class Pkg(ConanFile):
         self._create("Hello0", "0.1")
 
         # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(base_folder=self.client.base_folder, cpu_count=False)
+        client = TestClient(base_folder=self.client.cache.cache_folder, cpu_count=False)
         files = {CONANFILE_TXT: """[requires]
         Hello0/0.1@lasote/stable
 

@@ -44,7 +44,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
+        installer = client2.app_factory.get_app().proxy
 
         remotes = Remotes()
         remotes.add("remotename", "url")
@@ -56,7 +56,7 @@ class DownloadTest(unittest.TestCase):
                 return Response(False, 500)
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
+        installer = ConanProxy(client2.cache, client2.out, client2.remote_manager)
 
         try:
             installer.get_recipe(ref, False, False, remotes, ActionRecorder())

@@ -185,18 +185,15 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO DEBUG!", client.out)
             self.assertNotIn("FIND HELLO RELEASE!", client.out)
 
-            client.init_dynamic_vars()  # to reset output
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator,
                           cwd=client.current_folder)
             self.assertIn("FIND HELLO RELEASE!", client.out)
             self.assertNotIn("FIND HELLO DEBUG!", client.out)
 
-            client.init_dynamic_vars()  # to reset output
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=RelWithDebInfo' % generator,
                           cwd=client.current_folder)
             self.assertIn("FIND HELLO RELWITHDEBINFO!", client.out)
 
-            client.init_dynamic_vars()  # to reset output
             client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=MinSizeRel' % generator,
                           cwd=client.current_folder)
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)

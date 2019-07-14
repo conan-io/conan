@@ -87,9 +87,9 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run('user dummy -p ping_pong2', assert_error=True)
-        self.assertIn("ERROR: Wrong user or password", conan.user_io.out)
+        self.assertIn("ERROR: Wrong user or password", conan.out)
         conan.run('user lasote -p mypass')
-        self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
+        self.assertNotIn("ERROR: Wrong user or password", conan.out)
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
                       conan.out)
         conan.run('user none')
@@ -114,7 +114,7 @@ class UserTest(unittest.TestCase):
                       conan.out)
         conan.run('user none')
         conan.run(r'user lasote -p "my \"password"')
-        self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
+        self.assertNotIn("ERROR: Wrong user or password", conan.out)
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'lasote'",
                       conan.out)
 
@@ -148,18 +148,18 @@ class ConanLib(ConanFile):
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run('user -p -r default lasote')
-        self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
+        self.assertIn('Please enter a password for "lasote" account:', conan.out)
         conan.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.out)
 
     def test_command_interactive_only(self):
         test_server = TestServer()
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run('user -p')
-        self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
+        self.assertIn('Please enter a password for "lasote" account:', conan.out)
         conan.run("user")
-        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.user_io.out)
+        self.assertIn("Current user of remote 'default' set to: 'lasote'", conan.out)
 
     def test_command_user_with_interactive_password_login_prompt_disabled(self):
         """ Interactive password should not work.
@@ -169,7 +169,7 @@ class ConanLib(ConanFile):
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run('config set general.non_interactive=True')
         conan.run('user -p -r default lasote', assert_error=True)
-        self.assertIn('ERROR: Conan interactive mode disabled', conan.user_io.out)
+        self.assertIn('ERROR: Conan interactive mode disabled', conan.out)
         self.assertNotIn("Please enter a password for \"lasote\" account:", conan.out)
         conan.run("user")
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", conan.out)

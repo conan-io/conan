@@ -39,10 +39,6 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
         self.cached_conanfiles = {}
 
-    def invalidate_caches(self):
-        self.cached_conanfiles = {}
-        self._python_requires.invalidate_caches()
-
     def load_class(self, conanfile_path, lock_python_requires=None):
         cached = self.cached_conanfiles.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:

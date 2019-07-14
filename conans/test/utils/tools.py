@@ -51,6 +51,7 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
+from conans.client.runner import ConanRunner
 
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
@@ -636,22 +637,13 @@ class TestAppFactory(AppFactory):
         # helpers
         self.http_requester_class = None
         self.servers = None
-        self.users = None
+        self.user_io = None
 
     def get_app(self):
         return ConanApp(cache_folder=self.cache_folder,
                         user_io=self.user_io,
-                        output=self.output,
                         http_requester=self.http_requester,
                         runner=self.runner)
-
-    @property
-    def output(self):
-        return TestBufferConanOutput()
-
-    @property
-    def user_io(self):
-        return MockedUserIO(self.users, out=self.output)
 
     @property
     def http_requester(self):
@@ -681,6 +673,7 @@ class TestClient(object):
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
         self.app_factory = TestAppFactory()
+        self.app = None  # Lazy
 
         self.users = users
         if self.users is None:
@@ -690,7 +683,6 @@ class TestClient(object):
         self.app_factory.cache_folder = self.cache_folder
         self.app_factory.requester_class = requester_class
         self.app_factory.runner = runner
-        self.app_factory.users = self.users
 
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
@@ -710,6 +702,20 @@ servers["r2"] = TestServer()
         self.app_factory.servers = self.servers
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
+    @property
+    def cache(self):
+        # Returns a temporary cache object intended for inspecting it
+        return ClientCache(self.cache_folder, TestBufferConanOutput())
+
+    @property
+    def base_folder(self):
+        # Temporary hack to refactor ConanApp with less changes
+        return self.cache_folder
+
+    @property
+    def storage_folder(self):
+        return self.cache.store
+
     def _set_revisions(self, value):
         current_conf = load(self.cache.conan_conf_path)
         if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
@@ -719,8 +725,6 @@ servers["r2"] = TestServer()
         replace_in_file(self.cache.conan_conf_path,
                         "[general]", "[general]\nrevisions_enabled = %s" % value,
                         output=TestBufferConanOutput())
-        # Invalidate the cached config
-        self.cache.invalidate()
 
     def enable_revisions(self):
         self._set_revisions("1")
@@ -787,11 +791,12 @@ servers["r2"] = TestServer()
             tuple if required
         """
         if user_io:
-            self.app_factory.user_io = user_io
             self.out = user_io.out
         else:
             self.out = TestBufferConanOutput()
-        conan = Conan(output=self.out, app_factory=self.app_factory)
+        user_io = user_io or MockedUserIO(self.users, out=self.out)
+        self.app_factory.user_io = user_io
+        conan = Conan(output=self.out, user_io=user_io, app_factory=self.app_factory)
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
@@ -825,9 +830,15 @@ servers["r2"] = TestServer()
 
         return error
 
-    def run_command(self, command):
-        self.init_dynamic_vars()  # Resets the output
-        return self.runner(command, cwd=self.current_folder)
+    def run_command(self, command, cwd=None):
+        output = TestBufferConanOutput()
+        self.out = output
+        runner = ConanRunner(output=output)
+        return runner(command, cwd=cwd or self.current_folder)
+
+    def runner(self, command, cwd=None):
+        cwd = cwd or os.getcwd()
+        return self.run_command(command, cwd)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder

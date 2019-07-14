@@ -135,21 +135,26 @@ def _get_conanfile_path(path, cwd, py):
 
 
 class AppFactory(object):
-    def __init__(self):
+    def __init__(self, user_io):
         user_home = get_conan_user_home()
         self.cache_folder = os.path.join(user_home, ".conan")
+        self.user_io = user_io
 
     def get_app(self):
-        return ConanApp(cache_folder=self.cache_folder)
+        return ConanApp(self.cache_folder, self.user_io)
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder, output, user_io=None, http_requester=None, runner=None):
-        self.out = output
-        self.user_io = user_io or UserIO(out=self.out)
-
+    def __init__(self, cache_folder, user_io, http_requester=None, runner=None):
+        # User IO, interaction and logging
+        self.user_io = user_io
+        self.out = self.user_io.out
         self.cache = ClientCache(cache_folder, self.out)
         self.config = self.cache.config
+        interactive = not self.config.non_interactive
+        if not interactive:
+            self.user_io.disable_input()
+
         # Adjust CONAN_LOGGING_LEVEL with the env readed
         conans.util.log.logger = configure_logger(self.config.logging_level,
                                                   self.config.logging_file)
@@ -173,10 +178,6 @@ class ConanApp(object):
         # Adjust global tool variables
         set_global_instances(self.out, self.requester)
 
-        interactive = not self.config.non_interactive
-        if not interactive:
-            self.app.user_io.disable_input()
-
         self.runner = runner or ConanRunner(self.config.print_commands_to_output,
                                             self.config.generate_run_log_file,
                                             self.config.log_run_to_output,
@@ -195,12 +196,13 @@ class ConanApp(object):
 class ConanAPIV1(object):
     @classmethod
     def factory(cls):
-        return cls(), _, _
+        return cls(), None, None
 
-    def __init__(self, app_factory=None, output=None):
+    def __init__(self, app_factory=None, output=None, user_io=None):
         color = colorama_initialize()
         self.out = output or ConanOutput(sys.stdout, sys.stderr, color)
-        self.app_factory = app_factory or AppFactory()
+        self.user_io = user_io or UserIO(out=self.out)
+        self.app_factory = app_factory or AppFactory(self.user_io)
         self.app = self.app_factory.get_app()
         # Migration system
         migrator = ClientMigrator(self.app.cache, Version(client_version), self.app.out)
@@ -254,7 +256,7 @@ class ConanAPIV1(object):
             conanfile_class = self.app.loader.load_class(conanfile_path)
         else:
             update = True if remote_name else False
-            result = self._proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
+            result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
             conanfile_class = self.app.loader.load_class(conanfile_path)
             conanfile_class.name = ref.name
@@ -296,7 +298,7 @@ class ConanAPIV1(object):
         ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
         manager = self._init_manager(recorder)
-        pt = PackageTester(manager, self.app.user_io)
+        pt = PackageTester(manager, self.user_io)
         pt.install_build_and_test(conanfile_path, ref, graph_info, remotes,
                                   update, build_modes=build_modes,
                                   test_build_folder=test_build_folder)
@@ -356,7 +358,7 @@ class ConanAPIV1(object):
             graph_info.root = ConanFileReference(None, None, None, None, validate=False)
             manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(ref)
-            create(ref, manager, self.app.user_io, graph_info, remotes, update, build_modes,
+            create(ref, manager, self.user_io, graph_info, remotes, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
                    test_build_folder, test_folder, conanfile_path)
 
@@ -603,7 +605,8 @@ class ConanAPIV1(object):
                        source_folder=None, target_folder=None):
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(path_or_url, self.app.cache, self.app.out, verify_ssl,
-                                     requester=self._requester, config_type=config_type, args=args,
+                                     requester=self.app.requester, config_type=config_type,
+                                     args=args,
                                      source_folder=source_folder, target_folder=target_folder)
 
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env,
@@ -788,7 +791,7 @@ class ConanAPIV1(object):
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
         remotes = self.app.cache.registry.load_remotes()
-        remover = ConanRemover(self.app.cache, self.app.remote_manager, self.app.user_io, remotes)
+        remover = ConanRemover(self.app.cache, self.app.remote_manager, self.user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -803,12 +806,12 @@ class ConanAPIV1(object):
         # FIXME: conan copy does not support short-paths in Windows
         ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self.app.cache,
-                 self.app.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
+                 self.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
 
     @api_method
     def authenticate(self, name, password, remote_name):
         if not password:
-            name, password = self.app.user_io.request_login(remote_name=remote_name, username=name)
+            name, password = self.user_io.request_login(remote_name=remote_name, username=name)
         remote = self.get_remote_by_name(remote_name)
         _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name, password)
         return remote_name, prev_user, user
@@ -885,7 +888,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         upload_recorder = UploadRecorder()
-        uploader = CmdUpload(self.app.cache, self.app.user_io, self.app.remote_manager,
+        uploader = CmdUpload(self.app.cache, self.user_io, self.app.remote_manager,
                              self.app.loader, self.app.hook_manager)
         remotes = self.app.cache.registry.load_remotes()
         remotes.select(remote_name)
