@@ -871,11 +871,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
-    def run_command(self, command):
+    def run_command(self, command, cwd=None):
         out = TestBufferConanOutput()
         self.user_io = UserIO(out=out)
         runner = ConanRunner(output=out)
-        return runner(command, cwd=self.current_folder)
+        return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder

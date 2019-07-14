@@ -69,14 +69,15 @@ find_package(Hello0 REQUIRED)
         # Without the toolchain we cannot find the package
         build_dir = os.path.join(client.current_folder, "build")
         os.mkdir(build_dir)
-        ret = client.run_command("cmake ..", cwd=build_dir)
+        with client.chdir(build_dir):
+            ret = client.run_command("cmake ..")
         shutil.rmtree(build_dir)
         self.assertNotEqual(ret, 0)
 
         # With the toolchain everything is ok
         os.mkdir(build_dir)
-        ret = client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_paths.cmake",
-                            cwd=build_dir)
+        with client.chdir(build_dir):
+            ret = client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_paths.cmake")
         self.assertEqual(ret, 0)
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
         ref = ConanFileReference.loads("Hello0/0.1@user/channel")

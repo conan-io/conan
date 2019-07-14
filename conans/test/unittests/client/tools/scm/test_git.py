@@ -201,12 +201,13 @@ class HelloConan(ConanFile):
         client = TestClient()
         git_repo = temp_folder()
         save(os.path.join(git_repo, "file.h"), "contents")
-        client.run_command("git init .", cwd=git_repo)
-        client.run_command('git config user.email "you@example.com"', cwd=git_repo)
-        client.run_command('git config user.name "Your Name"', cwd=git_repo)
-        client.run_command("git checkout -b dev", cwd=git_repo)
-        client.run_command("git add .", cwd=git_repo)
-        client.run_command('git commit -m "comm"', cwd=git_repo)
+        with client.chdir(git_repo):
+            client.run_command("git init .")
+            client.run_command('git config user.email "you@example.com"')
+            client.run_command('git config user.name "Your Name"')
+            client.run_command("git checkout -b dev")
+            client.run_command("git add .")
+            client.run_command('git commit -m "comm"')
 
         conanfile = """
 import os
@@ -273,15 +274,17 @@ class HelloConan(ConanFile):
     def git_commit_message_test(self):
         client = TestClient()
         git_repo = temp_folder()
-        client.run_command("git init .", cwd=git_repo)
-        client.run_command('git config user.email "you@example.com"', cwd=git_repo)
-        client.run_command('git config user.name "Your Name"', cwd=git_repo)
-        client.run_command("git checkout -b dev", cwd=git_repo)
+        with client.chdir(git_repo):
+            client.run_command("git init .")
+            client.run_command('git config user.email "you@example.com"')
+            client.run_command('git config user.name "Your Name"')
+            client.run_command("git checkout -b dev")
         git = Git(git_repo)
         self.assertIsNone(git.get_commit_message())
         save(os.path.join(git_repo, "test"), "contents")
-        client.run_command("git add test", cwd=git_repo)
-        client.run_command('git commit -m "first commit"', cwd=git_repo)
+        with client.chdir(git_repo):
+            client.run_command("git add test")
+            client.run_command('git commit -m "first commit"')
         self.assertEqual("dev", git.get_branch())
         self.assertEqual("first commit", git.get_commit_message())
 

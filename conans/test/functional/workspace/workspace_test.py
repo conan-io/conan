@@ -529,8 +529,9 @@ class WorkspaceTest(unittest.TestCase):
         client.init_dynamic_vars()
 
         generator = "Visual Studio 15 Win64" if platform.system() == "Windows" else "Unix Makefiles"
-        client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=base_release)
-        client.run_command('cmake --build . --config Release', cwd=base_release)
+        with client.chdir(base_release):
+            client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator)
+            client.run_command('cmake --build . --config Release')
 
         cmd_release = os.path.normpath("./A/build/Release/bin/app")
         cmd_debug = os.path.normpath("./A/build/Debug/bin/app")
@@ -645,8 +646,9 @@ class WorkspaceTest(unittest.TestCase):
 
         client.init_dynamic_vars()
         generator = "Visual Studio 15 Win64"
-        client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator, cwd=build)
-        client.run_command('cmake --build . --config Release', cwd=build)
+        with client.chdir(build):
+            client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator)
+            client.run_command('cmake --build . --config Release')
 
         cmd_release = os.path.normpath("./A/build/Release/app")
         cmd_debug = os.path.normpath("./A/build/Debug/app")
@@ -659,7 +661,8 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "C/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
 
-        client.run_command('cmake --build . --config Release', cwd=build)
+        with client.chdir(build):
+            client.run_command('cmake --build . --config Release')
         client.run_command(cmd_release)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Hello World B Release!", client.out)
@@ -668,7 +671,8 @@ class WorkspaceTest(unittest.TestCase):
         tools.replace_in_file(os.path.join(client.current_folder, "B/src/hello.cpp"),
                               "Hello World", "Bye Moon", output=client.out)
 
-        client.run_command('cmake --build . --config Release', cwd=build)
+        with client.chdir(build):
+            client.run_command('cmake --build . --config Release')
         client.run_command(cmd_release)
         self.assertIn("Bye Moon C Release!", client.out)
         self.assertIn("Bye Moon B Release!", client.out)
@@ -1024,4 +1028,3 @@ class Pkg(ConanFile):
         client = TestClient()
         client.run("workspace", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
-
