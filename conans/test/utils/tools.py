@@ -53,7 +53,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.client.runner import ConanRunner
 
-
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
@@ -961,7 +960,7 @@ class TurboTestClient(TestClient):
     def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
         _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
         if origin_url:
-            self.runner('git remote add origin {}'.format(origin_url), cwd=self.current_folder)
+            self.run_command('git remote add origin {}'.format(origin_url))
         return commit
 
     def init_svn_repo(self, subpath, files=None, repo_url=None):

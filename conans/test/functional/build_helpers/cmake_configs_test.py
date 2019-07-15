@@ -34,9 +34,9 @@ class CMakeConfigsTest(unittest.TestCase):
         client.run('install . --build missing')
         client.run("build .")
         cmd = os.sep.join([".", "bin", "say_hello"])
-        client.runner(cmd, cwd=client.current_folder)
+        client.run_command(cmd)
         self.assertIn("Hello Release Hello2 Hello Release Hello1 Hello Release Hello0",
                       " ".join(str(client.out).splitlines()))
-        client.runner(cmd + "_d", cwd=client.current_folder)
+        client.run_command(cmd + "_d")
         self.assertIn("Hello Debug Hello2 Hello Debug Hello1 Hello Debug Hello0",
                       " ".join(str(client.out).splitlines()))

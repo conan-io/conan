@@ -116,18 +116,18 @@ class CompleteFlowTest(unittest.TestCase):
         client3.run('install .')
         client3.run('build .')
         command = os.sep.join([".", "bin", "say_hello"])
-        client3.runner(command, cwd=client3.current_folder)
-        self.assertIn("Hello Hello1", client3.user_io.out)
-        self.assertIn("Hello Hello0", client3.user_io.out)
+        client3.run_command(command)
+        self.assertIn("Hello Hello1", client3.out)
+        self.assertIn("Hello Hello0", client3.out)
 
         client3.run('install . -o language=1 --build missing')
         time.sleep(1)
         client3.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client3.runner(command, cwd=client3.current_folder)
-        self.assertIn("Hola Hello1", client3.user_io.out)
-        self.assertIn("Hola Hello0", client3.user_io.out)
+        client3.run_command(command)
+        self.assertIn("Hola Hello1", client3.out)
+        self.assertIn("Hola Hello0", client3.out)
 
     def _assert_library_exists(self, pref, paths):
         package_path = paths.package_layout(pref.ref).package(pref)

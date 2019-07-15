@@ -327,7 +327,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client.runner(command, cwd=client.current_folder)
+        client.run_command(command)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
 
@@ -349,8 +349,8 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello0.a", client2.out)
         self.assertNotIn("libhello1.a", client2.out)
         self.assertNotIn("libhello3.a", client2.out)
-        client2.runner(command, cwd=client2.current_folder)
 
+        client2.run_command(command)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client2.out).splitlines()[-3:])
 
@@ -365,7 +365,8 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello0.a", client2.out)
         self.assertNotIn("libhello1.a", client2.out)
         self.assertNotIn("libhello3.a", client2.out)
-        client2.runner(command, cwd=client2.current_folder)
+
+        client2.run_command(command)
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
                           'Hola Hello0', 'Hola Hello0'],
                          str(client2.out).splitlines()[-4:])

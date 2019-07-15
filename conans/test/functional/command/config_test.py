@@ -22,7 +22,7 @@ class ConfigTest(unittest.TestCase):
         self.assertIn("path = ./data", self.client.out)
 
         self.client.run("config get storage.path")
-        full_path = os.path.join(self.client.cache.cache_folder, "data")
+        full_path = os.path.join(self.client.base_folder, "data")
         self.assertIn(full_path, self.client.out)
         self.assertNotIn("path:", self.client.out)
 

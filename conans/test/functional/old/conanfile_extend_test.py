@@ -34,7 +34,7 @@ class ConanOtherLib(ConanFile):
         client.save(files)
         client.run("export . user/channel")
 
-        self.cache_folder = client.cache.cache_folder
+        self.cache_folder = client.base_folder
 
     def test_base(self):
 

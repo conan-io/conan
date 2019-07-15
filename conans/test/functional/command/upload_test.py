@@ -217,8 +217,8 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm")
-        self.assertIn("WARN: Hello0/1.2.1@user/testing: Removing conan_sources.tgz, marked as dirty",
-                      client.out)
+        self.assertIn("WARN: Hello0/1.2.1@user/testing: Removing conan_sources.tgz, "
+                      "marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -705,7 +705,8 @@ class Pkg(ConanFile):
         client = self._client()
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing:{} -q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
+        client.run("upload Hello0/1.2.1@user/testing:{} "
+                   "-q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with full reference", client.out)
@@ -714,7 +715,8 @@ class Pkg(ConanFile):
         client = self._client()
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing -p {} -q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
+        client.run("upload Hello0/1.2.1@user/testing -p {} "
+                   "-q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with '--package'", client.out)

@@ -55,7 +55,7 @@ class TestMigrations(unittest.TestCase):
         metadata["recipe"]["revision"] = "Other"
         save(layout2.package_metadata(), json.dumps(metadata))
 
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.base_folder, CONAN_VERSION)
         save(version_file, "1.14.1")
         client.run("search")  # This will fire a migration
 
@@ -73,7 +73,7 @@ class TestMigrations(unittest.TestCase):
     def test_migrate_config_install(self):
         client = TestClient()
         client.run('config set general.config_install="url, http:/fake.url, None, None"')
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.base_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client.run("search")
         self.assertEqual(load(version_file), __version__)

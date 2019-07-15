@@ -133,7 +133,7 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
+        client.run_command("cmake . %s" % generator)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -153,7 +153,7 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
+        client.run_command("cmake . %s" % generator)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
@@ -175,7 +175,7 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
+        client.run_command("cmake . %s" % generator)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -202,8 +202,7 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s -DCONAN_CXX_FLAGS=CmdCXXFlag" % generator,
-                      cwd=client.current_folder)
+        client.run_command("cmake . %s -DCONAN_CXX_FLAGS=CmdCXXFlag" % generator)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
@@ -233,7 +232,7 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
+        client.run_command("cmake . %s" % generator)
 
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
