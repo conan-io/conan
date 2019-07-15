@@ -647,7 +647,7 @@ class TestClient(object):
     in command line
     """
 
-    def __init__(self, base_folder=None, current_folder=None, servers=None, users=None,
+    def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
                  revisions_enabled=None, cpu_count=1):
         """
@@ -662,8 +662,8 @@ class TestClient(object):
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        self.base_folder = base_folder or temp_folder(path_with_spaces)
-        self.cache = ClientCache(self.base_folder, TestBufferConanOutput())
+        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        self.cache = ClientCache(self.cache_folder, TestBufferConanOutput())
         self.storage_folder = self.cache.store
 
         self.requester_class = requester_class
@@ -672,7 +672,7 @@ class TestClient(object):
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
 
-        self.tune_conan_conf(base_folder, cpu_count, revisions_enabled)
+        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -708,14 +708,14 @@ servers["r2"] = TestServer()
         self._set_revisions("0")
         assert not self.cache.config.revisions_enabled
 
-    def tune_conan_conf(self, base_folder, cpu_count, revisions_enabled):
+    def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
         # Create the default
         self.cache.config
 
         if cpu_count:
             replace_in_file(self.cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=TestBufferConanOutput(), strict=not bool(base_folder))
+                            output=TestBufferConanOutput(), strict=not bool(cache_folder))
 
         current_conf = load(self.cache.conan_conf_path)
         if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
@@ -793,7 +793,7 @@ servers["r2"] = TestServer()
         # Migration system
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, output)
+        self.cache = ClientCache(self.cache_folder, output)
 
         # Migration system
         migrator = ClientMigrator(self.cache, Version(__version__), output)

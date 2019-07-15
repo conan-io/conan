@@ -96,7 +96,7 @@ class Pkg(ConanFile):
 
         # MAKE SURE WE USE ANOTHER CLIENT, with another USER HOME PATH
         client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        self.assertNotEqual(client2.base_folder, client.base_folder)
+        self.assertNotEqual(client2.cache_folder, client.cache_folder)
         reuse = '''from conans import ConanFile
 class HelloConan(ConanFile):
     requires = "Pkg/0.1@lasote/testing"

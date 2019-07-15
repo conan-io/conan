@@ -152,7 +152,7 @@ the old general
             save(old_conf_path, "\n[general]\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
             save(old_attribute_checker_plugin, "")
             # Do not adjust cpu_count, it is reusing a cache
-            cache = TestClient(base_folder=old_user_home, cpu_count=False).cache
+            cache = TestClient(cache_folder=old_user_home, cpu_count=False).cache
             assert old_conan_folder == cache.cache_folder
             return old_user_home, old_conan_folder, old_conf_path, \
                 old_attribute_checker_plugin, cache

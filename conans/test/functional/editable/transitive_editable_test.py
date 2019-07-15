@@ -17,7 +17,7 @@ class TransitiveEditableTest(unittest.TestCase):
         client.save({"conanfile.py": str(conanfileC)})
         client.run("editable add . LibC/0.1@user/testing")
 
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         conanfileB = TestConanFile("LibB", "0.1", requires=["LibC/0.1@user/testing"])
 
         client2.save({"conanfile.py": str(conanfileB)})

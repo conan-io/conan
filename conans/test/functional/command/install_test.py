@@ -371,7 +371,7 @@ class Pkg(ConanFile):
         self._create("Hello0", "0.1")
 
         # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(base_folder=self.client.base_folder, cpu_count=False)
+        client = TestClient(cache_folder=self.client.cache_folder, cpu_count=False)
         files = {CONANFILE_TXT: """[requires]
         Hello0/0.1@lasote/stable
 
@@ -443,7 +443,8 @@ class TestConan(ConanFile):
                    "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
-        client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
+        client.run("install . --build=missing -s os=Macos -s os_build=Macos "
+                   "--install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)
