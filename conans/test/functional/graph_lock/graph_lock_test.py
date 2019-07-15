@@ -3,10 +3,10 @@ import os
 import textwrap
 import unittest
 
+from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-from conans.test.utils.conanfile import TestConanFile
-from conans.model.graph_lock import LOCKFILE
 
 
 class GraphLockErrorsTest(unittest.TestCase):
@@ -36,6 +36,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
     def _check_lock(self, ref_b, rev_b=""):
         lock_file = load(os.path.join(self.client.current_folder, "custom.lock"))
         lock_file_json = json.loads(lock_file)
+        self.assertEqual(lock_file_json["version"], LOCKFILE_VERSION)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#6d56ca1040e37a13b75bc286f3e1a5ad",

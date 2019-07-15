@@ -41,9 +41,9 @@ class CaseSensitiveTest(unittest.TestCase):
     def _check(self, error, client):
         self.assertTrue(error)
         if is_case_insensitive_os():
-            self.assertIn("case incompatible 'Hello0'", client.user_io.out)
+            self.assertIn("case incompatible 'Hello0'", client.out)
         else:
-            self.assertNotIn("case incompatible 'Hello0'", client.user_io.out)
+            self.assertNotIn("case incompatible 'Hello0'", client.out)
 
     def install_same_test(self):
         client = TestClient()

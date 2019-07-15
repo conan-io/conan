@@ -56,7 +56,7 @@ class InfoFoldersTest(unittest.TestCase):
         client.run("export . %s" % self.user_channel)
         client.run("info %s --paths" % (self.reference1))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
-        output = client.user_io.out
+        output = client.out
         self.assertIn(os.path.join(base_path, "export"), output)
         self.assertIn(os.path.join(base_path, "source"), output)
         self.assertIn(os.path.join(base_path, "build", NO_SETTINGS_PACKAGE_ID), output)
@@ -68,7 +68,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         for ref in [self.reference2, "."]:
             client.run("info %s --paths" % (ref))
-            output = client.user_io.out
+            output = client.out
 
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             self.assertIn(os.path.join(base_path, "export"), output)
@@ -82,7 +82,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         self._prepare_deps(client)
         client.run("info . --paths --only package_folder --package-filter MyPackage/*")
-        output = client.user_io.out
+        output = client.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
@@ -90,7 +90,7 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("MyPackage2", output)
 
         client.run("info . --paths --only package_folder --package-filter MyPackage*")
-        output = client.user_io.out
+        output = client.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
@@ -105,7 +105,7 @@ class InfoFoldersTest(unittest.TestCase):
         client.run("export . %s" % self.user_channel)
         client.run("info %s --paths --only=build_folder" % (self.reference1))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
-        output = client.user_io.out
+        output = client.out
         self.assertNotIn("export", output)
         self.assertNotIn("source", output)
         self.assertIn(os.path.join(base_path, "build"), output)
@@ -122,7 +122,7 @@ class InfoFoldersTest(unittest.TestCase):
             client.run("export . %s" % self.user_channel)
             client.run("info %s --paths" % (self.reference1))
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
-            output = client.user_io.out
+            output = client.out
             self.assertIn(os.path.join(base_path, "export"), output)
             self.assertNotIn(os.path.join(base_path, "source"), output)
             self.assertNotIn(os.path.join(base_path, "build"), output)
@@ -135,7 +135,7 @@ class InfoFoldersTest(unittest.TestCase):
             # Ensure that the inner folders are not created (that could affect
             # pkg creation flow
             ref = ConanFileReference.loads(self.reference1)
-            id_ = re.search('ID:\s*([a-z0-9]*)', str(client.user_io.out)).group(1)
+            id_ = re.search('ID:\s*([a-z0-9]*)', str(client.out)).group(1)
             pref = PackageReference(ref, id_)
             for path in (client.cache.package_layout(ref, True).source(),
                          client.cache.package_layout(ref, True).build(pref),
@@ -193,7 +193,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
         client.run("info .")
-        output = client.user_io.out
+        output = client.out
         self.assertNotIn("export_folder", output)
         self.assertNotIn("source_folder", output)
         self.assertNotIn("build_folder", output)

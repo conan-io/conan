@@ -158,12 +158,12 @@ class ProfilesEnvironmentTest(unittest.TestCase):
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         self.client.run("install . --build=missing --pr scopes_env")
         self.client.run("build .")
-        six.assertRegex(self, str(self.client.user_io.out), "PATH=['\"]*/path/to/my/folder")
+        six.assertRegex(self, str(self.client.out), "PATH=['\"]*/path/to/my/folder")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
 
     def _assert_env_variable_printed(self, name, value):
-        self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
+        self.assertIn("%s=%s" % (name, value), self.client.out)
 
     def _create_profile(self, name, settings, env=None):
         env = env or {}

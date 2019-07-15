@@ -166,13 +166,12 @@ class TestConan(ConanFile):
            "revision": "auto"}
 """
         client.save({"conanfile.py": conanfile + scm})
-        with chdir(client.current_folder):
-            client.runner("git init")
-            client.runner('git config user.email "you@example.com"')
-            client.runner('git config user.name "Your Name"')
-            client.runner("git remote add origin https://github.com/fake/fake.git")
-            client.runner("git add .")
-            client.runner("git commit -m \"initial commit\"")
+        client.run_command("git init")
+        client.run_command('git config user.email "you@example.com"')
+        client.run_command('git config user.name "Your Name"')
+        client.run_command("git remote add origin https://github.com/fake/fake.git")
+        client.run_command("git add .")
+        client.run_command("git commit -m \"initial commit\"")
         client.run("create . danimtb/testing")
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
         client.run("upload test/1.0@danimtb/testing -r upload_repo")

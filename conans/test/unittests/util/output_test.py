@@ -39,8 +39,8 @@ class PkgConan(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         client.run("source .")
-        self.assertIn("TEXT", client.user_io.out)
-        self.assertIn("ENDTEXT", client.user_io.out)
+        self.assertIn("TEXT", client.out)
+        self.assertIn("ENDTEXT", client.out)
 
     def print_progress_test(self):
         stream = six.StringIO()
