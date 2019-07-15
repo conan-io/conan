@@ -62,8 +62,8 @@ class ClientCache(object):
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, base_folder, output):
-        self.cache_folder = base_folder
+    def __init__(self, cache_folder, output):
+        self.cache_folder = cache_folder
         self._output = output
 
         # Caching

@@ -34,11 +34,7 @@ class CollectLibsTest(unittest.TestCase):
         client.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
-<<<<<<< HEAD
-        client.runner(command, cwd=client.current_folder)
-=======
         client.run_command(command)
->>>>>>> develop
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)
 
@@ -48,10 +44,6 @@ class CollectLibsTest(unittest.TestCase):
         client.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
-<<<<<<< HEAD
-        client.runner(command, cwd=client.current_folder)
-=======
         client.run_command(command)
->>>>>>> develop
         self.assertIn("Hello Hello1", client.out)
         self.assertIn("Hello Hello0", client.out)

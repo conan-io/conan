@@ -48,7 +48,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
 
     def test_install_workflow(self):
         """ Using the install command, it won't be taken into account """
-        t2 = TestClient(base_folder=self.t.base_folder)
+        t2 = TestClient(cache_folder=self.t.cache_folder)
         t2.save({'conanfile.txt': "[requires]\n{}".format(self.reference)})
         ref = ConanFileReference.loads(self.reference)
         t2.run("install . --build={}".format(ref.name))

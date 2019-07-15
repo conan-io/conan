@@ -180,40 +180,18 @@ class HelloConan(ConanFile):
 
         with remove_from_path("sh"):
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-<<<<<<< HEAD
-            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator,
-                          cwd=client.current_folder)
-            self.assertIn("FIND HELLO DEBUG!", client.out)
-            self.assertNotIn("FIND HELLO RELEASE!", client.out)
-
-            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator,
-                          cwd=client.current_folder)
-            self.assertIn("FIND HELLO RELEASE!", client.out)
-            self.assertNotIn("FIND HELLO DEBUG!", client.out)
-
-            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=RelWithDebInfo' % generator,
-                          cwd=client.current_folder)
-            self.assertIn("FIND HELLO RELWITHDEBINFO!", client.out)
-
-            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=MinSizeRel' % generator,
-                          cwd=client.current_folder)
-=======
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator)
             self.assertIn("FIND HELLO DEBUG!", client.out)
             self.assertNotIn("FIND HELLO RELEASE!", client.out)
 
-            client.init_dynamic_vars()  # to reset output
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator)
             self.assertIn("FIND HELLO RELEASE!", client.out)
             self.assertNotIn("FIND HELLO DEBUG!", client.out)
 
-            client.init_dynamic_vars()  # to reset output
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=RelWithDebInfo' % generator)
             self.assertIn("FIND HELLO RELWITHDEBINFO!", client.out)
 
-            client.init_dynamic_vars()  # to reset output
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=MinSizeRel' % generator)
->>>>>>> develop
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
     @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
@@ -245,11 +223,6 @@ class HelloConan(ConanFile):
             client.run('install . -s build_type=RelWithDebInfo %s --build=missing' % release_install)
             client.run('install . -s build_type=MinSizeRel %s --build=missing' % release_install)
 
-<<<<<<< HEAD
-            client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
-            self.assertNotIn("WARN: Unknown compiler '", client.out)
-            self.assertNotIn("', skipping the version check...", client.out)
-=======
             client.run_command('cmake . -G "%s"' % generator)
             self.assertNotIn("WARN: Unknown compiler '", client.out)
             self.assertNotIn("', skipping the version check...", client.out)
@@ -257,7 +230,6 @@ class HelloConan(ConanFile):
                 self.assertIn("Conan: Using cmake targets configuration", client.out)
             else:
                 self.assertIn("Conan: Using cmake global configuration", client.out)
->>>>>>> develop
 
             # Debug
             client.run_command('cmake --build . --config Debug')
@@ -278,13 +250,6 @@ class HelloConan(ConanFile):
             self.assertIn("Hello0Def:Release Hello1Def:Release", client.out)
             self.assertIn("Hello Release Hello1", client.out)
             self.assertIn("Hello Release Hello0", client.out)
-<<<<<<< HEAD
-            if cmake_file == cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", client.out)
-            else:
-                self.assertIn("Conan: Using cmake global configuration", client.out)
-=======
->>>>>>> develop
 
             # RelWithDebInfo
             client.run_command('cmake --build . --config RelWithDebInfo')

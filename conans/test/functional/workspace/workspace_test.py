@@ -680,14 +680,8 @@ class WorkspaceTest(unittest.TestCase):
         client.run_command('cmake .. -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator, cwd=build)
         # CMake configure will find the Release libraries, as we are in cmake-multi mode
         # Need to reset the output after that
-<<<<<<< HEAD
-        client.runner('cmake --build . --config Debug', cwd=build)
-        client.runner(cmd_debug, cwd=client.current_folder)
-=======
-        client.init_dynamic_vars()  # Reset output
         client.run_command('cmake --build . --config Debug', cwd=build)
         client.run_command(cmd_debug)
->>>>>>> develop
         self.assertIn("Bye Moon C Debug!", client.out)
         self.assertIn("Bye Moon B Debug!", client.out)
         self.assertIn("Hello World A Debug!", client.out)

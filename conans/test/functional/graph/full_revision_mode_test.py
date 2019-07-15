@@ -22,12 +22,12 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta.save({"conanfile.py": conanfilea})
         clienta.run("create . liba/0.1@user/testing")
 
-        clientb = TestClient(base_folder=clienta.cache.cache_folder)
+        clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": str(TestConanFile("libb", "0.1",
                                                         requires=["liba/0.1@user/testing"]))})
         clientb.run("create . user/testing")
 
-        clientc = TestClient(base_folder=clienta.cache.cache_folder)
+        clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": str(TestConanFile("libc", "0.1",
                                                         requires=["libb/0.1@user/testing"]))})
         clientc.run("install . user/testing")
