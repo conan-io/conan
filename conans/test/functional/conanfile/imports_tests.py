@@ -72,7 +72,7 @@ class TestConan(ConanFile):
 """
         client.save({"conanfile.py": testconanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertIn("IMPORTED FOLDERS: [", client.user_io.out)
+        self.assertIn("IMPORTED FOLDERS: [", client.out)
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibB/LICENSE.md")),

@@ -1340,7 +1340,7 @@ class SCMRevisions(unittest.TestCase):
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         client = TurboTestClient()
         conanfile = GenConanfile().with_revision_mode("scm")
-        client.runner('git init .', cwd=client.current_folder)
+        client.run_command('git init .')
         client.save({"conanfile.py": str(conanfile)})
         client.run("create . {}".format(ref), assert_error=True)
         # It error, because the revision_mode is explicitly set to scm

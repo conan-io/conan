@@ -63,7 +63,6 @@ from conans.client.migrations import ClientMigrator
 from conans.model.version import Version
 
 
-
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
@@ -872,10 +871,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
-    def run_command(self, command):
-        self.all_output += str(self.out)
-        self.init_dynamic_vars()  # Resets the output
-        return self.runner(command, cwd=self.current_folder)
+    def run_command(self, command, cwd=None):
+        out = TestBufferConanOutput()
+        self.user_io = UserIO(out=out)
+        runner = ConanRunner(output=out)
+        return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
@@ -998,7 +998,7 @@ class TurboTestClient(TestClient):
     def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
         _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
         if origin_url:
-            self.runner('git remote add origin {}'.format(origin_url), cwd=self.current_folder)
+            self.run_command('git remote add origin {}'.format(origin_url))
         return commit
 
     def init_svn_repo(self, subpath, files=None, repo_url=None):

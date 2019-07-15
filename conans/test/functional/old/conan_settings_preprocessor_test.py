@@ -33,9 +33,9 @@ class HelloConan(ConanFile):
         self.assertNotIn(default_profile, "compiler.runtime")
         self.client.run("install Hello0/0.1@lasote/channel --build missing")
         if platform.system() == "Windows":
-            self.assertIn("Runtime: MD", self.client.user_io.out)
+            self.assertIn("Runtime: MD", self.client.out)
             self.client.run("install Hello0/0.1@lasote/channel --build missing -s build_type=Debug")
-            self.assertIn("Runtime: MDd", self.client.user_io.out)
+            self.assertIn("Runtime: MDd", self.client.out)
 
     def test_runtime_not_present_ok(self):
         # Generate the settings.yml
@@ -47,9 +47,9 @@ class HelloConan(ConanFile):
         self.client.run('install Hello0/0.1@lasote/channel --build missing -s '
                         'compiler="Visual Studio" -s compiler.runtime="MDd"', assert_error=True)
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'",
-                      self.client.user_io.out)
+                      self.client.out)
 
         # Now install, the preprocessor shouldn't fail nor do anything
         self.client.run("install Hello0/0.1@lasote/channel --build missing")
         self.assertNotIn("Setting 'compiler.runtime' not declared, automatically",
-                         self.client.user_io.out)
+                         self.client.out)
