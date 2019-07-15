@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 import unittest
@@ -6,7 +7,6 @@ from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 from conans.model.ref import PackageReference
-import json
 
 
 class GraphLockCITest(unittest.TestCase):
