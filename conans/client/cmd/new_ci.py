@@ -365,7 +365,7 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
             circleci_clang_versions or circleci_osx_versions):
         return {}
     gcc_versions = ["4.9", "5", "6", "7", "8"]
-    clang_versions = ["3.9", "4.0", "5.0", "6.0", "7.0"]
+    clang_versions = ["3.9", "4.0", "5.0", "6.0", "7.0", "7.1"]
     if visual_versions is True:
         visual_versions = ["12", "14", "15"]
     if linux_gcc_versions is True:
