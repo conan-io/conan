@@ -5,6 +5,7 @@ from conans.client.graph.graph import BINARY_SKIP, RECIPE_CONSUMER, RECIPE_VIRTU
     RECIPE_EDITABLE
 from conans.client.output import Color
 from conans.model.ref import PackageReference
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 
 
 def _get_python_requires(conanfile):
@@ -61,12 +62,18 @@ def print_graph(deps_graph, out, cache):
             out.writeln("    %s - %s" % (repr(package_id), binary), Color.BRIGHT_CYAN)
     _packages(requires)
 
-    out.writeln("Package Folders", Color.BRIGHT_YELLOW)
-
     def _package_folders(nodes, cache):
+        messages = []
         for node in nodes:
-            package_folder = cache.package_layout(node.ref).package(node)
-            out.writeln("    %s: %s" % (node.ref, package_folder), Color.BRIGHT_CYAN)
+            package_layout = cache.package_layout(node.ref)
+            if isinstance(package_layout, PackageCacheLayout):
+                package_folder = package_layout.package(node)
+                messages.append("    %s: %s" % (node.ref, package_folder))
+
+        if messages:
+            out.writeln("Package Folders", Color.BRIGHT_YELLOW)
+            for message in messages:
+                out.writeln(message, Color.BRIGHT_CYAN)
 
     _package_folders(requires, cache)
 
