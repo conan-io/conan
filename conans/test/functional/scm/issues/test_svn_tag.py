@@ -26,12 +26,13 @@ class SVNTaggedComponentTest(SVNLocalRepoTestCase):
                  'trunk/level1/level1.txt': "level1",
                  'trunk/level1/conanfile.py': "invalid content",
                  'tags/sentinel': ""}
-        self.project_url, rev = self.create_project(files=files)
+        self.project_url, _ = self.create_project(files=files)
         self.project_url = self.project_url.replace(" ", "%20")
 
         # Modify the recipe file and commit in trunk
         t = TestClient()
-        t.run_command('svn co "{url}/trunk" "{path}"'.format(url=self.project_url))
+        t.run_command('svn co "{url}/trunk" "{path}"'.format(url=self.project_url,
+                                                             path=t.current_folder))
         t.save({"level1/conanfile.py": conanfile})
         t.run_command('svn commit -m "created the conanfile"')
 

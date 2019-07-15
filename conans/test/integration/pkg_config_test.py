@@ -150,7 +150,8 @@ class LibAConan(ConanFile):
     def build(self):
 
         args = '--define-variable package_root_path_lib_b=%s' % self.deps_cpp_info["libB"].rootpath
-        pkgconfig_exec = 'pkg-config --define-variable package_root_path_lib_b=%s' % (self.deps_cpp_info["libB"].rootpath)
+        pkgconfig_exec = ('pkg-config --define-variable package_root_path_lib_b=%s'
+                          % (self.deps_cpp_info["libB"].rootpath))
         vars = {'PKG_CONFIG': pkgconfig_exec, # Used in autotools, not in gcc directly
                 'PKG_CONFIG_PATH': "%s" % self.deps_cpp_info["libB"].rootpath}
 
@@ -175,4 +176,4 @@ class LibAConan(ConanFile):
         client.run("install .")
         client.run("build .")
 
-        subprocess.Popen("./main")
+        subprocess.Popen("./main", cwd=client.current_folder)
