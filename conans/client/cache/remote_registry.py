@@ -1,7 +1,6 @@
 import json
 import os
 from collections import OrderedDict, namedtuple
-from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
 
 from conans.errors import ConanException, NoRemoteAvailable
@@ -268,16 +267,6 @@ class RemoteRegistry(object):
         else:
             self._output.warn("The URL is empty. It must contain scheme and hostname.")
 
-    @contextmanager
-    def _editables_metadata_from_cache(self):
-        """
-        Hide editable packages to get the cache layout instead of the editable one
-        """
-        editables = self._cache.editable_packages
-        self._cache.editable_packages = {}
-        yield
-        self._cache.editable_packages = editables
-
     def load_remotes(self):
         if not os.path.exists(self._filename):
             self._output.warn("Remotes registry file missing, "
@@ -295,7 +284,7 @@ class RemoteRegistry(object):
         renamed = remotes.add(remote_name, url, verify_ssl, insert, force)
         remotes.save(self._filename)
         if renamed:
-            with self._editables_metadata_from_cache():
+            with self._cache.editable_packages.override_refs({}):
                 for ref in self._cache.all_refs():
                     with self._cache.package_layout(ref).update_metadata() as metadata:
                         if metadata.recipe.remote == renamed:
@@ -313,7 +302,7 @@ class RemoteRegistry(object):
     def clear(self):
         remotes = self.load_remotes()
         remotes.clear()
-        with self._editables_metadata_from_cache():
+        with self._cache.editable_packages.override_refs({}):
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     metadata.recipe.remote = None
@@ -324,7 +313,7 @@ class RemoteRegistry(object):
     def remove(self, remote_name):
         remotes = self.load_remotes()
         del remotes[remote_name]
-        with self._editables_metadata_from_cache():
+        with self._cache.editable_packages.override_refs({}):
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote == remote_name:
@@ -337,7 +326,7 @@ class RemoteRegistry(object):
 
     def define(self, remotes):
         # For definition from conan config install
-        with self._editables_metadata_from_cache():
+        with self._cache.editable_packages.override_refs({}):
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote not in remotes:
@@ -351,7 +340,7 @@ class RemoteRegistry(object):
     def rename(self, remote_name, new_remote_name):
         remotes = self.load_remotes()
         remotes.rename(remote_name, new_remote_name)
-        with self._editables_metadata_from_cache():
+        with self._cache.editable_packages.override_refs({}):
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote == remote_name:

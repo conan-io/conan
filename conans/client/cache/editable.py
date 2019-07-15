@@ -1,5 +1,6 @@
 import json
 import os
+from contextlib import contextmanager
 from os.path import join, normpath
 
 from conans.model.ref import ConanFileReference
@@ -49,3 +50,13 @@ class EditablePackages(object):
 
     def override(self, workspace_edited):
         self._edited_refs = workspace_edited
+
+    @contextmanager
+    def override_refs(self, refs):
+        """
+        Hide editable packages to get the cache layout instead of the editable one
+        """
+        edited_refs = self._edited_refs
+        self._edited_refs = refs
+        yield
+        self._edited_refs = edited_refs
