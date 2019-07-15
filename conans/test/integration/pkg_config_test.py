@@ -27,7 +27,7 @@ int main() {
 """
 
 
-
+@unittest.skipIf(platform.system() == "Windows", ".pc files not in Win")
 class PkgConfigTest(unittest.TestCase):
 
     def test_reuse_pc_approach1(self):
@@ -92,9 +92,6 @@ class LibAConan(ConanFile):
            self.run('g++ main.cpp $(pkg-config libB --libs --cflags) -o main')
 
 """
-
-        if platform.system() == "Windows":
-            return
 
         self._run_reuse(libb_conanfile, liba_conanfile)
 
@@ -161,9 +158,6 @@ class LibAConan(ConanFile):
            self.run('g++ main.cpp $(pkg-config %s libB --libs --cflags) -o main' % args)
 
 """
-
-        if platform.system() == "Windows":
-            return
 
         self._run_reuse(libb_conanfile, liba_conanfile)
 

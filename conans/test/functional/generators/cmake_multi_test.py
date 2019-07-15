@@ -229,6 +229,10 @@ class HelloConan(ConanFile):
             client.run_command('cmake . -G "%s"' % generator)
             self.assertNotIn("WARN: Unknown compiler '", client.out)
             self.assertNotIn("', skipping the version check...", client.out)
+            if cmake_file == cmake_targets:
+                self.assertIn("Conan: Using cmake targets configuration", client.out)
+            else:
+                self.assertIn("Conan: Using cmake global configuration", client.out)
 
             # Debug
             client.run_command('cmake --build . --config Debug')
@@ -249,10 +253,6 @@ class HelloConan(ConanFile):
             self.assertIn("Hello0Def:Release Hello1Def:Release", client.out)
             self.assertIn("Hello Release Hello1", client.out)
             self.assertIn("Hello Release Hello0", client.out)
-            if cmake_file == cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", client.out)
-            else:
-                self.assertIn("Conan: Using cmake global configuration", client.out)
 
             # RelWithDebInfo
             client.run_command('cmake --build . --config RelWithDebInfo')

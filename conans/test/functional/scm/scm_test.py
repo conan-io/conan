@@ -114,7 +114,7 @@ class ConanLib(ConanFile):
             self.client.run_command('git config user.name "Your Name"')
             self.client.run_command("git add .")
             self.client.run_command('git commit -m  "commiting"')
-            self.client.run_command('git clone "%s" .' % repo.replace('\\', '/'))
+        self.client.run_command('git clone "%s" .' % repo.replace('\\', '/'))
         self.client.run("export . user/channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         os.remove(self.client.cache.package_layout(self.ref).scm_folder())
@@ -811,7 +811,8 @@ class ConanLib(ConanFile):
         self.output.warn("Contents: %s" % contents)
 
 '''
-        project_url, _ = self.create_project(files={"myfile": "contents", "conanfile.py": conanfile})
+        project_url, _ = self.create_project(files={"myfile": "contents",
+                                                    "conanfile.py": conanfile})
         project_url = project_url.replace(" ", "%20")
         self.client.run_command('svn co "{url}" "{path}"'.format(url=project_url,
                                                                  path=self.client.current_folder))
@@ -880,7 +881,8 @@ class ConanLib(ConanFile):
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
     def test_propset_own(self):
-        """ Apply svn:needs-lock property to every file in the own working-copy of the repository """
+        """ Apply svn:needs-lock property to every file in the own working-copy
+        of the repository """
 
         conanfile = base_svn.format(directory="None", url=_quoted("auto"), revision="auto")
         project_url, _ = self.create_project(files={"conanfile.py": conanfile})
