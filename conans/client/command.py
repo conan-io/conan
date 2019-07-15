@@ -10,8 +10,7 @@ from argparse import ArgumentError
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder,
-    _make_abs_path)
+from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -114,11 +113,11 @@ class Command(object):
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._user_io = conan_api._user_io
+        self._out = conan_api._user_io.out
 
     @property
     def _outputer(self):
-        return CommandOutputer(self._user_io.out, self._conan._cache)
+        return CommandOutputer(self._out, self._conan._cache)
 
     def help(self, *args):
         """
@@ -250,7 +249,7 @@ class Command(object):
         attributes = [args.raw, ] if args.raw else args.attribute
 
         result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
-        Printer(self._user_io.out).print_inspect(result, raw=args.raw)
+        Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
             json_output = json.dumps(result)
             if not os.path.isabs(args.json):
@@ -385,10 +384,9 @@ class Command(object):
             packages_list = args.package
 
             if packages_list:
-                self._user_io.out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan download [...] {}:{}`".format(reference,
-                                                                             packages_list[0]))
+                self._out.warn("Usage of `--package` argument is deprecated."
+                               " Use a full reference instead: "
+                               "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
             reference = pref.ref.full_repr()
             packages_list = [pref.id]
@@ -990,7 +988,7 @@ class Command(object):
             if args.pattern_or_reference:
                 raise ConanException("Specifying a pattern is not supported when removing locks")
             self._conan.remove_locks()
-            self._user_io.out.info("Cache locks removed")
+            self._out.info("Cache locks removed")
             return
         elif args.system_reqs:
             if args.packages:
@@ -1040,10 +1038,9 @@ class Command(object):
             packages_list = args.package
 
             if packages_list:
-                self._user_io.out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan copy [...] {}:{}`".format(reference,
-                                                                         packages_list[0]))
+                self._out.warn("Usage of `--package` argument is deprecated."
+                               " Use a full reference instead: "
+                               "`conan copy [...] {}:{}`".format(reference, packages_list[0]))
 
             if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
@@ -1285,9 +1282,9 @@ class Command(object):
             package_id = args.package
 
             if package_id:
-                self._user_io.out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan upload [...] {}:{}`".format(reference, package_id))
+                self._out.warn("Usage of `--package` argument is deprecated."
+                               " Use a full reference instead: "
+                               "`conan upload [...] {}:{}`".format(reference, package_id))
 
             if args.query and package_id:
                 raise ConanException("'--query' argument cannot be used together with '--package'")
@@ -1518,7 +1515,7 @@ class Command(object):
             self._conan.update_profile(profile, key, value)
         elif args.subcommand == "get":
             key = args.item
-            self._user_io.out.writeln(self._conan.get_profile_key(profile, key))
+            self._out.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 
@@ -1551,9 +1548,9 @@ class Command(object):
             package_id = args.package
 
             if package_id:
-                self._user_io.out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan get [...] {}:{}`".format(reference, package_id))
+                self._out.warn("Usage of `--package` argument is deprecated."
+                               " Use a full reference instead: "
+                               "`conan get [...] {}:{}`".format(reference, package_id))
         else:
             reference = pref.ref.full_repr()
             package_id = pref.id
@@ -1603,9 +1600,9 @@ class Command(object):
 
         install_parser = subparsers.add_parser('install',
                                                help='same as a "conan install" command'
-                                                    ' but using the workspace data from the file. If'
-                                                    ' no file is provided, it will look for a file'
-                                                    ' named "conanws.yml"')
+                                                    ' but using the workspace data from the file. '
+                                                    'If no file is provided, it will look for a '
+                                                    'file named "conanws.yml"')
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
@@ -1655,20 +1652,19 @@ class Command(object):
 
         if args.subcommand == "add":
             self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
-            self._user_io.out.success("Reference '{}' in editable mode".format(args.reference))
+            self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)
             if ret:
-                self._user_io.out.success("Removed editable mode for reference "
-                                          "'{}'".format(args.reference))
+                self._out.success("Removed editable mode for reference '{}'".format(args.reference))
             else:
-                self._user_io.out.warn("Reference '{}' was not installed "
-                                       "as editable".format(args.reference))
+                self._out.warn("Reference '{}' was not installed "
+                               "as editable".format(args.reference))
         elif args.subcommand == "list":
             for k, v in self._conan.editable_list().items():
-                self._user_io.out.info("%s" % k)
-                self._user_io.out.writeln("    Path: %s" % v["path"])
-                self._user_io.out.writeln("    Layout: %s" % v["layout"])
+                self._out.info("%s" % k)
+                self._out.writeln("    Path: %s" % v["path"])
+                self._out.writeln("    Layout: %s" % v["layout"])
 
     def graph(self, *args):
         """
@@ -1712,7 +1708,7 @@ class Command(object):
             self._conan.update_lock(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
             build_order = self._conan.build_order(args.lockfile, args.build)
-            self._user_io.out.writeln(build_order)
+            self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
@@ -1754,10 +1750,10 @@ class Command(object):
         fmt = '  %-{}s'.format(max_len)
 
         for group_name, comm_names in grps:
-            self._user_io.out.writeln(group_name, Color.BRIGHT_MAGENTA)
+            self._out.writeln(group_name, Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
-                self._user_io.out.write(fmt % name, Color.GREEN)
+                self._out.write(fmt % name, Color.GREEN)
 
                 # Help will be all the lines up to the first empty one
                 docstring_lines = commands[name].__doc__.split('\n')
@@ -1774,11 +1770,10 @@ class Command(object):
 
                 import textwrap
                 txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" "*(max_len+2))
-                self._user_io.out.writeln(txt)
+                self._out.writeln(txt)
 
-        self._user_io.out.writeln("")
-        self._user_io.out.writeln('Conan commands. Type "conan <command> -h" for help',
-                                  Color.BRIGHT_YELLOW)
+        self._out.writeln("")
+        self._out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
     def _commands(self):
         """ returns a list of available commands
@@ -1796,13 +1791,12 @@ class Command(object):
 
     def _warn_python2(self):
         if six.PY2:
-            self._user_io.out.writeln("")
-            self._user_io.out.writeln("Python 2 will soon be deprecated. It is strongly "
-                                      "recommended to use Python 3 with Conan:",
-                                      front=Color.BRIGHT_YELLOW)
-            self._user_io.out.writeln("https://docs.conan.io/en/latest/installation.html"
-                                      "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
-            self._user_io.out.writeln("")
+            self._out.writeln("")
+            self._out.writeln("Python 2 will soon be deprecated. It is strongly "
+                              "recommended to use Python 3 with Conan:", front=Color.BRIGHT_YELLOW)
+            self._out.writeln("https://docs.conan.io/en/latest/installation.html"
+                              "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
+            self._out.writeln("")
 
     @staticmethod
     def _check_query_parameter(pattern, query):
@@ -1828,7 +1822,7 @@ class Command(object):
                 method = commands[command]
             except KeyError as exc:
                 if command in ["-v", "--version"]:
-                    self._user_io.out.success("Conan version %s" % client_version)
+                    self._out.success("Conan version %s" % client_version)
                     return False
                 self._warn_python2()
                 self._show_help()
@@ -1845,20 +1839,20 @@ class Command(object):
         except SystemExit as exc:
             if exc.code != 0:
                 logger.error(exc)
-                self._user_io.out.error("Exiting with code: %d" % exc.code)
+                self._out.error("Exiting with code: %d" % exc.code)
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
             ret_code = ERROR_INVALID_CONFIGURATION
-            self._user_io.out.error(exc)
+            self._out.error(exc)
         except ConanException as exc:
             ret_code = ERROR_GENERAL
-            self._user_io.out.error(exc)
+            self._out.error(exc)
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
             ret_code = ERROR_GENERAL
             msg = exception_message_safe(exc)
-            self._user_io.out.error(msg)
+            self._out.error(msg)
 
         return ret_code
 
