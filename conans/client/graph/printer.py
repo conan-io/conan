@@ -62,18 +62,14 @@ def print_graph(deps_graph, out, cache):
             out.writeln("    %s - %s" % (repr(package_id), binary), Color.BRIGHT_CYAN)
     _packages(requires)
 
+    out.writeln("Package Folders", Color.BRIGHT_YELLOW)
+
     def _package_folders(nodes, cache):
-        messages = []
         for node in nodes:
             package_layout = cache.package_layout(node.ref)
             if isinstance(package_layout, PackageCacheLayout):
                 package_folder = package_layout.package(node)
-                messages.append("    %s: %s" % (node.ref, package_folder))
-
-        if messages:
-            out.writeln("Package Folders", Color.BRIGHT_YELLOW)
-            for message in messages:
-                out.writeln(message, Color.BRIGHT_CYAN)
+                out.writeln("    %s: %s" % (node.ref, package_folder), Color.BRIGHT_CYAN)
 
     _package_folders(requires, cache)
 

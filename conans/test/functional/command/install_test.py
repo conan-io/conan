@@ -188,6 +188,7 @@ class Pkg(ConanFile):
         client.run("install .")
         self.assertNotIn("Hello", client.out)
         self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
+        self.assertIn("Package Folders", client.out)
 
     def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
@@ -220,6 +221,7 @@ class Pkg(ConanFile):
                       self.client.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable: Forced build from source",
                       self.client.user_io.out)
+        self.assertIn("Package Folders", self.client.user_io.out)
 
     def install_transitive_cache_test(self):
         self._create("Hello0", "0.1")
@@ -280,6 +282,9 @@ class Pkg(ConanFile):
             hello1_info = os.path.join(hello1, CONANINFO)
             hello1_conan_info = ConanInfo.load_file(hello1_info)
             self.assertEqual(lang, hello1_conan_info.options.language)
+            self.assertIn("Package Folders", self.client.user_io.out)
+            self.assertIn("Hello0/0.1@lasote/stable: %s" % hello0, self.client.user_io.out)
+            self.assertIn("Hello1/0.1@lasote/stable: %s" % hello1, self.client.user_io.out)
 
     def upper_option_test(self):
         self._create("Hello0", "0.1", no_config=True)
