@@ -54,7 +54,7 @@ class EditablePackages(object):
     @contextmanager
     def override_refs(self, refs):
         """
-        Hide editable packages to get the cache layout instead of the editable one
+        Override editable packages
         """
         edited_refs = self._edited_refs
         self._edited_refs = refs
