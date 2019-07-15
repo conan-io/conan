@@ -15,7 +15,7 @@ def _get_python_requires(conanfile):
     return result
 
 
-def print_graph(deps_graph, out):
+def print_graph(deps_graph, out, cache):
     requires = OrderedDict()
     build_requires = OrderedDict()
     python_requires = set()
@@ -60,6 +60,15 @@ def print_graph(deps_graph, out):
             binary = binary.pop()
             out.writeln("    %s - %s" % (repr(package_id), binary), Color.BRIGHT_CYAN)
     _packages(requires)
+
+    out.writeln("Package Folders", Color.BRIGHT_YELLOW)
+
+    def _package_folders(nodes, cache):
+        for node in nodes:
+            package_folder = cache.package_layout(node.ref).package(node)
+            out.writeln("    %s: %s" % (node.ref, package_folder), Color.BRIGHT_CYAN)
+
+    _package_folders(requires, cache)
 
     if build_requires:
         out.writeln("Build requirements", Color.BRIGHT_YELLOW)

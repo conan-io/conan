@@ -64,7 +64,7 @@ class ConanManager(object):
             self._user_io.out.highlight("Installing package: %s" % str(ref_or_path))
         else:
             conanfile.output.highlight("Installing package")
-        print_graph(deps_graph, self._user_io.out)
+        print_graph(deps_graph, self._user_io.out, self._cache)
 
         try:
             if cross_building(graph_info.profile.processed_settings):

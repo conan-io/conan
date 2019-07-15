@@ -484,7 +484,7 @@ class ConanAPIV1(object):
         deps_graph, _ = self._graph_manager.load_graph(workspace.root, None, graph_info, build,
                                                        False, update, remotes, recorder)
 
-        print_graph(deps_graph, self._user_io.out)
+        print_graph(deps_graph, self._user_io.out, self._cache)
 
         # Inject the generators before installing
         for node in deps_graph.nodes:
@@ -1233,7 +1233,7 @@ class ConanAPIV1(object):
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, build,
                                                        False, False, remotes, recorder)
 
-        print_graph(deps_graph, self._user_io.out)
+        print_graph(deps_graph, self._user_io.out, self._cache)
         graph_info.save_lock(lockfile)
         return deps_graph.new_build_order()
 
@@ -1258,7 +1258,7 @@ class ConanAPIV1(object):
         deps_graph, _ = self._graph_manager.load_graph(reference, None, graph_info, build, update,
                                                        False, remotes, recorder)
 
-        print_graph(deps_graph, self._user_io.out)
+        print_graph(deps_graph, self._user_io.out, self._cache)
         lockfile = _make_abs_path(lockfile)
         graph_info.save_lock(lockfile)
         self._user_io.out.info("Generated lockfile")
