@@ -19,6 +19,22 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def not_found_package_dirty_cache_test(self):
+        # Conan does a lock on the cache, and even if the package doesn't exist
+        # left a trailing folder with the filelocks. This test checks
+        # it will be cleared
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": TestConanFile("Hello", "0.1")})
+        client.run("create . lasote/testing")
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("install hello/0.1@lasote/testing", assert_error=True)
+        self.assertIn("Unable to find 'hello/0.1@lasote/testing'", client.out)
+        # This used to fail in Windows, because of the trailing lock
+        client.run("remove * -f")
+        client.run("install Hello/0.1@lasote/testing")
+
     def install_reference_txt_test(self):
         # Test to check the "conan install <path> <reference>" command argument
         client = TestClient()
@@ -443,7 +459,8 @@ class TestConan(ConanFile):
                    "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache",
                       client.out)  # Test "from local cache" output message
-        client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
+        client.run("install . --build=missing -s os=Macos -s os_build=Macos "
+                   "--install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)
