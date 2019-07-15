@@ -118,7 +118,7 @@ class Command(object):
     @property
     def _outputer(self):
         # FIXME, this access to the cache for output is ugly, should be removed
-        return CommandOutputer(self._conan.out, self._conan.app.cache)
+        return CommandOutputer(self._out, self._conan.app.cache)
 
     def help(self, *args):
         """
@@ -386,9 +386,8 @@ class Command(object):
 
             if packages_list:
                 self._out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan download [...] {}:{}`".format(reference,
-                                                                             packages_list[0]))
+                               " Use a full reference instead: "
+                               "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
             reference = pref.ref.full_repr()
             packages_list = [pref.id]
@@ -1041,9 +1040,8 @@ class Command(object):
 
             if packages_list:
                 self._out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan copy [...] {}:{}`".format(reference,
-                                                                         packages_list[0]))
+                               " Use a full reference instead: "
+                               "`conan copy [...] {}:{}`".format(reference, packages_list[0]))
 
             if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
@@ -1286,8 +1284,8 @@ class Command(object):
 
             if package_id:
                 self._out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan upload [...] {}:{}`".format(reference, package_id))
+                               " Use a full reference instead: "
+                               "`conan upload [...] {}:{}`".format(reference, package_id))
 
             if args.query and package_id:
                 raise ConanException("'--query' argument cannot be used together with '--package'")
@@ -1552,8 +1550,8 @@ class Command(object):
 
             if package_id:
                 self._out.warn("Usage of `--package` argument is deprecated."
-                                       " Use a full reference instead: "
-                                       "`conan get [...] {}:{}`".format(reference, package_id))
+                               " Use a full reference instead: "
+                               "`conan get [...] {}:{}`".format(reference, package_id))
         else:
             reference = pref.ref.full_repr()
             package_id = pref.id
@@ -1603,9 +1601,9 @@ class Command(object):
 
         install_parser = subparsers.add_parser('install',
                                                help='same as a "conan install" command'
-                                                    ' but using the workspace data from the file. If'
-                                                    ' no file is provided, it will look for a file'
-                                                    ' named "conanws.yml"')
+                                                    ' but using the workspace data from the file. '
+                                                    'If no file is provided, it will look for a '
+                                                    'file named "conanws.yml"')
         install_parser.add_argument('path', help='path to workspace definition file (it will look'
                                                  ' for a "conanws.yml" inside if a directory is'
                                                  ' given)')
@@ -1659,11 +1657,10 @@ class Command(object):
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)
             if ret:
-                self._out.success("Removed editable mode for reference "
-                                          "'{}'".format(args.reference))
+                self._out.success("Removed editable mode for reference '{}'".format(args.reference))
             else:
                 self._out.warn("Reference '{}' was not installed "
-                                       "as editable".format(args.reference))
+                               "as editable".format(args.reference))
         elif args.subcommand == "list":
             for k, v in self._conan.editable_list().items():
                 self._out.info("%s" % k)
@@ -1777,8 +1774,7 @@ class Command(object):
                 self._out.writeln(txt)
 
         self._out.writeln("")
-        self._out.writeln('Conan commands. Type "conan <command> -h" for help',
-                                  Color.BRIGHT_YELLOW)
+        self._out.writeln('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
     def _commands(self):
         """ returns a list of available commands
@@ -1798,10 +1794,9 @@ class Command(object):
         if six.PY2:
             self._out.writeln("")
             self._out.writeln("Python 2 will soon be deprecated. It is strongly "
-                                      "recommended to use Python 3 with Conan:",
-                                      front=Color.BRIGHT_YELLOW)
+                              "recommended to use Python 3 with Conan:", front=Color.BRIGHT_YELLOW)
             self._out.writeln("https://docs.conan.io/en/latest/installation.html"
-                                      "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
+                              "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
 
     @staticmethod
