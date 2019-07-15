@@ -38,7 +38,7 @@ lib/1.0@conan/stable conan.io
 other/1.0@lasote/testing conan.io
 """)
         client = TestClient(cache_folder=cache_folder, servers=False)
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client.run("remote list")
         self.assertIn("conan.io: https://server.conan.io", client.out)
