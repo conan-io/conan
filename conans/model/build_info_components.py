@@ -12,6 +12,10 @@ DEFAULT_BUILD = ""
 
 
 class Component(object):
+    """
+    Component of a package representing a library or an executable. User can fill all the
+    information related to the component
+    """
 
     def __init__(self, name, root_folder):
         self._rootpath = root_folder
@@ -73,6 +77,10 @@ class Component(object):
 
 
 class DepComponent(object):
+    """
+    Component of a package representing a library or an executable. User cannot change the content
+    but can check all the information related to the component
+    """
 
     def __init__(self, component):
         self._rootpath = component.rootpath
