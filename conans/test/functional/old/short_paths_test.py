@@ -45,6 +45,8 @@ class TestConan(ConanFile):
                                     NO_SETTINGS_PACKAGE_ID)
         package_folder = os.path.join(client.cache.package_layout(ref).base_folder(), "package",
                                       NO_SETTINGS_PACKAGE_ID)
+        self.assertIn("Package Folders", client.out)
+        self.assertIn("test/1.0@danimtb/testing: %s" % package_folder, client.out)
         self.assertIn("SOURCE: source_file.cpp", client.out)
         self.assertEqual(["source_file.cpp"], os.listdir(source_folder))
         self.assertIn("BUILD: source_file.cpp", client.out)
@@ -59,6 +61,8 @@ class TestConan(ConanFile):
             sorted(os.listdir(package_folder)))
         client.save({"conanfile.py": conanfile.format("True")})
         client.run("create . danimtb/testing")
+        self.assertIn("Package Folders", client.out)
+        self.assertIn("test/1.0@danimtb/testing: %s" % package_folder, client.out)
         self.assertIn("SOURCE: source_file.cpp", client.out)
         self.assertEqual([".conan_link"], os.listdir(source_folder))
         self.assertIn("BUILD: source_file.cpp", client.out)
@@ -91,6 +95,8 @@ class TestConan(ConanFile):
 
         # try local flow still works, but no pkg id available
         client.run("install .")
+        self.assertIn("Package Folders", client.out)
+        self.assertNotIn("test/1.0@None/None: ", client.out)
         client.run("package .")
         self.assertIn("conanfile.py (test/1.0@None/None): Package 'package' created", client.out)
 
