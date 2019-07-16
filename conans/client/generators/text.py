@@ -1,3 +1,4 @@
+import os
 import re
 import traceback
 from collections import OrderedDict, defaultdict
@@ -124,7 +125,8 @@ class TXTGenerator(Generator):
                 if dep is None:
                     continue
                 else:
-                    cpp_info = CppInfo(configs_cpp_info[None]["rootpath"][0])  # Get general rootpath
+                    root_path = configs_cpp_info[None]["rootpath"][0]  # Get general rootpath
+                    cpp_info = CppInfo(root_path)
                     cpp_info.filter_empty = False
 
                 for config, fields in configs_cpp_info.items():
@@ -135,6 +137,13 @@ class TXTGenerator(Generator):
                             continue
                         if key == 'sysroot':
                             value = value[0]
+                        if key in ["includedirs", "libdirs", "bindirs", "builddirs", "srcdirs",
+                                   "resdirs"]:
+                            try:
+                                # Convert absolute paths to relative
+                                value = [os.path.relpath(val, root_path) for val in value]
+                            except Exception:
+                                pass
                         setattr(item_to_apply, key, value)
                 deps_cpp_info.update(cpp_info, dep)
             return deps_cpp_info

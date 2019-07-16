@@ -47,7 +47,7 @@ class BuildInfoTest(unittest.TestCase):
 """,
 """
 [includedirs_Boost]
-/this_boost_path/boost_include
+F:/ChildrenPath
 """,
 """
 [includedirs_My_Lib]
@@ -69,21 +69,29 @@ class BuildInfoTest(unittest.TestCase):
         deps_cpp_info, _, _ = TXTGenerator.loads(text)
 
         def assert_cpp(deps_cpp_info_test):
-            self.assertIn('/this_my_lib_path/mylib_path', deps_cpp_info_test.include_paths)
-            self.assertIn('/this_my_component_lib_path/my_component_lib',
+            self.assertEqual(['F:/ChildrenPath', 'mylib_path', 'otherlib_path', 'my_component_lib',
+                              'my-component-tool'], deps_cpp_info_test.includedirs)
+            self.assertEqual(['F:/ChildrenPath'], deps_cpp_info_test["Boost"].includedirs)
+            self.assertEqual(['mylib_path'], deps_cpp_info_test["My_Lib"].includedirs)
+            self.assertEqual(['otherlib_path'], deps_cpp_info_test["My_Other_Lib"].includedirs)
+            self.assertEqual(['my-component-tool'],
+                             deps_cpp_info_test["My-Component-Tool"].includedirs)
+            self.assertIn(os.path.join('/this_my_lib_path', 'mylib_path'),
                           deps_cpp_info_test.include_paths)
-            self.assertIn('/this_my_component_tool_path/my-component-tool',
+            self.assertIn(os.path.join('/this_my_component_lib_path', 'my_component_lib'),
                           deps_cpp_info_test.include_paths)
-            self.assertIn('/this_boost_path/boost_include', deps_cpp_info_test.include_paths)
-            self.assertIn('/this_my_other_lib_path/otherlib_path',
+            self.assertIn(os.path.join('/this_my_component_tool_path', 'my-component-tool'),
                           deps_cpp_info_test.include_paths)
-            self.assertEqual(['/this_boost_path/boost_include'],
+            self.assertIn('F:/ChildrenPath', deps_cpp_info_test.include_paths)
+            self.assertIn(os.path.join('/this_my_other_lib_path', 'otherlib_path'),
+                          deps_cpp_info_test.include_paths)
+            self.assertEqual(['F:/ChildrenPath'],
                              deps_cpp_info_test["Boost"].include_paths)
-            self.assertEqual(['/this_my_lib_path/mylib_path'],
+            self.assertEqual([os.path.join('/this_my_lib_path', 'mylib_path')],
                              deps_cpp_info_test["My_Lib"].include_paths)
-            self.assertEqual(['/this_my_other_lib_path/otherlib_path'],
+            self.assertEqual([os.path.join('/this_my_other_lib_path', 'otherlib_path')],
                              deps_cpp_info_test["My_Other_Lib"].include_paths)
-            self.assertEqual(['/this_my_component_tool_path/my-component-tool'],
+            self.assertEqual([os.path.join('/this_my_component_tool_path', 'my-component-tool')],
                              deps_cpp_info_test["My-Component-Tool"].include_paths)
 
         assert_cpp(deps_cpp_info)
