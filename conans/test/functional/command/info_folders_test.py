@@ -113,11 +113,11 @@ class InfoFoldersTest(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths(self):
-        folder = temp_folder(False)
-        short_folder = os.path.join(folder, ".cn")
+        cache_folder = temp_folder(False)
+        short_folder = os.path.join(cache_folder, ".cn")
 
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
-            client = TestClient(base_folder=folder)
+            client = TestClient(cache_folder=cache_folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
             client.run("info %s --paths" % (self.reference1))
@@ -150,13 +150,13 @@ class InfoFoldersTest(unittest.TestCase):
         granted with full control permission to avoid access problems when cygwin/msys2
         windows subsystems are mounting/using that folder.
         """
-        folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
+        cache_folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
         out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
-                                      % os.path.splitdrive(folder)[0])
+                                      % os.path.splitdrive(cache_folder)[0])
         if "NTFS" not in str(out):
             return
-        short_folder = os.path.join(folder, ".cnacls")
+        short_folder = os.path.join(cache_folder, ".cnacls")
 
         self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists"
                          % short_folder)
@@ -175,7 +175,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Run conan export in using short_folder
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
-            client = TestClient(base_folder=folder)
+            client = TestClient(cache_folder=cache_folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
 
@@ -202,8 +202,8 @@ class InfoFoldersTest(unittest.TestCase):
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths_folders(self):
         # https://github.com/conan-io/conan/issues/4612
-        folder = temp_folder(False)
-        short_folder = os.path.join(folder, ".cn")
+        cache_folder = temp_folder(False)
+        short_folder = os.path.join(cache_folder, ".cn")
 
         conanfile = dedent("""
             from conans import ConanFile
@@ -212,7 +212,7 @@ class InfoFoldersTest(unittest.TestCase):
                 short_paths=True
             """)
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
-            client = TestClient(base_folder=folder, servers={"default": TestServer()},
+            client = TestClient(cache_folder=cache_folder, servers={"default": TestServer()},
                                 users={"default": [("lasote", "mypass")]})
             client.save({CONANFILE: conanfile})
             client.run("export . pkga/0.1@lasote/testing")

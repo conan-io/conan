@@ -30,15 +30,15 @@ class RegistryTest(unittest.TestCase):
                          [("conan.io", "https://server.conan.io", True)])
 
     def to_json_migration_test(self):
-        tmp = temp_folder()
-        f = os.path.join(tmp, "registry.txt")
+        cache_folder = temp_folder()
+        f = os.path.join(cache_folder, "registry.txt")
         save(f, """conan.io https://server.conan.io True
 
 lib/1.0@conan/stable conan.io
 other/1.0@lasote/testing conan.io
 """)
-        client = TestClient(base_folder=tmp, servers=False)
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        client = TestClient(cache_folder=cache_folder, servers=False)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client.run("remote list")
         self.assertIn("conan.io: https://server.conan.io", client.out)
