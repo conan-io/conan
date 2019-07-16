@@ -133,8 +133,8 @@ VAR2=23
         one_dep_folder = temp_folder()
         one_dep = CppInfo(one_dep_folder)
         one_dep.filter_empty = False  # For testing: Do not filter paths
-        one_dep.includedirs.append("whatever")
-        one_dep.includedirs.append("whenever")
+        one_dep.includedirs.append("C:/whatever")
+        one_dep.includedirs.append("C:/whenever")
         one_dep.libdirs.append("other")
         one_dep.libs.extend(["math", "winsock", "boost"])
         deps_cpp_info.update(one_dep, "global")
@@ -145,8 +145,8 @@ VAR2=23
         child.cxxflags.append("cxxmyflag")
         deps_cpp_info.update(child, "Boost")
         self.assertEqual([os.path.join(one_dep_folder, "include"),
-                          os.path.join(one_dep_folder, "whatever"),
-                          os.path.join(one_dep_folder, "whenever"),
+                          "C:/whatever",
+                          "C:/whenever",
                           os.path.join(child_folder, "include"),
                           os.path.join(child_folder, "ChildrenPath")], deps_cpp_info.include_paths)
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
@@ -173,9 +173,9 @@ VAR2=23
         parent_folder = temp_folder()
         parent = CppInfo(parent_folder)
         parent.filter_empty = False  # For testing: Do not remove empty paths
-        parent.includedirs.append("whatever")
+        parent.includedirs.append("C:/whatever")
         self.assertEqual({}, parent.configs)
-        parent.debug.includedirs.append("whenever")
+        parent.debug.includedirs.append("C:/whenever")
         self.assertEqual(["debug"], list(parent.configs))
         parent.libs.extend(["math"])
         parent.debug.libs.extend(["debug_Lib"])
@@ -185,33 +185,32 @@ VAR2=23
         self.assertEqual(["debug"], list(deps_cpp_info.configs))
         self.assertEqual(os.path.join(parent_folder, "include"),
                          deps_cpp_info.debug.include_paths[0])
-        self.assertEqual(os.path.join(parent_folder, "whenever"),
-                         deps_cpp_info.debug.include_paths[1])
+        self.assertEqual("C:/whenever", deps_cpp_info.debug.include_paths[1])
         self.assertEqual(os.path.join(parent_folder, "include"),
                          deps_cpp_info.include_paths[0])
-        self.assertEqual(os.path.join(parent_folder, "whatever"), deps_cpp_info.include_paths[1])
+        self.assertEqual("C:/whatever", deps_cpp_info.include_paths[1])
 
         child_folder = temp_folder()
         child = CppInfo(child_folder)
         child.filter_empty = False  # For testing: Do not remove empty paths
-        child.includedirs.append("ChildrenPath")
-        child.debug.includedirs.append("ChildrenDebugPath")
+        child.includedirs.append("C:/ChildrenPath")
+        child.debug.includedirs.append("C:/ChildrenDebugPath")
         child.cxxflags.append("cxxmyflag")
         child.debug.cxxflags.append("cxxmydebugflag")
         deps_cpp_info.update(child, "child")
 
         self.assertEqual([os.path.join(parent_folder, "include"),
-                          os.path.join(parent_folder, "whenever"),
+                          "C:/whenever",
                           os.path.join(child_folder, "include"),
-                          os.path.join(child_folder, "ChildrenDebugPath")],
+                          "C:/ChildrenDebugPath"],
                          deps_cpp_info.debug.include_paths)
         self.assertEqual(["cxxmyflag"], deps_cpp_info["child"].cxxflags)
         self.assertEqual(["debug_Lib"], deps_cpp_info.debug.libs)
 
         self.assertEqual([os.path.join(parent_folder, "include"),
-                          os.path.join(parent_folder, "whatever"),
+                          "C:/whatever",
                           os.path.join(child_folder, "include"),
-                          os.path.join(child_folder, "ChildrenPath")],
+                          "C:/ChildrenPath"],
                          deps_cpp_info.include_paths)
 
         deps_env_info = DepsEnvInfo()
@@ -228,9 +227,9 @@ VAR2=23
 
         deps_cpp_info2, _, deps_env_info2 = TXTGenerator.loads(output)
         self.assertEqual([os.path.join(parent_folder, "include"),
-                          os.path.join(parent_folder, "whatever"),
+                          "C:/whatever",
                           os.path.join(child_folder, "include"),
-                          os.path.join(child_folder, "ChildrenPath")], deps_cpp_info.include_paths)
+                          "C:/ChildrenPath"], deps_cpp_info.include_paths)
         self.assertEqual(_normpaths(deps_cpp_info.include_paths),
                          _normpaths(deps_cpp_info2.include_paths))
         self.assertEqual(_normpaths(deps_cpp_info.lib_paths),
@@ -251,7 +250,7 @@ VAR2=23
         self.assertEqual(_normpaths(deps_cpp_info["child"].debug.include_paths),
                          _normpaths(deps_cpp_info2["child"].debug.include_paths))
         self.assertEqual(_normpaths([os.path.join(child_folder, "include"),
-                                     os.path.join(child_folder, "ChildrenDebugPath")]),
+                                     "C:/ChildrenDebugPath"]),
                          _normpaths(deps_cpp_info["child"].debug.include_paths))
         self.assertEqual(deps_cpp_info["child"].debug.cxxflags,
                          deps_cpp_info2["child"].debug.cxxflags)
