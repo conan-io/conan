@@ -139,11 +139,18 @@ class TXTGenerator(Generator):
                             value = value[0]
                         if key in ["includedirs", "libdirs", "bindirs", "builddirs", "srcdirs",
                                    "resdirs"]:
-                            try:
-                                # Convert absolute paths to relative
-                                value = [os.path.relpath(val, root_path) for val in value]
-                            except Exception:
-                                pass
+                            # Convert absolute paths to relative if root_path is inside the path
+                            saved_values = value
+                            value = []
+                            for val in saved_values:
+                                try:
+                                    rel_path = os.path.relpath(val, root_path)
+                                    if ".." in rel_path:
+                                        value.append(val)
+                                    else:
+                                        value.append(rel_path)
+                                except ValueError:
+                                    value.append(val)
                         setattr(item_to_apply, key, value)
                 deps_cpp_info.update(cpp_info, dep)
             return deps_cpp_info
