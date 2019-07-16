@@ -98,7 +98,7 @@ class CppInfo(object):
 
     @property
     def components(self):
-        return self._components
+        return self._components.items()
 
     def __getattr__(self, config):
         if config not in self.configs:
@@ -115,7 +115,7 @@ class CppInfo(object):
             attr_name = "cxxflags" if name == "cppflags" else name  # Backwards compatibility
             result[name] = getattr(self, attr_name)
         result["components"] = {}
-        for name, component in self.components.items():
+        for name, component in self.components:
             result["components"][name] = component.as_dict()
         result["configs"] = {}
         for config, cpp_info in self.configs.items():
@@ -165,7 +165,7 @@ class DepCppInfo(object):
         self.filter_empty = cpp_info.filter_empty
         self._components = OrderedDict()
         # Copy Components
-        for comp_name, comp_value in cpp_info.components.items():
+        for comp_name, comp_value in cpp_info.components:
             self._components[comp_name] = DepComponent(comp_value)
         # Copy Configurations
         for config, sub_cpp_info in cpp_info.configs.items():
@@ -242,7 +242,7 @@ class DepCppInfo(object):
         ordered = OrderedDict()
         while len(ordered) != len(self._components):
             # Search for next element to be processed
-            for comp_name, comp in self._components.items():
+            for comp_name, comp in self.components:
                 if comp_name in ordered:
                     continue
                 # check if all the deps are declared
@@ -407,7 +407,7 @@ class DepCppInfo(object):
 
     @property
     def components(self):
-        return self._components
+        return self._components.items()
 
     def as_dict(self):
         result = {}
@@ -418,7 +418,7 @@ class DepCppInfo(object):
             attr_name = "cxxflags" if name == "cppflags" else name  # Backwards compatibility
             result[name] = getattr(self, attr_name)
         result["components"] = {}
-        for name, component in self.components.items():
+        for name, component in self.components:
             result["components"][name] = component.as_dict()
         result["configs"] = {}
         for config, dep_cpp_info in self.configs.items():

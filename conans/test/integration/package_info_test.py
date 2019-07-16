@@ -123,7 +123,7 @@ class HelloConan(ConanFile):
                     self.output.info("DEPS System deps: %s" % dep_value.system_deps)
                 # Components values
                 for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                    for comp_name, comp_value in dep_value.components.items():
+                    for comp_name, comp_value in dep_value.components:
                         self.output.info("COMP %s Include paths: %s" % (comp_name,
                         comp_value.include_paths))
                         self.output.info("COMP %s name: %s" % (comp_name, comp_value.name))
