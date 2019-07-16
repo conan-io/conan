@@ -395,7 +395,7 @@ class HelloConan(ConanFile):
 
     def test_metadata_editable_packages(self):
         """
-        conan remote remove fails with editable packages
+        Check that 'conan remote' commands work with editable packages
         """
         self.client.save({"conanfile.py": """from conans import ConanFile
 class Conan(ConanFile):
