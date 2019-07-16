@@ -184,7 +184,7 @@ class DepCppInfo(object):
         return self._components[key]
 
     def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self.rootpath, p) for p in paths]
+        abs_paths = [p if os.path.isabs(p) else os.path.join(self.rootpath, p) for p in paths]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
