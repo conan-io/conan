@@ -103,7 +103,7 @@ class DepComponent(object):
         self._filter_empty = component.filter_empty
 
     def _filter_paths(self, paths):
-        abs_paths = [p if os.path.isabs(p) else os.path.join(self._rootpath, p) for p in paths]
+        abs_paths = [os.path.join(self._rootpath, p) for p in paths]
         if self._filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
