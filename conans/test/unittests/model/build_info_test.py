@@ -625,6 +625,6 @@ VAR2=23
         info.debug["DebugComponent"].lib = "libdebugcomp"
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "my_lib")
-        self.assertEqual({}, deps_cpp_info["my_lib"].components)
+        self.assertEqual([], deps_cpp_info["my_lib"].components)
         self.assertEqual("libdebugcomp",
-                         deps_cpp_info["my_lib"].debug.components["DebugComponent"].lib)
+                         deps_cpp_info["my_lib"].debug["DebugComponent"].lib)
