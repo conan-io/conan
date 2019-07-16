@@ -60,7 +60,7 @@ class InfoTest(unittest.TestCase):
         client.run("upload %s/%s@lu/st" % (name, version))
 
     def assert_last_line(self, client, line):
-        lastline = str(client.user_io.out).splitlines()[-1]
+        lastline = str(client.out).splitlines()[-1]
         self.assertEqual(lastline, line)
 
     def info_build_test(self):
@@ -68,7 +68,8 @@ class InfoTest(unittest.TestCase):
         # If we install H3 we need to build all except H1b
         self.clients["H3"].run("info . --build missing")
         self.assert_last_line(self.clients["H3"],
-                              "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
+                              "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, "
+                              "H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # If we install H0 we need to build nothing (current project)
         self.clients["H0"].run("info ./conanfile.py --build missing")
@@ -93,7 +94,8 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("remove '*' -f")
         self.clients["H3"].run("info ./conanfile.py --build")
         self.assert_last_line(self.clients["H3"],
-                              "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
+                              "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, "
+                              "H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # Now upgrade the recipe H1a and upload it (but not the package)
         # so the package become outdated

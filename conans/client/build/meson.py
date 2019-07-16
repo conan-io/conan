@@ -1,7 +1,8 @@
 import os
 import subprocess
 
-from conans.client import defs_to_string, join_arguments, tools
+from conans.client import tools
+from conans.client.build import defs_to_string, join_arguments
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import args_to_string

@@ -50,8 +50,9 @@ class MSBuild(object):
         :param force_vcvars: Will ignore if the environment is already set for a different
         Visual Studio version.
         :param toolset: Specify a toolset. Will append a /p:PlatformToolset option.
-        :param platforms: Dictionary with the mapping of archs/platforms from Conan naming to another
-        one. It is useful for Visual Studio solutions that have a different naming in architectures.
+        :param platforms: Dictionary with the mapping of archs/platforms from Conan naming to
+        another one. It is useful for Visual Studio solutions that have a different naming in
+        architectures.
         Example: platforms={"x86":"Win32"} (Visual solution uses "Win32" instead of "x86").
         This dictionary will update the default one:
         msvc_arch = {'x86': 'x86', 'x86_64': 'x64', 'armv7': 'ARM', 'armv8': 'ARM64'}

@@ -4,6 +4,8 @@ import tarfile
 import time
 from collections import defaultdict
 
+from tqdm import tqdm
+
 from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
@@ -163,8 +165,8 @@ class CmdUpload(object):
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
                         if ref.revision != rec_rev:
-                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the "
-                                                   "current recipe revision" % package_id)
+                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the"
+                                                   " current recipe revision" % package_id)
                             continue
                     package_revision = metadata.packages[package_id].revision
                     assert package_revision is not None, "PREV cannot be None to upload"
@@ -381,8 +383,8 @@ class CmdUpload(object):
             if remote_manifest == local_manifest:
                 return None, None
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. Forbidden "
-                                     "overwrite.")
+                raise ConanException("Local package is different from the remote package. Forbidden"
+                                     " overwrite.")
         deleted = set(remote_snapshot).difference(the_files)
         return the_files, deleted
 
@@ -390,6 +392,7 @@ class CmdUpload(object):
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
         url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
         msg += ": %s" % url
+        self._user_io.out.writeln("")
         self._user_io.out.info(msg)
 
     def _package_integrity_check(self, pref, files, package_folder):
@@ -469,7 +472,8 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
         if tgz_path:
             result[tgz_name] = tgz_path
         elif tgz_files:
-            output.rewrite_line(msg)
+            if output and not output.is_terminal:
+                output.writeln(msg)
             tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder, output)
             result[tgz_name] = tgz_path
 
@@ -483,7 +487,8 @@ def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder
 def _compress_package_files(files, symlinks, dest_folder, output):
     tgz_path = files.get(PACKAGE_TGZ_NAME)
     if not tgz_path:
-        output.writeln("Compressing package...")
+        if output and not output.is_terminal:
+            output.writeln("Compressing package...")
         tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
         tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_folder, output)
 
@@ -514,6 +519,11 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         last_progress = None
         if output and n_files > 1 and not output.is_terminal:
             output.write("[")
+        elif output and n_files > 1 and output.is_terminal:
+            progress_bar = tqdm(total=len(files), desc="Compressing %s" % name,
+                                unit="files", leave=True, dynamic_ncols=False,
+                                ascii=True, file=output)
+
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
@@ -530,16 +540,15 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                 i_file = i_file + 1
                 units = min(50, int(50 * i_file / n_files))
                 if last_progress != units:  # Avoid screen refresh if nothing has change
-                    if output.is_terminal:
-                        text = "%s/%s files" % (i_file, n_files)
-                        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), text))
-                    else:
+                    if not output.is_terminal:
                         output.write('=' * (units - (last_progress or 0)))
                     last_progress = units
+                if output.is_terminal:
+                    progress_bar.update()
 
         if output and n_files > 1:
             if output.is_terminal:
-                output.writeln("")
+                progress_bar.close()
             else:
                 output.writeln("]")
         tgz.close()
