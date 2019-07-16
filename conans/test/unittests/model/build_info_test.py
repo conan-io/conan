@@ -48,6 +48,9 @@ class BuildInfoTest(unittest.TestCase):
 """
 [includedirs_Boost]
 F:/ChildrenPath
+""" if platform.system() == "Windows" else """
+[includedirs_Boost]
+/ChildrenPath
 """,
 """
 [includedirs_My_Lib]
@@ -69,9 +72,11 @@ F:/ChildrenPath
         deps_cpp_info, _, _ = TXTGenerator.loads(text)
 
         def assert_cpp(deps_cpp_info_test):
-            self.assertEqual(['F:/ChildrenPath', 'mylib_path', 'otherlib_path', 'my_component_lib',
+            children_abs_path = "F:/ChildrenPath" if platform.system() == "Windows" else\
+                "/ChildrenPath"
+            self.assertEqual([children_abs_path, 'mylib_path', 'otherlib_path', 'my_component_lib',
                               'my-component-tool'], deps_cpp_info_test.includedirs)
-            self.assertEqual(['F:/ChildrenPath'], deps_cpp_info_test["Boost"].includedirs)
+            self.assertEqual([children_abs_path], deps_cpp_info_test["Boost"].includedirs)
             self.assertEqual(['mylib_path'], deps_cpp_info_test["My_Lib"].includedirs)
             self.assertEqual(['otherlib_path'], deps_cpp_info_test["My_Other_Lib"].includedirs)
             self.assertEqual(['my-component-tool'],
@@ -82,10 +87,10 @@ F:/ChildrenPath
                           deps_cpp_info_test.include_paths)
             self.assertIn(os.path.join('/this_my_component_tool_path', 'my-component-tool'),
                           deps_cpp_info_test.include_paths)
-            self.assertIn('F:/ChildrenPath', deps_cpp_info_test.include_paths)
+            self.assertIn(children_abs_path, deps_cpp_info_test.include_paths)
             self.assertIn(os.path.join('/this_my_other_lib_path', 'otherlib_path'),
                           deps_cpp_info_test.include_paths)
-            self.assertEqual(['F:/ChildrenPath'],
+            self.assertEqual([children_abs_path],
                              deps_cpp_info_test["Boost"].include_paths)
             self.assertEqual([os.path.join('/this_my_lib_path', 'mylib_path')],
                              deps_cpp_info_test["My_Lib"].include_paths)
@@ -138,13 +143,15 @@ VAR2=23
         self.assertEqual(deps_env_info["LIBA"].VAR2, "23")
 
     def help_test(self):
+        whatever_abs_path = "C:/whatever" if platform.system() == "Windows" else "/whatever"
+        whenever_abs_path = "C:/whenever" if platform.system() == "Windows" else "/whenever"
         deps_env_info = DepsEnvInfo()
         deps_cpp_info = DepsCppInfo()
         one_dep_folder = temp_folder()
         one_dep = CppInfo(one_dep_folder)
         one_dep.filter_empty = False  # For testing: Do not filter paths
-        one_dep.includedirs.append("C:/whatever")
-        one_dep.includedirs.append("C:/whenever")
+        one_dep.includedirs.append(whatever_abs_path)
+        one_dep.includedirs.append(whenever_abs_path)
         one_dep.libdirs.append("other")
         one_dep.libs.extend(["math", "winsock", "boost"])
         deps_cpp_info.update(one_dep, "global")
@@ -155,8 +162,8 @@ VAR2=23
         child.cxxflags.append("cxxmyflag")
         deps_cpp_info.update(child, "Boost")
         self.assertEqual([os.path.join(one_dep_folder, "include"),
-                          "C:/whatever",
-                          "C:/whenever",
+                          whatever_abs_path,
+                          whenever_abs_path,
                           os.path.join(child_folder, "include"),
                           os.path.join(child_folder, "ChildrenPath")], deps_cpp_info.include_paths)
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
