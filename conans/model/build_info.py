@@ -239,6 +239,12 @@ class DepCppInfo(object):
         return result
 
     def _get_flags(self, name):
+        """
+        Get all the "flags" (defines, cxxflags, linker flags...) either composing the lists from
+        components or from the global variables. Do NOT filter repeated values
+        :param name: name of the "flag" (defines, cflags, sharedlinkflags...) to get the values from
+        :return: list or ordered "flags"
+        """
         if self._components:
             result = []
             for component in self._sorted_components:
