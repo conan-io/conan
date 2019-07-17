@@ -231,7 +231,11 @@ def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
     if os.path.exists(path):
         return
-    os.makedirs(path)
+    try:
+        os.makedirs(name=path)  # thread-safe
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
 
 
 def path_exists(path, basedir):
