@@ -639,13 +639,12 @@ VAR2=23
 
     def components_with_configs_test(self):
         """
-        Components can be part of only one configuration
+        Components can be part of one configuration (Release/Debug)
         """
         folder = temp_folder()
         info = CppInfo(folder)
         info.debug["DebugComponent"].lib = "libdebugcomp"
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.update(info, "my_lib")
-        self.assertEqual([], deps_cpp_info["my_lib"].components)
-        self.assertEqual("libdebugcomp",
-                         deps_cpp_info["my_lib"].debug["DebugComponent"].lib)
+        self.assertFalse(deps_cpp_info["my_lib"].components)
+        self.assertEqual("libdebugcomp", deps_cpp_info["my_lib"].debug["DebugComponent"].lib)
