@@ -82,13 +82,17 @@ class CppInfo(object):
     cppflags = property(get_cppflags, set_cppflags)
 
     def _check_and_clear_default_values(self):
-        for dir_name in self._default_values:
-            dirs_value = getattr(self, dir_name)
-            if dirs_value is not None and dirs_value != self._default_values[dir_name]:
+        """
+        Check that the variables are loaded with default values first and clear them after in
+        favor of components
+        """
+        for field in self._default_values:
+            field_value = getattr(self, field)
+            if field_value is not None and field_value != self._default_values[field]:
                 msg_template = "Using Components and global '{}' values ('{}') is not supported"
-                raise ConanException(msg_template.format(dir_name, dirs_value))
+                raise ConanException(msg_template.format(field, field_value))
             else:
-                self.__dict__[dir_name] = None
+                self.__dict__[field] = None
 
     def __getitem__(self, key):
         self._check_and_clear_default_values()
