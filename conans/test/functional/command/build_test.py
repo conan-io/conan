@@ -130,7 +130,7 @@ class AConan(ConanFile):
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
-                      % package_folder, client.user_io.out)
+                      % package_folder, client.out)
 
     def build_different_folders_test(self):
         conanfile = """

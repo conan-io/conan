@@ -92,12 +92,12 @@ class Test(ConanFile):
         client.run("upload * --all --confirm")
         for remote in ("", "-r=default"):
             client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.user_io.out)
-            self.assertIn("os: Linux", client.user_io.out)
+            self.assertIn("os: Windows", client.out)
+            self.assertIn("os: Linux", client.out)
             client.run("remove Test/0.1@lasote/testing -p --outdated -f %s" % remote)
             client.run("search Test/0.1@lasote/testing  %s" % remote)
-            self.assertNotIn("os: Windows", client.user_io.out)
-            self.assertIn("os: Linux", client.user_io.out)
+            self.assertNotIn("os: Windows", client.out)
+            self.assertIn("os: Linux", client.out)
 
 
 fake_recipe_hash = "999999999"
@@ -369,7 +369,7 @@ class RemoveTest(unittest.TestCase):
 
     def remote_build_error_test(self):
         self.client.run("remove hello/* -b -r=default", assert_error=True)
-        self.assertIn("Remotes don't have 'build' or 'src' folder", self.client.user_io.out)
+        self.assertIn("Remotes don't have 'build' or 'src' folder", self.client.out)
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -451,32 +451,32 @@ class RemoveTest(unittest.TestCase):
         self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)
         if platform.system() == "Linux":
-            self.assertIn("Recipe not found: 'hello/1.4.10@myuser/testing'", self.client.user_io.out)
+            self.assertIn("Recipe not found: 'hello/1.4.10@myuser/testing'", self.client.out)
         else:
             self.assertIn("Requested 'hello/1.4.10@myuser/testing' but found "
                           "case incompatible 'Hello'\n"
-                          "Case insensitive filesystem can't manage this", self.client.user_io.out)
+                          "Case insensitive filesystem can't manage this", self.client.out)
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": True, "H2": True, "B": True, "O": True})
 
         self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.1" -f')
-        self.assertNotIn("No packages matching the query", self.client.user_io.out)
+        self.assertNotIn("No packages matching the query", self.client.out)
         self.assert_folders(local_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
         self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.2" -f')
-        self.assertNotIn("No packages matching the query", self.client.user_io.out)
+        self.assertNotIn("No packages matching the query", self.client.out)
         self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
         self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.2" -f -r default')
-        self.assertNotIn("No packages matching the query", self.client.user_io.out)
+        self.assertNotIn("No packages matching the query", self.client.out)
         self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},

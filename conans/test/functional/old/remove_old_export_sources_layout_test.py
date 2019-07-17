@@ -28,7 +28,7 @@ class MyPkg(ConanFile):
         client.run("upload Pkg/0.1@lasote/testing")
         client.run("remove * -f")
         client.run("search")
-        self.assertIn("There are no packages", client.user_io.out)
+        self.assertIn("There are no packages", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         rev, _ = servers["default"].server_store.get_last_revision(ref)
         ref = ref.copy_with_rev(rev)

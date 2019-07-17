@@ -28,4 +28,4 @@ class MyPkg(ConanFile):
         f.write(b"Hello world")
         client.run("install MyPkg/0.1@lasote/testing --build", assert_error=True)
         self.assertIn("Couldn't remove folder, might be busy or open",
-                      client.user_io.out)
+                      client.out)

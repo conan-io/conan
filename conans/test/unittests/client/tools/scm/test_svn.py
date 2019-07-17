@@ -557,10 +557,10 @@ class HelloConan(ConanFile):
     def test_clone_root_folder(self):
         tmp_folder = self.gimme_tmp()
         client = TestClient()
-        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        client.run_command('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
         save(os.path.join(tmp_folder, "file.h"), "contents")
-        client.runner("svn add file.h", cwd=tmp_folder)
-        client.runner('svn commit -m "message"', cwd=tmp_folder)
+        client.run_command("svn add file.h", cwd=tmp_folder)
+        client.run_command('svn commit -m "message"', cwd=tmp_folder)
 
         conanfile = self.conanfile.format(svn_folder="", svn_url=self.repo_url,
                                           file_path="file.h")
@@ -570,10 +570,10 @@ class HelloConan(ConanFile):
     def test_clone_subfolder(self):
         tmp_folder = self.gimme_tmp()
         client = TestClient()
-        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        client.run_command('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
         save(os.path.join(tmp_folder, "file.h"), "contents")
-        client.runner("svn add file.h", cwd=tmp_folder)
-        client.runner('svn commit -m "message"', cwd=tmp_folder)
+        client.run_command("svn add file.h", cwd=tmp_folder)
+        client.run_command('svn commit -m "message"', cwd=tmp_folder)
 
         conanfile = self.conanfile.format(svn_folder="\"src\"", svn_url=self.repo_url,
                                           file_path="src/file.h")

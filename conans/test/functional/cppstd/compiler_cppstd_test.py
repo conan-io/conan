@@ -33,8 +33,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             unittest.TestCase.run(self, *args, **kwargs)
 
     def setUp(self):
-        self.tmp_folder = temp_folder()
-        self.t = TestClient(base_folder=self.tmp_folder)
+        self.t = TestClient(cache_folder=temp_folder())
 
         settings = ["os", "compiler", "build_type", "arch"]
         if self.recipe_cppstd:
@@ -49,8 +48,8 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         self.t.save({"conanfile.py": conanfile})
 
     def test_value_invalid(self):
-        self.t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang -shh:compiler.cppstd=144",
-                   assert_error=True)
+        self.t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang "
+                   "-shh:compiler.cppstd=144", assert_error=True)
         self.assertIn("Invalid setting '144' is not a valid 'settings.compiler.cppstd' value",
                       self.t.out)
 
@@ -79,7 +78,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             class Lib(ConanFile):
                 settings = "os", "arch"
         """)
-        t = TestClient(base_folder=temp_folder())
+        t = TestClient(cache_folder=temp_folder())
         t.save({'conanfile.py': conanfile})
 
         with catch_deprecation_warning(self):
@@ -101,7 +100,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                 def configure(self):
                     self.output.info(">>> cppstd: {}".format(self.settings.cppstd))
         """)
-        t = TestClient(base_folder=temp_folder())
+        t = TestClient(cache_folder=temp_folder())
         t.save({'conanfile.py': conanfile}, clean_first=True)
 
         with catch_deprecation_warning(self):
@@ -144,7 +143,8 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
         self.assertIn(">>> compiler.cppstd: None", self.t.out)
 
     def test_only_compiler_cppstd(self):
-        """ settings.cppstd is available only if declared explicitly (otherwise it is deprecated) """
+        """ settings.cppstd is available only if declared explicitly (otherwise it is deprecated)
+        """
         self.t.run("info . -s compiler.cppstd=14")
         self.assertNotIn(">>> cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: None", self.t.out)

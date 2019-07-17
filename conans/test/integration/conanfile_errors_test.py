@@ -22,11 +22,11 @@ class HelloConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in package() method, line 9",
-                      client.user_io.out)
+                      client.out)
         self.assertIn('self.copy2("*.h", dst="include", src=["include","platform"]',
-                      client.user_io.out)
+                      client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'",
-                      client.user_io.out)
+                      client.out)
 
     def copy_error2_test(self):
         client = TestClient()
@@ -45,11 +45,11 @@ class HelloConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in package() method, line 9",
-                      client.user_io.out)
+                      client.out)
         self.assertIn('self.copy("*.h", dst="include", src=["include","platform"]',
-                      client.user_io.out)
+                      client.out)
         # It results that the error is different in different Python2/3 and OSs
-        # self.assertIn("'list' object has no attribute 'replace'", client.user_io.out)
+        # self.assertIn("'list' object has no attribute 'replace'", client.out)
 
     def package_info_error_test(self):
         client = TestClient()
@@ -68,11 +68,11 @@ class HelloConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in package_info() method, line 9",
-                      client.user_io.out)
+                      client.out)
         self.assertIn('self.copy2()',
-                      client.user_io.out)
+                      client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'",
-                      client.user_io.out)
+                      client.out)
 
     def config_error_test(self):
         client = TestClient()
@@ -93,7 +93,7 @@ class HelloConan(ConanFile):
 
         self.assertIn("""ERROR: Hello/0.1@lasote/stable: Error in configure() method, line 9
 	self.copy2()
-	AttributeError: 'HelloConan' object has no attribute 'copy2'""", client.user_io.out)
+	AttributeError: 'HelloConan' object has no attribute 'copy2'""", client.out)
 
     def source_error_test(self):
         client = TestClient()
@@ -112,11 +112,11 @@ class HelloConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", assert_error=True)
         self.assertIn("Hello/0.1@lasote/stable: Error in source() method, line 9",
-                      client.user_io.out)
+                      client.out)
         self.assertIn('self.copy2()',
-                      client.user_io.out)
+                      client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'",
-                      client.user_io.out)
+                      client.out)
 
     def duplicate_requires_test(self):
         client = TestClient()
@@ -128,7 +128,7 @@ foo/0.2@user/testing
         files = {"conanfile.txt": conanfile}
         client.save(files)
         client.run("install . --build", assert_error=True)
-        self.assertIn("ERROR: Duplicated requirement", client.user_io.out)
+        self.assertIn("ERROR: Duplicated requirement", client.out)
 
     def duplicate_requires_py_test(self):
         client = TestClient()
@@ -144,4 +144,4 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("install . --build", assert_error=True)
         self.assertIn("Error while initializing requirements. Duplicated requirement",
-                      client.user_io.out)
+                      client.out)

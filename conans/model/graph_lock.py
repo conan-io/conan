@@ -8,9 +8,11 @@ from conans.errors import ConanException
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
+from conans.model.version import Version
 
 
 LOCKFILE = "conan.lock"
+LOCKFILE_VERSION = "0.1"
 
 
 class GraphLockFile(object):
@@ -37,6 +39,10 @@ class GraphLockFile(object):
     @staticmethod
     def loads(text):
         graph_json = json.loads(text)
+        version = graph_json.get("version")
+        if version:
+            version = Version(version)
+            # Do something with it, migrate, raise...
         profile = graph_json["profile"]
         # FIXME: Reading private very ugly
         profile, _ = _load_profile(profile, None, None)
@@ -52,7 +58,8 @@ class GraphLockFile(object):
 
     def dumps(self):
         result = {"profile": self.profile.dumps(),
-                  "graph_lock": self.graph_lock.as_dict()}
+                  "graph_lock": self.graph_lock.as_dict(),
+                  "version": LOCKFILE_VERSION}
         return json.dumps(result, indent=True)
 
 

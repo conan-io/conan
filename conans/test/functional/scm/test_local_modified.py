@@ -31,7 +31,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
         url, _ = create_local_git_repo(files={'conanfile.py': self.conanfile,
                                               'file.txt': self.reference},
                                        folder=self.t.current_folder)
-        self.t.runner('git remote add origin {}'.format(url), cwd=self.t.current_folder)
+        self.t.run_command('git remote add origin {}'.format(url))
         self.t.run("create . {}".format(self.reference))
         self.assertIn(">>>> I'm {}".format(self.reference), self.t.out)
         self.assertIn(">>>> content: {}".format(self.reference), self.t.out)
@@ -48,7 +48,7 @@ class SCMFolderObsoleteTest(unittest.TestCase):
 
     def test_install_workflow(self):
         """ Using the install command, it won't be taken into account """
-        t2 = TestClient(base_folder=self.t.base_folder)
+        t2 = TestClient(cache_folder=self.t.cache_folder)
         t2.save({'conanfile.txt': "[requires]\n{}".format(self.reference)})
         ref = ConanFileReference.loads(self.reference)
         t2.run("install . --build={}".format(ref.name))
