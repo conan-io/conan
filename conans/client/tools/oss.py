@@ -26,12 +26,17 @@ def args_to_string(args):
 def cpu_count(output=None):
     output = default_output(output, 'conans.client.tools.oss.cpu_count')
 
+    def get_cpu_quota():
+        return int(load("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"))
+
+    def get_cpu_period():
+        return int(load("/sys/fs/cgroup/cpu/cpu.cfs_period_us"))
+
     def get_cpus():
-        base_cpus = "/sys/fs/cgroup/cpu"
         try:
-            cfs_quota_us = int(load(os.path.join(base_cpus, "cpu.cfs_quota_us")))
-            cfs_period_us = int(load(os.path.join(base_cpus, "cpu.cfs_period_us")))
-            if cfs_quota_us > -1 and cfs_period_us > 0:
+            cfs_quota_us = get_cpu_quota()
+            cfs_period_us = get_cpu_period()
+            if cfs_quota_us > 0 and cfs_period_us > 0:
                 return int(math.ceil(cfs_quota_us / cfs_period_us))
         except:
             pass
