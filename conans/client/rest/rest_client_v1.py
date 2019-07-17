@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+from multiprocessing.pool import ThreadPool
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
@@ -28,6 +29,8 @@ def complete_url(base_url, url):
 
 
 class RestV1Methods(RestCommonMethods):
+
+    threadpool = ThreadPool(8)
 
     @property
     def router(self):
@@ -166,17 +169,24 @@ class RestV1Methods(RestCommonMethods):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
+
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        for filename, resource_url in sorted(file_urls.items(), reverse=True):
+
+        def _download_single(item):
+            filename, resource_url = item[0], item[1]
             if self._output and not self._output.is_terminal:
                 self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
             downloader.download(resource_url, abs_path, auth=auth)
             ret[filename] = abs_path
+
+        results = self.threadpool.imap_unordered(_download_single, sorted(file_urls.items(), reverse=True))
+        [r for r in results]  # wait for the results
+
         return ret
 
     def get_recipe(self, ref, dest_folder):
