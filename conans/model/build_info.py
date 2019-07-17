@@ -197,9 +197,9 @@ class DepCppInfo(object):
         else:
             return abs_paths
 
-    def _get_paths(self, path_name):
+    def _get_absolute_paths(self, path_name):
         """
-        Get the absolute paths either composing the lists from components or from the global
+        Get the ABSOLUTE paths either composing the lists from components or from the global
         variables. Also filter the values checking if the folders exist or not and avoid repeated
         values.
         :param path_name: name of the type of path (include, bin, res...) to get the values from
@@ -218,17 +218,24 @@ class DepCppInfo(object):
             result = self._abs_filter_paths(getattr(self, "_%sdirs" % path_name))
         return result
 
-    def _get_dirs(self, name):
+    def _get_relative_dirs(self, name):
+        """
+        Get the RELATIVE directories either composing the lists from components or from the global
+        variables. Also filter the values checking if the folders exist or not and avoid repeated
+        values.
+        :param path_name: name of the type of path (include, bin, res...) to get the values from
+        :return: List of relative paths
+        """
         result = []
         if self._components:
             components = self._sorted_components
             components.reverse()
             for dep_value in components:
-                for _dir in getattr(dep_value, name):
+                for _dir in getattr(dep_value, "%sdirs" % name):
                     if _dir not in result:
                         result.append(_dir)
         else:
-            result = getattr(self, "_%s" % name)
+            result = getattr(self, "_%sdirs" % name)
         return result
 
     def _get_flags(self, name):
@@ -309,62 +316,62 @@ class DepCppInfo(object):
 
     @property
     def includedirs(self):
-        return self._get_dirs("includedirs")
+        return self._get_relative_dirs("include")
 
     @property
     def srcdirs(self):
-        return self._get_dirs("srcdirs")
+        return self._get_relative_dirs("src")
 
     @property
     def libdirs(self):
-        return self._get_dirs("libdirs")
+        return self._get_relative_dirs("lib")
 
     @property
     def resdirs(self):
-        return self._get_dirs("resdirs")
+        return self._get_relative_dirs("res")
 
     @property
     def bindirs(self):
-        return self._get_dirs("bindirs")
+        return self._get_relative_dirs("bin")
 
     @property
     def builddirs(self):
-        return self._get_dirs("builddirs")
+        return self._get_relative_dirs("build")
 
     @property
     def include_paths(self):
         if self._include_paths is None:
-            self._include_paths = self._get_paths("include")
+            self._include_paths = self._get_absolute_paths("include")
         return self._include_paths
 
     @property
     def lib_paths(self):
         if self._lib_paths is None:
-            self._lib_paths = self._get_paths("lib")
+            self._lib_paths = self._get_absolute_paths("lib")
         return self._lib_paths
 
     @property
     def src_paths(self):
         if self._src_paths is None:
-            self._src_paths = self._get_paths("src")
+            self._src_paths = self._get_absolute_paths("src")
         return self._src_paths
 
     @property
     def bin_paths(self):
         if self._bin_paths is None:
-            self._bin_paths = self._get_paths("bin")
+            self._bin_paths = self._get_absolute_paths("bin")
         return self._bin_paths
 
     @property
     def build_paths(self):
         if self._build_paths is None:
-            self._build_paths = self._get_paths("build")
+            self._build_paths = self._get_absolute_paths("build")
         return self._build_paths
 
     @property
     def res_paths(self):
         if self._res_paths is None:
-            self._res_paths = self._get_paths("res")
+            self._res_paths = self._get_absolute_paths("res")
         return self._res_paths
 
     @property
