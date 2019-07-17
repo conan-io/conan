@@ -123,6 +123,9 @@ class TXTGenerator(Generator):
             deps_cpp_info = DepsCppInfo()
             for dep, configs_cpp_info in data.items():
                 if dep is None:
+                    # None corresponds to the aggregated values from all the dependencies. It is
+                    # skipped because we are assigning the dependencies individually and can compose
+                    # the aggregated values
                     continue
                 else:
                     root_path = configs_cpp_info[None]["rootpath"][0]  # Get general rootpath
