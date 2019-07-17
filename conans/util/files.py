@@ -176,6 +176,21 @@ def load(path, binary=False):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
+        if not binary:
+            import codecs
+            encodings = {codecs.BOM_UTF8: "utf_8_sig",
+                         codecs.BOM_UTF16_BE: "utf_16_be",
+                         codecs.BOM_UTF16_LE: "utf_16_le",
+                         codecs.BOM_UTF32_BE: "utf_32_be",
+                         codecs.BOM_UTF32_LE: "utf_32_le",
+                         b'\x2b\x2f\x76\x38': "utf_7",
+                         b'\x2b\x2f\x76\x39': "utf_7",
+                         b'\x2b\x2f\x76\x2b': "utf_7",
+                         b'\x2b\x2f\x76\x2f': "utf_7"}
+            for bom in encodings:
+                if tmp.startswith(bom):
+                    return tmp[len(bom):].decode(encodings[bom])
+
         return tmp if binary else decode_text(tmp)
 
 
