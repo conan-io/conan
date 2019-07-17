@@ -395,6 +395,7 @@ VAR2=23
         info["B"].lib = "libB"
         info["B"].deps = []
         _assert_link_order(DepCppInfo(info).libs)
+        self.assertEqual(["libC", "libF", "libD", "libA", "libE", "libB"], DepCppInfo(info).libs)
 
         info = CppInfo(None)
         info["K"].lib = "libK"
@@ -422,6 +423,8 @@ VAR2=23
         info["B"].lib = "libB"
         info["B"].deps = []
         _assert_link_order(DepCppInfo(info).libs)
+        self.assertEqual(["libL", "libI", "libK", "libH", "libE", "libB", "libG", "libJ", "libF",
+                          "libD", "libC", "libA"], DepCppInfo(info).libs)
 
     def cppinfo_inexistent_component_dep_test(self):
         info = CppInfo(None)
