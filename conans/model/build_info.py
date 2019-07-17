@@ -187,7 +187,10 @@ class DepCppInfo(object):
     def __getitem__(self, key):
         return self._components[key]
 
-    def _filter_paths(self, paths):
+    def _abs_filter_paths(self, paths):
+        """
+        Get absolute paths and filter the empty directories if needed
+        """
         abs_paths = [os.path.join(self.rootpath, p) for p in paths]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
@@ -199,7 +202,7 @@ class DepCppInfo(object):
         Get the absolute paths either composing the lists from components or from the global
         variables. Also filter the values checking if the folders exist or not and avoid repeated
         values.
-        :param path_name: name of the path variable to get (include_paths, res_paths...)
+        :param path_name: name of the type of path (include, bin, res...) to get the values from
         :return: List of absolute paths
         """
         result = []
@@ -207,12 +210,12 @@ class DepCppInfo(object):
             components = self._sorted_components
             components.reverse()
             for dep_value in components:
-                abs_paths = self._filter_paths(getattr(dep_value, "%s_paths" % path_name))
+                abs_paths = self._abs_filter_paths(getattr(dep_value, "%s_paths" % path_name))
                 for path in abs_paths:
                     if path not in result:
                         result.append(path)
         else:
-            result = self._filter_paths(getattr(self, "_%sdirs" % path_name))
+            result = self._abs_filter_paths(getattr(self, "_%sdirs" % path_name))
         return result
 
     def _get_dirs(self, name):

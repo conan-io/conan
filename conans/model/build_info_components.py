@@ -102,7 +102,10 @@ class DepComponent(object):
         self._exelinkflags = component.exelinkflags
         self._filter_empty = component.filter_empty
 
-    def _filter_paths(self, paths):
+    def _abs_filter_paths(self, paths):
+        """
+        Get absolute paths and filter the empty directories if needed
+        """
         abs_paths = [os.path.join(self._rootpath, p) for p in paths]
         if self._filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
@@ -159,27 +162,27 @@ class DepComponent(object):
 
     @property
     def include_paths(self):
-        return self._filter_paths(self._includedirs)
+        return self._abs_filter_paths(self._includedirs)
 
     @property
     def lib_paths(self):
-        return self._filter_paths(self._libdirs)
+        return self._abs_filter_paths(self._libdirs)
 
     @property
     def bin_paths(self):
-        return self._filter_paths(self._bindirs)
+        return self._abs_filter_paths(self._bindirs)
 
     @property
     def build_paths(self):
-        return self._filter_paths(self._builddirs)
+        return self._abs_filter_paths(self._builddirs)
 
     @property
     def res_paths(self):
-        return self._filter_paths(self._resdirs)
+        return self._abs_filter_paths(self._resdirs)
 
     @property
     def src_paths(self):
-        return self._filter_paths(self._srcdirs)
+        return self._abs_filter_paths(self._srcdirs)
 
     @property
     def defines(self):
