@@ -165,8 +165,8 @@ class CmdUpload(object):
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
                         if ref.revision != rec_rev:
-                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the "
-                                                   "current recipe revision" % package_id)
+                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the"
+                                                   " current recipe revision" % package_id)
                             continue
                     package_revision = metadata.packages[package_id].revision
                     assert package_revision is not None, "PREV cannot be None to upload"
@@ -383,8 +383,8 @@ class CmdUpload(object):
             if remote_manifest == local_manifest:
                 return None, None
             if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. Forbidden "
-                                     "overwrite.")
+                raise ConanException("Local package is different from the remote package. Forbidden"
+                                     " overwrite.")
         deleted = set(remote_snapshot).difference(the_files)
         return the_files, deleted
 
@@ -520,9 +520,9 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
         if output and n_files > 1 and not output.is_terminal:
             output.write("[")
         elif output and n_files > 1 and output.is_terminal:
-            progress_bar = tqdm(total=len(files), desc="Compressing package...", 
-                                unit="files", leave=False, dynamic_ncols=True,
-                                ascii=False)
+            progress_bar = tqdm(total=len(files), desc="Compressing %s" % name,
+                                unit="files", leave=True, dynamic_ncols=False,
+                                ascii=True, file=output)
 
         for filename, abs_path in sorted(files.items()):
             info = tarfile.TarInfo(name=filename)
@@ -544,13 +544,11 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                         output.write('=' * (units - (last_progress or 0)))
                     last_progress = units
                 if output.is_terminal:
-                    progress_bar.set_description("Compressing package: %s/%s files" % (i_file, n_files))
-                    progress_bar.update()                    
+                    progress_bar.update()
 
         if output and n_files > 1:
             if output.is_terminal:
                 progress_bar.close()
-                output.rewrite_line("{} [done]".format(progress_bar.desc))
             else:
                 output.writeln("]")
         tgz.close()

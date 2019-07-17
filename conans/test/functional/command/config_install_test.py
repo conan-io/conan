@@ -8,7 +8,6 @@ import zipfile
 import six
 from mock import patch
 
-from conans.client import tools
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
@@ -153,14 +152,16 @@ class ConfigInstallTest(unittest.TestCase):
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "windows")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.cache.profiles_path,
+                                           "windows")).splitlines(),
                          win_profile.splitlines())
         conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
         self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
         self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
         self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
-        self.assertEqual(conan_conf.get_item("general.default_package_id_mode"), "full_package_mode")
+        self.assertEqual(conan_conf.get_item("general.default_package_id_mode"),
+                         "full_package_mode")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
@@ -168,19 +169,20 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
-                         load(os.path.join(self.client.cache.cache_folder, "pylintrc")))
+                         load(os.path.join(self.client.cache_folder, "pylintrc")))
         self.assertEqual("",
-                         load(os.path.join(self.client.cache.cache_folder, "python", "__init__.py")))
+                         load(os.path.join(self.client.cache_folder, "python",
+                                           "__init__.py")))
         self.assertEqual("#hook dummy",
-                         load(os.path.join(self.client.cache.cache_folder, "hooks", "dummy")))
+                         load(os.path.join(self.client.cache_folder, "hooks", "dummy")))
         self.assertEqual("#hook foo",
-                         load(os.path.join(self.client.cache.cache_folder, "hooks", "foo.py")))
+                         load(os.path.join(self.client.cache_folder, "hooks", "foo.py")))
         self.assertEqual("#hook custom",
-                         load(os.path.join(self.client.cache.cache_folder, "hooks", "custom",
+                         load(os.path.join(self.client.cache_folder, "hooks", "custom",
                                            "custom.py")))
-        self.assertFalse(os.path.exists(os.path.join(self.client.cache.cache_folder, "hooks",
+        self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, "hooks",
                                                      ".git")))
-        self.assertFalse(os.path.exists(os.path.join(self.client.cache.cache_folder, ".git")))
+        self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, ".git")))
 
     def reuse_python_test(self):
         zippath = self._create_zip()
@@ -218,9 +220,9 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "hello",
                             "subf/subf/file2.txt": "bye"})
         self.client.run('config install "%s" -sf=subf -tf=newsubf' % folder)
-        content = load(os.path.join(self.client.cache.cache_folder, "newsubf/file.txt"))
+        content = load(os.path.join(self.client.cache_folder, "newsubf/file.txt"))
         self.assertEqual(content, "hello")
-        content = load(os.path.join(self.client.cache.cache_folder, "newsubf/subf/file2.txt"))
+        content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
     def install_multiple_configs_test(self):
@@ -228,8 +230,8 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "hello",
                             "subf2/file2.txt": "bye"})
         self.client.run('config install "%s" -sf=subf' % folder)
-        content = load(os.path.join(self.client.cache.cache_folder, "file.txt"))
-        file2 = os.path.join(self.client.cache.cache_folder, "file2.txt")
+        content = load(os.path.join(self.client.cache_folder, "file.txt"))
+        file2 = os.path.join(self.client.cache_folder, "file2.txt")
         self.assertEqual(content, "hello")
         self.assertFalse(os.path.exists(file2))
         self.client.run('config install "%s" -sf=subf2' % folder)
@@ -238,7 +240,7 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "HELLO!!",
                             "subf2/file2.txt": "BYE!!"})
         self.client.run('config install')
-        content = load(os.path.join(self.client.cache.cache_folder, "file.txt"))
+        content = load(os.path.join(self.client.cache_folder, "file.txt"))
         self.assertEqual(content, "HELLO!!")
         content = load(file2)
         self.assertEqual(content, "BYE!!")
@@ -338,12 +340,12 @@ class Pkg(ConanFile):
         """
 
         folder = self._create_profile_folder()
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % folder)
         check_path = os.path.join(folder, ".git")
@@ -354,12 +356,12 @@ class Pkg(ConanFile):
         absolute_folder = os.path.join(self.client.current_folder, "config")
         mkdir(absolute_folder)
         folder = self._create_profile_folder(absolute_folder)
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % relative_folder)
         self._check("git, %s, True, None" % os.path.join("%s" % folder, ".git"))
@@ -369,12 +371,12 @@ class Pkg(ConanFile):
         """
 
         folder = self._create_profile_folder()
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git" --args="-c init.templateDir=value"' % folder)
         check_path = os.path.join(folder, ".git")
@@ -461,18 +463,18 @@ class Pkg(ConanFile):
 
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
-            self.client.runner('git checkout -b other_branch')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+            self.client.run_command('git checkout -b other_branch')
             save(os.path.join(folder, "hooks", "cust", "cust.py"), "")
-            self.client.runner('git add .')
-            self.client.runner('git commit -m "my file"')
-            self.client.runner('git tag 0.0.1')
-            self.client.runner('git checkout master')
+            self.client.run_command('git add .')
+            self.client.run_command('git commit -m "my file"')
+            self.client.run_command('git tag 0.0.1')
+            self.client.run_command('git checkout master')
 
         # Without checkout
         self.client.run('config install "%s/.git"' % folder)
@@ -491,13 +493,13 @@ class Pkg(ConanFile):
         self._check("git, %s, True, -b other_branch" % check_path)
         self.assertTrue(os.path.exists(file_path))
         # Add changes to that branch and update
-        with tools.chdir(folder):
-            self.client.runner('git checkout other_branch')
+        with self.client.chdir(folder):
+            self.client.run_command('git checkout other_branch')
             save(os.path.join(folder, "hooks", "other", "other.py"), "")
-            self.client.runner('git add .')
-            self.client.runner('git commit -m "my other file"')
-            self.client.runner('git checkout master')
-        other_path = os.path.join(self.client.cache.cache_folder, "hooks", "other", "other.py")
+            self.client.run_command('git add .')
+            self.client.run_command('git commit -m "my other file"')
+            self.client.run_command('git checkout master')
+        other_path = os.path.join(self.client.cache_folder, "hooks", "other", "other.py")
         self.assertFalse(os.path.exists(other_path))
         self.client.run('config install')
         check_path = os.path.join(folder, ".git")

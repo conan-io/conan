@@ -148,7 +148,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
+        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
 
     def test_version_full_recipe_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -171,7 +171,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
+        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
 
         # If we change only the package ID from hello (one more defaulted option to True) should not affect
         self._export("Hello", "1.2.0", package_id_text=None, requires=None, default_option_value="on")
@@ -201,8 +201,8 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
-        self.assertIn("Package ID:", self.client.user_io.out)
+        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
+        self.assertIn("Package ID:", self.client.out)
 
     def test_nameless_mode(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)

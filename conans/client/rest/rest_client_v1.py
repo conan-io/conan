@@ -1,7 +1,7 @@
 import os
+import time
 import traceback
 
-import time
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
 from conans.client.remote_manager import check_compressed_files

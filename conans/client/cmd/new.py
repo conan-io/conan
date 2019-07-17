@@ -267,7 +267,8 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
     if bare and (header or exports_sources):
         raise ConanException("'bare' is incompatible with 'header' and 'sources'")
     if template and (header or exports_sources or bare):
-        raise ConanException("'template' argument incompatible with 'header', 'sources', and 'bare'")
+        raise ConanException("'template' argument incompatible with 'header', "
+                             "'sources', and 'bare'")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,

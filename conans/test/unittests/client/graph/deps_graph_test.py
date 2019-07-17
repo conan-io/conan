@@ -35,8 +35,8 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_node(n1)
         deps.add_node(n2)
         deps.add_node(n3)
-        deps.add_edge(n1, n2)
-        deps.add_edge(n2, n3)
+        deps.add_edge(n1, n2, None)
+        deps.add_edge(n2, n3, None)
         self.assertEqual([[n3], [n2], [n1]], deps.by_levels())
 
     def multi_levels_test(self):
@@ -54,9 +54,9 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_node(n2)
         deps.add_node(n32)
         deps.add_node(n31)
-        deps.add_edge(n1, n2)
-        deps.add_edge(n2, n31)
-        deps.add_edge(n2, n32)
+        deps.add_edge(n1, n2, None)
+        deps.add_edge(n2, n31, None)
+        deps.add_edge(n2, n32, None)
         self.assertEqual([[n31, n32], [n2], [n1]], deps.by_levels())
 
     def multi_levels_test2(self):
@@ -78,10 +78,10 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_node(n2)
         deps.add_node(n32)
         deps.add_node(n31)
-        deps.add_edge(n1, n2)
-        deps.add_edge(n1, n5)
-        deps.add_edge(n2, n31)
-        deps.add_edge(n2, n32)
+        deps.add_edge(n1, n2, None)
+        deps.add_edge(n1, n5, None)
+        deps.add_edge(n2, n31, None)
+        deps.add_edge(n2, n32, None)
         self.assertEqual([[n5, n31, n32], [n2], [n1]], deps.by_levels())
 
     def multi_levels_test3(self):
@@ -103,9 +103,9 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_node(n2)
         deps.add_node(n32)
         deps.add_node(n31)
-        deps.add_edge(n1, n2)
-        deps.add_edge(n1, n5)
-        deps.add_edge(n2, n31)
-        deps.add_edge(n2, n32)
-        deps.add_edge(n32, n5)
+        deps.add_edge(n1, n2, None)
+        deps.add_edge(n1, n5, None)
+        deps.add_edge(n2, n31, None)
+        deps.add_edge(n2, n32, None)
+        deps.add_edge(n32, n5, None)
         self.assertEqual([[n5, n31], [n32], [n2], [n1]], deps.by_levels())

@@ -90,7 +90,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient()
         client.run("upload some_nonsense", assert_error=True)
         self.assertIn("ERROR: No packages found matching pattern 'some_nonsense'",
-                      client.user_io.out)
+                      client.out)
 
     def invalid_reference_error_test(self):
         """ Trying to upload an invalid reference must raise an Error
@@ -98,7 +98,7 @@ class UploadTest(unittest.TestCase):
         client = TestClient()
         client.run("upload some_nonsense -p hash1", assert_error=True)
         self.assertIn("ERROR: -p parameter only allowed with a valid recipe reference",
-                      client.user_io.out)
+                      client.out)
 
     def non_existing_recipe_error_test(self):
         """ Trying to upload a non-existing recipe must raise an Error
@@ -162,9 +162,9 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all")
-        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
-        self.assertIn("Uploading conan_package.tgz", client.user_io.out)
-        self.assertIn("Uploading conanfile.py", client.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client.out)
+        self.assertIn("Uploading conan_package.tgz", client.out)
+        self.assertIn("Uploading conanfile.py", client.out)
 
     def query_upload_test(self):
         client = self._client()
@@ -177,24 +177,24 @@ class UploadTest(unittest.TestCase):
         # Check that the right number of packages are picked up by the queries
         client.run("upload Hello1/*@user/testing --confirm -q 'os=Windows or os=Macos'")
         for i in range(1, 5):
-            self.assertIn("Uploading package %d/4" % i, client.user_io.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.user_io.out)
+            self.assertIn("Uploading package %d/4" % i, client.out)
+        self.assertNotIn("Package is up to date, upload skipped", client.out)
 
         client.run("upload Hello1/*@user/testing --confirm -q 'os=Linux and arch=x86_64'")
-        self.assertIn("Uploading package 1/1", client.user_io.out)
+        self.assertIn("Uploading package 1/1", client.out)
 
         client.run("upload Hello1/*@user/testing --confirm -q 'arch=armv8'")
         for i in range(1, 4):
-            self.assertIn("Uploading package %d/3" % i, client.user_io.out)
-        self.assertIn("Package is up to date, upload skipped", client.user_io.out)
+            self.assertIn("Uploading package %d/3" % i, client.out)
+        self.assertIn("Package is up to date, upload skipped", client.out)
 
         # Check that a query not matching any packages doesn't upload any packages
         client.run("upload Hello1/*@user/testing --confirm -q 'arch=sparc'")
-        self.assertNotIn("Uploading package", client.user_io.out)
+        self.assertNotIn("Uploading package", client.out)
 
         # Check that an invalid query fails
         client.run("upload Hello1/*@user/testing --confirm -q 'blah blah blah'", assert_error=True)
-        self.assertIn("Invalid package query", client.user_io.out)
+        self.assertIn("Invalid package query", client.out)
 
     def broken_sources_tgz_test(self):
         # https://github.com/conan-io/conan/issues/2854
@@ -217,8 +217,8 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm")
-        self.assertIn("WARN: Hello0/1.2.1@user/testing: Removing conan_sources.tgz, marked as dirty",
-                      client.out)
+        self.assertIn("WARN: Hello0/1.2.1@user/testing: Removing conan_sources.tgz, "
+                      "marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -264,9 +264,9 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload Hello0/1.2.1@frodo/stable --all --check", assert_error=True)
-        self.assertIn("WARN: Mismatched checksum 'added.txt'", client.user_io.out)
-        self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.user_io.out)
-        self.assertIn("ERROR: Cannot upload corrupted package", client.user_io.out)
+        self.assertIn("WARN: Mismatched checksum 'added.txt'", client.out)
+        self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.out)
+        self.assertIn("ERROR: Cannot upload corrupted package", client.out)
 
     def upload_modified_recipe_test(self):
         client = self._client()
@@ -275,7 +275,7 @@ class UploadTest(unittest.TestCase):
                      "hello.cpp": "int i=0"})
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
-        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
                       client.out)
 
@@ -288,20 +288,20 @@ class UploadTest(unittest.TestCase):
         manifest.time += 10
         manifest.save(client2.cache.package_layout(ref).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
-        self.assertIn("Uploading conanmanifest.txt", client2.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client2.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
                       client2.out)
 
         # first client tries to upload again
         if not client.cache.config.revisions_enabled:
             client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
-            self.assertIn("Remote recipe is newer than local recipe", client.user_io.out)
-            self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.user_io.out)
-            self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.user_io.out)
+            self.assertIn("Remote recipe is newer than local recipe", client.out)
+            self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.out)
+            self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.out)
         else:
             # The client tries to upload exactly the same revision already uploaded, so no changes
             client.run("upload Hello0/1.2.1@frodo/stable")
-            self.assertIn("Recipe is up to date, upload skipped", client.user_io.out)
+            self.assertIn("Recipe is up to date, upload skipped", client.out)
 
     def upload_unmodified_recipe_test(self):
         client = self._client()
@@ -310,7 +310,7 @@ class UploadTest(unittest.TestCase):
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
-        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
                       client.out)
 
@@ -529,29 +529,29 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip-upload")
 
         # dry run should not upload
-        self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)
+        self.assertNotIn("Uploading conan_package.tgz", client.out)
 
         # but dry run should compress
-        self.assertIn("Compressing recipe...", client.user_io.out)
-        self.assertIn("Compressing package...", client.user_io.out)
+        self.assertIn("Compressing recipe...", client.out)
+        self.assertIn("Compressing package...", client.out)
 
         client.run("search -r default")
         # after dry run nothing should be on the server ...
-        self.assertNotIn("Hello0/1.2.1@frodo/stable", client.user_io.out)
+        self.assertNotIn("Hello0/1.2.1@frodo/stable", client.out)
 
         # now upload, the stuff should NOT be recompressed
         client.run("upload Hello0/1.2.1@frodo/stable -r default --all")
 
         # check for upload message
-        self.assertIn("Uploading conan_package.tgz", client.user_io.out)
+        self.assertIn("Uploading conan_package.tgz", client.out)
 
         # check if compressed files are re-used
-        self.assertNotIn("Compressing recipe...", client.user_io.out)
-        self.assertNotIn("Compressing package...", client.user_io.out)
+        self.assertNotIn("Compressing recipe...", client.out)
+        self.assertNotIn("Compressing package...", client.out)
 
         # now it should be on the server
         client.run("search -r default")
-        self.assertIn("Hello0/1.2.1@frodo/stable", client.user_io.out)
+        self.assertIn("Hello0/1.2.1@frodo/stable", client.out)
 
     def upload_without_sources_test(self):
         client = self._client()
@@ -705,7 +705,8 @@ class Pkg(ConanFile):
         client = self._client()
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing:{} -q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
+        client.run("upload Hello0/1.2.1@user/testing:{} "
+                   "-q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with full reference", client.out)
@@ -714,7 +715,8 @@ class Pkg(ConanFile):
         client = self._client()
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
-        client.run("upload Hello0/1.2.1@user/testing -p {} -q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
+        client.run("upload Hello0/1.2.1@user/testing -p {} "
+                   "-q 'os=Windows or os=Macos'".format(NO_SETTINGS_PACKAGE_ID),
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with '--package'", client.out)

@@ -79,17 +79,17 @@ class HelloReuseConan(ConanFile):
 
     def test_create(self):
         self.client.run("create . lasote/stable")
-        self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.user_io.out)
-        self.assertIn("Hello/0.1@lasote/stable: Building lasote/stable", self.client.user_io.out)
-        self.assertNotIn("other/testing", self.client.user_io.out)
+        self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
+        self.assertIn("Hello/0.1@lasote/stable: Building lasote/stable", self.client.out)
+        self.assertNotIn("other/testing", self.client.out)
 
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile.replace("lasote/stable",
                                                                            "other/testing")})
         self.client.run("create . other/testing")
-        self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.user_io.out)
-        self.assertIn("Hello/0.1@other/testing: Building other/testing", self.client.user_io.out)
-        self.assertNotIn("lasote/stable", self.client.user_io.out)
+        self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
+        self.assertIn("Hello/0.1@other/testing: Building other/testing", self.client.out)
+        self.assertNotIn("lasote/stable", self.client.out)
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
@@ -107,14 +107,14 @@ class HelloReuseConan(ConanFile):
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install .")
-        self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.user_io.out)
-        self.assertNotIn("other/testing", self.client.user_io.out)
+        self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
+        self.assertNotIn("other/testing", self.client.out)
 
         os.environ["CONAN_USERNAME"] = "other"
         os.environ["CONAN_CHANNEL"] = "testing"
         self.client.run("install .")
-        self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.user_io.out)
-        self.assertNotIn("lasote/stable", self.client.user_io.out)
+        self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
+        self.assertNotIn("lasote/stable", self.client.out)
 
         del os.environ["CONAN_USERNAME"]
         del os.environ["CONAN_CHANNEL"]

@@ -43,6 +43,6 @@ class SharedChainTest(unittest.TestCase):
         client.run("build .")
         command = os.sep.join([".", "bin", "say_hello"])
 
-        client.runner(command, cwd=client.current_folder)
+        client.run_command(command)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],
-                         str(client.user_io.out).splitlines()[-3:])
+                         str(client.out).splitlines()[-3:])

@@ -262,7 +262,8 @@ class RemoteRegistry(object):
         if url:
             address = urlparse(url)
             if not all([address.scheme, address.netloc]):
-                self._output.warn("The URL '%s' is invalid. It must contain scheme and hostname." % url)
+                self._output.warn("The URL '%s' is invalid. It must contain scheme and hostname."
+                                  % url)
         else:
             self._output.warn("The URL is empty. It must contain scheme and hostname.")
 
