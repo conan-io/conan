@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+import multiprocessing
 from multiprocessing.pool import ThreadPool
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
@@ -185,7 +186,15 @@ class RestV1Methods(RestCommonMethods):
             ret[filename] = abs_path
 
         results = self.threadpool.imap_unordered(_download_single, sorted(file_urls.items(), reverse=True))
-        [r for r in results]  # wait for the results
+        # wait for the jobs, carefully, to avoid infinite lock and let the main thread process events,
+        # like KeyboardInterrupt
+        while True:
+            try:
+                results.next(timeout=100)
+            except multiprocessing.TimeoutError:
+                pass
+            except StopIteration:
+                break
 
         return ret
 
