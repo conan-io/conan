@@ -495,7 +495,7 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-def create_local_git_repo(files=None, branch=None, submodules=None, folder=None):
+def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1, tags=None):
     tmp = folder or temp_folder()
     tmp = get_cased_path(tmp)
     if files:
@@ -509,7 +509,12 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None)
         git.run("checkout -b %s" % branch)
 
     git.run("add .")
-    git.run('commit -m  "commiting"')
+    for i in range(0, commits):
+        git.run('commit --allow-empty -m "commiting"')
+
+    tags = tags or []
+    for tag in tags:
+        git.run("tag %s" % tag)
 
     if submodules:
         for submodule in submodules:
