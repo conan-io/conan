@@ -244,7 +244,7 @@ class HelloConan(ConanFile):
                       client.out)
         self.assertIn("COMP ISS System deps: %s" % expected_comp_iss_system_deps, client.out)
 
-    def package_info_diaomond_order_consumer_test(self):
+    def package_info_diamond_order_consumer_test(self):
         """
         Check that the value order in deps_cpp_info is the same one when those are recovered from
         conanbuildinfo.txt (consumer case)
