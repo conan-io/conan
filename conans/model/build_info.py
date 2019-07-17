@@ -246,6 +246,10 @@ class DepCppInfo(object):
 
     @property
     def _sorted_components(self):
+        """
+        Sort Components from less dependent one first to the most dependent one last
+        :return: List of sorted components
+        """
         ordered = OrderedDict()
         while len(ordered) != len(self._components):
             # Search for next element to be processed
