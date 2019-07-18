@@ -28,7 +28,7 @@ from conans import load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
-from conans.client.conan_api import Conan, AppFactory, ConanApp
+from conans.client.conan_api import Conan
 from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -629,33 +629,6 @@ class MockedUserIO(UserIO):
         return tmp
 
 
-class TestAppFactory(AppFactory):
-    def __init__(self):
-        self.cache_folder = None
-        self.runner = None
-        # helpers
-        self.http_requester_class = None
-        self.servers = None
-        self.user_io = None
-
-    def get_app(self):
-        return ConanApp(cache_folder=self.cache_folder,
-                        user_io=self.user_io,
-                        http_requester=self.http_requester,
-                        runner=self.runner)
-
-    @property
-    def http_requester(self):
-        # Check if servers are real
-        real_servers = any(isinstance(s, (str, ArtifactoryServer))
-                           for s in self.servers.values())
-        if not real_servers:
-            if self.requester_class:
-                return self.requester_class(self.servers)
-            else:
-                return TestRequester(self.servers)
-
-
 class TestClient(object):
 
     """ Test wrap of the conans application to launch tests in the same way as
@@ -671,17 +644,14 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
-        self.app_factory = TestAppFactory()
-        self.app = None  # Lazy
 
         self.users = users
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.cache_folder = cache_folder or temp_folder(path_with_spaces)
-        self.app_factory.cache_folder = self.cache_folder
-        self.app_factory.requester_class = requester_class
-        self.app_factory.runner = runner
+        self.requester_class = requester_class
+        self.runner = runner
 
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
@@ -698,7 +668,6 @@ servers["r2"] = TestServer()
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
-        self.app_factory.servers = self.servers
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     @property
@@ -714,6 +683,17 @@ servers["r2"] = TestServer()
     @property
     def storage_folder(self):
         return self.cache.store
+
+    @property
+    def _http_requester(self):
+        # Check if servers are real
+        real_servers = any(isinstance(s, (str, ArtifactoryServer))
+                           for s in self.servers.values())
+        if not real_servers:
+            if self.requester_class:
+                return self.requester_class(self.servers)
+            else:
+                return TestRequester(self.servers)
 
     def _set_revisions(self, value):
         current_conf = load(self.cache.conan_conf_path)
@@ -735,7 +715,7 @@ servers["r2"] = TestServer()
 
     def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
         # Create the default
-        cache = ClientCache(self.cache_folder, TestBufferConanOutput())
+        cache = self.cache
         cache.config
 
         if cpu_count:
@@ -753,7 +733,7 @@ servers["r2"] = TestServer()
                             output=TestBufferConanOutput())
 
     def update_servers(self):
-        cache = ClientCache(self.cache_folder, TestBufferConanOutput())
+        cache = self.cache
         Remotes().save(cache.registry_path)
         registry = cache.registry
 
@@ -794,8 +774,9 @@ servers["r2"] = TestServer()
         else:
             self.out = TestBufferConanOutput()
         user_io = user_io or MockedUserIO(self.users, out=self.out)
-        self.app_factory.user_io = user_io
-        conan = Conan(output=self.out, user_io=user_io, app_factory=self.app_factory)
+
+        conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+                      http_requester=self.requester_class, runner=self.runner)
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
@@ -834,10 +815,6 @@ servers["r2"] = TestServer()
         self.out = output
         runner = ConanRunner(output=output)
         return runner(command, cwd=cwd or self.current_folder)
-
-    def runner(self, command, cwd=None):
-        cwd = cwd or os.getcwd()
-        return self.run_command(command, cwd)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder

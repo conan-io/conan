@@ -68,7 +68,7 @@ default_manifest_folder = '.conan_manifests'
 def api_method(f):
     def wrapper(*args, **kwargs):
         api = args[0]
-        api.app = api.app_factory.get_app()
+        api.create_app()
         try:
             curdir = get_cwd()
             log_command(f.__name__, kwargs)
@@ -134,22 +134,13 @@ def _get_conanfile_path(path, cwd, py):
     return path
 
 
-class AppFactory(object):
-    def __init__(self, user_io):
-        user_home = get_conan_user_home()
-        self.cache_folder = os.path.join(user_home, ".conan")
-        self.user_io = user_io
-
-    def get_app(self):
-        return ConanApp(self.cache_folder, self.user_io)
-
-
 class ConanApp(object):
     def __init__(self, cache_folder, user_io, http_requester=None, runner=None):
         # User IO, interaction and logging
         self.user_io = user_io
         self.out = self.user_io.out
-        self.cache = ClientCache(cache_folder, self.out)
+        self.cache_folder = cache_folder
+        self.cache = ClientCache(self.cache_folder, self.out)
         self.config = self.cache.config
         interactive = not self.config.non_interactive
         if not interactive:
@@ -198,17 +189,24 @@ class ConanAPIV1(object):
     def factory(cls):
         return cls(), None, None
 
-    def __init__(self, app_factory=None, output=None, user_io=None):
+    def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None,
+                 runner=None):
         color = colorama_initialize()
         self.out = output or ConanOutput(sys.stdout, sys.stderr, color)
         self.user_io = user_io or UserIO(out=self.out)
-        self.app_factory = app_factory or AppFactory(self.user_io)
-        self.app = self.app_factory.get_app()
+        self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
+        cache = ClientCache(self.cache_folder, self.out)
+        self.http_requester = http_requester
+        self.runner = runner
+        self.app = None  # Api calls will create a new one every call
         # Migration system
-        migrator = ClientMigrator(self.app.cache, Version(client_version), self.app.out)
+        migrator = ClientMigrator(cache, Version(client_version), self.out)
         migrator.migrate()
         # Remove in Conan 2.0
-        sys.path.append(os.path.join(self.app.cache.cache_folder, "python"))
+        sys.path.append(os.path.join(cache.cache_folder, "python"))
+
+    def create_app(self):
+        self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester, self.runner)
 
     def _init_manager(self, action_recorder):
         """Every api call gets a new recorder and new manager"""
