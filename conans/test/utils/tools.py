@@ -776,7 +776,7 @@ servers["r2"] = TestServer()
         user_io = user_io or MockedUserIO(self.users, out=self.out)
 
         conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
-                      http_requester=self.requester_class, runner=self.runner)
+                      http_requester=self._http_requester, runner=self.runner)
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
