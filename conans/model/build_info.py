@@ -331,7 +331,7 @@ class DepCppInfo(object):
 
     @property
     def includedirs(self):
-        return self._get_relative_dirs("include")
+        return self._includedirs
 
     @property
     def srcdirs(self):
