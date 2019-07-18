@@ -213,10 +213,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_READ_ONLY_CACHE": self._env_c("general.read_only_cache", "CONAN_READ_ONLY_CACHE", None),
                "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
                "CONAN_USE_ALWAYS_SHORT_PATHS": self._env_c("general.use_always_short_paths", "CONAN_USE_ALWAYS_SHORT_PATHS", None),
-               "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback",
-                                                      "CONAN_VERBOSE_TRACEBACK", None),
-               "CONAN_ERROR_ON_OVERRIDE": self._env_c("general.error_on_override",
-                                                      "CONAN_ERROR_ON_OVERRIDE", "False"),
+               "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
+               "CONAN_ERROR_ON_OVERRIDE": self._env_c("general.error_on_override", "CONAN_ERROR_ON_OVERRIDE", "False"),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
                "CONAN_CMAKE_GENERATOR_PLATFORM": self._env_c("general.cmake_generator_platform", "CONAN_CMAKE_GENERATOR_PLATFORM", None),

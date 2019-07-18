@@ -290,7 +290,6 @@ class ExportTest(unittest.TestCase):
         self.ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
         self.client.save(self.files)
         self.client.run("export . lasote/stable", assert_error=True)
-
         self.assertIn("ERROR: Cannot export package with same name but different case",
                       self.client.out)
 

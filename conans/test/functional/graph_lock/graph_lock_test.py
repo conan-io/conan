@@ -3,9 +3,8 @@ import os
 import textwrap
 import unittest
 
-from conans.model.ref import ConanFileReference
-
 from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
+from conans.model.ref import ConanFileReference
 from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
