@@ -23,31 +23,36 @@ def args_to_string(args):
         return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
 
 
-def cpu_count(output=None):
-    output = default_output(output, 'conans.client.tools.oss.cpu_count')
+class CpuProperties(object):
 
-    def get_cpu_quota():
+    def get_cpu_quota(self):
         return int(load("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"))
 
-    def get_cpu_period():
+    def get_cpu_period(self):
         return int(load("/sys/fs/cgroup/cpu/cpu.cfs_period_us"))
 
-    def get_cpus():
+    def get_cpus(self):
         try:
-            cfs_quota_us = get_cpu_quota()
-            cfs_period_us = get_cpu_period()
+            cfs_quota_us = self.get_cpu_quota()
+            cfs_period_us = self.get_cpu_period()
             if cfs_quota_us > 0 and cfs_period_us > 0:
                 return int(math.ceil(cfs_quota_us / cfs_period_us))
         except:
             pass
         return multiprocessing.cpu_count()
 
+
+def cpu_count(output=None):
     try:
+        cpu = CpuProperties()
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         if env_cpu_count is not None and not env_cpu_count.isdigit():
             raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
                                  "please specify a positive integer" % env_cpu_count)
-        return int(env_cpu_count) if env_cpu_count else get_cpus()
+        if env_cpu_count:
+            return int(env_cpu_count)
+        else:
+            return cpu.get_cpus()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
