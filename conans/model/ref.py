@@ -115,10 +115,16 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
-    def __repr__(self):
+    def __str__(self):
+        if not self.user and not self.channel:
+            return "%s/%s" % (self.name, self.version)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
-    def full_repr(self):
+    def __repr__(self):
+        str_rev = "#%s" % self.revision if self.revision else ""
+        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
+
+    def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s%s" % (str(self), str_rev)
 
@@ -161,11 +167,16 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return PackageReference(ref, package_id, validate=validate)
 
     def __repr__(self):
+        str_rev = "#%s" % self.revision if self.revision else ""
+        tmp = "%s:%s%s" % (repr(self.ref), self.id, str_rev)
+        return tmp
+
+    def __str__(self):
         return "%s:%s" % (self.ref, self.id)
 
-    def full_repr(self):
+    def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        tmp = "%s:%s%s" % (self.ref.full_repr(), self.id, str_rev)
+        tmp = "%s:%s%s" % (self.ref.full_str(), self.id, str_rev)
         return tmp
 
     def copy_with_revs(self, revision, p_revision):
