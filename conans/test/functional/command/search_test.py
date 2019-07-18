@@ -1122,11 +1122,11 @@ class Test(ConanFile):
         client.run("upload * --all --confirm")
         for remote in ("", "-r=default"):
             client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.user_io.out)
-            self.assertIn("os: Linux", client.user_io.out)
+            self.assertIn("os: Windows", client.out)
+            self.assertIn("os: Linux", client.out)
             client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
-            self.assertIn("os: Windows", client.user_io.out)
-            self.assertNotIn("os: Linux", client.user_io.out)
+            self.assertIn("os: Windows", client.out)
+            self.assertNotIn("os: Linux", client.out)
 
     def test_exception_client_without_revs(self):
         client = TestClient()

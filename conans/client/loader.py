@@ -43,17 +43,23 @@ class ConanFileLoader(object):
         self.cached_conanfiles = {}
         self._python_requires.invalidate_caches()
 
-    def load_class(self, conanfile_path):
-        conanfile = self.cached_conanfiles.get(conanfile_path)
-        if conanfile:
-            return conanfile
+    def load_class(self, conanfile_path, lock_python_requires=None):
+        cached = self.cached_conanfiles.get(conanfile_path)
+        if cached and cached[1] == lock_python_requires:
+            return cached[0]
 
+        if lock_python_requires is not None:
+            self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
         try:
             self._python_requires.valid = True
             _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
-            self.cached_conanfiles[conanfile_path] = conanfile
+
+            self._python_requires.locked_versions = None
+            self.cached_conanfiles[conanfile_path] = (conanfile, lock_python_requires)
+
             conanfile.conan_data = self._load_data(conanfile_path)
+
             return conanfile
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
@@ -70,8 +76,9 @@ class ConanFileLoader(object):
 
         return data or {}
 
-    def load_export(self, conanfile_path, name, version, user, channel):
-        conanfile = self.load_class(conanfile_path)
+    def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
+        conanfile = self.load_class(conanfile_path, lock_python_requires)
+
         # Export does a check on existing name & version
         if "name" in conanfile.__dict__:
             if name and name != conanfile.name:
@@ -107,9 +114,9 @@ class ConanFileLoader(object):
         conanfile.initialize(tmp_settings, processed_profile._env_values)
 
     def load_consumer(self, conanfile_path, processed_profile, name=None, version=None, user=None,
-                      channel=None, test=None):
+                      channel=None, test=None, lock_python_requires=None):
 
-        conanfile_class = self.load_class(conanfile_path)
+        conanfile_class = self.load_class(conanfile_path, lock_python_requires)
         if name and conanfile_class.name and name != conanfile_class.name:
             raise ConanException("Package recipe name %s!=%s" % (name, conanfile_class.name))
         if version and conanfile_class.version and version != conanfile_class.version:
@@ -139,11 +146,13 @@ class ConanFileLoader(object):
             processed_profile._user_options.clear_unscoped_options()
 
             return conanfile
+        except ConanInvalidConfiguration:
+            raise
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conanfile(self, conanfile_path, processed_profile, ref):
-        conanfile_class = self.load_class(conanfile_path)
+    def load_conanfile(self, conanfile_path, processed_profile, ref, lock_python_requires=None):
+        conanfile_class = self.load_class(conanfile_path, lock_python_requires)
         conanfile_class.name = ref.name
         conanfile_class.version = ref.version
         conanfile = conanfile_class(self._output, self._runner, str(ref), ref.user, ref.channel)
@@ -255,6 +264,7 @@ def parse_conanfile(conanfile_path, python_requires):
             conanfile = _parse_module(module, filename)
 
             # Check for duplicates
+            # TODO: move it into PythonRequires
             py_reqs = {}
             for it in py_requires:
                 if it.ref.name in py_reqs:

@@ -25,7 +25,7 @@ class LayoutTest(unittest.TestCase):
         client.save({"conanfile.py": TestConanFile("lib", "1.0"),
                      "mylayout": layout})
         client.run("editable add . {} --layout mylayout".format(ref))
-        client2 = TestClient(base_folder=client.base_folder)
+        client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": TestConanFile("app", "1.0",
                                                     requires=["lib/1.0@conan/stable"])})
         client2.run("create . user/testing")
@@ -44,7 +44,7 @@ class LayoutTest(unittest.TestCase):
                      "layout": ""})
         client.run("editable add . mytool/0.1@user/testing -l=layout")
         self.assertIn("Using layout file:", client.out)
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
@@ -76,7 +76,7 @@ class LayoutTest(unittest.TestCase):
             [{}:includedirs]
             include_{}
             """)
-        layout_folder = os.path.join(client.base_folder, LAYOUTS_FOLDER)
+        layout_folder = os.path.join(client.cache_folder, LAYOUTS_FOLDER)
         ref_str = "mytool/0.1@user/testing"
         save_files(layout_folder, {"layout_win_cache": layout_cache.format(ref_str, "win_cache"),
                                    "layout_linux_cache": layout_cache.format(ref_str,
@@ -87,7 +87,7 @@ class LayoutTest(unittest.TestCase):
                      "layout_win": layout_repo.format("win"),
                      "layout_linux": layout_repo.format("linux")})
         client.run("editable add . mytool/0.1@user/testing")
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
@@ -120,14 +120,14 @@ class LayoutTest(unittest.TestCase):
             include_{}
             """)
 
-        layout_folder = os.path.join(client.base_folder, LAYOUTS_FOLDER)
+        layout_folder = os.path.join(client.cache_folder, LAYOUTS_FOLDER)
         save_files(layout_folder, {"win/cache": layout_repo.format("win/cache"),
                                    "linux/cache": layout_repo.format("linux/cache")})
         client.save({"conanfile.py": conanfile,
                      "layout/win": layout_repo.format("layout/win"),
                      "layout/linux": layout_repo.format("layout/linux")})
         client.run("editable add . mytool/0.1@user/testing")
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
@@ -162,7 +162,7 @@ class LayoutTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
         client.run("editable add . mytool/0.1@user/testing")
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
@@ -188,7 +188,7 @@ class LayoutTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
         client.run("editable add . mytool/0.1@user/testing")
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
@@ -212,7 +212,7 @@ class LayoutTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "layout": layout_repo})
         client.run("editable add . mytool/0.1@user/testing -l=layout")
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing
@@ -250,7 +250,7 @@ class LayoutTest(unittest.TestCase):
         save(layout_path, layoutabs)
         client.save({"conanfile.py": conanfile})
         client.run('editable add . mytool/0.1@user/testing -l="%s"' % layout_path)
-        client2 = TestClient(client.base_folder)
+        client2 = TestClient(client.cache_folder)
         consumer = textwrap.dedent("""
             [requires]
             mytool/0.1@user/testing

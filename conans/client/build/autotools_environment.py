@@ -2,7 +2,7 @@ import copy
 import os
 import platform
 
-from conans.client import join_arguments
+from conans.client.build import join_arguments
 from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
                                                 build_type_flags, format_defines,
                                                 format_include_paths, format_libraries,
@@ -37,6 +37,8 @@ class AutoToolsBuildEnvironment(object):
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._os = conanfile.settings.get_safe("os")
         self._arch = conanfile.settings.get_safe("arch")
+        self._os_target = conanfile.settings.get_safe("os_target")
+        self._arch_target = conanfile.settings.get_safe("arch_target")
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
@@ -79,10 +81,19 @@ class AutoToolsBuildEnvironment(object):
         arch_detected = detected_architecture() or platform.machine()
         os_detected = detected_os() or platform.system()
 
+        if self._os_target and self._arch_target:
+            try:
+                target = get_gnu_triplet(self._os_target, self._arch_target, self._compiler)
+            except ConanException as exc:
+                self._conanfile.output.warn(str(exc))
+                target = None
+        else:
+            target = None
+
         if os_detected is None or arch_detected is None or self._arch is None or self._os is None:
-            return False, False, False
+            return False, False, target
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
-            return False, False, False
+            return False, False, target
 
         try:
             build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
@@ -94,7 +105,7 @@ class AutoToolsBuildEnvironment(object):
         except ConanException as exc:
             self._conanfile.output.warn(str(exc))
             host = None
-        return build, host, None
+        return build, host, target
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
                   pkg_config_paths=None, vars=None, use_default_install_dirs=True):

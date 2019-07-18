@@ -46,7 +46,8 @@ class PackageTester(object):
                   install_folder=test_build_folder, test=reference)
         finally:
             if delete_after_build:
-                os.chdir(base_folder)  # Required for windows where deleting the cwd is not possible.
+                # Required for windows where deleting the cwd is not possible.
+                os.chdir(base_folder)
                 rmdir(test_build_folder)
 
     @staticmethod

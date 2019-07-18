@@ -105,6 +105,15 @@ OpenCV2:other_option=Cosa #
                'OpenCV3/2.4.10@phil/stable']
         self.assertEqual(parser.requirements, exp)
 
+    def revision_parsing_test(self):
+        # Valid content
+        file_content = '''[requires]
+OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
+'''
+        parser = ConanFileTextLoader(file_content)
+        exp = ['OpenCV/2.4.10@user/stable#RREV1']
+        self.assertEqual(parser.requirements, exp)
+
     def load_conan_txt_test(self):
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable

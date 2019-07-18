@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -11,6 +12,43 @@ from conans.util.files import load
 
 
 class VersionRangesUpdatingTest(unittest.TestCase):
+
+    def update_remote_test(self):
+        # https://github.com/conan-io/conan/issues/5333
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Boost(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . boost/1.68.0@lasote/stable")
+        client.run("create . boost/1.69.0@lasote/stable")
+        client.run("create . boost/1.70.0@lasote/stable")
+        client.run("upload * -r=default --all --confirm")
+        client.run("remove * -f")
+        conanfile = textwrap.dedent("""
+            [requires]
+            boost/[>=1.68.0]@lasote/stable
+            """)
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install .")   
+        self.assertIn("boost/*@lasote/stable versions found in 'default' remote", client.out)
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+        client.run("install .")
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in local cache", client.out)
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
+
+        client.run("install . --update")
+        self.assertIn("resolved to 'boost/1.70.0@lasote/stable' in remote 'default'", client.out)
+        self.assertIn("boost/1.70.0", client.out)
+        self.assertNotIn("boost/1.69.0", client.out)
+        self.assertNotIn("boost/1.68.0", client.out)
 
     def update_test(self):
         client = TestClient(servers={"default": TestServer()},
@@ -181,7 +219,7 @@ class HelloReuseConan(ConanFile):
         self.client.run('remove "Hello0/0.*" -f')
         self.client.run("install . --build missing")
         self.assertIn("Version range '>0.1,<0.3' required by 'conanfile.py (Hello1/0.1@None/None)' "
-                      "resolved to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
+                      "resolved to 'Hello0/0.2@lasote/stable'", self.client.out)
         self.assertIn("conanfile.py (Hello1/0.1@None/None): Generated conaninfo.txt",
                       self.client.out)
 
@@ -207,10 +245,10 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Version range '~=0' required by 'conanfile.py (Hello3/0.1@None/None)' "
                           "resolved to 'Hello2/0.1@lasote/stable'", self.client.out)
             self.assertIn("Version range '>0.1,<0.3' required by 'Hello1/0.1@lasote/stable' "
-                          "resolved to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
+                          "resolved to 'Hello0/0.2@lasote/stable'", self.client.out)
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
-                          "to 'Hello0/0.2@lasote/stable'", self.client.user_io.out)
-            self.assertNotIn("Conflict", self.client.user_io.out)
+                          "to 'Hello0/0.2@lasote/stable'", self.client.out)
+            self.assertNotIn("Conflict", self.client.out)
             self.assertIn("conanfile.py (Hello3/0.1@None/None): Generated conaninfo.txt",
                           self.client.out)
 
@@ -234,10 +272,10 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Version range '~=0' required by 'conanfile.py (Hello3/0.1@None/None)' "
                           "resolved to 'Hello2/0.1@lasote/stable'", self.client.out)
             self.assertIn("Version range '>0.1,<0.3' required by 'Hello1/0.1@lasote/stable' "
-                          "resolved to 'Hello0/0.2.1@lasote/stable'", self.client.user_io.out)
+                          "resolved to 'Hello0/0.2.1@lasote/stable'", self.client.out)
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
-                          "to 'Hello0/0.2.1@lasote/stable'", self.client.user_io.out)
-            self.assertNotIn("Conflict", self.client.user_io.out)
+                          "to 'Hello0/0.2.1@lasote/stable'", self.client.out)
+            self.assertNotIn("Conflict", self.client.out)
             self.assertIn("conanfile.py (Hello3/0.1@None/None): Generated conaninfo.txt",
                           self.client.out)
 

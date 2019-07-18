@@ -129,10 +129,6 @@ class ClientV2Router(ClientCommonRouter):
     def __init__(self, base_url):
         self.base_url = "{}/v2/".format(base_url)
 
-    def recipe_latest(self, ref, path):
-        """Recipe file url"""
-        return self.base_url + self._for_recipe(ref, path)
-
     def recipe_file(self, ref, path):
         """Recipe file url"""
         return self.base_url + self._for_recipe_file(ref, path)

@@ -238,7 +238,7 @@ class TestConan(ConanFile):
                          "//Windows header")
         self._consume(client, ". -s os=Windows")
         self.assertIn("Hello/0.1@lasote/stable:3475bd55b91ae904ac96fde0f106a136ab951a5e",
-                      client.user_io.out)
+                      client.out)
 
         # Now repeat
         client.save({CONANFILE: conanfile,
@@ -247,7 +247,7 @@ class TestConan(ConanFile):
         err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows",
                          assert_error=True)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
-                      client.user_io.out)
+                      client.out)
         self.assertTrue(err)
         # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f")
@@ -262,7 +262,7 @@ class TestConan(ConanFile):
         err = client.run("export-pkg . Hello/0.1@lasote/stable -if inst", assert_error=True)
         self.assertTrue(err)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
-                      client.user_io.out)
+                      client.out)
         # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f")
         self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
@@ -291,7 +291,7 @@ class TestConan(ConanFile):
 """
         client.save({CONANFILE: consumer}, clean_first=True)
         client.run("install %s" % install_args)
-        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 
     def test_new(self):
         client = TestClient()
@@ -314,7 +314,7 @@ class TestConan(ConanFile):
 
         # ensure the recipe hash is computed and added
         client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("Outdated from recipe: False", client.user_io.out)
+        self.assertIn("Outdated from recipe: False", client.out)
 
     def test_build_folders(self):
         client = TestClient()
@@ -462,8 +462,8 @@ class TestConan(ConanFile):
 """
         client.save({CONANFILE: consumer}, clean_first=True)
         client.run("install conanfile.py -g cmake")
-        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.user_io.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.out)
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)

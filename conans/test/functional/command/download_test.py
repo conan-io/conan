@@ -196,3 +196,10 @@ class Pkg(ConanFile):
         self.assertTrue(os.path.exists(package_layout.conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
+
+    def download_not_found_reference_test(self):
+        server = TestServer()
+        servers = {"default": server}
+        client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client.run("download pkg/0.1@lasote/stable", assert_error=True)
+        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)

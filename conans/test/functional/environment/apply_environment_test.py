@@ -155,7 +155,7 @@ class MyTest(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . lasote/testing -e MYVAR=MYVALUE")
-        self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
+        self.assertIn("MYVAR==>MYVALUE", client.out)
 
     def deactivate_env_inheritance_test(self):
         client = TestClient()
@@ -328,13 +328,13 @@ virtualrunenv
                    " -s compiler.version=4.6 -s compiler.libcxx=libstdc++11"
                    " -e CXX=/mycompilercxx -e CC=/mycompilercc")
 
-        self.assertIn("COMPILER: Hello0=>gcc", client.user_io.out)
-        self.assertIn("CXX: Hello0=>/mycompilercxx", client.user_io.out)
-        self.assertIn("CC: Hello0=>/mycompilercc", client.user_io.out)
+        self.assertIn("COMPILER: Hello0=>gcc", client.out)
+        self.assertIn("CXX: Hello0=>/mycompilercxx", client.out)
+        self.assertIn("CC: Hello0=>/mycompilercc", client.out)
 
-        self.assertIn("COMPILER: Hello1=>gcc", client.user_io.out)
-        self.assertIn("CXX: Hello1=>/mycompilercxx", client.user_io.out)
-        self.assertIn("CC: Hello1=>/mycompilercc", client.user_io.out)
+        self.assertIn("COMPILER: Hello1=>gcc", client.out)
+        self.assertIn("CXX: Hello1=>/mycompilercxx", client.out)
+        self.assertIn("CC: Hello1=>/mycompilercc", client.out)
 
         # Different for Hello0
         client.run("install Hello1/1.0@lasote/stable --build -s compiler=gcc"
@@ -344,13 +344,13 @@ virtualrunenv
                    " -s Hello0:compiler.libcxx=libstdc++"
                    " -e Hello0:CXX=/othercompilercxx -e Hello0:CC=/othercompilercc")
 
-        self.assertIn("COMPILER: Hello0=>clang", client.user_io.out)
-        self.assertIn("CXX: Hello0=>/othercompilercxx", client.user_io.out)
-        self.assertIn("CC: Hello0=>/othercompilercc", client.user_io.out)
+        self.assertIn("COMPILER: Hello0=>clang", client.out)
+        self.assertIn("CXX: Hello0=>/othercompilercxx", client.out)
+        self.assertIn("CC: Hello0=>/othercompilercc", client.out)
 
-        self.assertIn("COMPILER: Hello1=>gcc", client.user_io.out)
-        self.assertIn("CXX: Hello1=>/mycompilercxx", client.user_io.out)
-        self.assertIn("CC: Hello1=>/mycompilercc", client.user_io.out)
+        self.assertIn("COMPILER: Hello1=>gcc", client.out)
+        self.assertIn("CXX: Hello1=>/mycompilercxx", client.out)
+        self.assertIn("CC: Hello1=>/mycompilercc", client.out)
 
     def conan_profile_unscaped_env_var_test(self):
 
@@ -485,26 +485,26 @@ class Hello2Conan(ConanFile):
         client.save(files)
         client.run("install . --build missing")
         client.run("build .")
-        self.assertIn("VAR1=>99", client.user_io.out)
+        self.assertIn("VAR1=>99", client.out)
 
         # Now specify a different value in command Line, but conaninfo already exists
         # So you cannot override it from command line without deleting the conaninfo.TXTGenerator
         client.run("install . -e VAR1=100 --build missing")
         client.run("build .")
-        self.assertIn("VAR1=>100", client.user_io.out)
+        self.assertIn("VAR1=>100", client.out)
 
         # Remove conaninfo
         os.remove(os.path.join(client.current_folder, CONANINFO))
         client.run("install . -e VAR1=100 --build missing")
         client.run("build .")
-        self.assertIn("VAR1=>100", client.user_io.out)
+        self.assertIn("VAR1=>100", client.out)
 
         # Now from a profile
         os.remove(os.path.join(client.current_folder, CONANINFO))
         client.save({"myprofile": "[env]\nVAR1=102"}, clean_first=False)
         client.run("install . --profile ./myprofile --build missing")
         client.run("build .")
-        self.assertIn("VAR1=>102", client.user_io.out)
+        self.assertIn("VAR1=>102", client.out)
 
     def test_complex_deps_propagation(self):
         client = TestClient()
@@ -516,9 +516,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
         client.run("build .")
-        self.assertIn("VAR1=>800*", client.user_io.out)
-        self.assertIn("VAR2=>24*", client.user_io.out)
-        self.assertIn("VAR3=>22*", client.user_io.out)
+        self.assertIn("VAR1=>800*", client.out)
+        self.assertIn("VAR2=>24*", client.out)
+        self.assertIn("VAR3=>22*", client.out)
 
     def assertInSep(self, string, output):
         string = string.replace(":", os.pathsep)
@@ -536,9 +536,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
         client.run("build .")
-        self.assertInSep("VAR1=>700:800:900*" % {"sep": os.pathsep}, client.user_io.out)
-        self.assertInSep("VAR2=>24:23*" % {"sep": os.pathsep}, client.user_io.out)
-        self.assertInSep("VAR3=>45*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900*" % {"sep": os.pathsep}, client.out)
+        self.assertInSep("VAR2=>24:23*" % {"sep": os.pathsep}, client.out)
+        self.assertInSep("VAR3=>45*", client.out)
 
         # Try other configuration
         self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23", "VAR3": "-23"})
@@ -548,9 +548,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
         client.run("build .")
-        self.assertInSep("VAR1=>700:800:900*", client.user_io.out)
-        self.assertInSep("VAR2=>24:23*", client.user_io.out)
-        self.assertInSep("VAR3=>23*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900*", client.out)
+        self.assertInSep("VAR2=>24:23*", client.out)
+        self.assertInSep("VAR3=>23*", client.out)
 
         # Try injecting some ENV in the install
         self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23", "VAR3": "-23"})
@@ -560,9 +560,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e VAR1=[override] -e VAR3=SIMPLE")
         client.run("build .")
-        self.assertInSep("VAR1=>override:700:800:900", client.user_io.out)
-        self.assertInSep("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>SIMPLE*", client.user_io.out)
+        self.assertInSep("VAR1=>override:700:800:900", client.out)
+        self.assertInSep("VAR2=>24:23*", client.out)
+        self.assertIn("VAR3=>SIMPLE*", client.out)
 
     def test_override_simple(self):
         client = TestClient()
@@ -574,9 +574,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_A:VAR3=override")
         client.run("build .")
-        self.assertInSep("VAR1=>700:800:900", client.user_io.out)
-        self.assertInSep("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>-23*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900", client.out)
+        self.assertInSep("VAR2=>24:23*", client.out)
+        self.assertIn("VAR3=>-23*", client.out)
 
     def test_override_simple2(self):
         client = TestClient()
@@ -587,22 +587,22 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e VAR3=override")
-        self.assertIn("Building LIB_A, VAR1:None", client.user_io.out)
-        self.assertIn("Building LIB_A, VAR2:None", client.user_io.out)
-        self.assertIn("Building LIB_A, VAR3:override", client.user_io.out)
+        self.assertIn("Building LIB_A, VAR1:None", client.out)
+        self.assertIn("Building LIB_A, VAR2:None", client.out)
+        self.assertIn("Building LIB_A, VAR3:override", client.out)
 
-        self.assertIn("Building LIB_B, VAR1:900", client.user_io.out)
-        self.assertIn("Building LIB_B, VAR2:23", client.user_io.out)
-        self.assertIn("Building LIB_B, VAR3:override", client.user_io.out)
+        self.assertIn("Building LIB_B, VAR1:900", client.out)
+        self.assertIn("Building LIB_B, VAR2:23", client.out)
+        self.assertIn("Building LIB_B, VAR3:override", client.out)
 
-        self.assertIn("Building LIB_C, VAR1:800", client.user_io.out)
-        self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
-        self.assertIn("Building LIB_C, VAR3:override", client.user_io.out)
+        self.assertIn("Building LIB_C, VAR1:800", client.out)
+        self.assertIn("Building LIB_C, VAR2:24", client.out)
+        self.assertIn("Building LIB_C, VAR3:override", client.out)
 
         client.run("build .")
-        self.assertInSep("VAR1=>700:800:900", client.user_io.out)
-        self.assertInSep("VAR2=>24:23*", client.user_io.out)
-        self.assertInSep("VAR3=>override*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900", client.out)
+        self.assertInSep("VAR2=>24:23*", client.out)
+        self.assertInSep("VAR3=>override*", client.out)
 
     def test_complex_deps_propagation_override(self):
         client = TestClient()
@@ -613,22 +613,22 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_B:VAR3=override")
-        self.assertIn("Building LIB_A, VAR1:None", client.user_io.out)
-        self.assertIn("Building LIB_A, VAR2:None", client.user_io.out)
-        self.assertIn("Building LIB_A, VAR3:None", client.user_io.out)
+        self.assertIn("Building LIB_A, VAR1:None", client.out)
+        self.assertIn("Building LIB_A, VAR2:None", client.out)
+        self.assertIn("Building LIB_A, VAR3:None", client.out)
 
-        self.assertIn("Building LIB_B, VAR1:900", client.user_io.out)
-        self.assertIn("Building LIB_B, VAR2:23", client.user_io.out)
-        self.assertIn("Building LIB_B, VAR3:override", client.user_io.out)
+        self.assertIn("Building LIB_B, VAR1:900", client.out)
+        self.assertIn("Building LIB_B, VAR2:23", client.out)
+        self.assertIn("Building LIB_B, VAR3:override", client.out)
 
-        self.assertIn("Building LIB_C, VAR1:800", client.user_io.out)
-        self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
-        self.assertIn("Building LIB_C, VAR3:-23", client.user_io.out)
+        self.assertIn("Building LIB_C, VAR1:800", client.out)
+        self.assertIn("Building LIB_C, VAR2:24", client.out)
+        self.assertIn("Building LIB_C, VAR3:-23", client.out)
 
         client.run("build .")
-        self.assertInSep("VAR1=>700:800:900", client.user_io.out)
-        self.assertInSep("VAR2=>24:23*", client.user_io.out)
-        self.assertInSep("VAR3=>bestvalue*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900", client.out)
+        self.assertInSep("VAR2=>24:23*", client.out)
+        self.assertInSep("VAR3=>bestvalue*", client.out)
 
     def mix_path_case_test(self):
         client = TestClient()
