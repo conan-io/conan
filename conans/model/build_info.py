@@ -205,8 +205,8 @@ class DepCppInfo(object):
         :param path_name: name of the type of path (include, bin, res...) to get the values from
         :return: List of absolute paths
         """
-        result = []
         if self._components:
+            result = []
             components = self._sorted_components
             components.reverse()
             for dep_value in components:
@@ -226,8 +226,8 @@ class DepCppInfo(object):
         :param path_name: name of the type of path (include, bin, res...) to get the values from
         :return: List of relative paths
         """
-        result = []
         if self._components:
+            result = []
             components = self._sorted_components
             components.reverse()
             for dep_value in components:
