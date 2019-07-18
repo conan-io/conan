@@ -38,8 +38,8 @@ class RefTest(unittest.TestCase):
 
     def errors_test(self):
         self.assertRaises(ConanException, ConanFileReference.loads, "")
-        self.assertEqual(ConanFileReference.loads("opencv/2.4.10@").channel, "_")
-        self.assertEqual(ConanFileReference.loads("opencv/2.4.10@").user, "_")
+        self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).channel)
+        self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).user)
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv??/2.4.10@laso/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10 @ laso/testing")

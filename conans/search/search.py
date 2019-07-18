@@ -98,7 +98,7 @@ def search_recipes(cache, pattern=None, ignorecase=True):
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
     subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-    refs = [ConanFileReference(*folder.split("/")) for folder in subdirs]
+    refs = [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, r)]

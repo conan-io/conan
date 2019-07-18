@@ -126,9 +126,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """
     sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
-    DEFAULT_REF_USER = "_"
-    DEFAULT_REF_CHANNEL = "_"
-
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
         @param name:        string containing the desired name
@@ -140,9 +137,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         if (user and not channel) or (channel and not user):
             raise InvalidNameException("Specify the user and the revision or neither of them")
 
-        user = user or cls.DEFAULT_REF_USER
-        channel = channel or cls.DEFAULT_REF_CHANNEL
-
         version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
@@ -152,9 +146,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def _validate(self):
         ConanName.validate_name(self.name, reference_token="package name")
         ConanName.validate_name(self.version, True, reference_token="package version")
-        if self.user != self.DEFAULT_REF_USER:
+        if self.user is not None:
             ConanName.validate_name(self.user, reference_token="user name")
-        if self.channel != self.DEFAULT_REF_CHANNEL:
+        if self.channel is not None:
             ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
@@ -167,10 +161,19 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
+    @staticmethod
+    def load_dir_repr(dir_repr):
+        name, version, user, channel = dir_repr.split("/")
+        if user == "_":
+            user = None
+        if channel == "_":
+            channel = None
+        return ConanFileReference(name, version, user, channel)
+
     def __str__(self):
         if self.name is None and self.version is None:
             return ""
-        if self.user == self.DEFAULT_REF_USER and self.channel == self.DEFAULT_REF_CHANNEL:
+        if self.user is None and self.channel is None:
             return "%s/%s" % (self.name, self.version)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
@@ -183,13 +186,19 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return "%s%s" % (str(self), str_rev)
 
     def dir_repr(self):
-        return "/".join(self[:-1])
+        return "/".join([self.name, self.version, self.user or "_", self.channel or "_"])
 
     def copy_with_rev(self, revision):
         return ConanFileReference(self.name, self.version, self.user, self.channel, revision)
 
     def copy_clear_rev(self):
         return ConanFileReference(self.name, self.version, self.user, self.channel, None)
+
+    def __lt__(self, other):
+        def de_noneize(ref):
+            return ref.name, ref.version, ref.user or "", ref.channel or "", ref.revision or ""
+
+        return de_noneize(self) < de_noneize(other)
 
 
 class PackageReference(namedtuple("PackageReference", "ref id revision")):
