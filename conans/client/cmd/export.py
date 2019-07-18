@@ -26,7 +26,7 @@ from conans import ConanFile
 class AliasConanfile(ConanFile):
     alias = "%s"
     revision_mode = "%s"
-""" % (target_ref.full_repr(), revision_mode)
+""" % (target_ref.full_str(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
     digest = FileTreeManifest.create(package_layout.export())
@@ -56,8 +56,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
                        conanfile.py
     """
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
-    ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                             conanfile.channel)
+    ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:

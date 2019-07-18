@@ -512,7 +512,7 @@ class TestConanLib(ConanFile):
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
-        client.run("create . %s" % ref.full_repr(), assert_error=True)
+        client.run("create . %s" % ref.full_str(), assert_error=True)
         self.assertIn("Build error", client.out)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))

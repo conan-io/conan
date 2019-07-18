@@ -267,7 +267,7 @@ class ConanAPIV1(object):
             conanfile_class = self._loader.load_class(conanfile_path)
             conanfile_class.name = ref.name
             conanfile_class.version = ref.version
-        conanfile = conanfile_class(self._user_io.out, None, str(ref))
+        conanfile = conanfile_class(self._user_io.out, None, repr(ref))
 
         result = OrderedDict()
         if not attributes:
@@ -966,7 +966,7 @@ class ConanAPIV1(object):
         tmp = self._cache.registry.prefs_list
         for pref, remote in tmp.items():
             if pref.ref == ref and remote:
-                ret[pref.full_repr()] = remote
+                ret[repr(pref)] = remote
         return ret
 
     @api_method
@@ -1013,7 +1013,7 @@ class ConanAPIV1(object):
     @api_method
     def remove_system_reqs_by_pattern(self, pattern):
         for ref in search_recipes(self._cache, pattern=pattern):
-            self.remove_system_reqs(ref.full_repr())
+            self.remove_system_reqs(repr(ref))
 
     @api_method
     def remove_locks(self):
@@ -1078,7 +1078,7 @@ class ConanAPIV1(object):
         alias_conanfile_path = self._cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
             conanfile_class = self._loader.load_class(alias_conanfile_path)
-            conanfile = conanfile_class(self._user_io.out, None, str(ref))
+            conanfile = conanfile_class(self._user_io.out, None, repr(ref))
             if not getattr(conanfile, 'alias', None):
                 raise ConanException("Reference '{}' is already a package, remove it before "
                                      "creating and alias with the same name".format(ref))
@@ -1103,7 +1103,7 @@ class ConanAPIV1(object):
                                  " Enable this feature setting to '1' the environment variable"
                                  " 'CONAN_REVISIONS_ENABLED' or the config value"
                                  " 'general.revisions_enabled' in your conan.conf file")
-        ref = ConanFileReference.loads(str(reference))
+        ref = ConanFileReference.loads(repr(reference))
         if ref.revision:
             raise ConanException("Cannot list the revisions of a specific recipe revision")
 
@@ -1142,7 +1142,7 @@ class ConanAPIV1(object):
                                  " Enable this feature setting to '1' the environment variable"
                                  " 'CONAN_REVISIONS_ENABLED' or the config value"
                                  " 'general.revisions_enabled' in your conan.conf file")
-        pref = PackageReference.loads(str(reference), validate=True)
+        pref = PackageReference.loads(repr(reference), validate=True)
         if not pref.ref.revision:
             raise ConanException("Specify a recipe reference with revision")
         if pref.revision:

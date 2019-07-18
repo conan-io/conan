@@ -14,7 +14,7 @@ from conans.util.files import load, md5, save
 
 def export_folder(base, ref):
     try:
-        ref = ConanFileReference.loads(str(ref))
+        ref = ConanFileReference.loads(repr(ref))
     except Exception:
         pass
     path = ref.dir_repr() if isinstance(ref, ConanFileReference) else ref

@@ -222,7 +222,7 @@ class SearchTest(unittest.TestCase):
         client.run("search lib*")
         self.assertIn(textwrap.dedent("""
                         lib/1.0
-                        lib/1.0@odin/valhalla
+                        lib/1.0@foo/bar
                         lib/1.0@user/channel"""), client.out)
 
     def recipe_search_all_test(self):

@@ -33,7 +33,7 @@ class ClientCommonRouter(object):
         query = ''
         if pattern:
             if isinstance(pattern, ConanFileReference):
-                pattern = pattern.full_repr()
+                pattern = repr(pattern)
             params = {"q": pattern}
             if not ignorecase:
                 params["ignorecase"] = "False"

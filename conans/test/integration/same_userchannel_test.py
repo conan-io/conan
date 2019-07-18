@@ -93,14 +93,13 @@ class HelloReuseConan(ConanFile):
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1@None/None): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_USERNAME environment "
-                      "variable not defined, but self.user is used", self.client.out)
+        # The requirement is valid without CHANNEL but it fails beause there is no remote
+        self.assertIn("ERROR: Failed requirement 'Say/0.1' from "
+                      "'conanfile.py (Hello/0.1)'", self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1@None/None): "
+        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
                       "Error in requirements() method, line 10", self.client.out)
         self.assertIn("ConanException: CONAN_CHANNEL environment "
                       "variable not defined, but self.channel is used", self.client.out)

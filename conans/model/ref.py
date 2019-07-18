@@ -43,8 +43,6 @@ def get_reference_fields(arg_reference, user_channel_allowed=False):
         name, version = split_pair(name_version, "/", priority_first=False)
         user, channel = split_pair(user_channel, "/")
 
-        user = user or ConanFileReference.DEFAULT_REF_USER
-        channel = channel or ConanFileReference.DEFAULT_REF_CHANNEL
         return name, version, user, channel, revision
     else:
         if user_channel_allowed:
@@ -139,6 +137,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
+        if (user and not channel) or (channel and not user):
+            raise InvalidNameException("Specify the user and the revision or neither of them")
+
         user = user or cls.DEFAULT_REF_USER
         channel = channel or cls.DEFAULT_REF_CHANNEL
 
@@ -166,12 +167,18 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
-    def __repr__(self):
+    def __str__(self):
+        if self.name is None and self.version is None:
+            return ""
         if self.user == self.DEFAULT_REF_USER and self.channel == self.DEFAULT_REF_CHANNEL:
             return "%s/%s" % (self.name, self.version)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
-    def full_repr(self):
+    def __repr__(self):
+        str_rev = "#%s" % self.revision if self.revision else ""
+        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
+
+    def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
         return "%s%s" % (str(self), str_rev)
 
@@ -214,11 +221,16 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return PackageReference(ref, package_id, validate=validate)
 
     def __repr__(self):
+        str_rev = "#%s" % self.revision if self.revision else ""
+        tmp = "%s:%s%s" % (repr(self.ref), self.id, str_rev)
+        return tmp
+
+    def __str__(self):
         return "%s:%s" % (self.ref, self.id)
 
-    def full_repr(self):
+    def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        tmp = "%s:%s%s" % (self.ref.full_repr(), self.id, str_rev)
+        tmp = "%s:%s%s" % (self.ref.full_str(), self.id, str_rev)
         return tmp
 
     def copy_with_revs(self, revision, p_revision):

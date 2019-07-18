@@ -185,7 +185,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("install .")
         client.run("build .", assert_error=True)
         self.assertIn("patch: error: no patch data found!", client.out)
-        self.assertIn("ERROR: conanfile.py (test/1.9.10@None/None): "
+        self.assertIn("ERROR: conanfile.py (test/1.9.10): "
                       "Error in build() method, line 12", client.out)
         self.assertIn("Failed to parse patch: string", client.out)
 

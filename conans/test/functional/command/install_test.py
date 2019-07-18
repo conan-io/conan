@@ -603,14 +603,13 @@ class TestConan(ConanFile):
                       client.out)
 
         client.run('upload lib/1.0 -c --all')
-        self.assertIn("Uploaded conan recipe 'lib/1.0@foo/bar' to 'default'", client.out)
+        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
 
         client.run('remove "*" -f')
-        client.run('install lib/1.0')
-        self.assertIn("lib/1.0: Downloaded", client.out)
 
         # This fails, Conan thinks this is a path
         client.run('install lib/1.0', assert_error=True)
 
         # Try this syntax to upload too
+        client.run('install lib/1.0@')
         client.run('upload lib/1.0@ -c --all')

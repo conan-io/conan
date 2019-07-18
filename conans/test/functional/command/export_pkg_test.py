@@ -576,7 +576,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        ref = ConanFileReference.loads("Hello/0.1")
+        ref = ConanFileReference.loads("Hello/0.1@")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")

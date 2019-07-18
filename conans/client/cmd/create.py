@@ -29,7 +29,7 @@ def create(ref, manager, user_io, graph_info, remotes, update, build_modes,
            manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
            test_folder, conanfile_path):
 
-    assert(isinstance(ref, ConanFileReference), "ref needed")
+    assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:
