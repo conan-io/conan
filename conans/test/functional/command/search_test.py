@@ -216,14 +216,12 @@ class SearchTest(unittest.TestCase):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("config set general.default_username=odin")
-        client.run("config set general.default_channel=valhalla")
         client.run("create .")
         client.run("create . user/channel")
         client.run("create . foo/bar")
         client.run("search lib*")
         self.assertIn(textwrap.dedent("""
-                        lib/1.0@foo/bar
+                        lib/1.0
                         lib/1.0@odin/valhalla
                         lib/1.0@user/channel"""), client.out)
 

@@ -43,6 +43,8 @@ def get_reference_fields(arg_reference, user_channel_allowed=False):
         name, version = split_pair(name_version, "/", priority_first=False)
         user, channel = split_pair(user_channel, "/")
 
+        user = user or ConanFileReference.DEFAULT_REF_USER
+        channel = channel or ConanFileReference.DEFAULT_REF_CHANNEL
         return name, version, user, channel, revision
     else:
         if user_channel_allowed:
@@ -126,6 +128,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """
     sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
+    DEFAULT_REF_USER = "_"
+    DEFAULT_REF_CHANNEL = "_"
+
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
         @param name:        string containing the desired name
@@ -134,6 +139,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param channel:     string containing the user channel
         @param revision:    string containing the revision (optional)
         """
+        user = user or cls.DEFAULT_REF_USER
+        channel = channel or cls.DEFAULT_REF_CHANNEL
+
         version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
@@ -143,8 +151,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     def _validate(self):
         ConanName.validate_name(self.name, reference_token="package name")
         ConanName.validate_name(self.version, True, reference_token="package version")
-        ConanName.validate_name(self.user, reference_token="user name")
-        ConanName.validate_name(self.channel, reference_token="channel")
+        if self.user != self.DEFAULT_REF_USER:
+            ConanName.validate_name(self.user, reference_token="user name")
+        if self.channel != self.DEFAULT_REF_CHANNEL:
+            ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
 
@@ -157,6 +167,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return ref
 
     def __repr__(self):
+        if self.user == self.DEFAULT_REF_USER and self.channel == self.DEFAULT_REF_CHANNEL:
+            return "%s/%s" % (self.name, self.version)
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
 
     def full_repr(self):

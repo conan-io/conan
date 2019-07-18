@@ -491,7 +491,8 @@ class Command(object):
                                     generators=args.generator,
                                     install_folder=args.install_folder)
             else:
-                name, version, user, channel, _ = get_reference_fields(args.reference)
+                name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                                       user_channel_allowed=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
@@ -910,7 +911,7 @@ class Command(object):
 
         self._warn_python2()
         name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                            user_channel_allowed=True)
+                                                               user_channel_allowed=True)
         cwd = os.getcwd()
         info = None
 

@@ -513,21 +513,6 @@ class TestConanLib(ConanFile):
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))
 
-    def create_without_ref_test(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class MyPkg(ConanFile):
-                    name = "lib"
-                    version = "1.0"
-                """)
-        client.save({"conanfile.py": conanfile})
-        client.run("config set general.default_username=foo")
-        client.run("config set general.default_channel=bar")
-        client.run('create .')
-        self.assertIn("lib/1.0@foo/bar: Created package revision", client.out)
-
     def create_with_name_and_version_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -537,10 +522,8 @@ class TestConanLib(ConanFile):
                     pass
                 """)
         client.save({"conanfile.py": conanfile})
-        client.run("config set general.default_username=foo")
-        client.run("config set general.default_channel=bar")
         client.run('create . lib/1.0@')
-        self.assertIn("lib/1.0@foo/bar: Created package revision", client.out)
+        self.assertIn("lib/1.0: Created package revision", client.out)
 
     def create_with_only_user_channel_test(self):
         """This should be the recommended way and only from Conan 2.0"""
@@ -554,4 +537,7 @@ class TestConanLib(ConanFile):
                 """)
         client.save({"conanfile.py": conanfile})
         client.run('create . @user/channel')
+        self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
+
+        client.run('create . user/channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)

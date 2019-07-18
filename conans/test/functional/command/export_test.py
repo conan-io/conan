@@ -471,16 +471,13 @@ class ExportMetadataTest(unittest.TestCase):
                             version = "1.0"
                         """)
         client.save({"conanfile.py": conanfile})
-        client.run("config set general.default_username=foo")
-        client.run("config set general.default_channel=bar")
         client.run('export .')
-        folder = client.cache.package_layout(ConanFileReference.loads("lib/1.0@foo/bar")).export()
-        self.assertIn("foo/bar", folder)
-        self.assertIn("lib/1.0@foo/bar: A new conanfile.py version was exported", client.out)
+        folder = client.cache.package_layout(ConanFileReference.loads("lib/1.0")).export()
+        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
 
         # Do it twice
         client.run('export . ')
-        self.assertIn("lib/1.0@foo/bar: The stored package has not changed", client.out)
+        self.assertIn("lib/1.0: The stored package has not changed", client.out)
 
     def export_with_name_and_version_test(self):
         client = TestClient()
@@ -492,10 +489,8 @@ class ExportMetadataTest(unittest.TestCase):
                 """)
         client.save({"conanfile.py": conanfile})
 
-        client.run("config set general.default_username=foo")
-        client.run("config set general.default_channel=bar")
         client.run('export . lib/1.0@')
-        self.assertIn("lib/1.0@foo/bar: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
 
     def export_with_only_user_channel_test(self):
         """This should be the recommended way and only from Conan 2.0"""

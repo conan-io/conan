@@ -597,19 +597,16 @@ class TestConan(ConanFile):
                 """)
         client.save({"conanfile.py": conanfile})
 
-        client.run("config set general.default_username=foo")
-        client.run("config set general.default_channel=bar")
-
         client.run('create .')
-        self.assertIn("lib/1.0@foo/bar: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
                       client.out)
 
         client.run('upload lib/1.0 -c --all')
         self.assertIn("Uploaded conan recipe 'lib/1.0@foo/bar' to 'default'", client.out)
 
         client.run('remove "*" -f')
-        client.run('install lib/1.0@')
-        self.assertIn("lib/1.0@foo/bar: Downloaded", client.out)
+        client.run('install lib/1.0')
+        self.assertIn("lib/1.0: Downloaded", client.out)
 
         # This fails, Conan thinks this is a path
         client.run('install lib/1.0', assert_error=True)

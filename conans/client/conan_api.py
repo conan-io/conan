@@ -321,7 +321,6 @@ class ConanAPIV1(object):
                                     string - test_folder path
                                     False  - disabling tests
         """
-        user, channel = self._default_user_channel(user, channel)
         settings = settings or []
         options = options or []
         env = env or []
@@ -488,7 +487,6 @@ class ConanAPIV1(object):
 
     @api_method
     def install_reference_by_fields(self, name, version, user, channel, revision, **kwargs):
-        user, channel = self._default_user_channel(user, channel)
         ref = ConanFileReference(name, version, user, channel, revision)
         return self.install_reference(ref, **kwargs)
 
@@ -754,28 +752,9 @@ class ConanAPIV1(object):
         cwd = get_cwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path, self._user_io.out)
-        
-    def _default_user_channel(self, user, channel):
-        if not user:
-            try:
-                user = self._cache.config.get_item("general.default_username")
-            except ConanException:
-                raise ConanException("The reference doesn't have the 'user' field and there is no "
-                                     "default one configured. You can adjust a default running:\n "
-                                     "conan config set general.default_username=foo")
-        if not channel:
-            try:
-                channel = self._cache.config.get_item("general.default_channel")
-            except ConanException:
-                raise ConanException("The reference doesn't have the 'channel' field and there is "
-                                     "no default one configured. You can adjust a default "
-                                     "running:\n "
-                                     "conan config set general.default_channel=bar")
-        return user, channel
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
-        user, channel = self._default_user_channel(user, channel)
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         remotes = self._cache.registry.load_remotes()
         self._python_requires.enable_remotes(remotes=remotes)
