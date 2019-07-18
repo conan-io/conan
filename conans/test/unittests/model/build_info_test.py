@@ -319,20 +319,27 @@ VAR2=23
         with six.assertRaisesRegex(self, ConanException, "'.exe' is already set for this Component"):
             component.lib = "libhola"
 
-    def cpp_info_libs_components_fail_test(self):
+    def dep_cpp_info_libs_exes_components_fail_test(self):
         """
-        Usage of .libs is not allowed in cpp_info when using Components
+        Usage of .libs and .exes is not allowed in dep_cpp_info when using Components
         """
-        info = CppInfo(None)
+        info = CppInfo("")
         info.name = "Greetings"
         self.assertEqual(info.name, "Greetings")
         info.libs = ["libgreet"]
-        with six.assertRaisesRegex(self, ConanException, "Using Components and global 'libs' "
-                                                         "values"):
-            info["hola"].exe = "hola.exe"
-
+        info["hola"].exe = "whatever_exe"
+        self.assertTrue(info.components)
+        with six.assertRaisesRegex(self, ConanException, "Setting cpp_info.libs or cpp_info.exes and"
+                                                         " Components is not supported"):
+            DepCppInfo(info)
         info.libs = []
-        info["greet"].exe = "exegreet"
+        info.exes = ["my_exe"]
+        with six.assertRaisesRegex(self, ConanException, "Setting cpp_info.libs or cpp_info.exes and"
+                                                         " Components is not supported"):
+            DepCppInfo(info)
+        # Test it works without .libs and without .exes but with component
+        info.exes = []
+        DepCppInfo(info)
 
     def cpp_info_system_deps_test(self):
         """

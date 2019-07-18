@@ -46,21 +46,6 @@ class CppInfo(object):
         self._components = OrderedDict()
         self.public_deps = []
         self.configs = {}    # FIXME: Should not be part of the public interface
-        self._default_values = {
-            "includedirs": [DEFAULT_INCLUDE],
-            "libdirs": [DEFAULT_LIB],
-            "bindirs": [DEFAULT_BIN],
-            "resdirs": [DEFAULT_RES],
-            "builddirs": [DEFAULT_BUILD],
-            "srcdirs": [],
-            "libs": [],
-            "exes": [],
-            "defines": [],
-            "cflags": [],
-            "cxxflags": [],
-            "sharedlinkflags": [],
-            "exelinkflags": []
-        }
 
     @property
     def rootpath(self):
@@ -81,21 +66,7 @@ class CppInfo(object):
     # Old style property to allow deprecation decorators
     cppflags = property(get_cppflags, set_cppflags)
 
-    def _check_and_clear_default_values(self):
-        """
-        Check that the variables are loaded with default values first and clear them after in
-        favor of components
-        """
-        for field in self._default_values:
-            field_value = getattr(self, field)
-            if field_value is not None and field_value != self._default_values[field]:
-                msg_template = "Using Components and global '{}' values ('{}') is not supported"
-                raise ConanException(msg_template.format(field, field_value))
-            else:
-                self.__dict__[field] = None
-
     def __getitem__(self, key):
-        self._check_and_clear_default_values()
         if key not in self._components:
             self._components[key] = Component(key, self.rootpath)
         return self._components[key]
