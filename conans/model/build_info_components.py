@@ -83,30 +83,14 @@ class DepComponent(object):
     """
 
     def __init__(self, component):
-        self._rootpath = component.rootpath
-        self._name = component.name
-        self._deps = component.deps
-        self._lib = component.lib
-        self._exe = component.exe
-        self._system_deps = component.system_deps
-        self._includedirs = component.includedirs
-        self._libdirs = component.libdirs
-        self._resdirs = component.resdirs
-        self._bindirs = component.bindirs
-        self._builddirs = component.builddirs
-        self._srcdirs = component.srcdirs
-        self._defines = component.defines
-        self._cflags = component.cflags
-        self._cxxflags = component.cxxflags
-        self._sharedlinkflags = component.sharedlinkflags
-        self._exelinkflags = component.exelinkflags
+        self._component = component
         self._filter_empty = component.filter_empty
 
     def _abs_filter_paths(self, paths):
         """
         Get absolute paths and filter the empty directories if needed
         """
-        abs_paths = [os.path.join(self._rootpath, p) for p in paths]
+        abs_paths = [os.path.join(self._component.rootpath, p) for p in paths]
         if self._filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
         else:
@@ -114,95 +98,95 @@ class DepComponent(object):
 
     @property
     def name(self):
-        return self._name
+        return self._component.name
 
     @property
     def rootpath(self):
-        return self._rootpath
+        return self._component.rootpath
 
     @property
     def deps(self):
-        return self._deps
+        return self._component.deps
 
     @property
     def lib(self):
-        return self._lib
+        return self._component.lib
 
     @property
     def exe(self):
-        return self._exe
+        return self._component.exe
 
     @property
     def system_deps(self):
-        return self._system_deps
+        return self._component.system_deps
 
     @property
     def includedirs(self):
-        return self._includedirs
+        return self._component.includedirs
 
     @property
     def srcdirs(self):
-        return self._srcdirs
+        return self._component.srcdirs
 
     @property
     def libdirs(self):
-        return self._libdirs
+        return self._component.libdirs
 
     @property
     def resdirs(self):
-        return self._resdirs
+        return self._component.resdirs
 
     @property
     def bindirs(self):
-        return self._bindirs
+        return self._component.bindirs
 
     @property
     def builddirs(self):
-        return self._builddirs
+        return self._component.builddirs
 
     @property
     def include_paths(self):
-        return self._abs_filter_paths(self._includedirs)
+        return self._abs_filter_paths(self.includedirs)
 
     @property
     def lib_paths(self):
-        return self._abs_filter_paths(self._libdirs)
+        return self._abs_filter_paths(self.libdirs)
 
     @property
     def bin_paths(self):
-        return self._abs_filter_paths(self._bindirs)
+        return self._abs_filter_paths(self.bindirs)
 
     @property
     def build_paths(self):
-        return self._abs_filter_paths(self._builddirs)
+        return self._abs_filter_paths(self.builddirs)
 
     @property
     def res_paths(self):
-        return self._abs_filter_paths(self._resdirs)
+        return self._abs_filter_paths(self.resdirs)
 
     @property
     def src_paths(self):
-        return self._abs_filter_paths(self._srcdirs)
+        return self._abs_filter_paths(self.srcdirs)
 
     @property
     def defines(self):
-        return self._defines
+        return self._component.defines
 
     @property
     def cflags(self):
-        return self._cflags
+        return self._component.cflags
 
     @property
     def cxxflags(self):
-        return self._cxxflags
+        return self._component.cxxflags
 
     @property
     def sharedlinkflags(self):
-        return self._sharedlinkflags
+        return self._component.sharedlinkflags
 
     @property
     def exelinkflags(self):
-        return self._exelinkflags
+        return self._component.exelinkflags
 
     def as_dict(self):
         result = {}
