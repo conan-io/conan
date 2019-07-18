@@ -1,5 +1,4 @@
 import os
-from __builtin__ import reversed
 from collections import OrderedDict
 from copy import deepcopy
 
