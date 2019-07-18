@@ -339,7 +339,7 @@ VAR2=23
         System deps are composed in '.libs' attribute even if there are no '.lib' in the component.
         Also make sure None values are discarded.
         """
-        info = CppInfo(None)
+        info = CppInfo("")
         info["LIB1"].system_deps = ["sys1", "sys11"]
         info["LIB1"].deps = ["LIB2"]
         info["LIB2"].system_deps = ["sys2"]
@@ -355,7 +355,7 @@ VAR2=23
         """
         Check the order of libs and system_deps and discard repeated values
         """
-        info = CppInfo(None)
+        info = CppInfo("")
         info["LIB1"].lib = "lib1"
         info["LIB1"].system_deps = ["sys1", "sys11"]
         info["LIB1"].deps = ["LIB2"]
@@ -381,7 +381,7 @@ VAR2=23
                 for dep in info[component_name].deps:
                     self.assertIn(info[dep].lib, sorted_libs[num:])
 
-        info = CppInfo(None)
+        info = CppInfo("")
         info["F"].lib = "libF"
         info["F"].deps = ["D", "E"]
         info["E"].lib = "libE"
@@ -397,7 +397,7 @@ VAR2=23
         _assert_link_order(DepCppInfo(info).libs)
         self.assertEqual(["libC", "libF", "libD", "libA", "libE", "libB"], DepCppInfo(info).libs)
 
-        info = CppInfo(None)
+        info = CppInfo("")
         info["K"].lib = "libK"
         info["K"].deps = ["G", "H"]
         info["J"].lib = "libJ"
@@ -516,7 +516,7 @@ VAR2=23
                          info["Crypto"].resdirs)
 
     def cppinfo_exes_test(self):
-        info = CppInfo(None)
+        info = CppInfo("")
         info.name = "OpenSSL"
         info["Exe1"].exe = "the_exe1"
         info["Exe2"].exe = "the_exe2"

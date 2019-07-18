@@ -1,4 +1,5 @@
 import os
+from __builtin__ import reversed
 from collections import OrderedDict
 from copy import deepcopy
 
@@ -138,35 +139,11 @@ class DepCppInfo(object):
         if cpp_info.components and (cpp_info.libs or cpp_info.exes):
             raise ConanException("Setting cpp_info.libs or cpp_info.exes and Components is not "
                                  "supported")
-        self._name = cpp_info.name
-        self._version = cpp_info.version
-        self._description = cpp_info.description
-        self._rootpath = cpp_info.rootpath
-        self._sysroot = cpp_info.sysroot
-        self._system_deps = cpp_info.system_deps
-        self._includedirs = cpp_info.includedirs
-        self._srcdirs = cpp_info.srcdirs
-        self._libdirs = cpp_info.libdirs
-        self._resdirs = cpp_info.resdirs
-        self._bindirs = cpp_info.bindirs
-        self._builddirs = cpp_info.builddirs
-        self._libs = cpp_info.libs
-        self._exes = cpp_info.exes
-        self._defines = cpp_info.defines
-        self._cflags = cpp_info.cflags
-        self._cxxflags = cpp_info.cxxflags
-        self._sharedlinkflags = cpp_info.sharedlinkflags
-        self._exelinkflags = cpp_info.exelinkflags
-        self._include_paths = None
-        self._lib_paths = None
-        self._bin_paths = None
-        self._build_paths = None
-        self._res_paths = None
-        self._src_paths = None
+        self._cpp_info = cpp_info
         self._public_deps = cpp_info.public_deps
-        self.configs = {}
         # When package is editable, filter_empty=False, so empty dirs are maintained
         self.filter_empty = cpp_info.filter_empty
+        self.configs = {}
         self._components = OrderedDict()
         # Copy Components
         for comp_name, comp_value in cpp_info.components:
@@ -176,6 +153,28 @@ class DepCppInfo(object):
             sub_dep_cpp_info = DepCppInfo(sub_cpp_info)
             sub_dep_cpp_info.filter_empty = self.filter_empty
             self.configs[config] = sub_dep_cpp_info
+        # To initialize
+        self._sorted_components = self._get_sorted_components()
+        self._includedirs = self._get_relative_dirs("include")
+        self._srcdirs = self._get_relative_dirs("src")
+        self._libdirs = self._get_relative_dirs("lib")
+        self._resdirs = self._get_relative_dirs("res")
+        self._bindirs = self._get_relative_dirs("bin")
+        self._builddirs = self._get_relative_dirs("build")
+        self._include_paths = self._get_absolute_paths("include")
+        self._src_paths = self._get_absolute_paths("src")
+        self._lib_paths = self._get_absolute_paths("lib")
+        self._res_paths = self._get_absolute_paths("res")
+        self._bin_paths = self._get_absolute_paths("bin")
+        self._build_paths = self._get_absolute_paths("build")
+        self._defines = self._get_flags("defines")
+        self._cflags = self._get_flags("cflags")
+        self._cxxflags = self._get_flags("cxxflags")
+        self._sharedlinkflags = self._get_flags("sharedlinkflags")
+        self._exelinkflags = self._get_flags("exelinkflags")
+        self._system_deps = self._get_system_deps()
+        self._libs = self._get_libs()
+        self._exes = self._get_exes()
 
     def __getattr__(self, config):
         if config not in self.configs:
@@ -187,78 +186,7 @@ class DepCppInfo(object):
     def __getitem__(self, key):
         return self._components[key]
 
-    def _abs_filter_paths(self, paths):
-        """
-        Get absolute paths and filter the empty directories if needed
-        """
-        abs_paths = [os.path.join(self.rootpath, p) for p in paths]
-        if self.filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
-        else:
-            return abs_paths
-
-    def _get_absolute_paths(self, path_name):
-        """
-        Get the ABSOLUTE paths either composing the lists from components or from the global
-        variables. Also filter the values checking if the folders exist or not and avoid repeated
-        values.
-        :param path_name: name of the type of path (include, bin, res...) to get the values from
-        :return: List of absolute paths
-        """
-        if self._components:
-            result = []
-            components = self._sorted_components
-            components.reverse()
-            for dep_value in components:
-                abs_paths = self._abs_filter_paths(getattr(dep_value, "%s_paths" % path_name))
-                for path in abs_paths:
-                    if path not in result:
-                        result.append(path)
-        else:
-            result = self._abs_filter_paths(getattr(self, "_%sdirs" % path_name))
-        return result
-
-    def _get_relative_dirs(self, name):
-        """
-        Get the RELATIVE directories either composing the lists from components or from the global
-        variables. Also filter the values checking if the folders exist or not and avoid repeated
-        values.
-        :param path_name: name of the type of path (include, bin, res...) to get the values from
-        :return: List of relative paths
-        """
-        if self._components:
-            result = []
-            components = self._sorted_components
-            components.reverse()
-            for dep_value in components:
-                for _dir in getattr(dep_value, "%sdirs" % name):
-                    if _dir not in result:
-                        result.append(_dir)
-        else:
-            result = getattr(self, "_%sdirs" % name)
-        return result
-
-    def _get_flags(self, name):
-        """
-        Get all the "flags" (defines, cxxflags, linker flags...) either composing the lists from
-        components or from the global variables. Do NOT filter repeated values
-        :param name: name of the "flag" (defines, cflags, sharedlinkflags...) to get the values from
-        :return: list or ordered "flags"
-        """
-        if self._components:
-            result = []
-            for component in self._sorted_components:
-                items = getattr(component, name)
-                if items:
-                    for item in items:
-                        if item and item not in result:
-                            result.extend(item)
-            return result
-        else:
-            return getattr(self, "_%s" % name)
-
-    @property
-    def _sorted_components(self):
+    def _get_sorted_components(self):
         """
         Sort Components from less dependent one first to the most dependent one last
         :return: List of sorted components
@@ -281,112 +209,88 @@ class DepCppInfo(object):
                                      "'self.cpp_info'")
         return list(ordered.values())
 
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def version(self):
-        return self._version
-
-    @property
-    def description(self):
-        return self._description
-
-    @property
-    def public_deps(self):
-        return self._public_deps
-
-    @property
-    def rootpath(self):
-        return self._rootpath
-
-    @property
-    def sysroot(self):
-        return self._sysroot
-
-    @property
-    def system_deps(self):
+    def _get_relative_dirs(self, name):
+        """
+        Get the RELATIVE directories either composing the lists from components or from the global
+        variables. Also filter the values checking if the folders exist or not and avoid repeated
+        values.
+        :param path_name: name of the type of path (include, bin, res...) to get the values from
+        :return: List of relative paths
+        """
         if self._components:
             result = []
-            components = self._sorted_components
-            components.reverse()
-            for component in components:
+            for dep_value in reversed(self._sorted_components):
+                for _dir in getattr(dep_value, "%sdirs" % name):
+                    if _dir not in result:
+                        result.append(_dir)
+        else:
+            result = getattr(self._cpp_info, "%sdirs" % name)
+        return result
+
+    def _abs_filter_paths(self, paths):
+        """
+        Get absolute paths and filter the empty directories if needed
+        """
+        abs_paths = [os.path.join(self._cpp_info.rootpath, p) for p in paths]
+        if self.filter_empty:
+            return [p for p in abs_paths if os.path.isdir(p)]
+        else:
+            return abs_paths
+
+    def _get_absolute_paths(self, path_name):
+        """
+        Get the ABSOLUTE paths either composing the lists from components or from the global
+        variables. Also filter the values checking if the folders exist or not and avoid repeated
+        values.
+        :param path_name: name of the type of path (include, bin, res...) to get the values from
+        :return: List of absolute paths
+        """
+        if self._components:
+            result = []
+            for dep_value in reversed(self._sorted_components):
+                abs_paths = self._abs_filter_paths(getattr(dep_value, "%s_paths" % path_name))
+                for path in abs_paths:
+                    if path not in result:
+                        result.append(path)
+        else:
+            result = self._abs_filter_paths(getattr(self._cpp_info, "%sdirs" % path_name))
+        return result
+
+    def _get_flags(self, name):
+        """
+        Get all the "flags" (defines, cxxflags, linker flags...) either composing the lists from
+        components or from the global variables. Do NOT filter repeated values
+        :param name: name of the "flag" (defines, cflags, sharedlinkflags...) to get the values from
+        :return: list or ordered "flags"
+        """
+        if self._components:
+            result = []
+            for component in self._sorted_components:
+                items = getattr(component, name)
+                if items:
+                    for item in items:
+                        if item and item not in result:
+                            result.extend(item)
+            return result
+        else:
+            return getattr(self._cpp_info, "%s" % name)
+
+    def _get_system_deps(self):
+        if self._components:
+            result = []
+            for component in reversed(self._sorted_components):
                 if component.system_deps:
                     for system_dep in component.system_deps:
-                        if system_dep and system_dep:
+                        if system_dep:
                             result.append(system_dep)
             return result
         else:
-            return self._system_deps
+            return self._cpp_info.system_deps
 
-    @property
-    def includedirs(self):
-        return self._get_relative_dirs("include")
-
-    @property
-    def srcdirs(self):
-        return self._get_relative_dirs("src")
-
-    @property
-    def libdirs(self):
-        return self._get_relative_dirs("lib")
-
-    @property
-    def resdirs(self):
-        return self._get_relative_dirs("res")
-
-    @property
-    def bindirs(self):
-        return self._get_relative_dirs("bin")
-
-    @property
-    def builddirs(self):
-        return self._get_relative_dirs("build")
-
-    @property
-    def include_paths(self):
-        if self._include_paths is None:
-            self._include_paths = self._get_absolute_paths("include")
-        return self._include_paths
-
-    @property
-    def lib_paths(self):
-        if self._lib_paths is None:
-            self._lib_paths = self._get_absolute_paths("lib")
-        return self._lib_paths
-
-    @property
-    def src_paths(self):
-        if self._src_paths is None:
-            self._src_paths = self._get_absolute_paths("src")
-        return self._src_paths
-
-    @property
-    def bin_paths(self):
-        if self._bin_paths is None:
-            self._bin_paths = self._get_absolute_paths("bin")
-        return self._bin_paths
-
-    @property
-    def build_paths(self):
-        if self._build_paths is None:
-            self._build_paths = self._get_absolute_paths("build")
-        return self._build_paths
-
-    @property
-    def res_paths(self):
-        if self._res_paths is None:
-            self._res_paths = self._get_absolute_paths("res")
-        return self._res_paths
-
-    @property
-    def libs(self):
+    def _get_libs(self):
         if self._components:
             result = []
-            components = self._sorted_components
-            components.reverse()
-            for component in components:
+            for component in reversed(self._sorted_components):
                 if component.lib and component.lib not in result:
                     result.append(component.lib)
                 for sys_dep in component.system_deps:
@@ -394,40 +298,123 @@ class DepCppInfo(object):
                         result.append(sys_dep)
             return result
         else:
-            return self._libs
+            return self._cpp_info.libs
 
-    @property
-    def exes(self):
+    def _get_exes(self):
         if self._components:
             return [component.exe for component in self._sorted_components if component.exe]
         else:
-            return self._exes
+            return self._cpp_info.exes
+
+    @property
+    def name(self):
+        return self._cpp_info.name
+
+    @property
+    def version(self):
+        return self._cpp_info.version
+
+    @property
+    def description(self):
+        return self._cpp_info.description
+
+    @property
+    def public_deps(self):
+        return self._cpp_info.public_deps
+
+    @property
+    def rootpath(self):
+        return self._cpp_info.rootpath
+
+    @property
+    def sysroot(self):
+        return self._cpp_info.sysroot
+
+    @property
+    def includedirs(self):
+        return self._get_relative_dirs("include")
+
+    @property
+    def srcdirs(self):
+        return self._srcdirs
+
+    @property
+    def libdirs(self):
+        return self._libdirs
+
+    @property
+    def resdirs(self):
+        return self._resdirs
+
+    @property
+    def bindirs(self):
+        return self._bindirs
+
+    @property
+    def builddirs(self):
+        return self._builddirs
+
+    @property
+    def include_paths(self):
+        return self._include_paths
+
+    @property
+    def src_paths(self):
+        return self._src_paths
+
+    @property
+    def lib_paths(self):
+        return self._lib_paths
+
+    @property
+    def res_paths(self):
+        return self._res_paths
+
+    @property
+    def bin_paths(self):
+        return self._bin_paths
+
+    @property
+    def build_paths(self):
+        return self._build_paths
 
     @property
     def defines(self):
-        return self._get_flags("defines")
+        return self._defines
 
     @property
     def cflags(self):
-        return self._get_flags("cflags")
+        return self._cflags
 
     @property
     def cxxflags(self):
-        return self._get_flags("cxxflags")
+        return self._cxxflags
 
     @property
     def sharedlinkflags(self):
-        return self._get_flags("sharedlinkflags")
+        return self._sharedlinkflags
 
     @property
     def exelinkflags(self):
-        return self._get_flags("exelinkflags")
+        return self._exelinkflags
 
     # Compatibility for 'cppflags'
     @property
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
     def cppflags(self):
         return self.cxxflags
+
+    @property
+    def system_deps(self):
+        return self._system_deps
+
+    @property
+    def libs(self):
+        return self._libs
+
+    @property
+    def exes(self):
+        return self._exes
 
     @property
     def components(self):
