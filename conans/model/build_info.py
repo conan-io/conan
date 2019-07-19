@@ -162,9 +162,10 @@ class DepCppInfo(object):
         :return: List of sorted components
         """
         ordered = OrderedDict()
+        components = deepcopy(self._components)
         while len(ordered) != len(self._components):
             # Search for next element to be processed
-            for comp_name, comp in self.components:
+            for comp_name, comp in components.items():
                 if comp_name in ordered:
                     continue
                 # check if all the deps are declared
@@ -173,6 +174,7 @@ class DepCppInfo(object):
                 # check if all the deps are already added to ordered
                 if all([dep in ordered for dep in comp.deps]):
                     ordered[comp_name] = comp
+                    del components[comp_name]
                     break
             else:
                 raise ConanException("There is a dependency loop in the components declared in "
