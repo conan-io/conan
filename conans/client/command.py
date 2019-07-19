@@ -450,28 +450,9 @@ class Command(object):
 
         path_is_reference = check_valid_ref(args.path_or_reference, allow_pattern=False)
 
-        if path_is_reference and args.reference:
-            raise ConanException("A full reference was provided as first argument, second "
-                                 "argument not allowed")
-
         info = None
         try:
-            if path_is_reference:
-                ref = ConanFileReference.loads(args.path_or_reference, validate=False)
-                info = self._conan.install_reference(
-                                    ref,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    remote_name=args.remote,
-                                    verify=args.verify, manifests=args.manifests,
-                                    manifests_interactive=args.manifests_interactive,
-                                    build=args.build, profile_names=args.profile,
-                                    update=args.update,
-                                    generators=args.generator,
-                                    install_folder=args.install_folder,
-                                    lockfile=args.lockfile)
-            else:
+            if not path_is_reference:
                 name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                        user_channel_input=True)
                 info = self._conan.install(path=args.path_or_reference,
@@ -486,6 +467,26 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
                                            lockfile=args.lockfile)
+            else:
+                if args.reference:
+                    raise ConanException("A full reference was provided as first argument, second "
+                                         "argument not allowed")
+
+                ref = ConanFileReference.loads(args.path_or_reference, validate=False)
+                info = self._conan.install_reference(
+                    ref,
+                    settings=args.settings,
+                    options=args.options,
+                    env=args.env,
+                    remote_name=args.remote,
+                    verify=args.verify, manifests=args.manifests,
+                    manifests_interactive=args.manifests_interactive,
+                    build=args.build, profile_names=args.profile,
+                    update=args.update,
+                    generators=args.generator,
+                    install_folder=args.install_folder,
+                    lockfile=args.lockfile)
+
         except ConanException as exc:
             info = exc.info
             raise
