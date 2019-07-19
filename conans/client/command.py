@@ -389,7 +389,7 @@ class Command(object):
                                " Use a full reference instead: "
                                "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1046,7 +1046,7 @@ class Command(object):
             if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1190,8 +1190,7 @@ class Command(object):
                 except (TypeError, ConanException, AttributeError):
                     pass
                 else:
-                    info = self._conan.get_package_revisions(pref.full_repr(),
-                                                             remote_name=args.remote)
+                    info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
 
                 if not info:
                     if not ref:
@@ -1200,13 +1199,13 @@ class Command(object):
                               "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
                               "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
                         raise ConanException(msg)
-                    info = self._conan.get_recipe_revisions(ref.full_repr(),
+                    info = self._conan.get_recipe_revisions(repr(ref),
                                                             remote_name=args.remote)
                 self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
-                info = self._conan.search_packages(ref.full_repr(), query=args.query,
+                info = self._conan.search_packages(repr(ref), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
@@ -1290,7 +1289,7 @@ class Command(object):
             if args.query and package_id:
                 raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             package_id = pref.id
 
             if args.package:
@@ -1553,7 +1552,7 @@ class Command(object):
                                " Use a full reference instead: "
                                "`conan get [...] {}:{}`".format(reference, package_id))
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             package_id = pref.id
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
