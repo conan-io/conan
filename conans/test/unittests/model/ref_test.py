@@ -37,8 +37,6 @@ class RefTest(unittest.TestCase):
         self.assertEqual(ref.revision, "rev1")
 
     def errors_test(self):
-        self.assertRaises(ConanException, ConanFileReference.loads, "")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10")
         self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).channel)
         self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).user)
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
@@ -140,26 +138,15 @@ class ConanNameTestCase(unittest.TestCase):
 class CheckValidRefTest(unittest.TestCase):
 
     def test_string(self):
-        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=False))
-        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
-
-        self.assertFalse(check_valid_ref("package/*@user/channel", allow_pattern=False))
-        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
-
-    def test_conanfileref(self):
-        ref = ConanFileReference.loads("package/1.0@user/channel")
-        self.assertTrue(check_valid_ref(ref, allow_pattern=False))
-        self.assertTrue(check_valid_ref(ref, allow_pattern=True))
-
-        ref_pattern = ConanFileReference.loads("package/*@user/channel")
-        self.assertFalse(check_valid_ref(ref_pattern, allow_pattern=False))
-        self.assertTrue(check_valid_ref(ref_pattern, allow_pattern=True))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel"))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel"))
 
     def test_incomplete_refs(self):
-        self.assertFalse(check_valid_ref("package/1.0", allow_pattern=False))
-        self.assertFalse(check_valid_ref("package/1.0@user", allow_pattern=False))
-        self.assertFalse(check_valid_ref("package/1.0@/channel", allow_pattern=False))
-        self.assertFalse(check_valid_ref("lib@#rev", allow_pattern=False))
+        self.assertTrue(check_valid_ref("package/1.0", strict_mode=False))
+        self.assertFalse(check_valid_ref("package/1.0"))
+        self.assertFalse(check_valid_ref("package/1.0@user"))
+        self.assertFalse(check_valid_ref("package/1.0@/channel"))
+        self.assertFalse(check_valid_ref("lib@#rev"))
 
 
 class GetReferenceFieldsTest(unittest.TestCase):

@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import six
@@ -481,3 +482,44 @@ class RemoveTest(unittest.TestCase):
                             remote_folders={"H1": [1], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
+
+
+class RemoveWithoutUserChannel(unittest.TestCase):
+
+    def setUp(self):
+        self.test_server = TestServer(users={"lasote": "password"},
+                                      write_permissions=[("lib/1.0@*/*", "lasote")])
+        servers = {"default": self.test_server}
+        self.client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+
+    def local_test(self):
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Test(ConanFile):
+            pass
+        """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . lib/1.0@")
+        self.client.run("remove lib/1.0 -f")
+        folder = self.client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
+        self.assertFalse(os.path.exists(folder))
+
+    def remote_test(self):
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Test(ConanFile):
+            pass
+        """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . lib/1.0@")
+        self.client.run("upload lib/1.0 -r default -c --all")
+        self.client.run("remove lib/1.0 -f")
+        # we can still install it
+        self.client.run("install lib/1.0@")
+        self.assertIn("Installing package: lib/1.0", self.client.out)
+        self.client.run("remove lib/1.0 -f")
+
+        # Now remove remotely
+        self.client.run("remove lib/1.0 -f -r default")
+        self.client.run("install lib/1.0@", assert_error=True)
+        self.assertIn("ERROR: Unable to find 'lib/1.0' in remotes", self.client.out)

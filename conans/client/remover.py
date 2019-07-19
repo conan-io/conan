@@ -144,7 +144,7 @@ class ConanRemover(object):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
         try:
-            input_ref = ConanFileReference.loads(pattern)
+            input_ref = None if "*" in pattern else ConanFileReference.loads(pattern)
         except (ConanException, TypeError):
             input_ref = None
 
@@ -168,7 +168,7 @@ class ConanRemover(object):
             else:
                 refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            if input_ref and check_valid_ref(input_ref, allow_pattern=False):
+            if input_ref and check_valid_ref(input_ref, strict_mode=False):
                 refs = []
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))

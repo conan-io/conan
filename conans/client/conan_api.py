@@ -442,8 +442,8 @@ class ConanAPIV1(object):
         if packages and recipe:
             raise ConanException("recipe parameter cannot be used together with packages")
         # Install packages without settings (fixed ids or all)
-        ref = ConanFileReference.loads(reference)
-        if check_valid_ref(ref, allow_pattern=False):
+        if check_valid_ref(reference):
+            ref = ConanFileReference.loads(reference)
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -619,9 +619,9 @@ class ConanAPIV1(object):
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env,
                    lockfile=None):
         cwd = get_cwd()
-        try:
+        if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
-        except ConanException:
+        else:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
         install_folder = _make_abs_path(install_folder, cwd)
@@ -666,9 +666,9 @@ class ConanAPIV1(object):
         return nodes_to_build, conanfile
 
     @api_method
-    def info(self, reference, remote_name=None, settings=None, options=None, env=None,
+    def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
              profile_names=None, update=False, install_folder=None, build=None, lockfile=None):
-        reference, graph_info = self._info_args(reference, install_folder, profile_names,
+        reference, graph_info = self._info_args(reference_or_path, install_folder, profile_names,
                                                 settings, options, env, lockfile=lockfile)
         recorder = ActionRecorder()
         remotes = self._cache.registry.load_remotes()

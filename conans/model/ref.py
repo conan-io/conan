@@ -15,9 +15,15 @@ def _split_pair(pair, split_char):
 
     words = pair.split(split_char)
     if len(words) != 2:
-        raise ConanException("The reference has too many '%s'".format(split_char))
+        raise ConanException("The reference has too many '{}'".format(split_char))
     else:
         return words
+
+
+def _noneize(text):
+    if not text or text == "None":
+        return None
+    return text
 
 
 def get_reference_fields(arg_reference, user_channel_input=False):
@@ -48,24 +54,34 @@ def get_reference_fields(arg_reference, user_channel_input=False):
         name, version = _split_pair(name_version, "/") or (None, name_version)
         user, channel = _split_pair(user_channel, "/") or (user_channel, None)
 
-        return name or None, version or None, user or None, channel or None, revision or None
+        return _noneize(name), _noneize(version), _noneize(user), _noneize(channel), \
+               _noneize(revision)
     else:
         if user_channel_input:
+            # x/y is user and channel
             el1, el2 = _split_pair(arg_reference, "/") or (arg_reference, None)
-            return None, None, el1 or None, el2 or None, revision or None
+            return None, None, _noneize(el1), _noneize(el2), _noneize(revision)
         else:
-            raise InvalidNameException("Invalid reference, specify something like zlib/1.2.11@ "
-                                       "if you want to avoid the 'user/channel'")
+            # x/y is name and version
+            el1, el2 = _split_pair(arg_reference, "/") or (arg_reference, None)
+            return _noneize(el1), _noneize(el2), None, None, _noneize(revision)
 
 
-def check_valid_ref(ref, allow_pattern):
+def check_valid_ref(reference, strict_mode=True):
+    """
+    :param strict_mode: Only if the reference contains the "@" is valid, used to disambiguate"""
     try:
-        if not isinstance(ref, ConanFileReference):
-            ref = ConanFileReference.loads(ref, validate=True)
-        return "*" not in ref or allow_pattern
+
+        if not reference:
+            return False
+        if strict_mode and "@" not in reference:
+            return False
+        if strict_mode and "*" in reference:
+            return False
+        ConanFileReference.loads(reference, validate=True)
+        return True
     except ConanException:
-        pass
-    return False
+        return False
 
 
 class ConanName(object):
@@ -149,13 +165,15 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return obj
 
     def _validate(self):
-        ConanName.validate_name(self.name, reference_token="package name")
-        ConanName.validate_name(self.version, True, reference_token="package version")
+        if self.name is not None:
+            ConanName.validate_name(self.name, reference_token="package name")
+        if self.version is not None:
+            ConanName.validate_name(self.version, True, reference_token="package version")
         if self.user is not None:
             ConanName.validate_name(self.user, reference_token="user name")
         if self.channel is not None:
             ConanName.validate_name(self.channel, reference_token="channel")
-        if self.revision:
+        if self.revision is not None:
             ConanName.validate_revision(self.revision)
 
         if (self.user and not self.channel) or (self.channel and not self.user):

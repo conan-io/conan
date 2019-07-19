@@ -566,7 +566,7 @@ class TestConanLib(ConanFile):
     from conans import ConanFile
 
     class HelloTestConan(ConanFile):
-        requires = "HelloBar/0.1@"
+        requires = "HelloBar/0.1"
     ''')
 
         client.save({"conanfile.py": conanfile})

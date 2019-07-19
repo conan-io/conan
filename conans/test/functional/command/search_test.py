@@ -312,10 +312,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual("There are no packages matching the 'Hello/1.4' pattern\n",
                          self.client.out)
 
-        self.client.run("search Hello/1.4.10@")
-        self.assertEqual("Existing package recipes:\n\n"
-                         "Hello/1.4.10@myuser/testing\n", self.client.out)
-
         self.client.run("search Hello/1.4.10@myuser")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n", self.client.out)
@@ -1093,6 +1089,47 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
+
+
+class SearchReferencesWithoutUserChannel(unittest.TestCase):
+    conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    name = "lib"
+    version = "1.0"
+    """
+
+    def search_local_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("create . ")
+        # This searches by pattern
+        client.run("search BAD/1.0")
+        self.assertIn("There are no packages matching the 'BAD/1.0' pattern", client.out)
+        # This searches by pattern
+        client.run("search lib/1.0")
+        self.assertIn("Existing package recipes:", client.out)
+        self.assertIn("lib/1.0\n", client.out)
+
+        #  Support for explicit ref without user/channel
+        client.run("search lib/1.0@")
+        self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+    def search_remote_test(self):
+        test_server = TestServer(users={"lasote": "password"},
+                                 write_permissions=[("lib/1.0@*/*", "lasote")])
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        client.save({"conanfile.py": self.conanfile})
+        client.run("create . ")
+        client.run("upload * -r default -c --all")
+        # This is by pattern
+        client.run("search lib/1.0 -r default")
+        self.assertIn("Existing package recipes:", client.out)
+        self.assertIn("lib/1.0\n", client.out)
+
+        # This is by ref
+        client.run("search lib/1.0@ -r default")
+        self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")

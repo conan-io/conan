@@ -448,7 +448,8 @@ class Command(object):
         args = parser.parse_args(*args)
         cwd = get_cwd()
 
-        path_is_reference = check_valid_ref(args.path_or_reference, allow_pattern=False)
+        # We need @ otherwise it could be a path, so check strict
+        path_is_reference = check_valid_ref(args.path_or_reference)
 
         info = None
         try:
@@ -1018,7 +1019,7 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException("Please specify a valid pattern or reference to be cleaned")
 
-            if check_valid_ref(args.pattern_or_reference, allow_pattern=False):
+            if check_valid_ref(args.pattern_or_reference):
                 return self._conan.remove_system_reqs(args.pattern_or_reference)
 
             return self._conan.remove_system_reqs_by_pattern(args.pattern_or_reference)
@@ -1189,25 +1190,22 @@ class Command(object):
         if args.table and args.json:
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
-        try:
-            name, version, user, channel, rrev = get_reference_fields(args.pattern_or_reference)
-            ref = ConanFileReference(name, version, user, channel, rrev)
-            if "*" in ref:
+        # Searching foo/bar is considered a pattern (FIXME: 2.0) so use strict mode to disambiguate
+        is_reference = check_valid_ref(args.pattern_or_reference)
+
+        if is_reference:
+            ref = ConanFileReference.loads(args.pattern_or_reference)
+            if "*" in args.pattern_or_reference or "@" not in args.pattern_or_reference:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.g.: conan search lib/*@lasote/stable
+                # FIXME: Conan 2.0 "conan search lib/1.0" now is considered a pattern instead of
+                #        a valid reference. Patterns should have always explicit *
                 ref = None
-
-            # FIXME: Remove this check in Conan 2.0,
-            #        to accept partial references in the search as valid ones
-            if ref and not all([name, version, user, channel]):
-                raise ConanException()
-
-        except (TypeError, ConanException):
+        else:
             ref = None
             if args.query:
                 raise ConanException("-q parameter only allowed with a valid recipe reference, "
                                      "not with a pattern")
-
         cwd = os.getcwd()
         info = None
 
@@ -1233,7 +1231,7 @@ class Command(object):
                 return
 
             if ref:
-                info = self._conan.search_packages(repr(ref), query=args.query,
+                info = self._conan.search_packages(str(ref), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference

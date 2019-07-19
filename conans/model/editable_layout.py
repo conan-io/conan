@@ -6,7 +6,7 @@ import six
 from six.moves import configparser
 
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, check_valid_ref
 from conans.util.files import load
 from conans.util.templates import render_layout_file
 
@@ -90,13 +90,14 @@ class EditableLayout(object):
                 raise ConanException("Wrong cpp_info field '%s' in layout file: %s"
                                      % (section_name, self._filepath))
             if reference:
-                try:
+                if not check_valid_ref(reference):
+                    raise ConanException("Wrong package reference '%s' in layout file: %s"
+                                         % (reference, self._filepath))
+                else:
                     r = ConanFileReference.loads(reference, validate=True)
                     if r.revision:
                         raise ConanException("Don't provide revision in Editable layouts")
-                except ConanException:
-                    raise ConanException("Wrong package reference '%s' in layout file: %s"
-                                         % (reference, self._filepath))
+
             data.setdefault(reference, {})[section_name] =\
                 [self._work_on_item(k) for k, _ in parser.items(section)]
         return data, folders
