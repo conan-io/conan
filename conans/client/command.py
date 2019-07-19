@@ -953,9 +953,8 @@ class Command(object):
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
 
-        # The two first conditions is to allow "conan export ." and "conan export lib/1.0@"
-        # FIXME: In Conan 2.0 all should be valid
-        if args.reference and not args.reference.endswith("@") and (not user or not channel):
+        if any([user, channel]) and not all([user, channel]):
+            # Or user/channel or nothing, but not partial
             raise ConanException("Invalid parameter '%s', "
                                  "specify the full reference or user/channel" % args.reference)
 
@@ -1198,9 +1197,10 @@ class Command(object):
                 # e.g.: conan search lib/*@lasote/stable
                 ref = None
 
-            if ref and (not name or not version or not user or not channel):
-                raise ConanException("")
-            # FIXME: Remove this check in Conan 2.0, so we accept partial references as valid ones
+            # FIXME: Remove this check in Conan 2.0,
+            #        to accept partial references in the search as valid ones
+            if ref and not all([name, version, user, channel]):
+                raise ConanException()
 
         except (TypeError, ConanException):
             ref = None
