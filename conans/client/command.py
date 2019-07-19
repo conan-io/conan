@@ -326,8 +326,6 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python2()
-        if args.reference:
-            check_valid_ref(args.reference, allow_pattern=False)
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
