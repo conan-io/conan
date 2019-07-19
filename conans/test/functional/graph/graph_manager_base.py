@@ -80,7 +80,7 @@ class GraphManagerTest(unittest.TestCase):
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
-        self.assertEqual(node.ref.full_repr(), ref.full_repr())
+        self.assertEqual(repr(node.ref), repr(ref))
         self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
 
