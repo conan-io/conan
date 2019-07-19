@@ -685,6 +685,18 @@ servers["r2"] = TestServer()
         return self.cache.store
 
     @property
+    def requester(self):
+        api = self.get_conan_api()
+        api.create_app()
+        return api.app.requester
+
+    @property
+    def proxy(self):
+        api = self.get_conan_api()
+        api.create_app()
+        return api.app.proxy
+
+    @property
     def _http_requester(self):
         # Check if servers are real
         real_servers = any(isinstance(s, (str, ArtifactoryServer))
@@ -764,11 +776,7 @@ servers["r2"] = TestServer()
         finally:
             self.current_folder = old_dir
 
-    def run(self, command_line, user_io=None, assert_error=False):
-        """ run a single command as in the command line.
-            If user or password is filled, user_io will be mocked to return this
-            tuple if required
-        """
+    def get_conan_api(self, user_io=None):
         if user_io:
             self.out = user_io.out
         else:
@@ -777,6 +785,14 @@ servers["r2"] = TestServer()
 
         conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
                       http_requester=self._http_requester, runner=self.runner)
+        return conan
+
+    def run(self, command_line, user_io=None, assert_error=False):
+        """ run a single command as in the command line.
+            If user or password is filled, user_io will be mocked to return this
+            tuple if required
+        """
+        conan = self.get_conan_api(user_io)
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()

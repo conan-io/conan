@@ -317,7 +317,6 @@ class TestConan(ConanFile):
         """
         # Try to upload an package without upload conans first
         self.client.run('upload %s -p %s' % (self.ref, str(self.pref.id)))
-        print self.client.out
         self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
 
     def simple_test(self):
