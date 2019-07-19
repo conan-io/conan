@@ -6,13 +6,8 @@ import deprecation
 
 from conans.errors import ConanException
 from conans.model.build_info_components import Component, DepComponent
-
-DEFAULT_INCLUDE = "include"
-DEFAULT_LIB = "lib"
-DEFAULT_BIN = "bin"
-DEFAULT_RES = "res"
-DEFAULT_SHARE = "share"
-DEFAULT_BUILD = ""
+from conans.model.build_info_components import DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_BIN, \
+    DEFAULT_RES, DEFAULT_SHARE, DEFAULT_BUILD
 
 
 class CppInfo(object):
