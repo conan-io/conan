@@ -473,19 +473,18 @@ class Command(object):
                                          "argument not allowed")
 
                 ref = ConanFileReference.loads(args.path_or_reference, validate=False)
-                info = self._conan.install_reference(
-                    ref,
-                    settings=args.settings,
-                    options=args.options,
-                    env=args.env,
-                    remote_name=args.remote,
-                    verify=args.verify, manifests=args.manifests,
-                    manifests_interactive=args.manifests_interactive,
-                    build=args.build, profile_names=args.profile,
-                    update=args.update,
-                    generators=args.generator,
-                    install_folder=args.install_folder,
-                    lockfile=args.lockfile)
+                manifest_interactive = args.manifests_interactive
+                info = self._conan.install_reference(ref, settings=args.settings,
+                                                     options=args.options,
+                                                     env=args.env,
+                                                     remote_name=args.remote,
+                                                     verify=args.verify, manifests=args.manifests,
+                                                     manifests_interactive=manifest_interactive,
+                                                     build=args.build, profile_names=args.profile,
+                                                     update=args.update,
+                                                     generators=args.generator,
+                                                     install_folder=args.install_folder,
+                                                     lockfile=args.lockfile)
 
         except ConanException as exc:
             info = exc.info
