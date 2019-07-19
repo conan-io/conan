@@ -394,12 +394,14 @@ class DepCppInfo(object):
 
     def as_dict(self):
         result = {}
-        for name in ["name", "rootpath", "sysroot", "description", "system_deps", "libs", "exes", "version",
-                     "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
-                     "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
-                     "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]:
-            attr_name = "cxxflags" if name == "cppflags" else name  # Backwards compatibility
-            result[name] = getattr(self, attr_name)
+        fields = ["name", "rootpath", "sysroot", "description", "system_deps",
+                  "libs", "exes", "version",
+                  "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
+                  "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
+                  "defines", "cflags", "cxxflags", "cppflags", "sharedlinkflags", "exelinkflags"]
+        for field in fields:
+            attr_name = "cxxflags" if field == "cppflags" else field  # Backwards compatibility
+            result[field] = getattr(self, attr_name)
         result["components"] = {}
         for name, component in self.components:
             result["components"][name] = component.as_dict()
