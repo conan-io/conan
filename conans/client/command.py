@@ -1214,9 +1214,9 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
-            name, version, user, channel, _ = get_reference_fields(args.pattern_or_reference,
-                                                                   user_channel_allowed=False)
-            ref = ConanFileReference(name, version, user, channel)
+            name, version, user, channel, rrev = get_reference_fields(args.pattern_or_reference,
+                                                                      user_channel_allowed=False)
+            ref = ConanFileReference(name, version, user, channel, rrev)
             if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference
                 # e.g.: conan search lib/*@lasote/stable

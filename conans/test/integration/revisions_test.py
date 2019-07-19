@@ -1094,7 +1094,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search("lib*", remote="default")
         items = data["results"][0]["items"]
         self.assertEqual(2, len(items))
-        expected = [repr(pref1b.ref), repr(pref2b.ref)]
+        expected = [str(pref1b.ref), str(pref2b.ref)]
 
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 

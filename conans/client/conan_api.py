@@ -1103,7 +1103,7 @@ class ConanAPIV1(object):
                                  " Enable this feature setting to '1' the environment variable"
                                  " 'CONAN_REVISIONS_ENABLED' or the config value"
                                  " 'general.revisions_enabled' in your conan.conf file")
-        ref = ConanFileReference.loads(repr(reference))
+        ref = ConanFileReference.loads(reference)
         if ref.revision:
             raise ConanException("Cannot list the revisions of a specific recipe revision")
 
@@ -1142,7 +1142,7 @@ class ConanAPIV1(object):
                                  " Enable this feature setting to '1' the environment variable"
                                  " 'CONAN_REVISIONS_ENABLED' or the config value"
                                  " 'general.revisions_enabled' in your conan.conf file")
-        pref = PackageReference.loads(repr(reference), validate=True)
+        pref = PackageReference.loads(reference, validate=True)
         if not pref.ref.revision:
             raise ConanException("Specify a recipe reference with revision")
         if pref.revision:

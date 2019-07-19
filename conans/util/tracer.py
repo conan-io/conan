@@ -11,6 +11,9 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import md5sum, sha1sum
 from conans.util.log import logger
 
+
+# FIXME: Conan 2.0 the traces should have all the revisions information also.
+
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_RECIPE_SOURCES", "DOWNLOADED_PACKAGE",
                   "PACKAGE_BUILT_FROM_SOURCES",
