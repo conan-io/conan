@@ -114,13 +114,13 @@ class GitToolTest(unittest.TestCase):
         git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
                   force_english=True)
         git.clone(url="https://myrepo.git")
-        self.assertIn("git config http.sslVerify true", runner.calls[1])
+        self.assertIn("git -c http.sslVerify=true", runner.calls[0])
 
         runner = MyRunner()
         git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
                   force_english=False)
         git.clone(url="https://myrepo.git")
-        self.assertIn("git config http.sslVerify false", runner.calls[1])
+        self.assertIn("git -c http.sslVerify=false", runner.calls[0])
 
     def test_clone_submodule_git(self):
         subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
