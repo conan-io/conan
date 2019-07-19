@@ -9,6 +9,7 @@ import yaml
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
+from conans.client.tools.env import environment_append
 from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
@@ -43,7 +44,8 @@ class ConanFileLoader(object):
         self.cached_conanfiles = {}
         self._python_requires.invalidate_caches()
 
-    def load_class(self, conanfile_path, lock_python_requires=None):
+    def load_class(self, conanfile_path, lock_python_requires=None, env=None):
+        env = env or dict()
         cached = self.cached_conanfiles.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
             return cached[0]
@@ -52,7 +54,7 @@ class ConanFileLoader(object):
             self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
         try:
             self._python_requires.valid = True
-            _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+            _, conanfile = parse_conanfile(conanfile_path, self._python_requires, env)
             self._python_requires.valid = False
 
             self._python_requires.locked_versions = None
@@ -152,7 +154,9 @@ class ConanFileLoader(object):
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     def load_conanfile(self, conanfile_path, processed_profile, ref, lock_python_requires=None):
-        conanfile_class = self.load_class(conanfile_path, lock_python_requires)
+        env, multiple = processed_profile._env_values.env_dicts(ref.name)
+        env.update(multiple)
+        conanfile_class = self.load_class(conanfile_path, lock_python_requires, env)
         conanfile_class.name = ref.name
         conanfile_class.version = ref.version
         conanfile = conanfile_class(self._output, self._runner, str(ref), ref.user, ref.channel)
@@ -257,9 +261,10 @@ def _parse_module(conanfile_module, module_id):
     return result
 
 
-def parse_conanfile(conanfile_path, python_requires):
+def parse_conanfile(conanfile_path, python_requires, env=None):
+    env = env or dict()
     with python_requires.capture_requires() as py_requires:
-        module, filename = _parse_conanfile(conanfile_path)
+        module, filename = _parse_conanfile(conanfile_path, env)
         try:
             conanfile = _parse_module(module, filename)
 
@@ -280,10 +285,11 @@ def parse_conanfile(conanfile_path, python_requires):
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
-def _parse_conanfile(conan_file_path):
+def _parse_conanfile(conan_file_path, env=None):
     """ From a given path, obtain the in memory python import module
     """
 
+    env = env or dict()
     if not os.path.exists(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
 
@@ -294,7 +300,8 @@ def _parse_conanfile(conan_file_path):
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             sys.dont_write_bytecode = True
-            loaded = imp.load_source(module_id, conan_file_path)
+            with environment_append(env):
+                loaded = imp.load_source(module_id, conan_file_path)
             sys.dont_write_bytecode = False
 
         # These lines are necessary, otherwise local conanfile imports with same name
