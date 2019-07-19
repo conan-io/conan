@@ -793,6 +793,7 @@ servers["r2"] = TestServer()
             tuple if required
         """
         conan = self.get_conan_api(user_io)
+        self.api = conan
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
