@@ -327,7 +327,7 @@ class Command(object):
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                               user_channel_allowed=True)
+                                                               user_channel_input=True)
 
         # The two first conditions is to allow "conan create ." and "conan create lib/1.0@"
         # FIXME: In Conan 2.0 all should be valid
@@ -496,7 +496,7 @@ class Command(object):
                                     lockfile=args.lockfile)
             else:
                 name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                                       user_channel_allowed=True)
+                                                                       user_channel_input=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
@@ -923,7 +923,7 @@ class Command(object):
 
         self._warn_python2()
         name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                               user_channel_allowed=True)
+                                                               user_channel_input=True)
         cwd = os.getcwd()
         info = None
 
@@ -974,7 +974,7 @@ class Command(object):
         args = parser.parse_args(*args)
         self._warn_python2()
         name, version, user, channel, _ = get_reference_fields(args.reference,
-                                                            user_channel_allowed=True)
+                                                               user_channel_input=True)
 
         # The two first conditions is to allow "conan export ." and "conan export lib/1.0@"
         # FIXME: In Conan 2.0 all should be valid
@@ -1214,8 +1214,7 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         try:
-            name, version, user, channel, rrev = get_reference_fields(args.pattern_or_reference,
-                                                                      user_channel_allowed=False)
+            name, version, user, channel, rrev = get_reference_fields(args.pattern_or_reference)
             ref = ConanFileReference(name, version, user, channel, rrev)
             if "*" in ref:
                 # Fixes a version with only a wildcard (valid reference) but not real reference

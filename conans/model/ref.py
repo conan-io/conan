@@ -7,26 +7,27 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
-def get_reference_fields(arg_reference, user_channel_allowed=False):
+def get_reference_fields(arg_reference, user_channel_input=False):
     """
     :param arg_reference: String with a complete reference, or
-        only user/channel (if user_channel_allowed)
+        only user/channel (if user_channel_input)
         only name/version (if not pattern_is_user_channel)
-    :param user_channel_allowed: Two items means user/channel or not.
+    :param user_channel_input: Two items means user/channel or not.
     :return: name, version, user and channel, in a tuple
     """
 
-    def split_pair(pair, split_char, priority_first=True):
-        if not pair:
+    # FIXME: The partial references meaning user/channel should be disambiguated at 2.0
+    def split_pair(pair, split_char):
+        if not pair or pair == split_char:
             return None, None
-        if "/" in pair:
-            tmp = pair.split(split_char)
-            if len(tmp) != 2:
-                raise ConanException("The reference has too many '%s'".format(split_char))
-            else:
-                return tmp
+        if split_char not in pair:
+            return None
+
+        tmp = pair.split(split_char)
+        if len(tmp) != 2:
+            raise ConanException("The reference has too many '%s'".format(split_char))
         else:
-            return (pair, None) if priority_first else (None, pair)
+            return tmp
 
     if not arg_reference:
         return None, None, None, None, None
@@ -40,17 +41,20 @@ def get_reference_fields(arg_reference, user_channel_allowed=False):
 
     if "@" in arg_reference:
         name_version, user_channel = split_pair(arg_reference, "@")
-        name, version = split_pair(name_version, "/", priority_first=False)
-        user, channel = split_pair(user_channel, "/")
+        # FIXME: Conan 2.0
+        # In conan now "xxx@conan/stable" means that xxx is the version, I would say it should
+        # be the name
+        name, version = split_pair(name_version, "/") or (None, name_version)
+        user, channel = split_pair(user_channel, "/") or (user_channel, None)
 
-        return name, version, user, channel, revision
+        return name or None, version or None, user or None, channel or None, revision or None
     else:
-        if user_channel_allowed:
-            el1, el2 = split_pair(arg_reference, "/")
-            return None, None, el1, el2, revision
+        if user_channel_input:
+            el1, el2 = split_pair(arg_reference, "/") or (arg_reference, None)
+            return None, None, el1 or None, el2 or None, revision or None
         else:
-            raise ConanException("Invalid reference, specify something like zlib/1.2.11@ "
-                                 "if you want to avoid the 'user/channel'")
+            raise InvalidNameException("Invalid reference, specify something like zlib/1.2.11@ "
+                                       "if you want to avoid the 'user/channel'")
 
 
 def check_valid_ref(ref, allow_pattern):
@@ -135,7 +139,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param revision:    string containing the revision (optional)
         """
         if (user and not channel) or (channel and not user):
-            raise InvalidNameException("Specify the user and the revision or neither of them")
+            raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
 
         version = Version(version) if version is not None else None
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
@@ -152,6 +156,12 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             ConanName.validate_name(self.channel, reference_token="channel")
         if self.revision:
             ConanName.validate_revision(self.revision)
+
+        if (self.user and not self.channel) or (self.channel and not self.user):
+            raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
+
+        if self.revision and not (self.user and self.channel and self.name and self.version):
+            raise InvalidNameException("A reference with revision has to specify all the fields")
 
     @staticmethod
     def loads(text, validate=True):
@@ -189,10 +199,12 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         return "/".join([self.name, self.version, self.user or "_", self.channel or "_"])
 
     def copy_with_rev(self, revision):
-        return ConanFileReference(self.name, self.version, self.user, self.channel, revision)
+        return ConanFileReference(self.name, self.version, self.user, self.channel, revision,
+                                  validate=False)
 
     def copy_clear_rev(self):
-        return ConanFileReference(self.name, self.version, self.user, self.channel, None)
+        return ConanFileReference(self.name, self.version, self.user, self.channel, None,
+                                  validate=False)
 
     def __lt__(self, other):
         def de_noneize(ref):
