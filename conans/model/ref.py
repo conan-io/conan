@@ -7,7 +7,21 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
+def _split_pair(pair, split_char):
+    if not pair or pair == split_char:
+        return None, None
+    if split_char not in pair:
+        return None
+
+    words = pair.split(split_char)
+    if len(words) != 2:
+        raise ConanException("The reference has too many '%s'".format(split_char))
+    else:
+        return words
+
+
 def get_reference_fields(arg_reference, user_channel_input=False):
+    # FIXME: The partial references meaning user/channel should be disambiguated at 2.0
     """
     :param arg_reference: String with a complete reference, or
         only user/channel (if user_channel_input)
@@ -15,19 +29,6 @@ def get_reference_fields(arg_reference, user_channel_input=False):
     :param user_channel_input: Two items means user/channel or not.
     :return: name, version, user and channel, in a tuple
     """
-
-    # FIXME: The partial references meaning user/channel should be disambiguated at 2.0
-    def split_pair(pair, split_char):
-        if not pair or pair == split_char:
-            return None, None
-        if split_char not in pair:
-            return None
-
-        tmp = pair.split(split_char)
-        if len(tmp) != 2:
-            raise ConanException("The reference has too many '%s'".format(split_char))
-        else:
-            return tmp
 
     if not arg_reference:
         return None, None, None, None, None
@@ -40,17 +41,17 @@ def get_reference_fields(arg_reference, user_channel_input=False):
         arg_reference = tmp[0]
 
     if "@" in arg_reference:
-        name_version, user_channel = split_pair(arg_reference, "@")
+        name_version, user_channel = _split_pair(arg_reference, "@")
         # FIXME: Conan 2.0
-        # In conan now "xxx@conan/stable" means that xxx is the version, I would say it should
-        # be the name
-        name, version = split_pair(name_version, "/") or (None, name_version)
-        user, channel = split_pair(user_channel, "/") or (user_channel, None)
+        #  In conan now "xxx@conan/stable" means that xxx is the version, I would say it should
+        #  be the name
+        name, version = _split_pair(name_version, "/") or (None, name_version)
+        user, channel = _split_pair(user_channel, "/") or (user_channel, None)
 
         return name or None, version or None, user or None, channel or None, revision or None
     else:
         if user_channel_input:
-            el1, el2 = split_pair(arg_reference, "/") or (arg_reference, None)
+            el1, el2 = _split_pair(arg_reference, "/") or (arg_reference, None)
             return None, None, el1 or None, el2 or None, revision or None
         else:
             raise InvalidNameException("Invalid reference, specify something like zlib/1.2.11@ "

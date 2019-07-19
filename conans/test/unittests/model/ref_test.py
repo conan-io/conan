@@ -212,6 +212,9 @@ class GetReferenceFieldsTest(unittest.TestCase):
             tmp = get_reference_fields("lib@user/channel", user_channel_input=user_channel_input)
             self.assertEqual(tmp, (None, "lib", "user", "channel", None))
 
+            tmp = get_reference_fields("/@/#", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, None, None, None, None))
+
     def test_only_user_channel(self):
         tmp = get_reference_fields("user/channel", user_channel_input=True)
         self.assertEqual(tmp, (None, None, "user", "channel", None))

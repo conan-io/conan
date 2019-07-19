@@ -326,12 +326,14 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python2()
+        if args.reference:
+            check_valid_ref(args.reference, allow_pattern=False)
+
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
 
-        # The two first conditions is to allow "conan create ." and "conan create lib/1.0@"
-        # FIXME: In Conan 2.0 all should be valid
-        if args.reference and not args.reference.endswith("@") and (not user or not channel):
+        if any([user, channel]) and not all([user, channel]):
+            # Or user/channel or nothing, but not partial
             raise ConanException("Invalid parameter '%s', "
                                  "specify the full reference or user/channel" % args.reference)
 
@@ -448,15 +450,7 @@ class Command(object):
         args = parser.parse_args(*args)
         cwd = get_cwd()
 
-        path_is_reference = False
-        path_is_complete_reference = False  # Like lib/1.0@
-        try:
-            get_reference_fields(args.path_or_reference)
-            path_is_reference = True
-            ConanFileReference.loads(args.path_or_reference)
-            path_is_complete_reference = True
-        except ConanException:
-            pass
+        path_is_reference = check_valid_ref(args.path_or_reference, allow_pattern=False)
 
         if path_is_reference and args.reference:
             raise ConanException("A full reference was provided as first argument, second "
@@ -464,25 +458,10 @@ class Command(object):
 
         info = None
         try:
-            if path_is_complete_reference:
-                ref = ConanFileReference.loads(args.path_or_reference)
+            if path_is_reference:
+                ref = ConanFileReference.loads(args.path_or_reference, validate=False)
                 info = self._conan.install_reference(
                                     ref,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    remote_name=args.remote,
-                                    verify=args.verify, manifests=args.manifests,
-                                    manifests_interactive=args.manifests_interactive,
-                                    build=args.build, profile_names=args.profile,
-                                    update=args.update,
-                                    generators=args.generator,
-                                    install_folder=args.install_folder,
-                                    lockfile=args.lockfile)
-            elif path_is_reference:
-                name, version, user, channel, rev = get_reference_fields(args.path_or_reference)
-                info = self._conan.install_reference_by_fields(
-                                    name, version, user, channel, rev,
                                     settings=args.settings,
                                     options=args.options,
                                     env=args.env,
@@ -1848,18 +1827,6 @@ class Command(object):
             self._out.writeln("https://docs.conan.io/en/latest/installation.html"
                               "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
-
-    @staticmethod
-    def _check_query_parameter(pattern, query):
-        if pattern:
-            try:
-                name, version, user, channel, revision = get_reference_fields(pattern)
-                ConanFileReference(name, version, user, channel, revision)
-            except ConanException:
-                if query is not None:
-                    raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.g. conan search "
-                                         "MyPackage/1.2@user/channel -q \"os=Windows\"")
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class

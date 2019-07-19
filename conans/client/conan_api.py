@@ -503,11 +503,6 @@ class ConanAPIV1(object):
         workspace.generate(install_folder, deps_graph, self._user_io.out)
 
     @api_method
-    def install_reference_by_fields(self, name, version, user, channel, revision, **kwargs):
-        ref = ConanFileReference(name, version, user, channel, revision)
-        return self.install_reference(ref, **kwargs)
-
-    @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
