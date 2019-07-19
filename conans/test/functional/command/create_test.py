@@ -545,3 +545,31 @@ class TestConanLib(ConanFile):
 
         client.run('create . user/channel')
         self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
+
+    def requires_without_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent('''
+    from conans import ConanFile
+
+    class HelloConan(ConanFile):
+        name = "HelloBar"
+        version = "0.1"
+        
+        def package_info(self):
+            self.output.warn("Hello, I'm HelloBar")
+    ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent('''
+    from conans import ConanFile
+
+    class HelloTestConan(ConanFile):
+        requires = "HelloBar/0.1@"
+    ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . consumer/1.0@")
+        self.assertIn("HelloBar/0.1: WARN: Hello, I'm HelloBar", client.out)
+        self.assertIn("consumer/1.0: Created package revision", client.out)
