@@ -192,7 +192,8 @@ class DepComponent(object):
         result = {}
         for name in ["name", "rootpath", "deps", "lib", "exe", "system_deps",
                      "includedirs", "srcdirs", "libdirs", "bindirs", "builddirs", "resdirs",
-                     "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
+                     "include_paths", "src_paths", "lib_paths", "bin_paths", "build_paths",
+                     "res_paths",
                      "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags"]:
             result[name] = getattr(self, name)
         return result

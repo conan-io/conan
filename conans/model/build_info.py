@@ -42,10 +42,10 @@ class CppInfo(object):
         self.version = None
         self.description = None
         # When package is editable, filter_empty=False, so empty dirs are maintained
-        self.filter_empty = True   # FIXME: Should not be part of the public interface
+        self.filter_empty = True  # FIXME: Should not be part of the public interface
         self._components = OrderedDict()
         self.public_deps = []
-        self.configs = {}    # FIXME: Should not be part of the public interface
+        self.configs = {}  # FIXME: Should not be part of the public interface
 
     @property
     def rootpath(self):
