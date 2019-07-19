@@ -1,18 +1,18 @@
 import os
 import platform
+import unittest
+from collections import defaultdict, namedtuple
 
 import six
-import unittest
-from collections import defaultdict, namedtuple, OrderedDict
 
 from conans.client.generators import TXTGenerator
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, DepsCppInfo, Component, DepCppInfo
+from conans.model.build_info import Component, CppInfo, DepCppInfo, DepsCppInfo
 from conans.model.build_info_components import DepComponent
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.conanfile import MockConanfile
-from conans.test.utils.deprecation import catch_deprecation_warning, catch_real_deprecation_warning
+from conans.test.utils.deprecation import catch_real_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir, save
 
@@ -24,47 +24,37 @@ def _normpaths(paths):
 class BuildInfoTest(unittest.TestCase):
 
     def parse_test(self):
-        items = [
-"""
+        items = ["""
 [rootpath_Boost]
 /this_boost_path
-""",
-"""
+""", """
 [rootpath_My_Lib]
 /this_my_lib_path
-""",
-"""
+""", """
 [rootpath_My_Other_Lib]
 /this_my_other_lib_path
-""",
-"""
+""", """
 [rootpath_My.Component.Lib]
 /this_my_component_lib_path
-""",
-"""
+""", """
 [rootpath_My-Component-Tool]
 /this_my_component_tool_path
-""",
-"""
+""", """
 [includedirs_Boost]
 F:/ChildrenPath
 """ if platform.system() == "Windows" else """
 [includedirs_Boost]
 /ChildrenPath
-""",
-"""
+""", """
 [includedirs_My_Lib]
 /this_my_lib_path/mylib_path
-""",
-"""
+""", """
 [includedirs_My_Other_Lib]
 /this_my_other_lib_path/otherlib_path
-""",
-"""
+""", """
 [includedirs_My.Component.Lib]
 /this_my_component_lib_path/my_component_lib
-""",
-"""
+""", """
 [includedirs_My-Component-Tool]
 /this_my_component_tool_path/my-component-tool
 """]
@@ -72,7 +62,7 @@ F:/ChildrenPath
         deps_cpp_info, _, _ = TXTGenerator.loads(text)
 
         def assert_cpp(deps_cpp_info_test):
-            children_abs_path = "F:/ChildrenPath" if platform.system() == "Windows" else\
+            children_abs_path = "F:/ChildrenPath" if platform.system() == "Windows" else \
                 "/ChildrenPath"
             self.assertEqual([children_abs_path, 'mylib_path', 'otherlib_path', 'my_component_lib',
                               'my-component-tool'], deps_cpp_info_test.includedirs)
@@ -166,8 +156,11 @@ VAR2=23
                           whenever_abs_path,
                           os.path.join(child_folder, "include"),
                           os.path.join(child_folder, "ChildrenPath")], deps_cpp_info.include_paths)
-        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
-        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {}, defaultdict(dict))).content
+        fakeconan = namedtuple(
+                "Conanfile",
+                "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
+        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None, {},
+                                        defaultdict(dict))).content
         deps_cpp_info2, _, _ = TXTGenerator.loads(output)
         self.assertEqual(deps_cpp_info.configs, deps_cpp_info2.configs)
         self.assertEqual(_normpaths(deps_cpp_info.include_paths),
@@ -244,8 +237,11 @@ VAR2=23
         deps_user_info = DepsUserInfo()
         deps_user_info["LIB2"].myuservar = "23"
 
-        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
-        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, deps_user_info, {}, defaultdict(dict))).content
+        fakeconan = namedtuple(
+                "Conanfile",
+                "deps_cpp_info cpp_info deps_env_info env_info user_info deps_user_info")
+        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, deps_user_info, {},
+                                        defaultdict(dict))).content
 
         deps_cpp_info2, _, deps_env_info2 = TXTGenerator.loads(output)
         self.assertEqual([os.path.join(parent_folder, "include"),
