@@ -268,7 +268,8 @@ class ProfileTest(unittest.TestCase):
         self.client.save(files)
 
         # Create a profile and use it
-        profile_settings = OrderedDict([("compiler", "Visual Studio"),
+        profile_settings = OrderedDict([("os", "Windows"),
+                                        ("compiler", "Visual Studio"),
                                         ("compiler.version", "12"),
                                         ("compiler.runtime", "MD"),
                                         ("arch", "x86")])
@@ -279,9 +280,9 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
         package_settings = {"*@lasote/*": tmp_settings}
-        create_profile(self.client.cache.profiles_path,
-                       "myprofile", settings=profile_settings,
-                       package_settings=package_settings)
+        _create_profile(self.client.cache.profiles_path,
+                        "myprofile", settings=profile_settings,
+                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
