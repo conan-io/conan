@@ -290,6 +290,19 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.version=4.8", info)
 
+        package_settings = {"*@other/*": tmp_settings}
+        _create_profile(self.client.cache.profiles_path,
+                        "myprofile", settings=profile_settings,
+                        package_settings=package_settings)
+        # Try to override some settings in install command
+        self.client.run("install . lasote/testing -pr myprofile")
+        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        self.assertIn("compiler=Visual Studio", info)
+        self.assertIn("compiler.runtime=MD", info)
+        self.assertIn("compiler.version=12", info)
+        self.assertNotIn("gcc", info)
+        self.assertNotIn("libcxx", info)
+
     def install_profile_options_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
