@@ -1191,16 +1191,10 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         # Searching foo/bar is considered a pattern (FIXME: 2.0) so use strict mode to disambiguate
-        is_reference = check_valid_ref(args.pattern_or_reference)
+        is_reference = check_valid_ref(args.pattern_or_reference, strict_mode=True)
 
         if is_reference:
             ref = ConanFileReference.loads(args.pattern_or_reference)
-            if "*" in args.pattern_or_reference or "@" not in args.pattern_or_reference:
-                # Fixes a version with only a wildcard (valid reference) but not real reference
-                # e.g.: conan search lib/*@lasote/stable
-                # FIXME: Conan 2.0 "conan search lib/1.0" now is considered a pattern instead of
-                #        a valid reference. Patterns should have always explicit *
-                ref = None
         else:
             ref = None
             if args.query:
