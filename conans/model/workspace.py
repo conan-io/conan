@@ -14,10 +14,11 @@ from conans.util.files import load, save
 
 class LocalPackage(object):
 
-    def __init__(self, ref, path, layout):
+    def __init__(self, ref, path, layout, target_name=None):
         self._ref = ref
         self.path = path
         self.layout = layout
+        self.target_name = target_name or self._ref.name
 
     def layout_path(self, path):
         path = path or "."
@@ -83,7 +84,8 @@ class Workspace(object):
 
                 ref = ConanFileReference.loads(ref, validate=True)
                 path = os.path.normpath(os.path.join(base_folder, data.pop("path")))
-                package = LocalPackage(ref, path, layout)
+                target_name = data.pop("target_name", None)
+                package = LocalPackage(ref, path, layout, target_name)
                 ws.packages[ref] = package
 
                 if data:
@@ -162,16 +164,19 @@ class WorkspaceCMake(Workspace):
             {%- if pkg.in %}
                 # Inner: {{ ref }}
                 add_subdirectory("{{ pkg.source_folder }}" "{{ pkg.build_folder }}")
-                add_library({{ pkg.name }}::{{ pkg.name }} ALIAS {{ pkg.name }})
-                add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.name }})
+                get_target_property(target_type {{ pkg.target_name }} TYPE)
+                if (NOT target_type STREQUAL "EXECUTABLE")
+                    add_library({{ pkg.name }}::{{ pkg.name }} ALIAS {{ pkg.target_name }})
+                    add_library(CONAN_PKG::{{ pkg.name }} ALIAS {{ pkg.target_name }})
+                endif()
             {%- else %}
                 {%- if pkg.requires %}
                 # Outter: {{ ref }}
-                outer_package({{pkg.name}} {{ref}})
+                outer_package({{pkg.target_name}} {{ref}})
                 {%- endif %}
             {%- endif %}
             {%- for r in pkg.requires %}
-                add_dependencies({{ pkg.name }} {{ r }})
+                add_dependencies({{ pkg.target_name }} {{ r }})
             {%- endfor %}
         {% endfor %}
     """)
@@ -180,6 +185,8 @@ class WorkspaceCMake(Workspace):
         cmake_minimum_required(VERSION 3.3)
         project("{{ ws.name }}")
         
+        set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
         include(${CMAKE_CURRENT_SOURCE_DIR}/conanbuildinfo.cmake)
         conan_basic_setup(NO_OUTPUT_DIRS)  # Execute Conan magic
         
@@ -198,6 +205,16 @@ class WorkspaceCMake(Workspace):
         ordered_packages = []  # [(ref, pkg), ]
         in_ws = {}  # {ref: {source_folder: X, build_folder: Y}}
         out_dependents = {}  # {ref: {name, requires}}  Package not in WS but consuming editable ones
+
+        def gather_requires(node_input):
+            ret = []
+            for it in node_input.neighbors():
+                if it.ref in in_ws:
+                    ret.append(self.packages[it.ref].target_name)
+                elif it.ref in out_dependents:
+                    ret.append("{n}::{n}".format(n=it.ref.name))
+            return ret
+
         for node in graph.ordered_iterate():
             if node.ref in self.packages:
                 assert node.recipe == RECIPE_EDITABLE, "Not editable in the graph, but in workspace"
@@ -213,10 +230,9 @@ class WorkspaceCMake(Workspace):
                 pkg = {'name': node.ref.name,
                        'source_folder': self.packages[node.ref].layout_path(source_folder),
                        'build_folder': self.packages[node.ref].layout_path(build_folder),
-                       'requires': [it.ref.name for it in node.neighbors()
-                                    if it.ref in in_ws or
-                                    it.ref in out_dependents],
-                       'in': True}
+                       'requires': gather_requires(node),
+                       'in': True,
+                       'target_name': self.packages[node.ref].target_name}
                 in_ws[node.ref] = pkg
                 ordered_packages.append((node.ref, pkg))
             else:
@@ -226,9 +242,7 @@ class WorkspaceCMake(Workspace):
                 if any([it.ref in in_ws for it in node.public_closure]):
                     # This node depends on one in the WS
                     pkg = {'name': node.ref.name,
-                           'requires': [it.ref.name for it in node.neighbors()
-                                        if it.ref in in_ws or
-                                        it.ref in out_dependents],
+                           'requires': gather_requires(node),
                            'in': False}
                 elif any([it.ref in self.packages for it in node.inverse_closure]):
                     # This node is consumed by someone in the WS
