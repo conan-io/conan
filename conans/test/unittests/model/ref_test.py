@@ -37,6 +37,7 @@ class RefTest(unittest.TestCase):
         self.assertEqual(ref.revision, "rev1")
 
     def errors_test(self):
+        self.assertRaises(ConanException, ConanFileReference.loads, "")
         self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).channel)
         self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).user)
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
@@ -63,6 +64,13 @@ class RefTest(unittest.TestCase):
     def revisions_test(self):
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
         self.assertEqual(ref.channel, "testing")
+        self.assertEqual(ref.revision, "23")
+
+        ref = ConanFileReference.loads("opencv/2.4.10#23")
+        self.assertIsNone(ref.channel)
+        self.assertIsNone(ref.user)
+        self.assertEqual(ref.name, "opencv")
+        self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.revision, "23")
 
         ref = ConanFileReference("opencv", "2.3", "lasote", "testing", "34")

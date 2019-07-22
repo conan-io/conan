@@ -609,6 +609,8 @@ class TestConan(ConanFile):
 
         # This fails, Conan thinks this is a path
         client.run('install lib/1.0', assert_error=True)
+        fake_path = os.path.join(client.current_folder, "lib", "1.0")
+        self.assertIn("Conanfile not found at {}".format(fake_path), client.out)
 
         # Try this syntax to upload too
         client.run('install lib/1.0@')

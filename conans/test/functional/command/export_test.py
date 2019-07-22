@@ -473,7 +473,7 @@ class ExportMetadataTest(unittest.TestCase):
                         """)
         client.save({"conanfile.py": conanfile})
         client.run('export .')
-        folder = client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
+        client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
         self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
 
         # Do it twice

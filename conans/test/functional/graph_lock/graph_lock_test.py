@@ -327,7 +327,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.save({"conanfile.py": consumer})
 
     def _check_lock(self, ref_b):
-        ref_b = repr(ConanFileReference.loads(ref_b))
+        ref_b = repr(ConanFileReference.loads(ref_b, validate=False))
         lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
         self.assertIn("Tool/0.1@user/channel", lock_file)
         self.assertNotIn("Tool/0.2@user/channel", lock_file)

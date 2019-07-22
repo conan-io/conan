@@ -145,7 +145,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
     """
-    sep_pattern = re.compile(r"([^/]+)/([^/]+)@([^/]+)/([^/#]+)#?(.+)?")
 
     def __new__(cls, name, version, user, channel, revision=None, validate=True):
         """Simple name creation.
@@ -176,11 +175,11 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         if self.revision is not None:
             ConanName.validate_revision(self.revision)
 
+        if not self.name or not self.version:
+            raise InvalidNameException("Specify the 'name' and the 'version'")
+
         if (self.user and not self.channel) or (self.channel and not self.user):
             raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
-
-        if self.revision and not (self.user and self.channel and self.name and self.version):
-            raise InvalidNameException("A reference with revision has to specify all the fields")
 
     @staticmethod
     def loads(text, validate=True):
