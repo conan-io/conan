@@ -98,10 +98,10 @@ class ConanFileLoader(object):
         tmp_settings = processed_profile.processed_settings.copy()
         package_settings_values = processed_profile.package_settings_values
         if package_settings_values:
-            ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
-                                   conanfile._conan_user, conanfile._conan_channel)
             pkg_settings = package_settings_values.get(conanfile.name)
-            if not pkg_settings:
+            if pkg_settings is None:
+                ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
+                                       conanfile._conan_user, conanfile._conan_channel)
                 for pattern, settings in package_settings_values.items():
                     if fnmatch.fnmatchcase(ref, pattern):
                         pkg_settings = settings
