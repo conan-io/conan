@@ -30,7 +30,6 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.hook_manager import HookManager
-from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -91,7 +90,7 @@ def test_processed_profile(profile=None, settings=None):
         profile = Profile()
     if profile.processed_settings is None:
         profile.processed_settings = settings or Settings()
-    return ProcessedProfile(profile=profile)
+    return profile
 
 
 class TestingResponse(object):

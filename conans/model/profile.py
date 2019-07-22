@@ -13,13 +13,32 @@ class Profile(object):
     """
 
     def __init__(self):
-        # Sections
-        self.processed_settings = None
+        # Input sections, as defined by user profile files and command line
         self.settings = OrderedDict()
         self.package_settings = defaultdict(OrderedDict)
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
+
+        # Cached processed values
+        self.processed_settings = None  # Settings with values, and smart completion
+        self._user_options = None
+        self._package_settings_values = None
+        self.dev_reference = None  # Reference of the package being develop
+
+    @property
+    def user_options(self):
+        if self._user_options is None:
+            self._user_options = self.options.copy()
+        return self._user_options
+
+    @property
+    def package_settings_values(self):
+        if self._package_settings_values is None:
+            self._package_settings_values = {}
+            for pkg, settings in self.package_settings.items():
+                self._package_settings_values[pkg] = list(settings.items())
+        return self._package_settings_values
 
     def process_settings(self, cache, preprocess=True):
         self.processed_settings = cache.settings.copy()
@@ -42,13 +61,6 @@ class Profile(object):
                     raise ConanException("Error in resulting settings for package"
                                          " '{}': {}\n{}".format(pkg, e, '\n'.join(pkg_profile)))
                 # TODO: Assign the _validated_ settings and do not compute again
-
-    @property
-    def package_settings_values(self):
-        result = {}
-        for pkg, settings in self.package_settings.items():
-            result[pkg] = list(settings.items())
-        return result
 
     def dumps(self):
         result = ["[settings]"]

@@ -18,34 +18,8 @@ class LoadConanfileTxtTest(unittest.TestCase):
     def setUp(self):
         settings = Settings()
         self.profile = Profile()
-        self.profile._settings = settings
-        self.profile._user_options = None
-        self.profile._env_values = None
-        self.conanfile_txt_path = os.path.join(temp_folder(), "conanfile.txt")
-        output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, output, None)
+        self.profile.processed_settings = settings
 
-    def env_test(self):
-        env_values = EnvValues()
-        env_values.add("PREPEND_PATH", ["hello", "bye"])
-        env_values.add("VAR", ["var_value"])
-        self.profile._env_values = env_values
-        save(self.conanfile_txt_path, "")
-        conanfile = self.loader.load_conanfile_txt(self.conanfile_txt_path, self.profile)
-        self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
-
-
-class LoadConanfileTest(unittest.TestCase):
-
-    def setUp(self):
-        settings = Settings()
-        self.profile = Profile()
-        self.profile._settings = settings
-        self.profile._user_options = None
-        self.profile._env_values = None
-        self.profile._dev_reference = None
-        self.profile._package_settings = None
-        self.conanfile_path = os.path.join(temp_folder(), "conanfile.py")
         output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
 
@@ -53,8 +27,19 @@ class LoadConanfileTest(unittest.TestCase):
         env_values = EnvValues()
         env_values.add("PREPEND_PATH", ["hello", "bye"])
         env_values.add("VAR", ["var_value"])
-        self.profile._env_values = env_values
-        save(self.conanfile_path,
+        self.profile.env_values = env_values
+        conanfile_txt_path = os.path.join(temp_folder(), "conanfile.txt")
+        save(conanfile_txt_path, "")
+        conanfile = self.loader.load_conanfile_txt(conanfile_txt_path, self.profile)
+        self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
+
+    def conanfile_py_env_test(self):
+        conanfile_path = os.path.join(temp_folder(), "conanfile.py")
+        env_values = EnvValues()
+        env_values.add("PREPEND_PATH", ["hello", "bye"])
+        env_values.add("VAR", ["var_value"])
+        self.profile.env_values = env_values
+        save(conanfile_path,
              textwrap.dedent("""
                 from conans import ConanFile
 
@@ -63,5 +48,5 @@ class LoadConanfileTest(unittest.TestCase):
                     version = "1.0"
              """))
         ref = ConanFileReference("hello", "1.0", "user", "channel")
-        conanfile = self.loader.load_conanfile(self.conanfile_path, self.profile, ref)
+        conanfile = self.loader.load_conanfile(conanfile_path, self.profile, ref)
         self.assertEqual(conanfile.env, {"PREPEND_PATH": ["hello", "bye"], "VAR": ["var_value"]})
