@@ -143,10 +143,8 @@ class ConanRemover(object):
         if remote_name and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        try:
-            input_ref = None if "*" in pattern else ConanFileReference.loads(pattern)
-        except (ConanException, TypeError):
-            input_ref = None
+        is_reference = check_valid_ref(pattern, strict_mode=True)
+        input_ref = ConanFileReference.loads(pattern) if is_reference else None
 
         if not input_ref and packages_query is not None:
             raise ConanException("query parameter only allowed with a valid recipe "
