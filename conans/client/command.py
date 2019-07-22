@@ -1231,7 +1231,7 @@ class Command(object):
                 return
 
             if ref:
-                info = self._conan.search_packages(str(ref), query=args.query,
+                info = self._conan.search_packages(repr(ref), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
