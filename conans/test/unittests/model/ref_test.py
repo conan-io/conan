@@ -219,3 +219,53 @@ class GetReferenceFieldsTest(unittest.TestCase):
 
         tmp = get_reference_fields("/channel", user_channel_input=True)
         self.assertEqual(tmp, (None, None, None, "channel", None))
+
+        ref_pattern = ConanFileReference.loads("package/*@user/channel")
+        self.assertFalse(check_valid_ref(ref_pattern, strict_mode=False))
+
+
+class CompatiblePrefTest(unittest.TestCase):
+
+    def test_compatible(self):
+
+        def ok(pref1, pref2):
+            pref1 = PackageReference.loads(pref1)
+            pref2 = PackageReference.loads(pref2)
+            return pref1.is_compatible_with(pref2)
+
+        # Same ref is ok
+        self.assertTrue(ok("package/1.0@user/channel#RREV1:packageid1#PREV1",
+                           "package/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # Change PREV is not ok
+        self.assertFalse(ok("package/1.0@user/channel#RREV1:packageid1#PREV1",
+                            "package/1.0@user/channel#RREV1:packageid1#PREV2"))
+
+        # Different ref is not ok
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
+                            "packageB/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # Different ref is not ok
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1",
+                            "packageB/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # Different package_id is not ok
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1",
+                            "packageA/1.0@user/channel#RREV1:packageid2#PREV1"))
+
+        # Completed PREV is ok
+        self.assertTrue(ok("packageA/1.0@user/channel#RREV1:packageid1",
+                           "packageA/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # But only in order, the second ref cannot remove PREV
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
+                            "packageA/1.0@user/channel#RREV1:packageid1"))
+
+        # Completing RREV is also OK
+        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
+                           "packageA/1.0@user/channel#RREV1:packageid1"))
+
+        # Completing RREV and PREV is also OK
+        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
+                           "packageA/1.0@user/channel#RREV:packageid1#PREV"))
+

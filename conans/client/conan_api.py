@@ -624,9 +624,10 @@ class ConanAPIV1(object):
         else:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
-        install_folder = _make_abs_path(install_folder, cwd)
-        if not os.path.exists(os.path.join(install_folder, GRAPH_INFO_FILE)):
-            install_folder = None
+        if install_folder:
+            install_folder = _make_abs_path(install_folder, cwd)
+            if not os.path.exists(os.path.join(install_folder, GRAPH_INFO_FILE)):
+                install_folder = None
 
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,

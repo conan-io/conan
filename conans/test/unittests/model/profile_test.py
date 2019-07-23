@@ -65,6 +65,7 @@ MyPackage:os=Windows
         self.assertEqual(np.package_settings_values,
                          {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
 
+        np._package_settings_values = None  # invalidate caching
         np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
         self.assertEqual(np.package_settings_values,
                          {"MyPackage": [("os", "Windows"), ("OTHER", "2"),

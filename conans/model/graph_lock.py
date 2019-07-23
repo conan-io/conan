@@ -161,7 +161,8 @@ class GraphLock(object):
             if node.modified:
                 old_node = self._nodes[id_]
                 if old_node.modified:
-                    raise ConanException("Lockfile had already modified %s" % str(node.pref))
+                    if not old_node.pref.is_compatible_with(node.pref):
+                        raise ConanException("Lockfile had already modified %s" % str(node.pref))
                 self._nodes[id_] = node
 
     def clean_modified(self):
@@ -213,12 +214,15 @@ class GraphLock(object):
                 if node.recipe == RECIPE_CONSUMER:
                     continue  # If the consumer node is not found, could be a test_package
                 raise
-            if lock_node.pref and repr(lock_node.pref) != repr(node.pref):
-                if node.binary == BINARY_BUILD or node.id in affected:
+            if lock_node.pref:
+                # If the update is compatible (resolved complete PREV) or if the node has
+                # been build, then update the graph
+                if lock_node.pref.is_compatible_with(node.pref) or \
+                        node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
-                    raise ConanException("Mistmatch between lock and graph:\nLock:  %s\nGraph: %s"
-                                         % (lock_node.pref.full_str(), node.pref.full_str()))
+                    raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
+                                         % (repr(lock_node.pref), repr(node.pref)))
 
     def lock_node(self, node, requires):
         """ apply options and constraints on requirements of a node, given the information from
