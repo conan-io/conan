@@ -6,6 +6,7 @@ import yaml
 from jinja2 import Template
 
 from conans.client.graph.graph import RECIPE_EDITABLE
+from conans.client.importer import run_imports
 from conans.errors import ConanException
 from conans.model.editable_layout import get_editable_abs_path, EditableLayout
 from conans.model.ref import ConanFileReference
@@ -235,6 +236,10 @@ class WorkspaceCMake(Workspace):
                        'target_name': self.packages[node.ref].target_name}
                 in_ws[node.ref] = pkg
                 ordered_packages.append((node.ref, pkg))
+
+                # Run imports for _editable_ packages
+                # TODO: I need to run the imports, is this the place?
+                run_imports(conanfile, self.packages[node.ref].layout_path(source_folder))
             else:
                 if not node.ref:
                     continue
