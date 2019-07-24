@@ -88,7 +88,7 @@ class ConanFileLoader(object):
         else:
             conanfile.version = version
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        return conanfile(self._output, self._runner, str(ref), user, channel)
+        return conanfile(self._output, self._runner, str(ref), ref.user, ref.channel)
 
     @staticmethod
     def _initialize_conanfile(conanfile, processed_profile):
@@ -115,12 +115,12 @@ class ConanFileLoader(object):
         conanfile_class.name = name or conanfile_class.name
         conanfile_class.version = version or conanfile_class.version
         if test:
-            display_name = "%s (test package)" % test
+            display_name = "%s (test package)" % str(test)
         else:
             ref = ConanFileReference(conanfile_class.name, conanfile_class.version, user, channel,
                                      validate=False)
-            if ref.name or ref.version or ref.user or ref.channel:
-                display_name = "%s (%s)" % (os.path.basename(conanfile_path), ref)
+            if str(ref):
+                display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
             else:
                 display_name = os.path.basename(conanfile_path)
         conanfile = conanfile_class(self._output, self._runner, display_name, user, channel)
@@ -179,8 +179,8 @@ class ConanFileLoader(object):
         except Exception as e:
             raise ConanException("%s:\n%s" % (path, str(e)))
         for reference in parser.requirements:
-            ConanFileReference.loads(reference)  # Raise if invalid
-            conanfile.requires.add(reference)
+            ref = ConanFileReference.loads(reference)  # Raise if invalid
+            conanfile.requires.add_ref(ref)
         for build_reference in parser.build_requirements:
             ConanFileReference.loads(build_reference)
             if not hasattr(conanfile, "build_requires"):
@@ -207,7 +207,8 @@ class ConanFileLoader(object):
         conanfile.settings = processed_profile.processed_settings.copy_values()
 
         for reference in references:
-            conanfile.requires.add(repr(reference))  # Convert to string necessary
+            conanfile.requires.add_ref(reference)
+
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
         if scope_options:

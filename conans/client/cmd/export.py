@@ -56,8 +56,20 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
                        conanfile.py
     """
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
-    ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                             conanfile.channel)
+
+    # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
+    # Take the default from the env vars if they exist to not break behavior
+    try:
+        user = conanfile.user
+    except ConanException:
+        user = None
+
+    try:
+        channel = conanfile.channel
+    except ConanException:
+        channel = None
+
+    ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:

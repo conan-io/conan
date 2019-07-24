@@ -1,15 +1,17 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, mkdir, rmdir
-from conans.test.utils.conanfile import TestConanFile
 
 
 class InstallTest(unittest.TestCase):
@@ -597,3 +599,35 @@ class TestConan(ConanFile):
         client2 = TestClient(servers=servers, users={})
         client2.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Package installed", client2.out)
+
+    def install_without_ref_test(self):
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    name = "lib"
+                    version = "1.0"
+                """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('create .')
+        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+
+        client.run('upload lib/1.0 -c --all')
+        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
+
+        client.run('remove "*" -f')
+
+        # This fails, Conan thinks this is a path
+        client.run('install lib/1.0', assert_error=True)
+        fake_path = os.path.join(client.current_folder, "lib", "1.0")
+        self.assertIn("Conanfile not found at {}".format(fake_path), client.out)
+
+        # Try this syntax to upload too
+        client.run('install lib/1.0@')
+        client.run('upload lib/1.0@ -c --all')

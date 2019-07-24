@@ -110,7 +110,7 @@ class GraphManager(object):
             if require:
                 require.ref = require.range_ref = ref
             else:
-                conanfile.requires(str(ref))
+                conanfile.requires.add_ref(ref)
             conanfile._conan_user = ref.user
             conanfile._conan_channel = ref.channel
 

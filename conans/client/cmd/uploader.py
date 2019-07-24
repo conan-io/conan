@@ -93,11 +93,11 @@ class CmdUpload(object):
     def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
         """ validate inputs and compute the refs (without revisions) to be uploaded
         """
-        if package_id and not check_valid_ref(reference_or_pattern, allow_pattern=False):
+        if package_id and not check_valid_ref(reference_or_pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
 
-        if package_id or check_valid_ref(reference_or_pattern, allow_pattern=False):
+        if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
             refs = [ref, ]

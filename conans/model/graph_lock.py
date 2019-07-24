@@ -76,10 +76,11 @@ class GraphLockNode(object):
         """ constructs a GraphLockNode from a json like dict
         """
         json_pref = data["pref"]
-        pref = PackageReference.loads(json_pref) if json_pref else None
+        pref = PackageReference.loads(json_pref, validate=False) if json_pref else None
         python_requires = data.get("python_requires")
         if python_requires:
-            python_requires = [ConanFileReference.loads(ref) for ref in python_requires]
+            python_requires = [ConanFileReference.loads(ref, validate=False)
+                               for ref in python_requires]
         options = OptionsValues.loads(data["options"])
         modified = data.get("modified")
         requires = data.get("requires", {})
