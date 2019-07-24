@@ -1,6 +1,7 @@
 import copy
 import os
 import platform
+import textwrap
 import unittest
 
 from conans.client import tools
@@ -194,3 +195,31 @@ virtualenv
         client.runner("%s -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
                       (OSInfo.bash_path(), client.current_folder))
         self.assertIn("PREPEND_VAR=1:2:three:kk", client.out)
+
+    def reuse_script_sh_test(self):
+        # https://github.com/conan-io/conan/issues/5528
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                exports_sources = "*"
+                def package(self):
+                    self.copy("*")
+                def package_info(self):
+                    self.env_info.PATH=[self.package_folder.replace("\\\\", "/")]
+            """)
+        tool = 'echo "Hello world"'
+        client.save({"conanfile.py": conanfile,
+                     "mytool.sh": tool})
+        client.run("create . tool/0.1@user/testing")
+        conanfile = textwrap.dedent("""
+                    [requires]
+                    tool/0.1@user/testing
+                    [generators]
+                    virtualenv
+                    """)
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install .")
+        sh = load(os.path.join(client.current_folder, "activate.sh"))
+        self.assertNotIn("\\", sh)
+        self.assertIn("tool/0.1/user/testing", sh)
