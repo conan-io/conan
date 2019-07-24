@@ -621,6 +621,7 @@ class ConanAPIV1(object):
         cwd = get_cwd()
         if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
+            install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
         else:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
