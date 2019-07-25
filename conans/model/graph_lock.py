@@ -8,9 +8,11 @@ from conans.errors import ConanException
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
+from conans.model.version import Version
 
 
 LOCKFILE = "conan.lock"
+LOCKFILE_VERSION = "0.1"
 
 
 class GraphLockFile(object):
@@ -37,6 +39,10 @@ class GraphLockFile(object):
     @staticmethod
     def loads(text):
         graph_json = json.loads(text)
+        version = graph_json.get("version")
+        if version:
+            version = Version(version)
+            # Do something with it, migrate, raise...
         profile = graph_json["profile"]
         # FIXME: Reading private very ugly
         profile, _ = _load_profile(profile, None, None)
@@ -52,7 +58,8 @@ class GraphLockFile(object):
 
     def dumps(self):
         result = {"profile": self.profile.dumps(),
-                  "graph_lock": self.graph_lock.as_dict()}
+                  "graph_lock": self.graph_lock.as_dict(),
+                  "version": LOCKFILE_VERSION}
         return json.dumps(result, indent=True)
 
 
@@ -69,10 +76,11 @@ class GraphLockNode(object):
         """ constructs a GraphLockNode from a json like dict
         """
         json_pref = data["pref"]
-        pref = PackageReference.loads(json_pref) if json_pref else None
+        pref = PackageReference.loads(json_pref, validate=False) if json_pref else None
         python_requires = data.get("python_requires")
         if python_requires:
-            python_requires = [ConanFileReference.loads(ref) for ref in python_requires]
+            python_requires = [ConanFileReference.loads(ref, validate=False)
+                               for ref in python_requires]
         options = OptionsValues.loads(data["options"])
         modified = data.get("modified")
         requires = data.get("requires", {})
@@ -83,10 +91,10 @@ class GraphLockNode(object):
         that can be converted to json
         """
         result = {}
-        result["pref"] = self.pref.full_repr() if self.pref else None
+        result["pref"] = repr(self.pref) if self.pref else None
         result["options"] = self.options.dumps()
         if self.python_requires:
-            result["python_requires"] = [r.full_repr() for r in self.python_requires]
+            result["python_requires"] = [repr(r) for r in self.python_requires]
         if self.modified:
             result["modified"] = True
         if self.requires:
@@ -104,8 +112,7 @@ class GraphLock(object):
                     continue
                 requires = {}
                 for edge in node.dependencies:
-                    requires[edge.require.ref.full_repr()] = edge.dst.id
-
+                    requires[repr(edge.require.ref)] = edge.dst.id
                 # It is necessary to lock the transitive python-requires too, for this node
                 python_reqs = {}
                 reqs = getattr(node.conanfile, "python_requires", {})
@@ -224,7 +231,7 @@ class GraphLock(object):
                     lock_node.pref = node.pref
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
-                                         % (lock_node.pref.full_repr(), node.pref.full_repr()))
+                                         % (repr(lock_node.pref), repr(node.pref)))
 
     def lock_node(self, node, requires):
         """ apply options and constraints on requirements of a node, given the information from
@@ -270,9 +277,9 @@ class GraphLock(object):
 
         # First search by ref (without RREV)
         ids = []
-        search_ref = str(ref)
+        search_ref = repr(ref)
         for id_, node in self._nodes.items():
-            if node.pref and str(node.pref.ref) == search_ref:
+            if node.pref and repr(node.pref.ref) == search_ref:
                 ids.append(id_)
         if ids:
             if len(ids) == 1:
@@ -289,7 +296,7 @@ class GraphLock(object):
                 return ids[0]
             raise ConanException("There are %s binaries with name %s" % (len(ids), ref.name))
 
-        raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_repr())
+        raise ConanException("Couldn't find '%s' in graph-lock" % ref.full_str())
 
     def update_exported_ref(self, node_id, ref):
         """ when the recipe is exported, it will change its reference, typically the RREV, and

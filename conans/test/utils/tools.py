@@ -30,7 +30,6 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.hook_manager import HookManager
-from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -63,7 +62,6 @@ from conans.client.migrations import ClientMigrator
 from conans.model.version import Version
 
 
-
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
@@ -92,7 +90,7 @@ def test_processed_profile(profile=None, settings=None):
         profile = Profile()
     if profile.processed_settings is None:
         profile.processed_settings = settings or Settings()
-    return ProcessedProfile(profile=profile)
+    return profile
 
 
 class TestingResponse(object):
@@ -648,7 +646,7 @@ class TestClient(object):
     in command line
     """
 
-    def __init__(self, base_folder=None, current_folder=None, servers=None, users=None,
+    def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
                  revisions_enabled=None, cpu_count=1):
         """
@@ -663,8 +661,8 @@ class TestClient(object):
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
-        self.base_folder = base_folder or temp_folder(path_with_spaces)
-        self.cache = ClientCache(self.base_folder, TestBufferConanOutput())
+        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        self.cache = ClientCache(self.cache_folder, TestBufferConanOutput())
         self.storage_folder = self.cache.store
 
         self.requester_class = requester_class
@@ -673,7 +671,7 @@ class TestClient(object):
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
 
-        self.tune_conan_conf(base_folder, cpu_count, revisions_enabled)
+        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
         if servers and len(servers) > 1 and not isinstance(servers, OrderedDict):
             raise Exception("""Testing framework error: Servers should be an OrderedDict. e.g:
@@ -709,14 +707,14 @@ servers["r2"] = TestServer()
         self._set_revisions("0")
         assert not self.cache.config.revisions_enabled
 
-    def tune_conan_conf(self, base_folder, cpu_count, revisions_enabled):
+    def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
         # Create the default
         self.cache.config
 
         if cpu_count:
             replace_in_file(self.cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=TestBufferConanOutput(), strict=not bool(base_folder))
+                            output=TestBufferConanOutput(), strict=not bool(cache_folder))
 
         current_conf = load(self.cache.conan_conf_path)
         if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
@@ -794,7 +792,7 @@ servers["r2"] = TestServer()
         # Migration system
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.base_folder, output)
+        self.cache = ClientCache(self.cache_folder, output)
 
         # Migration system
         migrator = ClientMigrator(self.cache, Version(__version__), output)
@@ -872,10 +870,11 @@ servers["r2"] = TestServer()
         self.all_output += str(self.user_io.out)
         return error
 
-    def run_command(self, command):
-        self.all_output += str(self.out)
-        self.init_dynamic_vars()  # Resets the output
-        return self.runner(command, cwd=self.current_folder)
+    def run_command(self, command, cwd=None):
+        out = TestBufferConanOutput()
+        self.user_io = UserIO(out=out)
+        runner = ConanRunner(output=out)
+        return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):
         """ helper metod, will store files in the current folder
@@ -913,7 +912,7 @@ class TurboTestClient(TestClient):
     def export(self, ref, conanfile=None, args=None, assert_error=False):
         conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_repr(), args or ""),
+        self.run("export . {} {}".format(ref.full_str(), args or ""),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
@@ -921,7 +920,7 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=None, args=None, assert_error=False):
         conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
-        self.run("create . {} {} --json {}".format(ref.full_repr(),
+        self.run("create . {} {} --json {}".format(ref.full_str(),
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
@@ -936,7 +935,7 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(ref.full_str(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
@@ -998,7 +997,7 @@ class TurboTestClient(TestClient):
     def init_git_repo(self, files=None, branch=None, submodules=None, origin_url=None):
         _, commit = create_local_git_repo(files, branch, submodules, self.current_folder)
         if origin_url:
-            self.runner('git remote add origin {}'.format(origin_url), cwd=self.current_folder)
+            self.run_command('git remote add origin {}'.format(origin_url))
         return commit
 
     def init_svn_repo(self, subpath, files=None, repo_url=None):
@@ -1115,7 +1114,7 @@ class GenConanfile(object):
     def _requirements_line(self):
         if not self._requirements:
             return ""
-        line = ", ".join(['"{}"'.format(r.full_repr()) for r in self._requirements])
+        line = ", ".join(['"{}"'.format(r.full_str()) for r in self._requirements])
         tmp = "requires = %s" % line
         return tmp
 

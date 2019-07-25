@@ -164,7 +164,7 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=relative_profile"
         rel_path = os.path.join('..', 'env_rel_profile')
         self.assertFalse(os.path.isabs(rel_path))
-        default_profile_path = os.path.join(client.cache.cache_folder,
+        default_profile_path = os.path.join(client.cache_folder,
                                             PROFILES_FOLDER, rel_path)
         save(default_profile_path, "[env]\n" + env_variable)
         with tools.environment_append({'CONAN_DEFAULT_PROFILE_PATH': rel_path}):

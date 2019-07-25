@@ -38,11 +38,11 @@ class UploadRecorder(object):
 
     def add_recipe(self, ref, remote_name, remote_url):
 
-        self._info[str(ref)] = {"recipe": _UploadElement(ref, remote_name, remote_url),
+        self._info[repr(ref.copy_clear_rev())] = {"recipe": _UploadElement(ref, remote_name, remote_url),
                                 "packages": []}
 
     def add_package(self, pref, remote_name, remote_url):
-        self._info[str(pref.ref)]["packages"].append(_UploadElement(pref, remote_name, remote_url))
+        self._info[repr(pref.ref.copy_clear_rev())]["packages"].append(_UploadElement(pref, remote_name, remote_url))
 
     def get_info(self):
         info = {"error": self.error, "uploaded": []}

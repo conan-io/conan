@@ -29,7 +29,7 @@ def build(graph_manager, hook_manager, conanfile_path,
 
     if test:
         try:
-            conan_file.requires.add(test)
+            conan_file.requires.add_ref(test)
         except ConanException:
             pass
 

@@ -186,14 +186,14 @@ virtualenv
         client.run("install . -g virtualenv")
         activate = load(os.path.join(client.current_folder, "activate.sh"))
         self.assertIn("PREPEND_VAR=\"1\":\"2\":\"three\"${PREPEND_VAR+:$PREPEND_VAR}", activate)
-        client.runner("%s -c 'source \"%s/activate.sh\" && env'" % (OSInfo.bash_path(),
-                                                                    client.current_folder))
+        client.run_command("%s -c 'source \"%s/activate.sh\" && env'" % (OSInfo.bash_path(),
+                                                                         client.current_folder))
         # Check no trailing path separator ":"
         self.assertNotIn("PREPEND_VAR=1:2:three:", client.out)
         self.assertIn("PREPEND_VAR=1:2:three", client.out)  # Check correct value
         # Check old value is preserved
-        client.runner("%s -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
-                      (OSInfo.bash_path(), client.current_folder))
+        client.run_command("%s -c 'export PREPEND_VAR=kk && source \"%s/activate.sh\" && env'" %
+                           (OSInfo.bash_path(), client.current_folder))
         self.assertIn("PREPEND_VAR=1:2:three:kk", client.out)
 
     def reuse_script_sh_test(self):
@@ -206,7 +206,7 @@ virtualenv
                 def package(self):
                     self.copy("*")
                 def package_info(self):
-                    self.env_info.PATH=[self.package_folder.replace("\\\\", "/")]
+                    self.env_info.PATH=[self.package_folder]
             """)
         tool = 'echo "Hello world"'
         client.save({"conanfile.py": conanfile,

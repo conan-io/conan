@@ -56,7 +56,7 @@ class InfoFoldersTest(unittest.TestCase):
         client.run("export . %s" % self.user_channel)
         client.run("info %s --paths" % (self.reference1))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
-        output = client.user_io.out
+        output = client.out
         self.assertIn(os.path.join(base_path, "export"), output)
         self.assertIn(os.path.join(base_path, "source"), output)
         self.assertIn(os.path.join(base_path, "build", NO_SETTINGS_PACKAGE_ID), output)
@@ -68,7 +68,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         for ref in [self.reference2, "."]:
             client.run("info %s --paths" % (ref))
-            output = client.user_io.out
+            output = client.out
 
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             self.assertIn(os.path.join(base_path, "export"), output)
@@ -82,7 +82,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         self._prepare_deps(client)
         client.run("info . --paths --only package_folder --package-filter MyPackage/*")
-        output = client.user_io.out
+        output = client.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
@@ -90,7 +90,7 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("MyPackage2", output)
 
         client.run("info . --paths --only package_folder --package-filter MyPackage*")
-        output = client.user_io.out
+        output = client.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
@@ -105,7 +105,7 @@ class InfoFoldersTest(unittest.TestCase):
         client.run("export . %s" % self.user_channel)
         client.run("info %s --paths --only=build_folder" % (self.reference1))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
-        output = client.user_io.out
+        output = client.out
         self.assertNotIn("export", output)
         self.assertNotIn("source", output)
         self.assertIn(os.path.join(base_path, "build"), output)
@@ -113,16 +113,16 @@ class InfoFoldersTest(unittest.TestCase):
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths(self):
-        folder = temp_folder(False)
-        short_folder = os.path.join(folder, ".cn")
+        cache_folder = temp_folder(False)
+        short_folder = os.path.join(cache_folder, ".cn")
 
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
-            client = TestClient(base_folder=folder)
+            client = TestClient(cache_folder=cache_folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
             client.run("info %s --paths" % (self.reference1))
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
-            output = client.user_io.out
+            output = client.out
             self.assertIn(os.path.join(base_path, "export"), output)
             self.assertNotIn(os.path.join(base_path, "source"), output)
             self.assertNotIn(os.path.join(base_path, "build"), output)
@@ -135,7 +135,7 @@ class InfoFoldersTest(unittest.TestCase):
             # Ensure that the inner folders are not created (that could affect
             # pkg creation flow
             ref = ConanFileReference.loads(self.reference1)
-            id_ = re.search('ID:\s*([a-z0-9]*)', str(client.user_io.out)).group(1)
+            id_ = re.search('ID:\s*([a-z0-9]*)', str(client.out)).group(1)
             pref = PackageReference(ref, id_)
             for path in (client.cache.package_layout(ref, True).source(),
                          client.cache.package_layout(ref, True).build(pref),
@@ -150,13 +150,13 @@ class InfoFoldersTest(unittest.TestCase):
         granted with full control permission to avoid access problems when cygwin/msys2
         windows subsystems are mounting/using that folder.
         """
-        folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
+        cache_folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
         out = subprocess.check_output("wmic logicaldisk %s get FileSystem"
-                                      % os.path.splitdrive(folder)[0])
+                                      % os.path.splitdrive(cache_folder)[0])
         if "NTFS" not in str(out):
             return
-        short_folder = os.path.join(folder, ".cnacls")
+        short_folder = os.path.join(cache_folder, ".cnacls")
 
         self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists"
                          % short_folder)
@@ -175,7 +175,7 @@ class InfoFoldersTest(unittest.TestCase):
 
         # Run conan export in using short_folder
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
-            client = TestClient(base_folder=folder)
+            client = TestClient(cache_folder=cache_folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
 
@@ -193,7 +193,7 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
         client.run("info .")
-        output = client.user_io.out
+        output = client.out
         self.assertNotIn("export_folder", output)
         self.assertNotIn("source_folder", output)
         self.assertNotIn("build_folder", output)
@@ -202,8 +202,8 @@ class InfoFoldersTest(unittest.TestCase):
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths_folders(self):
         # https://github.com/conan-io/conan/issues/4612
-        folder = temp_folder(False)
-        short_folder = os.path.join(folder, ".cn")
+        cache_folder = temp_folder(False)
+        short_folder = os.path.join(cache_folder, ".cn")
 
         conanfile = dedent("""
             from conans import ConanFile
@@ -212,7 +212,7 @@ class InfoFoldersTest(unittest.TestCase):
                 short_paths=True
             """)
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
-            client = TestClient(base_folder=folder, servers={"default": TestServer()},
+            client = TestClient(cache_folder=cache_folder, servers={"default": TestServer()},
                                 users={"default": [("lasote", "mypass")]})
             client.save({CONANFILE: conanfile})
             client.run("export . pkga/0.1@lasote/testing")

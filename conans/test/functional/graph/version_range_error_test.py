@@ -11,7 +11,7 @@ class VersionRangesErrorTest(unittest.TestCase):
         conanfile = TestConanFile("MyPkg", "0.1", requires=["MyOtherPkg/[~0.1]@user/testing"])
         client.save({CONANFILE: str(conanfile)})
         client.run("install . --build", assert_error=True)
-        self.assertIn("from requirement 'MyOtherPkg/[~0.1]@user/testing'", client.user_io.out)
+        self.assertIn("from requirement 'MyOtherPkg/[~0.1]@user/testing'", client.out)
 
     def werror_fail_test(self):
         client = TestClient()

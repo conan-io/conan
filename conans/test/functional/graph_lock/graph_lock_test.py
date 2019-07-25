@@ -3,10 +3,11 @@ import os
 import textwrap
 import unittest
 
+from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
+from conans.model.ref import ConanFileReference
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-from conans.test.utils.conanfile import TestConanFile
-from conans.model.graph_lock import LOCKFILE
 
 
 class GraphLockErrorsTest(unittest.TestCase):
@@ -34,13 +35,15 @@ class GraphLockCustomFilesTest(unittest.TestCase):
     pkg_b_package_revision = "#2913f67cea630aee496fe70fd38b5b0f"
 
     def _check_lock(self, ref_b, rev_b=""):
+        ref_b = repr(ConanFileReference.loads(ref_b))
         lock_file = load(os.path.join(self.client.current_folder, "custom.lock"))
         lock_file_json = json.loads(lock_file)
+        self.assertEqual(lock_file_json["version"], LOCKFILE_VERSION)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#6d56ca1040e37a13b75bc286f3e1a5ad",
                       lock_file)
-        self.assertIn('"%s:%s%s"' % (str(ref_b), self.pkg_b_id, rev_b), lock_file)
+        self.assertIn('"%s:%s%s"' % (ref_b, self.pkg_b_id, rev_b), lock_file)
 
     def test(self):
         client = TestClient()
@@ -51,14 +54,14 @@ class GraphLockCustomFilesTest(unittest.TestCase):
         # Use a consumer with a version rang
         client.save({"conanfile.py": self.consumer})
         client.run("graph lock . --lockfile=custom.lock")
-        self._check_lock("PkgB/0.1@None/None")
+        self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA version
         client.save({"conanfile.py": str(TestConanFile("PkgA", "0.2"))})
         client.run("create . PkgA/0.2@user/channel")
         client.save({"conanfile.py": self.consumer})
         client.run("install . --lockfile=custom.lock")
-        self._check_lock("PkgB/0.1@None/None")
+        self._check_lock("PkgB/0.1@")
 
 
 class GraphLockVersionRangeTest(unittest.TestCase):
@@ -80,7 +83,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.save({"conanfile.py": str(self.consumer)})
         client.run(self.graph_lock_command)
 
-        self._check_lock("PkgB/0.1@None/None")
+        self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA version
         client.save({"conanfile.py": str(TestConanFile("PkgA", "0.2"))})
@@ -94,7 +97,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#6d56ca1040e37a13b75bc286f3e1a5ad",
                       lock_file)
-        self.assertIn('"%s:%s%s"' % (str(ref_b), self.pkg_b_id, rev_b), lock_file)
+        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)), self.pkg_b_id, rev_b), lock_file)
 
     def install_info_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
@@ -106,7 +109,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         # Locked install will use PkgA/0.1
         # To use the stored graph_info.json, it has to be explicit in "--install-folder"
         client.run("install . -g=cmake --lockfile")
-        self._check_lock("PkgB/0.1@None/None")
+        self._check_lock("PkgB/0.1@")
 
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
@@ -225,7 +228,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.save({"conanfile.py": str(consumer)})
         client.run("install .")
 
-        self._check_lock("PkgB/0.1@None/None")
+        self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA revision, for example adding info
         client.save({"conanfile.py": str(TestConanFile("PkgA", "0.1", info=True))})
@@ -239,22 +242,23 @@ class GraphLockRevisionTest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel#b55538d56afb03f068a054f11310ce5a:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#6d56ca1040e37a13b75bc286f3e1a5ad",
                       lock_file)
-        self.assertIn('"%s:%s%s"' % (str(ref_b), self.pkg_b_id, rev_b), lock_file)
+        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)),
+                                     self.pkg_b_id, rev_b), lock_file)
 
     def install_info_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
         client = self.client
         client.run("install . -if=tmp")  # Output graph_info to temporary
         client.run("build . -if=tmp")
-        self.assertIn("conanfile.py (PkgB/0.1@None/None): BUILD DEP LIBS: mylibPkgA0.1lib!!",
+        self.assertIn("conanfile.py (PkgB/0.1): BUILD DEP LIBS: mylibPkgA0.1lib!!",
                       client.out)
 
         # Locked install will use PkgA/0.1
         # This is a bit weird, that is necessary to force the --update the get the rigth revision
         client.run("install . -g=cmake --lockfile --update")
-        self._check_lock("PkgB/0.1@None/None")
+        self._check_lock("PkgB/0.1@")
         client.run("build .")
-        self.assertIn("conanfile.py (PkgB/0.1@None/None): BUILD DEP LIBS: !!", client.out)
+        self.assertIn("conanfile.py (PkgB/0.1): BUILD DEP LIBS: !!", client.out)
 
         # Info also works
         client.run("info . --lockfile")
@@ -310,12 +314,12 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.save({"conanfile.py": consumer})
         client.run("install .")
         self.assertIn("Tool/0.1@user/channel", client.out)
-        self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/None@None/None")
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self._check_lock("Pkg/None@")
 
         client.run("build .")
-        self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
-        self.assertIn("conanfile.py (Pkg/None@None/None): BUILD VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
 
         # If we create a new Tool version
         client.save({"conanfile.py": conanfile.replace("42", "111")})
@@ -323,6 +327,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.save({"conanfile.py": consumer})
 
     def _check_lock(self, ref_b):
+        ref_b = repr(ConanFileReference.loads(ref_b, validate=False))
         lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
         self.assertIn("Tool/0.1@user/channel", lock_file)
         self.assertNotIn("Tool/0.2@user/channel", lock_file)
@@ -338,22 +343,22 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("install . -if=tmp")
         self.assertIn("Tool/0.2@user/channel", client.out)
         client.run("build . -if=tmp")
-        self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=111", client.out)
-        self.assertIn("conanfile.py (Pkg/None@None/None): BUILD VAR=111", client.out)
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=111", client.out)
+        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=111", client.out)
 
         client.run("install . --lockfile")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/None@None/None")
+        self._check_lock("Pkg/None@")
         client.run("build .")
-        self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
-        self.assertIn("conanfile.py (Pkg/None@None/None): BUILD VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
 
         client.run("package .")
-        self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
 
         client.run("info . --lockfile")
-        self.assertIn("conanfile.py (Pkg/None@None/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
 
     def create_test(self):
         client = self.client

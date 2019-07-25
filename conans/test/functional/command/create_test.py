@@ -59,20 +59,20 @@ class HelloTestConan(ConanFile):
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("create . lasote/testing")
         self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                      client.user_io.out)
+                      client.out)
         client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
                      "    requires='HelloBar/0.1@lasote/testing'",
                      "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
         client.run("create . lasote/stable")
         self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                         client.user_io.out)
+                         client.out)
 
     @parameterized.expand([(True, ), (False, )])
     def keep_build_test(self, with_test):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class MyPkg(ConanFile):
                 exports_sources = "*.h"
                 def source(self):
@@ -102,7 +102,8 @@ class HelloTestConan(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
+                      client.out)
         # keep the source
         client.save({"conanfile.py": conanfile + " "})
         client.run("create . Pkg/0.1@lasote/testing --keep-source")
@@ -110,7 +111,8 @@ class HelloTestConan(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
+                      client.out)
         # keep build
         client.run("create . Pkg/0.1@lasote/testing --keep-build")
         self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build",
@@ -118,7 +120,8 @@ class HelloTestConan(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
+                      client.out)
 
         # Changes in the recipe again
         client.save({"conanfile.py": conanfile})
@@ -130,7 +133,8 @@ class HelloTestConan(ConanFile):
         self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Packaged 1 '.h' file: header.h",
+                      client.out)
 
     def keep_build_error_test(self):
         client = TestClient()
@@ -508,7 +512,99 @@ class TestConanLib(ConanFile):
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
-        client.run("create . %s" % ref.full_repr(), assert_error=True)
+        client.run("create . %s" % ref.full_str(), assert_error=True)
         self.assertIn("Build error", client.out)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))
+
+    def create_with_name_and_version_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    pass
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create . lib/1.0@')
+        self.assertIn("lib/1.0: Created package revision", client.out)
+
+    def create_with_only_user_channel_test(self):
+        """This should be the recommended way and only from Conan 2.0"""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    name = "lib"
+                    version = "1.0"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create . @user/channel')
+        self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
+
+        client.run('create . user/channel')
+        self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
+
+    def requires_without_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent('''
+    from conans import ConanFile
+
+    class HelloConan(ConanFile):
+        name = "HelloBar"
+        version = "0.1"
+        
+        def package_info(self):
+            self.output.warn("Hello, I'm HelloBar")
+    ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent('''
+    from conans import ConanFile
+
+    class HelloTestConan(ConanFile):
+        requires = "HelloBar/0.1"
+    ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . consumer/1.0@")
+        self.assertIn("HelloBar/0.1: WARN: Hello, I'm HelloBar", client.out)
+        self.assertIn("consumer/1.0: Created package revision", client.out)
+
+    def conaninfo_contents_without_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent('''
+            from conans import ConanFile
+
+            class HelloConan(ConanFile):
+                name = "Hello"
+                version = "0.1"
+        ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile2 = textwrap.dedent('''
+            from conans import ConanFile
+
+            class ByeConan(ConanFile):
+                name = "Bye"
+                version = "0.1"
+                requires = "Hello/0.1"
+            ''')
+        client.save({"conanfile.py": conanfile2})
+        client.run("create .")
+
+        ref = ConanFileReference.loads("Bye/0.1")
+        packages_folder = client.cache.package_layout(ref).packages()
+        p_folder = os.path.join(packages_folder, os.listdir(packages_folder)[0])
+        conaninfo = load(os.path.join(p_folder, "conaninfo.txt"))
+        # The user and channel nor None nor "_/" appears in the conaninfo
+        self.assertNotIn("None", conaninfo)
+        self.assertNotIn("_/", conaninfo)
+        self.assertNotIn("/_", conaninfo)
+        self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
+                      conaninfo)

@@ -80,7 +80,7 @@ cmake_minimum_required(VERSION 2.8.12)
 
         client.run("create . user/channel")
         self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!",
-                      client.user_io.out)
+                      client.out)
 
         # Test also recipe without settings
         new_conanfile =\
@@ -91,4 +91,4 @@ cmake_minimum_required(VERSION 2.8.12)
         client.run("remove * --force")
         client.run("create . user/channel")
         self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!",
-                      client.user_io.out)
+                      client.out)

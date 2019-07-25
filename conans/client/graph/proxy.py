@@ -159,7 +159,7 @@ class ConanProxy(object):
             except NotFoundException:
                 pass
         else:
-            msg = "Unable to find '%s' in remotes" % ref.full_repr()
+            msg = "Unable to find '%s' in remotes" % ref.full_str()
             recorder.recipe_install_error(ref, INSTALL_ERROR_MISSING,
                                           msg, None)
             raise NotFoundException(msg)
