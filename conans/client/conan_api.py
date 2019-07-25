@@ -16,7 +16,7 @@ from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_ke
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
-from conans.client.cmd.user import user_set, users_clean, users_list
+from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_manager import GraphManager
@@ -817,10 +817,16 @@ class ConanAPIV1(object):
                  self._user_io, self._remote_manager, self._loader, remotes, force=force)
 
     @api_method
-    def authenticate(self, name, password, remote_name):
+    def authenticate(self, name, password, remote_name, skip_auth=False):
+        # FIXME: 2.0 rename "name" to "user".
+        # FIXME: 2.0 probably we should return also if we have been authenticated or not (skipped)
+        remote = self.get_remote_by_name(remote_name)
+
+        if skip_auth and token_present(self._cache.localdb, remote, name):
+            return remote.name, name, name
         if not password:
             name, password = self._user_io.request_login(remote_name=remote_name, username=name)
-        remote = self.get_remote_by_name(remote_name)
+
         _, remote_name, prev_user, user = self._remote_manager.authenticate(remote, name, password)
         return remote_name, prev_user, user
 

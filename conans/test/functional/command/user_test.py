@@ -3,6 +3,10 @@ import os
 import unittest
 from collections import OrderedDict
 
+import mock
+
+from conans.client.tools import environment_append
+
 from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
@@ -350,3 +354,32 @@ class ConanLib(ConanFile):
                                 "user_name": "lasote"
                             }
                         ]}, info)
+
+    def test_skip_auth(self):
+        default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers = OrderedDict()
+        servers["default"] = default_server
+        client = TestClient(servers=servers)
+        # Regular auth
+        client.run("user lasote -r default -p mypass")
+
+        # Now skip the auth
+        client.run("user lasote -r default -p BAD_PASS --skip-auth")
+        self.assertIn("User of remote 'default' is already 'lasote'", client.out)
+
+        client.run("user lasote -r default -p BAD_PASS", assert_error=True)
+        self.assertIn("Wrong user or password", client.out)
+
+        # Login again correctly
+        client.run("user lasote -r default -p mypass")
+
+        # If we try to skip the auth for a user not logged, it will fail, because
+        # we don't have credentials for that user
+        client.run("user danimtb -r default -p BAD_PASS --skip-auth", assert_error=True)
+        self.assertIn("Wrong user or password", client.out)
+
+        # Login again correctly
+        client.run("user lasote -r default -p mypass")
+
+        # Now try to skip without specifying user
+        client.run("user -r default -p BAD_PASS --skip-auth")

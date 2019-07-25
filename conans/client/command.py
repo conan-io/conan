@@ -1112,11 +1112,15 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the user list will be written to')
+        parser.add_argument("-s", "--skip-auth", default=False, action='store_true',
+                            help='Skips the authentication with the server if it '
+                                 'have access credentials. It doesn\'t check if the '
+                                 'current credentials are valid')
         args = parser.parse_args(*args)
 
-        if args.clean and any((args.name, args.remote, args.password, args.json)):
+        if args.clean and any((args.name, args.remote, args.password, args.json, args.skip_auth)):
             raise ConanException("'--clean' argument cannot be used together with 'name', "
-                                 "'--password', '--remote' or '--json'")
+                                 "'--password', '--remote', '--json' or '--skip.auth'")
         elif args.json and any((args.name, args.password)):
             raise ConanException("'--json' cannot be used together with 'name' or '--password'")
 
@@ -1138,7 +1142,8 @@ class Command(object):
                 password = args.password
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
-                                                                        password=password)
+                                                                        password=password,
+                                                                        skip_auth=args.skip_auth)
 
                 self._outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
