@@ -1113,9 +1113,9 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the user list will be written to')
         parser.add_argument("-s", "--skip-auth", default=False, action='store_true',
-                            help='Skips the authentication with the server if it '
-                                 'have access credentials. It doesn\'t check if the '
-                                 'current credentials are valid')
+                            help='Skips the authentication with the server if there are local '
+                                 'stored credentials. It doesn\'t check if the '
+                                 'current credentials are valid or not')
         args = parser.parse_args(*args)
 
         if args.clean and any((args.name, args.remote, args.password, args.json, args.skip_auth)):
