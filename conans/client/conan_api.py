@@ -820,6 +820,10 @@ class ConanAPIV1(object):
     def authenticate(self, name, password, remote_name, skip_auth=False):
         # FIXME: 2.0 rename "name" to "user".
         # FIXME: 2.0 probably we should return also if we have been authenticated or not (skipped)
+        # FIXME: 2.0 remove the skip_auth argument, that behavior will be done by:
+        #      "conan user USERNAME -r remote" that will use the local credentials (and verify that are valid)
+        #      against the server. Currently it only "associate" the USERNAME with the remote without
+        #      checking anything else
         remote = self.get_remote_by_name(remote_name)
 
         if skip_auth and token_present(self._cache.localdb, remote, name):
