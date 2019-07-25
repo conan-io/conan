@@ -105,7 +105,17 @@ class GraphLock(object):
                 requires = {}
                 for edge in node.dependencies:
                     requires[edge.require.ref.full_repr()] = edge.dst.id
-                python_reqs = getattr(node.conanfile, "python_requires", {})
+
+                # It is necessary to lock the transitive python-requires too, for this node
+                python_reqs = {}
+                reqs = getattr(node.conanfile, "python_requires", {})
+                while reqs:
+                    python_reqs.update(reqs)
+                    partial = {}
+                    for req in reqs.values():
+                        partial.update(getattr(req.conanfile, "python_requires", {}))
+                    reqs = partial
+
                 python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                            node.conanfile.options.values, False, requires)
