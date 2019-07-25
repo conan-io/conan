@@ -15,7 +15,7 @@ from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
-                               gzopen_without_timestamps, set_dirty)
+                               gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
@@ -501,9 +501,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    set_dirty(tgz_path)
-    with open(tgz_path, "wb") as tgz_handle:
-        # tgz_contents = BytesIO()
+    with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
         for filename, dest in sorted(symlinks.items()):
@@ -553,7 +551,6 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                 output.writeln("]")
         tgz.close()
 
-    clean_dirty(tgz_path)
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
 
