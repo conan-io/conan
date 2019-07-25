@@ -1248,7 +1248,8 @@ class Command(object):
                     remote_all = None
                 all_remotes_search = (remote_all is None and args.remote == "all")
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
-                                                       args.raw, all_remotes_search, args.revisions)
+                                                       args.raw, all_remotes_search,
+                                                       print_revision=args.revisions)
         except ConanException as exc:
             info = exc.info
             raise

@@ -16,7 +16,8 @@ class Search(object):
 
         references = OrderedDict()
         if not remote_name:
-            references[None] = search_recipes(self._cache, pattern, ignorecase, with_revision)
+            references[None] = search_recipes(self._cache, pattern, ignorecase,
+                                              with_revision=with_revision)
             return references
 
         if remote_name == 'all':
