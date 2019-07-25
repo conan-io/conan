@@ -1204,7 +1204,7 @@ class Command(object):
         info = None
 
         try:
-            if args.revisions:
+            if args.revisions and ref:
                 try:
                     pref = PackageReference.loads(args.pattern_or_reference)
                 except (TypeError, ConanException, AttributeError):
@@ -1239,7 +1239,8 @@ class Command(object):
 
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
-                                                  case_sensitive=args.case_sensitive)
+                                                  case_sensitive=args.case_sensitive,
+                                                  with_revision=args.revisions)
                 # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
                 try:
                     remote_all = self._conan.get_remote_by_name("all")
@@ -1247,7 +1248,7 @@ class Command(object):
                     remote_all = None
                 all_remotes_search = (remote_all is None and args.remote == "all")
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
-                                                       args.raw, all_remotes_search)
+                                                       args.raw, all_remotes_search, args.revisions)
         except ConanException as exc:
             info = exc.info
             raise
