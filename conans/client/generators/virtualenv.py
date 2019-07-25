@@ -49,6 +49,12 @@ class VirtualEnvGenerator(Generator):
 
         ret = []
         for name, value in variables:
+            upper_name = name.upper()
+            if flavor == "sh" and "PATH" in upper_name or "FOLDER" in upper_name:
+                if isinstance(value, list):
+                    value = [v.replace("\\", "/") for v in value]
+                else:
+                    value = value.replace("\\", "/")
             # activate values
             if isinstance(value, list):
                 append_with_spaces = name in self.append_with_spaces

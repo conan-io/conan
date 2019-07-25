@@ -210,16 +210,20 @@ virtualenv
             """)
         tool = 'echo "Hello world"'
         client.save({"conanfile.py": conanfile,
-                     "mytool.sh": tool})
+                     "bin/mytool.sh": tool})
         client.run("create . tool/0.1@user/testing")
         conanfile = textwrap.dedent("""
                     [requires]
                     tool/0.1@user/testing
                     [generators]
                     virtualenv
+                    virtualrunenv
                     """)
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
+        run_sh = load(os.path.join(client.current_folder, "activate_run.sh"))
+        self.assertNotIn("\\", run_sh)
+        self.assertIn("tool/0.1/user/testing", run_sh)
         sh = load(os.path.join(client.current_folder, "activate.sh"))
         self.assertNotIn("\\", sh)
         self.assertIn("tool/0.1/user/testing", sh)
