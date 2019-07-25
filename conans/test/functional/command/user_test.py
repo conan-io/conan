@@ -3,10 +3,6 @@ import os
 import unittest
 from collections import OrderedDict
 
-import mock
-
-from conans.client.tools import environment_append
-
 from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
@@ -218,7 +214,6 @@ class ConanLib(ConanFile):
         self.assertNotIn("[Authenticated]", client.out)
 
     def json_test(self):
-
         def _compare_dicts(first_dict, second_dict):
             self.assertTrue(set(first_dict), set(second_dict))
 
