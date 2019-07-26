@@ -153,9 +153,9 @@ class GraphLock(object):
 
     def update_lock(self, new_lock):
         """ update the lockfile with the contents of other one that was branched from this
-        one and had some node re-built. Only nodes marked as "modified" in the new one are
-        processed, and if the current lockfile already has it modified, it is a conflict,
-        and raise
+        one and had some node re-built. Only nodes marked as modified == BINARY_BUILD (has
+        been re-built, will be processed and updated, and set modified = True. The BINARY_BUILD
+        value is a temporary one when packages are being rebuilt.
         """
         for id_, node in new_lock._nodes.items():
             if node.modified == BINARY_BUILD:
