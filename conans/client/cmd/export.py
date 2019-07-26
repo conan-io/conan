@@ -3,6 +3,7 @@ import os
 import shutil
 
 import six
+from conans.client.source import run_scm
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -115,9 +116,9 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
         export_source(conanfile, origin_folder, package_layout.export_sources())
         shutil.copy2(conanfile_path, package_layout.conanfile())
 
-        _capture_export_scm_data(conanfile, os.path.dirname(conanfile_path),
-                                 package_layout.export(), output,
-                                 scm_src_file=package_layout.scm_folder())
+        scm_data, local_src_folder = _capture_export_scm_data(conanfile,
+                                                              os.path.dirname(conanfile_path),
+                                                              package_layout.export(), output)
 
         # Execute post-export hook before computing the digest
         hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
@@ -144,7 +145,13 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     source_folder = package_layout.source()
-    if os.path.exists(source_folder):
+    if local_src_folder and not keep_source:
+        # Copy the local folder to the source folder, this enables to work
+        # with local sources without committing and pushing changes to the scm remote.
+        # https://github.com/conan-io/conan/issues/5195
+        rmdir(source_folder)
+        run_scm(scm_data, source_folder, local_src_folder, output, cache=True)
+    elif os.path.exists(source_folder):
         try:
             if is_dirty(source_folder):
                 output.info("Source folder is corrupted, forcing removal")
@@ -178,14 +185,11 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
     return ref
 
 
-def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, scm_src_file):
-
-    if os.path.exists(scm_src_file):
-        os.unlink(scm_src_file)
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output):
 
     scm_data = get_scm_data(conanfile)
     if not scm_data:
-        return
+        return None, None
 
     # Resolve SCMData in the user workspace (someone may want to access CVS or import some py)
     scm = SCM(scm_data, conanfile_dir, output)
@@ -203,18 +207,16 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     if scm_data.revision == "auto":
         if not scm.is_pristine():
             output.warn("Repo status is not pristine: there might be modified files")
-        scm_data.revision = scm.get_revision()
-        output.success("Revision deduced by 'auto': %s" % scm_data.revision)
+        else:
+            # If it is pristine by default we don't replace the "auto" unless forcing
+            # This prevents the recipe to get uploaded pointing to an invalid commit
+            scm_data.revision = scm.get_revision()
+            output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
+    local_src_path = scm.get_local_path_to_url(scm_data.url) if captured else None
     _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
-    if captured:
-        # Generate the scm_folder.txt file pointing to the src_path
-        src_path = scm.get_local_path_to_url(scm_data.url)
-        if src_path:
-            save(scm_src_file, os.path.normpath(src_path).replace("\\", "/"))
-
-    return scm_data
+    return scm_data, local_src_path
 
 
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):

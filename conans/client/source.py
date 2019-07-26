@@ -4,7 +4,6 @@ import shutil
 import six
 
 from conans.client import tools
-from conans.client.cmd.export import export_recipe, export_source
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
     conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
@@ -103,6 +102,8 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
     def get_sources_from_exports():
         if conanfile_folder != src_folder:
             conanfile.output.info("Executing exports to: %s" % src_folder)
+            # FIXME: import loop between source and export
+            from conans.client.cmd.export import export_recipe, export_source
             export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
 
@@ -131,16 +132,11 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
             if raise_error or isinstance(e_rm, KeyboardInterrupt):
                 raise ConanException("Unable to remove source folder")
 
-    sources_pointer = cache.package_layout(reference).scm_folder()
-    local_sources_path = load(sources_pointer) if os.path.exists(sources_pointer) else None
     if is_dirty(src_folder):
         output.warn("Trying to remove corrupted source folder")
         remove_source()
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
-        remove_source()
-    elif local_sources_path and os.path.exists(local_sources_path):
-        output.warn("Detected 'scm' auto in conanfile, trying to remove source folder")
         remove_source()
 
     if not os.path.exists(src_folder):  # No source folder, need to get it
@@ -154,7 +150,7 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
                 merge_directories(export_source_folder, src_folder)
 
             _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                        cache, local_sources_path,
+                        cache, None,
                         get_sources_from_exports=get_sources_from_exports)
 
 
@@ -179,7 +175,9 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
                                      reference=reference)
                 output = conanfile.output
                 output.info('Configuring sources in %s' % src_folder)
-                _run_scm(conanfile, src_folder, local_sources_path, output, cache=cache)
+                scm_data = get_scm_data(conanfile)
+                if scm_data:
+                    run_scm(scm_data, src_folder, local_sources_path, output, cache=cache)
 
                 get_sources_from_exports()
 
@@ -210,17 +208,10 @@ def _clean_source_folder(folder):
         pass
 
 
-def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
-    scm_data = get_scm_data(conanfile)
-    if not scm_data:
-        return
+def run_scm(scm_data, src_folder, local_sources_path, output, cache):
 
     dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
-    if cache:
-        # When in cache, capturing the sources from user space is done only if exists
-        if not local_sources_path or not os.path.exists(local_sources_path):
-            local_sources_path = None
-    else:
+    if not cache:
         # In user space, if revision="auto", then copy
         if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
             scm = SCM(scm_data, local_sources_path, output)
@@ -233,7 +224,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
         else:
             local_sources_path = None
 
-    if local_sources_path and conanfile.develop:
+    if local_sources_path:
         excluded = SCM(scm_data, local_sources_path, output).excluded_files
         output.info("Getting sources from folder: %s" % local_sources_path)
         merge_directories(local_sources_path, dest_dir, excluded=excluded)
