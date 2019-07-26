@@ -516,3 +516,95 @@ class TestConanLib(ConanFile):
         self.assertIn("Build error", client.out)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertFalse(os.path.exists(package_folder))
+
+    def create_with_name_and_version_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    pass
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create . lib/1.0@')
+        self.assertIn("lib/1.0: Created package revision", client.out)
+
+    def create_with_only_user_channel_test(self):
+        """This should be the recommended way and only from Conan 2.0"""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    name = "lib"
+                    version = "1.0"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create . @user/channel')
+        self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
+
+        client.run('create . user/channel')
+        self.assertIn("lib/1.0@user/channel: Created package revision", client.out)
+
+    def requires_without_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent('''
+    from conans import ConanFile
+
+    class HelloConan(ConanFile):
+        name = "HelloBar"
+        version = "0.1"
+        
+        def package_info(self):
+            self.output.warn("Hello, I'm HelloBar")
+    ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile = textwrap.dedent('''
+    from conans import ConanFile
+
+    class HelloTestConan(ConanFile):
+        requires = "HelloBar/0.1"
+    ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create . consumer/1.0@")
+        self.assertIn("HelloBar/0.1: WARN: Hello, I'm HelloBar", client.out)
+        self.assertIn("consumer/1.0: Created package revision", client.out)
+
+    def conaninfo_contents_without_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent('''
+            from conans import ConanFile
+
+            class HelloConan(ConanFile):
+                name = "Hello"
+                version = "0.1"
+        ''')
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
+        conanfile2 = textwrap.dedent('''
+            from conans import ConanFile
+
+            class ByeConan(ConanFile):
+                name = "Bye"
+                version = "0.1"
+                requires = "Hello/0.1"
+            ''')
+        client.save({"conanfile.py": conanfile2})
+        client.run("create .")
+
+        ref = ConanFileReference.loads("Bye/0.1")
+        packages_folder = client.cache.package_layout(ref).packages()
+        p_folder = os.path.join(packages_folder, os.listdir(packages_folder)[0])
+        conaninfo = load(os.path.join(p_folder, "conaninfo.txt"))
+        # The user and channel nor None nor "_/" appears in the conaninfo
+        self.assertNotIn("None", conaninfo)
+        self.assertNotIn("_/", conaninfo)
+        self.assertNotIn("/_", conaninfo)
+        self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
+                      conaninfo)

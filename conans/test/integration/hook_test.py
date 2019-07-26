@@ -203,7 +203,7 @@ class HookTest(unittest.TestCase):
         self._check_export_pkg(conanfile_cache_path, client.out)
 
         client.run("remove * --force")
-        client.run("export-pkg . -pf . danimtb/testing")
+        client.run('export-pkg . danimtb/testing -pf . ')
         self._check_export(conanfile_path, conanfile_cache_path, client.out)
         self._check_export_pkg(conanfile_cache_path, client.out)
 

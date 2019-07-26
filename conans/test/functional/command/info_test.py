@@ -14,6 +14,17 @@ from conans.test.utils.conanfile import TestConanFile
 
 class InfoTest(unittest.TestCase):
 
+    def not_found_package_dirty_cache_test(self):
+        # Conan does a lock on the cache, and even if the package doesn't exist
+        # left a trailing folder with the filelocks. This test checks
+        # it will be cleared
+        client = TestClient()
+        client.run("info nothing/0.1@user/testing", assert_error=True)
+        self.assertEqual(os.listdir(client.cache.store), [])
+        # This used to fail in Windows, because of the different case
+        client.save({"conanfile.py": TestConanFile("Nothing", "0.1")})
+        client.run("export . user/testing")
+
     def failed_info_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -630,3 +641,16 @@ class MyTest(ConanFile):
         save(path, "broken thing")
         client.run("info .", assert_error=True)
         self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)
+
+    def previous_lockfile_error_test(self):
+        # https://github.com/conan-io/conan/issues/5479
+        client = TestClient()
+        client.save({"conanfile.py": TestConanFile("pkg", "0.1")})
+        client.run("create . user/testing")
+        client.save({"conanfile.py": TestConanFile("other", "0.1",
+                                                   options="{'shared': [True, False]}",
+                                                   default_options='shared=False')})
+        client.run("install . -o shared=True")
+        client.run("info pkg/0.1@user/testing")
+        self.assertIn("pkg/0.1@user/testing", client.out)
+        self.assertNotIn("shared", client.out)

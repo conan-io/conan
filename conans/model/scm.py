@@ -23,7 +23,7 @@ class SCMData(object):
             self.verify_ssl = data.get("verify_ssl")
             self.username = data.get("username")
             self.password = data.get("password")
-            self.subfolder = data.get("subfolder", "")
+            self.subfolder = data.get("subfolder")
             self.submodule = data.get("submodule")
         else:
             raise ConanException("Not SCM enabled in conanfile")
@@ -46,7 +46,7 @@ class SCMData(object):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
              "subfolder": self.subfolder, "submodule": self.submodule}
-        d = {k: v for k, v in d.items() if v is not None and v is not ""}
+        d = {k: v for k, v in d.items() if v is not None}
         return json.dumps(d, sort_keys=True)
 
 

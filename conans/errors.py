@@ -185,7 +185,7 @@ class RecipeNotFoundException(NotFoundException):
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = repr(self.ref) if self.print_rev else str(self.ref)
+        tmp = self.ref.full_str() if self.print_rev else str(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 

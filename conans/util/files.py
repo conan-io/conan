@@ -9,7 +9,9 @@ import sys
 import tarfile
 import tempfile
 
+
 from os.path import abspath, join as joinpath, realpath
+from contextlib import contextmanager
 
 import six
 
@@ -53,6 +55,13 @@ def clean_dirty(folder):
 def is_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
     return os.path.exists(dirty_file)
+
+
+@contextmanager
+def set_dirty_context_manager(folder):
+    set_dirty(folder)
+    yield
+    clean_dirty(folder)
 
 
 def decode_text(text):
