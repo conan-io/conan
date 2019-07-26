@@ -1,5 +1,6 @@
 import unittest
 
+from conans.client.conf import default_settings_yml
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -55,4 +56,32 @@ Description: My cool description
 Version: 1.3
 Libs: -L${libdir}
 Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
+""")
+
+    def apple_frameworks_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.compiler = "apple-clang"
+        settings.os = "Macos"
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.settings = settings
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.frameworks = ['AudioUnit', 'AudioToolbox']
+        cpp_info.version = "1.3"
+        cpp_info.description = "My cool description"
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+
+        generator = PkgConfigGenerator(conanfile)
+        files = generator.content
+
+        self.assertEqual(files["MyPkg.pc"], """prefix=dummy_root_folder1
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: MyPkg
+Description: My cool description
+Version: 1.3
+Libs: -L${libdir} -Wl,-rpath,"${libdir}" -framework AudioUnit -framework AudioToolbox
+Cflags: -I${includedir}
 """)

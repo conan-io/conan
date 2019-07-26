@@ -263,8 +263,10 @@ class ConanFile(object):
         if run_environment:
             with tools.run_environment(self):
                 if OSInfo().is_macos:
-                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                                                             command)
+                    command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
+                              (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                               os.environ.get("DYLD_FRAMEWORK_PATH", ''),
+                               command)
                 retcode = _run()
         else:
             retcode = _run()
