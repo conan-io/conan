@@ -11,13 +11,12 @@ class Search(object):
         self._remote_manager = remote_manager
         self._remotes = remotes
 
-    def search_recipes(self, pattern, remote_name=None, case_sensitive=False, with_revision=False):
+    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         ignorecase = not case_sensitive
 
         references = OrderedDict()
         if not remote_name:
-            references[None] = search_recipes(self._cache, pattern, ignorecase,
-                                              with_revision=with_revision)
+            references[None] = search_recipes(self._cache, pattern, ignorecase)
             return references
 
         if remote_name == 'all':

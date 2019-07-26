@@ -223,11 +223,9 @@ class CommandOutputer(object):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         self._handle_json_output(data, json_output, cwd)
 
-    def print_search_references(self, search_info, pattern, raw, all_remotes_search,
-                                print_revision=False):
+    def print_search_references(self, search_info, pattern, raw, all_remotes_search):
         printer = Printer(self._output)
-        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search,
-                                     print_revision=print_revision)
+        printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table,
                               outdated=False):

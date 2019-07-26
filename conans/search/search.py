@@ -89,7 +89,7 @@ def evaluate(prop_name, prop_value, conan_vars_info):
         return compatible_prop(info_options.get(prop_name, None), prop_value)
 
 
-def search_recipes(cache, pattern=None, ignorecase=True, with_revision=False):
+def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
         if isinstance(pattern, ConanFileReference):
@@ -102,20 +102,7 @@ def search_recipes(cache, pattern=None, ignorecase=True, with_revision=False):
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, r)]
-
-    refs_with_rev = []
-    if with_revision:
-        for ref in refs:
-            layout = cache.package_layout(ref)
-            try:
-                rev = layout.recipe_revision()
-                refs_with_rev.append(
-                    ConanFileReference(ref.name, ref.version, ref.user, ref.channel, revision=rev))
-            except RecipeNotFoundException as e:
-                e.print_rev = True
-                raise e
-
-    refs = sorted(refs_with_rev) if with_revision else sorted(refs)
+    refs = sorted(refs)
     return refs
 
 

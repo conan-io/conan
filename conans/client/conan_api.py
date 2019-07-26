@@ -847,14 +847,13 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def search_recipes(self, pattern, remote_name=None, case_sensitive=False, with_revision=False):
+    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         search_recorder = SearchRecorder()
         remotes = self._cache.registry.load_remotes()
         search = Search(self._cache, self._remote_manager, remotes)
 
         try:
-            references = search.search_recipes(pattern, remote_name, case_sensitive,
-                                               with_revision=with_revision)
+            references = search.search_recipes(pattern, remote_name, case_sensitive)
         except ConanException as exc:
             search_recorder.error = True
             exc.info = search_recorder.get_info()
