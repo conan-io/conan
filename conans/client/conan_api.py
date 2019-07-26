@@ -1093,7 +1093,7 @@ class ConanAPIV1(object):
         return self._cache.registry.load_remotes()[remote_name]
 
     @api_method
-    def get_recipe_revisions(self, reference, remote_name=None):
+    def get_recipe_revisions(self, reference, remote_name=None, check_rev_time=True):
         if not self._cache.config.revisions_enabled:
             raise ConanException("The client doesn't have the revisions feature enabled."
                                  " Enable this feature setting to '1' the environment variable"
@@ -1111,20 +1111,21 @@ class ConanAPIV1(object):
                 e.print_rev = True
                 raise e
 
-            # Check the time in the associated remote if any
-            remote_name = layout.load_metadata().recipe.remote
-            remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
-            if remote:
-                try:
-                    revisions = self._remote_manager.get_recipe_revisions(ref, remote)
-                except RecipeNotFoundException:
-                    pass
-                except (NoRestV2Available, NotFoundException):
-                    rev_time = None
-                else:
-                    tmp = {r["revision"]: r["time"] for r in revisions}
-                    rev_time = tmp.get(rev)
+            if check_rev_time:
+                # Check the time in the associated remote if any
+                remote_name = layout.load_metadata().recipe.remote
+                remote = self._cache.registry.load_remotes()[remote_name] if remote_name else None
+                if remote:
+                    try:
+                        revisions = self._remote_manager.get_recipe_revisions(ref, remote)
+                    except RecipeNotFoundException:
+                        pass
+                    except (NoRestV2Available, NotFoundException):
+                        rev_time = None
+                    else:
+                        tmp = {r["revision"]: r["time"] for r in revisions}
+                        rev_time = tmp.get(rev)
 
             return [{"revision": rev, "time": rev_time}]
         else:

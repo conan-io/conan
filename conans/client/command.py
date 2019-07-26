@@ -1204,26 +1204,41 @@ class Command(object):
         info = None
 
         try:
-            if args.revisions and ref:
-                try:
-                    pref = PackageReference.loads(args.pattern_or_reference)
-                except (TypeError, ConanException, AttributeError):
-                    pass
+            if args.revisions:
+                if ref:
+                    try:
+                        pref = PackageReference.loads(args.pattern_or_reference)
+                    except (TypeError, ConanException, AttributeError):
+                        pass
+                    else:
+                        info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
+
+                    if not info:
+                        info = self._conan.get_recipe_revisions(repr(ref),
+                                                                remote_name=args.remote)
+                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                    return
                 else:
-                    info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
+                    if args.remote:
+                        msg = "With --revision and --remote, specify a reference (e.g {ref}) or a package " \
+                              "reference with " \
+                              "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
+                              "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
+                        raise ConanException(msg)
+                    else:
+                        info = self._conan.search_recipes(args.pattern_or_reference,
+                                                          remote_name=args.remote,
+                                                          case_sensitive=args.case_sensitive)
+                        for remote_info in info["results"]:
+                            for conan_item in remote_info["items"]:
+                                reference = conan_item["recipe"]["id"]
+                                ref = ConanFileReference.loads(reference)
+                                rev = self._conan.get_recipe_revisions(repr(ref),
+                                                                       remote_name=args.remote,
+                                                                       check_rev_time=False)
+                                self._outputer.print_revisions(ref, rev, remote_name=args.remote)
 
-                if not info:
-                    info = self._conan.get_recipe_revisions(repr(ref),
-                                                            remote_name=args.remote)
-                self._outputer.print_revisions(ref, info, remote_name=args.remote)
-                return
-            elif args.revisions and not ref and args.remote:
-                msg = "With --revision and --remote, specify a reference (e.g {ref}) or a package " \
-                      "reference with " \
-                      "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
-                      "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
-                raise ConanException(msg)
-
+                    return
             if ref:
                 info = self._conan.search_packages(repr(ref), query=args.query,
                                                    remote_name=args.remote,
@@ -1239,8 +1254,7 @@ class Command(object):
 
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
-                                                  case_sensitive=args.case_sensitive,
-                                                  with_revision=args.revisions)
+                                                  case_sensitive=args.case_sensitive)
                 # Deprecate 2.0: Dirty check if search is done for all remotes or for remote "all"
                 try:
                     remote_all = self._conan.get_remote_by_name("all")
@@ -1248,8 +1262,7 @@ class Command(object):
                     remote_all = None
                 all_remotes_search = (remote_all is None and args.remote == "all")
                 self._outputer.print_search_references(info["results"], args.pattern_or_reference,
-                                                       args.raw, all_remotes_search,
-                                                       print_revision=args.revisions)
+                                                       args.raw, all_remotes_search)
         except ConanException as exc:
             info = exc.info
             raise
