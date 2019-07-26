@@ -81,9 +81,16 @@ def evaluate(prop_name, prop_value, conan_vars_info):
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
+    properties = ["os", "os_build", "compiler", "arch", "arch_build", "build_type"]
 
-    if (prop_name in ["os", "os_build", "compiler", "arch", "arch_build", "build_type"] or
-            prop_name.startswith("compiler.")):
+    def starts_with_common_settings(prop_name):
+        for setting in properties:
+            if prop_name.startswith(setting + '.'):
+                return True
+        return False
+
+    if (prop_name in properties or
+            starts_with_common_settings(prop_name)):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)

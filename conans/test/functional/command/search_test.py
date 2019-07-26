@@ -61,6 +61,22 @@ conan_vars1c = '''
   d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
 
+conan_vars1d = '''
+[settings]
+    arch=x86
+    arch.vendor=intel
+    os=Linux
+    os.distro=Ubuntu
+    os.distro.version=19.04
+    compiler=gcc
+    compiler.version=4.3
+    compiler.libcxx=libstdc++
+    libc=glibc
+    libc.version=2.29
+[options]
+    use_Qt=True
+'''
+
 conan_vars2 = '''
 [options]
     use_OpenGL=True
@@ -131,6 +147,7 @@ class SearchTest(unittest.TestCase):
         root_folder3 = 'Bye/0.14/myuser/testing'
         root_folder4 = 'NodeInfo/1.0.2/myuser/stable'
         root_folder5 = 'MissFile/1.0.2/myuser/stable'
+        root_folder6 = 'Hello/1.5.10/myuser/testing'
         root_folder11 = 'Hello/1.4.11/myuser/testing'
         root_folder12 = 'Hello/1.4.12/myuser/testing'
         root_folder_tool = 'Tool/1.0.0/myuser/testing'
@@ -151,6 +168,9 @@ class SearchTest(unittest.TestCase):
                           "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
                                                         PACKAGES_FOLDER,
                                                         CONANINFO): conan_vars1c,
+                          "%s/%s/LinuxPackageCustom/%s" % (root_folder6,
+                                                           PACKAGES_FOLDER,
+                                                           CONANINFO): conan_vars1d,
                           "%s/%s/a44f541cd44w57/%s" % (root_folder2,
                                                        PACKAGES_FOLDER,
                                                        CONANINFO): conan_vars2,
@@ -193,6 +213,7 @@ class SearchTest(unittest.TestCase):
         create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
         create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
         create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder6, ["LinuxPackageCustom"])
         create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
@@ -202,6 +223,7 @@ class SearchTest(unittest.TestCase):
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder3, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder4, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder5, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder6, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder11, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder12, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder_tool, EXPORT_FOLDER))
@@ -237,6 +259,7 @@ class SearchTest(unittest.TestCase):
 Hello/1.4.10@myuser/testing
 Hello/1.4.11@myuser/testing
 Hello/1.4.12@myuser/testing
+Hello/1.5.10@myuser/testing
 helloTest/1.4.10@myuser/stable""".format(remote)
                 self.assertIn(expected, self.client.out)
 
@@ -252,13 +275,15 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n"
+                          "Hello/1.5.10@myuser/testing\n"
                           "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                          "Hello/1.4.12@myuser/testing\n"
+                          "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
@@ -266,6 +291,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n"
+                          "Hello/1.5.10@myuser/testing\n"
                           "MissFile/1.0.2@myuser/stable\n"
                           "NodeInfo/1.0.2@myuser/stable\n"
                           "Tool/1.0.0@myuser/testing\n"
@@ -274,26 +300,30 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello/*@myuser/testing")
         self.assertIn("Hello/1.4.10@myuser/testing\n"
                       "Hello/1.4.11@myuser/testing\n"
-                      "Hello/1.4.12@myuser/testing\n", self.client.out)
+                      "Hello/1.4.12@myuser/testing\n"
+                      "Hello/1.5.10@myuser/testing\n", self.client.out)
 
     def search_partial_match_test(self):
         self.client.run("search Hello")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n"
                          "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search hello")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n"
                          "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n"
                          "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hel")
         self.assertEqual("There are no packages matching the 'Hel' pattern\n", self.client.out)
@@ -302,7 +332,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual("Existing package recipes:\n\n"
                          "Hello/1.4.10@myuser/testing\n"
                          "Hello/1.4.11@myuser/testing\n"
-                         "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10")
         self.assertEqual("Existing package recipes:\n\n"
@@ -332,6 +363,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual("Hello/1.4.10@myuser/testing\n"
                          "Hello/1.4.11@myuser/testing\n"
                          "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n"
                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
     def search_html_table_test(self):
@@ -419,16 +451,17 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(str(self.client.out).count("PlatformIndependantSHA"), 2)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
-    def _assert_pkg_q(self, query, packages_found, remote):
+    def _assert_pkg_q(self, query, packages_found, remote, ref="Hello/1.4.10@myuser/testing"):
 
-        command = 'search Hello/1.4.10@myuser/testing -q \'%s\'' % query
+        command = 'search %s -q \'%s\'' % (ref, query)
         if remote:
             command += " -r %s" % remote
         self.client.run(command)
 
-        for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA"]:
+        for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA",
+                          "LinuxPackageCustom"]:
             self.assertEqual(pack_name in self.client.out,
-                              pack_name in packages_found, "%s fail" % pack_name)
+                             pack_name in packages_found, "%s fail" % pack_name)
 
     def _assert_pkg_query_tool(self, query, packages_found, remote):
         command = 'search Tool/1.0.0@myuser/testing -q \'%s\'' % query
@@ -497,6 +530,11 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
             self._assert_pkg_q(q, ["WindowsPackageSHA", "LinuxPackageSHA"], remote)
+
+            q = 'compiler="gcc" AND compiler.libcxx="libstdc++" AND ' \
+                'arch="x86" AND arch.vendor="intel" AND os.distro="Ubuntu" AND ' \
+                'os.distro.version="19.04" AND compiler.version="4.3" AND os="Linux"'
+            self._assert_pkg_q(q, ["LinuxPackageCustom"], remote, ref="Hello/1.5.10@myuser/testing")
 
             q = 'os_build="Windows"'
             self._assert_pkg_query_tool(q, ["winx86", "winx64"], remote)
@@ -621,6 +659,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages for reference 'Hello/1.4.10@myuser/testing' "
                       "matching the query 'compiler.version=1.0'", self.client.out)
 
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'glib=glibc AND glib.version=2.29'")
+        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+                      "the query 'glib=glibc AND glib.version=2.29'", self.client.out)
+
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.version=4.5"')
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -727,6 +769,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                         },
                         {
                             'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
+                        },
+                        {
+                            'recipe': {
                                 'id': 'helloTest/1.4.10@myuser/stable'}
                         }
                     ]
@@ -764,6 +810,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                  'id': 'Hello/1.4.12@myuser/testing'}
                         },
                         {
+                            'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
+                        },
+                        {
                              'recipe': {
                                  'id': 'helloTest/1.4.10@myuser/stable'}
                         }
@@ -783,6 +833,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                         {
                             'recipe': {
                                 'id': 'Hello/1.4.12@myuser/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -816,6 +870,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                         {
                             'recipe': {
                                 'id': 'Hello/1.4.12@myuser/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -1078,6 +1136,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             ]
         }
         self.assertEqual(expected_output, output)
+
+
 
     def search_packages_with_reference_not_exported_test(self):
         self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
