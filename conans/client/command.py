@@ -1205,20 +1205,14 @@ class Command(object):
 
         try:
             if args.revisions:
-                if ref:
-                    try:
-                        pref = PackageReference.loads(args.pattern_or_reference)
-                    except (TypeError, ConanException, AttributeError):
-                        pass
-                    else:
-                        info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
-
-                    if not info:
-                        info = self._conan.get_recipe_revisions(repr(ref),
-                                                                remote_name=args.remote)
-                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
-                    return
+                try:
+                    pref = PackageReference.loads(args.pattern_or_reference)
+                except (TypeError, ConanException, AttributeError):
+                    pass
                 else:
+                    info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
+
+                if not ref and not info:
                     exc_msg = "With --revision, specify a reference (e.g {ref}) a valid pattern " \
                           "or a package reference with " \
                           "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
@@ -1242,6 +1236,13 @@ class Command(object):
                             raise ConanException(exc_msg)
 
                     return
+                else:
+                    if not info:
+                        info = self._conan.get_recipe_revisions(repr(ref),
+                                                                remote_name=args.remote)
+                    self._outputer.print_revisions(ref, info, remote_name=args.remote)
+                    return
+
             if ref:
                 info = self._conan.search_packages(repr(ref), query=args.query,
                                                    remote_name=args.remote,
