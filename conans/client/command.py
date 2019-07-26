@@ -1213,16 +1213,16 @@ class Command(object):
                     info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
 
                 if not info:
-                    if not ref:
-                        msg = "With --revision, specify a reference (e.g {ref}) or a package " \
-                              "reference with " \
-                              "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
-                              "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
-                        raise ConanException(msg)
                     info = self._conan.get_recipe_revisions(repr(ref),
                                                             remote_name=args.remote)
                 self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
+            elif args.revisions and not ref and args.remote:
+                msg = "With --revision and --remote, specify a reference (e.g {ref}) or a package " \
+                      "reference with " \
+                      "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
+                      "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
+                raise ConanException(msg)
 
             if ref:
                 info = self._conan.search_packages(repr(ref), query=args.query,
