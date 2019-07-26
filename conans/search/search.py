@@ -89,11 +89,24 @@ def evaluate(prop_name, prop_value, conan_vars_info):
                 return True
         return False
 
-    if (prop_name in properties or
-            starts_with_common_settings(prop_name)):
-        return compatible_prop(info_settings.get(prop_name, None), prop_value)
-    else:
+    def starts_with_options_prefix(prop_name):
+        if prop_name.startswith("option:") or prop_name.startswith("o:"):
+            return True
+        return False
+
+    def starts_with_settings_prefix(prop_name):
+        if prop_name.startswith("setting:") or prop_name.startswith("s:"):
+            return True
+        return False
+
+    if starts_with_options_prefix(prop_name):
         return compatible_prop(info_options.get(prop_name, None), prop_value)
+    elif (prop_name in properties or
+          starts_with_common_settings(prop_name) or
+          starts_with_settings_prefix(prop_name)):
+        return compatible_prop(info_settings.get(prop_name, None), prop_value)
+
+    return compatible_prop(info_options.get(prop_name, None), prop_value)
 
 
 def search_recipes(cache, pattern=None, ignorecase=True):
