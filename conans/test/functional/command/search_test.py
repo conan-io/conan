@@ -1194,6 +1194,10 @@ class Test(ConanFile):
         client.run("search lib/1.0@user/testing --revisions")
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
 
+        # test that the pattern search with --revisions enabled works
+        client.run("search li* --revisions")
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
 
@@ -1347,6 +1351,10 @@ class Test(ConanFile):
                       "234234234234234234'", client.out)
 
         # IN REMOTE
+
+        # Search with pattern and remotes
+        client.run("search * --revisions -r default", assert_error=True)
+        self.assertIn("ERROR: With --revision, specify a reference", client.out)
 
         # Search not found in remote
         client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
