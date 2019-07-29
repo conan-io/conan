@@ -64,10 +64,12 @@ class BuildRequiresTest(unittest.TestCase):
                                                   requires=["LibA/0.1@user/testing"],
                                                   build_requires=["catch/0.1@user/testing"]))})
         t.run("install .")
-        print t.out
         self.assertIn("catch/0.1@user/testing from local cache", t.out)
+        self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
+                      t.out)
+        self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      t.out)
         conanbuildinfo = load(os.path.join(t.current_folder, "conanbuildinfo.txt"))
-        print conanbuildinfo
         self.assertIn('MYENV=["myenvcatch0.1env"]', conanbuildinfo)
         self.assertIn('[libs_catch]', conanbuildinfo)
         self.assertIn("mylibcatch0.1lib", conanbuildinfo)

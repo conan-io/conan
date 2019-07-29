@@ -39,7 +39,6 @@ class GraphBinariesAnalyzer(object):
             return
 
         ref, conanfile = node.ref, node.conanfile
-        pref = node.pref
         # If it has lock
         locked = node.graph_lock_node
         if locked and locked.pref.id == node.package_id:
@@ -53,7 +52,13 @@ class GraphBinariesAnalyzer(object):
         if previous_nodes:
             previous_nodes.append(node)
             previous_node = previous_nodes[0]
-            node.binary = previous_node.binary
+            # The previous node might have been skipped, but current one not necessarily
+            # keep the original node.binary value (before being skipped), and if it will be
+            # defined as SKIP again by self._handle_private(node) if it is really private
+            if previous_node.binary == BINARY_SKIP:
+                node.binary = previous_node.binary_non_skip
+            else:
+                node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
             return
@@ -229,6 +234,8 @@ class GraphBinariesAnalyzer(object):
                 # Current closure contains own node to be skipped
                 for n in neigh.public_closure.values():
                     if n.private:
+                        # store the binary origin before being overwritten by SKIP
+                        n.binary_non_skip = n.binary
                         n.binary = BINARY_SKIP
                         self._handle_private(n)
 
@@ -241,16 +248,3 @@ class GraphBinariesAnalyzer(object):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated, remotes)
             self._handle_private(node)
-
-    def _handle_private_graph(self, deps_graph):
-        current = set([deps_graph.root])
-        while current:
-            current_node = current.pop()
-            if current_node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                # Can skip its private
-                for n in current_node.neighbors():
-                    if n.private:
-                        n.binary = BINARY_SKIP
-                        current.add(n)
-            else:
-                current.update(current_node.neighbors())
