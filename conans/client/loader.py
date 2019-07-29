@@ -1,3 +1,4 @@
+import fnmatch
 import imp
 import inspect
 import os
@@ -27,10 +28,6 @@ class ConanFileLoader(object):
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
         self.cached_conanfiles = {}
-
-    def invalidate_caches(self):
-        self.cached_conanfiles = {}
-        self._python_requires.invalidate_caches()
 
     def load_class(self, conanfile_path, lock_python_requires=None):
         cached = self.cached_conanfiles.get(conanfile_path)
@@ -95,11 +92,18 @@ class ConanFileLoader(object):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = processed_profile.processed_settings.copy()
-        if (processed_profile.package_settings_values and
-                conanfile.name in processed_profile.package_settings_values):
-            # Update the values, keeping old ones (confusing assign)
-            values_tuple = processed_profile.package_settings_values[conanfile.name]
-            tmp_settings.values = Values.from_list(values_tuple)
+        package_settings_values = processed_profile.package_settings_values
+        if package_settings_values:
+            pkg_settings = package_settings_values.get(conanfile.name)
+            if pkg_settings is None:
+                ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
+                                       conanfile._conan_user, conanfile._conan_channel)
+                for pattern, settings in package_settings_values.items():
+                    if fnmatch.fnmatchcase(ref, pattern):
+                        pkg_settings = settings
+                        break
+            if pkg_settings:
+                tmp_settings.values = Values.from_list(pkg_settings)
 
         conanfile.initialize(tmp_settings, processed_profile.env_values)
 

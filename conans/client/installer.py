@@ -437,7 +437,7 @@ class BinaryInstaller(object):
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
         if node.graph_lock_node:
-            node.graph_lock_node.modified = True
+            node.graph_lock_node.modified = BINARY_BUILD
         return pref
 
     @staticmethod

@@ -18,6 +18,12 @@ def users_list(localdb_file, remotes):
     return remotes_info
 
 
+def token_present(localdb_file, remote, user):
+    localdb = LocalDB.create(localdb_file)
+    current_user, token = localdb.get_login(remote.url)
+    return token is not None and (user is None or user == current_user)
+
+
 def users_clean(localdb_file):
     LocalDB.create(localdb_file, clean=True)
 

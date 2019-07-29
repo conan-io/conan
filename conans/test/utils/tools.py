@@ -24,16 +24,13 @@ from six.moves.urllib.parse import quote, urlsplit, urlunsplit
 from webtest.app import TestApp
 from requests.exceptions import HTTPError
 
-from conans import tools, load, __version__
+from conans import load
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
-from conans.client.hook_manager import HookManager
 from conans.client.output import ConanOutput
-from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -51,16 +48,9 @@ from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
                                                TESTING_REMOTE_PRIVATE_USER,
                                                TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
-from conans.tools import set_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
-from conans.client.rest.rest_client import RestApiClient
-from conans.client.store.localdb import LocalDB
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.remote_manager import RemoteManager
-from conans.client.migrations import ClientMigrator
-from conans.model.version import Version
-
+from conans.client.runner import ConanRunner
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -465,21 +455,19 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
 
 
 class TestBufferConanOutput(ConanOutput):
-
     """ wraps the normal output of the application, captures it into an stream
     and gives it operators similar to string, so it can be compared in tests
     """
 
     def __init__(self):
-        self._buffer = StringIO()
-        ConanOutput.__init__(self, self._buffer, color=False)
+        ConanOutput.__init__(self, StringIO(), color=False)
 
     def __repr__(self):
         # FIXME: I'm sure there is a better approach. Look at six docs.
         if six.PY2:
-            return str(self._buffer.getvalue().encode("ascii", "ignore"))
+            return str(self._stream.getvalue().encode("ascii", "ignore"))
         else:
-            return self._buffer.getvalue()
+            return self._stream.getvalue()
 
     def __str__(self, *args, **kwargs):
         return self.__repr__()
@@ -656,17 +644,13 @@ class TestClient(object):
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
 
-        self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users
         if self.users is None:
             self.users = {"default": [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
 
         self.cache_folder = cache_folder or temp_folder(path_with_spaces)
-        self.cache = ClientCache(self.cache_folder, TestBufferConanOutput())
-        self.storage_folder = self.cache.store
-
         self.requester_class = requester_class
-        self.conan_runner = runner
+        self.runner = runner
 
         if revisions_enabled is None:
             revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
@@ -683,9 +667,44 @@ servers["r2"] = TestServer()
         self.servers = servers or {}
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
-
-        self.init_dynamic_vars()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+    @property
+    def cache(self):
+        # Returns a temporary cache object intended for inspecting it
+        return ClientCache(self.cache_folder, TestBufferConanOutput())
+
+    @property
+    def base_folder(self):
+        # Temporary hack to refactor ConanApp with less changes
+        return self.cache_folder
+
+    @property
+    def storage_folder(self):
+        return self.cache.store
+
+    @property
+    def requester(self):
+        api = self.get_conan_api()
+        api.create_app()
+        return api.app.requester
+
+    @property
+    def proxy(self):
+        api = self.get_conan_api()
+        api.create_app()
+        return api.app.proxy
+
+    @property
+    def _http_requester(self):
+        # Check if servers are real
+        real_servers = any(isinstance(s, (str, ArtifactoryServer))
+                           for s in self.servers.values())
+        if not real_servers:
+            if self.requester_class:
+                return self.requester_class(self.servers)
+            else:
+                return TestRequester(self.servers)
 
     def _set_revisions(self, value):
         current_conf = load(self.cache.conan_conf_path)
@@ -696,8 +715,6 @@ servers["r2"] = TestServer()
         replace_in_file(self.cache.conan_conf_path,
                         "[general]", "[general]\nrevisions_enabled = %s" % value,
                         output=TestBufferConanOutput())
-        # Invalidate the cached config
-        self.cache.invalidate()
 
     def enable_revisions(self):
         self._set_revisions("1")
@@ -709,30 +726,29 @@ servers["r2"] = TestServer()
 
     def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
         # Create the default
-        self.cache.config
+        cache = self.cache
+        cache.config
 
         if cpu_count:
-            replace_in_file(self.cache.conan_conf_path,
+            replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(cache_folder))
 
-        current_conf = load(self.cache.conan_conf_path)
+        current_conf = load(cache.conan_conf_path)
         if "revisions_enabled" in current_conf:  # Invalidate any previous value to be sure
-            replace_in_file(self.cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
+            replace_in_file(cache.conan_conf_path, "revisions_enabled", "#revisions_enabled",
                             output=TestBufferConanOutput())
         if revisions_enabled:
-            replace_in_file(self.cache.conan_conf_path,
+            replace_in_file(cache.conan_conf_path,
                             "[general]", "[general]\nrevisions_enabled = 1",
                             output=TestBufferConanOutput())
 
-        # Invalidate the cached config
-        self.cache.invalidate()
-
     def update_servers(self):
-        Remotes().save(self.cache.registry_path)
-        registry = self.cache.registry
+        cache = self.cache
+        Remotes().save(cache.registry_path)
+        registry = cache.registry
 
-        def add_server_to_registry(name, server):
+        for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):
                 registry.add(name, server.repo_api_url)
                 self.users.update({name: [(ARTIFACTORY_DEFAULT_USER,
@@ -742,22 +758,10 @@ servers["r2"] = TestServer()
             else:
                 registry.add(name, server)
 
-        for name, server in self.servers.items():
-            if name == "default":
-                add_server_to_registry(name, server)
-
-        for name, server in self.servers.items():
-            if name != "default":
-                add_server_to_registry(name, server)
-
     @property
     def default_compiler_visual_studio(self):
         settings = self.cache.default_profile.settings
         return settings.get("compiler", None) == "Visual Studio"
-
-    @property
-    def out(self):
-        return self.user_io.out
 
     @contextmanager
     def chdir(self, newdir):
@@ -771,81 +775,34 @@ servers["r2"] = TestServer()
         finally:
             self.current_folder = old_dir
 
-    def _get_http_requester(self):
-        # Check if servers are real
-        real_servers = False
-        for server in self.servers.values():
-            if isinstance(server, str) or isinstance(server, ArtifactoryServer):  # Just URI
-                real_servers = True
-                break
-
-        http_requester = None
-        if not real_servers:
-            if self.requester_class:
-                http_requester = self.requester_class(self.servers)
-            else:
-
-                http_requester = TestRequester(self.servers)
-        return http_requester
-
-    def init_dynamic_vars(self, user_io=None):
-        # Migration system
-        output = TestBufferConanOutput()
-        self.user_io = user_io or MockedUserIO(self.users, out=output)
-        self.cache = ClientCache(self.cache_folder, output)
-
-        # Migration system
-        migrator = ClientMigrator(self.cache, Version(__version__), output)
-        migrator.migrate()
-
-        http_requester = self._get_http_requester()
-        config = self.cache.config
-        if self.conan_runner:
-            self.runner = self.conan_runner
+    def get_conan_api(self, user_io=None):
+        if user_io:
+            self.out = user_io.out
         else:
-            self.runner = ConanRunner(config.print_commands_to_output, config.generate_run_log_file,
-                                      config.log_run_to_output, output=output)
+            self.out = TestBufferConanOutput()
+        user_io = user_io or MockedUserIO(self.users, out=self.out)
 
-        self.requester = ConanRequester(config, http_requester)
-        self.hook_manager = HookManager(self.cache.hooks_path, config.hooks, self.user_io.out)
-
-        put_headers = self.cache.read_put_headers()
-        self.rest_api_client = RestApiClient(self.user_io.out, self.requester,
-                                             revisions_enabled=config.revisions_enabled,
-                                             put_headers=put_headers)
-        # To store user and token
-        self.localdb = LocalDB.create(self.cache.localdb)
-        # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
-        # Handle remote connections
-        self.remote_manager = RemoteManager(self.cache, auth_manager, self.user_io.out,
-                                            self.hook_manager)
-        return output, self.requester
+        conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+                      http_requester=self._http_requester, runner=self.runner)
+        return conan
 
     def run(self, command_line, user_io=None, assert_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        output, requester = self.init_dynamic_vars(user_io)
-        with tools.environment_append(self.cache.config.env_vars):
-            # Settings preprocessor
-            interactive = not get_env("CONAN_NON_INTERACTIVE", False)
-            conan = Conan(self.cache, self.user_io, self.runner, self.remote_manager,
-                          self.hook_manager, requester, interactive=interactive)
+        conan = self.get_conan_api(user_io)
+        self.api = conan
         command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
-        sys.path.append(os.path.join(self.cache.cache_folder, "python"))
         old_modules = list(sys.modules.keys())
 
-        old_output, old_requester = set_global_instances(output, requester)
         try:
             error = command.run(args)
         finally:
-            set_global_instances(old_output, old_requester)
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
@@ -863,17 +820,16 @@ servers["r2"] = TestServer()
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-'*80,
                 cmd=command_line,
-                output=self.user_io.out
+                output=self.out
             )
             raise Exception(exc_message)
 
-        self.all_output += str(self.user_io.out)
         return error
 
     def run_command(self, command, cwd=None):
-        out = TestBufferConanOutput()
-        self.user_io = UserIO(out=out)
-        runner = ConanRunner(output=out)
+        output = TestBufferConanOutput()
+        self.out = output
+        runner = ConanRunner(output=output)
         return runner(command, cwd=cwd or self.current_folder)
 
     def save(self, files, path=None, clean_first=False):

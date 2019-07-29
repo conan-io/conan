@@ -96,7 +96,7 @@ class GraphLockNode(object):
         if self.python_requires:
             result["python_requires"] = [repr(r) for r in self.python_requires]
         if self.modified:
-            result["modified"] = True
+            result["modified"] = self.modified
         if self.requires:
             result["requires"] = self.requires
         return result
@@ -113,7 +113,16 @@ class GraphLock(object):
                 requires = {}
                 for edge in node.dependencies:
                     requires[repr(edge.require.ref)] = edge.dst.id
-                python_reqs = getattr(node.conanfile, "python_requires", {})
+                # It is necessary to lock the transitive python-requires too, for this node
+                python_reqs = {}
+                reqs = getattr(node.conanfile, "python_requires", {})
+                while reqs:
+                    python_reqs.update(reqs)
+                    partial = {}
+                    for req in reqs.values():
+                        partial.update(getattr(req.conanfile, "python_requires", {}))
+                    reqs = partial
+
                 python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                            node.conanfile.options.values, False, requires)
@@ -153,23 +162,18 @@ class GraphLock(object):
 
     def update_lock(self, new_lock):
         """ update the lockfile with the contents of other one that was branched from this
-        one and had some node re-built. Only nodes marked as "modified" in the new one are
-        processed, and if the current lockfile already has it modified, it is a conflict,
-        and raise
+        one and had some node re-built. Only nodes marked as modified == BINARY_BUILD (has
+        been re-built, will be processed and updated, and set modified = True. The BINARY_BUILD
+        value is a temporary one when packages are being rebuilt.
         """
         for id_, node in new_lock._nodes.items():
-            if node.modified:
+            if node.modified == BINARY_BUILD:
                 old_node = self._nodes[id_]
                 if old_node.modified:
                     if not old_node.pref.is_compatible_with(node.pref):
                         raise ConanException("Lockfile had already modified %s" % str(node.pref))
+                node.modified = True
                 self._nodes[id_] = node
-
-    def clean_modified(self):
-        """ remove all the "modified" flags from the lockfile
-        """
-        for _, node in self._nodes.items():
-            node.modified = False
 
     def _closure_affected(self):
         """ returns all the IDs of the nodes that depend directly or indirectly of some
