@@ -52,11 +52,12 @@ class EditablePackages(object):
         self._edited_refs = workspace_edited
 
     @contextmanager
-    def override_refs(self, refs):
+    def disable_editables(self):
         """
-        Override editable packages
+        Temporary disable editables, if we want to make operations on the cache, as updating
+        remotes in packages metadata.
         """
         edited_refs = self._edited_refs
-        self._edited_refs = refs
+        self._edited_refs = {}
         yield
         self._edited_refs = edited_refs

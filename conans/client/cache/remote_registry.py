@@ -284,7 +284,7 @@ class RemoteRegistry(object):
         renamed = remotes.add(remote_name, url, verify_ssl, insert, force)
         remotes.save(self._filename)
         if renamed:
-            with self._cache.editable_packages.override_refs({}):
+            with self._cache.editable_packages.disable_editables():
                 for ref in self._cache.all_refs():
                     with self._cache.package_layout(ref).update_metadata() as metadata:
                         if metadata.recipe.remote == renamed:
@@ -302,7 +302,7 @@ class RemoteRegistry(object):
     def clear(self):
         remotes = self.load_remotes()
         remotes.clear()
-        with self._cache.editable_packages.override_refs({}):
+        with self._cache.editable_packages.disable_editables():
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     metadata.recipe.remote = None
@@ -313,7 +313,7 @@ class RemoteRegistry(object):
     def remove(self, remote_name):
         remotes = self.load_remotes()
         del remotes[remote_name]
-        with self._cache.editable_packages.override_refs({}):
+        with self._cache.editable_packages.disable_editables():
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote == remote_name:
@@ -326,7 +326,7 @@ class RemoteRegistry(object):
 
     def define(self, remotes):
         # For definition from conan config install
-        with self._cache.editable_packages.override_refs({}):
+        with self._cache.editable_packages.disable_editables():
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote not in remotes:
@@ -340,7 +340,7 @@ class RemoteRegistry(object):
     def rename(self, remote_name, new_remote_name):
         remotes = self.load_remotes()
         remotes.rename(remote_name, new_remote_name)
-        with self._cache.editable_packages.override_refs({}):
+        with self._cache.editable_packages.disable_editables():
             for ref in self._cache.all_refs():
                 with self._cache.package_layout(ref).update_metadata() as metadata:
                     if metadata.recipe.remote == remote_name:
