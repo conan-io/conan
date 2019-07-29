@@ -5,7 +5,7 @@ class _SearchRecipe(namedtuple("SearchRecipe", "ref")):
     with_packages = True
 
     def to_dict(self):
-        data = {"id": str(self.ref)}
+        data = {"id": repr(self.ref)}
         return data
 
 

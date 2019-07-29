@@ -1221,8 +1221,8 @@ class Test(ConanFile):
 
     def test_exception_client_without_revs(self):
         client = TestClient()
-        client.run("search whatever --revisions", assert_error=True)
-        self.assertIn("ERROR: With --revision, specify a reference", client.out)
+        client.run("search whatever --revisions")
+        self.assertIn("There are no packages matching the 'whatever' pattern", client.out)
 
         client.run("search lib/0.1@user/testing --revisions", assert_error=True)
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
@@ -1253,6 +1253,10 @@ class Test(ConanFile):
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+
+        # test that the pattern search with --revisions enabled works
+        client.run("search li* --revisions")
+        self.assertIn("lib/1.0@user/testing#bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
 
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
@@ -1407,6 +1411,10 @@ class Test(ConanFile):
                       "234234234234234234'", client.out)
 
         # IN REMOTE
+
+        # Search with pattern and remotes
+        client.run("search * --revisions -r default", assert_error=True)
+        self.assertIn("ERROR: With --revision, specify a reference", client.out)
 
         # Search not found in remote
         client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)

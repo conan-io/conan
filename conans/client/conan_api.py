@@ -2,6 +2,8 @@ import os
 import sys
 from collections import OrderedDict
 
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
+
 import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
@@ -851,7 +853,8 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
+    def search_recipes(self, pattern, remote_name=None, case_sensitive=False,
+                       fill_revisions=False):
         search_recorder = SearchRecorder()
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
@@ -865,6 +868,11 @@ class ConanAPIV1(object):
 
         for remote_name, refs in references.items():
             for ref in refs:
+                if fill_revisions:
+                    layout = self.app.cache.package_layout(ref)
+                    if isinstance(layout, PackageCacheLayout):
+                        ref = ref.copy_with_rev(layout.recipe_revision())
+
                 search_recorder.add_recipe(remote_name, ref, with_packages=False)
         return search_recorder.get_info()
 
