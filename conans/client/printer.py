@@ -145,7 +145,7 @@ class Printer(object):
                 for conan_item in remote_info["items"]:
                     reference = conan_item["recipe"]["id"]
                     ref = ConanFileReference.loads(reference)
-                    self._print_colored_line(str(ref), indent=0)
+                    self._print_colored_line(ref.full_str(), indent=0)
         else:
             for remote_info in search_info:
                 if all_remotes_search:
@@ -153,7 +153,7 @@ class Printer(object):
                 for conan_item in remote_info["items"]:
                     reference = conan_item["recipe"]["id"]
                     ref = ConanFileReference.loads(reference)
-                    self._out.writeln(str(ref))
+                    self._out.writeln(ref.full_str())
 
     def print_search_packages(self, search_info, ref, packages_query,
                               outdated=False):
