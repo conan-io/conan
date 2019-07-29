@@ -8,7 +8,6 @@ from conans.client.graph.graph import BINARY_BUILD, Node,\
     RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.loader import ProcessedProfile
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
 from conans.model.graph_info import GraphInfo
@@ -74,7 +73,7 @@ class GraphManager(object):
             profile.process_settings(self._cache, preprocess=False)
             # This is the hack of recovering the options from the graph_info
             profile.options.update(graph_info.options)
-        processed_profile = ProcessedProfile(profile, None)
+        processed_profile = profile
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             if graph_lock and not test:  # Only lock python requires if it is not test_package
@@ -111,13 +110,14 @@ class GraphManager(object):
             if require:
                 require.ref = require.range_ref = ref
             else:
-                conanfile.requires(str(ref))
+                conanfile.requires.add_ref(ref)
             conanfile._conan_user = ref.user
             conanfile._conan_channel = ref.channel
 
         # Computing the full dependency graph
         profile = graph_info.profile
-        processed_profile = ProcessedProfile(profile, create_reference)
+        processed_profile = profile
+        processed_profile.dev_reference = create_reference
         ref = None
         graph_lock = graph_info.graph_lock
         if isinstance(reference, list):  # Install workspace with multiple root nodes

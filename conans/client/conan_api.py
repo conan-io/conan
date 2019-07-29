@@ -16,7 +16,7 @@ from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_ke
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
-from conans.client.cmd.user import user_set, users_clean, users_list
+from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_manager import GraphManager
@@ -267,7 +267,7 @@ class ConanAPIV1(object):
             conanfile_class = self._loader.load_class(conanfile_path)
             conanfile_class.name = ref.name
             conanfile_class.version = ref.version
-        conanfile = conanfile_class(self._user_io.out, None, str(ref))
+        conanfile = conanfile_class(self._user_io.out, None, repr(ref))
 
         result = OrderedDict()
         if not attributes:
@@ -442,8 +442,8 @@ class ConanAPIV1(object):
         if packages and recipe:
             raise ConanException("recipe parameter cannot be used together with packages")
         # Install packages without settings (fixed ids or all)
-        ref = ConanFileReference.loads(reference)
-        if check_valid_ref(ref, allow_pattern=False):
+        if check_valid_ref(reference):
+            ref = ConanFileReference.loads(reference)
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -619,14 +619,15 @@ class ConanAPIV1(object):
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env,
                    lockfile=None):
         cwd = get_cwd()
-        try:
+        if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
-        except ConanException:
+            install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
+        else:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
-        install_folder = _make_abs_path(install_folder, cwd)
-        if not os.path.exists(os.path.join(install_folder, GRAPH_INFO_FILE)):
-            install_folder = None
+            install_folder = _make_abs_path(install_folder, cwd)
+            if not os.path.exists(os.path.join(install_folder, GRAPH_INFO_FILE)):
+                install_folder = None
 
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
         graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
@@ -666,9 +667,9 @@ class ConanAPIV1(object):
         return nodes_to_build, conanfile
 
     @api_method
-    def info(self, reference, remote_name=None, settings=None, options=None, env=None,
+    def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
              profile_names=None, update=False, install_folder=None, build=None, lockfile=None):
-        reference, graph_info = self._info_args(reference, install_folder, profile_names,
+        reference, graph_info = self._info_args(reference_or_path, install_folder, profile_names,
                                                 settings, options, env, lockfile=lockfile)
         recorder = ActionRecorder()
         remotes = self._cache.registry.load_remotes()
@@ -816,10 +817,20 @@ class ConanAPIV1(object):
                  self._user_io, self._remote_manager, self._loader, remotes, force=force)
 
     @api_method
-    def authenticate(self, name, password, remote_name):
+    def authenticate(self, name, password, remote_name, skip_auth=False):
+        # FIXME: 2.0 rename "name" to "user".
+        # FIXME: 2.0 probably we should return also if we have been authenticated or not (skipped)
+        # FIXME: 2.0 remove the skip_auth argument, that behavior will be done by:
+        #      "conan user USERNAME -r remote" that will use the local credentials (and verify that are valid)
+        #      against the server. Currently it only "associate" the USERNAME with the remote without
+        #      checking anything else
+        remote = self.get_remote_by_name(remote_name)
+
+        if skip_auth and token_present(self._cache.localdb, remote, name):
+            return remote.name, name, name
         if not password:
             name, password = self._user_io.request_login(remote_name=remote_name, username=name)
-        remote = self.get_remote_by_name(remote_name)
+
         _, remote_name, prev_user, user = self._remote_manager.authenticate(remote, name, password)
         return remote_name, prev_user, user
 
@@ -961,7 +972,7 @@ class ConanAPIV1(object):
         tmp = self._cache.registry.prefs_list
         for pref, remote in tmp.items():
             if pref.ref == ref and remote:
-                ret[pref.full_repr()] = remote
+                ret[repr(pref)] = remote
         return ret
 
     @api_method
@@ -1008,7 +1019,7 @@ class ConanAPIV1(object):
     @api_method
     def remove_system_reqs_by_pattern(self, pattern):
         for ref in search_recipes(self._cache, pattern=pattern):
-            self.remove_system_reqs(ref.full_repr())
+            self.remove_system_reqs(repr(ref))
 
     @api_method
     def remove_locks(self):
@@ -1073,7 +1084,7 @@ class ConanAPIV1(object):
         alias_conanfile_path = self._cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
             conanfile_class = self._loader.load_class(alias_conanfile_path)
-            conanfile = conanfile_class(self._user_io.out, None, str(ref))
+            conanfile = conanfile_class(self._user_io.out, None, repr(ref))
             if not getattr(conanfile, 'alias', None):
                 raise ConanException("Reference '{}' is already a package, remove it before "
                                      "creating and alias with the same name".format(ref))
@@ -1098,7 +1109,7 @@ class ConanAPIV1(object):
                                  " Enable this feature setting to '1' the environment variable"
                                  " 'CONAN_REVISIONS_ENABLED' or the config value"
                                  " 'general.revisions_enabled' in your conan.conf file")
-        ref = ConanFileReference.loads(str(reference))
+        ref = ConanFileReference.loads(reference)
         if ref.revision:
             raise ConanException("Cannot list the revisions of a specific recipe revision")
 
@@ -1137,7 +1148,7 @@ class ConanAPIV1(object):
                                  " Enable this feature setting to '1' the environment variable"
                                  " 'CONAN_REVISIONS_ENABLED' or the config value"
                                  " 'general.revisions_enabled' in your conan.conf file")
-        pref = PackageReference.loads(str(reference), validate=True)
+        pref = PackageReference.loads(reference, validate=True)
         if not pref.ref.revision:
             raise ConanException("Specify a recipe reference with revision")
         if pref.revision:
@@ -1236,14 +1247,6 @@ class ConanAPIV1(object):
         print_graph(deps_graph, self._user_io.out)
         graph_info.save_lock(lockfile)
         return deps_graph.new_build_order()
-
-    @api_method
-    def lock_clean_modified(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-        lock = GraphLockFile.load(lockfile)
-        lock.graph_lock.clean_modified()
-        lock.save(lockfile)
 
     @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,

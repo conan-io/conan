@@ -3,10 +3,11 @@ import os
 import textwrap
 import unittest
 
+from conans.client.graph.graph import BINARY_BUILD
 from conans.model.graph_lock import LOCKFILE
+from conans.model.ref import PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-from conans.model.ref import PackageReference
 
 
 class GraphLockCITest(unittest.TestCase):
@@ -94,7 +95,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
                       lock_fileb)
-        self.assertIn('"modified": true', lock_fileb)
+        self.assertIn('"modified": "%s"' % BINARY_BUILD, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -110,7 +111,6 @@ class GraphLockCITest(unittest.TestCase):
                                         servers={"default": test_server})
                 client_aux.run("config set general.revisions_enabled=True")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -224,7 +224,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
                       lock_fileb)
-        self.assertIn('"modified": true', lock_fileb)
+        self.assertIn('"modified": "%s"' % BINARY_BUILD, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -240,7 +240,6 @@ class GraphLockCITest(unittest.TestCase):
                                         servers={"default": test_server})
                 client_aux.run("config set general.revisions_enabled=True")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -344,7 +343,6 @@ class GraphLockCITest(unittest.TestCase):
                 client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.run("config set general.default_package_id_mode=full_package_mode")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -446,7 +444,6 @@ class GraphLockCITest(unittest.TestCase):
             client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})
-            client_aux.run("graph clean-modified .")
             client_aux.run("install %s --build=%s --lockfile"
                            % (pkg_ref.ref, pkg_ref.ref.name))
             lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))

@@ -185,7 +185,7 @@ class RecipeNotFoundException(NotFoundException):
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_repr() if self.print_rev else str(self.ref)
+        tmp = self.ref.full_str() if self.print_rev else str(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
@@ -201,7 +201,7 @@ class PackageNotFoundException(NotFoundException):
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.pref.full_repr() if self.print_rev else str(self.pref)
+        tmp = self.pref.full_str() if self.print_rev else str(self.pref)
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 

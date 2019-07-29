@@ -4,6 +4,7 @@ import unittest
 from mock import Mock
 
 from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
@@ -21,7 +22,6 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
-from conans.client.cache.remote_registry import Remotes
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -80,7 +80,7 @@ class GraphManagerTest(unittest.TestCase):
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
-        self.assertEqual(node.ref.full_repr(), ref.full_repr())
+        self.assertEqual(repr(node.ref), repr(ref))
         self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
 

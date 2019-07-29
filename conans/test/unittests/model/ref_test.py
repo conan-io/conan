@@ -4,7 +4,7 @@ import six
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, ConanName, InvalidNameException, PackageReference, \
-    check_valid_ref
+    check_valid_ref, get_reference_fields
 
 
 class RefTest(unittest.TestCase):
@@ -38,7 +38,8 @@ class RefTest(unittest.TestCase):
 
     def errors_test(self):
         self.assertRaises(ConanException, ConanFileReference.loads, "")
-        self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10")
+        self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).channel)
+        self.assertIsNone(ConanFileReference.loads("opencv/2.4.10@", validate=False).user)
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10@lasote")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv??/2.4.10@laso/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10 @ laso/testing")
@@ -63,6 +64,13 @@ class RefTest(unittest.TestCase):
     def revisions_test(self):
         ref = ConanFileReference.loads("opencv/2.4.10@lasote/testing#23")
         self.assertEqual(ref.channel, "testing")
+        self.assertEqual(ref.revision, "23")
+
+        ref = ConanFileReference.loads("opencv/2.4.10#23")
+        self.assertIsNone(ref.channel)
+        self.assertIsNone(ref.user)
+        self.assertEqual(ref.name, "opencv")
+        self.assertEqual(ref.version, "2.4.10")
         self.assertEqual(ref.revision, "23")
 
         ref = ConanFileReference("opencv", "2.3", "lasote", "testing", "34")
@@ -138,17 +146,126 @@ class ConanNameTestCase(unittest.TestCase):
 class CheckValidRefTest(unittest.TestCase):
 
     def test_string(self):
-        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=False))
-        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel"))
+        self.assertTrue(check_valid_ref("package/1.0@user/channel"))
 
-        self.assertFalse(check_valid_ref("package/*@user/channel", allow_pattern=False))
-        self.assertTrue(check_valid_ref("package/1.0@user/channel", allow_pattern=True))
+    def test_incomplete_refs(self):
+        self.assertTrue(check_valid_ref("package/1.0", strict_mode=False))
+        self.assertFalse(check_valid_ref("package/1.0"))
+        self.assertFalse(check_valid_ref("package/1.0@user"))
+        self.assertFalse(check_valid_ref("package/1.0@/channel"))
+        self.assertFalse(check_valid_ref("lib@#rev"))
 
-    def test_conanfileref(self):
-        ref = ConanFileReference.loads("package/1.0@user/channel")
-        self.assertTrue(check_valid_ref(ref, allow_pattern=False))
-        self.assertTrue(check_valid_ref(ref, allow_pattern=True))
+
+class GetReferenceFieldsTest(unittest.TestCase):
+
+    def test_fields_complete(self):
+
+        # No matter if we say we allow partial references for "user/channel", if we
+        # provide this patterns everything is parsed correctly
+        for user_channel_input in [True, False]:
+            tmp = get_reference_fields("lib/1.0@user", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, ("lib", "1.0", "user", None, None))
+
+            tmp = get_reference_fields("lib/1.0@/channel", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, ("lib", "1.0", None, "channel", None))
+
+            # FIXME: 2.0 in this case lib is considered the version, weird.
+            tmp = get_reference_fields("lib@#rev", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, "lib", None, None, "rev"))
+
+            # FIXME: 2.0 in this case lib is considered the version, weird.
+            tmp = get_reference_fields("lib@/channel#rev", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, "lib", None, "channel", "rev"))
+
+            tmp = get_reference_fields("/1.0@user/#rev", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, "1.0", "user", None, "rev"))
+
+            tmp = get_reference_fields("/@/#", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, None, None, None, None))
+
+            tmp = get_reference_fields("lib/1.0@/", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, ("lib", "1.0", None, None, None))
+
+            tmp = get_reference_fields("lib/1.0@", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, ("lib", "1.0", None, None, None))
+
+            tmp = get_reference_fields("lib/@", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, ("lib", None, None, None, None))
+
+            tmp = get_reference_fields("/@", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, None, None, None, None))
+
+            tmp = get_reference_fields("@", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, None, None, None, None))
+
+            tmp = get_reference_fields("lib/1.0@user/channel#rev",
+                                       user_channel_input=user_channel_input)
+            self.assertEqual(tmp, ("lib", "1.0", "user", "channel", "rev"))
+
+            # FIXME: 2.0 in this case lib is considered the version, weird.
+            tmp = get_reference_fields("lib@user/channel", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, "lib", "user", "channel", None))
+
+            tmp = get_reference_fields("/@/#", user_channel_input=user_channel_input)
+            self.assertEqual(tmp, (None, None, None, None, None))
+
+    def test_only_user_channel(self):
+        tmp = get_reference_fields("user/channel", user_channel_input=True)
+        self.assertEqual(tmp, (None, None, "user", "channel", None))
+
+        tmp = get_reference_fields("user", user_channel_input=True)
+        self.assertEqual(tmp, (None, None, "user", None, None))
+
+        tmp = get_reference_fields("/channel", user_channel_input=True)
+        self.assertEqual(tmp, (None, None, None, "channel", None))
 
         ref_pattern = ConanFileReference.loads("package/*@user/channel")
-        self.assertFalse(check_valid_ref(ref_pattern, allow_pattern=False))
-        self.assertTrue(check_valid_ref(ref_pattern, allow_pattern=True))
+        self.assertFalse(check_valid_ref(ref_pattern, strict_mode=False))
+
+
+class CompatiblePrefTest(unittest.TestCase):
+
+    def test_compatible(self):
+
+        def ok(pref1, pref2):
+            pref1 = PackageReference.loads(pref1)
+            pref2 = PackageReference.loads(pref2)
+            return pref1.is_compatible_with(pref2)
+
+        # Same ref is ok
+        self.assertTrue(ok("package/1.0@user/channel#RREV1:packageid1#PREV1",
+                           "package/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # Change PREV is not ok
+        self.assertFalse(ok("package/1.0@user/channel#RREV1:packageid1#PREV1",
+                            "package/1.0@user/channel#RREV1:packageid1#PREV2"))
+
+        # Different ref is not ok
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
+                            "packageB/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # Different ref is not ok
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1",
+                            "packageB/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # Different package_id is not ok
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1",
+                            "packageA/1.0@user/channel#RREV1:packageid2#PREV1"))
+
+        # Completed PREV is ok
+        self.assertTrue(ok("packageA/1.0@user/channel#RREV1:packageid1",
+                           "packageA/1.0@user/channel#RREV1:packageid1#PREV1"))
+
+        # But only in order, the second ref cannot remove PREV
+        self.assertFalse(ok("packageA/1.0@user/channel#RREV1:packageid1#PREV1",
+                            "packageA/1.0@user/channel#RREV1:packageid1"))
+
+        # Completing RREV is also OK
+        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
+                           "packageA/1.0@user/channel#RREV1:packageid1"))
+
+        # Completing RREV and PREV is also OK
+        self.assertTrue(ok("packageA/1.0@user/channel:packageid1",
+                           "packageA/1.0@user/channel#RREV:packageid1#PREV"))
+

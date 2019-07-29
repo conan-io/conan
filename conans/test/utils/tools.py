@@ -30,7 +30,6 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.hook_manager import HookManager
-from conans.client.loader import ProcessedProfile
 from conans.client.output import ConanOutput
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
@@ -91,7 +90,7 @@ def test_processed_profile(profile=None, settings=None):
         profile = Profile()
     if profile.processed_settings is None:
         profile.processed_settings = settings or Settings()
-    return ProcessedProfile(profile=profile)
+    return profile
 
 
 class TestingResponse(object):
@@ -913,7 +912,7 @@ class TurboTestClient(TestClient):
     def export(self, ref, conanfile=None, args=None, assert_error=False):
         conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
-        self.run("export . {} {}".format(ref.full_repr(), args or ""),
+        self.run("export . {} {}".format(ref.full_str(), args or ""),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
@@ -921,7 +920,7 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=None, args=None, assert_error=False):
         conanfile = str(conanfile) if conanfile else str(GenConanfile())
         self.save({"conanfile.py": conanfile})
-        self.run("create . {} {} --json {}".format(ref.full_repr(),
+        self.run("create . {} {} --json {}".format(ref.full_str(),
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
@@ -936,7 +935,7 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.full_repr(), remote, args or ""),
+        self.run("upload {} -c --all -r {} {}".format(ref.full_str(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
@@ -1115,7 +1114,7 @@ class GenConanfile(object):
     def _requirements_line(self):
         if not self._requirements:
             return ""
-        line = ", ".join(['"{}"'.format(r.full_repr()) for r in self._requirements])
+        line = ", ".join(['"{}"'.format(r.full_str()) for r in self._requirements])
         tmp = "requires = %s" % line
         return tmp
 

@@ -16,7 +16,8 @@ from conans.client.output import Color
 from conans.client.printer import Printer
 from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAvailable, \
     ConanMigrationError
-from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
+from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
+    check_valid_ref
 from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
@@ -301,7 +302,7 @@ class Command(object):
                                          prog="conan create",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference",
+        parser.add_argument("reference", nargs='?', default=None,
                             help='user/channel, version@user/channel or pkg/version@user/channel '
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -325,7 +326,14 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python2()
-        name, version, user, channel = get_reference_fields(args.reference)
+
+        name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                               user_channel_input=True)
+
+        if any([user, channel]) and not all([user, channel]):
+            # Or user/channel or nothing, but not partial
+            raise ConanException("Invalid parameter '%s', "
+                                 "specify the full reference or user/channel" % args.reference)
 
         if args.test_folder == "None":
             # Now if parameter --test-folder=None (string None) we have to skip tests
@@ -388,7 +396,7 @@ class Command(object):
                                " Use a full reference instead: "
                                "`conan download [...] {}:{}`".format(reference, packages_list[0]))
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -440,12 +448,14 @@ class Command(object):
         args = parser.parse_args(*args)
         cwd = get_cwd()
 
+        # We need @ otherwise it could be a path, so check strict
+        path_is_reference = check_valid_ref(args.path_or_reference)
+
         info = None
         try:
-            try:
-                ref = ConanFileReference.loads(args.path_or_reference)
-            except ConanException:
-                name, version, user, channel = get_reference_fields(args.reference)
+            if not path_is_reference:
+                name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                                       user_channel_input=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings, options=args.options,
@@ -463,6 +473,7 @@ class Command(object):
                     raise ConanException("A full reference was provided as first argument, second "
                                          "argument not allowed")
 
+                ref = ConanFileReference.loads(args.path_or_reference, validate=False)
                 manifest_interactive = args.manifests_interactive
                 info = self._conan.install_reference(ref, settings=args.settings,
                                                      options=args.options,
@@ -475,6 +486,7 @@ class Command(object):
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile)
+
         except ConanException as exc:
             info = exc.info
             raise
@@ -852,9 +864,11 @@ class Command(object):
                                          prog="conan export-pkg",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", help="user/channel or pkg/version@user/channel "
-                                              "(if name and version are not declared in the "
-                                              "conanfile.py)")
+        parser.add_argument("reference", nargs='?', default=None,
+                            help="user/channel or pkg/version@user/channel "
+                                 "(if name and version are not declared in the "
+                                 "conanfile.py)")
+
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("-e", "--env", nargs=1, action=Extender,
                             help='Environment variables that will be set during the package build, '
@@ -886,7 +900,8 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._warn_python2()
-        name, version, user, channel = get_reference_fields(args.reference)
+        name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                               user_channel_input=True)
         cwd = os.getcwd()
         info = None
 
@@ -925,8 +940,9 @@ class Command(object):
                                          prog="conan export",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("reference", help="user/channel, or Pkg/version@user/channel (if name "
-                                              "and version are not declared in the conanfile.py")
+        parser.add_argument("reference", nargs='?', default=None,
+                            help="user/channel, or Pkg/version@user/channel (if name "
+                                 "and version are not declared in the conanfile.py")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
@@ -935,7 +951,14 @@ class Command(object):
 
         args = parser.parse_args(*args)
         self._warn_python2()
-        name, version, user, channel = get_reference_fields(args.reference)
+        name, version, user, channel, _ = get_reference_fields(args.reference,
+                                                               user_channel_input=True)
+
+        if any([user, channel]) and not all([user, channel]):
+            # Or user/channel or nothing, but not partial
+            raise ConanException("Invalid parameter '%s', "
+                                 "specify the full reference or user/channel" % args.reference)
+
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
                                   keep_source=args.keep_source, lockfile=args.lockfile)
@@ -996,7 +1019,7 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException("Please specify a valid pattern or reference to be cleaned")
 
-            if check_valid_ref(args.pattern_or_reference, allow_pattern=False):
+            if check_valid_ref(args.pattern_or_reference):
                 return self._conan.remove_system_reqs(args.pattern_or_reference)
 
             return self._conan.remove_system_reqs_by_pattern(args.pattern_or_reference)
@@ -1045,7 +1068,7 @@ class Command(object):
             if args.all and packages_list:
                 raise ConanException("Cannot specify both --all and --package")
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             packages_list = [pref.id]
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1089,11 +1112,15 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the user list will be written to')
+        parser.add_argument("-s", "--skip-auth", default=False, action='store_true',
+                            help='Skips the authentication with the server if there are local '
+                                 'stored credentials. It doesn\'t check if the '
+                                 'current credentials are valid or not')
         args = parser.parse_args(*args)
 
-        if args.clean and any((args.name, args.remote, args.password, args.json)):
+        if args.clean and any((args.name, args.remote, args.password, args.json, args.skip_auth)):
             raise ConanException("'--clean' argument cannot be used together with 'name', "
-                                 "'--password', '--remote' or '--json'")
+                                 "'--password', '--remote', '--json' or '--skip.auth'")
         elif args.json and any((args.name, args.password)):
             raise ConanException("'--json' cannot be used together with 'name' or '--password'")
 
@@ -1115,7 +1142,8 @@ class Command(object):
                 password = args.password
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
-                                                                        password=password)
+                                                                        password=password,
+                                                                        skip_auth=args.skip_auth)
 
                 self._outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
@@ -1167,18 +1195,16 @@ class Command(object):
         if args.table and args.json:
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
-        try:
+        # Searching foo/bar is considered a pattern (FIXME: 2.0) so use strict mode to disambiguate
+        is_reference = check_valid_ref(args.pattern_or_reference, strict_mode=True)
+
+        if is_reference:
             ref = ConanFileReference.loads(args.pattern_or_reference)
-            if "*" in ref:
-                # Fixes a version with only a wildcard (valid reference) but not real reference
-                # e.g.: conan search lib/*@lasote/stable
-                ref = None
-        except (TypeError, ConanException):
+        else:
             ref = None
             if args.query:
                 raise ConanException("-q parameter only allowed with a valid recipe reference, "
                                      "not with a pattern")
-
         cwd = os.getcwd()
         info = None
 
@@ -1189,8 +1215,7 @@ class Command(object):
                 except (TypeError, ConanException, AttributeError):
                     pass
                 else:
-                    info = self._conan.get_package_revisions(pref.full_repr(),
-                                                             remote_name=args.remote)
+                    info = self._conan.get_package_revisions(repr(pref), remote_name=args.remote)
 
                 if not info:
                     if not ref:
@@ -1199,13 +1224,13 @@ class Command(object):
                               "recipe revision (e.g {ref}#3453453453:d50a0d523d98c15bb147b18f" \
                               "a7d203887c38be8b)".format(ref=_REFERENCE_EXAMPLE)
                         raise ConanException(msg)
-                    info = self._conan.get_recipe_revisions(ref.full_repr(),
+                    info = self._conan.get_recipe_revisions(repr(ref),
                                                             remote_name=args.remote)
                 self._outputer.print_revisions(ref, info, remote_name=args.remote)
                 return
 
             if ref:
-                info = self._conan.search_packages(ref.full_repr(), query=args.query,
+                info = self._conan.search_packages(repr(ref), query=args.query,
                                                    remote_name=args.remote,
                                                    outdated=args.outdated)
                 # search is done for one reference
@@ -1289,7 +1314,7 @@ class Command(object):
             if args.query and package_id:
                 raise ConanException("'--query' argument cannot be used together with '--package'")
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             package_id = pref.id
 
             if args.package:
@@ -1552,7 +1577,7 @@ class Command(object):
                                " Use a full reference instead: "
                                "`conan get [...] {}:{}`".format(reference, package_id))
         else:
-            reference = pref.ref.full_repr()
+            reference = repr(pref.ref)
             package_id = pref.id
             if args.package:
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
@@ -1688,9 +1713,6 @@ class Command(object):
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
-        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
-        clean_cmd.add_argument('lockfile', help='lockfile folder')
-
         lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                               " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
@@ -1712,8 +1734,6 @@ class Command(object):
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "clean-modified":
-            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "lock":
             self._conan.create_lock(args.path_or_reference,
                                     remote_name=args.remote,
@@ -1798,18 +1818,6 @@ class Command(object):
                               "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
 
-    @staticmethod
-    def _check_query_parameter(pattern, query):
-        if pattern:
-            try:
-                ConanFileReference.loads(pattern)
-                return pattern
-            except ConanException:
-                if query is not None:
-                    raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.g. conan search "
-                                         "MyPackage/1.2@user/channel -q \"os=Windows\"")
-
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
         methods
@@ -1855,34 +1863,6 @@ class Command(object):
             self._out.error(msg)
 
         return ret_code
-
-
-def get_reference_fields(arg_reference):
-    """
-    :param arg_reference: String with a complete reference, or only user/channel
-    :return: name, version, user and channel, in a tuple
-    """
-
-    if not arg_reference:
-        return None, None, None, None
-
-    try:
-        name_version, user_channel = arg_reference.split("@")
-        name_version = name_version.split("/")
-        try:
-            name, version = name_version
-        except ValueError:
-            name, version = None, name_version[0]
-        user, channel = user_channel.split("/")
-    except ValueError:
-        name, version = None, None
-        try:
-            user, channel = arg_reference.split("/")
-        except ValueError:
-            raise ConanException("Invalid parameter '%s', specify the full reference or "
-                                 "user/channel" % arg_reference)
-
-    return name, version, user, channel
 
 
 def _add_manifests_arguments(parser):
