@@ -139,6 +139,7 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
 
+    # !!!!!!!!!!!!!! si hemos copiado los sources del scm auto aqui no entra mas :(
     if not os.path.exists(src_folder):  # No source folder, need to get it
         with set_dirty_context_manager(src_folder):
             mkdir(src_folder)
