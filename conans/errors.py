@@ -18,8 +18,8 @@ from conans.util.files import decode_text
 class CalledProcessErrorWithStderr(CalledProcessError):
     def __str__(self):
         ret = super(CalledProcessErrorWithStderr, self).__str__()
-        if self.stderr:
-            ret += "\n" + decode_text(self.stderr)
+        if self.output:
+            ret += "\n" + decode_text(self.output)
         return ret
 
 

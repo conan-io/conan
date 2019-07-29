@@ -504,7 +504,7 @@ def check_output(cmd, folder=None, return_code=False, stderr=None):
 
         if process.returncode:
             # Only in case of error, we print also the stderr to know what happened
-            raise CalledProcessErrorWithStderr(process.returncode, cmd, stderr=stderr)
+            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
 
         output = load(tmp_file)
         return output
