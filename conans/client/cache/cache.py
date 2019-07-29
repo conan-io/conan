@@ -252,10 +252,6 @@ class ClientCache(object):
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
 
-    def invalidate(self):
-        self._config = None
-        self._no_lock = None
-
 
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment

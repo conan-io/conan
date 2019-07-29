@@ -114,11 +114,12 @@ class Command(object):
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._out = conan_api._user_io.out
+        self._out = conan_api.out
 
     @property
     def _outputer(self):
-        return CommandOutputer(self._out, self._conan._cache)
+        # FIXME, this access to the cache for output is ugly, should be removed
+        return CommandOutputer(self._out, self._conan.app.cache)
 
     def help(self, *args):
         """
