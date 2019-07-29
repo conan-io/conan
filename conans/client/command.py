@@ -1113,11 +1113,15 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the user list will be written to')
+        parser.add_argument("-s", "--skip-auth", default=False, action='store_true',
+                            help='Skips the authentication with the server if there are local '
+                                 'stored credentials. It doesn\'t check if the '
+                                 'current credentials are valid or not')
         args = parser.parse_args(*args)
 
-        if args.clean and any((args.name, args.remote, args.password, args.json)):
+        if args.clean and any((args.name, args.remote, args.password, args.json, args.skip_auth)):
             raise ConanException("'--clean' argument cannot be used together with 'name', "
-                                 "'--password', '--remote' or '--json'")
+                                 "'--password', '--remote', '--json' or '--skip.auth'")
         elif args.json and any((args.name, args.password)):
             raise ConanException("'--json' cannot be used together with 'name' or '--password'")
 
@@ -1139,7 +1143,8 @@ class Command(object):
                 password = args.password
                 remote_name, prev_user, user = self._conan.authenticate(name,
                                                                         remote_name=remote_name,
-                                                                        password=password)
+                                                                        password=password,
+                                                                        skip_auth=args.skip_auth)
 
                 self._outputer.print_user_set(remote_name, prev_user, user)
         except ConanException as exc:
@@ -1709,9 +1714,6 @@ class Command(object):
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
 
-        clean_cmd = subparsers.add_parser('clean-modified', help='Clean modified')
-        clean_cmd.add_argument('lockfile', help='lockfile folder')
-
         lock_cmd = subparsers.add_parser('lock', help='create a lockfile')
         lock_cmd.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                               " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
@@ -1733,8 +1735,6 @@ class Command(object):
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
-        elif args.subcommand == "clean-modified":
-            self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "lock":
             self._conan.create_lock(args.path_or_reference,
                                     remote_name=args.remote,

@@ -16,7 +16,7 @@ from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_ke
 from conans.client.cmd.search import Search
 from conans.client.cmd.test import PackageTester
 from conans.client.cmd.uploader import CmdUpload
-from conans.client.cmd.user import user_set, users_clean, users_list
+from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf import ConanClientConfigParser
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_manager import GraphManager
@@ -809,11 +809,23 @@ class ConanAPIV1(object):
                  self.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
 
     @api_method
-    def authenticate(self, name, password, remote_name):
+    def authenticate(self, name, password, remote_name, skip_auth=False):
+        # FIXME: 2.0 rename "name" to "user".
+        # FIXME: 2.0 probably we should return also if we have been authenticated or not (skipped)
+        # FIXME: 2.0 remove the skip_auth argument, that behavior will be done by:
+        #      "conan user USERNAME -r remote" that will use the local credentials (
+        #      and verify that are valid)
+        #      against the server. Currently it only "associate" the USERNAME with the remote
+        #      without checking anything else
+        remote = self.get_remote_by_name(remote_name)
+
+        if skip_auth and token_present(self.app.cache.localdb, remote, name):
+            return remote.name, name, name
         if not password:
             name, password = self.user_io.request_login(remote_name=remote_name, username=name)
-        remote = self.get_remote_by_name(remote_name)
-        _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name, password)
+
+        _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
+                                                                               password)
         return remote_name, prev_user, user
 
     @api_method
@@ -1229,14 +1241,6 @@ class ConanAPIV1(object):
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)
         return deps_graph.new_build_order()
-
-    @api_method
-    def lock_clean_modified(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
-        lock = GraphLockFile.load(lockfile)
-        lock.graph_lock.clean_modified()
-        lock.save(lockfile)
 
     @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
