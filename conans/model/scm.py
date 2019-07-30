@@ -1,8 +1,10 @@
 import json
 import os
+import subprocess
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+from conans.util.files import rmdir
 
 
 def get_scm_data(conanfile):
@@ -86,7 +88,13 @@ class SCM(object):
     def checkout(self):
         output = ""
         if self._data.type == "git":
-            output += self.repo.clone(url=self._data.url)
+            try:
+                output += self.repo.clone(url=self._data.url, branch=self._data.revision, shallow=True)
+            except subprocess.CalledProcessError:
+                # remove the .git directory, otherwise, fallback clone cannot be successful
+                # it's completely safe to do here, as clone without branch expects empty directory
+                rmdir(os.path.join(self.repo_folder, ".git"))
+                output += self.repo.clone(url=self._data.url, shallow=False)
             output += self.repo.checkout(element=self._data.revision,
                                          submodule=self._data.submodule)
         else:
