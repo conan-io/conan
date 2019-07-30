@@ -1,12 +1,13 @@
+import json
 import os
 import textwrap
 import unittest
 
+from conans.client.graph.graph import BINARY_BUILD
 from conans.model.graph_lock import LOCKFILE
+from conans.model.ref import PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
-from conans.model.ref import PackageReference
-import json
 
 
 class GraphLockCITest(unittest.TestCase):
@@ -75,7 +76,7 @@ class GraphLockCITest(unittest.TestCase):
                       lock_file)
 
         # Do a change in B
-        clientb = TestClient(base_folder=client.base_folder, servers={"default": test_server})
+        clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
         clientb.run("config set general.revisions_enabled=True")
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
                      "myfile.txt": "ByeB World!!",
@@ -94,7 +95,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "7e4312d9a6d3726436d62a6b508f361d13e65354#55f822331b182e54b5144e578ba9135b",
                       lock_fileb)
-        self.assertIn('"modified": true', lock_fileb)
+        self.assertIn('"modified": "%s"' % BINARY_BUILD, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -106,11 +107,10 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             for _, pkg_ref in to_build[0]:
                 pkg_ref = PackageReference.loads(pkg_ref)
-                client_aux = TestClient(base_folder=client.base_folder,
+                client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.run("config set general.revisions_enabled=True")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -204,7 +204,7 @@ class GraphLockCITest(unittest.TestCase):
                       lock_file)
 
         # Do a change in B
-        clientb = TestClient(base_folder=client.base_folder, servers={"default": test_server})
+        clientb = TestClient(cache_folder=client.cache_folder, servers={"default": test_server})
         clientb.run("config set general.revisions_enabled=True")
         clientb.run("config set general.default_package_id_mode=package_revision_mode")
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
@@ -224,7 +224,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel#d3d184611fb757faa65e4d4203198579:"
                       "d80dd9662f447164906643ab88a1ed4e7b12925b#50246cbe82411551e5ebc5bcc75f1a9a",
                       lock_fileb)
-        self.assertIn('"modified": true', lock_fileb)
+        self.assertIn('"modified": "%s"' % BINARY_BUILD, lock_fileb)
         # Go back to main orchestrator
         client.save({"new_lock/%s" % LOCKFILE: lock_fileb})
         client.run("graph update-lock . new_lock")
@@ -236,11 +236,10 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             for _, pkg_ref in to_build[0]:
                 pkg_ref = PackageReference.loads(pkg_ref)
-                client_aux = TestClient(base_folder=client.base_folder,
+                client_aux = TestClient(cache_folder=client.cache_folder,
                                         servers={"default": test_server})
                 client_aux.run("config set general.revisions_enabled=True")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -318,7 +317,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel", lock_file)
 
         # Do a change in B
-        clientb = TestClient(base_folder=client.base_folder)
+        clientb = TestClient(cache_folder=client.cache_folder)
         clientb.run("config set general.default_package_id_mode=full_package_mode")
         clientb.save({"conanfile.py": conanfile.format(requires='requires="PkgA/[*]@user/channel"'),
                      "myfile.txt": "ByeB World!!",
@@ -341,10 +340,9 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             for _, pkg_ref in to_build[0]:
                 pkg_ref = PackageReference.loads(pkg_ref)
-                client_aux = TestClient(base_folder=client.base_folder)
+                client_aux = TestClient(cache_folder=client.cache_folder)
                 client_aux.run("config set general.default_package_id_mode=full_package_mode")
                 client_aux.save({LOCKFILE: lock_fileaux})
-                client_aux.run("graph clean-modified .")
                 client_aux.run("install %s --build=%s --lockfile"
                                % (pkg_ref.ref, pkg_ref.ref.name))
                 lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -420,7 +418,7 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel", lock_file)
 
         # Do a change in A
-        clientb = TestClient(base_folder=client.base_folder)
+        clientb = TestClient(cache_folder=client.cache_folder)
         clientb.run("config set general.default_package_id_mode=full_package_mode")
         clientb.save({"conanfile.py": conanfile.format(requires=''),
                      "myfile.txt": "ByeA World!!",
@@ -443,10 +441,9 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             _, pkg_ref = to_build[0].pop(0)
             pkg_ref = PackageReference.loads(pkg_ref)
-            client_aux = TestClient(base_folder=client.base_folder)
+            client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})
-            client_aux.run("graph clean-modified .")
             client_aux.run("install %s --build=%s --lockfile"
                            % (pkg_ref.ref, pkg_ref.ref.name))
             lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
@@ -509,7 +506,7 @@ class GraphLockCITest(unittest.TestCase):
         client.run("graph lock PkgD/0.1@user/channel -pr=myprofile")
         lock_file = load(os.path.join(client.current_folder, LOCKFILE))
 
-        client2 = TestClient(base_folder=client.base_folder)
+        client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": conanfile.format(requires=""), LOCKFILE: lock_file})
         client2.run("create . PkgA/0.1@user/channel --lockfile")
         self.assertIn("PkgA/0.1@user/channel: BUILDING WITH OPTION: 5!!", client2.out)

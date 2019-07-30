@@ -2,8 +2,11 @@
 import os
 import six
 import unittest
+import subprocess
 
+from mock import patch
 from nose.plugins.attrib import attr
+from parameterized import parameterized
 
 from conans.client import tools
 from conans.client.tools.scm import Git
@@ -30,6 +33,18 @@ class GitRemoteUrlTest(unittest.TestCase):
 
 @attr('git')
 class GitToolTest(unittest.TestCase):
+
+    @patch('subprocess.Popen')
+    def test_version(self, mocked_open):
+        mocked_open.return_value.communicate.return_value = ('git version 2.21.0'.encode(), None)
+        version = Git.get_version()
+        self.assertEqual(version, "2.21.0")
+
+    @patch('subprocess.Popen')
+    def test_version_invalid(self, mocked_open):
+        mocked_open.return_value.communicate.return_value = ('failed'.encode(), None)
+        with self.assertRaises(ConanException):
+            Git.get_version()
 
     def test_repo_root(self):
         root_path, _ = create_local_git_repo({"myfile": "anything"})
@@ -74,6 +89,61 @@ class GitToolTest(unittest.TestCase):
         git.clone(path)
         self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
 
+    @parameterized.expand([(None,),  # default
+                           ("develop",),  # branch name
+                           ("1.0",),  # tag name
+                           ("HEAD",),  # expression
+                           ])
+    def test_clone_git_shallow(self, element):
+        path, revision = create_local_git_repo({"myfile": "contents"}, commits=3, tags=["1.0"], branch="develop")
+        tmp = temp_folder()
+        git = Git(tmp)
+        git.clone("file://" + path, branch=element, shallow=True)  # --depth is ignored in local clones
+        with self.assertRaises(subprocess.CalledProcessError):
+            git.checkout(element="HEAD~1")
+        self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+        self.assertEqual(git.get_revision(), revision)
+        self.assertEqual(git.run("rev-list --all --count"), "1")
+
+    def test_clone_git_shallow_revision(self):
+        path, revision = create_local_git_repo({"myfile": "contents"}, commits=3, tags=["1.0"], branch="develop")
+        tmp = temp_folder()
+        git = Git(tmp)
+        if Git.get_version() < "2.13":
+            # older Git versions have known bugs with "git fetch origin <sha>":
+            # https://github.com/git/git/blob/master/Documentation/RelNotes/2.13.0.txt
+            #  * "git fetch" that requests a commit by object name, when the other
+            #    side does not allow such an request, failed without much
+            #    explanation.
+            # https://github.com/git/git/blob/master/Documentation/RelNotes/2.14.0.txt
+            # * There is no good reason why "git fetch $there $sha1" should fail
+            #    when the $sha1 names an object at the tip of an advertised ref,
+            #    even when the other side hasn't enabled allowTipSHA1InWant.
+            with self.assertRaises(subprocess.CalledProcessError):
+                git.clone("file://" + path, branch=revision, shallow=True)
+        else:
+            git.clone("file://" + path, branch=revision, shallow=True)
+            with self.assertRaises(subprocess.CalledProcessError):
+                git.checkout(element="HEAD~1")
+            self.assertTrue(os.path.exists(os.path.join(tmp, "myfile")))
+            self.assertEqual(git.get_revision(), revision)
+            self.assertEqual(git.run("rev-list --all --count"), "1")
+
+    def test_clone_git_shallow_with_local(self):
+        path, revision = create_local_git_repo({"repofile": "contents"}, commits=3)
+        tmp = temp_folder()
+        save(os.path.join(tmp, "localfile"), "contents")
+        save(os.path.join(tmp, "indexfile"), "contents")
+        git = Git(tmp)
+        git.run("init")
+        git.run("add indexfile")
+        git.clone("file://" + path, branch="master", shallow=True)  # --depth is ignored in local clones
+        self.assertTrue(os.path.exists(os.path.join(tmp, "repofile")))
+        self.assertTrue(os.path.exists(os.path.join(tmp, "localfile")))
+        self.assertTrue(os.path.exists(os.path.join(tmp, "indexfile")))
+        self.assertEqual(git.get_revision(), revision)
+        self.assertEqual(git.run("rev-list --all --count"), "1")
+
     def test_clone_existing_folder_git(self):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release")
 
@@ -114,13 +184,13 @@ class GitToolTest(unittest.TestCase):
         git = Git(tmp, username="peter", password="otool", verify_ssl=True, runner=runner,
                   force_english=True)
         git.clone(url="https://myrepo.git")
-        self.assertIn("git config http.sslVerify true", runner.calls[1])
+        self.assertIn("git -c http.sslVerify=true", runner.calls[0])
 
         runner = MyRunner()
         git = Git(tmp, username="peter", password="otool", verify_ssl=False, runner=runner,
                   force_english=False)
         git.clone(url="https://myrepo.git")
-        self.assertIn("git config http.sslVerify false", runner.calls[1])
+        self.assertIn("git -c http.sslVerify=false", runner.calls[0])
 
     def test_clone_submodule_git(self):
         subsubmodule, _ = create_local_git_repo({"subsubmodule": "contents"})
@@ -201,12 +271,13 @@ class HelloConan(ConanFile):
         client = TestClient()
         git_repo = temp_folder()
         save(os.path.join(git_repo, "file.h"), "contents")
-        client.runner("git init .", cwd=git_repo)
-        client.runner('git config user.email "you@example.com"', cwd=git_repo)
-        client.runner('git config user.name "Your Name"', cwd=git_repo)
-        client.runner("git checkout -b dev", cwd=git_repo)
-        client.runner("git add .", cwd=git_repo)
-        client.runner('git commit -m "comm"', cwd=git_repo)
+        with client.chdir(git_repo):
+            client.run_command("git init .")
+            client.run_command('git config user.email "you@example.com"')
+            client.run_command('git config user.name "Your Name"')
+            client.run_command("git checkout -b dev")
+            client.run_command("git add .")
+            client.run_command('git commit -m "comm"')
 
         conanfile = """
 import os
@@ -273,15 +344,17 @@ class HelloConan(ConanFile):
     def git_commit_message_test(self):
         client = TestClient()
         git_repo = temp_folder()
-        client.runner("git init .", cwd=git_repo)
-        client.runner('git config user.email "you@example.com"', cwd=git_repo)
-        client.runner('git config user.name "Your Name"', cwd=git_repo)
-        client.runner("git checkout -b dev", cwd=git_repo)
+        with client.chdir(git_repo):
+            client.run_command("git init .")
+            client.run_command('git config user.email "you@example.com"')
+            client.run_command('git config user.name "Your Name"')
+            client.run_command("git checkout -b dev")
         git = Git(git_repo)
         self.assertIsNone(git.get_commit_message())
         save(os.path.join(git_repo, "test"), "contents")
-        client.runner("git add test", cwd=git_repo)
-        client.runner('git commit -m "first commit"', cwd=git_repo)
+        with client.chdir(git_repo):
+            client.run_command("git add test")
+            client.run_command('git commit -m "first commit"')
         self.assertEqual("dev", git.get_branch())
         self.assertEqual("first commit", git.get_commit_message())
 

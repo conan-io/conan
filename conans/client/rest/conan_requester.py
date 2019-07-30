@@ -1,4 +1,5 @@
 import fnmatch
+import logging
 import os
 import platform
 import time
@@ -10,6 +11,11 @@ from requests.adapters import HTTPAdapter
 from conans import __version__ as client_version
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
+
+# Capture SSL warnings as pointed out here:
+# https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
+# TODO: Fix this security warning
+logging.captureWarnings(True)
 
 
 class ConanRequester(object):

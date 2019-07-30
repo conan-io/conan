@@ -26,7 +26,7 @@ class ProfileTest(unittest.TestCase):
     def empty_test(self):
         client = TestClient()
         client.run("profile list")
-        self.assertIn("No profiles defined", client.user_io.out)
+        self.assertIn("No profiles defined", client.out)
 
     def list_test(self):
         client = TestClient()
@@ -59,12 +59,12 @@ class ProfileTest(unittest.TestCase):
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("[settings]\nos=Windows", client.user_io.out)
-        self.assertIn("MyOption=32", client.user_io.out)
+        self.assertIn("[settings]\nos=Windows", client.out)
+        self.assertIn("MyOption=32", client.out)
         client.run("profile show profile3")
-        self.assertIn("CC=/path/tomy/gcc_build", client.user_io.out)
-        self.assertIn("CXX=/path/tomy/g++_build", client.user_io.out)
-        self.assertIn("package:VAR=value", client.user_io.out)
+        self.assertIn("CC=/path/tomy/gcc_build", client.out)
+        self.assertIn("CXX=/path/tomy/g++_build", client.out)
+        self.assertIn("package:VAR=value", client.out)
 
     def profile_update_and_get_test(self):
         client = TestClient()
@@ -134,13 +134,13 @@ class ProfileTest(unittest.TestCase):
 
         # Remove a non existent key
         client.run("profile remove settings.os ./MyProfile", assert_error=True)
-        self.assertIn("Profile key 'settings.os' doesn't exist", client.user_io.out)
+        self.assertIn("Profile key 'settings.os' doesn't exist", client.out)
 
         client.run("profile remove options.foo ./MyProfile", assert_error=True)
-        self.assertIn("Profile key 'options.foo' doesn't exist", client.user_io.out)
+        self.assertIn("Profile key 'options.foo' doesn't exist", client.out)
 
         client.run("profile remove env.foo ./MyProfile", assert_error=True)
-        self.assertIn("Profile key 'env.foo' doesn't exist", client.user_io.out)
+        self.assertIn("Profile key 'env.foo' doesn't exist", client.out)
 
     def profile_update_env_test(self):
         client = TestClient()
@@ -174,7 +174,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("os=", load(pr_path))
 
         client.run("profile new ./MyProfile2 --detect", assert_error=True)
-        self.assertIn("Profile already exists", client.user_io.out)
+        self.assertIn("Profile already exists", client.out)
 
         client.run("profile new MyProfile3")
         pr_path = os.path.join(client.cache.profiles_path, "MyProfile3")
@@ -195,7 +195,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(load(pr_path), empty_profile)
 
         client.run("profile new ./MyProfile --detect", assert_error=True)
-        self.assertIn("Profile already exists", client.user_io.out)
+        self.assertIn("Profile already exists", client.out)
 
         client.run("profile new ./MyProfile --detect --force", assert_error=False)
         self.assertNotEqual(load(pr_path), empty_profile)

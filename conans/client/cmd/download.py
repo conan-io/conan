@@ -28,7 +28,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
-            output.info("Getting the complete package list from '%s'..." % ref.full_repr())
+            output.info("Getting the complete package list from '%s'..." % ref.full_str())
             packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:

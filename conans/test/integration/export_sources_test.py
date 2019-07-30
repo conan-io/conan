@@ -386,7 +386,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         # upload to remote again, the folder remains as installed
         self.client.run("install Hello/0.1@lasote/testing --update")
-        self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.out)
         self._check_export_installed_folder(mode)
 
         rev = self.server.server_store.get_last_revision(self.ref)

@@ -65,11 +65,11 @@ class ExportDirtyTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         self.assertIn("ERROR: Unable to delete source folder. "
                       "Will be marked as corrupted for deletion",
-                      self.client.user_io.out)
+                      self.client.out)
 
         err = self.client.run("install Hello0/0.1@lasote/stable --build", assert_error=True)
         self.assertTrue(err)
-        self.assertIn("ERROR: Unable to remove source folder", self.client.user_io.out)
+        self.assertIn("ERROR: Unable to remove source folder", self.client.out)
 
     def test_export_remove(self):
         """ The export is able to remove dirty source folders
@@ -78,7 +78,7 @@ class ExportDirtyTest(unittest.TestCase):
             return
         self.f.close()
         self.client.run("export . lasote/stable")
-        self.assertIn("Source folder is corrupted, forcing removal", self.client.user_io.out)
+        self.assertIn("Source folder is corrupted, forcing removal", self.client.out)
         err = self.client.run("install Hello0/0.1@lasote/stable --build")
         self.assertFalse(err)
 
@@ -91,4 +91,4 @@ class ExportDirtyTest(unittest.TestCase):
         self.f.close()
         err = self.client.run("install Hello0/0.1@lasote/stable --build")
         self.assertFalse(err)
-        self.assertIn("WARN: Trying to remove corrupted source folder", self.client.user_io.out)
+        self.assertIn("WARN: Trying to remove corrupted source folder", self.client.out)

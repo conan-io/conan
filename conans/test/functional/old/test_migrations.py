@@ -55,7 +55,7 @@ class TestMigrations(unittest.TestCase):
         metadata["recipe"]["revision"] = "Other"
         save(layout2.package_metadata(), json.dumps(metadata))
 
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.14.1")
         client.run("search")  # This will fire a migration
 
@@ -73,7 +73,7 @@ class TestMigrations(unittest.TestCase):
     def test_migrate_config_install(self):
         client = TestClient()
         client.run('config set general.config_install="url, http:/fake.url, None, None"')
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client.run("search")
         self.assertEqual(load(version_file), __version__)
@@ -152,7 +152,7 @@ the old general
             save(old_conf_path, "\n[general]\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
             save(old_attribute_checker_plugin, "")
             # Do not adjust cpu_count, it is reusing a cache
-            cache = TestClient(base_folder=old_user_home, cpu_count=False).cache
+            cache = TestClient(cache_folder=old_user_home, cpu_count=False).cache
             assert old_conan_folder == cache.cache_folder
             return old_user_home, old_conan_folder, old_conf_path, \
                 old_attribute_checker_plugin, cache
