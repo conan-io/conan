@@ -51,10 +51,10 @@ class CppInfo(object):
     def __getattr__(self, config):
         def _get_cpp_info():
             result = CppInfo(self.rootpath)
+            result.filter_empty = self.filter_empty
             result.sysroot = self.sysroot
             result.configs = None  # To avoid nested configs
             return result
-
         return self.configs.setdefault(config, _get_cpp_info())
 
     def _filter_paths(self, paths):
@@ -138,6 +138,55 @@ class DepsCppInfo(object):
         self.sharedlinkflags = []
         self.exelinkflags = []
 
+    # FIXME Conan 2.0. Alias to remove
+    @property
+    def includedirs(self):
+        return self.include_paths
+
+    @includedirs.setter
+    def includedirs(self, value):
+        self.include_paths = value
+
+    @property
+    def libdirs(self):
+        return self.lib_paths
+
+    @libdirs.setter
+    def libdirs(self, value):
+        self.lib_paths = value
+
+    @property
+    def srcdirs(self):
+        return self.src_paths
+
+    @srcdirs.setter
+    def srcdirs(self, value):
+        self.src_paths = value
+
+    @property
+    def bindirs(self):
+        return self.bin_paths
+
+    @bindirs.setter
+    def bindirs(self, value):
+        self.bin_paths = value
+
+    @property
+    def builddirs(self):
+        return self.build_paths
+
+    @builddirs.setter
+    def builddirs(self, value):
+        self.build_paths = value
+
+    @property
+    def resdirs(self):
+        return self.res_paths
+
+    @resdirs.setter
+    def resdirs(self, value):
+        self.res_paths = value
+
     def update(self, cpp_info, pkg_name):
         assert isinstance(cpp_info, CppInfo)
         self._dependencies[pkg_name] = cpp_info
@@ -147,7 +196,6 @@ class DepsCppInfo(object):
                 self.configs.setdefault(config, DepsCppInfo()).update(config_cpp_info, pkg_name)
 
     def _accumulate(self, cpp_info):
-
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 

@@ -15,11 +15,11 @@ def extend(cpp_info, config):
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]
         result = DepsCppInfo()
-        result.include_paths = add_lists(cpp_info.include_paths, config_info.include_paths)
-        result.lib_paths = add_lists(cpp_info.lib_paths, config_info.lib_paths)
-        result.bin_paths = add_lists(cpp_info.bin_paths, config_info.bin_paths)
-        result.res_paths = add_lists(cpp_info.res_paths, config_info.res_paths)
-        result.build_paths = add_lists(cpp_info.build_paths, config_info.build_paths)
+        result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
+        result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
+        result.bindirs = add_lists(cpp_info.bindirs, config_info.bindirs)
+        result.resdirs = add_lists(cpp_info.resdirs, config_info.resdirs)
+        result.builddirs = add_lists(cpp_info.builddirs, config_info.builddirs)
         result.libs = cpp_info.libs + config_info.libs
         result.defines = cpp_info.defines + config_info.defines
         result.cflags = cpp_info.cflags + config_info.cflags
