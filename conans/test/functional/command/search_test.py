@@ -1256,7 +1256,7 @@ class Test(ConanFile):
 
         # test that the pattern search with --revisions enabled works
         client.run("search li* --revisions")
-        self.assertIn("lib/1.0@user/testing#bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+        self.assertIn("lib/1.0@user/testing#bd761686d5c57b31f4cd85fd0329751f", client.out)
 
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
@@ -1473,11 +1473,10 @@ class Test(ConanFile):
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
 
-    def test_invalid_command_call(self):
+    def test_empty_pattern_with_revisions_command_call(self):
         client = TestClient()
-        client.run("search --revisions", assert_error=True)
-        self.assertIn("With --revision, specify a reference", client.out)
-        self.assertIn("or a package reference with recipe revision", client.out)
+        client.run("search --revisions")
+        self.assertIn("There are no packages", client.out)
 
 
 class SearchRemoteAllTestCase(unittest.TestCase):
