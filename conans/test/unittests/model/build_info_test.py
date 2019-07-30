@@ -30,10 +30,10 @@ my-component-tool
 
         def assert_cpp(deps_cpp_info_test):
             self.assertEqual(deps_cpp_info_test.include_paths, ['C:/Whenever'])
-            self.assertEqual(deps_cpp_info_test["Boost"].include_paths, ['F:/ChildrenPath'])
-            self.assertEqual(deps_cpp_info_test["My_Lib"].include_paths, ['mylib_path'])
-            self.assertEqual(deps_cpp_info_test["My_Other_Lib"].include_paths, ['otherlib_path'])
-            self.assertEqual(deps_cpp_info_test["My-Component-Tool"].include_paths, ['my-component-tool'])
+            self.assertEqual(deps_cpp_info_test["Boost"].includedirs, ['F:/ChildrenPath'])
+            self.assertEqual(deps_cpp_info_test["My_Lib"].includedirs, ['mylib_path'])
+            self.assertEqual(deps_cpp_info_test["My_Other_Lib"].includedirs, ['otherlib_path'])
+            self.assertEqual(deps_cpp_info_test["My-Component-Tool"].includedirs, ['my-component-tool'])
 
         assert_cpp(deps_cpp_info)
         # Now adding env_info
@@ -74,7 +74,7 @@ VAR2=23
         deps_cpp_info.include_paths.append("C:/whenever")
         deps_cpp_info.lib_paths.append("C:/other")
         deps_cpp_info.libs.extend(["math", "winsock", "boost"])
-        child = CppInfo("F:")
+        child = CppInfo("F:/")
         child.includedirs.append("ChildrenPath")
         child.cxxflags.append("cxxmyflag")
         deps_cpp_info.update(child, "Boost")
@@ -102,7 +102,7 @@ VAR2=23
         deps_cpp_info.libs.extend(["math"])
         deps_cpp_info.debug.libs.extend(["debug_Lib"])
 
-        child = CppInfo("F:")
+        child = CppInfo("F:/")
         child.includedirs.append("ChildrenPath")
         child.debug.includedirs.append("ChildrenDebugPath")
         child.cxxflags.append("cxxmyflag")
@@ -142,8 +142,7 @@ VAR2=23
 
         self.assertEqual(deps_cpp_info["Boost"].debug.include_paths,
                          deps_cpp_info2["Boost"].debug.include_paths)
-        self.assertEqual(deps_cpp_info["Boost"].debug.include_paths,
-                         ["F:/ChildrenDebugPath"])
+        self.assertEqual(deps_cpp_info["Boost"].debug.include_paths, [])
         self.assertEqual(deps_cpp_info["Boost"].debug.cxxflags,
                          deps_cpp_info2["Boost"].debug.cxxflags)
         self.assertEqual(deps_cpp_info["Boost"].debug.cxxflags, ["cxxmydebugflag"])

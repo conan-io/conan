@@ -113,34 +113,21 @@ class TXTGenerator(Generator):
 
             # Build the data structures
             deps_cpp_info = DepsCppInfo()
-            global_data = data.pop(None, None)
-            if global_data:
-                print "LOADING global"
-                for config, fields in global_data.items():
-                    item_to_apply = deps_cpp_info if not config else getattr(deps_cpp_info, config)
-
-                    for key, value in fields.items():
-                        if key in ['rootpath', 'sysroot']:
-                            value = value[0]
-                        key = key.replace("dirs", "_paths")
-                        setattr(item_to_apply, key, value)
-
             for dep, configs_cpp_info in data.items():
-                print "LOADING ", dep
-                cpp_info = CppInfo(rootpath="")
+                if dep is None:
+                    cpp_info = deps_cpp_info
+                else:
+                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(rootpath=""))
 
                 for config, fields in configs_cpp_info.items():
-                    print "     CONFIG ", config
                     item_to_apply = cpp_info if not config else getattr(cpp_info, config)
 
                     for key, value in fields.items():
-                        print "         KEY ", key, value
                         if key in ['rootpath', 'sysroot']:
                             value = value[0]
+                        if dep is None:
+                            key = key.replace("dirs", "_paths")
                         setattr(item_to_apply, key, value)
-                        print "FINAL ATTRIBBUTE ", getattr(item_to_apply, key)
-                        print "FINAL ATTRIBBUTE ", getattr(item_to_apply, key.replace("dirs", "_paths"), "NO ATTRI!!!")
-                deps_cpp_info.update(cpp_info, dep)
 
             return deps_cpp_info
 

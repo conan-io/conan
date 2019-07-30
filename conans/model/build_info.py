@@ -49,7 +49,6 @@ class CppInfo(object):
         self.configs = {}
 
     def __getattr__(self, config):
-        print "__GETATTR__ ", config
         def _get_cpp_info():
             result = CppInfo(self.rootpath)
             result.sysroot = self.sysroot

@@ -91,6 +91,7 @@ class Conan(ConanFile):
         client.run("export . lasote/testing")
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         client.run("install . --build=missing")
+
         client.run("build .")  # We do not need to specify -g txt anymore
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, BUILD_INFO)))
 
