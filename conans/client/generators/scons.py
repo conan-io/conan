@@ -18,11 +18,10 @@ class SConsGenerator(Generator):
                     '        "CCFLAGS"     : {info.cflags},\n'
                     '        "SHLINKFLAGS" : {info.sharedlinkflags},\n'
                     '        "LINKFLAGS"   : {info.exelinkflags},\n'
-                    '    }},\n'
-                    '    "{dep}_version" : "{info.version}",\n')
+                    '    }},\n')
+        template_version = '    "{dep}_version" : "{info.version}",\n'
 
-        sections = []
-        sections.append("conan = {\n")
+        sections = ["conan = {\n"]
 
         all_flags = template.format(dep="conan", info=self.deps_build_info)
         sections.append(all_flags)
@@ -30,6 +29,8 @@ class SConsGenerator(Generator):
         for config, cpp_info in self.deps_build_info.configs.items():
             all_flags = template.format(dep="conan:" + config, info=cpp_info)
             sections.append(all_flags)
+
+        template += template_version
 
         for dep_name, info in self.deps_build_info.dependencies:
             dep_name = dep_name.replace("-", "_")

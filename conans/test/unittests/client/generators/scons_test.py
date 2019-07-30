@@ -30,6 +30,5 @@ class SConsGeneratorTest(unittest.TestCase):
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE2\', \'MYDEFINE1\'],", scons_lines)
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE1\'],", scons_lines)
         self.assertIn("        \"CPPDEFINES\"  : [\'MYDEFINE2\'],", scons_lines)
-        self.assertIn('    "conan_version" : "None",', scons_lines)
         self.assertIn('    "MyPkg_version" : "0.1",', scons_lines)
         self.assertIn('    "MyPkg2_version" : "3.2.3",', scons_lines)
