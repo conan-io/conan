@@ -3,6 +3,7 @@
 import sys
 import unittest
 
+import os
 import mock
 from parameterized import parameterized
 
@@ -29,6 +30,7 @@ class ColoramaInitialize(unittest.TestCase):
 
         with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
             # CONAN_COLOR_DISPLAY not in environment
+            assert CONAN_COLOR_DISPLAY not in os.environ
             with mock.patch("conans.client.output.colorama_init", side_effect=colorama_init) as m:
                 ret = colorama_initialize()
                 self.assertEqual(ret, True)
@@ -61,6 +63,7 @@ class ColoramaInitialize(unittest.TestCase):
 
         with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
             # CONAN_COLOR_DISPLAY not in environment
+            assert CONAN_COLOR_DISPLAY not in os.environ
             with mock.patch("conans.client.output.colorama_init", side_effect=colorama_init) as m:
                 ret = colorama_initialize()
                 self.assertEqual(ret, False)
