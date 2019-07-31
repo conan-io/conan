@@ -714,6 +714,32 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages for reference 'helloTest/1.4.10@myuser/stable' "
                       "matching the query 'use_OpenGL=True AND arch=x86'", self.client.out)
 
+    def test_search_with_settings_prefix(self):
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'setting:compiler=gcc'")
+        self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
+        self.assertIn("compiler: gcc", self.client.out)
+
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'setting:libc=glibc AND "
+                        "setting:libc.version=2.29'")
+        self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
+        self.assertIn("libc: glibc", self.client.out)
+        self.assertIn("libc.version: 2.29", self.client.out)
+
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'setting:foo=bar'")
+        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+                      "the query 'setting:foo=bar'", self.client.out)
+        self.assertNotIn("foo: bar", self.client.out)
+
+    def test_search_with_options_prefix(self):
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'option:use_Qt=True'")
+        self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
+        self.assertIn("use_Qt: True", self.client.out)
+
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'option:foobar=qux'")
+        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+                      "the query 'option:foobar=qux'", self.client.out)
+        self.assertNotIn("foobar: qux", self.client.out)
+
     def search_with_no_local_test(self):
         client = TestClient()
         client.run("search nonexist/1.0@lasote/stable", assert_error=True)

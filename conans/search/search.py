@@ -90,20 +90,22 @@ def evaluate(prop_name, prop_value, conan_vars_info):
         return False
 
     def starts_with_options_prefix(prop_name):
-        if prop_name.startswith("option:") or prop_name.startswith("o:"):
-            return True
-        return False
+        return prop_name.startswith("option:") or prop_name.startswith("o:")
 
     def starts_with_settings_prefix(prop_name):
-        if prop_name.startswith("setting:") or prop_name.startswith("s:"):
-            return True
-        return False
+        return prop_name.startswith("setting:") or prop_name.startswith("s:")
+
+    def remove_query_prefix(pro_name):
+        return prop_name[prop_name.find(":") + 1:]
 
     if starts_with_options_prefix(prop_name):
+        prop_name = remove_query_prefix(prop_name)
         return compatible_prop(info_options.get(prop_name, None), prop_value)
+    elif starts_with_settings_prefix(prop_name):
+        prop_name = remove_query_prefix(prop_name)
+        return compatible_prop(info_settings.get(prop_name, None), prop_value)
     elif (prop_name in properties or
-          starts_with_common_settings(prop_name) or
-          starts_with_settings_prefix(prop_name)):
+          starts_with_common_settings(prop_name)):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
 
     return compatible_prop(info_options.get(prop_name, None), prop_value)
