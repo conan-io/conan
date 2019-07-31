@@ -10,7 +10,7 @@ pylocations = {"Windows": winpylocation,
                "Darwin": macpylocation}[platform.system()]
 
 
-def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_tags,
+def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_tags, include_tags,
               num_cores=3, verbosity=None):
 
     verbosity = verbosity or (2 if platform.system() == "Windows" else 1)
@@ -21,7 +21,16 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
                             "bin" if platform.system() != "Windows" else "Scripts",
                             "activate")
 
-    exluded_tags_str = '-A "%s"' % " and ".join(["not %s" % tag for tag in excluded_tags]) if excluded_tags else ""
+    tags_str = []
+    if excluded_tags:
+        for tag in excluded_tags:
+            tags_str.append("not {}".format(tag))
+    if include_tags:
+        for tag in include_tags:
+            tags_str.append("{}".format(tag))
+
+    if tags_str:
+        tags_str = '-A "%s"' % " and ".join(tags_str)
 
     pyenv = pylocations[pyver]
     source_cmd = "." if platform.system() != "Windows" else ""
@@ -47,14 +56,14 @@ def run_tests(module_path, pyver, source_folder, tmp_folder, flavor, excluded_ta
               "{pip_installs} " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
-              "nosetests {module_path} {excluded_tags} --verbosity={verbosity} " \
+              "nosetests {module_path} {tags_str} --verbosity={verbosity} " \
               "{multiprocess} " \
               "{debug_traces} " \
               "--with-xunit " \
               "&& codecov -t f1a9c517-3d81-4213-9f51-61513111fc28".format(
                                     **{"module_path": module_path,
                                        "pyenv": pyenv,
-                                       "excluded_tags": exluded_tags_str,
+                                       "tags_str": tags_str,
                                        "venv_dest": venv_dest,
                                        "verbosity": verbosity,
                                        "venv_exe": venv_exe,
@@ -102,6 +111,8 @@ if __name__ == "__main__":
     parser.add_argument('pyver', help='e.g.: py27')
     parser.add_argument('source_folder', help='Folder containing the conan source code')
     parser.add_argument('tmp_folder', help='Folder to create the venv inside')
+    parser.add_argument('--include_tags', '-i', nargs=1, action=Extender,
+                        help='Tags to test e.g.: rest_api')
     parser.add_argument('--num_cores', type=int, help='Number of cores to use', default=3)
     parser.add_argument('--exclude_tags', '-e', nargs=1, action=Extender,
                         help='Tags to exclude from testing, e.g.: rest_api')
@@ -109,4 +120,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_tests(args.module, args.pyver, args.source_folder, args.tmp_folder, args.flavor,
-              args.exclude_tags, num_cores=args.num_cores)
+              args.exclude_tags, args.include_tags, num_cores=args.num_cores)
