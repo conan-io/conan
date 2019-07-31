@@ -1,7 +1,7 @@
 import os
 import six
 import sys
-from colorama import Fore, Style
+from colorama import Fore, Style, init as colorama_init
 
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text
@@ -19,11 +19,10 @@ def colorama_initialize():
         color = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
 
     if color:
-        import colorama
         if force_color:
-            colorama.init(convert=False, strip=False)
+            colorama_init(convert=False, strip=False)
         else:
-            colorama.init()
+            colorama_init()
 
     return bool(color)
 

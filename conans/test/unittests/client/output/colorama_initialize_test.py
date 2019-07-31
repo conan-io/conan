@@ -43,7 +43,7 @@ class ColoramaInitialize(unittest.TestCase):
 
             # CONAN_COLOR_DISPLAY equals ~False
             with environment_append({CONAN_COLOR_DISPLAY: "0"}):
-                with mock.patch("conans.client.output.colorama_init", side_effect=None) as m:
+                with mock.patch("conans.client.output.colorama_init", side_effect=False) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, False)
                     self.assertFalse(m.called)
