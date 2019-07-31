@@ -16,97 +16,85 @@ class ColoramaInitializeTTY(unittest.TestCase):
     assert hasattr(sys.stdout, 'isatty')
 
     def test_pycharm_hosted(self, _):
-        PYCHARM_HOSTED_VALUE = "1"
-        convert = strip = None
+        with environment_append({PYCHARM_HOSTED: "1"}):
 
-        def colorama_init_mocked(**kwargs):
-            global convert, strip
-            convert = kwargs.get('convert', 'not-set')
-            strip = kwargs.get('strip', 'not-set')
+            with environment_append({CONAN_COLOR_DISPLAY: "1"}):
 
-        with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
-                with environment_append({CONAN_COLOR_DISPLAY: "1"}):
+                def colorama_init(convert, strip):
+                    self.assertEqual(convert, False)
+                    self.assertEqual(strip, False)
+
+                with mock.patch("conans.client.output.colorama_init", side_effect=colorama_init) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertTrue(m.called)
 
-                with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+            with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+                with mock.patch("conans.client.output.colorama_init", side_effect=None) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, False)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertFalse(m.called)
 
     def test_not_pycharm_hosted(self, _):
-        PYCHARM_HOSTED_VALUE = "0"
-        convert = strip = None
+        with environment_append({PYCHARM_HOSTED: ""}):
 
-        def colorama_init_mocked(**kwargs):
-            global convert, strip
-            convert = kwargs.get('convert', 'not-set')
-            strip = kwargs.get('strip', 'not-set')
+            with environment_append({CONAN_COLOR_DISPLAY: "1"}):
 
-        with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
-                with environment_append({CONAN_COLOR_DISPLAY: "1"}):
+                def colorama_init(convert='not-set', strip='not-set'):
+                    self.assertEqual(convert, 'not-set')
+                    self.assertEqual(strip, 'not-set')
+
+                with mock.patch("conans.client.output.colorama_init", side_effect=colorama_init) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertTrue(m.called)
 
-                with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+            with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+                with mock.patch("conans.client.output.colorama_init", side_effect=False) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, False)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertFalse(m.called)
 
 
 @mock.patch('sys.stdout.isatty', return_value=False)
 class ColoramaInitializeNoTTY(unittest.TestCase):
 
     def test_pycharm_hosted(self, _):
-        PYCHARM_HOSTED_VALUE = "1"
-        convert = strip = None
+        with environment_append({PYCHARM_HOSTED: "1"}):
 
-        def colorama_init_mocked(**kwargs):
-            global convert, strip
-            convert = kwargs.get('convert', 'not-set')
-            strip = kwargs.get('strip', 'not-set')
+            with environment_append({CONAN_COLOR_DISPLAY: "1"}):
 
-        with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
-                with environment_append({CONAN_COLOR_DISPLAY: "1"}):
+                def colorama_init(convert, strip):
+                    self.assertEqual(convert, False)
+                    self.assertEqual(strip, False)
+
+                with mock.patch("conans.client.output.colorama_init", side_effect=colorama_init) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertTrue(m.called)
 
-                with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+            with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+                with mock.patch("conans.client.output.colorama_init", side_effect=False) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, False)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertFalse(m.called)
 
     def test_not_pycharm_hosted(self, _):
-        PYCHARM_HOSTED_VALUE = "0"
-        convert = strip = None
+        with environment_append({PYCHARM_HOSTED: ""}):
 
-        def colorama_init_mocked(**kwargs):
-            global convert, strip
-            convert = kwargs.get('convert', 'not-set')
-            strip = kwargs.get('strip', 'not-set')
+            with environment_append({CONAN_COLOR_DISPLAY: "1"}):
 
-        with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
-                with environment_append({CONAN_COLOR_DISPLAY: "1"}):
+                def colorama_init(convert='not-set', strip='not-set'):
+                    self.assertEqual(convert, 'not-set')
+                    self.assertEqual(strip, 'not-set')
+
+                with mock.patch("conans.client.output.colorama_init", side_effect=colorama_init) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertTrue(m.called)
 
-                with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+            with environment_append({CONAN_COLOR_DISPLAY: "0"}):
+                with mock.patch("conans.client.output.colorama_init", side_effect=False) as m:
                     ret = colorama_initialize()
                     self.assertEqual(ret, False)
-                    self.assertEqual(convert, None)
-                    self.assertEqual(strip, None)
+                    self.assertFalse(m.called)
