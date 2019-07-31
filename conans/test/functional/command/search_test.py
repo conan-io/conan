@@ -725,9 +725,24 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("libc: glibc", self.client.out)
         self.assertIn("libc.version: 2.29", self.client.out)
 
+        self.client.run("search Hello/1.5.10@myuser/testing -q 's:compiler=gcc'")
+        self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
+        self.assertIn("compiler: gcc", self.client.out)
+
+        self.client.run("search Hello/1.5.10@myuser/testing -q 's:libc=glibc AND "
+                        "setting:libc.version=2.29'")
+        self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
+        self.assertIn("libc: glibc", self.client.out)
+        self.assertIn("libc.version: 2.29", self.client.out)
+
         self.client.run("search Hello/1.5.10@myuser/testing -q 'setting:foo=bar'")
         self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
                       "the query 'setting:foo=bar'", self.client.out)
+        self.assertNotIn("foo: bar", self.client.out)
+
+        self.client.run("search Hello/1.5.10@myuser/testing -q 's:foo=bar'")
+        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+                      "the query 's:foo=bar'", self.client.out)
         self.assertNotIn("foo: bar", self.client.out)
 
     def test_search_with_options_prefix(self):
@@ -735,9 +750,18 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
         self.assertIn("use_Qt: True", self.client.out)
 
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'o:use_Qt=True'")
+        self.assertIn("Package_ID: LinuxPackageCustom", self.client.out)
+        self.assertIn("use_Qt: True", self.client.out)
+
         self.client.run("search Hello/1.5.10@myuser/testing -q 'option:foobar=qux'")
         self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
                       "the query 'option:foobar=qux'", self.client.out)
+        self.assertNotIn("foobar: qux", self.client.out)
+
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'o:foobar=qux'")
+        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+                      "the query 'o:foobar=qux'", self.client.out)
         self.assertNotIn("foobar: qux", self.client.out)
 
     def search_with_no_local_test(self):
