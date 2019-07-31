@@ -9,20 +9,23 @@ from conans.util.files import decode_text
 
 def colorama_initialize():
     # Respect color env setting or check tty if unset
-    color_set = "CONAN_COLOR_DISPLAY" in os.environ
-    if ((color_set and get_env("CONAN_COLOR_DISPLAY", 1))
-            or (not color_set
-                and hasattr(sys.stdout, "isatty")
-                and sys.stdout.isatty())):
+    for var in ("CONAN_COLOR_DISPLAY", "PYCHARM_HOSTED"):
+        if var in os.environ:
+            force_color = get_env(var, False)
+            color = force_color
+            break
+    else:
+        force_color = False
+        color = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
+    if color:
         import colorama
-        if get_env("PYCHARM_HOSTED"):  # in PyCharm disable convert/strip
+        if force_color:
             colorama.init(convert=False, strip=False)
         else:
             colorama.init()
-        color = True
-    else:
-        color = False
-    return color
+
+    return bool(color)
 
 
 class Color(object):
