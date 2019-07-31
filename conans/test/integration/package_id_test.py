@@ -5,6 +5,7 @@ from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -37,7 +38,6 @@ class Pkg(ConanFile):
                                   default_options=[("an_option", "%s" % default_option_value)],
                                   package_id=package_id_text,
                                   settings=settings)
-
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         revisions_enabled = self.client.cache.config.revisions_enabled
         self.client.disable_revisions()
@@ -148,7 +148,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
+        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
 
     def test_version_full_recipe_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -171,7 +171,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
+        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
 
         # If we change only the package ID from hello (one more defaulted option to True) should not affect
         self._export("Hello", "1.2.0", package_id_text=None, requires=None, default_option_value="on")
@@ -201,8 +201,8 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         with self.assertRaises(Exception):
             self.client.run("install .")
-        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
-        self.assertIn("Package ID:", self.client.user_io.out)
+        self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
+        self.assertIn("Package ID:", self.client.out)
 
     def test_nameless_mode(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -296,9 +296,9 @@ class Pkg(ConanFile):
                             ' --build missing')
 
             ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-            pkg = os.listdir(self.client.cache.packages(ref))
+            pkg = os.listdir(self.client.cache.package_layout(ref).packages())
             pref = PackageReference(ref, pkg[0])
-            pkg_folder = self.client.cache.package(pref)
+            pkg_folder = self.client.cache.package_layout(pref.ref).package(pref)
             return ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
 
         info = install_and_get_info(None)  # Default
@@ -348,9 +348,9 @@ class Pkg(ConanFile):
                         ' -s arch_build="x86"'
                         ' --build missing')
         ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
-        pkg = os.listdir(self.client.cache.packages(ref))
+        pkg = os.listdir(self.client.cache.package_layout(ref).packages())
         pref = PackageReference(ref, pkg[0])
-        pkg_folder = self.client.cache.package(pref)
+        pkg_folder = self.client.cache.package_layout(pref.ref).package(pref)
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
         self.assertEqual(str(info.settings.os_build), "Linux")
         self.assertEqual(str(info.settings.arch_build), "x86")
@@ -369,19 +369,41 @@ class Pkg(ConanFile):
                      channel="user/testing",
                      settings='"compiler", "cppstd"')
 
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
+        with catch_deprecation_warning(self):
+            self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
+                            '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
+                            '-s cppstd=gnu14')
+        with catch_deprecation_warning(self):
+            self.client.run('install Hello/1.2.0@user/testing'
+                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                            ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
 
         # Should NOT have binary available
-        self.client.run('install Hello/1.2.0@user/testing'
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 -s cppstd=gnu11',
-                        assert_error=True)
+        with catch_deprecation_warning(self):
+            self.client.run('install Hello/1.2.0@user/testing'
+                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                            ' -s compiler.version=7.2 -s cppstd=gnu11',
+                            assert_error=True)
 
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
-    def test_standard_version_default_non_matching(self):
+    def test_std_non_matching_with_cppstd(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+                     channel="user/testing",
+                     settings='"compiler", "cppstd"'
+                     )
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 --build')
+
+        with catch_deprecation_warning(self, n=1):
+            self.client.run('install Hello/1.2.0@user/testing'
+                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                            ' -s compiler.version=7.2 -s cppstd=gnu14',
+                            assert_error=True)  # Default
+        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+
+    def test_std_non_matching_with_compiler_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",
                      settings='"compiler"'
@@ -390,12 +412,21 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s compiler.cppstd=gnu14', assert_error=True)
+        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+
+    def test_std_matching_with_compiler_cppstd(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_matching()",
                      channel="user/testing",
-                     settings='"compiler", "cppstd"'
+                     settings='"compiler"'
                      )
         self.client.run('install Hello/1.2.0@user/testing '
-                                ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                                ' -s compiler.version=7.2 -s cppstd=gnu14',
-                                assert_error=True)  # Default
-        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 --build')
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
+        self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)

@@ -49,7 +49,8 @@ class VersionRangesTest(GraphTest):
         self.loader.cached_conanfiles = {}
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(str(content), processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, update, update, None, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
+                                             processed_profile)
         self.output.write("\n".join(self.resolver.output))
         return deps_graph
 
@@ -85,7 +86,8 @@ class VersionRangesTest(GraphTest):
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/[%s]@myuser/testing" % v)
             remote_packages.append(say_ref)
-        self.remote_search.packages = remote_packages
+        self.remotes.add("myremote", "myurl")
+        self.remote_manager.packages = remote_packages
         for expr, solution in [(">0.0", "2.2.1"),
                                (">0.1,<1", "0.3"),
                                (">0.1,<1||2.1", "2.1"),
@@ -99,7 +101,7 @@ class VersionRangesTest(GraphTest):
             deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
                                                         requires=["Say/[%s]@myuser/testing" % expr]),
                                           update=True)
-            self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
+            self.assertEqual(self.remote_manager.count, {'Say': 1})
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
             say = _get_nodes(deps_graph, "Say")[0]
@@ -115,10 +117,11 @@ class VersionRangesTest(GraphTest):
     def test_remote_optimized(self):
         self.resolver._local_search = None
         remote_packages = []
+        self.remotes.add("myremote", "myurl")
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             remote_packages.append(say_ref)
-        self.remote_search.packages = remote_packages
+        self.remote_manager.packages = remote_packages
 
         dep_content = """from conans import ConanFile
 class Dep1Conan(ConanFile):
@@ -144,7 +147,7 @@ class HelloConan(ConanFile):
                                                   Edge(dep1, say), Edge(dep2, say)})
 
         # Most important check: counter of calls to remote
-        self.assertEqual(self.remote_search.count, {'Say/*@myuser/testing': 1})
+        self.assertEqual(self.remote_manager.count, {'Say': 1})
 
     @parameterized.expand([("", "0.3", None, None),
                            ('"Say/1.1@myuser/testing"', "1.1", False, False),

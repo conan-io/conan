@@ -1,21 +1,22 @@
 import json
 import os
 import shutil
+import textwrap
 import unittest
 import zipfile
 
 import six
 from mock import patch
 
-from conans.client import tools
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.uploader_downloader import Downloader
+from conans.client.rest.uploader_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import load, mkdir, save, save_files
+
 
 win_profile = """[settings]
     os: Windows
@@ -48,13 +49,13 @@ level = 10                  # environment CONAN_LOGGING_LEVEL
 [general]
 compression_level = 6                 # environment CONAN_COMPRESSION_LEVEL
 cpu_count = 1             # environment CONAN_CPU_COUNT
+default_package_id_mode = full_package_mode # environment CONAN_DEFAULT_PACKAGE_ID_MODE
 
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
 # As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
 http = http://user:pass@10.10.1.10:3128/
-no_proxy = mylocalhost
 https = None
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
@@ -79,37 +80,8 @@ def zipdir(path, zipfilename):
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
-        # Save to the old registry, it has to be migrated
-        registry_path = self.client.cache.registry_path
-
-        save(registry_path, """
-{
- "remotes": [
-  {
-   "url": "https://myrepo2.com",
-   "verify_ssl": true,
-   "name": "my-repo-2"
-  },
-  {
-   "url": "https://conan-center.com",
-   "verify_ssl": true,
-   "name": "conan-center"
-  }
- ],
- "references": {
-  "MyPkg/0.1@user/channel": "my-repo-2",
-  "Other/1.2@user/channel": "conan-center"
- }
-}
-""")
         save(os.path.join(self.client.cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.cache.profiles_path, "linux"), "#empty linux profile")
-
-        self.old_env = dict(os.environ)
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.old_env)
 
     def _create_profile_folder(self, folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
@@ -129,6 +101,33 @@ class ConfigInstallTest(unittest.TestCase):
                             })
         return folder
 
+    def config_hooks_test(self):
+        # Make sure the conan.conf hooks information is appended
+        folder = temp_folder(path_with_spaces=False)
+        conan_conf = textwrap.dedent("""
+            [hooks]
+            foo
+            custom/custom
+            """)
+        save_files(folder, {"config/conan.conf": conan_conf})
+        client = TestClient()
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("foo"))
+        self.assertEqual(1, content.count("custom/custom"))
+
+        config = ConanClientConfigParser(client.cache.conan_conf_path)
+        hooks = config.get_item("hooks")
+        self.assertIn("foo", hooks)
+        self.assertIn("custom/custom", hooks)
+        self.assertIn("attribute_checker", hooks)
+        client.run('config install "%s"' % folder)
+        self.assertIn("Processing conan.conf", client.out)
+        content = load(client.cache.conan_conf_path)
+        self.assertEqual(1, content.count("foo"))
+        self.assertEqual(1, content.count("custom/custom"))
+
     def _create_zip(self, zippath=None):
         folder = self._create_profile_folder()
         zippath = zippath or os.path.join(folder, "myconfig.zip")
@@ -145,43 +144,45 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(str(config.args), args)
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        registry = self.client.cache.registry
-        self.assertEqual(registry.remotes.list, [Remote("myrepo1", "https://myrepourl.net", False),
-                                                 Remote("my-repo-2", "https://myrepo2.com", True),
-                                                 ])
-        self.assertEqual(registry.refs.list, {"MyPkg/0.1@user/channel": "my-repo-2"})
+        remotes = self.client.cache.registry.load_remotes()
+        self.assertEqual(list(remotes.values()), [Remote("myrepo1", "https://myrepourl.net", False),
+                                                  Remote("my-repo-2", "https://myrepo2.com", True),
+                                                  ])
         self.assertEqual(sorted(os.listdir(self.client.cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
         self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "linux")).splitlines(),
                          linux_profile.splitlines())
-        self.assertEqual(load(os.path.join(self.client.cache.profiles_path, "windows")).splitlines(),
+        self.assertEqual(load(os.path.join(self.client.cache.profiles_path,
+                                           "windows")).splitlines(),
                          win_profile.splitlines())
         conan_conf = ConanClientConfigParser(self.client.cache.conan_conf_path)
         self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
         self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
         self.assertEqual(conan_conf.get_item("log.level"), "10")
         self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
+        self.assertEqual(conan_conf.get_item("general.default_package_id_mode"),
+                         "full_package_mode")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
         with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
-        self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
-                         load(os.path.join(self.client.cache.conan_folder, "pylintrc")))
+                         load(os.path.join(self.client.cache_folder, "pylintrc")))
         self.assertEqual("",
-                         load(os.path.join(self.client.cache.conan_folder, "python", "__init__.py")))
+                         load(os.path.join(self.client.cache_folder, "python",
+                                           "__init__.py")))
         self.assertEqual("#hook dummy",
-                         load(os.path.join(self.client.cache.conan_folder, "hooks", "dummy")))
+                         load(os.path.join(self.client.cache_folder, "hooks", "dummy")))
         self.assertEqual("#hook foo",
-                         load(os.path.join(self.client.cache.conan_folder, "hooks", "foo.py")))
+                         load(os.path.join(self.client.cache_folder, "hooks", "foo.py")))
         self.assertEqual("#hook custom",
-                         load(os.path.join(self.client.cache.conan_folder, "hooks", "custom",
+                         load(os.path.join(self.client.cache_folder, "hooks", "custom",
                                            "custom.py")))
-        self.assertFalse(os.path.exists(os.path.join(self.client.cache.conan_folder, "hooks",
+        self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, "hooks",
                                                      ".git")))
-        self.assertFalse(os.path.exists(os.path.join(self.client.cache.conan_folder, ".git")))
+        self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, ".git")))
 
     def reuse_python_test(self):
         zippath = self._create_zip()
@@ -219,9 +220,9 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "hello",
                             "subf/subf/file2.txt": "bye"})
         self.client.run('config install "%s" -sf=subf -tf=newsubf' % folder)
-        content = load(os.path.join(self.client.cache.conan_folder, "newsubf/file.txt"))
+        content = load(os.path.join(self.client.cache_folder, "newsubf/file.txt"))
         self.assertEqual(content, "hello")
-        content = load(os.path.join(self.client.cache.conan_folder, "newsubf/subf/file2.txt"))
+        content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
     def install_multiple_configs_test(self):
@@ -229,8 +230,8 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "hello",
                             "subf2/file2.txt": "bye"})
         self.client.run('config install "%s" -sf=subf' % folder)
-        content = load(os.path.join(self.client.cache.conan_folder, "file.txt"))
-        file2 = os.path.join(self.client.cache.conan_folder, "file2.txt")
+        content = load(os.path.join(self.client.cache_folder, "file.txt"))
+        file2 = os.path.join(self.client.cache_folder, "file2.txt")
         self.assertEqual(content, "hello")
         self.assertFalse(os.path.exists(file2))
         self.client.run('config install "%s" -sf=subf2' % folder)
@@ -239,12 +240,12 @@ class Pkg(ConanFile):
         save_files(folder, {"subf/file.txt": "HELLO!!",
                             "subf2/file2.txt": "BYE!!"})
         self.client.run('config install')
-        content = load(os.path.join(self.client.cache.conan_folder, "file.txt"))
+        content = load(os.path.join(self.client.cache_folder, "file.txt"))
         self.assertEqual(content, "HELLO!!")
         content = load(file2)
         self.assertEqual(content, "BYE!!")
 
-    def dont_duplicate_configs(self):
+    def test_dont_duplicate_configs(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello"})
         self.client.run('config install "%s" -sf=subf' % folder)
@@ -255,6 +256,35 @@ class Pkg(ConanFile):
         content = load(self.client.cache.config_install_file)
         self.assertEqual(1, content.count("subf"))
         self.assertEqual(1, content.count("other"))
+
+    def test_install_registry_txt_error(self):
+        folder = temp_folder()
+        save_files(folder, {"registry.txt": "myrepo1 https://myrepourl.net False"})
+        self.client.run('config install "%s"' % folder)
+        self.assertIn("WARN: registry.txt has been deprecated. Migrating to remotes.json",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertEqual("myrepo1: https://myrepourl.net [Verify SSL: False]\n", self.client.out)
+
+    def test_install_registry_json_error(self):
+        folder = temp_folder()
+        registry_json = {"remotes": [{"url": "https://server.conan.io",
+                                      "verify_ssl": True,
+                                      "name": "conan.io"
+                                      }]}
+        save_files(folder, {"registry.json": json.dumps(registry_json)})
+        self.client.run('config install "%s"' % folder)
+        self.assertIn("WARN: registry.json has been deprecated. Migrating to remotes.json",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
+
+    def test_install_remotes_json_error(self):
+        folder = temp_folder()
+        save_files(folder, {"remotes.json": ""})
+        self.client.run('config install "%s"' % folder, assert_error=True)
+        self.assertIn("ERROR: remotes.json install is not supported yet. Use 'remotes.txt'",
+                      self.client.out)
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.cache.profiles_path)
@@ -272,7 +302,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -284,7 +314,7 @@ class Pkg(ConanFile):
         def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
@@ -301,6 +331,7 @@ class Pkg(ConanFile):
     def failed_install_http_test(self):
         """ should install from a http zip
         """
+        self.client.run("config set general.retry_wait=0")
         self.client.run('config install httpnonexisting', assert_error=True)
         self.assertIn("ERROR: Error while installing config from httpnonexisting", self.client.out)
 
@@ -309,12 +340,12 @@ class Pkg(ConanFile):
         """
 
         folder = self._create_profile_folder()
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % folder)
         check_path = os.path.join(folder, ".git")
@@ -325,12 +356,12 @@ class Pkg(ConanFile):
         absolute_folder = os.path.join(self.client.current_folder, "config")
         mkdir(absolute_folder)
         folder = self._create_profile_folder(absolute_folder)
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % relative_folder)
         self._check("git, %s, True, None" % os.path.join("%s" % folder, ".git"))
@@ -340,12 +371,12 @@ class Pkg(ConanFile):
         """
 
         folder = self._create_profile_folder()
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git" --args="-c init.templateDir=value"' % folder)
         check_path = os.path.join(folder, ".git")
@@ -403,7 +434,7 @@ class Pkg(ConanFile):
             self.assertEqual(url, fake_url_with_credentials)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=my_download):
+        with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install %s" % fake_url_with_credentials)
 
             # Check credentials are not displayed in output
@@ -424,26 +455,26 @@ class Pkg(ConanFile):
             self.assertTrue(obj.verify)
             self._create_zip(filename)
 
-        with patch.object(Downloader, 'download', new=download_verify_false):
+        with patch.object(FileDownloader, 'download', new=download_verify_false):
             self.client.run("config install %s --verify-ssl=False" % fake_url)
 
-        with patch.object(Downloader, 'download', new=download_verify_true):
+        with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
-        with tools.chdir(folder):
-            self.client.runner('git init .')
-            self.client.runner('git add .')
-            self.client.runner('git config user.name myname')
-            self.client.runner('git config user.email myname@mycompany.com')
-            self.client.runner('git commit -m "mymsg"')
-            self.client.runner('git checkout -b other_branch')
+        with self.client.chdir(folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+            self.client.run_command('git checkout -b other_branch')
             save(os.path.join(folder, "hooks", "cust", "cust.py"), "")
-            self.client.runner('git add .')
-            self.client.runner('git commit -m "my file"')
-            self.client.runner('git tag 0.0.1')
-            self.client.runner('git checkout master')
+            self.client.run_command('git add .')
+            self.client.run_command('git commit -m "my file"')
+            self.client.run_command('git tag 0.0.1')
+            self.client.run_command('git checkout master')
 
         # Without checkout
         self.client.run('config install "%s/.git"' % folder)
@@ -462,13 +493,13 @@ class Pkg(ConanFile):
         self._check("git, %s, True, -b other_branch" % check_path)
         self.assertTrue(os.path.exists(file_path))
         # Add changes to that branch and update
-        with tools.chdir(folder):
-            self.client.runner('git checkout other_branch')
+        with self.client.chdir(folder):
+            self.client.run_command('git checkout other_branch')
             save(os.path.join(folder, "hooks", "other", "other.py"), "")
-            self.client.runner('git add .')
-            self.client.runner('git commit -m "my other file"')
-            self.client.runner('git checkout master')
-        other_path = os.path.join(self.client.cache.conan_folder, "hooks", "other", "other.py")
+            self.client.run_command('git add .')
+            self.client.run_command('git commit -m "my other file"')
+            self.client.run_command('git checkout master')
+        other_path = os.path.join(self.client.cache_folder, "hooks", "other", "other.py")
         self.assertFalse(os.path.exists(other_path))
         self.client.run('config install')
         check_path = os.path.join(folder, ".git")

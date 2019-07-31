@@ -40,7 +40,7 @@ class DiamondTest(unittest.TestCase):
 
     def _check_individual_deps(self):
         self.assertIn("INCLUDE [", self.client.out)
-        self.assertIn(".conan/data/Hello0/0.1/lasote/stable", self.client.out)
+        self.assertIn("/data/Hello0/0.1/lasote/stable", self.client.out)
         build_file = os.path.join(self.client.current_folder, BUILD_INFO)
         content = load(build_file)
         cmakebuildinfo = load(os.path.join(self.client.current_folder, BUILD_INFO_CMAKE))
@@ -101,7 +101,7 @@ class DiamondTest(unittest.TestCase):
 
         def check_run_output(client):
             command = os.sep.join([".", "bin", "say_hello"])
-            client.runner(command, cwd=client.current_folder)
+            client.run_command(command)
             if language == 0:
                 self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                                   'Hello Hello2', 'Hello Hello0'],
@@ -115,7 +115,7 @@ class DiamondTest(unittest.TestCase):
 
         # Try to upload and reuse the binaries
         self.client.run("upload Hello* --all --confirm")
-        self.assertEqual(str(self.client.user_io.out).count("Uploading package"), 4)
+        self.assertEqual(str(self.client.out).count("Uploading package"), 4)
 
         # Reuse in another client
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},

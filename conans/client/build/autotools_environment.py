@@ -2,13 +2,13 @@ import copy
 import os
 import platform
 
-from conans.client import join_arguments
+from conans.client.build import join_arguments
 from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
                                                 build_type_flags, format_defines,
                                                 format_include_paths, format_libraries,
                                                 format_library_paths, libcxx_define, libcxx_flag,
                                                 pic_flag, rpath_flags, sysroot_flag)
-from conans.client.build.cppstd_flags import cppstd_flag
+from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
     detected_architecture, detected_os, get_gnu_triplet
@@ -37,11 +37,14 @@ class AutoToolsBuildEnvironment(object):
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._os = conanfile.settings.get_safe("os")
         self._arch = conanfile.settings.get_safe("arch")
+        self._os_target = conanfile.settings.get_safe("os_target")
+        self._arch_target = conanfile.settings.get_safe("arch_target")
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
+        self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
-        self._cppstd = conanfile.settings.get_safe("cppstd")
+        self._cppstd = cppstd_from_settings(conanfile.settings)
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
@@ -65,7 +68,7 @@ class AutoToolsBuildEnvironment(object):
         self.build, self.host, self.target = self._get_host_build_target_flags()
 
     def _configure_fpic(self):
-        if str(self._os) not in ["Windows", "WindowsStore"]:
+        if not str(self._os).startswith("Windows"):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
@@ -78,10 +81,19 @@ class AutoToolsBuildEnvironment(object):
         arch_detected = detected_architecture() or platform.machine()
         os_detected = detected_os() or platform.system()
 
+        if self._os_target and self._arch_target:
+            try:
+                target = get_gnu_triplet(self._os_target, self._arch_target, self._compiler)
+            except ConanException as exc:
+                self._conanfile.output.warn(str(exc))
+                target = None
+        else:
+            target = None
+
         if os_detected is None or arch_detected is None or self._arch is None or self._os is None:
-            return False, False, False
+            return False, False, target
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
-            return False, False, False
+            return False, False, target
 
         try:
             build = get_gnu_triplet(os_detected, arch_detected, self._compiler)
@@ -93,7 +105,7 @@ class AutoToolsBuildEnvironment(object):
         except ConanException as exc:
             self._conanfile.output.warn(str(exc))
             host = None
-        return build, host, None
+        return build, host, target
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
                   pkg_config_paths=None, vars=None, use_default_install_dirs=True):
@@ -207,7 +219,8 @@ class AutoToolsBuildEnvironment(object):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count(output=self._conanfile.output)) if "-j" not in str_args else None
+            cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
+                                if "-j" not in str_args else None)
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
@@ -221,7 +234,7 @@ class AutoToolsBuildEnvironment(object):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
 
@@ -239,7 +252,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        arch_flag = architecture_flag(compiler=self._compiler, os=self._os, arch=self._arch)
         if arch_flag:
             ret.append(arch_flag)
         btfs = build_type_flags(compiler=self._compiler, build_type=self._build_type,
@@ -251,6 +264,8 @@ class AutoToolsBuildEnvironment(object):
                            compiler=self._compiler)
         if srf:
             ret.append(srf)
+        if self._compiler_runtime:
+            ret.append("-%s" % self._compiler_runtime)
 
         return ret
 
@@ -329,8 +344,9 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": cxx_flags,
                "CFLAGS": c_flags,
                "LDFLAGS": ld_flags,
-               "LIBS": libs,
+               "LIBS": libs
                }
+
         return ret
 
     @property
@@ -347,8 +363,9 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": cxx_flags.strip(),
                "CFLAGS": cflags.strip(),
                "LDFLAGS": ldflags.strip(),
-               "LIBS": libs.strip(),
+               "LIBS": libs.strip()
                }
+
         return ret
 
 

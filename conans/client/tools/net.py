@@ -1,6 +1,6 @@
 import os
 
-from conans.client.rest.uploader_downloader import Downloader
+from conans.client.rest.uploader_downloader import FileDownloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
@@ -49,22 +49,23 @@ def ftp_download(ip, filename, login='', password=''):
     finally:
         try:
             ftp.quit()
-        except:
+        except Exception:
             pass
 
 
 def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, overwrite=False,
              auth=None, headers=None, requester=None):
 
-    if retry is None:
-        retry = 2
-    if retry_wait is None:
-        retry_wait = 5
-
     out = default_output(out, 'conans.client.tools.net.download')
     requester = default_requester(requester, 'conans.client.tools.net.download')
 
-    downloader = Downloader(requester=requester, output=out, verify=verify)
+    # It might be possible that users provide their own requester
+    retry = retry if retry is not None else getattr(requester, "retry", None)
+    retry = retry if retry is not None else 1
+    retry_wait = retry_wait if retry_wait is not None else getattr(requester, "retry_wait", None)
+    retry_wait = retry_wait if retry_wait is not None else 5
+
+    downloader = FileDownloader(requester=requester, output=out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                         auth=auth, headers=headers)
     out.writeln("")

@@ -1,8 +1,8 @@
 import platform
-import subprocess
 import unittest
 
 from conans.client import tools
+from conans.client.tools.oss import check_output
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
@@ -96,7 +96,7 @@ class Pkg(ConanFile):
 
         # MAKE SURE WE USE ANOTHER CLIENT, with another USER HOME PATH
         client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        self.assertNotEqual(client2.base_folder, client.base_folder)
+        self.assertNotEqual(client2.cache_folder, client.cache_folder)
         reuse = '''from conans import ConanFile
 class HelloConan(ConanFile):
     requires = "Pkg/0.1@lasote/testing"
@@ -153,5 +153,5 @@ execute_process(COMMAND say_hello)
                 # running, or in the same line "$ DYLD_LIBRARY_PATH=[path] say_hello"
                 command = "bash -c 'source activate_run.sh && say_hello'"
 
-            output = subprocess.check_output(command, shell=True)
-            self.assertIn("Hello Tool!", str(output))
+            output = check_output(command)
+            self.assertIn("Hello Tool!", output)

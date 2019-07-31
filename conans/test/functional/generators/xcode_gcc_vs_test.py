@@ -8,6 +8,7 @@ from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_IN
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
+from conans.model.graph_lock import LOCKFILE
 
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
@@ -41,7 +42,7 @@ xcode
         client.run('install . --build missing')
         self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
                                  BUILD_INFO_VISUAL_STUDIO, BUILD_INFO,
-                                 BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE]),
+                                 BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE, LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
         cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
@@ -53,13 +54,13 @@ xcode
 
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
-        self.assertIn(".conan/data/Hello/0.1/lasote/stable/package", cmake)
+        self.assertIn("/data/Hello/0.1/lasote/stable/package", cmake)
 
         self.assertIn("-L", gcc)
         self.assertIn("-l", gcc)
         self.assertIn("-I", gcc)
 
-        self.assertIn(".conan/data/Hello/0.1/lasote/stable/package", gcc)
+        self.assertIn("/data/Hello/0.1/lasote/stable/package", gcc)
 
         # CHECK VISUAL STUDIO GENERATOR
 
@@ -68,21 +69,22 @@ xcode
         definition_group = xmldoc.getElementsByTagName('ItemDefinitionGroup')[0]
         compiler = definition_group.getElementsByTagName("ClCompile")[0]
 
-        include_dirs = compiler.getElementsByTagName("AdditionalIncludeDirectories")[0].firstChild.data
+        elem = compiler.getElementsByTagName("AdditionalIncludeDirectories")
+        include_dirs = elem[0].firstChild.data
         definitions = compiler.getElementsByTagName("PreprocessorDefinitions")[0].firstChild.data
 
         linker = definition_group.getElementsByTagName("Link")[0]
         lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
         libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
 
-        package_id = os.listdir(client.cache.packages(ref))[0]
+        package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
-        package_path = client.cache.package(pref).replace("\\", "/")
+        package_path = client.cache.package_layout(pref.ref).package(pref)
 
-        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "/"),
+        replaced_path = re.sub(os.getenv("USERPROFILE", "not user profile").replace("\\", "\\\\"),
                                "$(USERPROFILE)", package_path, flags=re.I)
-        expected_lib_dirs = os.path.join(replaced_path, "lib").replace("\\", "/")
-        expected_include_dirs = os.path.join(replaced_path, "include").replace("\\", "/")
+        expected_lib_dirs = os.path.join(replaced_path, "lib")
+        expected_include_dirs = os.path.join(replaced_path, "include")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
         self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
@@ -102,4 +104,5 @@ xcode
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
         self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
         self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
-        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"), xcode)
+        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"),
+                      xcode)

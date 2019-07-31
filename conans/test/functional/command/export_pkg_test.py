@@ -109,7 +109,7 @@ class HelloPythonConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkg_folder = client.cache.packages(ref)
+        pkg_folder = client.cache.package_layout(ref).packages()
         folders = os.listdir(pkg_folder)
         pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
@@ -225,18 +225,20 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(win_pref, short_paths=short_paths)
+        package_folder = client.cache.package_layout(win_pref.ref,
+                                                     short_paths=short_paths).package(win_pref)
         if short_paths and platform.system() == "Windows":
-            self.assertEqual(load(os.path.join(client.cache.package(win_pref),
+            self.assertEqual(load(os.path.join(client.cache.package_layout(win_pref.ref, False).package(win_pref),
                                                ".conan_link")),
                              package_folder)
         else:
-            self.assertEqual(client.cache.package(win_pref), package_folder)
+            self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
+                             package_folder)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header")
         self._consume(client, ". -s os=Windows")
         self.assertIn("Hello/0.1@lasote/stable:3475bd55b91ae904ac96fde0f106a136ab951a5e",
-                      client.user_io.out)
+                      client.out)
 
         # Now repeat
         client.save({CONANFILE: conanfile,
@@ -245,7 +247,7 @@ class TestConan(ConanFile):
         err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows",
                          assert_error=True)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
-                      client.user_io.out)
+                      client.out)
         self.assertTrue(err)
         # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f")
@@ -260,7 +262,7 @@ class TestConan(ConanFile):
         err = client.run("export-pkg . Hello/0.1@lasote/stable -if inst", assert_error=True)
         self.assertTrue(err)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
-                      client.user_io.out)
+                      client.out)
         # With force works
         client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f")
         self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
@@ -289,7 +291,7 @@ class TestConan(ConanFile):
 """
         client.save({CONANFILE: consumer}, clean_first=True)
         client.run("install %s" % install_args)
-        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 
     def test_new(self):
         client = TestClient()
@@ -312,7 +314,7 @@ class TestConan(ConanFile):
 
         # ensure the recipe hash is computed and added
         client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("Outdated from recipe: False", client.user_io.out)
+        self.assertIn("Outdated from recipe: False", client.out)
 
     def test_build_folders(self):
         client = TestClient()
@@ -336,7 +338,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -359,7 +361,7 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -386,7 +388,7 @@ class TestConan(ConanFile):
                    "--source-folder=src")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package(pref)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -460,8 +462,8 @@ class TestConan(ConanFile):
 """
         client.save({CONANFILE: consumer}, clean_first=True)
         client.run("install conanfile.py -g cmake")
-        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.user_io.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.out)
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
@@ -560,3 +562,22 @@ class MyConan(ConanFile):
         self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json",
                         assert_error=True)
         _check_json_output(with_error=True)
+
+    def test_export_pkg_no_ref(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def package(self):
+        self.copy("*.h", src="src", dst="include")
+"""
+        client.save({CONANFILE: conanfile,
+                     "src/header.h": "contents"})
+        client.run("export-pkg . -s os=Windows")
+        ref = ConanFileReference.loads("Hello/0.1@")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        header = os.path.join(package_folder, "include/header.h")
+        self.assertTrue(os.path.exists(header))

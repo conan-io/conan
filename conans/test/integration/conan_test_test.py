@@ -39,7 +39,7 @@ class HelloConan(ConanFile):
 from conans import ConanFile
 
 class HelloTestConan(ConanFile):
-    requires = "Hello/0.1@conan/stable"
+    requires = ["Hello/0.1@conan/stable", ]
     def test(self):
         self.output.warn("Tested ok!")
 ''', "Hello/0.1@conan/stable")
@@ -116,14 +116,14 @@ class HelloReuseConan(ConanFile):
         client.run("test test Hello/0.1@lasote/stable")
         pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.cache.package(pref), "FindXXX.cmake")))
+                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
         client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.cache.package(pref), "FindXXX.cmake")))
+                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
-                         load(os.path.join(client.cache.package(pref), "FindXXX.cmake")))
+                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
 
     def conan_test_test(self):
         conanfile = '''

@@ -3,7 +3,7 @@ import os
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.search.search import filter_outdated, search_packages, search_recipes
 from conans.util.log import logger
@@ -84,11 +84,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, cache, remote_manager, user_io):
+    def __init__(self, cache, remote_manager, user_io, remotes):
         self._user_io = user_io
         self._cache = cache
         self._remote_manager = remote_manager
-        self._registry = cache.registry
+        self._remotes = remotes
 
     def _remote_remove(self, ref, package_ids, remote):
         assert(isinstance(remote, Remote))
@@ -101,8 +101,8 @@ class ConanRemover(object):
 
     @staticmethod
     def _message_removing_editable(ref):
-        return "Package '{r}' is installed as editable, unlink it first using " \
-               "command 'conan link {r} --remove'".format(r=ref)
+        return "Package '{r}' is installed as editable, remove it first using " \
+               "command 'conan editable remove {r}'".format(r=ref)
 
     def _local_remove(self, ref, src, build_ids, package_ids):
         if self._cache.installed_as_editable(ref):
@@ -124,13 +124,10 @@ class ConanRemover(object):
             remover.remove_packages(package_layout, package_ids)
             with package_layout.update_metadata() as metadata:
                 for package_id in package_ids:
-                    pref = PackageReference(ref, package_id)
-                    self._registry.prefs.remove(pref)
                     metadata.clear_package(package_id)
+
         if not src and build_ids is None and package_ids is None:
             remover.remove(package_layout, output=self._user_io.out)
-            self._registry.refs.remove(ref, quiet=True)
-            self._registry.prefs.remove_all(ref)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None, outdated=False):
@@ -146,10 +143,8 @@ class ConanRemover(object):
         if remote_name and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        try:
-            input_ref = ConanFileReference.loads(pattern)
-        except (ConanException, TypeError):
-            input_ref = None
+        is_reference = check_valid_ref(pattern, strict_mode=True)
+        input_ref = ConanFileReference.loads(pattern) if is_reference else None
 
         if not input_ref and packages_query is not None:
             raise ConanException("query parameter only allowed with a valid recipe "
@@ -162,7 +157,7 @@ class ConanRemover(object):
                                          "revision")
 
         if remote_name:
-            remote = self._registry.remotes.get(remote_name)
+            remote = self._remotes[remote_name]
             if input_ref:
                 if not self._cache.config.revisions_enabled and input_ref.revision:
                     raise ConanException("Revisions not enabled in the client, cannot remove "
@@ -214,7 +209,7 @@ class ConanRemover(object):
                     package_ids = list(packages.keys())
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
-                                           % ref.full_repr())
+                                           % ref.full_str())
                     continue
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):

@@ -14,7 +14,7 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
@@ -60,6 +60,22 @@ conan_vars1c = '''
 [recipe_hash]
   d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
+
+conan_vars1d = '''
+[settings]
+    arch=x86
+    arch.vendor=intel
+    os=Linux
+    os.distro=Ubuntu
+    os.distro.version=19.04
+    compiler=gcc
+    compiler.version=4.3
+    compiler.libcxx=libstdc++
+    libc=glibc
+    libc.version=2.29
+[options]
+    use_Qt=True
+'''
 
 conan_vars2 = '''
 [options]
@@ -131,6 +147,7 @@ class SearchTest(unittest.TestCase):
         root_folder3 = 'Bye/0.14/myuser/testing'
         root_folder4 = 'NodeInfo/1.0.2/myuser/stable'
         root_folder5 = 'MissFile/1.0.2/myuser/stable'
+        root_folder6 = 'Hello/1.5.10/myuser/testing'
         root_folder11 = 'Hello/1.4.11/myuser/testing'
         root_folder12 = 'Hello/1.4.12/myuser/testing'
         root_folder_tool = 'Tool/1.0.0/myuser/testing'
@@ -151,6 +168,9 @@ class SearchTest(unittest.TestCase):
                           "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
                                                         PACKAGES_FOLDER,
                                                         CONANINFO): conan_vars1c,
+                          "%s/%s/LinuxPackageCustom/%s" % (root_folder6,
+                                                           PACKAGES_FOLDER,
+                                                           CONANINFO): conan_vars1d,
                           "%s/%s/a44f541cd44w57/%s" % (root_folder2,
                                                        PACKAGES_FOLDER,
                                                        CONANINFO): conan_vars2,
@@ -193,6 +213,7 @@ class SearchTest(unittest.TestCase):
         create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
         create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
         create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
+        create_metadata(root_folder6, ["LinuxPackageCustom"])
         create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
@@ -202,9 +223,29 @@ class SearchTest(unittest.TestCase):
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder3, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder4, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder5, EXPORT_FOLDER))
+        fake_manifest.save(os.path.join(self.client.cache.store, root_folder6, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder11, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder12, EXPORT_FOLDER))
         fake_manifest.save(os.path.join(self.client.cache.store, root_folder_tool, EXPORT_FOLDER))
+
+    def test_search_with_none_user_channel(self):
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        
+        class Test(ConanFile):
+            name = "lib"
+            version = "1.0"
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+        client.run("create . user/channel")
+        client.run("create . foo/bar")
+        client.run("search lib*")
+        self.assertIn(textwrap.dedent("""
+                        lib/1.0
+                        lib/1.0@foo/bar
+                        lib/1.0@user/channel"""), client.out)
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
@@ -218,6 +259,7 @@ class SearchTest(unittest.TestCase):
 Hello/1.4.10@myuser/testing
 Hello/1.4.11@myuser/testing
 Hello/1.4.12@myuser/testing
+Hello/1.5.10@myuser/testing
 helloTest/1.4.10@myuser/stable""".format(remote)
                 self.assertIn(expected, self.client.out)
 
@@ -233,13 +275,15 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n"
+                          "Hello/1.5.10@myuser/testing\n"
                           "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
         self.client.run("search Hello* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                          "Hello/1.4.12@myuser/testing\n"
+                          "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search *myuser* --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
@@ -247,6 +291,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                           "Hello/1.4.10@myuser/testing\n"
                           "Hello/1.4.11@myuser/testing\n"
                           "Hello/1.4.12@myuser/testing\n"
+                          "Hello/1.5.10@myuser/testing\n"
                           "MissFile/1.0.2@myuser/stable\n"
                           "NodeInfo/1.0.2@myuser/stable\n"
                           "Tool/1.0.0@myuser/testing\n"
@@ -255,59 +300,60 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.client.run("search Hello/*@myuser/testing")
         self.assertIn("Hello/1.4.10@myuser/testing\n"
                       "Hello/1.4.11@myuser/testing\n"
-                      "Hello/1.4.12@myuser/testing\n", self.client.out)
+                      "Hello/1.4.12@myuser/testing\n"
+                      "Hello/1.5.10@myuser/testing\n", self.client.out)
 
     def search_partial_match_test(self):
         self.client.run("search Hello")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search hello")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello --case-sensitive")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hel")
         self.assertEqual("There are no packages matching the 'Hel' pattern\n", self.client.out)
 
         self.client.run("search Hello/")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n"
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4")
         self.assertEqual("There are no packages matching the 'Hello/1.4' pattern\n",
-                          self.client.out)
-
-        self.client.run("search Hello/1.4.10@")
-        self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@fen")
         self.assertEqual("There are no packages matching the 'Hello/1.4.10@fen' pattern\n",
-                          self.client.out)
+                         self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/")
         self.assertEqual("Existing package recipes:\n\n"
-                          "Hello/1.4.10@myuser/testing\n", self.client.out)
+                         "Hello/1.4.10@myuser/testing\n", self.client.out)
 
         self.client.run("search Hello/1.4.10@myuser/test", assert_error=True)
         self.assertEqual("ERROR: Recipe not found: 'Hello/1.4.10@myuser/test'\n", self.client.out)
@@ -315,9 +361,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
         self.assertEqual("Hello/1.4.10@myuser/testing\n"
-                          "Hello/1.4.11@myuser/testing\n"
-                          "Hello/1.4.12@myuser/testing\n"
-                          "helloTest/1.4.10@myuser/stable\n", self.client.out)
+                         "Hello/1.4.11@myuser/testing\n"
+                         "Hello/1.4.12@myuser/testing\n"
+                         "Hello/1.5.10@myuser/testing\n"
+                         "helloTest/1.4.10@myuser/stable\n", self.client.out)
 
     def search_html_table_test(self):
         self.client.run("search Hello/1.4.10@myuser/testing --table=table.html")
@@ -404,16 +451,17 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertEqual(str(self.client.out).count("PlatformIndependantSHA"), 2)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
 
-    def _assert_pkg_q(self, query, packages_found, remote):
+    def _assert_pkg_q(self, query, packages_found, remote, ref="Hello/1.4.10@myuser/testing"):
 
-        command = 'search Hello/1.4.10@myuser/testing -q \'%s\'' % query
+        command = 'search %s -q \'%s\'' % (ref, query)
         if remote:
             command += " -r %s" % remote
         self.client.run(command)
 
-        for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA"]:
+        for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA",
+                          "LinuxPackageCustom"]:
             self.assertEqual(pack_name in self.client.out,
-                              pack_name in packages_found, "%s fail" % pack_name)
+                             pack_name in packages_found, "%s fail" % pack_name)
 
     def _assert_pkg_query_tool(self, query, packages_found, remote):
         command = 'search Tool/1.0.0@myuser/testing -q \'%s\'' % query
@@ -483,6 +531,11 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
             self._assert_pkg_q(q, ["WindowsPackageSHA", "LinuxPackageSHA"], remote)
 
+            q = 'compiler="gcc" AND compiler.libcxx="libstdc++" AND ' \
+                'arch="x86" AND arch.vendor="intel" AND os.distro="Ubuntu" AND ' \
+                'os.distro.version="19.04" AND compiler.version="4.3" AND os="Linux"'
+            self._assert_pkg_q(q, ["LinuxPackageCustom"], remote, ref="Hello/1.5.10@myuser/testing")
+
             q = 'os_build="Windows"'
             self._assert_pkg_query_tool(q, ["winx86", "winx64"], remote)
 
@@ -510,21 +563,21 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         # test in remote with search capabilities
         test_cases(remote="search_able")
 
-    def _copy_to_server(self, client_store_path, server_store):
-        subdirs = list_folder_subdirs(basedir=client_store_path.store, level=4)
+    def _copy_to_server(self, cache, server_store):
+        subdirs = list_folder_subdirs(basedir=cache.store, level=4)
         refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1)
                 for folder in subdirs]
         for ref in refs:
-            origin_path = client_store_path.export(ref)
+            origin_path = cache.package_layout(ref).export()
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
-            packages = client_store_path.packages(ref)
+            packages = cache.package_layout(ref).packages()
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
                 pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
-                origin_path = client_store_path.package(pref)
+                origin_path = cache.package_layout(ref).package(pref)
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)
@@ -606,6 +659,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages for reference 'Hello/1.4.10@myuser/testing' "
                       "matching the query 'compiler.version=1.0'", self.client.out)
 
+        self.client.run("search Hello/1.5.10@myuser/testing -q 'glib=glibc AND glib.version=2.29'")
+        self.assertIn("There are no packages for reference 'Hello/1.5.10@myuser/testing' matching "
+                      "the query 'glib=glibc AND glib.version=2.29'", self.client.out)
+
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.version=4.5"')
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -665,7 +722,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
     def search_with_no_registry_test(self):
         # https://github.com/conan-io/conan/issues/2589
         client = TestClient()
-        os.remove(os.path.join(client.cache.registry_path))
+        os.remove(client.cache.registry_path)
         client.run("search nonexist/1.0@lasote/stable -r=myremote", assert_error=True)
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
@@ -712,6 +769,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                         },
                         {
                             'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
+                        },
+                        {
+                            'recipe': {
                                 'id': 'helloTest/1.4.10@myuser/stable'}
                         }
                     ]
@@ -749,6 +810,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                  'id': 'Hello/1.4.12@myuser/testing'}
                         },
                         {
+                            'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
+                        },
+                        {
                              'recipe': {
                                  'id': 'helloTest/1.4.10@myuser/stable'}
                         }
@@ -768,6 +833,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                         {
                             'recipe': {
                                 'id': 'Hello/1.4.12@myuser/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -801,6 +870,10 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                         {
                             'recipe': {
                                 'id': 'Hello/1.4.12@myuser/testing'}
+                        },
+                        {
+                            'recipe': {
+                                'id': 'Hello/1.5.10@myuser/testing'}
                         },
                         {
                             'recipe': {
@@ -1064,6 +1137,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         }
         self.assertEqual(expected_output, output)
 
+
+
     def search_packages_with_reference_not_exported_test(self):
         self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'my_pkg/1.0@conan/stable'", self.client.out)
@@ -1074,6 +1149,47 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         client.run("search my_pkg")
         self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
+
+
+class SearchReferencesWithoutUserChannel(unittest.TestCase):
+    conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    name = "lib"
+    version = "1.0"
+    """
+
+    def search_local_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": self.conanfile})
+        client.run("create . ")
+        # This searches by pattern
+        client.run("search BAD/1.0")
+        self.assertIn("There are no packages matching the 'BAD/1.0' pattern", client.out)
+        # This searches by pattern
+        client.run("search lib/1.0")
+        self.assertIn("Existing package recipes:", client.out)
+        self.assertIn("lib/1.0\n", client.out)
+
+        #  Support for explicit ref without user/channel
+        client.run("search lib/1.0@")
+        self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+    def search_remote_test(self):
+        test_server = TestServer(users={"lasote": "password"},
+                                 write_permissions=[("lib/1.0@*/*", "lasote")])
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        client.save({"conanfile.py": self.conanfile})
+        client.run("create . ")
+        client.run("upload * -r default -c --all")
+        # This is by pattern
+        client.run("search lib/1.0 -r default")
+        self.assertIn("Existing package recipes:", client.out)
+        self.assertIn("lib/1.0\n", client.out)
+
+        # This is by ref
+        client.run("search lib/1.0@ -r default")
+        self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
@@ -1097,15 +1213,18 @@ class Test(ConanFile):
         client.run("upload * --all --confirm")
         for remote in ("", "-r=default"):
             client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.user_io.out)
-            self.assertIn("os: Linux", client.user_io.out)
+            self.assertIn("os: Windows", client.out)
+            self.assertIn("os: Linux", client.out)
             client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
-            self.assertIn("os: Windows", client.user_io.out)
-            self.assertNotIn("os: Linux", client.user_io.out)
+            self.assertIn("os: Windows", client.out)
+            self.assertNotIn("os: Linux", client.out)
 
     def test_exception_client_without_revs(self):
         client = TestClient()
-        client.run("search whatever --revisions", assert_error=True)
+        client.run("search whatever --revisions")
+        self.assertIn("There are no packages matching the 'whatever' pattern", client.out)
+
+        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
         self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
 
 
@@ -1134,6 +1253,10 @@ class Test(ConanFile):
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
         self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+
+        # test that the pattern search with --revisions enabled works
+        client.run("search li* --revisions")
+        self.assertIn("lib/1.0@user/testing#bd761686d5c57b31f4cd85fd0329751f", client.out)
 
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c")
@@ -1289,6 +1412,10 @@ class Test(ConanFile):
 
         # IN REMOTE
 
+        # Search with pattern and remotes
+        client.run("search * --revisions -r default", assert_error=True)
+        self.assertIn("ERROR: With --revision, specify a reference", client.out)
+
         # Search not found in remote
         client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'missing/1.0@conan/stable'", client.out)
@@ -1346,11 +1473,10 @@ class Test(ConanFile):
                    assert_error=True)
         self.assertIn("Cannot list the revisions of a specific package revision", client.out)
 
-    def test_invalid_command_call(self):
+    def test_empty_pattern_with_revisions_command_call(self):
         client = TestClient()
-        client.run("search --revisions", assert_error=True)
-        self.assertIn("With --revision, specify a reference", client.out)
-        self.assertIn("or a package reference with recipe revision", client.out)
+        client.run("search --revisions")
+        self.assertIn("There are no packages", client.out)
 
 
 class SearchRemoteAllTestCase(unittest.TestCase):
@@ -1376,4 +1502,3 @@ class SearchRemoteAllTestCase(unittest.TestCase):
         self.assertIn("all: http://fake", self.client.out)
         self.client.run("search -r {} {}".format(self.remote_name, self.reference))
         self.assertIn("Existing recipe in remote 'all':", self.client.out)  # Searching in 'all'
-

@@ -93,7 +93,7 @@ class ConanFileToolsTest(ConanFile):
         client.save({"conanfile.py": conanfile})
         # Also check that it not fails the config method with Visual Studio, because of the lack of libcxx
         client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
-        self.assertIn("conanfile.py (test/1.9@None/None): Generated conaninfo.txt", client.out)
+        self.assertIn("conanfile.py (test/1.9): Generated conaninfo.txt", client.out)
 
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("libcxx", conaninfo)

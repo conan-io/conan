@@ -1,11 +1,64 @@
 import os
+import textwrap
 import unittest
 
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.tools import save
 from conans.util.files import load
 
 
 class NewTest(unittest.TestCase):
+
+    def template_test(self):
+        client = TestClient()
+        template1 = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
+        """)
+        save(os.path.join(client.cache_folder, "templates/mytemplate.py"), template1)
+        client.run("new hello/0.1 --template=mytemplate.py")
+        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('name = "hello"', conanfile)
+        self.assertIn('version = "0.1"', conanfile)
+
+    def template_test_package_test(self):
+        client = TestClient()
+        template2 = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                version = "fixed"
+        """)
+        save(os.path.join(client.cache_folder, "templates", "subfolder", "mytemplate.py"),
+             template2)
+        client.run("new hello/0.1 -m=subfolder/mytemplate.py")
+        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('version = "fixed"', conanfile)
+
+    def template_abs_path_test_package_test(self):
+        client = TestClient()
+        template2 = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                version = "fixed"
+        """)
+        tmp = temp_folder()
+        full_path = os.path.join(tmp, "templates", "subfolder", "mytemplate.py")
+        save(full_path, template2)
+        client.run('new hello/0.1 --template="%s"' % full_path)
+        conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('version = "fixed"', conanfile)
+
+    def template_errors_test(self):
+        client = TestClient()
+        client.run("new hello/0.1 -m=mytemplate.py", assert_error=True)
+        self.assertIn("ERROR: Template doesn't exist", client.out)
+        client.run("new hello/0.1 --template=mytemplate.py --bare", assert_error=True)
+        self.assertIn("ERROR: 'template' argument incompatible", client.out)
+        client.run("new hello/0.1 --template", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
 
     def new_test(self):
         client = TestClient()
@@ -21,7 +74,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_error_test(self):
         """ packages with short name
@@ -29,10 +82,10 @@ class NewTest(unittest.TestCase):
         client = TestClient()
         client.run('new A/1.3@myuser/testing', assert_error=True)
         self.assertIn("ERROR: Value provided for package name, 'A' (type str), is too short. Valid "
-                      "names must contain at least 2 characters.", client.user_io.out)
+                      "names must contain at least 2 characters.", client.out)
         client.run('new A2/1.3@myuser/u', assert_error=True)
         self.assertIn("ERROR: Value provided for channel, 'u' (type str), is too short. Valid "
-                      "names must contain at least 2 characters.", client.user_io.out)
+                      "names must contain at least 2 characters.", client.out)
 
     def new_dash_test(self):
         """ packages with dash
@@ -50,7 +103,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("My-Package/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("My-Package/1.3@myuser/testing", client.out)
 
     def new_header_test(self):
         client = TestClient()
@@ -68,7 +121,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_sources_test(self):
         client = TestClient()
@@ -85,7 +138,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_purec_test(self):
         client = TestClient()
@@ -101,7 +154,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_without_test(self):
         client = TestClient()

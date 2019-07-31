@@ -2,7 +2,7 @@ import os
 
 from bottle import FileUpload, static_file
 
-from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
+from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.server.service.common.common import CommonService
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore

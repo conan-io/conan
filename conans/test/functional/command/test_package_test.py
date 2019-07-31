@@ -28,8 +28,8 @@ class TestConanLib(ConanFile):
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
-        self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
-        self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_only_test(self):
         test_conanfile = '''
@@ -46,9 +46,9 @@ class TestConanLib(ConanFile):
         client.run("test test_package Hello/0.1@lasote/stable")
 
         self.assertNotIn("Exporting package recipe", client.out)
-        self.assertNotIn("WARN: Forced build from source", client.out)
+        self.assertNotIn("Forced build from source", client.out)
         self.assertNotIn("Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertNotIn("WARN: Forced build from source", client.out)
+        self.assertNotIn("Forced build from source", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
@@ -95,13 +95,13 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . user/channel")
-        self.assertIn("Hello/0.1@user/channel: Configuring sources", client.user_io.out)
-        self.assertIn("Hello/0.1@user/channel: Generated conaninfo.txt", client.user_io.out)
+        self.assertIn("Hello/0.1@user/channel: Configuring sources", client.out)
+        self.assertIn("Hello/0.1@user/channel: Generated conaninfo.txt", client.out)
 
         # explicit override of user/channel works
         client.run("create . lasote/stable")
-        self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
-        self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
+        self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
     def test_with_path_errors_test(self):
         client = TestClient()

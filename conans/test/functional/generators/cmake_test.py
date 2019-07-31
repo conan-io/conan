@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 from nose.plugins.attrib import attr
@@ -35,6 +36,36 @@ CONAN_BASIC_SETUP()
         client.run('install .')
         client.run('build .')
 
+    @attr("slow")
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    def skip_check_if_toolset_test(self):
+        file_content = '''from conans import ConanFile, CMake
+
+class ConanFileToolsTest(ConanFile):
+    generators = "cmake"
+    exports_sources = "CMakeLists.txt"
+    settings = "os", "arch", "compiler"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+    '''
+        client = TestClient()
+        cmakelists = '''
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+PROJECT(Hello)
+cmake_minimum_required(VERSION 2.8)
+include("${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+CONAN_BASIC_SETUP()
+'''
+        client.save({"conanfile.py": file_content,
+                     "CMakeLists.txt": cmakelists})
+        client.run("create . lib/1.0@user/channel -s compiler='Visual Studio' -s compiler.toolset=v140")
+        self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
+
+
     @attr('slow')
     def no_output_test(self):
         client = TestClient()
@@ -53,7 +84,7 @@ CONAN_BASIC_SETUP()
         replace_in_file(cmakelists_path,
                         "conan_basic_setup()",
                         "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
-                        output=client.user_io.out)
+                        output=client.out)
         client.run("build . --configure")
         self.assertNotIn("Conan: Using cmake global configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
@@ -61,7 +92,7 @@ CONAN_BASIC_SETUP()
 
         # Use TARGETS
         replace_in_file(cmakelists_path, "conan_basic_setup()", "conan_basic_setup(TARGETS)",
-                        output=client.user_io.out)
+                        output=client.out)
         client.run("build . --configure")
         self.assertNotIn("Conan: Using cmake targets configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)

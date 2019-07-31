@@ -44,7 +44,8 @@ class ConfigParser(object):
                 else:
                     raise ConanException("ConfigParser: Bad syntax '%s'" % line)
             if field:
-                if self._allowed_fields and field not in self._allowed_fields and raise_unexpected_field:
+                if (self._allowed_fields and field not in self._allowed_fields and
+                        raise_unexpected_field):
                     raise ConanException("ConfigParser: Unrecognized field '%s'" % field)
                 else:
                     current_lines = []
@@ -53,7 +54,8 @@ class ConfigParser(object):
                 if current_lines is None:
                     raise ConanException("ConfigParser: Unexpected line '%s'" % line)
                 if parse_lines:
-                    line = line.split('#')[0]
+                    line = line.split(' #', 1)[0]
+                    line = line.split('    #', 1)[0]
                     line = line.strip()
                 current_lines.append(line)
 

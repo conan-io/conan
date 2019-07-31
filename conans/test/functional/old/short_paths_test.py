@@ -40,10 +40,10 @@ class TestConan(ConanFile):
                      "source_file.cpp": ""})
         client.run("create . danimtb/testing")
         ref = ConanFileReference("test", "1.0", "danimtb", "testing")
-        source_folder = os.path.join(client.cache.base_folder(ref), "source")
-        build_folder = os.path.join(client.cache.base_folder(ref), "build",
+        source_folder = os.path.join(client.cache.package_layout(ref).base_folder(), "source")
+        build_folder = os.path.join(client.cache.package_layout(ref).base_folder(), "build",
                                     NO_SETTINGS_PACKAGE_ID)
-        package_folder = os.path.join(client.cache.base_folder(ref), "package",
+        package_folder = os.path.join(client.cache.package_layout(ref).base_folder(), "package",
                                       NO_SETTINGS_PACKAGE_ID)
         self.assertIn("SOURCE: source_file.cpp", client.out)
         self.assertEqual(["source_file.cpp"], os.listdir(source_folder))
@@ -92,7 +92,7 @@ class TestConan(ConanFile):
         # try local flow still works, but no pkg id available
         client.run("install .")
         client.run("package .")
-        self.assertIn("conanfile.py (test/1.0@None/None): Package 'package' created", client.out)
+        self.assertIn("conanfile.py (test/1.0): Package 'package' created", client.out)
 
         # try export-pkg with package folder
         client.run("remove test/1.0@danimtb/testing --force")

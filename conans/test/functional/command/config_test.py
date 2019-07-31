@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from conans.test.utils.tools import TestClient
@@ -12,31 +13,32 @@ class ConfigTest(unittest.TestCase):
     def basic_test(self):
         # show the full file
         self.client.run("config get")
-        self.assertIn("default_profile = default", self.client.user_io.out)
-        self.assertIn("path = ./data", self.client.user_io.out)
+        self.assertIn("default_profile = default", self.client.out)
+        self.assertIn("path = ./data", self.client.out)
 
     def storage_test(self):
         # show the full file
         self.client.run("config get storage")
-        self.assertIn("path = ./data", self.client.user_io.out)
+        self.assertIn("path = ./data", self.client.out)
 
         self.client.run("config get storage.path")
-        self.assertIn("./data", self.client.user_io.out)
-        self.assertNotIn("path:", self.client.user_io.out)
+        full_path = os.path.join(self.client.cache_folder, "data")
+        self.assertIn(full_path, self.client.out)
+        self.assertNotIn("path:", self.client.out)
 
     def errors_test(self):
         self.client.run("config get whatever", assert_error=True)
-        self.assertIn("'whatever' is not a section of conan.conf", self.client.user_io.out)
+        self.assertIn("'whatever' is not a section of conan.conf", self.client.out)
         self.client.run("config get whatever.what", assert_error=True)
-        self.assertIn("'whatever' is not a section of conan.conf", self.client.user_io.out)
+        self.assertIn("'whatever' is not a section of conan.conf", self.client.out)
         self.client.run("config get storage.what", assert_error=True)
-        self.assertIn("'what' doesn't exist in [storage]", self.client.user_io.out)
+        self.assertIn("'what' doesn't exist in [storage]", self.client.out)
         self.client.run('config set proxies=https:', assert_error=True)
         self.assertIn("You can't set a full section, please specify a key=value",
-                      self.client.user_io.out)
+                      self.client.out)
 
         self.client.run('config set proxies.http:Value', assert_error=True)
-        self.assertIn("Please specify 'key=value'", self.client.user_io.out)
+        self.assertIn("Please specify 'key=value'", self.client.out)
 
     def define_test(self):
         self.client.run("config set general.fakeos=Linux")
@@ -84,3 +86,7 @@ class ConfigTest(unittest.TestCase):
         self.client.run('config rm env.MY_VAR')
         conf_file = load(self.client.cache.conan_conf_path)
         self.assertNotIn('MY_VAR', conf_file)
+
+    def missing_subarguments_test(self):
+        self.client.run("config", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)

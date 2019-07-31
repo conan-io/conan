@@ -4,11 +4,13 @@ import platform
 import subprocess
 import sys
 import tempfile
-from subprocess import CalledProcessError, PIPE
+from subprocess import PIPE
+
+import six
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException
+from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
 
@@ -77,6 +79,15 @@ def detected_architecture():
     elif "s390" in machine:
         return "s390"
 
+    if OSInfo().is_aix:
+        processor = platform.processor()
+        if "powerpc" in processor:
+            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
+            if kernel_bitness:
+                return "ppc64" if kernel_bitness == "64" else "ppc32"
+        elif "rs6000" in processor:
+            return "ppc32"
+
     return None
 
 # DETECT OS, VERSION AND DISTRIBUTIONS
@@ -113,6 +124,7 @@ class OSInfo(object):
         self.is_macos = system == "Darwin"
         self.is_freebsd = system == "FreeBSD"
         self.is_solaris = system == "SunOS"
+        self.is_aix = system == "AIX"
         self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
@@ -129,6 +141,9 @@ class OSInfo(object):
         elif self.is_solaris:
             self.os_version = Version(platform.release())
             self.os_version_name = self.get_solaris_version_name(self.os_version)
+        elif self.is_aix:
+            self.os_version = self.get_aix_version()
+            self.os_version_name = "AIX %s" % self.os_version.minor(fill=False)
 
     def _get_linux_distro_info(self):
         import distro
@@ -155,7 +170,7 @@ class OSInfo(object):
         if self.is_linux:
             return self.linux_distro in ["arch", "manjaro"]
         elif self.is_windows and which('uname.exe'):
-            uname = subprocess.check_output(['uname.exe', '-s']).decode()
+            uname = check_output(['uname.exe', '-s'])
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
@@ -281,6 +296,14 @@ class OSInfo(object):
             return "Solaris 11"
 
     @staticmethod
+    def get_aix_version():
+        try:
+            ret = check_output("oslevel").strip()
+            return Version(ret)
+        except Exception:
+            return Version("%s.%s" % (platform.version(), platform.release()))
+
+    @staticmethod
     def bash_path():
         if os.getenv("CONAN_BASH_PATH"):
             return os.getenv("CONAN_BASH_PATH")
@@ -299,8 +322,20 @@ class OSInfo(object):
         try:
             # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
-                ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
+                ret = check_output(command).strip().lower()
                 return ret
+        except Exception:
+            return None
+
+    @staticmethod
+    def get_aix_conf(options=None):
+        options = " %s" % options if options else ""
+        if not OSInfo().is_aix:
+            raise ConanException("Command only for AIX operating system")
+
+        try:
+            ret = check_output("getconf%s" % options).strip()
+            return ret
         except Exception:
             return None
 
@@ -323,13 +358,14 @@ class OSInfo(object):
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:
-            output = OSInfo.uname("-r")
-            if output.startswith("2"):
-                return MSYS2
-            elif output.startswith("1"):
-                return MSYS
-            else:
-                return None
+            version = OSInfo.uname("-r").split('.')
+            if version and version[0].isdigit():
+                major = int(version[0])
+                if major == 1:
+                    return MSYS
+                elif major >= 2:
+                    return MSYS2
+            return None
         elif "linux" in output:
             return WSL
         else:
@@ -375,13 +411,22 @@ def get_gnu_triplet(os_, arch, compiler=None):
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
-               "armv8.3": "aarch64"
+               "armv8.3": "aarch64",
+               "asm.js": "asmjs",
+               "wasm": "wasm32",
                }.get(arch, None)
 
     if not machine:
         # https://wiki.debian.org/Multiarch/Tuples
-        if "arm" in arch:
+        if os_ == "AIX":
+            if "ppc32" in arch:
+                machine = "rs6000"
+            elif "ppc64" in arch:
+                machine = "powerpc"
+        elif "arm" in arch:
             machine = "arm"
+        elif "ppc32be" in arch:
+            machine = "powerpcbe"
         elif "ppc64le" in arch:
             machine = "powerpc64le"
         elif "ppc64" in arch:
@@ -400,6 +445,8 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "s390x-ibm"
         elif "s390" in arch:
             machine = "s390-ibm"
+        elif "sh4" in arch:
+            machine = "sh4"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -421,7 +468,12 @@ def get_gnu_triplet(os_, arch, compiler=None):
                  "Macos": "apple-darwin",
                  "iOS": "apple-darwin",
                  "watchOS": "apple-darwin",
-                 "tvOS": "apple-darwin"}.get(os_, os_.lower())
+                 "tvOS": "apple-darwin",
+                 # NOTE: it technically must be "asmjs-unknown-emscripten" or
+                 # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
+                 "Emscripten": "local-emscripten",
+                 "AIX": "ibm-aix",
+                 "Neutrino": "nto-qnx"}.get(os_, os_.lower())
 
     if os_ in ("Linux", "Android"):
         if "arm" in arch and "armv8" not in arch:
@@ -436,22 +488,28 @@ def get_gnu_triplet(os_, arch, compiler=None):
     return "%s-%s" % (machine, op_system)
 
 
-def check_output(cmd, folder=None, return_code=False):
+def check_output(cmd, folder=None, return_code=False, stderr=None):
     tmp_file = tempfile.mktemp()
     try:
-        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True, stderr=PIPE, cwd=folder)
-        process.communicate()
+        # We don't want stderr to print warnings that will mess the pristine outputs
+        stderr = stderr or PIPE
+        cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
+        process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
+                                   stderr=stderr, cwd=folder)
+
+        _, stderr = process.communicate()
 
         if return_code:
             return process.returncode
 
         if process.returncode:
-            raise CalledProcessError(process.returncode, cmd)
+            # Only in case of error, we print also the stderr to know what happened
+            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
 
         output = load(tmp_file)
         return output
     finally:
         try:
             os.unlink(tmp_file)
-        except:
+        except Exception:
             pass
