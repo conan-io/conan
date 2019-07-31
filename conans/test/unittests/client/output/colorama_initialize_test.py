@@ -16,6 +16,7 @@ class ColoramaInitializeTTY(unittest.TestCase):
     assert hasattr(sys.stdout, 'isatty')
 
     def test_pycharm_hosted(self, _):
+        PYCHARM_HOSTED_VALUE = "1"
         convert = strip = None
 
         def colorama_init_mocked(**kwargs):
@@ -24,7 +25,7 @@ class ColoramaInitializeTTY(unittest.TestCase):
             strip = kwargs.get('strip', 'not-set')
 
         with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: "1"}):
+            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
                 with environment_append({CONAN_COLOR_DISPLAY: "1"}):
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
@@ -38,6 +39,7 @@ class ColoramaInitializeTTY(unittest.TestCase):
                     self.assertEqual(strip, None)
 
     def test_not_pycharm_hosted(self, _):
+        PYCHARM_HOSTED_VALUE = "0"
         convert = strip = None
 
         def colorama_init_mocked(**kwargs):
@@ -46,7 +48,7 @@ class ColoramaInitializeTTY(unittest.TestCase):
             strip = kwargs.get('strip', 'not-set')
 
         with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: "1"}):
+            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
                 with environment_append({CONAN_COLOR_DISPLAY: "1"}):
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
@@ -64,6 +66,7 @@ class ColoramaInitializeTTY(unittest.TestCase):
 class ColoramaInitializeNoTTY(unittest.TestCase):
 
     def test_pycharm_hosted(self, _):
+        PYCHARM_HOSTED_VALUE = "1"
         convert = strip = None
 
         def colorama_init_mocked(**kwargs):
@@ -72,7 +75,7 @@ class ColoramaInitializeNoTTY(unittest.TestCase):
             strip = kwargs.get('strip', 'not-set')
 
         with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: "1"}):
+            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
                 with environment_append({CONAN_COLOR_DISPLAY: "1"}):
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
@@ -86,6 +89,7 @@ class ColoramaInitializeNoTTY(unittest.TestCase):
                     self.assertEqual(strip, None)
 
     def test_not_pycharm_hosted(self, _):
+        PYCHARM_HOSTED_VALUE = "0"
         convert = strip = None
 
         def colorama_init_mocked(**kwargs):
@@ -94,7 +98,7 @@ class ColoramaInitializeNoTTY(unittest.TestCase):
             strip = kwargs.get('strip', 'not-set')
 
         with mock.patch("colorama.init", side_effect=colorama_init_mocked):
-            with environment_append({PYCHARM_HOSTED: "0"}):
+            with environment_append({PYCHARM_HOSTED: PYCHARM_HOSTED_VALUE}):
                 with environment_append({CONAN_COLOR_DISPLAY: "1"}):
                     ret = colorama_initialize()
                     self.assertEqual(ret, True)
