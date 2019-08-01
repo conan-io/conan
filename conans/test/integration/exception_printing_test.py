@@ -61,8 +61,8 @@ class ExceptionsTest(ConanFile):
 
     def _test_fail_line(self, conanfile, numline, method_name):
         self._call_install(conanfile)
-        self.assertIn("ExceptionsTest/0.1@lasote/stable: Error in %s() method, line %s" % (method_name, numline), self.client.user_io.out)
-        self.assertIn("DRLException: Oh! an error!", self.client.user_io.out)
+        self.assertIn("ExceptionsTest/0.1@lasote/stable: Error in %s() method, line %s" % (method_name, numline), self.client.out)
+        self.assertIn("DRLException: Oh! an error!", self.client.out)
 
     def _get_conanfile_for(self, method_name):
         throw = "raise DRLException('Oh! an error!')"
@@ -80,11 +80,11 @@ class ExceptionsTest(ConanFile):
     def _test_fail_line_aux(self, conanfile, main_line, numline, method_name):
         self._call_install(conanfile)
         self.assertIn("ExceptionsTest/0.1@lasote/stable: Error in %s() method, line %s" % (method_name, main_line),
-                      self.client.user_io.out)
+                      self.client.out)
         self.assertIn("\nwhile calling '_aux_method', line %s" % numline,
-                      self.client.user_io.out)
+                      self.client.out)
 
-        self.assertIn("DRLException: Oh! an error!", self.client.user_io.out)
+        self.assertIn("DRLException: Oh! an error!", self.client.out)
 
     def _get_conanfile_for_error_in_other_method(self, method_name):
         throw = "self._aux_method()"
@@ -120,9 +120,9 @@ class ExceptionsTest(ConanFile):
     def test_complete_traceback(self):
         with tools.environment_append({"CONAN_VERBOSE_TRACEBACK": "1"}):
             self._call_install(self._get_conanfile_for_error_in_other_method("source"))
-            self.assertIn("ERROR: Traceback (most recent call last):", self.client.user_io.out)
-            self.assertIn('self._aux_method()', self.client.user_io.out)
-            self.assertIn("raise DRLException('Oh! an error!')", self.client.user_io.out)
+            self.assertIn("ERROR: Traceback (most recent call last):", self.client.out)
+            self.assertIn('self._aux_method()', self.client.out)
+            self.assertIn("raise DRLException('Oh! an error!')", self.client.out)
 
 
 if __name__ == '__main__':

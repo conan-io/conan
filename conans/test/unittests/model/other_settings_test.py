@@ -145,7 +145,7 @@ compiler:
 
         client.run("install test/1.9@lasote/testing --build -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s compiler.libcxx=libstdc++")
-        self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.user_io.out)
+        self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.out)
 
         # Now the new one
         files = {"conanfile.py": file_content.replace('"arch"', '"arch", "build_type"')}
@@ -157,7 +157,7 @@ compiler:
                    "-s compiler.version=4.9 -s os=Windows -s build_type=None -s "
                    "compiler.libcxx=libstdc++")
         self.assertIn("build_type", load(client.cache.settings_path))
-        self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.user_io.out)
+        self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.out)
 
     def settings_constraint_error_type_test(self):
         # https://github.com/conan-io/conan/issues/3022
@@ -190,14 +190,14 @@ class Test(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
-        default_profile = os.path.join(client.base_folder, "profiles/default")
+        default_profile = os.path.join(client.cache_folder, "profiles/default")
         save(default_profile, "[settings]\ncompiler=gcc\ncompiler.version=6.3")
         client.run("create . user/channel", assert_error=True)
         self.assertIn("Invalid setting '6.3' is not a valid 'settings.compiler.version'",
-                      client.user_io.out)
+                      client.out)
         client.run("create . user/channel -s compiler=gcc -s compiler.version=7.1")
-        self.assertIn("Hello/0.1@user/channel: Compiler version!: 7.1", client.user_io.out)
-        self.assertIn("Hello/0.1@user/channel: Generating the package", client.user_io.out)
+        self.assertIn("Hello/0.1@user/channel: Compiler version!: 7.1", client.out)
+        self.assertIn("Hello/0.1@user/channel: Generating the package", client.out)
 
     def settings_as_a_str_test(self):
         content = """
@@ -274,7 +274,7 @@ class SayConan(ConanFile):
 
         client.save({CONANFILE: content})
         client.run("install . --build missing", assert_error=True)
-        self.assertIn(str(undefined_value("settings.os")), str(client.user_io.out))
+        self.assertIn(str(undefined_value("settings.os")), str(client.out))
 
     def invalid_settings_test2(self):
         # MISSING A DEFAULT VALUE BECAUSE ITS RESTRICTED TO OTHER, SO ITS REQUIRED
@@ -292,7 +292,7 @@ class SayConan(ConanFile):
         client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing",
                    assert_error=True)
         self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
-                      str(client.user_io.out))
+                      str(client.out))
 
     def invalid_settings_test3(self):
         # dict without options
@@ -309,7 +309,7 @@ class SayConan(ConanFile):
         client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing",
                    assert_error=True)
         self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
-                      str(client.user_io.out))
+                      str(client.out))
 
         # Test wrong settings in conanfile
         content = """
@@ -324,7 +324,7 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("install . --build missing", assert_error=True)
         self.assertIn("invalid' is not defined",
-                      str(client.user_io.out))
+                      str(client.out))
 
         # Test wrong values in conanfile
     def invalid_settings_test4(self):
@@ -342,7 +342,7 @@ class SayConan(ConanFile):
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
                                      'SunOS', 'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
-                      str(client.user_io.out))
+                      str(client.out))
 
         # Now add new settings to config and try again
         config = load(client.cache.settings_path)
@@ -351,7 +351,7 @@ class SayConan(ConanFile):
 
         save(client.cache.settings_path, config)
         client.run("install . -s os=ChromeOS --build missing")
-        self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
+        self.assertIn('Generated conaninfo.txt', str(client.out))
 
         # Settings is None
         content = """
@@ -364,7 +364,7 @@ class SayConan(ConanFile):
 """
         client.save({CONANFILE: content})
         client.run("install . --build missing")
-        self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
+        self.assertIn('Generated conaninfo.txt', str(client.out))
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEqual(conan_info.settings.dumps(), "")
 
@@ -379,6 +379,6 @@ class SayConan(ConanFile):
 """
         client.save({CONANFILE: content})
         client.run("install . --build missing")
-        self.assertIn('Generated conaninfo.txt', str(client.user_io.out))
+        self.assertIn('Generated conaninfo.txt', str(client.out))
         conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEqual(conan_info.settings.dumps(), "")

@@ -27,6 +27,6 @@ class GetPackageManifestTestCase(unittest.TestCase):
 
             # Exception tells me about the originating error and the request I was doing.
             self.assertIn("Error retrieving manifest file for package '{}'"
-                          " from remote ({})".format(pref.full_repr(), remote_url),
+                          " from remote ({})".format(pref.full_str(), remote_url),
                           str(exc.exception))
             self.assertIn("invalid literal for int() with base 10", str(exc.exception))

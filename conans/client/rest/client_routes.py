@@ -33,7 +33,7 @@ class ClientCommonRouter(object):
         query = ''
         if pattern:
             if isinstance(pattern, ConanFileReference):
-                pattern = pattern.full_repr()
+                pattern = repr(pattern)
             params = {"q": pattern}
             if not ignorecase:
                 params["ignorecase"] = "False"
@@ -128,10 +128,6 @@ class ClientV2Router(ClientCommonRouter):
 
     def __init__(self, base_url):
         self.base_url = "{}/v2/".format(base_url)
-
-    def recipe_latest(self, ref, path):
-        """Recipe file url"""
-        return self.base_url + self._for_recipe(ref, path)
 
     def recipe_file(self, ref, path):
         """Recipe file url"""

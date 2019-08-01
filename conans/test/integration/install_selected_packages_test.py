@@ -76,7 +76,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
         # Try to install all
         self.new_client.run("download Hello0/0.1@lasote/stable", assert_error=True)
-        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/stable'", self.new_client.user_io.out)
+        self.assertIn("Recipe not found: 'Hello0/0.1@lasote/stable'", self.new_client.out)
 
         # Upload only the recipe
         self.new_client.save(self.files)
@@ -85,7 +85,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
         # And try to download all
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        self.assertIn("No remote binary packages found in remote", self.new_client.user_io.out)
+        self.assertIn("No remote binary packages found in remote", self.new_client.out)
 
     def _upload_some_packages(self, client):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")

@@ -837,6 +837,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertEqual(str, type(result))
 
     @attr('slow')
+    @attr('local_bottle')
     def get_filename_download_test(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
@@ -900,6 +901,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     @attr('slow')
+    @attr('local_bottle')
     def get_gunzip_test(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()

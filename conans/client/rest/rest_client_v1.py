@@ -1,7 +1,7 @@
 import os
+import time
 import traceback
 
-import time
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
 from conans.client.remote_manager import check_compressed_files
@@ -44,12 +44,10 @@ class RestV1Methods(RestCommonMethods):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if output:
+            if output and not output.is_terminal:
                 output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             contents = downloader.download(resource_url, auth=auth)
-            if output:
-                output.writeln("")
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -91,7 +89,7 @@ class RestV1Methods(RestCommonMethods):
             return FileTreeManifest.loads(decode_text(content))
         except Exception as e:
             msg = "Error retrieving manifest file for package " \
-                  "'{}' from remote ({}): '{}'".format(pref.full_repr(), self.remote_url, e)
+                  "'{}' from remote ({}): '{}'".format(repr(pref), self.remote_url, e)
             logger.error(msg)
             logger.error(traceback.format_exc())
             raise ConanException(msg)
@@ -145,13 +143,13 @@ class RestV1Methods(RestCommonMethods):
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename, resource_url in sorted(file_urls.items()):
-            output.rewrite_line("Uploading %s" % filename)
+            if output and not output.is_terminal:
+                output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
                                 retry=retry, retry_wait=retry_wait,
                                 headers=self._put_headers)
-                output.writeln("")
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed.append(filename)
@@ -173,13 +171,11 @@ class RestV1Methods(RestCommonMethods):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
-            if self._output:
+            if self._output and not self._output.is_terminal:
                 self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
             downloader.download(resource_url, abs_path, auth=auth)
-            if self._output:
-                self._output.writeln("")
             ret[filename] = abs_path
         return ret
 

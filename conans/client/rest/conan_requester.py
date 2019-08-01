@@ -1,18 +1,34 @@
 import fnmatch
+import logging
 import os
 import platform
-import requests
 import time
+import warnings
+
+import requests
+from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
+# Capture SSL warnings as pointed out here:
+# https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
+# TODO: Fix this security warning
+logging.captureWarnings(True)
+
 
 class ConanRequester(object):
 
     def __init__(self, config, http_requester=None):
-        self._http_requester = http_requester if http_requester else requests.Session()
+        if http_requester:
+            self._http_requester = http_requester
+        else:
+            self._http_requester = requests.Session()
+            adapter = HTTPAdapter(max_retries=config.retry)
+            self._http_requester.mount("http://", adapter)
+            self._http_requester.mount("https://", adapter)
+
         self._timeout_seconds = config.request_timeout
         self.proxies = config.proxies or {}
         self._cacert_path = config.cacert_path
@@ -28,6 +44,8 @@ class ConanRequester(object):
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
         no_proxy = self.proxies.pop("no_proxy", None)
         if no_proxy:
+            warnings.warn("proxies.no_proxy has been deprecated."
+                          " Use proxies.no_proxy_match instead")
             os.environ["NO_PROXY"] = no_proxy
 
         if not os.path.exists(self._cacert_path):

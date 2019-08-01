@@ -43,10 +43,11 @@ class PackageTester(object):
             # FIXME: This is ugly access to graph_manager and hook_manager. Will be cleaned in 2.0
             build(self._manager._graph_manager, self._manager._hook_manager, conanfile_abs_path,
                   base_folder, test_build_folder, package_folder=None,
-                  install_folder=test_build_folder, test=str(reference))
+                  install_folder=test_build_folder, test=reference)
         finally:
             if delete_after_build:
-                os.chdir(base_folder)  # Required for windows where deleting the cwd is not possible.
+                # Required for windows where deleting the cwd is not possible.
+                os.chdir(base_folder)
                 rmdir(test_build_folder)
 
     @staticmethod

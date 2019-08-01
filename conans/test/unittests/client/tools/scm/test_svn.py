@@ -39,6 +39,20 @@ class SVNRemoteUrlTest(unittest.TestCase):
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
+    @patch('subprocess.Popen')
+    def test_version(self, mocked_open):
+        svn_version_string = """svn, version 1.10.3 (r1842928)
+compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
+        mocked_open.return_value.communicate.return_value = (svn_version_string.encode(), None)
+        version = SVN.get_version()
+        self.assertEqual(version, "1.10.3")
+
+    @patch('subprocess.Popen')
+    def test_version_invalid(self, mocked_open):
+        mocked_open.return_value.communicate.return_value = ('failed'.encode(), None)
+        with self.assertRaises(ConanException):
+            SVN.get_version()
+
     def test_check_svn_repo(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
@@ -557,10 +571,10 @@ class HelloConan(ConanFile):
     def test_clone_root_folder(self):
         tmp_folder = self.gimme_tmp()
         client = TestClient()
-        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        client.run_command('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
         save(os.path.join(tmp_folder, "file.h"), "contents")
-        client.runner("svn add file.h", cwd=tmp_folder)
-        client.runner('svn commit -m "message"', cwd=tmp_folder)
+        client.run_command("svn add file.h", cwd=tmp_folder)
+        client.run_command('svn commit -m "message"', cwd=tmp_folder)
 
         conanfile = self.conanfile.format(svn_folder="", svn_url=self.repo_url,
                                           file_path="file.h")
@@ -570,10 +584,10 @@ class HelloConan(ConanFile):
     def test_clone_subfolder(self):
         tmp_folder = self.gimme_tmp()
         client = TestClient()
-        client.runner('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
+        client.run_command('svn co "{}" "{}"'.format(self.repo_url, tmp_folder))
         save(os.path.join(tmp_folder, "file.h"), "contents")
-        client.runner("svn add file.h", cwd=tmp_folder)
-        client.runner('svn commit -m "message"', cwd=tmp_folder)
+        client.run_command("svn add file.h", cwd=tmp_folder)
+        client.run_command('svn commit -m "message"', cwd=tmp_folder)
 
         conanfile = self.conanfile.format(svn_folder="\"src\"", svn_url=self.repo_url,
                                           file_path="src/file.h")

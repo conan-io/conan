@@ -111,12 +111,12 @@ class ConanLib(ConanFile):
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
         self.client.run("imports .")  # Automatic conanbuildinfo.txt
-        self.assertNotIn("conanbuildinfo.txt file not found", self.client.user_io.out)
+        self.assertNotIn("conanbuildinfo.txt file not found", self.client.out)
 
     def install_manifest_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
         self.client.run("install ./conanfile.txt")
-        self.assertIn("imports(): Copied 2 '.txt' files", self.client.user_io.out)
+        self.assertIn("imports(): Copied 2 '.txt' files", self.client.out)
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
         self._check_manifest()
@@ -124,7 +124,7 @@ class ConanLib(ConanFile):
     def install_manifest_without_install_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
         self.client.run('imports . ', assert_error=True)
-        self.assertIn("You can generate it using 'conan install'", self.client.user_io.out)
+        self.assertIn("You can generate it using 'conan install'", self.client.out)
 
     def install_dest_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
@@ -168,8 +168,8 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
         self.assertNotIn(IMPORTS_MANIFESTS, os.listdir(self.client.current_folder))
-        self.assertIn("Removed 2 imported files", self.client.user_io.out)
-        self.assertIn("Removed imports manifest file", self.client.user_io.out)
+        self.assertIn("Removed 2 imported files", self.client.out)
+        self.assertIn("Removed imports manifest file", self.client.out)
 
     def _check_manifest(self):
         manifest_content = load(os.path.join(self.client.current_folder, IMPORTS_MANIFESTS))
@@ -186,7 +186,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
         self.client.run("imports .")
-        self.assertIn("imports(): Copied 2 '.txt' files", self.client.user_io.out)
+        self.assertIn("imports(): Copied 2 '.txt' files", self.client.out)
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
         self._check_manifest()

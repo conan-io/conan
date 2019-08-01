@@ -454,8 +454,8 @@ class Pkg(ConanFile):
 
         client.run("install . --build=missing")
 
-        self.assertIn("Hello/0.1@lasote/channel from local", client.user_io.out)
-        self.assertNotIn("Hello/0.X@lasote/channel", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/channel from local", client.out)
+        self.assertNotIn("Hello/0.X@lasote/channel", client.out)
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
         self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
@@ -464,13 +464,13 @@ class Pkg(ConanFile):
         client.run('remove "*" -f')
 
         client.run("install .")
-        self.assertIn("Hello/0.1@lasote/channel from 'default'", client.user_io.out)
-        self.assertNotIn("Hello/0.X@lasote/channel from", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/channel from 'default'", client.out)
+        self.assertNotIn("Hello/0.X@lasote/channel from", client.out)
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("install . --build=missing")
-        self.assertIn("Hello/0.2", client.user_io.out)
-        self.assertNotIn("Hello/0.1", client.user_io.out)
+        self.assertIn("Hello/0.2", client.out)
+        self.assertNotIn("Hello/0.1", client.out)
 
     def test_not_override_package(self):
         """ Do not override a package with an alias

@@ -19,10 +19,10 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
 
     # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
     # to be downloaded from remotes
-    deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info, build_mode=[ref.name],
-                                             check_updates=False, update=False,
-                                             remotes=remotes, recorder=recorder,
-                                             apply_build_requires=False)
+    deps_graph, _ = graph_manager.load_graph(ref, None, graph_info=graph_info,
+                                             build_mode=[ref.name], check_updates=False,
+                                             update=False, remotes=remotes,
+                                             recorder=recorder, apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
@@ -58,8 +58,13 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     readed_manifest = FileTreeManifest.load(dest_package_folder)
     pref = PackageReference(pref.ref, pref.id, readed_manifest.summary_hash)
     output.info("Package revision %s" % pref.revision)
+
     with layout.update_metadata() as metadata:
         metadata.packages[package_id].revision = pref.revision
         metadata.packages[package_id].recipe_revision = metadata.recipe.revision
 
+    if graph_info.graph_lock:
+        # after the package has been created we need to update the node PREV
+        nodes[0].prev = pref.revision
+        graph_info.graph_lock.update_check_graph(deps_graph, output)
     recorder.package_exported(pref)

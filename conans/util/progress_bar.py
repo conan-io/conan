@@ -12,8 +12,9 @@ class _FileReaderWithProgressBar(object):
     tqdm_defaults = {'unit': 'B',
                      'unit_scale': True,
                      'unit_divisor': 1024,
-                     'ascii': False,  # Fancy output (forces unicode progress bar)
-                     }
+                     'dynamic_ncols': False,
+                     'leave': True,
+                     'ascii': True}
 
     def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
@@ -27,6 +28,9 @@ class _FileReaderWithProgressBar(object):
         self.seek(0, os.SEEK_END)
         self._tqdm_bar = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
         self.seek(0)
+
+    def description(self):
+        return self._tqdm_bar.desc
 
     def seekable(self):
         return self._fileobj.seekable()
@@ -66,4 +70,4 @@ def open_binary(path, output, **kwargs):
         yield file_wrapped
         file_wrapped.pb_close()
         if not output.is_terminal:
-            output.write("\n")
+            output.writeln("\n")
