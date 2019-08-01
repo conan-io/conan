@@ -96,6 +96,7 @@ class ConanManager(object):
             manifest_manager.print_log()
 
         if install_folder:
+            conanfile.install_folder = install_folder
             # Write generators
             output = conanfile.output if conanfile.display_name != "virtual" else self._user_io.out
             if generators is not False:
