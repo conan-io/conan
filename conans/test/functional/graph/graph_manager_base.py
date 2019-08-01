@@ -4,6 +4,7 @@ import unittest
 from mock import Mock
 
 from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import ConanPythonRequire
@@ -21,7 +22,6 @@ from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.util.files import save
-from conans.client.cache.remote_registry import Remotes
 
 
 class GraphManagerTest(unittest.TestCase):
@@ -52,7 +52,8 @@ class GraphManagerTest(unittest.TestCase):
         manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
         manifest.save(self.cache.package_layout(ref).export())
 
-    def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None):
+    def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None,
+                    install=True):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         save(path, str(content))
@@ -65,20 +66,21 @@ class GraphManagerTest(unittest.TestCase):
         update = check_updates = False
         recorder = ActionRecorder()
         remotes = Remotes()
-        build_mode = []
+        build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
         deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
                                                 build_mode, check_updates, update,
                                                 remotes, recorder)
-        self.binary_installer.install(deps_graph, False, graph_info)
+        if install:
+            self.binary_installer.install(deps_graph, None, False, graph_info)
         return deps_graph
 
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
-        self.assertEqual(node.ref.full_repr(), ref.full_repr())
+        self.assertEqual(repr(node.ref), repr(ref))
         self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
 

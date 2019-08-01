@@ -46,7 +46,8 @@ class ConanProxy(object):
 
         # NOT in disk, must be retrieved from remotes
         if not os.path.exists(conanfile_path):
-            remote, new_ref = self._download_recipe(ref, output, remotes, remotes.selected, recorder)
+            remote, new_ref = self._download_recipe(ref, output, remotes, remotes.selected,
+                                                    recorder)
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
@@ -158,7 +159,7 @@ class ConanProxy(object):
             except NotFoundException:
                 pass
         else:
-            msg = "Unable to find '%s' in remotes" % ref.full_repr()
+            msg = "Unable to find '%s' in remotes" % ref.full_str()
             recorder.recipe_install_error(ref, INSTALL_ERROR_MISSING,
                                           msg, None)
             raise NotFoundException(msg)

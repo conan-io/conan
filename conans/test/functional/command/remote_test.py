@@ -93,27 +93,27 @@ class HelloConan(ConanFile):
 
     def basic_test(self):
         self.client.run("remote list")
-        self.assertIn("remote0: http://", self.client.user_io.out)
-        self.assertIn("remote1: http://", self.client.user_io.out)
-        self.assertIn("remote2: http://", self.client.user_io.out)
+        self.assertIn("remote0: http://", self.client.out)
+        self.assertIn("remote1: http://", self.client.out)
+        self.assertIn("remote2: http://", self.client.out)
 
         self.client.run("remote add origin https://myurl")
         self.client.run("remote list")
-        lines = str(self.client.user_io.out).splitlines()
+        lines = str(self.client.out).splitlines()
         self.assertIn("origin: https://myurl", lines[3])
 
         self.client.run("remote update origin https://2myurl")
         self.client.run("remote list")
-        self.assertIn("origin: https://2myurl", self.client.user_io.out)
+        self.assertIn("origin: https://2myurl", self.client.out)
 
         self.client.run("remote update remote0 https://remote0url")
         self.client.run("remote list")
-        output = str(self.client.user_io.out)
+        output = str(self.client.out)
         self.assertIn("remote0: https://remote0url", output.splitlines()[0])
 
         self.client.run("remote remove remote0")
         self.client.run("remote list")
-        output = str(self.client.user_io.out)
+        output = str(self.client.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
     def remove_remote_test(self):
@@ -167,7 +167,7 @@ class HelloConan(ConanFile):
 
         client.run("remote add r4 https://r4 -f")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
         self.assertIn("r2: https://r2", lines[1])
         self.assertIn("r3: https://r3", lines[2])
@@ -175,7 +175,7 @@ class HelloConan(ConanFile):
 
         client.run("remote add r2 https://newr2 -f")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
         self.assertIn("r3: https://r3", lines[1])
         self.assertIn("r4: https://r4", lines[2])
@@ -183,7 +183,7 @@ class HelloConan(ConanFile):
 
         client.run("remote add newr1 https://r1 -f")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("r3: https://r3", lines[0])
         self.assertIn("r4: https://r4", lines[1])
         self.assertIn("r2: https://newr2", lines[2])
@@ -194,7 +194,7 @@ class HelloConan(ConanFile):
 
         client.run("remote add newr1 https://newr1 -f -i")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("newr1: https://newr1", lines[0])
         self.assertIn("r3: https://r3", lines[1])
         self.assertIn("r4: https://r4", lines[2])
@@ -208,7 +208,7 @@ class HelloConan(ConanFile):
         client.run("remote add_ref Hello/0.1@user/testing r2")
         client.run("remote rename r2 mynewr2")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
         self.assertIn("mynewr2: https://r2", lines[1])
         self.assertIn("r3: https://r3", lines[2])
@@ -222,18 +222,18 @@ class HelloConan(ConanFile):
     def insert_test(self):
         self.client.run("remote add origin https://myurl --insert")
         self.client.run("remote list")
-        first_line = str(self.client.user_io.out).splitlines()[0]
+        first_line = str(self.client.out).splitlines()[0]
         self.assertIn("origin: https://myurl", first_line)
 
         self.client.run("remote add origin2 https://myurl2 --insert=0")
         self.client.run("remote list")
-        lines = str(self.client.user_io.out).splitlines()
+        lines = str(self.client.out).splitlines()
         self.assertIn("origin2: https://myurl2", lines[0])
         self.assertIn("origin: https://myurl", lines[1])
 
         self.client.run("remote add origin3 https://myurl3 --insert=1")
         self.client.run("remote list")
-        lines = str(self.client.user_io.out).splitlines()
+        lines = str(self.client.out).splitlines()
         self.assertIn("origin2: https://myurl2", lines[0])
         self.assertIn("origin3: https://myurl3", lines[1])
         self.assertIn("origin: https://myurl", lines[2])
@@ -246,14 +246,14 @@ class HelloConan(ConanFile):
 
         client.run("remote update r2 https://r2new --insert")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("r2: https://r2new", lines[0])
         self.assertIn("r1: https://r1", lines[1])
         self.assertIn("r3: https://r3", lines[2])
 
         client.run("remote update r2 https://r2new2 --insert 2")
         client.run("remote list")
-        lines = str(client.user_io.out).splitlines()
+        lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
         self.assertIn("r3: https://r3", lines[1])
         self.assertIn("r2: https://r2new2", lines[2])
@@ -298,7 +298,7 @@ class HelloConan(ConanFile):
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
         self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
-                      client.user_io.out)
+                      client.out)
         data = json.loads(load(client.cache.registry_path))
         self.assertEqual(data["remotes"], [])
 
@@ -314,68 +314,121 @@ class HelloConan(ConanFile):
         """
         self.client.run("remote add remote1 http://otherurl", assert_error=True)
         self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
-                      self.client.user_io.out)
+                      self.client.out)
 
         self.client.run("remote list")
-        url = str(self.client.user_io.out).split()[1]
+        url = str(self.client.out).split()[1]
         self.client.run("remote add newname %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL",
-                      self.client.user_io.out)
+                      self.client.out)
 
         self.client.run("remote update remote1 %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL",
-                      self.client.user_io.out)
+                      self.client.out)
 
     def basic_refs_test(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
         self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
+        self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
 
         self.client.run("remote add_ref Hello1/0.1@user/testing remote1")
         self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@user/testing: remote1", self.client.user_io.out)
+        self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
+        self.assertIn("Hello1/0.1@user/testing: remote1", self.client.out)
 
         self.client.run("remote remove_ref Hello1/0.1@user/testing")
         self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
-        self.assertNotIn("Hello1/0.1@user/testing", self.client.user_io.out)
+        self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
+        self.assertNotIn("Hello1/0.1@user/testing", self.client.out)
 
         self.client.run("remote add_ref Hello1/0.1@user/testing remote1")
         self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@user/testing: remote1", self.client.user_io.out)
+        self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
+        self.assertIn("Hello1/0.1@user/testing: remote1", self.client.out)
 
         self.client.run("remote update_ref Hello1/0.1@user/testing remote2")
         self.client.run("remote list_ref")
-        self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@user/testing: remote2", self.client.user_io.out)
+        self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
+        self.assertIn("Hello1/0.1@user/testing: remote2", self.client.out)
 
     def package_refs_test(self):
 
         self.client.run("remote add_pref Hello/0.1@user/testing:555 remote0")
         self.client.run("remote list_pref Hello/0.1@user/testing")
-        self.assertIn("Hello/0.1@user/testing:555: remote0", self.client.user_io.out)
+        self.assertIn("Hello/0.1@user/testing:555: remote0", self.client.out)
 
         self.client.run("remote add_pref Hello1/0.1@user/testing:555 remote1")
         self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertIn("Hello1/0.1@user/testing:555: remote1", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:555: remote1", self.client.out)
 
         self.client.run("remote remove_pref Hello1/0.1@user/testing:555")
         self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertNotIn("Hello1/0.1@user/testing:555", self.client.user_io.out)
+        self.assertNotIn("Hello1/0.1@user/testing:555", self.client.out)
 
         self.client.run("remote add_pref Hello1/0.1@user/testing:555 remote0")
         self.client.run("remote add_pref Hello1/0.1@user/testing:666 remote1")
         self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertIn("Hello1/0.1@user/testing:555: remote0", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:555: remote0", self.client.out)
+        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.out)
 
         self.client.run("remote update_pref Hello1/0.1@user/testing:555 remote2")
         self.client.run("remote list_pref Hello1/0.1@user/testing")
-        self.assertIn("Hello1/0.1@user/testing:555: remote2", self.client.user_io.out)
-        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@user/testing:555: remote2", self.client.out)
+        self.assertIn("Hello1/0.1@user/testing:666: remote1", self.client.out)
 
     def missing_subarguments_test(self):
         self.client.run("remote", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+    def test_invalid_url(self):
+        self.client.run("remote add foobar foobar.com")
+        self.assertIn("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname.",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertIn("foobar.com", self.client.out)
+
+        self.client.run("remote update foobar pepe.org")
+        self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertIn("pepe.org", self.client.out)
+
+    def test_metadata_editable_packages(self):
+        """
+        Check that 'conan remote' commands work with editable packages
+        """
+        self.client.save({"conanfile.py": """from conans import ConanFile
+class Conan(ConanFile):
+    pass"""})
+        self.client.run("create . pkg/1.1@lasote/stable")
+        self.client.run("upload pkg/1.1@lasote/stable --all -c --remote remote1")
+        self.client.run("remove -f pkg/1.1@lasote/stable")
+        self.client.run("install pkg/1.1@lasote/stable")
+        self.assertIn("pkg/1.1@lasote/stable: Package installed", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertIn("pkg/1.1@lasote/stable: remote1", self.client.out)
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        # Check add --force, update and rename
+        self.client.run("remote add remote2 %s --force" % self.servers["remote1"].fake_url)
+        self.client.run("remote update remote2 %sfake" % self.servers["remote1"].fake_url)
+        self.client.run("remote rename remote2 remote-fake")
+        self.client.run("editable remove pkg/1.1@lasote/stable")
+        # Check associated remote has changed name
+        self.client.run("remote list_ref")
+        self.assertIn("pkg/1.1@lasote/stable: remote-fake", self.client.out)
+        # Check remove
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        self.client.run("remote remove remote-fake")
+        self.client.run("remote list")
+        self.assertIn("remote0: %s" % self.servers["remote0"].fake_url, self.client.out)
+        self.assertNotIn("remote-fake", self.client.out)
+        # Check clean
+        self.client.run("editable remove pkg/1.1@lasote/stable")
+        self.client.run("remove -f pkg/1.1@lasote/stable")
+        self.client.run("remote add remote1 %s" % self.servers["remote1"].fake_url)
+        self.client.run("install pkg/1.1@lasote/stable")
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertNotIn("remote0", self.client.out)

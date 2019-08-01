@@ -37,15 +37,16 @@ def print_graph(deps_graph, out):
             if node.recipe == RECIPE_EDITABLE:
                 from_text = "from user folder"
             else:
-                from_text = "from local cache" if not node.remote else "from '%s'" % node.remote.name
-            out.writeln("    %s %s - %s" % (repr(node.ref), from_text, node.recipe),
+                from_text = ("from local cache" if not node.remote
+                             else "from '%s'" % node.remote.name)
+            out.writeln("    %s %s - %s" % (str(node.ref), from_text, node.recipe),
                         Color.BRIGHT_CYAN)
 
     _recipes(requires)
     if python_requires:
         out.writeln("Python requires", Color.BRIGHT_YELLOW)
         for p in python_requires:
-            out.writeln("    %s" % repr(p), Color.BRIGHT_CYAN)
+            out.writeln("    %s" % repr(p.copy_clear_rev()), Color.BRIGHT_CYAN)
     out.writeln("Packages", Color.BRIGHT_YELLOW)
 
     def _packages(nodes):
@@ -57,7 +58,7 @@ def print_graph(deps_graph, out):
                 binary.remove(BINARY_SKIP)
             assert len(binary) == 1
             binary = binary.pop()
-            out.writeln("    %s - %s" % (repr(package_id), binary), Color.BRIGHT_CYAN)
+            out.writeln("    %s - %s" % (str(package_id), binary), Color.BRIGHT_CYAN)
     _packages(requires)
 
     if build_requires:

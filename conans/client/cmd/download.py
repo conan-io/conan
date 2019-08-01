@@ -1,6 +1,7 @@
 from conans.client.output import ScopedOutput
 from conans.client.source import complete_recipe_sources
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.errors import NotFoundException, RecipeNotFoundException
 
 
 def download(ref, package_ids, remote, recipe, remote_manager,
@@ -11,7 +12,11 @@ def download(ref, package_ids, remote, recipe, remote_manager,
 
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
-    ref = remote_manager.get_recipe(ref, remote)
+    try:
+        ref = remote_manager.get_recipe(ref, remote)
+    except NotFoundException:
+        raise RecipeNotFoundException(ref)
+
     with cache.package_layout(ref).update_metadata() as metadata:
         metadata.recipe.remote = remote.name
 
@@ -23,7 +28,7 @@ def download(ref, package_ids, remote, recipe, remote_manager,
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
-            output.info("Getting the complete package list from '%s'..." % ref.full_repr())
+            output.info("Getting the complete package list from '%s'..." % ref.full_str())
             packages_props = remote_manager.search_packages(remote, ref, None)
             package_ids = list(packages_props.keys())
             if not package_ids:
@@ -42,5 +47,6 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
     for package_id in package_ids:
         pref = PackageReference(ref, package_id)
         package_folder = cache.package_layout(pref.ref, short_paths=short_paths).package(pref)
-        output.info("Downloading %s" % str(pref))
+        if output and not output.is_terminal:
+            output.info("Downloading %s" % str(pref))
         remote_manager.get_package(pref, package_folder, remote, output, recorder)

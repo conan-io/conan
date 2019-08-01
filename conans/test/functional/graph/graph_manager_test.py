@@ -59,7 +59,7 @@ class TransitiveGraphTest(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         # No Revision??? Because of consumer?
-        self._check_node(app, "app/0.1@None/None", deps=[libb], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libb], build_deps=[], dependents=[],
                          closure=[libb, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
                          dependents=[app], closure=[liba])
@@ -84,7 +84,7 @@ class TransitiveGraphTest(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         # No Revision??? Because of consumer?
-        self._check_node(app, "app/0.1@None/None", deps=[libb, libc], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libb, libc], build_deps=[], dependents=[],
                          closure=[libb, libc, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
                          dependents=[app], closure=[liba])
@@ -119,7 +119,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[libe, libf], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libe, libf], build_deps=[], dependents=[],
                          closure=[libe, libf, libd, libb, libc, liba])
         self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
                          dependents=[app], closure=[libd, libb, libc, liba])
@@ -156,7 +156,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[libb, libc, libd], build_deps=[],
+        self._check_node(app, "app/0.1@", deps=[libb, libc, libd], build_deps=[],
                          dependents=[], closure=[libb, libc, libd, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
                          dependents=[app], closure=[liba])
@@ -189,7 +189,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[libb, libc, libd], build_deps=[],
+        self._check_node(app, "app/0.1@", deps=[libb, libc, libd], build_deps=[],
                          dependents=[], closure=[libb, libd, libc, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
                          dependents=[app], closure=[liba])
@@ -222,7 +222,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         self._check_node(libd, "libd/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[liba, libc], closure=[])
-        self._check_node(liba, "liba/0.1@None/None", deps=[libd, libc, libb], build_deps=[],
+        self._check_node(liba, "liba/0.1@", deps=[libd, libc, libb], build_deps=[],
                          dependents=[],
                          closure=[libb, libc, libd])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[libc], build_deps=[],
@@ -283,7 +283,7 @@ class TransitiveGraphTest(GraphManagerTest):
         app = deps_graph.root
         tool = app.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[], build_deps=[tool], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[], build_deps=[tool], dependents=[],
                          closure=[tool])
         self._check_node(tool, "tool/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[app], closure=[])
@@ -302,7 +302,7 @@ class TransitiveGraphTest(GraphManagerTest):
         lib = app.dependencies[0].dst
         tool = lib.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[lib], build_deps=[], dependents=[],
                          closure=[lib])
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[tool],
                          dependents=[app], closure=[tool])
@@ -317,6 +317,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref,
                            TestConanFile("lib", "0.1",
                                          build_requires=["tool/0.1@user/testing"]))
+
         with six.assertRaisesRegex(self, ConanException, "Loop detected: 'tool/0.1@user/testing' "
                                    "requires 'lib/0.1@user/testing'"):
             self.build_graph(TestConanFile("app", "0.1", requires=["lib/0.1@user/testing"]))
@@ -343,7 +344,7 @@ class TransitiveGraphTest(GraphManagerTest):
         mingw_lib = lib.dependencies[1].dst
         mingw_app = app.dependencies[1].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[mingw_app], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[lib], build_deps=[mingw_app], dependents=[],
                          closure=[mingw_app, lib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[mingw_lib, gtest],
@@ -395,7 +396,7 @@ class TransitiveGraphTest(GraphManagerTest):
         zlib = lib.dependencies[0].dst
         gtest = lib.dependencies[1].dst
         zlib2 = gtest.dependencies[0].dst
-        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[lib], build_deps=[], dependents=[],
                          closure=[lib, zlib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], build_deps=[gtest],
@@ -428,7 +429,7 @@ class TransitiveGraphTest(GraphManagerTest):
         gtest = lib.dependencies[1].dst
         zlib2 = gtest.dependencies[0].dst
         self.assertIs(zlib, zlib2)
-        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[lib], build_deps=[], dependents=[],
                          closure=[lib, zlib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], build_deps=[gtest],
@@ -485,7 +486,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[libe], build_deps=[libf], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libe], build_deps=[libf], dependents=[],
                          closure=[libf, libe, libd, libb, liba])
         self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
                          dependents=[app], closure=[libd, libb, liba])
@@ -528,7 +529,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[libe, libf], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libe, libf], build_deps=[], dependents=[],
                          closure=[libe, libf, libd, libb, liba], )
         self._check_node(libe, "libe/0.1@user/testing#123", deps=[libd], build_deps=[],
                          dependents=[app], closure=[libd, libb, liba])
@@ -567,7 +568,7 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[libb, libc], build_deps=[libd],
+        self._check_node(app, "app/0.1@", deps=[libb, libc], build_deps=[libd],
                          dependents=[], closure=[libd, libb, libc, liba])
         self._check_node(libb, "libb/0.1@user/testing#123", deps=[liba], build_deps=[],
                          dependents=[app], closure=[liba])
@@ -622,7 +623,7 @@ class TransitiveGraphTest(GraphManagerTest):
         tool = lib.dependencies[0].dst
         zlib = tool.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@None/None", deps=[lib], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[lib], build_deps=[], dependents=[],
                          closure=[lib])
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[tool],
@@ -683,7 +684,7 @@ class TransitiveGraphTest(GraphManagerTest):
         grass = gazelle.dependencies[0].dst
         grass2 = cheetah.dependencies[1].dst
 
-        self._check_node(cheetah, "cheetah/0.1@None/None", deps=[gazelle], build_deps=[grass2],
+        self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], build_deps=[grass2],
                          dependents=[], closure=[gazelle, grass])
         self.assertEqual(cheetah.conanfile.deps_cpp_info.libs,
                          ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
@@ -718,7 +719,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertIs(liba, liba2)
         self.assertFalse(liba.private)
 
-        self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libc], build_deps=[], dependents=[],
                          closure=[libc, libb, liba], )
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba], build_deps=[],
                          dependents=[app], closure=[libb, liba])
@@ -757,7 +758,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertTrue(liba1.private)
         self.assertTrue(liba2.private)
 
-        self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libc], build_deps=[], dependents=[],
                          closure=[libc, libb])
         closure = [liba2, libb] if private_first else [libb, liba2]
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb, liba2], build_deps=[],
@@ -789,7 +790,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertTrue(libb.private)
         self.assertFalse(libc.private)
 
-        self._check_node(app, "app/0.1@None/None", deps=[libc], build_deps=[], dependents=[],
+        self._check_node(app, "app/0.1@", deps=[libc], build_deps=[], dependents=[],
                          closure=[libc])
         self._check_node(libc, "libc/0.1@user/testing#123", deps=[libb], build_deps=[],
                          dependents=[app], closure=[libb])

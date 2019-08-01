@@ -26,25 +26,25 @@ class PythonDiamondTest(unittest.TestCase):
         self.client.save(files3, clean_first=True)
 
         self.client.run("install .")
-        self.assertIn("Hello1/0.1@lasote/stable: Build stuff Hello0", self.client.user_io.out)
-        self.assertIn("Hello2/0.1@lasote/stable: Build stuff Hello0", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Build stuff Hello0", self.client.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Build stuff Hello0", self.client.out)
 
         self.assertIn(" ".join(["Hello3/0.1@lasote/stable: Build stuff Hello1",
                                 "Hello3/0.1@lasote/stable: Build stuff Hello0",
                                 "Hello3/0.1@lasote/stable: Build stuff Hello2",
                                 "Hello3/0.1@lasote/stable: Build stuff Hello0"]),
-                      " ".join(str(self.client.user_io.out).splitlines()))
-        self.assertNotIn("Project: Build stuff Hello3", self.client.user_io.out)
+                      " ".join(str(self.client.out).splitlines()))
+        self.assertNotIn("Project: Build stuff Hello3", self.client.out)
 
         self.client.run("build .")
-        self.assertIn("conanfile.py (Hello4/0.1@None/None): Build stuff Hello3",
+        self.assertIn("conanfile.py (Hello4/0.1): Build stuff Hello3",
                       self.client.out)
 
         if platform.system() == "Windows":
             command = "activate && python main.py"
         else:
             command = 'bash -c "source activate.sh && python main.py"'
-        self.client.runner(command, cwd=self.client.current_folder)
+        self.client.run_command(command)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
-                         str(self.client.user_io.out).splitlines()[-6:])
+                         str(self.client.out).splitlines()[-6:])

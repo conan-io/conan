@@ -1,16 +1,15 @@
 # coding=utf-8
 
 import os
-import tempfile
 import textwrap
 import unittest
 
 from parameterized import parameterized
 
 from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
-from conans.test import CONAN_TEST_FOLDER
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
+from conans.test.utils.test_files import temp_folder
 
 
 class HeaderOnlyLibTestClient(TestClient):
@@ -87,19 +86,19 @@ class EditableReferenceTest(unittest.TestCase):
     @parameterized.expand([(False, True), (True, False), (True, True), (False, False)])
     def test_header_only(self, use_repo_file, use_cache_file):
         # We need two clients sharing the same Conan cache
-        base_folder = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        cache_folder = temp_folder()
 
         # Editable project
         client_editable = HeaderOnlyLibTestClient(use_repo_file=use_repo_file,
                                                   use_cache_file=use_cache_file,
-                                                  base_folder=base_folder)
+                                                  cache_folder=cache_folder)
         if use_repo_file:
             client_editable.run("editable add . MyLib/0.1@user/editable --layout=mylayout")
         else:
             client_editable.run("editable add . MyLib/0.1@user/editable")
 
         # Consumer project
-        client = TestClient(base_folder=base_folder)
+        client = TestClient(cache_folder=cache_folder)
         conanfile_py = """
 import os
 from conans import ConanFile, CMake

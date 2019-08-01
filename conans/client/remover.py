@@ -143,10 +143,8 @@ class ConanRemover(object):
         if remote_name and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        try:
-            input_ref = ConanFileReference.loads(pattern)
-        except (ConanException, TypeError):
-            input_ref = None
+        is_reference = check_valid_ref(pattern, strict_mode=True)
+        input_ref = ConanFileReference.loads(pattern) if is_reference else None
 
         if not input_ref and packages_query is not None:
             raise ConanException("query parameter only allowed with a valid recipe "
@@ -168,7 +166,7 @@ class ConanRemover(object):
             else:
                 refs = self._remote_manager.search_recipes(remote, pattern)
         else:
-            if input_ref and check_valid_ref(input_ref, allow_pattern=False):
+            if input_ref:
                 refs = []
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))
@@ -211,7 +209,7 @@ class ConanRemover(object):
                     package_ids = list(packages.keys())
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
-                                           % ref.full_repr())
+                                           % ref.full_str())
                     continue
 
             if self._ask_permission(ref, src, build_ids, package_ids, force):

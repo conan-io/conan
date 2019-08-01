@@ -10,7 +10,8 @@ from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
 from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
-from conans.util.files import (clean_dirty, is_dirty, load, mkdir, rmdir, set_dirty, walk)
+from conans.util.files import (set_dirty, is_dirty, load, mkdir, rmdir, set_dirty_context_manager,
+                               walk)
 
 
 def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
@@ -143,18 +144,18 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
         remove_source()
 
     if not os.path.exists(src_folder):  # No source folder, need to get it
-        set_dirty(src_folder)
-        mkdir(src_folder)
+        with set_dirty_context_manager(src_folder):
+            mkdir(src_folder)
 
-        def get_sources_from_exports():
-            # so self exported files have precedence over python_requires ones
-            merge_directories(export_folder, src_folder)
-            # Now move the export-sources to the right location
-            merge_directories(export_source_folder, src_folder)
+            def get_sources_from_exports():
+                # so self exported files have precedence over python_requires ones
+                merge_directories(export_folder, src_folder)
+                # Now move the export-sources to the right location
+                merge_directories(export_source_folder, src_folder)
 
-        _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                    cache, local_sources_path, get_sources_from_exports=get_sources_from_exports)
-        clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
+            _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
+                        cache, local_sources_path,
+                        get_sources_from_exports=get_sources_from_exports)
 
 
 def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache,
@@ -214,7 +215,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
     if not scm_data:
         return
 
-    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
+    dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
     if cache:
         # When in cache, capturing the sources from user space is done only if exists
         if not local_sources_path or not os.path.exists(local_sources_path):

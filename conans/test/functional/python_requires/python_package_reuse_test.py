@@ -131,19 +131,19 @@ class ToolsTest(ConanFile):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("install .")
-        self.assertNotIn("Hello Bar", client.user_io.out)  # IMPORTANT!! WTF? Why this test was passing? Why I'm missing?
-        self.assertNotIn("Hello Foo", client.user_io.out)
+        self.assertNotIn("Hello Bar", client.out)  # IMPORTANT!! WTF? Why this test was passing? Why I'm missing?
+        self.assertNotIn("Hello Foo", client.out)
         client.run("build .")
-        self.assertNotIn("Hello Bar", client.user_io.out)
-        self.assertIn("Hello Foo", client.user_io.out)
+        self.assertNotIn("Hello Bar", client.out)
+        self.assertIn("Hello Foo", client.out)
 
         client.run("package . -pf=mypkg")
-        self.assertNotIn("Hello Bar", client.user_io.out)
-        self.assertIn("Hello Boom", client.user_io.out)
+        self.assertNotIn("Hello Bar", client.out)
+        self.assertIn("Hello Boom", client.out)
 
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
-        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+        lines = [line.split(":")[1] for line in str(client.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
@@ -161,7 +161,7 @@ class ToolsTest(ConanFile):
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
-        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+        lines = [line.split(":")[1] for line in str(client.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
@@ -169,10 +169,10 @@ class ToolsTest(ConanFile):
         client.run("upload conantool/1.0@lasote/stable --all")
         client.run("remove * -f")
         client.run("search")
-        self.assertNotIn("lasote/stable", client.user_io.out)
+        self.assertNotIn("lasote/stable", client.out)
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
-        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+        lines = [line.split(":")[1] for line in str(client.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
@@ -190,7 +190,7 @@ class ToolsTest(ConanFile):
         client.run("export . lasote/stable")
         self.assertNotIn("Unable to import 'mytest'", client.out)
         client.run("install Consumer/0.1@lasote/stable --build")
-        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+        lines = [line.split(":")[1] for line in str(client.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
@@ -203,7 +203,7 @@ class ToolsTest(ConanFile):
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
-        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+        lines = [line.split(":")[1] for line in str(client.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
@@ -216,10 +216,10 @@ class ToolsTest(ConanFile):
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("install .")
         client.run("source .")
-        self.assertIn("Hello Baz", client.user_io.out)
-        self.assertNotIn("Hello Foo", client.user_io.out)
-        self.assertNotIn("Hello Bar", client.user_io.out)
-        self.assertNotIn("Hello Boom", client.user_io.out)
+        self.assertIn("Hello Baz", client.out)
+        self.assertNotIn("Hello Foo", client.out)
+        self.assertNotIn("Hello Bar", client.out)
+        self.assertNotIn("Hello Boom", client.out)
 
     def errors_test(self):
         client = TestClient()
@@ -233,7 +233,7 @@ class ToolsTest(ConanFile):
         client.run("source .", assert_error=True)
         # Output in py3 is different, uses single quote
         # Now it works automatically without the env generator file
-        self.assertIn("No module named mytest", str(client.user_io.out).replace("'", ""))
+        self.assertIn("No module named mytest", str(client.out).replace("'", ""))
 
     def pythonpath_env_injection_test(self):
 

@@ -48,7 +48,7 @@ class Pkg(ConanFile):
         client.current_folder = build_folder
 
         client.run("source ..", assert_error=True)
-        self.assertIn("'settings.build_type' doesn't exist", client.user_io.out)
+        self.assertIn("'settings.build_type' doesn't exist", client.out)
         # This doesn't fail, it doesn't access build_type
         client.run("install ..")
         client.run("build ..")
