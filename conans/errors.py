@@ -9,8 +9,18 @@
 
 """
 from contextlib import contextmanager
+from subprocess import CalledProcessError
 
 from conans.util.env_reader import get_env
+from conans.util.files import decode_text
+
+
+class CalledProcessErrorWithStderr(CalledProcessError):
+    def __str__(self):
+        ret = super(CalledProcessErrorWithStderr, self).__str__()
+        if self.output:
+            ret += "\n" + decode_text(self.output)
+        return ret
 
 
 @contextmanager
@@ -185,7 +195,7 @@ class RecipeNotFoundException(NotFoundException):
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_repr() if self.print_rev else str(self.ref)
+        tmp = self.ref.full_str() if self.print_rev else str(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
@@ -201,7 +211,7 @@ class PackageNotFoundException(NotFoundException):
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.pref.full_repr() if self.print_rev else str(self.pref)
+        tmp = self.pref.full_str() if self.print_rev else str(self.pref)
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 

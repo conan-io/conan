@@ -106,8 +106,8 @@ class Pkg(ConanFile):
         client.run("inspect . -a=revision_mode")
         self.assertIn("revision_mode: hash", client.out)
 
-        client.run("inspect . -a=unexisting_attr", assert_error=True)
-        self.assertIn("ERROR: 'Pkg' object has no attribute 'unexisting_attr'", client.out)
+        client.run("inspect . -a=unexisting_attr")
+        self.assertIn("unexisting_attr:", client.out)
 
     def options_test(self):
         client = TestClient()
@@ -378,8 +378,8 @@ class InspectRawTest(unittest.TestCase):
     def test_invalid_field(self):
         client = TestClient()
         client.save({"conanfile.py": self.conanfile})
-        client.run("inspect . --raw=not_exists", assert_error=True)
-        self.assertIn("ERROR: 'Pkg' object has no attribute 'not_exists'", client.out)
+        client.run("inspect . --raw=not_exists")
+        self.assertEqual("", client.out)
 
     def test_private_field(self):
         client = TestClient()

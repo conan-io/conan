@@ -9,7 +9,9 @@ import sys
 import tarfile
 import tempfile
 
+
 from os.path import abspath, join as joinpath, realpath
+from contextlib import contextmanager
 
 import six
 
@@ -55,7 +57,31 @@ def is_dirty(folder):
     return os.path.exists(dirty_file)
 
 
+@contextmanager
+def set_dirty_context_manager(folder):
+    set_dirty(folder)
+    yield
+    clean_dirty(folder)
+
+
 def decode_text(text):
+    import codecs
+    encodings = {codecs.BOM_UTF8: "utf_8_sig",
+                 codecs.BOM_UTF16_BE: "utf_16_be",
+                 codecs.BOM_UTF16_LE: "utf_16_le",
+                 codecs.BOM_UTF32_BE: "utf_32_be",
+                 codecs.BOM_UTF32_LE: "utf_32_le",
+                 b'\x2b\x2f\x76\x38': "utf_7",
+                 b'\x2b\x2f\x76\x39': "utf_7",
+                 b'\x2b\x2f\x76\x2b': "utf_7",
+                 b'\x2b\x2f\x76\x2f': "utf_7",
+                 b'\x2b\x2f\x76\x38\x2d': "utf_7"}
+    for bom in sorted(encodings, key=len, reverse=True):
+        if text.startswith(bom):
+            try:
+                return text[len(bom):].decode(encodings[bom])
+            except UnicodeDecodeError:
+                continue
     decoders = ["utf-8", "Windows-1252"]
     for decoder in decoders:
         try:

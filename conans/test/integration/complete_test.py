@@ -63,11 +63,11 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s" % str(ref))
-        self.assertIn("Compressing recipe", str(self.client.user_io.out))
+        self.assertIn("Compressing recipe", str(self.client.out))
 
         # Not needed to tgz again
         self.client.run("upload %s" % str(ref))
-        self.assertNotIn("Compressing exported", str(self.client.user_io.out))
+        self.assertNotIn("Compressing exported", str(self.client.out))
 
         # Check that recipe exists on server
         server_paths = self.servers["default"].server_store
@@ -77,17 +77,17 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertIn("Compressing package", str(self.client.user_io.out))
+        self.assertIn("Compressing package", str(self.client.out))
 
         # Not needed to tgz again
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertNotIn("Compressing package", str(self.client.out))
 
         # If we install the package again will be removed and re tgz
         self.client.run("install %s" % str(ref))
         # Upload package
         self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertNotIn("Compressing package", str(self.client.out))
 
         # Check library on server
         self._assert_library_exists_in_server(pref, server_paths)
@@ -116,18 +116,18 @@ class CompleteFlowTest(unittest.TestCase):
         client3.run('install .')
         client3.run('build .')
         command = os.sep.join([".", "bin", "say_hello"])
-        client3.runner(command, cwd=client3.current_folder)
-        self.assertIn("Hello Hello1", client3.user_io.out)
-        self.assertIn("Hello Hello0", client3.user_io.out)
+        client3.run_command(command)
+        self.assertIn("Hello Hello1", client3.out)
+        self.assertIn("Hello Hello0", client3.out)
 
         client3.run('install . -o language=1 --build missing')
         time.sleep(1)
         client3.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client3.runner(command, cwd=client3.current_folder)
-        self.assertIn("Hola Hello1", client3.user_io.out)
-        self.assertIn("Hola Hello0", client3.user_io.out)
+        client3.run_command(command)
+        self.assertIn("Hola Hello1", client3.out)
+        self.assertIn("Hola Hello0", client3.out)
 
     def _assert_library_exists(self, pref, paths):
         package_path = paths.package_layout(pref.ref).package(pref)

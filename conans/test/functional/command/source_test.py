@@ -22,7 +22,7 @@ class ScmtestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.runner("git init .", cwd=client.current_folder)
+        client.run_command("git init .")
         client.run("source .")
         self.assertEqual(sorted(["conanfile.py", '.git']),
                          sorted(os.listdir(client.current_folder)))
@@ -142,8 +142,8 @@ class ConanLib(ConanFile):
         os.mkdir(subdir)
         client.run("install . --install-folder subdir")
         client.run("source . --install-folder subdir --source-folder subdir")
-        self.assertIn("conanfile.py (Hello/0.1@None/None): Configuring sources", client.user_io.out)
-        self.assertIn("conanfile.py (Hello/0.1@None/None): cwd=>%s" % subdir, client.user_io.out)
+        self.assertIn("conanfile.py (Hello/0.1): Configuring sources", client.out)
+        self.assertIn("conanfile.py (Hello/0.1): cwd=>%s" % subdir, client.out)
 
     def local_source_src_not_exist_test(self):
         conanfile = '''
@@ -270,12 +270,12 @@ class ConanLib(ConanFile):
                      BUILD_INFO: ""})
 
         client.run("source .", assert_error=True)
-        self.assertIn("conanfile.py: Running source!", client.user_io.out)
-        self.assertIn("ERROR: conanfile.py: Error in source() method, line 9", client.user_io.out)
+        self.assertIn("conanfile.py: Running source!", client.out)
+        self.assertIn("ERROR: conanfile.py: Error in source() method, line 9", client.out)
 
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
-        self.assertIn("conanfile.py: Configuring sources in", client.user_io.out)
-        self.assertIn("conanfile.py: Running source!", client.user_io.out)
+        self.assertIn("conanfile.py: Configuring sources in", client.out)
+        self.assertIn("conanfile.py: Running source!", client.out)
         self.assertEqual("Hello World", load(os.path.join(client.current_folder, "file1.txt")))

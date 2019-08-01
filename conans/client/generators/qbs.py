@@ -40,7 +40,7 @@ class QbsGenerator(Generator):
                     '            cpp.systemIncludePaths: [{deps.bin_paths}]\n'
                     '            cpp.dynamicLibraries: [{deps.libs}]\n'
                     '            cpp.defines: [{deps.defines}]\n'
-                    '            cpp.cppFlags: [{deps.cxxflags}]\n'  # TODO: cppFlags -> cxxFlags?
+                    '            cpp.cxxFlags: [{deps.cxxflags}]\n'
                     '            cpp.cFlags: [{deps.cflags}]\n'
                     '            cpp.linkerFlags: [{deps.linkerFlags}]\n'
                     '        }}\n'

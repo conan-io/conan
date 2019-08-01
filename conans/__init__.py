@@ -19,4 +19,4 @@ ONLY_V2 = "only_v2"  # Remotes and virtuals from Artifactory returns this capabi
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always with revisions
 DEFAULT_REVISION_V1 = "0"
 
-__version__ = '1.17.0-dev'
+__version__ = '1.19.0-dev'

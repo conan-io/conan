@@ -17,7 +17,7 @@ class NewTest(unittest.TestCase):
                 name = "{{name}}"
                 version = "{{version}}"
         """)
-        save(os.path.join(client.base_folder, "templates/mytemplate.py"), template1)
+        save(os.path.join(client.cache_folder, "templates/mytemplate.py"), template1)
         client.run("new hello/0.1 --template=mytemplate.py")
         conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
         self.assertIn("class HelloConan(ConanFile):", conanfile)
@@ -30,7 +30,8 @@ class NewTest(unittest.TestCase):
             class {{package_name}}Conan(ConanFile):
                 version = "fixed"
         """)
-        save(os.path.join(client.base_folder, "templates", "subfolder", "mytemplate.py"), template2)
+        save(os.path.join(client.cache_folder, "templates", "subfolder", "mytemplate.py"),
+             template2)
         client.run("new hello/0.1 -m=subfolder/mytemplate.py")
         conanfile = load(os.path.join(client.current_folder, "conanfile.py"))
         self.assertIn("class HelloConan(ConanFile):", conanfile)
@@ -73,7 +74,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_error_test(self):
         """ packages with short name
@@ -81,10 +82,10 @@ class NewTest(unittest.TestCase):
         client = TestClient()
         client.run('new A/1.3@myuser/testing', assert_error=True)
         self.assertIn("ERROR: Value provided for package name, 'A' (type str), is too short. Valid "
-                      "names must contain at least 2 characters.", client.user_io.out)
+                      "names must contain at least 2 characters.", client.out)
         client.run('new A2/1.3@myuser/u', assert_error=True)
         self.assertIn("ERROR: Value provided for channel, 'u' (type str), is too short. Valid "
-                      "names must contain at least 2 characters.", client.user_io.out)
+                      "names must contain at least 2 characters.", client.out)
 
     def new_dash_test(self):
         """ packages with dash
@@ -102,7 +103,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("My-Package/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("My-Package/1.3@myuser/testing", client.out)
 
     def new_header_test(self):
         client = TestClient()
@@ -120,7 +121,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_sources_test(self):
         client = TestClient()
@@ -137,7 +138,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_purec_test(self):
         client = TestClient()
@@ -153,7 +154,7 @@ class NewTest(unittest.TestCase):
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
-        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+        self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
     def new_without_test(self):
         client = TestClient()

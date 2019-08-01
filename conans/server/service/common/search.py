@@ -105,7 +105,7 @@ class SearchService(object):
             ret = set()
             for subdir in subdirs:
                 new_ref = ConanFileReference(*subdir.split("/"))
-                if _partial_match(b_pattern, new_ref.full_repr()):
+                if _partial_match(b_pattern, repr(new_ref)):
                     ret.add(new_ref.copy_clear_rev())
 
             return sorted(ret)

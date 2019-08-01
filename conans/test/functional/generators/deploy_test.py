@@ -24,7 +24,7 @@ class DeployGeneratorTest(unittest.TestCase):
         ref = ConanFileReference("name", "version", "user", "channel")
         self.client.create(ref, conanfile)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % ref.full_repr())
+        self.client.run("install %s -g deploy" % ref.full_str())
 
     def deploy_folder_path_test(self):
         base_path = os.path.join(self.client.current_folder, "name")
@@ -84,7 +84,7 @@ class DeployGeneratorGraphTest(unittest.TestCase):
         self.client.create(ref1, conanfile1)
         self.client.create(ref2, conanfile2)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % ref2.full_repr())
+        self.client.run("install %s -g deploy" % ref2.full_str())
 
     def get_expected_paths(self):
         base1_path = os.path.join(self.client.current_folder, "name1")
@@ -133,7 +133,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
         os.chmod(self.header_path, stat_info.st_mode | stat.S_IXUSR)
         self.client.current_folder = temp_folder()
-        self.client.run("install %s -g deploy" % self.ref1.full_repr())
+        self.client.run("install %s -g deploy" % self.ref1.full_str())
         base1_path = os.path.join(self.client.current_folder, "name1")
         header1_path = os.path.join(base1_path, "include", "header1.h")
         stat_info = os.stat(header1_path)
