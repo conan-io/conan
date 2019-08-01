@@ -143,13 +143,17 @@ class Printer(object):
                 if all_remotes_search:
                     self._out.highlight("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
-                    self._print_colored_line(str(conan_item["recipe"]["id"]), indent=0)
+                    reference = conan_item["recipe"]["id"]
+                    ref = ConanFileReference.loads(reference)
+                    self._print_colored_line(ref.full_str(), indent=0)
         else:
             for remote_info in search_info:
                 if all_remotes_search:
                     self._out.writeln("Remote '%s':" % str(remote_info["remote"]))
                 for conan_item in remote_info["items"]:
-                    self._out.writeln(str(conan_item["recipe"]["id"]))
+                    reference = conan_item["recipe"]["id"]
+                    ref = ConanFileReference.loads(reference)
+                    self._out.writeln(ref.full_str())
 
     def print_search_packages(self, search_info, ref, packages_query,
                               outdated=False):

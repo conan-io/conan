@@ -130,7 +130,7 @@ class AConan(ConanFile):
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
-                      % package_folder, client.user_io.out)
+                      % package_folder, client.out)
 
     def build_different_folders_test(self):
         conanfile = """
@@ -373,5 +373,5 @@ class BarConan(ConanFile):
         client.run("install . -s MyPkg:build_type=Debug -s build_type=Release")
         self.assertIn("Dep/0.1@user/testing: PACKAGE_INFO: Dep BuildType=Release!", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (MyPkg/None@None/None): BUILD: MyPkg BuildType=Debug!",
+        self.assertIn("conanfile.py (MyPkg/None): BUILD: MyPkg BuildType=Debug!",
                       client.out)

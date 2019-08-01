@@ -2,6 +2,7 @@ import os
 
 from conans.client.cmd.test import PackageTester
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 
 
 def get_test_conanfile_path(tf, conanfile_path):
@@ -24,15 +25,16 @@ def get_test_conanfile_path(tf, conanfile_path):
                                  % tf)
 
 
-def create(reference, manager, user_io, graph_info, remotes, update, build_modes,
+def create(ref, manager, user_io, graph_info, remotes, update, build_modes,
            manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
            test_folder, conanfile_path):
 
+    assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:
         pt = PackageTester(manager, user_io)
-        pt.install_build_and_test(test_conanfile_path, reference, graph_info, remotes, update,
+        pt.install_build_and_test(test_conanfile_path, ref, graph_info, remotes, update,
                                   build_modes=build_modes,
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
@@ -40,8 +42,8 @@ def create(reference, manager, user_io, graph_info, remotes, update, build_modes
                                   keep_build=keep_build,
                                   test_build_folder=test_build_folder)
     else:
-        manager.install(ref_or_path=reference,
-                        create_reference=reference,
+        manager.install(ref_or_path=ref,
+                        create_reference=ref,
                         install_folder=None,  # Not output anything
                         manifest_folder=manifest_folder,
                         manifest_verify=manifest_verify,

@@ -30,15 +30,15 @@ class RegistryTest(unittest.TestCase):
                          [("conan.io", "https://server.conan.io", True)])
 
     def to_json_migration_test(self):
-        tmp = temp_folder()
-        f = os.path.join(tmp, "registry.txt")
+        cache_folder = temp_folder()
+        f = os.path.join(cache_folder, "registry.txt")
         save(f, """conan.io https://server.conan.io True
 
 lib/1.0@conan/stable conan.io
 other/1.0@lasote/testing conan.io
 """)
-        client = TestClient(base_folder=tmp, servers=False)
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        client = TestClient(cache_folder=cache_folder, servers=False)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client.run("remote list")
         self.assertIn("conan.io: https://server.conan.io", client.out)
@@ -127,3 +127,23 @@ other/1.0@lasote/testing conan.io
                          Remote("repo2", "url2", True),
                          Remote("conan.io", "https://server.conan.io", True),
                          Remote("repo3", "url3", True)])
+
+    def test_remote_none(self):
+        """ RemoteRegistry should be able to deal when the URL is None
+        """
+        f = os.path.join(temp_folder(), "add_none_test")
+        Remotes().save(f)
+        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        registry = cache.registry
+
+        registry.add("foobar", None)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True),
+                          ("foobar", None, True)])
+        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
+        registry.remove("foobar")
+
+        registry.update("conan-center", None)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", None, True)])
+        self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)

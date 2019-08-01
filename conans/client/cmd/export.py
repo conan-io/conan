@@ -26,7 +26,7 @@ from conans import ConanFile
 class AliasConanfile(ConanFile):
     alias = "%s"
     revision_mode = "%s"
-""" % (target_ref.full_repr(), revision_mode)
+""" % (target_ref.full_str(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
     digest = FileTreeManifest.create(package_layout.export())
@@ -49,14 +49,38 @@ def check_casing_conflict(cache, ref):
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisions_enabled,
-               output, hook_manager, loader, cache, export=True):
+               output, hook_manager, loader, cache, export=True, graph_lock=None):
+
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
-    ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                             conanfile.channel)
+
+    # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
+    # Take the default from the env vars if they exist to not break behavior
+    try:
+        user = conanfile.user
+    except ConanException:
+        user = None
+
+    try:
+        channel = conanfile.channel
+    except ConanException:
+        channel = None
+
+    ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+
+    # If we receive lock information, python_requires could have been locked
+    if graph_lock:
+        node_id = graph_lock.get_node(ref)
+        python_requires = graph_lock.python_requires(node_id)
+        # TODO: check that the locked python_requires are different from the loaded ones
+        # FIXME: private access, will be improved when api collaborators are improved
+        loader._python_requires._range_resolver.output  # invalidate previous version range output
+        conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
+                                       conanfile.user, conanfile.channel, python_requires)
+
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
 
@@ -64,6 +88,8 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
         ref = ref.copy_with_rev(recipe_revision)
+        if graph_lock:
+            graph_lock.update_exported_ref(node_id, ref)
         return ref
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
@@ -146,6 +172,9 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
             remover.remove_packages(package_layout, ids_filter=to_remove)
 
     ref = ref.copy_with_rev(revision)
+    output.info("Exported revision: %s" % revision)
+    if graph_lock:
+        graph_lock.update_exported_ref(node_id, ref)
     return ref
 
 

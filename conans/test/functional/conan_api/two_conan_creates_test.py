@@ -1,11 +1,9 @@
 import os
 import platform
-import sys
 import unittest
-
-from six import StringIO
 from textwrap import dedent
 
+from conans.client.cache.cache import ClientCache
 from conans.client.conan_api import ConanAPIV1
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import chdir
@@ -27,12 +25,13 @@ class ConanCreateTest(unittest.TestCase):
         tmp = temp_folder()
         with environment_append({"CONAN_USER_HOME": tmp}):
             with chdir(tmp):
-                api, cache, _ = ConanAPIV1.factory()
+                api = ConanAPIV1(output=TestBufferConanOutput())
                 api.new(name="lib/1.0@conan/stable", bare=True)
 
                 def get_conaninfo(info):
                     package_id = info["installed"][0]["packages"][0]["id"]
                     pref = PackageReference.loads("lib/1.0@conan/stable:%s" % package_id)
+                    cache = ClientCache(api.cache_folder, TestBufferConanOutput())
                     folder = cache.package_layout(pref.ref).package(pref)
                     return load(os.path.join(folder, "conaninfo.txt"))
 
@@ -48,24 +47,18 @@ class ConanCreateTest(unittest.TestCase):
         tmp = temp_folder()
         with environment_append({"CONAN_USER_HOME": tmp}):
             with chdir(tmp):
-                try:
-                    old_stdout = sys.stdout
-                    result = StringIO()
-                    sys.stdout = result
-                    sys.stderr = sys.stdout
-                    api, _, _ = ConanAPIV1.factory()
-                    api._user_io.out = TestBufferConanOutput()
-                    conanfile = dedent("""
-                        from conans import ConanFile
-                        class Pkg(ConanFile):
-                            def build(self):
-                                self.output.info("NUMBER 42!!")
-                        """)
-                    save("conanfile.py", conanfile)
-                    api.create(".", "pkg", "version", "user", "channel")
-                    self.assertIn("pkg/version@user/channel: NUMBER 42!!", result.getvalue())
-                    save("conanfile.py", conanfile.replace("42", "123"))
-                    api.create(".", "pkg", "version", "user", "channel")
-                    self.assertIn("pkg/version@user/channel: NUMBER 123!!", result.getvalue())
-                finally:
-                    sys.stdout = old_stdout
+                output = TestBufferConanOutput()
+                api = ConanAPIV1(output=output)
+
+                conanfile = dedent("""
+                    from conans import ConanFile
+                    class Pkg(ConanFile):
+                        def build(self):
+                            self.output.info("NUMBER 42!!")
+                    """)
+                save("conanfile.py", conanfile)
+                api.create(".", "pkg", "version", "user", "channel")
+                self.assertIn("pkg/version@user/channel: NUMBER 42!!", output)
+                save("conanfile.py", conanfile.replace("42", "123"))
+                api.create(".", "pkg", "version", "user", "channel")
+                self.assertIn("pkg/version@user/channel: NUMBER 123!!", output)

@@ -118,7 +118,7 @@ class CustomGeneratorTest(unittest.TestCase):
         client.run("install . --build")
         self.assertIn("Generator MyCustomMultiGenerator is multifile. "
                       "Property 'filename' not used",
-                      client.user_io.out)
+                      client.out)
         for i in (1, 2):
             generated = load(os.path.join(client.current_folder, "file%d.gen" % i))
             self.assertEqual(generated, "CustomContent%d" % i)

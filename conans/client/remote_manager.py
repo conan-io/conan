@@ -1,8 +1,8 @@
 import os
-import traceback
-
 import shutil
 import time
+import traceback
+
 from requests.exceptions import ConnectionError
 
 from conans import DEFAULT_REVISION_V1

@@ -4,11 +4,13 @@ import platform
 import subprocess
 import sys
 import tempfile
-from subprocess import CalledProcessError, PIPE
+from subprocess import PIPE
+
 import six
+
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException
+from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
 
@@ -489,17 +491,20 @@ def get_gnu_triplet(os_, arch, compiler=None):
 def check_output(cmd, folder=None, return_code=False, stderr=None):
     tmp_file = tempfile.mktemp()
     try:
+        # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or PIPE
         cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
         process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
                                    stderr=stderr, cwd=folder)
-        process.communicate()
+
+        _, stderr = process.communicate()
 
         if return_code:
             return process.returncode
 
         if process.returncode:
-            raise CalledProcessError(process.returncode, cmd)
+            # Only in case of error, we print also the stderr to know what happened
+            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
 
         output = load(tmp_file)
         return output

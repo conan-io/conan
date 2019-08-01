@@ -32,7 +32,7 @@ class ConanManager(object):
     def install(self, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, create_reference=None,
-                keep_build=False):
+                keep_build=False, use_lock=False):
         """ Fetch and build all dependencies for the given reference
         @param ref_or_path: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -77,7 +77,10 @@ class ConanManager(object):
         installer = BinaryInstaller(self._cache, self._user_io.out, self._remote_manager,
                                     recorder=self._recorder,
                                     hook_manager=self._hook_manager)
+
         installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
+        if graph_info.graph_lock:
+            graph_info.graph_lock.update_check_graph(deps_graph, self._user_io.out)
 
         if manifest_folder:
             manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
@@ -100,7 +103,7 @@ class ConanManager(object):
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
-            if not isinstance(ref_or_path, ConanFileReference):
+            if not isinstance(ref_or_path, ConanFileReference) or use_lock:
                 # Write conaninfo
                 content = normalize(conanfile.info.dumps())
                 save(os.path.join(install_folder, CONANINFO), content)

@@ -22,13 +22,11 @@ class ClientCertsTest(unittest.TestCase):
 
         config = client.cache.config
         tools.save(config.client_cert_path, "Fake cert")
-        client.init_dynamic_vars()
 
         self.assertEqual(client.requester.get("url"), client.cache.config.client_cert_path)
 
         tools.save(config.client_cert_path, "Fake cert")
         tools.save(config.client_cert_key_path, "Fake key")
-        client.init_dynamic_vars()
         self.assertEqual(client.requester.get("url"), (config.client_cert_path,
                                                        config.client_cert_key_path))
 

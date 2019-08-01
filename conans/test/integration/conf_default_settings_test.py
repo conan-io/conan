@@ -39,9 +39,9 @@ os=Windows
         save(client.cache.default_profile_path, default_profile)
         client.save({CONANFILE_TXT: ""})
         client.run("install Any/0.2@user/channel", assert_error=True)
-        self.assertIn("'42' is not a valid 'settings.compiler.version' value", client.user_io.out)
+        self.assertIn("'42' is not a valid 'settings.compiler.version' value", client.out)
         client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
-        self.assertNotIn("'42' is not a valid 'settings.compiler.version' value", client.user_io.out)
+        self.assertNotIn("'42' is not a valid 'settings.compiler.version' value", client.out)
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "14"}):
             client.run('install .')
