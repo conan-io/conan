@@ -82,6 +82,7 @@ class SmartFormatter(argparse.HelpFormatter):
 
 
 _QUERY_EXAMPLE = ("os=Windows AND (arch=x86 OR compiler=gcc)")
+_QUERY_CUSTOM_EXAMPLE = ("setting:libc=glibc AND option:arch=native")
 _PATTERN_EXAMPLE = ("boost/*")
 _REFERENCE_EXAMPLE = ("MyPackage/1.2@user/channel")
 _PREF_EXAMPLE = ("MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17b137")
@@ -101,7 +102,8 @@ _REF_OR_PREF_HELP = ("Recipe reference or package reference e.g., '%s', "
 _PATH_HELP = ("Path to a folder containing a conanfile.py or to a recipe file "
               "e.g., my_folder/conanfile.py")
 _QUERY_HELP = ("Packages query: '%s'. The 'pattern_or_reference' parameter has "
-               "to be a reference: %s" % (_QUERY_EXAMPLE, _REFERENCE_EXAMPLE))
+               "to be a reference: %s. Use the prefixes option: and setting: for custom "
+               "properties: '%s'." % (_QUERY_EXAMPLE, _REFERENCE_EXAMPLE, _QUERY_CUSTOM_EXAMPLE))
 _SOURCE_FOLDER_HELP = ("Directory containing the sources. Defaulted to the conanfile's directory. A"
                        " relative path to current directory can also be specified")
 
