@@ -154,19 +154,20 @@ class Git(SCMBase):
 
     def checkout_submodules(self, submodule=None):
         """Do the checkout only for submodules"""
-        if submodule:
-            if submodule == "shallow":
-                output = self.run("submodule sync")
-                output += self.run("submodule update --init")
-                return output
-            elif submodule == "recursive":
-                output = self.run("submodule sync --recursive")
-                output += self.run("submodule update --init --recursive")
-                return output
-            else:
-                raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
-                                     "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
-                                     % submodule)
+        if not submodule:
+            return ""
+        if submodule == "shallow":
+            output = self.run("submodule sync")
+            output += self.run("submodule update --init")
+            return output
+        elif submodule == "recursive":
+            output = self.run("submodule sync --recursive")
+            output += self.run("submodule update --init --recursive")
+            return output
+        else:
+            raise ConanException("Invalid 'submodule' attribute value in the 'scm'. "
+                                 "Unknown value '%s'. Allowed values: ['shallow', 'recursive']"
+                                 % submodule)
 
     def excluded_files(self):
         ret = []

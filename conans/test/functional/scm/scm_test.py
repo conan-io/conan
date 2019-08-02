@@ -4,6 +4,7 @@ import unittest
 from collections import namedtuple
 
 from nose.plugins.attrib import attr
+from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -290,12 +291,21 @@ other_folder/excluded_subfolder
         self.assertTrue(os.path.exists(os.path.join(curdir, "source", "mysub", "myfile.txt")))
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
 
-    def test_shallow_clone_remote(self):
+    @parameterized.expand([
+        ("local", "v1.0", True),
+        ("local", None, False),
+        ("https://github.com/conan-io/conan.git", "0.22.1", True),
+        ("https://github.com/conan-io/conan.git", "c6cc15fa2f4b576bd70c9df11942e61e5cc7d746", False)])
+    def test_shallow_clone_remote(self, remote, revision, is_tag):
         # https://github.com/conan-io/conan/issues/5570
         self.client = TestClient()
 
         # "remote" git
-        path, _ = create_local_git_repo(tags=["v1.0"], files={"myfile.txt": "foo"})
+        if remote == "local":
+            remote, _ = create_local_git_repo(tags=[revision] if is_tag else None,
+                                              files={"conans/model/username.py": "foo"})
+            if revision is None:  # Get the generated commit
+                revision = Git(remote).get_commit()
 
         # Use explicit URL to avoid local optimization (scm_folder.txt)
         conanfile = '''
@@ -305,14 +315,14 @@ from conans import ConanFile, tools
 class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
-    scm = {"type": "git", "url": "%s", "revision": "v1.0"}
+    scm = {"type": "git", "url": "%s", "revision": "%s"}
 
     def build(self):
-        assert os.path.exists(os.path.join(self.build_folder, "myfile.txt"))
-''' % path
+        assert os.path.exists(os.path.join(self.build_folder, "conans", "model", "username.py"))
+''' % (remote, revision)
         self.client.save({"conanfile.py": conanfile})
-        create_local_git_repo(folder=self.client.current_folder, tags=["v1.0"])
-        ret_code = self.client.run_command('git remote add origin "{}"'.format(path))
+        create_local_git_repo(folder=self.client.current_folder, tags=[revision])
+        ret_code = self.client.run_command('git remote add origin "{}"'.format(remote))
         self.assertEqual(ret_code, 0)
         self.client.run("create . user/channel")
 
