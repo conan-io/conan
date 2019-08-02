@@ -290,6 +290,32 @@ other_folder/excluded_subfolder
         self.assertTrue(os.path.exists(os.path.join(curdir, "source", "mysub", "myfile.txt")))
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
 
+    def test_shallow_clone_remote(self):
+        # https://github.com/conan-io/conan/issues/5570
+        self.client = TestClient()
+
+        # "remote" git
+        path, _ = create_local_git_repo(tags=["v1.0"], files={"myfile.txt": "foo"})
+
+        # Use explicit URL to avoid local optimization (scm_folder.txt)
+        conanfile = '''
+import os
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {"type": "git", "url": "%s", "revision": "v1.0"}
+
+    def build(self):
+        assert os.path.exists(os.path.join(self.build_folder, "myfile.txt"))
+''' % path
+        self.client.save({"conanfile.py": conanfile})
+        create_local_git_repo(folder=self.client.current_folder, tags=["v1.0"])
+        ret_code = self.client.run_command('git remote add origin "{}"'.format(path))
+        self.assertEqual(ret_code, 0)
+        self.client.run("create . user/channel")
+
     def test_install_checked_out(self):
         test_server = TestServer()
         self.servers = {"myremote": test_server}
