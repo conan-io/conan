@@ -302,10 +302,10 @@ other_folder/excluded_subfolder
 
         # "remote" git
         if remote == "local":
-            remote, _ = create_local_git_repo(tags=[revision] if is_tag else None,
-                                              files={"conans/model/username.py": "foo"})
+            remote, rev = create_local_git_repo(tags=[revision] if is_tag else None,
+                                                files={"conans/model/username.py": "foo"})
             if revision is None:  # Get the generated commit
-                revision = Git(remote).get_commit()
+                revision = rev
 
         # Use explicit URL to avoid local optimization (scm_folder.txt)
         conanfile = '''
@@ -321,9 +321,6 @@ class ConanLib(ConanFile):
         assert os.path.exists(os.path.join(self.build_folder, "conans", "model", "username.py"))
 ''' % (remote, revision)
         self.client.save({"conanfile.py": conanfile})
-        create_local_git_repo(folder=self.client.current_folder, tags=[revision])
-        ret_code = self.client.run_command('git remote add origin "{}"'.format(remote))
-        self.assertEqual(ret_code, 0)
         self.client.run("create . user/channel")
 
     def test_install_checked_out(self):
