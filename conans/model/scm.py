@@ -95,7 +95,8 @@ class SCM(object):
                 # it's completely safe to do here, as clone without branch expects empty directory
                 rmdir(os.path.join(self.repo_folder, ".git"))
                 output += self.repo.clone(url=self._data.url, shallow=False)
-                output += self.repo.checkout(element=self._data.revision)
+                output += self.repo.checkout(element=self._data.revision,
+                                             submodule=self._data.submodule)
 
             self.repo.checkout_submodules(submodule=self._data.submodule)
         else:

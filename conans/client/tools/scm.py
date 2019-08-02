@@ -144,13 +144,16 @@ class Git(SCMBase):
 
         return output
 
-    def checkout(self, element):
+    def checkout(self, element, submodule=None):
+        # Element can be a tag, branch or commit
         self.check_repo()
         output = self.run('checkout "%s"' % element)
-        # Element can be a tag, branch or commit
+        self.checkout_submodules(submodule)
+
         return output
 
     def checkout_submodules(self, submodule=None):
+        """Do the checkout only for submodules"""
         if submodule:
             if submodule == "shallow":
                 output = self.run("submodule sync")
