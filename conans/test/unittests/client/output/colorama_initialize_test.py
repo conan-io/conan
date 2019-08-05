@@ -20,7 +20,7 @@ class ColoramaInitialize(unittest.TestCase):
     @mock.patch('sys.stdout.isatty', return_value=True)
     def test_tty_true(self, pycharm_hosted, _):
         assert hasattr(sys.stdout, 'isatty')
-        self.assertTrue(sys.stdout.isatty())  # Double check
+        self.assertTrue(sys.stdout.isatty())
 
         PYCHARM_HOSTED_VALUE = "1" if pycharm_hosted else ""
         CONVERT_VALUE = False if pycharm_hosted else 'not-set'
