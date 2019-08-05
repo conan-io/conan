@@ -17,6 +17,7 @@ class ToolChainTest(unittest.TestCase):
                 settings = "os", "compiler", "arch", "build_type"
                 generators = "cmake"
                 exports_sources = "*"
+                generators = "cmake"
             
                 def toolchain(self):
                     return CMakeToolchain(self)    
@@ -35,7 +36,11 @@ class ToolChainTest(unittest.TestCase):
         cmake = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)    
-            project(HelloWorldLib CXX)    
+            project(HelloWorldLib CXX)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup(NO_OUTPUT_DIRS)
+
             add_library(hello hello.cpp)
             """)
         hellopp = textwrap.dedent("""
