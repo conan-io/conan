@@ -70,16 +70,57 @@ class ToolChainTest(unittest.TestCase):
             HELLO_EXPORT 
             std::string hello();
             """)
+        app = textwrap.dedent(r"""
+            #include <iostream>
+            #include "hello.h"
+            
+            int main(){
+                std::cout << "****\n" << hello() << "\n****\n\n";
+            }
+            """)
+        test_cmake = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            
+            project(Greet CXX)
+            
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+            
+            add_executable(app app.cpp)
+            target_link_libraries(app ${CONAN_LIBS})
+            """)
+        test_conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake, tools
+            
+            class Test(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake"
+            
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            
+                def test(self):
+                    os.chdir("bin")
+                    self.run(".%sapp" % os.sep)
+            """)
         client.save({"conanfile.py": conanfile,
                      "src/CMakeLists.txt": cmake,
                      "src/hello.cpp": hellopp,
-                     "src/hello.h": helloh
+                     "src/hello.h": helloh,
+                     "test_package/app.cpp": app,
+                     "test_package/CMakeLists.txt": test_cmake,
+                     "test_package/conanfile.py": test_conanfile
                      })
 
         # Cache creation
         client.run("create . pkg/0.1@user/testing")
         print client.out
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
+        self.assertIn("Hello World Release!", client.out)
 
         # Local flow
         mkdir(os.path.join(client.current_folder, "build"))
