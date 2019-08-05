@@ -23,10 +23,54 @@ def pythonpath(conanfile):
         yield
 
 
+def get_run_environment(conanfile):
+    """
+    :param conanfile: The ConanFile for which to construct an environment.
+
+    :return: The changes applied to the current process environment, or None if unchanged.
+    """
+    env_vars, unset_vars = apply_environment(os.environ, RunEnvironment(conanfile).vars)
+
+    if env_vars or unset_vars:
+        new_env = os.environ.copy()
+        new_env.update(env_vars)
+        for var in unset_vars:
+            new_env.pop(var, None)
+        return new_env
+
+    else:
+        return None
+
+
 @contextmanager
 def run_environment(conanfile):
     with environment_append(RunEnvironment(conanfile).vars):
         yield
+
+
+def apply_environment(env, env_vars):
+    """
+    :param env: The current environment.
+    :param env_vars: List (dict) of simple environment vars. {name: value, name2: value2}
+                     => e.g.: MYVAR=1
+                     The values can also be lists of appendable environment vars.
+                     {name: [value, value2]} => e.g. PATH=/path/1:/path/2
+                     If the value is set to None, then that environment variable is unset.
+    :return: The variables that need to be set and unset in the environment, respectively.
+    """
+    unset_vars = []
+    for key in env_vars.keys():
+        if env_vars[key] is None:
+            unset_vars.append(key)
+    for var in unset_vars:
+        env_vars.pop(var, None)
+    for name, value in env_vars.items():
+        if isinstance(value, list):
+            old = env.get(name)
+            if old:
+                value.append(old)
+            env_vars[name] = os.pathsep.join(value)
+    return env_vars, unset_vars
 
 
 @contextmanager
@@ -39,18 +83,7 @@ def environment_append(env_vars):
                      If the value is set to None, then that environment variable is unset.
     :return: None
     """
-    unset_vars = []
-    for key in env_vars.keys():
-        if env_vars[key] is None:
-            unset_vars.append(key)
-    for var in unset_vars:
-        env_vars.pop(var, None)
-    for name, value in env_vars.items():
-        if isinstance(value, list):
-            env_vars[name] = os.pathsep.join(value)
-            old = os.environ.get(name)
-            if old:
-                env_vars[name] += os.pathsep + old
+    env_vars, unset_vars = apply_environment(os.environ, env_vars)
     if env_vars or unset_vars:
         old_env = dict(os.environ)
         os.environ.update(env_vars)
