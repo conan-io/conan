@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conans.paths import CONANFILE, CONANFILE_TXT
@@ -46,3 +47,43 @@ class HelloConan(ConanFile):
 
         client.run("install . -o *:switch=0 --build Lib3")
         self.assertIn("Lib3/1.0@conan/stable: WARN: Env var MYVAR=foo", client.out)
+
+    def package_info_system_deps_test(self):
+        dep = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Dep(ConanFile):
+                def package_info(self):
+                    self.cpp_info.system_deps = ["sysdep1"]
+                """)
+        intermediate = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+            class Intermediate(ConanFile):
+                requires = "dep/1.0@us/ch"
+                def package_info(self):
+                    self.cpp_info.system_deps = ["sysdep2", "sysdep3"]
+                """)
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Consumer(ConanFile):
+                requires = "intermediate/1.0@us/ch"
+                def build(self):
+                    self.output.info("System deps: %s" % self.deps_cpp_info.system_deps)
+                    for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                        self.output.info("%s system deps: %s" % (dep_key, dep_value.system_deps))
+                """)
+
+        client = TestClient()
+        client.save({"conanfile_dep.py": dep,
+                     "conanfile_intermediate.py": intermediate,
+                     "conanfile_consumer.py": consumer})
+        client.run("create conanfile_dep.py dep/1.0@us/ch")
+        client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        dep_system_deps = ["sysdep1"]
+        intermediate_system_deps = ["sysdep2", "sysdep3"]
+        merged_system_deps = intermediate_system_deps + dep_system_deps
+        self.assertIn("System deps: %s" % merged_system_deps, client.out)
+        self.assertIn("intermediate system deps: %s" % intermediate_system_deps, client.out)
+        self.assertIn("dep system deps: %s" % dep_system_deps, client.out)
