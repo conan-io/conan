@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+from six import string_types
 
 from conans.client import tools
 from conans.client.output import Color, ScopedOutput
@@ -262,7 +263,7 @@ class ConanFile(object):
                                              msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
             with tools.run_environment(self):
-                if OSInfo().is_macos and isinstance(command, str):
+                if OSInfo().is_macos and isinstance(command, string_types):
                     # Security policy on macOS clears this variable when executing /bin/sh. To
                     # keep its value, set it again inside the shell when running the command.
                     command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),

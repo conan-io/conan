@@ -75,7 +75,7 @@ class ConanRunner(object):
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            proc = Popen(command, shell=isinstance(command, str), stdout=PIPE, stderr=STDOUT, cwd=cwd)
+            proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -107,12 +107,12 @@ class ConanRunner(object):
 
     def _simple_os_call(self, command, cwd):
         if not cwd:
-            return subprocess.call(command, shell=isinstance(command, str))
+            return subprocess.call(command, shell=isinstance(command, six.string_types))
         else:
             try:
                 old_dir = get_cwd()
                 os.chdir(cwd)
-                result = subprocess.call(command, shell=isinstance(command, str))
+                result = subprocess.call(command, shell=isinstance(command, six.string_types))
             except Exception as e:
                 raise ConanException("Error while executing"
                                      " '%s'\n\t%s" % (command, str(e)))
