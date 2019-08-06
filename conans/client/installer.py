@@ -105,6 +105,9 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref, build_folder):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
+        if hasattr(conanfile, "toolchain"):
+            toolchain = conanfile.toolchain()
+            build_folder = os.path.join(build_folder, toolchain.build)
         write_generators(conanfile, build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
@@ -211,6 +214,9 @@ class _PackageBuilder(object):
                         self._build(conanfile, pref, build_folder)
                     clean_dirty(build_folder)
 
+                if hasattr(conanfile, "toolchain"):
+                    toolchain = conanfile.toolchain()
+                    build_folder = os.path.join(build_folder, toolchain.build)
                 prev = self._package(conanfile, pref, package_layout, conanfile_path, build_folder,
                                      package_folder)
                 assert prev
@@ -349,6 +355,12 @@ class BinaryInstaller(object):
         self._call_package_info(node.conanfile, package_folder=base_path, ref=node.ref)
 
         node.conanfile.cpp_info.filter_empty = False
+
+        if hasattr(node.conanfile, "toolchain"):
+            toolchain = node.conanfile.toolchain()
+            node.conanfile.cpp_info.includedirs = toolchain.includedirs
+            node.conanfile.cpp_info.libdirs = [str(toolchain.lib_path)]
+            return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
         if editable_cpp_info:

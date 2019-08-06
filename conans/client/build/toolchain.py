@@ -1,8 +1,12 @@
+import os
+
+
 class Toolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.src = ""
-        self.build = ""
+        # Relative build folder
+        self.build = "build"
         self.includedirs = [""]
         self.libdir = ""
         self.bindir = ""
@@ -13,6 +17,10 @@ class Toolchain(object):
         self._conanfile.copy("*.lib", dst="lib", src=str(self.libdir))
         self._conanfile.copy("*.a", dst="lib", src=str(self.libdir))
         self._conanfile.copy("*.exe", dst="bin", src=str(self.bindir))
+
+    @property
+    def lib_path(self):
+        return os.path.join(self.build, str(self.libdir))
 
 
 class CMakeToolchain(Toolchain):

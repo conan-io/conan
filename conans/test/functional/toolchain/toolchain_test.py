@@ -16,12 +16,15 @@ class ToolChainTest(unittest.TestCase):
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 generators = "cmake"
-                exports_sources = "*"
+                exports_sources = "src/*"
                 generators = "cmake"
             
                 def toolchain(self):
-                    return CMakeToolchain(self)    
-            
+                    toolchain = CMakeToolchain(self)
+                    # Default, will be overriden by local "build-folder" arg
+                    toolchain.build = "build"
+                    return toolchain
+    
                 def build(self):
                     cmake = CMake(self) # Opt-in is defined having toolchain
                     cmake.configure()
@@ -126,14 +129,42 @@ class ToolChainTest(unittest.TestCase):
         print client.out
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("Hello World Release!", client.out)
+        return
 
         # Local flow
         mkdir(os.path.join(client.current_folder, "build"))
-        with client.chdir("build"):
-            client.run("install ..")
-            client.run("build ..")
-            print client.out
-            client.run("package .. -pf=pkg")
-            print client.out
-            self.assertIn("conanfile.py: Package 'pkg' created", client.out)
+
+        client.run("install .")
+        client.run("editable add . pkg/0.1@user/testing")
+        client.run("build .")
+        # print client.out
+        # client.run("package .. -pf=pkg")
+        # print client.out
+        # self.assertIn("conanfile.py: Package 'pkg' created", client.out)
+
+        # Consumer of editable package
+        client2 = TestClient(cache_folder=client.cache_folder)
+        consumer = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake, tools
+
+            class Consumer(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "pkg/0.1@user/testing"
+                generators = "cmake"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    os.chdir("bin")
+                    self.run(".%sapp" % os.sep)
+            """)
+
+        client2.save({"app.cpp": app,
+                      "CMakeLists.txt": test_cmake,
+                      "conanfile.py": consumer})
+        client2.run("install . -g=cmake")
+        print client2.out
+        client2.run("build .")
 
