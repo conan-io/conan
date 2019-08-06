@@ -254,14 +254,15 @@ class ConanFile(object):
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
             ignore_errors=False, run_environment=False, with_login=True):
-        def _run(env=None):
+        def _run():
             if not win_bash:
-                return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd, env=env)
+                return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
             # FIXME: run in windows bash is not using output
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
-            retcode = _run(tools.get_run_environment(self))
+            with tools.run_environment(self):
+                retcode = _run()
         else:
             retcode = _run()
 

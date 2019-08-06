@@ -29,7 +29,7 @@ class ConanRunner(object):
         self._log_run_to_output = log_run_to_output
         self._output = output
 
-    def __call__(self, command, output=True, log_filepath=None, cwd=None, subprocess=False, env=None):
+    def __call__(self, command, output=True, log_filepath=None, cwd=None, subprocess=False):
         """
         @param command: Command to execute
         @param output: Instead of print to sys.stdout print to that stream. Could be None
@@ -58,24 +58,24 @@ class ConanRunner(object):
             # No output has to be redirected to logs or buffer or omitted
             if (output is True and not self._output and not log_filepath and self._log_run_to_output
                     and not subprocess):
-                return self._simple_os_call(command, cwd, env)
+                return self._simple_os_call(command, cwd)
             elif log_filepath:
                 if stream_output:
                     stream_output.write("Logging command output to file '%s'\n" % (log_filepath,))
                 with open(log_filepath, "a+") as log_handler:
                     if self._print_commands_to_output:
                         log_handler.write(call_message)
-                    return self._pipe_os_call(command, stream_output, log_handler, cwd, env)
+                    return self._pipe_os_call(command, stream_output, log_handler, cwd)
             else:
-                return self._pipe_os_call(command, stream_output, None, cwd, env)
+                return self._pipe_os_call(command, stream_output, None, cwd)
 
-    def _pipe_os_call(self, command, stream_output, log_handler, cwd, env):
+    def _pipe_os_call(self, command, stream_output, log_handler, cwd):
 
         try:
             # piping both stdout, stderr and then later only reading one will hang the process
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
-            proc = Popen(command, shell=isinstance(command, str), stdout=PIPE, stderr=STDOUT, cwd=cwd, env=env)
+            proc = Popen(command, shell=isinstance(command, str), stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -105,14 +105,14 @@ class ConanRunner(object):
         ret = proc.returncode
         return ret
 
-    def _simple_os_call(self, command, cwd, env):
+    def _simple_os_call(self, command, cwd):
         if not cwd:
-            return subprocess.call(command, shell=isinstance(command, str), env=env)
+            return subprocess.call(command, shell=isinstance(command, str))
         else:
             try:
                 old_dir = get_cwd()
                 os.chdir(cwd)
-                result = subprocess.call(command, shell=isinstance(command, str), env=env)
+                result = subprocess.call(command, shell=isinstance(command, str))
             except Exception as e:
                 raise ConanException("Error while executing"
                                      " '%s'\n\t%s" % (command, str(e)))
