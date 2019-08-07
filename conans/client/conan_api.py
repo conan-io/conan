@@ -2,8 +2,6 @@ import os
 import sys
 from collections import OrderedDict
 
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
-
 import conans
 from conans import __version__ as client_version
 from conans.client import packager, tools
@@ -56,13 +54,13 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
 from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-
 
 default_manifest_folder = '.conan_manifests'
 
@@ -471,7 +469,7 @@ class ConanAPIV1(object):
                                     self.app.cache, self.app.out)
 
         self.app.out.info("Configuration:")
-        self.app.out.writeln(graph_info.profile.dumps())
+        self.app.out.writeln(graph_info.profile_host.dumps())
 
         self.app.cache.editable_packages.override(workspace.get_editable_dict())
 
@@ -1222,10 +1220,10 @@ class ConanAPIV1(object):
         old_lock = GraphLockFile.load(old_lockfile)
         new_lockfile = _make_abs_path(new_lockfile, cwd)
         new_lock = GraphLockFile.load(new_lockfile)
-        if old_lock.profile.dumps() != new_lock.profile.dumps():
+        if old_lock.profile_host.dumps() != new_lock.profile_host.dumps():
             raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
-                                 % (old_lockfile, old_lock.profile.dumps(),
-                                    new_lockfile, new_lock.profile.dumps()))
+                                 % (old_lockfile, old_lock.profile_host.dumps(),
+                                    new_lockfile, new_lock.profile_host.dumps()))
         old_lock.graph_lock.update_lock(new_lock.graph_lock)
         old_lock.save(old_lockfile)
 
@@ -1284,8 +1282,8 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile)
-        graph_info.profile = graph_lock_file.profile
-        graph_info.profile.process_settings(cache, preprocess=False)
+        graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_host.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
         return graph_info
@@ -1299,8 +1297,8 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
         graph_info = None
     else:
         graph_lock_file = GraphLockFile.load(install_folder)
-        graph_info.profile = graph_lock_file.profile
-        graph_info.profile.process_settings(cache, preprocess=False)
+        graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_host.process_settings(cache, preprocess=False)
 
     if profile_names or settings or options or env or not graph_info:
         if graph_info:

@@ -40,10 +40,10 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(libb.ancestors, set([app.ref.name]))
         self.assertEqual(libb.recipe, RECIPE_INCACHE)
 
-        self.assertEqual(app.public_closure, [libb])
-        self.assertEqual(libb.public_closure, [])
-        self.assertEqual(app.public_deps, {"app": app, "libb": libb})
-        self.assertEqual(libb.public_deps, app.public_deps)
+        self.assertEqual(list(app.public_closure), [libb])
+        self.assertEqual(list(libb.public_closure), [])
+        self.assertEqual(list(app.public_deps), [app, libb])
+        self.assertEqual(list(libb.public_deps), list(app.public_deps))
 
     def test_transitive_two_levels(self):
         # app -> libb0.1 -> liba0.1

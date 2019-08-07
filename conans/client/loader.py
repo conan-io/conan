@@ -107,8 +107,8 @@ class ConanFileLoader(object):
 
         conanfile.initialize(tmp_settings, processed_profile.env_values)
 
-    def load_consumer(self, conanfile_path, processed_profile, name=None, version=None, user=None,
-                      channel=None, test=None, lock_python_requires=None):
+    def load_consumer(self, conanfile_path, processed_profile_host, name=None, version=None,
+                      user=None, channel=None, test=None, lock_python_requires=None):
 
         conanfile_class = self.load_class(conanfile_path, lock_python_requires)
         if name and conanfile_class.name and name != conanfile_class.name:
@@ -130,14 +130,14 @@ class ConanFileLoader(object):
         conanfile = conanfile_class(self._output, self._runner, display_name, user, channel)
         conanfile.in_local_cache = False
         try:
-            self._initialize_conanfile(conanfile, processed_profile)
+            self._initialize_conanfile(conanfile, processed_profile_host)
 
             # The consumer specific
             conanfile.develop = True
-            processed_profile.user_options.descope_options(conanfile.name)
-            conanfile.options.initialize_upstream(processed_profile.user_options,
+            processed_profile_host.user_options.descope_options(conanfile.name)
+            conanfile.options.initialize_upstream(processed_profile_host.user_options,
                                                   name=conanfile.name)
-            processed_profile.user_options.clear_unscoped_options()
+            processed_profile_host.user_options.clear_unscoped_options()
 
             return conanfile
         except ConanInvalidConfiguration:

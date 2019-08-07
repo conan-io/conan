@@ -1,7 +1,7 @@
 import uuid
+from collections import OrderedDict
 
 from conans.model.ref import PackageReference
-
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -22,9 +22,49 @@ BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 
+CONTEXT_HOST = "host"
+CONTEXT_BUILD = "build"
+CONTEXT_UNDEFINED = "undefined"
+CONTEXT_DEFAULT_BUILD_REQUIRES = CONTEXT_UNDEFINED
+CONTEXT_DEFAULT_REQUIRES = CONTEXT_HOST
+
+
+class _NodeOrderedDict(object):
+
+    def __init__(self):
+        self._nodes = OrderedDict()
+
+    @staticmethod
+    def _key(node):
+        return node.name, node.context
+
+    def add(self, node):
+        key = self._key(node)
+        inserted = key not in self._nodes
+        self._nodes[key] = node
+        return inserted
+
+    def get(self, name, context):
+        return self._nodes.get((name, context))
+
+    def pop(self, name, context):
+        return self._nodes.pop((name, context))
+
+    def sort(self, key_fn):
+        sorted_nodes = sorted(self._nodes.items(), key=lambda n: key_fn(n[1]))
+        self._nodes = OrderedDict(sorted_nodes)
+
+    def assign(self, other):
+        assert isinstance(other, _NodeOrderedDict), "Unexpected type: {}".format(type(other))
+        self._nodes = other._nodes.copy()
+
+    def __iter__(self):
+        for _, item in self._nodes.items():
+            yield item
+
 
 class Node(object):
-    def __init__(self, ref, conanfile, recipe=None):
+    def __init__(self, ref, conanfile, context=CONTEXT_UNDEFINED, recipe=None):
         self.ref = ref
         self._package_id = None
         self.prev = None
@@ -38,12 +78,15 @@ class Node(object):
         self.build_require = False
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
+        assert context in [CONTEXT_HOST, CONTEXT_BUILD, CONTEXT_UNDEFINED], \
+            "Not allowed context '{}' for node '{}'".format(context, self.ref)
+        self._context = context
 
         # A subset of the graph that will conflict by package name
-        self.public_deps = None  # {ref.name: Node}
+        self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
-        self.public_closure = None  # {ref.name: Node}
+        self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
@@ -77,9 +120,22 @@ class Node(object):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
         return PackageReference(self.ref, self.package_id, self.prev)
 
+    @property
+    def context(self):
+        assert self._context, "context not initialized for node '{}'".format(self.ref)
+        return self._context
+
+    @property
+    def public_deps(self):
+        return self._public_deps
+
+    @property
+    def public_closure(self):
+        return self._public_closure
+
     def partial_copy(self):
         # Used for collapse_graph
-        result = Node(self.ref, self.conanfile)
+        result = Node(self.ref, self.conanfile, context=self.context)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
@@ -111,9 +167,8 @@ class Node(object):
     def connect_closure(self, other_node):
         # When 2 nodes of the graph become connected, their closures information has
         # has to remain consistent. This method manages this.
-        name = other_node.name
-        self.public_closure[name] = other_node
-        self.public_deps[name] = other_node
+        self.public_closure.add(other_node)
+        self.public_deps.add(other_node)
         other_node.inverse_closure.add(self)
 
     def inverse_neighbors(self):
@@ -121,13 +176,14 @@ class Node(object):
 
     def __eq__(self, other):
         return (self.ref == other.ref and
-                self.conanfile == other.conanfile)
+                self.conanfile == other.conanfile and
+                self.context == other.context)
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash((self.ref, self.conanfile))
+        return hash((self.ref, self.conanfile, self.context))
 
     def __repr__(self):
         return repr(self.conanfile)

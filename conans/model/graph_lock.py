@@ -1,15 +1,14 @@
 import json
 import os
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, \
     BINARY_BUILD
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.util.files import load, save
 from conans.model.version import Version
-
+from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"
 LOCKFILE_VERSION = "0.1"
@@ -17,8 +16,9 @@ LOCKFILE_VERSION = "0.1"
 
 class GraphLockFile(object):
 
-    def __init__(self, profile, graph_lock):
-        self.profile = profile
+    def __init__(self, profile_host, profile_build, graph_lock):
+        self.profile_host = profile_host
+        self.profile_build = profile_build
         self.graph_lock = graph_lock
 
     @staticmethod
@@ -43,11 +43,14 @@ class GraphLockFile(object):
         if version:
             version = Version(version)
             # Do something with it, migrate, raise...
-        profile = graph_json["profile"]
+        profile_host = graph_json.get("profile_host") or graph_json["profile"]
+        profile_build = graph_json.get("profile_build", graph_json.get("profile", None))
         # FIXME: Reading private very ugly
-        profile, _ = _load_profile(profile, None, None)
+        profile_host, _ = _load_profile(profile_host, None, None)
+        if profile_build:
+            profile_build, _ = _load_profile(profile_build, None, None)
         graph_lock = GraphLock.from_dict(graph_json["graph_lock"])
-        graph_lock_file = GraphLockFile(profile, graph_lock)
+        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
 
     def save(self, path):
@@ -57,9 +60,11 @@ class GraphLockFile(object):
         save(path, serialized_graph_str)
 
     def dumps(self):
-        result = {"profile": self.profile.dumps(),
+        result = {"profile_host": self.profile_host.dumps(),
                   "graph_lock": self.graph_lock.as_dict(),
                   "version": LOCKFILE_VERSION}
+        if self.profile_build:
+            result["profile_build"] = self.profile_build.dumps()
         return json.dumps(result, indent=True)
 
 

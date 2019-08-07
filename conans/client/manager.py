@@ -54,7 +54,7 @@ class ConanManager(object):
             generators.add("txt")  # Add txt generator by default
 
         self._user_io.out.info("Configuration:")
-        self._user_io.out.writeln(graph_info.profile.dumps())
+        self._user_io.out.writeln(graph_info.profile_host.dumps())
         result = self._graph_manager.load_graph(ref_or_path, create_reference, graph_info,
                                                 build_modes, False, update, remotes,
                                                 self._recorder)
@@ -67,8 +67,8 @@ class ConanManager(object):
         print_graph(deps_graph, self._user_io.out)
 
         try:
-            if cross_building(graph_info.profile.processed_settings):
-                settings = get_cross_building_settings(graph_info.profile.processed_settings)
+            if cross_building(graph_info.profile_host.processed_settings):
+                settings = get_cross_building_settings(graph_info.profile_host.processed_settings)
                 message = "Cross-build from '%s:%s' to '%s:%s'" % settings
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist

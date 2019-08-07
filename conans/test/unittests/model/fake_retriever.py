@@ -17,7 +17,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "data", "root.py")
         save(conan_path, content)
         conanfile = self.loader.load_consumer(conan_path, processed_profile)
-        node = Node(None, conanfile, "rootpath")
+        node = Node(None, conanfile, recipe="rootpath")
         node.recipe = RECIPE_CONSUMER
         return node
 

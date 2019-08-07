@@ -232,7 +232,7 @@ class GraphBinariesAnalyzer(object):
                 if not neigh.private:
                     continue
                 # Current closure contains own node to be skipped
-                for n in neigh.public_closure.values():
+                for n in neigh.public_closure:
                     if n.private:
                         # store the binary origin before being overwritten by SKIP
                         n.binary_non_skip = n.binary

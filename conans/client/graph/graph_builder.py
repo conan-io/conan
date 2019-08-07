@@ -1,7 +1,7 @@
 import time
-from collections import OrderedDict
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
+    CONTEXT_UNDEFINED
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -25,9 +25,8 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        name = root_node.name
-        root_node.public_closure = OrderedDict([(name, root_node)])
-        root_node.public_deps = {name: root_node}
+        root_node.public_closure.add(root_node)
+        root_node.public_deps.add(root_node)
         root_node.ancestors = set()
         dep_graph.add_node(root_node)
 
@@ -52,7 +51,16 @@ class DepsGraphBuilder(object):
 
         conanfile = node.conanfile
         scope = conanfile.display_name
-        requires = [Requirement(ref) for ref in build_requires_refs]
+
+        requires = []
+        for ref, context in build_requires_refs:
+            r = Requirement(ref)
+            if context == CONTEXT_UNDEFINED:
+                r.context = CONTEXT_HOST  # TODO: It will depend on profiles provided by the user
+            else:
+                r.context = context
+            requires.append(r)
+
         if graph_lock:
             graph_lock.lock_node(node, requires)
 
@@ -66,9 +74,7 @@ class DepsGraphBuilder(object):
 
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
-        ordered_closure = list(node.public_closure.items())
-        ordered_closure.sort(key=lambda x: x[1] not in new_nodes)
-        node.public_closure = OrderedDict(ordered_closure)
+        node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
 
         subgraph = DepsGraph()
         subgraph.aliased = graph.aliased
@@ -144,8 +150,8 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         # If the requirement is found in the node public dependencies, it is a diamond
-        previous = node.public_deps.get(name)
-        previous_closure = node.public_closure.get(name)
+        previous = node.public_deps.get(name, context=CONTEXT_HOST)
+        previous_closure = node.public_closure.get(name, context=CONTEXT_HOST)
         # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
@@ -153,7 +159,7 @@ class DepsGraphBuilder(object):
                                              remotes, processed_profile, graph_lock)
 
             # The closure of a new node starts with just itself
-            new_node.public_closure = OrderedDict([(new_node.ref.name, new_node)])
+            new_node.public_closure.add(new_node)
             # The new created node is connected to the parent one
             node.connect_closure(new_node)
 
@@ -162,12 +168,12 @@ class DepsGraphBuilder(object):
                 # the new_node doesn't propagate downstream the "node" consumer, so its public_deps
                 # will be a copy of the node.public_closure, i.e. it can only cause conflicts in the
                 # new_node.public_closure.
-                new_node.public_deps = node.public_closure.copy()
-                new_node.public_deps[name] = new_node
+                new_node.public_deps.assign(node.public_closure)
+                new_node.public_deps.add(new_node)
             else:
                 # Normal requires propagate and can conflict with the parent "node.public_deps" too
-                new_node.public_deps = node.public_deps.copy()
-                new_node.public_deps[name] = new_node
+                new_node.public_deps.assign(node.public_deps)
+                new_node.public_deps.add(new_node)
 
                 # All the dependents of "node" are also connected now to "new_node"
                 for dep_node in node.inverse_closure:
@@ -188,7 +194,7 @@ class DepsGraphBuilder(object):
 
             # Add current ancestors to the previous node and upstream deps
             union = node.ancestors.union([node.name])
-            for n in previous.public_closure.values():
+            for n in previous.public_closure:
                 n.ancestors.update(union)
 
             # Even if it was in private scope, if it is reached via a public require
@@ -200,7 +206,7 @@ class DepsGraphBuilder(object):
             dep_graph.add_edge(node, previous, require)
             # All the upstream dependencies (public_closure) of the previously existing node
             # now will be also connected to the node and to all its dependants
-            for name, n in previous.public_closure.items():
+            for n in previous.public_closure:
                 if n.build_require or n.private:
                     continue
                 node.connect_closure(n)
@@ -238,11 +244,11 @@ class DepsGraphBuilder(object):
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
-            n = closure.get(req.ref.name)
+            n = closure.get(req.ref.name, context=CONTEXT_HOST)
             if n and self._conflicting_references(n.ref, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
-            n = closure.get(pkg_name)
+            n = closure.get(pkg_name, context=CONTEXT_HOST)
             if n:
                 options = n.conanfile.options
                 for option, value in options_values.items():
@@ -345,7 +351,7 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
-        new_node = Node(new_ref, dep_conanfile)
+        new_node = Node(new_ref, dep_conanfile, context=CONTEXT_HOST)
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
