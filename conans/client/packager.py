@@ -35,6 +35,7 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     conanfile.package_folder = package_folder
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
+    return digest.summary_hash
 
 
 def create_package(conanfile, package_id, source_folder, build_folder, package_folder,
@@ -79,12 +80,20 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
             raise
         raise ConanException(e)
 
-    _create_aux_files(install_folder, package_folder, conanfile, copy_info)
+    manifest = _create_aux_files(install_folder, package_folder, conanfile, copy_info)
     _report_files_from_manifest(package_output, package_folder)
     package_id = package_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % package_id)
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
+    return manifest.summary_hash
+
+
+def update_package_metadata(prev, layout, package_id, rrev, output):
+    output.info("Created package revision %s" % prev)
+    with layout.update_metadata() as metadata:
+        metadata.packages[package_id].revision = prev
+        metadata.packages[package_id].recipe_revision = rrev
 
 
 def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
@@ -105,6 +114,7 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     # Create the digest for the package
     digest = FileTreeManifest.create(package_folder)
     digest.save(package_folder)
+    return digest
 
 
 def _report_files_from_manifest(output, package_folder):
