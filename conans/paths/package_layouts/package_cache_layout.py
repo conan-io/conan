@@ -180,15 +180,6 @@ class PackageCacheLayout(object):
             yield metadata
             save(self.package_metadata(), metadata.dumps())
 
-    # Revisions
-    def package_summary_hash(self, pref):
-        package_folder = self.package(pref)
-        try:
-            read_manifest = FileTreeManifest.load(package_folder)
-        except IOError:
-            raise PackageNotFoundException(pref)
-        return read_manifest.summary_hash
-
     # Locks
     def conanfile_read_lock(self, output):
         if self._no_lock:

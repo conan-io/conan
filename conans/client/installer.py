@@ -158,8 +158,7 @@ class _PackageBuilder(object):
                                   package_folder, install_folder, self._hook_manager,
                                   conanfile_path, pref.ref)
 
-        update_package_metadata(prev, package_layout, package_id, pref.ref.revision,
-                                self._output)
+        update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(package_folder)
