@@ -5,8 +5,7 @@ from collections import OrderedDict
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, \
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
-    CONTEXT_DEFAULT_BUILD_REQUIRES
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
@@ -19,13 +18,14 @@ from conans.util.files import load
 
 
 class _RecipeBuildRequires(OrderedDict):
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, xbuilding):
         super(_RecipeBuildRequires, self).__init__()
         build_requires = getattr(conanfile, "build_requires", [])
         if not isinstance(build_requires, (list, tuple)):
             build_requires = [build_requires]
+        self._default_context = CONTEXT_BUILD if xbuilding else CONTEXT_HOST
         for build_require in build_requires:
-            self.add(build_require, context=CONTEXT_DEFAULT_BUILD_REQUIRES)
+            self.add(build_require, context=self._default_context)
 
     def add(self, build_require, context):
         if not isinstance(build_require, ConanFileReference):
@@ -36,7 +36,7 @@ class _RecipeBuildRequires(OrderedDict):
         assert not context or context in [CONTEXT_HOST, CONTEXT_BUILD], \
             "Invalid context '{}' for build_require" \
             " '{}' in conanfile '{}'".format(context, build_require, self._conanfile)
-        self.add(build_require, context or CONTEXT_DEFAULT_BUILD_REQUIRES)
+        self.add(build_require, context or self._default_context)
 
     def update(self, build_requires):
         for build_require in build_requires:
@@ -207,8 +207,8 @@ class GraphManager(object):
         return deps_graph, conanfile
 
     @staticmethod
-    def _get_recipe_build_requires(conanfile):
-        conanfile.build_requires = _RecipeBuildRequires(conanfile)
+    def _get_recipe_build_requires(conanfile, xbuilding):
+        conanfile.build_requires = _RecipeBuildRequires(conanfile, xbuilding)
         if hasattr(conanfile, "build_requirements"):
             with get_env_context_manager(conanfile):
                 with conanfile_exception_formatter(str(conanfile), "build_requirements"):
@@ -221,6 +221,7 @@ class GraphManager(object):
                                 processed_profile_host, processed_profile_build, graph_lock,
                                 apply_build_requires=True):
 
+        xbuilding = bool(processed_profile_build)  # If build profile is provided, then it is xbuild
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
         if not apply_build_requires:
             return
@@ -233,16 +234,17 @@ class GraphManager(object):
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE)
                     and node.recipe != RECIPE_CONSUMER):
                 continue
-            package_build_requires = self._get_recipe_build_requires(node.conanfile)
+            package_build_requires = self._get_recipe_build_requires(node.conanfile, xbuilding)
             str_ref = str(node.ref)
             new_profile_build_requires = []
             profile_build_requires = profile_build_requires or {}
+            profile_br_context = CONTEXT_BUILD if processed_profile_build else CONTEXT_HOST
             for pattern, build_requires in profile_build_requires.items():
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
                             for build_require in build_requires:
-                                br_key = (build_require.name, CONTEXT_DEFAULT_BUILD_REQUIRES)
+                                br_key = (build_require.name, profile_br_context)
                                 if br_key in package_build_requires:  # Override defined
                                     # this is a way to have only one package Name for all versions
                                     # (no conflicts)
@@ -250,7 +252,7 @@ class GraphManager(object):
                                     package_build_requires[br_key] = build_require
                                 elif build_require.name != node.name:  # Profile one
                                     new_profile_build_requires.append(
-                                        (build_require, CONTEXT_DEFAULT_BUILD_REQUIRES))
+                                        (build_require, profile_br_context))
 
             if package_build_requires:
                 br_list = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]

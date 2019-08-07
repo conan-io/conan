@@ -1,7 +1,6 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
-    CONTEXT_UNDEFINED
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -53,25 +52,23 @@ class DepsGraphBuilder(object):
         scope = conanfile.display_name
 
         requires = []
+        contexts = []  # FIXME: Using two lists is not the best implementation
         for ref, context in build_requires_refs:
-            r = Requirement(ref)
-            if context == CONTEXT_UNDEFINED:
-                r.context = CONTEXT_HOST  # TODO: It will depend on profiles provided by the user
-            else:
-                r.context = context
-            requires.append(r)
+            requires.append(Requirement(ref))
+            contexts.append(context)
 
         if graph_lock:
-            graph_lock.lock_node(node, requires)
+            graph_lock.lock_node(node, requires)  # TODO: Add info about context?
 
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
-        for require in requires:
+        for require, ctxt in zip(requires, contexts):
             name = require.ref.name
             require.build_require = True
+            context = ctxt if node.context == CONTEXT_HOST else node.context
             self._handle_require(name, node, require, graph, check_updates, update,
                                  remotes, processed_profile_host, processed_profile_build,
-                                 new_reqs, new_options, graph_lock)
+                                 new_reqs, new_options, graph_lock, context=context)
 
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
@@ -138,11 +135,11 @@ class DepsGraphBuilder(object):
                 continue
             self._handle_require(name, node, require, dep_graph, check_updates, update,
                                  remotes, processed_profile_host, processed_profile_build,
-                                 new_reqs, new_options, graph_lock)
+                                 new_reqs, new_options, graph_lock, context=node.context)
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
                         remotes, processed_profile_host, processed_profile_build,
-                        new_reqs, new_options, graph_lock):
+                        new_reqs, new_options, graph_lock, context):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -154,16 +151,21 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         # If the requirement is found in the node public dependencies, it is a diamond
-        context = require.context if node.context == CONTEXT_HOST else node.context
         previous = node.public_deps.get(name, context=context)
         previous_closure = node.public_closure.get(name, context=context)
         # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
-            processed_profile_host = processed_profile_host if require.context == CONTEXT_HOST \
+            if context == CONTEXT_BUILD and not processed_profile_build:
+                raise ConanException("Package '{}' requires '{}' on context build, but no profile"
+                                     " for build_machine has been provided. See docs about"
+                                     " crossbuilding feature.".format(node, name))
+
+            processed_profile_host = processed_profile_host if context == CONTEXT_HOST \
                 else processed_profile_build
             new_node = self._create_new_node(node, dep_graph, require, name, check_updates, update,
-                                             remotes, processed_profile_host, graph_lock)
+                                             remotes, processed_profile_host, graph_lock,
+                                             context=context)
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
@@ -326,7 +328,7 @@ class DepsGraphBuilder(object):
 
     def _create_new_node(self, current_node, dep_graph, requirement, name_req,
                          check_updates, update, remotes, processed_profile, graph_lock,
-                         alias_ref=None):
+                         context, alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
 
@@ -357,11 +359,9 @@ class DepsGraphBuilder(object):
             return self._create_new_node(current_node, dep_graph, requirement,
                                          name_req, check_updates, update,
                                          remotes, processed_profile, graph_lock,
-                                         alias_ref=alias_ref)
+                                         context=context, alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
-        context = requirement.context if current_node.context == CONTEXT_HOST \
-            else current_node.context
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status

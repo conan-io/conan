@@ -25,8 +25,6 @@ BINARY_EDITABLE = "Editable"
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 CONTEXT_UNDEFINED = "undefined"
-CONTEXT_DEFAULT_BUILD_REQUIRES = CONTEXT_UNDEFINED
-CONTEXT_DEFAULT_REQUIRES = CONTEXT_HOST
 
 
 class _NodeOrderedDict(object):
@@ -78,8 +76,6 @@ class Node(object):
         self.build_require = False
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
-        assert context in [CONTEXT_HOST, CONTEXT_BUILD, CONTEXT_UNDEFINED], \
-            "Not allowed context '{}' for node '{}'".format(context, self.ref)
         self._context = context
 
         # A subset of the graph that will conflict by package name
@@ -122,7 +118,8 @@ class Node(object):
 
     @property
     def context(self):
-        assert self._context, "context not initialized for node '{}'".format(self.ref)
+        assert self._context in [CONTEXT_HOST, CONTEXT_BUILD], \
+            "Using node '{}' with undefined context '{}'".format(self.ref, self._context)
         return self._context
 
     @property

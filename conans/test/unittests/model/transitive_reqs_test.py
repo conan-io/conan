@@ -100,7 +100,8 @@ class GraphTest(unittest.TestCase):
         processed_profile = test_processed_profile(profile=profile)
         root_conan = self.retriever.root(str(content), processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
-                                             processed_profile)
+                                             processed_profile_host=processed_profile,
+                                             processed_profile_build=None)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
@@ -1474,7 +1475,9 @@ class ConsumerConan(ConanFile):
     def build_graph(self, content):
         processed_profile = test_processed_profile()
         root_conan = self.retriever.root(content, processed_profile)
-        deps_graph = self.builder.load_graph(root_conan, False, False, None, processed_profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, None,
+                                             processed_profile_host=processed_profile,
+                                             processed_profile_build=None)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1850,7 +1853,8 @@ class ChatConan(ConanFile):
         processed_profile = test_processed_profile(profile=profile)
         root_conan = self.retriever.root(chat_content, processed_profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             processed_profile=processed_profile)
+                                             processed_profile_host=processed_profile,
+                                             processed_profile_build=None)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,

@@ -2,7 +2,6 @@ from collections import OrderedDict
 
 import six
 
-from conans.client.graph.graph import CONTEXT_DEFAULT_REQUIRES
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.env_reader import get_env
@@ -23,12 +22,15 @@ class Requirement(object):
         self.private = private
         self.build_require = False
         self._locked_id = None
-        self.context = CONTEXT_DEFAULT_REQUIRES
 
     def lock(self, locked_ref, locked_id):
         # When a requirement is locked it doesn't has ranges
         self.ref = self.range_ref = locked_ref
         self._locked_id = locked_id  # And knows the ID of the locked node that is pointing to
+
+    @property
+    def context(self):
+        raise RuntimeError("Never ask the context of a require")
 
     @property
     def locked_id(self):
