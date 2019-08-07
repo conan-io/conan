@@ -121,8 +121,7 @@ class GraphManager(object):
             conanfile._conan_channel = ref.channel
 
         # Computing the full dependency graph
-        profile_host = graph_info.profile_host
-        processed_profile_host = profile_host
+        processed_profile_host = graph_info.profile_host
         processed_profile_host.dev_reference = create_reference
         ref = None
         graph_lock = graph_info.graph_lock
@@ -181,9 +180,9 @@ class GraphManager(object):
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
-                                      profile_host_build_requires=profile_host.build_requires,
                                       recorder=recorder,
                                       processed_profile_host=processed_profile_host,
+                                      processed_profile_build=graph_info.profile_build,
                                       apply_build_requires=apply_build_requires,
                                       graph_lock=graph_lock)
 
@@ -219,7 +218,8 @@ class GraphManager(object):
 
     def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
                                 build_mode, remotes, profile_build_requires, recorder,
-                                processed_profile, graph_lock, apply_build_requires=True):
+                                processed_profile_host, processed_profile_build, graph_lock,
+                                apply_build_requires=True):
 
         binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
         if not apply_build_requires:
@@ -257,39 +257,44 @@ class GraphManager(object):
                 subgraph = builder.extend_build_requires(graph, node,
                                                          br_list,
                                                          check_updates, update, remotes,
-                                                         processed_profile, graph_lock)
+                                                         processed_profile_host,
+                                                         processed_profile_build, graph_lock)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, profile_build_requires, recorder,
-                                             processed_profile, graph_lock)
+                                             processed_profile_host, processed_profile_build,
+                                             graph_lock)
                 graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
-                                                         processed_profile, graph_lock)
+                                                         processed_profile_host,
+                                                         processed_profile_build, graph_lock)
                 self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
                                              update, build_mode,
                                              remotes, {}, recorder,
-                                             processed_profile, graph_lock)
+                                             processed_profile_host, processed_profile_build,
+                                             graph_lock)
                 graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    profile_host_build_requires, recorder, processed_profile_host,
+                    recorder, processed_profile_host, processed_profile_build,
                     apply_build_requires, graph_lock):
 
         assert isinstance(build_mode, BuildMode)
+        profile_host_build_requires = processed_profile_host.build_requires
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    recorder)
         graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile_host,
-                                   graph_lock)
+                                   processed_profile_build, graph_lock)
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager)
 
         self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remotes,
                                      profile_host_build_requires, recorder, processed_profile_host,
-                                     graph_lock,
+                                     processed_profile_build, graph_lock,
                                      apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order

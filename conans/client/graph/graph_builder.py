@@ -20,8 +20,8 @@ class DepsGraphBuilder(object):
         self._resolver = resolver
         self._recorder = recorder
 
-    def load_graph(self, root_node, check_updates, update, remotes, processed_profile,
-                   graph_lock=None):
+    def load_graph(self, root_node, check_updates, update, remotes, processed_profile_host,
+                   processed_profile_build, graph_lock=None):
         check_updates = check_updates or update
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
@@ -34,12 +34,12 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         self._load_deps(dep_graph, root_node, Requirements(), None, None,
                         check_updates, update, remotes,
-                        processed_profile, graph_lock)
+                        processed_profile_host, processed_profile_build, graph_lock)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
-                              remotes, processed_profile, graph_lock):
+                              remotes, processed_profile_host, processed_profile_build, graph_lock):
 
         # The options that will be defined in the node will be the real options values that have
         # been already propagated downstream from the dependency graph. This will override any
@@ -70,7 +70,8 @@ class DepsGraphBuilder(object):
             name = require.ref.name
             require.build_require = True
             self._handle_require(name, node, require, graph, check_updates, update,
-                                 remotes, processed_profile, new_reqs, new_options, graph_lock)
+                                 remotes, processed_profile_host, processed_profile_build,
+                                 new_reqs, new_options, graph_lock)
 
         new_nodes = set(n for n in graph.nodes if n.package_id is None)
         # This is to make sure that build_requires have precedence over the normal requires
@@ -112,7 +113,8 @@ class DepsGraphBuilder(object):
                                     list(conanfile.requires.values())))
 
     def _load_deps(self, dep_graph, node, down_reqs, down_ref, down_options,
-                   check_updates, update, remotes, processed_profile, graph_lock):
+                   check_updates, update, remotes, processed_profile_host,
+                   processed_profile_build, graph_lock):
         """ expands the dependencies of the node, recursively
 
         param node: Node object to be expanded in this step
@@ -135,10 +137,12 @@ class DepsGraphBuilder(object):
             if require.override:
                 continue
             self._handle_require(name, node, require, dep_graph, check_updates, update,
-                                 remotes, processed_profile, new_reqs, new_options, graph_lock)
+                                 remotes, processed_profile_host, processed_profile_build,
+                                 new_reqs, new_options, graph_lock)
 
     def _handle_require(self, name, node, require, dep_graph, check_updates, update,
-                        remotes, processed_profile, new_reqs, new_options, graph_lock):
+                        remotes, processed_profile_host, processed_profile_build,
+                        new_reqs, new_options, graph_lock):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -150,13 +154,16 @@ class DepsGraphBuilder(object):
                                  % (node.ref, require.ref))
 
         # If the requirement is found in the node public dependencies, it is a diamond
-        previous = node.public_deps.get(name, context=CONTEXT_HOST)
-        previous_closure = node.public_closure.get(name, context=CONTEXT_HOST)
+        context = require.context if node.context == CONTEXT_HOST else node.context
+        previous = node.public_deps.get(name, context=context)
+        previous_closure = node.public_closure.get(name, context=context)
         # build_requires and private will create a new node if it is not in the current closure
         if not previous or ((require.build_require or require.private) and not previous_closure):
             # new node, must be added and expanded (node -> new_node)
+            processed_profile_host = processed_profile_host if require.context == CONTEXT_HOST \
+                else processed_profile_build
             new_node = self._create_new_node(node, dep_graph, require, name, check_updates, update,
-                                             remotes, processed_profile, graph_lock)
+                                             remotes, processed_profile_host, graph_lock)
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
@@ -181,7 +188,8 @@ class DepsGraphBuilder(object):
 
             # RECURSION, keep expanding (depth-first) the new node
             self._load_deps(dep_graph, new_node, new_reqs, node.ref, new_options, check_updates,
-                            update, remotes, processed_profile, graph_lock)
+                            update, remotes, processed_profile_host, processed_profile_build,
+                            graph_lock)
 
         else:  # a public node already exist with this name
             # This is closing a diamond, the node already exists and is reachable
@@ -215,9 +223,10 @@ class DepsGraphBuilder(object):
 
             # Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
-            if self._recurse(previous.public_closure, new_reqs, new_options):
+            if self._recurse(previous.public_closure, new_reqs, new_options, previous.context):
                 self._load_deps(dep_graph, previous, new_reqs, node.ref, new_options, check_updates,
-                                update, remotes, processed_profile, graph_lock)
+                                update, remotes, processed_profile_host, processed_profile_build,
+                                graph_lock)
 
     @staticmethod
     def _conflicting_references(previous_ref, new_ref, consumer_ref=None):
@@ -239,16 +248,16 @@ class DepsGraphBuilder(object):
             return True
         return False
 
-    def _recurse(self, closure, new_reqs, new_options):
+    def _recurse(self, closure, new_reqs, new_options, context):
         """ For a given closure, if some requirements or options coming from downstream
         is incompatible with the current closure, then it is necessary to recurse
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
-            n = closure.get(req.ref.name, context=CONTEXT_HOST)
+            n = closure.get(req.ref.name, context=context)
             if n and self._conflicting_references(n.ref, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
-            n = closure.get(pkg_name, context=CONTEXT_HOST)
+            n = closure.get(pkg_name, context=context)
             if n:
                 options = n.conanfile.options
                 for option, value in options_values.items():
@@ -351,7 +360,9 @@ class DepsGraphBuilder(object):
                                          alias_ref=alias_ref)
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
-        new_node = Node(new_ref, dep_conanfile, context=CONTEXT_HOST)
+        context = requirement.context if current_node.context == CONTEXT_HOST \
+            else current_node.context
+        new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
