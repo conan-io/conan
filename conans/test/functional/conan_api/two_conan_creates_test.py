@@ -4,7 +4,7 @@ import unittest
 from textwrap import dedent
 
 from conans.client.cache.cache import ClientCache
-from conans.client.conan_api import ConanAPIV1
+from conans.client.conan_api import ConanAPIV1, ProfileData
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import chdir
 from conans.model.ref import PackageReference
@@ -57,8 +57,9 @@ class ConanCreateTest(unittest.TestCase):
                             self.output.info("NUMBER 42!!")
                     """)
                 save("conanfile.py", conanfile)
-                api.create(".", "pkg", "version", "user", "channel")
+                empty_profile = ProfileData(None, None, None, None)
+                api.create(".", "pkg", "version", "user", "channel", empty_profile, empty_profile)
                 self.assertIn("pkg/version@user/channel: NUMBER 42!!", output)
                 save("conanfile.py", conanfile.replace("42", "123"))
-                api.create(".", "pkg", "version", "user", "channel")
+                api.create(".", "pkg", "version", "user", "channel", empty_profile, empty_profile)
                 self.assertIn("pkg/version@user/channel: NUMBER 123!!", output)
