@@ -185,3 +185,4 @@ VAR2=23
         self.assertEqual(["sysdep1", "sysdep2", "sysdep3"], deps_cpp_info.system_deps)
         self.assertEqual(["sysdep1"], deps_cpp_info["dep1"].system_deps)
         self.assertEqual(["sysdep2", "sysdep3"], deps_cpp_info["dep2"].system_deps)
+

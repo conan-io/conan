@@ -31,7 +31,8 @@ class DepsCppCmake(object):
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
 
-        self.libs = join_flags(" ", cpp_info.libs)
+        self.libs = join_flags(" ", cpp_info.libs + cpp_info.system_deps)
+        self.system_deps = join_flags(" ", cpp_info.system_deps)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 

@@ -97,3 +97,32 @@ CONAN_BASIC_SETUP()
         self.assertNotIn("Conan: Using cmake targets configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
+
+    def system_deps_test(self):
+        mylib = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class MyLib(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.system_deps = ["sys1"]
+                    self.cpp_info.libs = ["lib1"]
+                """)
+        consumer = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class Consumer(ConanFile):
+                requires = "mylib/1.0@us/ch"
+                generators = "cmake"
+                """)
+        client = TestClient()
+        client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer})
+        client.run("create conanfile_mylib.py mylib/1.0@us/ch")
+        client.run("install conanfile_consumer.py")
+        content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB lib1 sys1)", content)
+        self.assertIn("set(CONAN_SYSTEM_DEPS sys1 ${CONAN_SYSTEM_DEPS})", content)
+        self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB sys1)", content)
