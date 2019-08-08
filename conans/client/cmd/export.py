@@ -29,12 +29,12 @@ class AliasConanfile(ConanFile):
 """ % (target_ref.full_str(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
-    digest = FileTreeManifest.create(package_layout.export())
-    digest.save(folder=package_layout.export())
+    manifest = FileTreeManifest.create(package_layout.export())
+    manifest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
     _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
-                                 output=output, path=None, digest=digest,
+                                 output=output, path=None, manifest=manifest,
                                  revision_mode=revision_mode)
 
 

@@ -29,7 +29,7 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     manifest = FileTreeManifest.create(package_folder)
     manifest.save(package_folder)
 
-    _report_files_from_manifest(output, package_folder)
+    _report_files_from_manifest(output, manifest)
 
     output.success("Package '%s' created" % package_id)
     conanfile.package_folder = package_folder
@@ -83,7 +83,7 @@ def create_package(conanfile, package_id, source_folder, build_folder, package_f
         raise ConanException(e)
 
     manifest = _create_aux_files(install_folder, package_folder, conanfile, copy_info)
-    _report_files_from_manifest(package_output, package_folder)
+    _report_files_from_manifest(package_output, manifest)
     package_id = package_id or os.path.basename(package_folder)
     output.success("Package '%s' created" % package_id)
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
@@ -120,9 +120,8 @@ def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     return manifest
 
 
-def _report_files_from_manifest(output, package_folder):
-    digest = FileTreeManifest.load(package_folder)
-    copied_files = list(digest.files())
+def _report_files_from_manifest(output, manifest):
+    copied_files = list(manifest.files())
     copied_files.remove(CONANINFO)
 
     if not copied_files:
