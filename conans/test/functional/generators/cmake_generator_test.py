@@ -51,7 +51,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                      "dummy.cpp": CPP_CONTENT,
                      "my_profile": PROFILE.format(os_build=os_build)
                      })
-        client.run("install . -p my_profile")
+        client.run("install . -pr my_profile")
         client.run("build .")
 
         if generator:

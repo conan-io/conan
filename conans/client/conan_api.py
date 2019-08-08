@@ -1223,13 +1223,13 @@ class ConanAPIV1(object):
         remotes = self.app.cache.registry.load_remotes()
         self.app.python_requires.enable_remotes(remotes=remotes)
 
-        graph_info = get_graph_info(None, None, None, None,
+        graph_info = get_graph_info(None, None,
                                     cwd=cwd, install_folder=None,
                                     cache=self.app.cache, output=self.app.out,
                                     lockfile=lockfile)
         reference = graph_info.graph_lock.root_node().pref.ref.copy_clear_rev()
         deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                       False, False, remotes, recorder)
+                                                          False, False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)
