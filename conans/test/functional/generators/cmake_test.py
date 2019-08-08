@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 from nose.plugins.attrib import attr
