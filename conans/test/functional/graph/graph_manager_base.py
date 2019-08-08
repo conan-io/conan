@@ -69,7 +69,7 @@ class GraphManagerTest(unittest.TestCase):
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         options = OptionsValues()
-        graph_info = GraphInfo(profile, options, root_ref=ref)
+        graph_info = GraphInfo(profile, options=options, root_ref=ref)
         deps_graph, _ = self.manager.load_graph(path, create_ref, graph_info,
                                                 build_mode, check_updates, update,
                                                 remotes, recorder)
