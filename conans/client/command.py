@@ -1,16 +1,16 @@
+import argparse
 import inspect
 import json
 import os
 import sys
-
-import argparse
-import six
 from argparse import ArgumentError
+
+import six
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path)
+from conans.client.conan_api import (Conan, default_manifest_folder, _make_abs_path, ProfileData)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 from conans.client.printer import Printer
@@ -284,8 +284,16 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
         args = parser.parse_args(*args)
         self._warn_python2()
-        return self._conan.test(args.path, args.reference, args.profile, args.settings,
-                                args.options, args.env, args.remote, args.update,
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+        profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                   options=args.options_host, env=args.env_host)
+
+        return self._conan.test(args.path, args.reference,
+                                profile_host=profile_host,
+                                profile_build=profile_build,
+                                remote_name=args.remote, update=args.update,
                                 build_modes=args.build, test_build_folder=args.test_build_folder,
                                 lockfile=args.lockfile)
 
@@ -326,6 +334,7 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
+
         self._warn_python2()
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
@@ -344,12 +353,20 @@ class Command(object):
 
         info = None
         try:
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
             info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile, args.settings, args.options,
-                                      args.env, args.test_folder, args.not_export,
-                                      args.build, args.keep_source, args.keep_build, args.verify,
-                                      args.manifests, args.manifests_interactive,
-                                      args.remote, args.update,
+                                      profile_host=profile_host,
+                                      profile_build=profile_build,
+                                      test_folder=args.test_folder, not_export=args.not_export,
+                                      build_modes=args.build, keep_source=args.keep_source,
+                                      keep_build=args.keep_build, verify=args.verify,
+                                      manifests=args.manifests,
+                                      manifests_interactive=args.manifests_interactive,
+                                      remote_name=args.remote, update=args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile)
         except ConanException as exc:
@@ -447,6 +464,11 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+        profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                   options=args.options_host, env=args.env_host)
+
         cwd = get_cwd()
 
         # We need @ otherwise it could be a path, so check strict
@@ -459,12 +481,12 @@ class Command(object):
                                                                        user_channel_input=True)
                 info = self._conan.install(path=args.path_or_reference,
                                            name=name, version=version, user=user, channel=channel,
-                                           settings=args.settings, options=args.options,
-                                           env=args.env,
+                                           profile_host=profile_host,
+                                           profile_build=profile_build,
                                            remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
-                                           build=args.build, profile_names=args.profile,
+                                           build=args.build,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
@@ -476,13 +498,13 @@ class Command(object):
 
                 ref = ConanFileReference.loads(args.path_or_reference, validate=False)
                 manifest_interactive = args.manifests_interactive
-                info = self._conan.install_reference(ref, settings=args.settings,
-                                                     options=args.options,
-                                                     env=args.env,
+                info = self._conan.install_reference(ref,
+                                                     profile_host=profile_host,
+                                                     profile_build=profile_build,
                                                      remote_name=args.remote,
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=manifest_interactive,
-                                                     build=args.build, profile_names=args.profile,
+                                                     build=args.build,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
@@ -604,21 +626,22 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+        profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                   options=args.options_host, env=args.env_host)
 
-        if args.install_folder and (args.profile or args.settings or args.options or args.env):
-            raise ArgumentError(None,
-                                "--install-folder cannot be used together with -s, -o, -e or -pr")
+        if args.install_folder and profile_host:
+            raise ArgumentError(None, "--install-folder cannot be used together with a"
+                                      " host profile (-s, -o, -e or -pr)")
         if args.build_order and args.graph:
-            raise ArgumentError(None,
-                                "--build-order cannot be used together with --graph")
+            raise ArgumentError(None, "--build-order cannot be used together with --graph")
 
         # BUILD ORDER ONLY
         if args.build_order:
             ret = self._conan.info_build_order(args.path_or_reference,
-                                               settings=args.settings,
-                                               options=args.options,
-                                               env=args.env,
-                                               profile_names=args.profile,
+                                               profile_host=profile_host,
+                                               profile_build=profile_build,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
@@ -633,10 +656,8 @@ class Command(object):
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
                                                        build_modes=args.build,
-                                                       settings=args.settings,
-                                                       options=args.options,
-                                                       env=args.env,
-                                                       profile_names=args.profile,
+                                                       profile_host=profile_host,
+                                                       profile_build=profile_build,
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
@@ -650,10 +671,8 @@ class Command(object):
         else:
             data = self._conan.info(args.path_or_reference,
                                     remote_name=args.remote,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    profile_names=args.profile,
+                                    profile_host=profile_host,
+                                    profile_build=profile_build,
                                     update=args.update,
                                     install_folder=args.install_folder,
                                     build=args.dry_build,
@@ -871,25 +890,16 @@ class Command(object):
                                  "conanfile.py)")
 
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-e", "--env", nargs=1, action=Extender,
-                            help='Environment variables that will be set during the package build, '
-                                 '-e CXX=/usr/bin/clang++')
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Overwrite existing package if existing')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help=_INSTALL_FOLDER_HELP + " If these files are found in the specified"
                             " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
                             "will raise an error.")
-        parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                            help='Define options values, e.g., -o pkg:with_qt=true')
-        parser.add_argument("-pr", "--profile", action=Extender,
-                            help='Profile for this package')
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
                                  " it won't call the recipe 'package()' method, and will run a copy"
                                  " of the provided folder.")
-        parser.add_argument("-s", "--settings", nargs=1, action=Extender,
-                            help='Define settings values, e.g., -s compiler=gcc')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
@@ -897,6 +907,7 @@ class Command(object):
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile will be updated with the exported package")
+        _add_profile_arguments(parser)
 
         args = parser.parse_args(*args)
 
@@ -907,6 +918,11 @@ class Command(object):
         info = None
 
         try:
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
                                           version=version,
@@ -914,10 +930,8 @@ class Command(object):
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
                                           install_folder=args.install_folder,
-                                          profile_names=args.profile,
-                                          env=args.env,
-                                          settings=args.settings,
-                                          options=args.options,
+                                          profile_host=profile_host,
+                                          profile_build=profile_build,
                                           force=args.force,
                                           user=user,
                                           channel=channel,
@@ -1653,11 +1667,18 @@ class Command(object):
                                          " (default to current working directory)")
 
         args = parser.parse_args(*args)
+        profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                   options=args.options_host, env=args.env_host)
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
 
         if args.subcommand == "install":
-            self._conan.workspace_install(args.path, args.settings, args.options, args.env,
-                                          args.remote, args.build,
-                                          args.profile, args.update,
+            self._conan.workspace_install(args.path,
+                                          profile_host=profile_host,
+                                          profile_build=profile_build,
+                                          remote_name=args.remote,
+                                          build=args.build,
+                                          update=args.update,
                                           install_folder=args.install_folder)
 
     def editable(self, *args):
@@ -1751,12 +1772,15 @@ class Command(object):
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "lock":
+            profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                        options=args.options_build, env=args.env_build)
+            profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
+                                       options=args.options_host, env=args.env_host)
+
             self._conan.create_lock(args.path_or_reference,
                                     remote_name=args.remote,
-                                    settings=args.settings,
-                                    options=args.options,
-                                    env=args.env,
-                                    profile_names=args.profile,
+                                    profile_host=profile_host,
+                                    profile_build=profile_build,
                                     update=args.update,
                                     lockfile=args.lockfile,
                                     build=args.build)
@@ -1901,24 +1925,54 @@ def _add_common_install_arguments(parser, build_help, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
-    parser.add_argument("-e", "--env", nargs=1, action=Extender,
-                        help='Environment variables that will be set during the package build, '
-                             '-e CXX=/usr/bin/clang++')
-    parser.add_argument("-o", "--options", nargs=1, action=Extender,
-                        help='Define options values, e.g., -o Pkg:with_qt=true')
-    parser.add_argument("-pr", "--profile", default=None, action=Extender,
-                        help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
-    parser.add_argument("-s", "--settings", nargs=1, action=Extender,
-                        help='Settings to build the package, overwriting the defaults. e.g., '
-                             '-s compiler=gcc')
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="Check updates exist from upstream remotes")
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument, nargs='?', const=".",
                             help="Path to a lockfile or folder containing 'conan.lock' file. "
                             "Lockfile can be updated if packages change")
+    _add_profile_arguments(parser)
+
+
+def _add_profile_arguments(parser):
+    # Arguments that can apply to the build or host machines (easily extend to target machine)
+    def environment_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-e{}".format(short_suffix),
+                            "--env{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="env_{}".format(machine),
+                            help='Environment variables that will be set during the'
+                                 ' package build ({} machine).'
+                                 ' e.g.: -e CXX=/usr/bin/clang++'.format(machine))
+    def options_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-o{}".format(short_suffix),
+                            "--options{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest="options_{}".format(machine),
+                            help='Define options values ({} machine), e.g.:'
+                                 ' -o Pkg:with_qt=true'.format(machine))
+
+    def profile_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-pr{}".format(short_suffix),
+                            "--profile{}".format(long_suffix),
+                            default=None, action=Extender,
+                            dest='profile_{}'.format(machine),
+                            help='Apply the specified profile to the {} machine'.format(machine))
+
+    def settings_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-s{}".format(short_suffix),
+                            "--settings{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest='settings_{}'.format(machine),
+                            help='Settings to build the package, overwriting the defaults'
+                                 ' ({} machine). e.g.: -s compiler=gcc'.format(machine))
+
+    for item_fn in [environment_args, options_args, profile_args, settings_args]:
+        item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
+        item_fn("build", ":b", ":build")
+        item_fn("host", ":h", ":host")
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
