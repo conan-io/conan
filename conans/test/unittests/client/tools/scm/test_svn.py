@@ -39,6 +39,20 @@ class SVNRemoteUrlTest(unittest.TestCase):
 @attr('svn')
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
 
+    @patch('subprocess.Popen')
+    def test_version(self, mocked_open):
+        svn_version_string = """svn, version 1.10.3 (r1842928)
+compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
+        mocked_open.return_value.communicate.return_value = (svn_version_string.encode(), None)
+        version = SVN.get_version()
+        self.assertEqual(version, "1.10.3")
+
+    @patch('subprocess.Popen')
+    def test_version_invalid(self, mocked_open):
+        mocked_open.return_value.communicate.return_value = ('failed'.encode(), None)
+        with self.assertRaises(ConanException):
+            SVN.get_version()
+
     def test_check_svn_repo(self):
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()

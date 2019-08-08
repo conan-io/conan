@@ -12,11 +12,6 @@ class ProfileTest(unittest.TestCase):
     def reuse_output_test(self):
         client = TestClient()
         client.run("profile new myprofile --detect")
-
-        if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
-            self.assertIn("edit the myprofile profile at", client.out)
-            self.assertIn("profiles/myprofile", client.out)
-
         client.run("profile update options.Pkg:myoption=123 myprofile")
         client.run("profile update env.Pkg2:myenv=123 myprofile")
         client.run("profile show myprofile")
@@ -75,8 +70,9 @@ class ProfileTest(unittest.TestCase):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
         if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
-            self.assertIn("edit the MyProfile profile at", client.out)
-            self.assertIn(os.path.join(client.current_folder, "MyProfile"), client.out)
+            self.assertIn("Or edit '{}/MyProfile' and "
+                          "set compiler.libcxx=libstdc++11".format(client.current_folder),
+                          client.out)
 
         pr_path = os.path.join(client.current_folder, "MyProfile")
 

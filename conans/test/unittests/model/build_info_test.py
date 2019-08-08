@@ -186,3 +186,10 @@ VAR2=23
         self.assertEqual(["sysdep1"], deps_cpp_info["dep1"].system_deps)
         self.assertEqual(["sysdep2", "sysdep3"], deps_cpp_info["dep2"].system_deps)
 
+    def cpp_info_name_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.name = "MyName"
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "myname")
+        self.assertIn("MyName", deps_cpp_info["myname"].name)

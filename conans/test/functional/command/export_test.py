@@ -461,3 +461,49 @@ class ExportMetadataTest(unittest.TestCase):
         ref = ConanFileReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref), assert_error=True)
         self.assertIn("ERROR: Revision mode should be one of 'hash' (default) or 'scm'", t.out)
+
+    def test_export_no_params(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                        from conans import ConanFile
+
+                        class MyPkg(ConanFile):
+                            name = "lib"
+                            version = "1.0"
+                        """)
+        client.save({"conanfile.py": conanfile})
+        client.run('export .')
+        client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
+        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
+
+        # Do it twice
+        client.run('export . ')
+        self.assertIn("lib/1.0: The stored package has not changed", client.out)
+
+    def export_with_name_and_version_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    pass
+                """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('export . lib/1.0@')
+        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
+
+    def export_with_only_user_channel_test(self):
+        """This should be the recommended way and only from Conan 2.0"""
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                from conans import ConanFile
+
+                class MyPkg(ConanFile):
+                    name = "lib"
+                    version = "1.0"
+                """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('export . @user/channel')
+        self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)

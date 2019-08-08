@@ -60,7 +60,7 @@ class BuildMode(object):
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
             is_matching_name = fnmatch.fnmatchcase(ref.name, pattern)
-            is_matching_ref = fnmatch.fnmatchcase(repr(ref), pattern)
+            is_matching_ref = fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern)
             if is_matching_name or is_matching_ref:
                 try:
                     self._unused_patterns.remove(pattern)

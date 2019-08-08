@@ -349,8 +349,8 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello0.a", client2.out)
         self.assertNotIn("libhello1.a", client2.out)
         self.assertNotIn("libhello3.a", client2.out)
-        client2.run_command(command)
 
+        client2.run_command(command)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client2.out).splitlines()[-3:])
 
@@ -365,6 +365,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello0.a", client2.out)
         self.assertNotIn("libhello1.a", client2.out)
         self.assertNotIn("libhello3.a", client2.out)
+
         client2.run_command(command)
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
                           'Hola Hello0', 'Hola Hello0'],

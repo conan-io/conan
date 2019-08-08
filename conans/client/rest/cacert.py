@@ -1,11 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
-
-# Capture SSL warnings as pointed out here:
-# https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
-# TODO: Fix this security warning
-logging.captureWarnings(True)
-
 
 cacert = """
 # Issuer: O=Equifax OU=Equifax Secure Certificate Authority

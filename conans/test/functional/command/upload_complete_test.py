@@ -16,7 +16,8 @@ from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
     uncompress_packaged_files
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer
+from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
+                                     MockedUserIO, TestBufferConanOutput)
 from conans.util.files import load, mkdir, save
 
 myconan1 = """
@@ -262,7 +263,7 @@ class UploadTest(unittest.TestCase):
                       self.client.out)
 
     def check_upload_confirm_question_test(self):
-        user_io = self.client.user_io
+        user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")

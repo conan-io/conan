@@ -51,6 +51,29 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 
 class BuildRequiresTest(unittest.TestCase):
+
+    def test_consumer(self):
+        # https://github.com/conan-io/conan/issues/5425
+        t = TestClient()
+        t.save({"conanfile.py": str(TestConanFile("catch", "0.1", info=True))})
+        t.run("create . catch/0.1@user/testing")
+        t.save({"conanfile.py": str(TestConanFile("LibA", "0.1",
+                                                  private_requires=["catch/0.1@user/testing"]))})
+        t.run("create . LibA/0.1@user/testing")
+        t.save({"conanfile.py": str(TestConanFile("LibC", "0.1",
+                                                  requires=["LibA/0.1@user/testing"],
+                                                  build_requires=["catch/0.1@user/testing"]))})
+        t.run("install .")
+        self.assertIn("catch/0.1@user/testing from local cache", t.out)
+        self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
+                      t.out)
+        self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      t.out)
+        conanbuildinfo = load(os.path.join(t.current_folder, "conanbuildinfo.txt"))
+        self.assertIn('MYENV=["myenvcatch0.1env"]', conanbuildinfo)
+        self.assertIn('[libs_catch]', conanbuildinfo)
+        self.assertIn("mylibcatch0.1lib", conanbuildinfo)
+
     def test_build_requires_diamond(self):
         t = TestClient()
         t.save({"conanfile.py": str(TestConanFile("libA", "0.1"))})
@@ -186,10 +209,10 @@ class App(ConanFile):
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("install . -pr=myprofile")
-        self.assertIn("conanfile.py (consumer/None@None/None): Applying build-requirement: "
+        self.assertIn("conanfile.py (consumer/None): Applying build-requirement: "
                       "mingw/0.1@myuser/stable", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (consumer/None@None/None): APP PATH FOR BUILD mymingwpath",
+        self.assertIn("conanfile.py (consumer/None): APP PATH FOR BUILD mymingwpath",
                       client.out)
 
     def test_transitive(self):
