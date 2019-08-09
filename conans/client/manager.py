@@ -76,6 +76,10 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
+    if hasattr(conanfile, "layout"):
+        layout = conanfile.layout()
+        if install_folder:
+            install_folder = os.path.join(install_folder, layout.build)
     if install_folder:
         # Write generators
         output = conanfile.output if conanfile.display_name != "virtual" else out

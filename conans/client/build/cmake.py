@@ -157,10 +157,10 @@ class CMake(object):
                 return os.path.join(origin, folder)
             return origin
 
-        if hasattr(self._conanfile, "toolchain"):
-            toolchain = self._conanfile.toolchain()
-            source_ret = os.path.join(self._conanfile.source_folder, toolchain.src)
-            build_ret = os.path.join(self._conanfile.build_folder, toolchain.build)
+        if hasattr(self._conanfile, "layout"):
+            layout = self._conanfile.layout()
+            source_ret = os.path.join(self._conanfile.source_folder, layout.src)
+            build_ret = os.path.join(self._conanfile.build_folder, layout.build)
         elif source_dir or build_dir:  # OLD MODE
             build_ret = build_dir or self.build_dir or self._conanfile.build_folder
             source_ret = source_dir or self._conanfile.source_folder

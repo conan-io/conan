@@ -1,7 +1,7 @@
 import os
 
 
-class Toolchain(object):
+class Layout(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.src = ""
@@ -23,7 +23,7 @@ class Toolchain(object):
         return os.path.join(self.build, str(self.libdir))
 
 
-class CMakeLayout(Toolchain):
+class CMakeLayout(Layout):
     def __init__(self, conanfile):
         super(CMakeLayout, self).__init__(conanfile)
         # Only input to build is the source directory, include not a thing here

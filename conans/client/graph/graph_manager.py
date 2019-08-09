@@ -95,6 +95,10 @@ class GraphManager(object):
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, processed_profile)
 
+        if hasattr(conanfile, "layout"):
+            layout = conanfile.layout()
+            if info_folder:
+                info_folder = os.path.join(info_folder, layout.build)
         load_deps_info(info_folder, conanfile, required=deps_info_required)
 
         return conanfile
