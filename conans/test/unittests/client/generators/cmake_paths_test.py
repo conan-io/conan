@@ -57,3 +57,14 @@ class CMakePathsGeneratorTest(unittest.TestCase):
                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[1])
         self.assertEqual('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CMAKE_PREFIX_PATH} '
                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])
+
+    def cpp_info_name_test(self):
+        settings = _MockSettings("Release")
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(settings, EnvValues())
+        tmp = temp_folder()
+        cpp_info = CppInfo(tmp)
+        cpp_info.name = "PkgCMakeName"
+        conanfile.deps_cpp_info.update(cpp_info, "pkg_reference_name")
+        generator = CMakePathsGenerator(conanfile)
+        self.assertIn('set(CONAN_PKGCMAKENAME_ROOT', generator.content)
