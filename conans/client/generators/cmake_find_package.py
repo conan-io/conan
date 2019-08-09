@@ -48,7 +48,7 @@ endif()
     def content(self):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
-            ret["Find%s.cmake" % depname] = self._find_for_dep(depname, cpp_info)
+            ret["Find%s.cmake" % cpp_info.name] = self._find_for_dep(cpp_info.name, cpp_info)
         return ret
 
     def _find_for_dep(self, name, cpp_info):
