@@ -314,3 +314,28 @@ endmacro()""", macro)
         definitions = definitions_builder.get_definitions()
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
+
+    def cpp_info_name_vars_test(self):
+        """
+        Test cpp_info.names values are applied instead of the reference name
+        """
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = "MyPkG"
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.name = "MyPkG2"
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        self.assertIn("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", content)
+        content = content.replace("set(CONAN_DEPENDENCIES my_pkg my_pkg2)", "")
+        self.assertNotIn("my_pkg", content)
+        self.assertNotIn("MY_PKG", content)
+        self.assertIn('add_library(CONAN_PKG::MyPkG INTERFACE IMPORTED)', content)
+        self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)', content)
+        self.assertNotIn('CONAN_PKG::my_pkg', content)
+        self.assertNotIn('CONAN_PKG::my_pkg2', content)
