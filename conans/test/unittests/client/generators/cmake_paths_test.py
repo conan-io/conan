@@ -42,6 +42,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo(tmp)
+        cpp_info.name = "MyLib"
         custom_dir = os.path.join(tmp, "custom_build_dir")
         os.mkdir(custom_dir)
         cpp_info.builddirs.append(os.path.join(tmp, "custom_build_dir"))
