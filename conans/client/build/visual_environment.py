@@ -99,8 +99,7 @@ class VisualStudioBuildEnvironment(object):
                      _environ_value_prefix("LIB", ";"))
         return {"CL": cl_args,
                 "LIB": lib_paths,
-                "_LINK_": link_args,
-                "UseEnv": "True"}
+                "_LINK_": link_args}
 
     @property
     def vars_dict(self):
@@ -122,8 +121,7 @@ class VisualStudioBuildEnvironment(object):
 
         ret = {"CL": cl,
                "LIB": lib,
-               "_LINK_": link,
-               "UseEnv": "True"}
+               "_LINK_": link}
         return ret
 
     def _std_cpp(self):
