@@ -4,6 +4,7 @@ import unittest
 
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import default_settings_yml
+from conans.client.generators import CMakeFindPackageGenerator
 from conans.client.generators.cmake import CMakeGenerator
 from conans.client.generators.cmake_multi import CMakeMultiGenerator
 from conans.errors import ConanException
@@ -315,7 +316,7 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
-    def cpp_info_name_vars_test(self):
+    def cpp_info_name_cmake_vars_test(self):
         """
         Test cpp_info.names values are applied instead of the reference name
         """
@@ -339,3 +340,27 @@ endmacro()""", macro)
         self.assertIn('add_library(CONAN_PKG::MyPkG2 INTERFACE IMPORTED)', content)
         self.assertNotIn('CONAN_PKG::my_pkg', content)
         self.assertNotIn('CONAN_PKG::my_pkg2', content)
+
+    def cpp_info_name_cmake_find_package_test(self):
+        """
+        Test cpp_info.names values are applied instead of the reference name
+        """
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = "MyPkG"
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.name = "MyPkG2"
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = CMakeFindPackageGenerator(conanfile)
+        content = generator.content
+        self.assertEqual(["FindMyPkG.cmake", "FindMyPkG2.cmake"], content.keys())
+        self.assertNotIn("my_pkg", content["FindMyPkG.cmake"])
+        self.assertNotIn("MY_PKG", content["FindMyPkG.cmake"])
+        self.assertNotIn("my_pkg", content["FindMyPkG2.cmake"])
+        self.assertNotIn("MY_PKG", content["FindMyPkG2.cmake"])
+        self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)", content["FindMyPkG.cmake"])
+        self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
