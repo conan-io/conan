@@ -29,12 +29,12 @@ class AliasConanfile(ConanFile):
 """ % (target_ref.full_str(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
-    digest = FileTreeManifest.create(package_layout.export())
-    digest.save(folder=package_layout.export())
+    manifest = FileTreeManifest.create(package_layout.export())
+    manifest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
     _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
-                                 output=output, path=None, digest=digest,
+                                 output=output, path=None, manifest=manifest,
                                  revision_mode=revision_mode)
 
 
@@ -102,9 +102,9 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
 
     # Get previous digest
     try:
-        previous_digest = FileTreeManifest.load(package_layout.export())
+        previous_manifest = FileTreeManifest.load(package_layout.export())
     except IOError:
-        previous_digest = None
+        previous_manifest = None
     finally:
         _recreate_folders(package_layout.export(), package_layout.export_sources())
 
@@ -124,22 +124,22 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
-        digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
-        modified_recipe = not previous_digest or previous_digest != digest
+        manifest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        modified_recipe = not previous_manifest or previous_manifest != manifest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
             output.info('Folder: %s' % package_layout.export())
         else:
             output.info("The stored package has not changed")
-            digest = previous_digest  # Use the old one, keep old timestamp
-        digest.save(package_layout.export())
+            manifest = previous_manifest  # Use the old one, keep old timestamp
+        manifest.save(package_layout.export())
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
                                             revisions_enabled=revisions_enabled,
                                             output=output,
                                             path=os.path.dirname(conanfile_path),
-                                            digest=digest,
+                                            manifest=manifest,
                                             revision_mode=conanfile.revision_mode)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
@@ -302,14 +302,14 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
-def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest,
+def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, manifest,
                                  revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
-        revision = digest.summary_hash
+        revision = manifest.summary_hash
         if revisions_enabled:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))
