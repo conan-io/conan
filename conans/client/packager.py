@@ -15,7 +15,7 @@ from conans.util.log import logger
 def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
                conanfile_path, ref):
     mkdir(package_folder)
-    conanfile.package_folder = src_package_folder
+    conanfile.package_folder = package_folder
     output = conanfile.output
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % package_folder)
