@@ -3,6 +3,7 @@ import re
 import unittest
 from collections import OrderedDict
 
+from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 from conans.util.files import load
 from conans.model.ref import ConanFileReference
@@ -151,6 +152,14 @@ class HelloConan(ConanFile):
 
     def clean_remote_test(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def clean_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
         self.client.run("remote clean")
         self.client.run("remote list")
         self.assertEqual("", self.client.out)
