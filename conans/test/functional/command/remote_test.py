@@ -166,6 +166,14 @@ class HelloConan(ConanFile):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
+    def remove_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote remove remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
     def add_force_test(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
