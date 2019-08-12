@@ -926,6 +926,10 @@ class ConanAPIV1(object):
         return self.app.cache.registry.remove(remote_name)
 
     @api_method
+    def remote_set_disabled(self, remote_name, state):
+        return self.app.cache.registry.set_disabled(remote_name, state)
+
+    @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
         return self.app.cache.registry.update(remote_name, url, verify_ssl, insert)
 

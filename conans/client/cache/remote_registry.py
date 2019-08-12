@@ -9,7 +9,7 @@ from conans.util.files import load, save
 from conans.model.ref import PackageReference, ConanFileReference
 
 
-Remote = namedtuple("Remote", "name url verify_ssl")
+Remote = namedtuple("Remote", "name url verify_ssl disabled")
 
 
 def load_registry_txt(contents):
@@ -132,7 +132,9 @@ class Remotes(object):
         result = Remotes()
         data = json.loads(text)
         for r in data.get("remotes", []):
-            result._remotes[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
+            disabled = r["disabled"] if "disabled" in r else False
+            result._remotes[r["name"]] = Remote(r["name"], r["url"],
+                                                r["verify_ssl"], disabled)
 
         return result
 
@@ -143,8 +145,18 @@ class Remotes(object):
         return "\n".join(result)
 
     def save(self, filename):
-        ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v}
-                           for r, (_, u, v) in self._remotes.items()]}
+        ret = {"remotes": []}
+        for r, (_, u, v, d) in self._remotes.items():
+            if d:
+                ret["remotes"].append({
+                    "name": r,
+                    "url": u,
+                    "verify_ssl": v,
+                    "disabled": d
+                })
+            else:
+                ret["remotes"].append({"name": r, "url": u, "verify_ssl": v})
+
         save(filename, json.dumps(ret, indent=True))
 
     def _get_by_url(self, url):
@@ -160,6 +172,11 @@ class Remotes(object):
         new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
         self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
                                      else (k, v) for k, v in self._remotes.items()])
+
+    def set_disabled(self, remote_name, state):
+        remote = self._remotes[remote_name]
+        if remote.disabled != state:
+            self._remotes[remote_name] = Remote(remote.name, remote.url, remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
@@ -276,6 +293,7 @@ class RemoteRegistry(object):
         else:
             content = load(self._filename)
             remotes = Remotes.loads(content)
+            remotes = Remotes.loads(content)
         return remotes
 
     def add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
@@ -350,6 +368,11 @@ class RemoteRegistry(object):
                             pkg_metadata.remote = new_remote_name
 
             remotes.save(self._filename)
+
+    def set_disabled(self, remote_name, state):
+        remotes = self.load_remotes()
+        remotes.set_disabled(remote_name, state)
+        remotes.save(self._filename)
 
     @property
     def refs_list(self):

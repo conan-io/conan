@@ -1449,6 +1449,11 @@ class Command(object):
         subparsers.add_parser('clean', help="Clean the list of remotes and all "
                                             "recipe-remote associations")
 
+        parser_enable = subparsers.add_parser('enable', help='Enable a remote')
+        parser_enable.add_argument('remote', help='Name of the remote')
+        parser_disable = subparsers.add_parser('disable', help='Disable a remote')
+        parser_disable.add_argument('remote', help='Name of the remote')
+
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
@@ -1491,6 +1496,10 @@ class Command(object):
             return self._conan.remote_update_pref(package_reference, remote_name)
         elif args.subcommand == "clean":
             return self._conan.remote_clean()
+        elif args.subcommand == "enable":
+            return self._conan.remote_set_disabled(remote_name, False)
+        elif args.subcommand == "disable":
+            return self._conan.remote_set_disabled(remote_name, True)
 
     def profile(self, *args):
         """
