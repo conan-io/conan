@@ -2,6 +2,7 @@ import os
 import sys
 from collections import OrderedDict
 
+from conans.client.manager import deps_install
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 
 import conans
@@ -16,7 +17,7 @@ from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.search import Search
-from conans.client.cmd.test import PackageTester
+from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conf import ConanClientConfigParser
@@ -30,7 +31,6 @@ from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
-from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
@@ -210,12 +210,6 @@ class ConanAPIV1(object):
     def create_app(self):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester, self.runner)
 
-    def _init_manager(self, action_recorder):
-        """Every api call gets a new recorder and new manager"""
-        return ConanManager(self.app.cache, self.app.user_io,
-                            self.app.remote_manager, action_recorder,
-                            self.app.graph_manager, self.app.hook_manager)
-
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
@@ -298,11 +292,9 @@ class ConanAPIV1(object):
                                     self.app.cache, self.app.out, lockfile=lockfile)
         ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
-        manager = self._init_manager(recorder)
-        pt = PackageTester(manager, self.user_io)
-        pt.install_build_and_test(conanfile_path, ref, graph_info, remotes,
-                                  update, build_modes=build_modes,
-                                  test_build_folder=test_build_folder)
+        install_build_and_test(self.app, conanfile_path, ref, graph_info, remotes,
+                               update, build_modes=build_modes,
+                               test_build_folder=test_build_folder, recorder=recorder)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -357,11 +349,10 @@ class ConanAPIV1(object):
 
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
             graph_info.root = ConanFileReference(None, None, None, None, validate=False)
-            manager = self._init_manager(recorder)
             recorder.add_recipe_being_developed(ref)
-            create(ref, manager, self.user_io, graph_info, remotes, update, build_modes,
+            create(self.app, ref, graph_info, remotes, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
-                   test_build_folder, test_folder, conanfile_path)
+                   test_build_folder, test_folder, conanfile_path, recorder=recorder)
 
             if lockfile:
                 graph_info.save_lock(lockfile)
@@ -419,11 +410,10 @@ class ConanAPIV1(object):
             recorder.recipe_exported(new_ref)
             recorder.add_recipe_being_developed(ref)
             remotes = self.app.cache.registry.load_remotes()
-            export_pkg(self.app.cache, self.app.graph_manager, self.app.hook_manager, recorder,
-                       self.app.out,
-                       ref, source_folder=source_folder, build_folder=build_folder,
-                       package_folder=package_folder, install_folder=install_folder,
-                       graph_info=graph_info, force=force, remotes=remotes)
+            export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
+                       build_folder=build_folder, package_folder=package_folder,
+                       install_folder=install_folder, graph_info=graph_info, force=force,
+                       remotes=remotes)
             if lockfile:
                 graph_info.save_lock(lockfile)
             return recorder.get_info(self.app.cache.config.revisions_enabled)
@@ -524,13 +514,13 @@ class ConanAPIV1(object):
             remotes = self.app.cache.registry.load_remotes()
             remotes.select(remote_name)
             self.app.python_requires.enable_remotes(update=update, remotes=remotes)
-            manager = self._init_manager(recorder)
-            manager.install(ref_or_path=reference, install_folder=install_folder,
-                            remotes=remotes, graph_info=graph_info, build_modes=build,
-                            update=update, manifest_folder=manifest_folder,
-                            manifest_verify=manifest_verify,
-                            manifest_interactive=manifest_interactive,
-                            generators=generators, use_lock=lockfile)
+
+            deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                         remotes=remotes, graph_info=graph_info, build_modes=build,
+                         update=update, manifest_folder=manifest_folder,
+                         manifest_verify=manifest_verify,
+                         manifest_interactive=manifest_interactive,
+                         generators=generators, use_lock=lockfile, recorder=recorder)
             return recorder.get_info(self.app.cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -563,18 +553,19 @@ class ConanAPIV1(object):
             remotes = self.app.cache.registry.load_remotes()
             remotes.select(remote_name)
             self.app.python_requires.enable_remotes(update=update, remotes=remotes)
-            manager = self._init_manager(recorder)
-            manager.install(ref_or_path=conanfile_path,
-                            install_folder=install_folder,
-                            remotes=remotes,
-                            graph_info=graph_info,
-                            build_modes=build,
-                            update=update,
-                            manifest_folder=manifest_folder,
-                            manifest_verify=manifest_verify,
-                            manifest_interactive=manifest_interactive,
-                            generators=generators,
-                            no_imports=no_imports)
+            deps_install(app=self.app,
+                         ref_or_path=conanfile_path,
+                         install_folder=install_folder,
+                         remotes=remotes,
+                         graph_info=graph_info,
+                         build_modes=build,
+                         update=update,
+                         manifest_folder=manifest_folder,
+                         manifest_verify=manifest_verify,
+                         manifest_interactive=manifest_interactive,
+                         generators=generators,
+                         no_imports=no_imports,
+                         recorder=recorder)
             return recorder.get_info(self.app.cache.config.revisions_enabled)
         except ConanException as exc:
             recorder.error = True
@@ -695,7 +686,7 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        build(self.app.graph_manager, self.app.hook_manager, conanfile_path,
+        build(self.app, conanfile_path,
               source_folder, build_folder, package_folder, install_folder,
               should_configure=should_configure, should_build=should_build,
               should_install=should_install, should_test=should_test)
@@ -718,7 +709,7 @@ class ConanAPIV1(object):
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                                deps_info_required=True)
+                                                                   deps_info_required=True)
         with get_env_context_manager(conanfile):
             packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
                                     install_folder, self.app.hook_manager, conanfile_path, None,

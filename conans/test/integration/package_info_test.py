@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conans.paths import CONANFILE, CONANFILE_TXT
@@ -46,3 +47,44 @@ class HelloConan(ConanFile):
 
         client.run("install . -o *:switch=0 --build Lib3")
         self.assertIn("Lib3/1.0@conan/stable: WARN: Env var MYVAR=foo", client.out)
+
+    def package_info_name_test(self):
+        dep = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+
+            class Dep(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.name = "MyCustomGreatName"
+                """)
+        intermediate = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+
+            class Intermediate(ConanFile):
+                requires = "dep/1.0@us/ch"
+                """)
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+
+
+            class Consumer(ConanFile):
+                requires = "intermediate/1.0@us/ch"
+
+                def build(self):
+                    for dep_key, dep_value in self.deps_cpp_info.dependencies:
+                        self.output.info("%s name: %s" % (dep_key, dep_value.name))
+                """)
+
+        client = TestClient()
+        client.save({"conanfile_dep.py": dep,
+                     "conanfile_intermediate.py": intermediate,
+                     "conanfile_consumer.py": consumer})
+        client.run("create conanfile_dep.py dep/1.0@us/ch")
+        client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
+        client.run("create conanfile_consumer.py consumer/1.0@us/ch")
+        self.assertIn("intermediate name: intermediate", client.out)
+        self.assertIn("dep name: MyCustomGreatName", client.out)
