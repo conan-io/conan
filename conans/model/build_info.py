@@ -16,6 +16,7 @@ class _CppInfo(object):
     specific systems will be produced from this info
     """
     def __init__(self):
+        self.name = None
         self.includedirs = []  # Ordered list of include paths
         self.srcdirs = []  # Ordered list of source paths
         self.libdirs = []  # Directories to find libraries
