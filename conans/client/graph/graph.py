@@ -210,7 +210,8 @@ class DepsGraph(object):
         self.nodes.add(node)
 
     def add_edge(self, src, dst, require):
-        assert src in self.nodes and dst in self.nodes
+        assert src in self.nodes, "Cannot find src='{}' in nodes (dst='{}')".format(src, dst)
+        assert dst in self.nodes, "Cannot find dst='{}' in nodes (src='{}')".format(dst, src)
         edge = Edge(src, dst, require)
         src.add_edge(edge)
         dst.add_edge(edge)
