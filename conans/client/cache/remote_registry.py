@@ -10,6 +10,7 @@ from conans.model.ref import PackageReference, ConanFileReference
 
 
 Remote = namedtuple("Remote", "name url verify_ssl disabled")
+Remote.__new__.__defaults__ = (None, None, None, False)
 
 
 def load_registry_txt(contents):
@@ -262,7 +263,7 @@ class Remotes(object):
         prev_remote = self._get_by_url(url)
         if prev_remote and verify_ssl == prev_remote.verify_ssl and insert is None:
             raise ConanException("Remote '%s' already exists with same URL" % prev_remote.name)
-        updated_remote = Remote(remote_name, url, verify_ssl)
+        updated_remote = Remote(remote_name, url, verify_ssl,prev_remote.disabled)
         if insert is not None:
             try:
                 insert_index = int(insert)
