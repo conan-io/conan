@@ -30,9 +30,21 @@ class CommandOutputer(object):
     def remote_list(self, remotes, raw):
         for r in remotes:
             if raw:
-                self._output.info("%s %s %s" % (r.name, r.url, r.verify_ssl))
+                if r.disabled:
+                    self._output.info(
+                        "%s %s %s %s" %
+                        (r.name, r.url, r.verify_ssl, r.disabled))
+                else:
+                    self._output.info("%s %s %s" %
+                                      (r.name, r.url, r.verify_ssl))
             else:
-                self._output.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+                if r.disabled:
+                    self._output.info(
+                        "%s: %s [Verify SSL: %s, Disabled: %s]" %
+                        (r.name, r.url, r.verify_ssl, r.disabled))
+                else:
+                    self._output.info("%s: %s [Verify SSL: %s]" %
+                                      (r.name, r.url, r.verify_ssl))
 
     def remote_ref_list(self, refs):
         for reference, remote_name in refs.items():
