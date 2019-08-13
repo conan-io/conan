@@ -603,7 +603,6 @@ class ConanAPIV1(object):
 
     @api_method
     def config_home(self):
-        self.app.out.info(self.cache_folder)
         return self.cache_folder
 
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env,

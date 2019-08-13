@@ -550,7 +550,9 @@ class Command(object):
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
         elif args.subcommand == "home":
-            return self._conan.config_home()
+            conan_home = self._conan.config_home()
+            self._out.info(conan_home)
+            return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
