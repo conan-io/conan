@@ -296,7 +296,7 @@ class RemoteRegistry(object):
         else:
             self._output.warn("The URL is empty. It must contain scheme and hostname.")
 
-    def load_remotes(self):
+    def load_remotes(self, with_disabled=True):
         if not os.path.exists(self._filename):
             self._output.warn("Remotes registry file missing, "
                               "creating default one in %s" % self._filename)
