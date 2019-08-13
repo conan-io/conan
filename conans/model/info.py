@@ -315,6 +315,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
+        result.base_compatibility()
 
         return result
 
@@ -475,3 +476,41 @@ class ConanInfo(object):
 
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
+
+    def base_compatibility(self):
+        if getattr(self.full_settings.compiler, "base", None):
+            if self.full_settings.compiler.ignore_base:
+                self.base_incompatible()
+            else:
+                self.base_compatible()
+
+    def base_compatible(self):
+        if getattr(self.full_settings.compiler, "base", None):
+            # Unfortunately assigning values is shallow
+            self.settings.compiler = (
+                self.full_settings.compiler.base
+            )  # So now self.settings.compiler is basically just a string
+
+            # Deep copy everything
+            for field, value in self.full_settings.compiler.base.as_list():
+                tokens = field.split(".")
+                attr = self.settings.compiler
+                for token in tokens[:-1]:
+                    attr = getattr(attr, token)
+                setattr(attr, tokens[-1], value)
+
+    def base_incompatible(self):
+        if getattr(self.full_settings.compiler, "base", None):
+            # Method to opt out of binary compatibility
+            # Unfortunately assigning values is shallow
+            self.settings.compiler = (
+                self.full_settings.compiler
+            )  # So now self.settings.compiler is basically just a string
+
+            # Deep copy everything
+            for field, value in self.full_settings.compiler.as_list():
+                tokens = field.split(".")
+                attr = self.settings.compiler
+                for token in tokens[:-1]:
+                    attr = getattr(attr, token)
+                setattr(attr, tokens[-1], value)

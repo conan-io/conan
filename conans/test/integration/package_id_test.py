@@ -430,3 +430,43 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
         self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)
+
+    def base_incompatible_test(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.base_incompatible()",
+                     channel="user/testing",
+                     settings='"compiler"'
+                     )
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="intel" -s compiler.version="16.0" '
+                        '-s compiler.base="Visual Studio" -s compiler.base.version=8'
+                        ' -s compiler.base.runtime=MD --build')
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="Visual Studio" '
+                        '-s compiler.version=8 '
+                        '-s compiler.runtime=MD', assert_error=True)
+        self.assertIn("Can't find a 'Hello/1.2.0@user/testing' package for the specified settings",
+                      self.client.out)
+        self.assertIn("Package ID: 1151fe341e6b310f7645a76b4d3d524342835acc", self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.version="16.0" '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD')
+        self.assertIn("Hello/1.2.0@user/testing:59a48fd8e038e7e81d45396b69734472a639bdaf - Cache",
+                      self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.ignore_base=True '
+                        '-s compiler.version="16.0" '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD',
+                        assert_error=True)
+        self.assertIn("Can't find a 'Hello/1.2.0@user/testing' package for the specified settings",
+                      self.client.out)
+        self.assertIn("Package ID: b98222974b5bba6a8bd14871afe6e4981b6ce428", self.client.out)
+        print(self.client.out)

@@ -6,7 +6,7 @@ from parameterized.parameterized import parameterized
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load
 
 
@@ -608,3 +608,38 @@ class TestConanLib(ConanFile):
         self.assertNotIn("/_", conaninfo)
         self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
                       conaninfo)
+
+    @parameterized.expand([("True", ), ("None", )])
+    def intel_compiler_test(self, ignore_base):
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        dep_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 16.0
+        compiler.base = Visual Studio
+        compiler.base.version = 8
+        compiler.base.runtime = MD
+        compiler.ignore_base = %s
+        """ % ignore_base)
+        client.save({"dep_conanfile.py": dep_conanfile,
+                     "dep_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile dep_profile" % ref.full_str())
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
+        profile = textwrap.dedent("""
+                [settings]
+                compiler = Visual Studio
+                compiler.version = 8
+                compiler.runtime = MD
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+        assert_error = ignore_base == "True"
+        client.run("install conanfile.py --profile profile", assert_error=assert_error)
+        if ignore_base == "True":
+            self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings",
+                          client.out)
+        else:
+            self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache",
+                          client.out)
