@@ -152,12 +152,15 @@ class ConanProxy(object):
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
-            try:
-                new_ref = _retrieve_from_remote(remote)
-                return remote, new_ref
-            # If not found continue with the next, else raise
-            except NotFoundException:
+            if remote.disabled:
                 pass
+            else:
+                try:
+                    new_ref = _retrieve_from_remote(remote)
+                    return remote, new_ref
+                # If not found continue with the next, else raise
+                except NotFoundException:
+                    pass
         else:
             msg = "Unable to find '%s' in remotes" % ref.full_str()
             recorder.recipe_install_error(ref, INSTALL_ERROR_MISSING,
