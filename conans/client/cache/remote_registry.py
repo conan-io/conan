@@ -141,7 +141,14 @@ class Remotes(object):
     def dumps(self):
         result = []
         for remote in self._remotes.values():
-            result.append("%s: %s [Verify SSL: %s]" % (remote.name, remote.url, remote.verify_ssl))
+            if remote.disabled:
+                result.append("%s: %s [Verify SSL: %s, Disabled: %s]" %
+                              (remote.name, remote.url, remote.verify_ssl,
+                               remote.disabled))
+            else:
+                result.append("%s: %s [Verify SSL: %s]" %
+                              (remote.name, remote.url, remote.verify_ssl))
+
         return "\n".join(result)
 
     def save(self, filename):
@@ -166,17 +173,22 @@ class Remotes(object):
 
     def rename(self, remote_name, new_remote_name):
         if new_remote_name in self._remotes:
-            raise ConanException("Remote '%s' already exists" % new_remote_name)
+            raise ConanException("Remote '%s' already exists" %
+                                 new_remote_name)
 
         remote = self._remotes[remote_name]
-        new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
-        self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
-                                     else (k, v) for k, v in self._remotes.items()])
+        new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl,
+                            remote.disabled)
+        self._remotes = OrderedDict([
+            (new_remote_name, new_remote) if k == remote_name else (k, v)
+            for k, v in self._remotes.items()
+        ])
 
     def set_disabled(self, remote_name, state):
         remote = self._remotes[remote_name]
         if remote.disabled != state:
-            self._remotes[remote_name] = Remote(remote.name, remote.url, remote.verify_ssl, state)
+            self._remotes[remote_name] = Remote(remote.name, remote.url,
+                                                remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
@@ -292,7 +304,6 @@ class RemoteRegistry(object):
             remotes.save(self._filename)
         else:
             content = load(self._filename)
-            remotes = Remotes.loads(content)
             remotes = Remotes.loads(content)
         return remotes
 
