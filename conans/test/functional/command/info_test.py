@@ -469,6 +469,39 @@ class AConan(ConanFile):
         self.assertIn("[tool/0.1@user/channel], [Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
                       client.out)
 
+    def build_order_build_requires_also_requires_test(self):
+        # https://github.com/conan-io/conan/issues/5474
+        client = TestClient()
+
+        ca = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class CA(ConanFile):
+                pass
+        """)
+        client.save({"conanfile.py": ca})
+        client.run("create . CA/version@user/channel")
+
+        cb = textwrap.dedent("""
+            from conans import ConanFile
+            
+            class CB(ConanFile):
+                def build_requirements(self):
+                    self.build_requires("CA/version@user/channel")
+        """)
+        client.save({"conanfile.py": cb})
+        client.run("create . CB/version@user/channel")
+
+        consumer = textwrap.dedent("""
+            [requires]
+            CA/version@user/channel
+            CB/version@user/channel
+        """)
+        client.save({"conanfile.txt": consumer})
+        client.run("info conanfile.txt --build-order=ALL")
+
+        self.assertEqual(client.out, "[CA/version@user/channel], [CB/version@user/channel]")
+
     def build_order_privates_test(self):
         # https://github.com/conan-io/conan/issues/3267
         client = TestClient()
