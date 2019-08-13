@@ -508,11 +508,13 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
+        get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
+        subparsers.add_parser('home', help='Retrieve the Conan home directory')
+        install_subparser = subparsers.add_parser('install', help='Install a full configuration '
+                                                                  'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
-        get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
-        install_subparser = subparsers.add_parser('install', help='install a full configuration '
-                                                                  'from a local or remote zip file')
+
         rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
@@ -547,6 +549,10 @@ class Command(object):
             return self._conan.config_get(args.item)
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
+        elif args.subcommand == "home":
+            conan_home = self._conan.config_home()
+            self._out.info(conan_home)
+            return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
