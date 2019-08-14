@@ -263,7 +263,8 @@ class Remotes(object):
         prev_remote = self._get_by_url(url)
         if prev_remote and verify_ssl == prev_remote.verify_ssl and insert is None:
             raise ConanException("Remote '%s' already exists with same URL" % prev_remote.name)
-        updated_remote = Remote(remote_name, url, verify_ssl,prev_remote.disabled)
+        disabled = True if prev_remote and prev_remote.disabled else False
+        updated_remote = Remote(remote_name, url, verify_ssl, disabled)
         if insert is not None:
             try:
                 insert_index = int(insert)
