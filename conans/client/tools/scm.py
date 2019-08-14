@@ -289,6 +289,9 @@ class SVN(SCMBase):
                 extra_options += " --trust-server-cert-failures=unknown-ca"
             else:
                 extra_options += " --trust-server-cert"
+        if self._username and self._password:
+            extra_options += " --username=" + self._username
+            extra_options += " --password=" + self._password
         return super(SVN, self).run(command="{} {}".format(command, extra_options))
 
     def _show_item(self, item, target='.'):
