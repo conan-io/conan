@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 from collections import OrderedDict, namedtuple
@@ -186,10 +187,15 @@ class Remotes(object):
         ])
 
     def set_disabled(self, remote_name, state):
-        remote = self._remotes[remote_name]
-        if remote.disabled != state:
-            self._remotes[remote_name] = Remote(remote.name, remote.url,
-                                                remote.verify_ssl, state)
+        filtered_remotes = []
+        for remote in self._remotes.values():
+            if fnmatch.fnmatch(remote.name, remote_name):
+                if remote.disabled != state:
+                    filtered_remotes.append(remote.name)
+        for r in filtered_remotes:
+            remote = self._remotes[r]
+            self._remotes[r] = Remote(remote.name, remote.url,
+                                      remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
