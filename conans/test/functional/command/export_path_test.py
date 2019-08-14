@@ -22,8 +22,8 @@ class ExportPathTest(unittest.TestCase):
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
+                      client.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(files.keys()):
@@ -51,8 +51,8 @@ class ExportPathTest(unittest.TestCase):
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
+                      client.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(files.keys()):
@@ -83,8 +83,8 @@ class ExportPathTest(unittest.TestCase):
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
+                      client.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp',
@@ -120,8 +120,8 @@ class ExportPathTest(unittest.TestCase):
         manif = FileTreeManifest.load(client.cache.package_layout(ref).export())
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(ref),
-                      client.user_io.out)
-        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.user_io.out)
+                      client.out)
+        self.assertIn('%s: Folder: %s' % (str(ref), reg_path), client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp',

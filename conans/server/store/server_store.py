@@ -261,7 +261,7 @@ class ServerStore(object):
         else:
             rev_list = RevisionList()
         if ref.revision is None:
-            raise ConanException("Invalid revision for: %s" % ref.full_repr())
+            raise ConanException("Invalid revision for: %s" % ref.full_str())
         rev_list.add_revision(ref.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")

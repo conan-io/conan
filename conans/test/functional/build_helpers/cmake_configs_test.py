@@ -17,8 +17,8 @@ class CMakeConfigsTest(unittest.TestCase):
         client.save(files, clean_first=True)
 
         client.run("create . user/testing")
-        self.assertIn("Hello Release Hello0", client.user_io.out)
-        self.assertIn("Hello Debug Hello0", client.user_io.out)
+        self.assertIn("Hello Release Hello0", client.out)
+        self.assertIn("Hello Debug Hello0", client.out)
 
     def cmake_multi_test(self):
         client = TestClient()
@@ -34,9 +34,9 @@ class CMakeConfigsTest(unittest.TestCase):
         client.run('install . --build missing')
         client.run("build .")
         cmd = os.sep.join([".", "bin", "say_hello"])
-        client.runner(cmd, cwd=client.current_folder)
+        client.run_command(cmd)
         self.assertIn("Hello Release Hello2 Hello Release Hello1 Hello Release Hello0",
-                      " ".join(str(client.user_io.out).splitlines()))
-        client.runner(cmd + "_d", cwd=client.current_folder)
+                      " ".join(str(client.out).splitlines()))
+        client.run_command(cmd + "_d")
         self.assertIn("Hello Debug Hello2 Hello Debug Hello1 Hello Debug Hello0",
-                      " ".join(str(client.user_io.out).splitlines()))
+                      " ".join(str(client.out).splitlines()))

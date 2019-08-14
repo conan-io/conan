@@ -166,7 +166,7 @@ OpenCV/2.4.104phil/stable
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        with six.assertRaisesRegex(self, ConanException, "Wrong package recipe reference(.*)"):
+        with six.assertRaisesRegex(self, ConanException, "The reference has too many '/'"):
             loader.load_conanfile_txt(file_path, test_processed_profile())
 
         file_content = '''[requires]
@@ -225,20 +225,21 @@ class MyTest(ConanFile):
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
 
-        recipe = loader.load_consumer(conanfile_path,
-                                      test_processed_profile(profile))
+        recipe = loader.load_consumer(conanfile_path, profile)
         self.assertEqual(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
+        profile = Profile()
+        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path,
-                                      test_processed_profile(profile))
+        recipe = loader.load_consumer(conanfile_path, profile)
         self.assertEqual(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
+        profile = Profile()
+        profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
-        recipe = loader.load_consumer(conanfile_path,
-                                      test_processed_profile(profile))
+        recipe = loader.load_consumer(conanfile_path, profile)
         self.assertIsNone(recipe.settings.os.value)
 
 

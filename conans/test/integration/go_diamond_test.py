@@ -1,4 +1,3 @@
-import os
 import platform
 import unittest
 
@@ -40,25 +39,27 @@ class GoDiamondTest(unittest.TestCase):
         client.run("build .")
 
         with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': client.current_folder}):
-            client.runner('go install hello4_main', cwd=os.path.join(client.current_folder, 'src'))
+            with client.chdir("src"):
+                client.run_command('go install hello4_main')
         if platform.system() == "Windows":
             command = "hello4_main"
         else:
             command = './hello4_main'
-        client.runner(command, cwd=os.path.join(client.current_folder, 'bin'))
+        with client.chdir("bin"):
+            client.run_command(command)
 
         self.assertEqual(['Hello 4', 'Hello 3', 'Hello 1', 'Hello 0', 'Hello 2', 'Hello 0'],
-                         str(client.user_io.out).splitlines()[-6:])
+                         str(client.out).splitlines()[-6:])
 
         # Try to upload and reuse the binaries
         client.run("upload hello3/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
         client.run("upload hello1/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
         client.run("upload hello2/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
         client.run("upload hello0/0.1@lasote/stable --all")
-        self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
+        self.assertEqual(str(client.out).count("Uploading package"), 1)
 #
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         ref = ConanFileReference.loads("hello4/0.2@lasote/stable")
@@ -68,13 +69,14 @@ class GoDiamondTest(unittest.TestCase):
 
         client2.run("install . --build missing")
         with environment_append({"PATH": ['$GOPATH/bin'], 'GOPATH': client2.current_folder}):
-            client2.runner('go install hello4_main',
-                           cwd=os.path.join(client2.current_folder, 'src'))
+            with client2.chdir("src"):
+                client2.run_command('go install hello4_main')
         if platform.system() == "Windows":
             command = "hello4_main"
         else:
             command = './hello4_main'
-        client2.runner(command, cwd=os.path.join(client2.current_folder, 'bin'))
+        with client2.chdir("bin"):
+            client2.run_command(command)
 
         self.assertEqual(['Hello 4', 'Hello 3', 'Hello 1', 'Hello 0', 'Hello 2', 'Hello 0'],
-                         str(client2.user_io.out).splitlines()[-6:])
+                         str(client2.out).splitlines()[-6:])

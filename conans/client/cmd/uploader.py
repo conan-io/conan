@@ -15,7 +15,7 @@ from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
-                               gzopen_without_timestamps, set_dirty)
+                               gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
@@ -93,11 +93,11 @@ class CmdUpload(object):
     def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
         """ validate inputs and compute the refs (without revisions) to be uploaded
         """
-        if package_id and not check_valid_ref(reference_or_pattern, allow_pattern=False):
+        if package_id and not check_valid_ref(reference_or_pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
 
-        if package_id or check_valid_ref(reference_or_pattern, allow_pattern=False):
+        if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
             refs = [ref, ]
@@ -501,9 +501,7 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    set_dirty(tgz_path)
-    with open(tgz_path, "wb") as tgz_handle:
-        # tgz_contents = BytesIO()
+    with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
         for filename, dest in sorted(symlinks.items()):
@@ -553,7 +551,6 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                 output.writeln("]")
         tgz.close()
 
-    clean_dirty(tgz_path)
     duration = time.time() - t1
     log_compressed_files(files, duration, tgz_path)
 

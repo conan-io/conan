@@ -152,7 +152,7 @@ class ActionRecorder(object):
             action_types = [action.type for action in the_actions]
             time = the_actions[0].time
             if revisions_enabled and isinstance(the_ref, ConanFileReference):
-                the_id = the_actions[0].full_ref.full_repr()
+                the_id = repr(the_actions[0].full_ref)
             else:
                 the_id = str(the_ref)
 

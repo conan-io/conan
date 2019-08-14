@@ -34,7 +34,7 @@ class ConanOtherLib(ConanFile):
         client.save(files)
         client.run("export . user/channel")
 
-        self.base_folder = client.base_folder
+        self.cache_folder = client.cache_folder
 
     def test_base(self):
 
@@ -70,7 +70,7 @@ class DevConanFile(HelloConan2):
                  "conanfile_dev.py": extension}
 
         # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(self.base_folder, cpu_count=False)
+        client = TestClient(self.cache_folder, cpu_count=False)
         client.save(files)
         client.run("install . --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
@@ -79,10 +79,10 @@ class DevConanFile(HelloConan2):
         self.assertNotIn("otherlib/0.2@user/channel", conaninfo)
         self.assertNotIn("otherlib:otherlib_option=1", conaninfo)
         client.run("build .")
-        self.assertIn("MyFlag False", client.user_io.out)
+        self.assertIn("MyFlag False", client.out)
         client.run("info .")
-        self.assertIn("lib/0.1@user/channel", client.user_io.out)
-        self.assertNotIn("otherlib/0.2@user/channel", client.user_io.out)
+        self.assertIn("lib/0.1@user/channel", client.out)
+        self.assertNotIn("otherlib/0.2@user/channel", client.out)
 
         client.run("install conanfile_dev.py --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
@@ -91,10 +91,10 @@ class DevConanFile(HelloConan2):
         self.assertIn("otherlib/0.2@user/channel", conaninfo)
         self.assertIn("otherlib:otherlib_option=1", conaninfo)
         client.run("build ./conanfile_dev.py")
-        self.assertIn("MyFlag True", client.user_io.out)
+        self.assertIn("MyFlag True", client.out)
         client.run("info conanfile_dev.py")
-        self.assertIn("lib/0.1@user/channel", client.user_io.out)
-        self.assertIn("otherlib/0.2@user/channel", client.user_io.out)
+        self.assertIn("lib/0.1@user/channel", client.out)
+        self.assertIn("otherlib/0.2@user/channel", client.out)
 
     def conanfile_subclass_test(self):
         base = '''
@@ -129,7 +129,7 @@ class ConanFileToolsTest(ConanBase):
         files = {"base_conan.py": base,
                  "conanfile.py": extension}
         # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(self.base_folder, cpu_count=False)
+        client = TestClient(self.cache_folder, cpu_count=False)
 
         client.save(files)
         client.run("create . conan/testing -o test:test_option=3 --build")
@@ -158,7 +158,7 @@ otherlib:otherlib_option = 1
                  "conanfile_dev.txt": extension}
 
         # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(self.base_folder, cpu_count=False)
+        client = TestClient(self.cache_folder, cpu_count=False)
         client.save(files)
         client.run("install . --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))

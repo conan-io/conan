@@ -92,7 +92,7 @@ class TestConan(ConanFile):
         # try local flow still works, but no pkg id available
         client.run("install .")
         client.run("package .")
-        self.assertIn("conanfile.py (test/1.0@None/None): Package 'package' created", client.out)
+        self.assertIn("conanfile.py (test/1.0): Package 'package' created", client.out)
 
         # try export-pkg with package folder
         client.run("remove test/1.0@danimtb/testing --force")
