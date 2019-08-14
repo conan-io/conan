@@ -211,9 +211,14 @@ class Remotes(object):
 
     def __getitem__(self, remote_name):
         try:
-            return self._remotes[remote_name]
+            remote = self._remotes[remote_name]
+            if remote.disabled:
+                raise ConanException("Remote '%s' is disabled" % (remote_name))
+            else:
+                return remote
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
+
 
     def __delitem__(self, remote_name):
         try:
