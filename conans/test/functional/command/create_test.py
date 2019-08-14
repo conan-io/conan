@@ -609,8 +609,7 @@ class TestConanLib(ConanFile):
         self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
                       conaninfo)
 
-    @parameterized.expand([("True", ), ("None", )])
-    def intel_compiler_test(self, ignore_base):
+    def intel_compiler_compatible_test(self):
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         dep_conanfile = GenConanfile().with_setting("compiler")
@@ -621,11 +620,10 @@ class TestConanLib(ConanFile):
         compiler.base = Visual Studio
         compiler.base.version = 8
         compiler.base.runtime = MD
-        compiler.ignore_base = %s
-        """ % ignore_base)
+        """)
         client.save({"dep_conanfile.py": dep_conanfile,
-                     "dep_profile": dep_profile})
-        client.run("create dep_conanfile.py %s --profile dep_profile" % ref.full_str())
+                     "intel_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile intel_profile" % ref.full_str())
         conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
         profile = textwrap.dedent("""
                 [settings]
@@ -634,12 +632,49 @@ class TestConanLib(ConanFile):
                 compiler.runtime = MD
                 """)
         client.save({"conanfile.py": conanfile,
-                     "profile": profile})
-        assert_error = ignore_base == "True"
-        client.run("install conanfile.py --profile profile", assert_error=assert_error)
-        if ignore_base == "True":
-            self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings",
-                          client.out)
-        else:
-            self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache",
-                          client.out)
+                     "visual_profile": profile})
+        client.run("install conanfile.py --profile visual_profile")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+        client.run("install conanfile.py --profile intel_profile")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+        client.run("install conanfile.py --profile intel_profile -s "
+                   "compiler.base_incompatible=True", assert_error=True)
+        self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings", client.out)
+        self.assertIn("Package ID: 1d24ddec1eace76ca48c9009add34eaaeea97d01", client.out)
+
+    def intel_compiler_incompatible_test(self):
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        dep_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 16.0
+        compiler.base = Visual Studio
+        compiler.base.version = 8
+        compiler.base.runtime = MD
+        compiler.base_incompatible = True
+        """)
+        client.save({"dep_conanfile.py": dep_conanfile,
+                     "intel_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile intel_profile" % ref.full_str())
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
+        profile = textwrap.dedent("""
+                [settings]
+                compiler = Visual Studio
+                compiler.version = 8
+                compiler.runtime = MD
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": profile})
+        client.run("install conanfile.py --profile visual_profile", assert_error=True)
+        self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings", client.out)
+        self.assertIn("Package ID: 1151fe341e6b310f7645a76b4d3d524342835acc", client.out)
+
+        client.run("install conanfile.py --profile intel_profile")
+        self.assertIn("Bye/0.1@us/ch:1d24ddec1eace76ca48c9009add34eaaeea97d01 - Cache", client.out)
+
+        client.run("install conanfile.py --profile intel_profile "
+                   "-s compiler.base_incompatible=None", assert_error=True)
+        self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings", client.out)
+        self.assertIn("Package ID: 1151fe341e6b310f7645a76b4d3d524342835acc", client.out)

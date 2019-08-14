@@ -479,7 +479,7 @@ class ConanInfo(object):
 
     def base_compatibility(self):
         if getattr(self.full_settings.compiler, "base", None):
-            if self.full_settings.compiler.ignore_base:
+            if self.full_settings.compiler.base_incompatible:
                 self.base_incompatible()
             else:
                 self.base_compatible()
@@ -502,10 +502,11 @@ class ConanInfo(object):
     def base_incompatible(self):
         if getattr(self.full_settings.compiler, "base", None):
             # Method to opt out of binary compatibility
-            # Unfortunately assigning values is shallow
             self.settings.compiler = (
                 self.full_settings.compiler
-            )  # So now self.settings.compiler is basically just a string
+            )
+            # Set base_incompatible=True in order to make packages compatible
+            self.settings.compiler.base_incompatible = True
 
             # Deep copy everything
             for field, value in self.full_settings.compiler.as_list():
