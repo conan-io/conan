@@ -21,7 +21,7 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
         gen = VirtualEnvPythonGenerator(conanfile)
         content = gen.content
 
-        file_extension = {"Linux": ".sh", "Windows": ".bat"}[platform.system()]
+        file_extension = {"Linux": ".sh", "Windows": ".bat"}.get(platform.system(), default=".sh")
         delimiter = {"Linux": ":", "Windows": ";"}[platform.system()]
 
         actual_pythonpath_value = [
