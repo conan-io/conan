@@ -247,6 +247,11 @@ class SearchTest(unittest.TestCase):
                         lib/1.0@foo/bar
                         lib/1.0@user/channel"""), client.out)
 
+    def search_disabled_remote_test(self):
+        self.client.run("remote disable search_able")
+        self.client.run("search * -r search_able", assert_error=True)
+        self.assertIn("ERROR: Remote 'search_able' is disabled", self.client.out)
+
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
         self._copy_to_server(self.client.cache, self.servers["local"].server_store)
