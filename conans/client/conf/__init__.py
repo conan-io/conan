@@ -87,7 +87,7 @@ compiler:
         libcxx: [libstdc++, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     intel:
-        version: ["16.0", "17.0", "18.0", "19.0"]
+        version: ["11.0", "12.0", "13.0", "14.0", "15.0", "16.0", "17.0", "18.0", "19.0"]
         base_incompatible: [None, True]
         base:
             gcc:
