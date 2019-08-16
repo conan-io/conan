@@ -1054,20 +1054,24 @@ class ConanAPIV1(object):
         if not path:
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
-        if not remote_name:
-            package_layout = self.app.cache.package_layout(ref, short_paths=None)
-            return package_layout.get_path(path=path, package_id=package_id), path
-        else:
-            remote = self.get_remote_by_name(remote_name)
-            if self.app.cache.config.revisions_enabled and not ref.revision:
-                ref = self.app.remote_manager.get_latest_recipe_revision(ref, remote)
-            if package_id:
-                pref = PackageReference(ref, package_id)
-                if self.app.cache.config.revisions_enabled and not pref.revision:
-                    pref = self.app.remote_manager.get_latest_package_revision(pref, remote)
-                return self.app.remote_manager.get_package_path(pref, path, remote), path
+        try:
+            if not remote_name:
+                package_layout = self.app.cache.package_layout(ref, short_paths=None)
+                return package_layout.get_path(path=path, package_id=package_id), path
             else:
-                return self.app.remote_manager.get_recipe_path(ref, path, remote), path
+                remote = self.get_remote_by_name(remote_name)
+                if self.app.cache.config.revisions_enabled and not ref.revision:
+                    ref = self.app.remote_manager.get_latest_recipe_revision(ref, remote)
+                if package_id:
+                    pref = PackageReference(ref, package_id)
+                    if self.app.cache.config.revisions_enabled and not pref.revision:
+                        pref = self.app.remote_manager.get_latest_package_revision(pref, remote)
+                    return self.app.remote_manager.get_package_path(pref, path, remote), path
+                else:
+                    return self.app.remote_manager.get_recipe_path(ref, path, remote), path
+        except (RecipeNotFoundException, PackageNotFoundException) as e:
+            e.print_rev = True
+            raise e
 
     @api_method
     def export_alias(self, reference, target_reference):
