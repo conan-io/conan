@@ -631,3 +631,13 @@ class TestConan(ConanFile):
         # Try this syntax to upload too
         client.run('install lib/1.0@')
         client.run('upload lib/1.0@ -c --all')
+
+    def install_disabled_remote_test(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
+        client.run("create . lasote/testing")
+        client.run("upload * --confirm --all -r default")
+        client.run("remote disable default")
+        client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
+        self.assertIn("ERROR: Remote 'default' is disabled", client.out)
