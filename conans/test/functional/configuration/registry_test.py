@@ -147,3 +147,30 @@ other/1.0@lasote/testing conan.io
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan-center", None, True, False)])
         self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
+
+    def enable_disable_remotes_test(self):
+        f = os.path.join(temp_folder(), "aux_file")
+        Remotes().save(f)
+        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        registry = cache.registry
+
+        registry.add("local", "http://localhost:9300")
+        registry.set_disabled("local", True)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, True)])
+
+        registry.set_disabled("conan-center", True)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, True),
+                          ("local", "http://localhost:9300", True, True)])
+
+        registry.set_disabled("*", False)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, False)])
+
+        registry.set_disabled("*", True)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, True),
+                          ("local", "http://localhost:9300", True, True)])
