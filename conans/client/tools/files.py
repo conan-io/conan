@@ -383,3 +383,22 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+def rename(src, dst, retry=5, output=None):
+    """
+    rename a file or folder with retrying
+    :param src: Path to the file or folder
+    :param dst: Destination file or folder
+    :param retry: Number to retry
+    :param output: output
+    :return:
+    """
+    output = default_output(output, 'conans.client.tools.files.rename')
+    for r in range(retry):
+        try:
+            os.rename(src, dst)
+            break
+        except Exception as e:
+            output.warn("rename failed, error: {0} occured, retrying: {1}".format(e, r+1))
+            if r+1 == retry:
+                raise ConanException("rename_retry failed")
