@@ -181,7 +181,7 @@ class Remotes(object):
             for k, v in self._remotes.items()
         ])
 
-    def set_disabled(self, remote_name, state):
+    def set_disabled_state(self, remote_name, state):
         filtered_remotes = []
         for remote in self._remotes.values():
             if fnmatch.fnmatch(remote.name, remote_name):
@@ -388,9 +388,9 @@ class RemoteRegistry(object):
 
             remotes.save(self._filename)
 
-    def set_disabled(self, remote_name, state):
+    def set_disabled_state(self, remote_name, state):
         remotes = self.load_remotes()
-        remotes.set_disabled(remote_name, state)
+        remotes.set_disabled_state(remote_name, state)
         remotes.save(self._filename)
 
     @property

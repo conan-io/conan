@@ -1497,9 +1497,9 @@ class Command(object):
         elif args.subcommand == "clean":
             return self._conan.remote_clean()
         elif args.subcommand == "enable":
-            return self._conan.remote_set_disabled(remote_name, False)
+            return self._conan.remote_set_disabled_state(remote_name, False)
         elif args.subcommand == "disable":
-            return self._conan.remote_set_disabled(remote_name, True)
+            return self._conan.remote_set_disabled_state(remote_name, True)
 
     def profile(self, *args):
         """
