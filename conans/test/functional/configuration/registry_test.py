@@ -117,7 +117,7 @@ other/1.0@lasote/testing conan.io
         registry = RemoteRegistry(cache, output)
         registry.add("repo1", "url1", True, insert=0)
         self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True, False),
-                         Remote("conan.io", "https://server.conan.io", True)])
+                         Remote("conan.io", "https://server.conan.io", True, False)])
         registry.add("repo2", "url2", True, insert=1)
         self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True, False),
                          Remote("repo2", "url2", True, False),
