@@ -2,6 +2,7 @@ import os
 import platform
 import textwrap
 import unittest
+from collections import OrderedDict
 
 from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
@@ -641,3 +642,18 @@ class TestConan(ConanFile):
         client.run("remote disable default")
         client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
         self.assertIn("ERROR: Remote 'default' is disabled", client.out)
+
+    def install_skip_disabled_remote_test(self):
+        client = TestClient(servers=OrderedDict({"default": TestServer(),
+                                                 "server2": TestServer(),
+                                                 "server3": TestServer()}),
+                            users={"default": [("lasote", "mypass")],
+                                   "server3": [("lasote", "mypass")]})
+        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
+        client.run("create . lasote/testing")
+        client.run("upload * --confirm --all -r default")
+        client.run("upload * --confirm --all -r server3")
+        client.run("remove * -f")
+        client.run("remote disable default")
+        client.run("install Pkg/0.1@lasote/testing", assert_error=False)
+        self.assertNotIn("Trying with 'default'...", client.out)
