@@ -151,16 +151,9 @@ class Remotes(object):
     def save(self, filename):
         ret = {"remotes": []}
         for r, (_, u, v, d) in self._remotes.items():
+            ret["remotes"].append({"name": r, "url": u, "verify_ssl": v})
             if d:
-                ret["remotes"].append({
-                    "name": r,
-                    "url": u,
-                    "verify_ssl": v,
-                    "disabled": d
-                })
-            else:
-                ret["remotes"].append({"name": r, "url": u, "verify_ssl": v})
-
+                ret["remotes"][-1]["disabled"] = True
         save(filename, json.dumps(ret, indent=True))
 
     def _get_by_url(self, url):
