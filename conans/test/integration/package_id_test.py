@@ -437,7 +437,7 @@ class Pkg(ConanFile):
                      settings='"compiler"')
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
-                        '-s compiler.version="16.0" '
+                        '-s compiler.version="16" '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD --build')
@@ -452,21 +452,21 @@ class Pkg(ConanFile):
 
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
-                        '-s compiler.version="16.0" '
+                        '-s compiler.version="16" '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD')
-        self.assertIn("Hello/1.2.0@user/testing:1d24ddec1eace76ca48c9009add34eaaeea97d01 - Cache",
+        self.assertIn("Hello/1.2.0@user/testing:24173945aa3b189def01170b0b30d28e48bdc68d - Cache",
                       self.client.out)
 
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
-                        '-s compiler.version="16.0" '
+                        '-s compiler.version="16" '
                         '-s compiler.base_incompatible=True '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD')
-        self.assertIn("Hello/1.2.0@user/testing:1d24ddec1eace76ca48c9009add34eaaeea97d01 - Cache",
+        self.assertIn("Hello/1.2.0@user/testing:24173945aa3b189def01170b0b30d28e48bdc68d - Cache",
                       self.client.out)
 
     def base_compatible_test(self):
@@ -475,7 +475,7 @@ class Pkg(ConanFile):
                      settings='"compiler"')
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
-                        '-s compiler.version="16.0" '
+                        '-s compiler.version="16" '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD --build')
@@ -489,7 +489,7 @@ class Pkg(ConanFile):
 
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
-                        '-s compiler.version="16.0" '
+                        '-s compiler.version="16" '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD')
@@ -499,7 +499,7 @@ class Pkg(ConanFile):
 
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
-                        '-s compiler.version="16.0" '
+                        '-s compiler.version="16" '
                         '-s compiler.base_incompatible=True '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
