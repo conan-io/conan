@@ -11,7 +11,6 @@ from conans.model.ref import PackageReference, ConanFileReference
 
 
 Remote = namedtuple("Remote", "name url verify_ssl disabled")
-Remote.__new__.__defaults__ = (None, None, None, False)
 
 
 def load_registry_txt(contents):
@@ -108,7 +107,7 @@ class Remotes(object):
     @classmethod
     def defaults(cls):
         result = Remotes()
-        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True)
+        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True, False)
         return result
 
     def select(self, remote_name):
@@ -222,7 +221,7 @@ class Remotes(object):
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
         # Remove duplicates
-        updated_remote = Remote(remote_name, url, verify_ssl)
+        updated_remote = Remote(remote_name, url, verify_ssl, False)
         self._remotes.pop(remote_name, None)
         remotes_list = []
         renamed = None
