@@ -19,7 +19,7 @@ class PostPackageTestCase(unittest.TestCase):
         t = TurboTestClient()
 
         def post_package_hook(conanfile, **kwargs):
-            # There shouldn't be a digest yet
+            # There shouldn't be a manifest yet
             post_package_hook.manifest_path = os.path.join(conanfile.package_folder, CONAN_MANIFEST)
             self.assertFalse(os.path.exists(post_package_hook.manifest_path))
 
@@ -29,9 +29,11 @@ class PostPackageTestCase(unittest.TestCase):
         with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
             pref = t.create(ConanFileReference.loads("name/version@user/channel"))
 
+        # Check that we are considering the same file
         package_layout = t.cache.package_layout(pref.ref)
         self.assertEqual(post_package_hook.manifest_path,
                          os.path.join(package_layout.package(pref), CONAN_MANIFEST))
+        # Now the file exists
         self.assertTrue(os.path.exists(post_package_hook.manifest_path))
 
     def test_export_pkg_command(self):
@@ -40,7 +42,7 @@ class PostPackageTestCase(unittest.TestCase):
         t = TurboTestClient()
 
         def post_package_hook(conanfile, **kwargs):
-            # There shouldn't be a digest yet
+            # There shouldn't be a manifest yet
             post_package_hook.manifest_path = os.path.join(conanfile.package_folder, CONAN_MANIFEST)
             self.assertFalse(os.path.exists(post_package_hook.manifest_path))
 
@@ -51,7 +53,9 @@ class PostPackageTestCase(unittest.TestCase):
             pref = t.export_pkg(ref=ConanFileReference.loads("name/version@user/channel"),
                                 args="--package-folder=.")
 
+        # Check that we are considering the same file
         package_layout = t.cache.package_layout(pref.ref)
         self.assertEqual(post_package_hook.manifest_path,
                          os.path.join(package_layout.package(pref), CONAN_MANIFEST))
+        # Now the file exists
         self.assertTrue(os.path.exists(post_package_hook.manifest_path))
