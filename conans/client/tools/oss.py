@@ -48,6 +48,16 @@ def detected_os():
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
+
+    if OSInfo().is_solaris:
+        # under intel solaris, platform.machine()=='i86pc' so we need to handle it early to suport 64-bit
+        processor = platform.processor()
+        kernel_bitness, elf = platform.architecture()
+        if "sparc" in processor:
+            return "sparcv9" if kernel_bitness == "64bit" else "sparc"
+        elif "i386" in processor:
+            return "x86_64" if kernel_bitness == "64bit" else "x86"
+ 
     if "ppc64le" in machine:
         return "ppc64le"
     elif "ppc64" in machine:
