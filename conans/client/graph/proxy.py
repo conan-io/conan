@@ -152,9 +152,7 @@ class ConanProxy(object):
         if not remotes:
             raise ConanException("No remote defined")
         for remote in remotes:
-            if remote.disabled:
-                pass
-            else:
+            if not remote.disabled:
                 try:
                     new_ref = _retrieve_from_remote(remote)
                     return remote, new_ref

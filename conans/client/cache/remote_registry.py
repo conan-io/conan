@@ -134,7 +134,7 @@ class Remotes(object):
         result = Remotes()
         data = json.loads(text)
         for r in data.get("remotes", []):
-            disabled = r["disabled"] if "disabled" in r else False
+            disabled = r.get("disabled", False)
             result._remotes[r["name"]] = Remote(r["name"], r["url"],
                                                 r["verify_ssl"], disabled)
 
@@ -143,14 +143,9 @@ class Remotes(object):
     def dumps(self):
         result = []
         for remote in self._remotes.values():
-            if remote.disabled:
-                result.append("%s: %s [Verify SSL: %s, Disabled: %s]" %
-                              (remote.name, remote.url, remote.verify_ssl,
-                               remote.disabled))
-            else:
-                result.append("%s: %s [Verify SSL: %s]" %
-                              (remote.name, remote.url, remote.verify_ssl))
-
+            disabled_str = ", Disabled: True" if remote.disabled else ""
+            result.append("%s: %s [Verify SSL: %s%s]" %
+                          (remote.name, remote.url, remote.verify_ssl, disabled_str))
         return "\n".join(result)
 
     def save(self, filename):
