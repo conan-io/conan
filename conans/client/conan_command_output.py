@@ -37,7 +37,7 @@ class CommandOutputer(object):
             else:
                 disabled_str = ", Disabled: True" if r.disabled else ""
                 self._output.info(
-                    "%s: %s [Verify SSL: %s]" %
+                    "%s: %s [Verify SSL: %s%s]" %
                     (r.name, r.url, r.verify_ssl, disabled_str))
 
     def remote_ref_list(self, refs):
