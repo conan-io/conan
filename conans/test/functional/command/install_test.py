@@ -642,6 +642,11 @@ class TestConan(ConanFile):
         client.run("remote disable default")
         client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
         self.assertIn("ERROR: Remote 'default' is disabled", client.out)
+        client.run("remote enable default")
+        client.run("install Pkg/0.1@lasote/testing -r default")
+        client.run("remote disable default")
+        client.run("install Pkg/0.1@lasote/testing --update", assert_error=True)
+        self.assertIn("ERROR: Remote 'default' is disabled", client.out)
 
     def install_skip_disabled_remote_test(self):
         client = TestClient(servers=OrderedDict({"default": TestServer(),
