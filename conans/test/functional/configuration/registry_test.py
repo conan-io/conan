@@ -156,14 +156,19 @@ other/1.0@lasote/testing conan.io
 
         registry.add("local", "http://localhost:9300")
         registry.set_disabled_state("local", True)
-        self.assertEqual(list(registry.load_remotes().values()),
+        self.assertEqual(list(registry.load_remotes().all_values()),
                          [("conan-center", "https://conan.bintray.com", True, False),
                           ("local", "http://localhost:9300", True, True)])
 
-        registry.set_disabled_state("conan-center", True)
         self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, False)])
+
+        registry.set_disabled_state("conan-center", True)
+        self.assertEqual(list(registry.load_remotes().all_values()),
                          [("conan-center", "https://conan.bintray.com", True, True),
                           ("local", "http://localhost:9300", True, True)])
+
+        self.assertEqual(list(registry.load_remotes().values()), [])
 
         registry.set_disabled_state("*", False)
         self.assertEqual(list(registry.load_remotes().values()),
@@ -171,6 +176,4 @@ other/1.0@lasote/testing conan.io
                           ("local", "http://localhost:9300", True, False)])
 
         registry.set_disabled_state("*", True)
-        self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True, True),
-                          ("local", "http://localhost:9300", True, True)])
+        self.assertEqual(list(registry.load_remotes().values()), [])
