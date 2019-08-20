@@ -616,7 +616,7 @@ class TestConanLib(ConanFile):
         dep_profile = textwrap.dedent("""
         [settings]
         compiler = intel
-        compiler.version = 16.0
+        compiler.version = 16
         compiler.base = Visual Studio
         compiler.base.version = 8
         compiler.base.runtime = MD
@@ -639,8 +639,7 @@ class TestConanLib(ConanFile):
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
         client.run("install conanfile.py --profile intel_profile -s "
                    "compiler.base_incompatible=True", assert_error=True)
-        self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings", client.out)
-        self.assertIn("Package ID: 1d24ddec1eace76ca48c9009add34eaaeea97d01", client.out)
+        self.assertIn("Bye/0.1@us/ch:24173945aa3b189def01170b0b30d28e48bdc68d - Missing", client.out)
 
     def intel_compiler_incompatible_test(self):
         client = TestClient()
@@ -668,13 +667,11 @@ class TestConanLib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "visual_profile": profile})
         client.run("install conanfile.py --profile visual_profile", assert_error=True)
-        self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings", client.out)
-        self.assertIn("Package ID: 1151fe341e6b310f7645a76b4d3d524342835acc", client.out)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
 
         client.run("install conanfile.py --profile intel_profile")
-        self.assertIn("Bye/0.1@us/ch:1d24ddec1eace76ca48c9009add34eaaeea97d01 - Cache", client.out)
+        self.assertIn("Bye/0.1@us/ch:24173945aa3b189def01170b0b30d28e48bdc68d - Cache", client.out)
 
         client.run("install conanfile.py --profile intel_profile "
                    "-s compiler.base_incompatible=None", assert_error=True)
-        self.assertIn("Can't find a 'Bye/0.1@us/ch' package for the specified settings", client.out)
-        self.assertIn("Package ID: 1151fe341e6b310f7645a76b4d3d524342835acc", client.out)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)

@@ -431,8 +431,8 @@ class Pkg(ConanFile):
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
         self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)
 
-    def base_incompatible_test(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.base_incompatible()",
+    def intel_incompatible_test(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.intel_incompatible()",
                      channel="user/testing",
                      settings='"compiler"')
         self.client.run('install Hello/1.2.0@user/testing '
@@ -446,9 +446,8 @@ class Pkg(ConanFile):
                         '-s compiler="Visual Studio" '
                         '-s compiler.version=8 '
                         '-s compiler.runtime=MD', assert_error=True)
-        self.assertIn("Can't find a 'Hello/1.2.0@user/testing' package for the specified settings",
+        self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Missing",
                       self.client.out)
-        self.assertIn("Package ID: 1151fe341e6b310f7645a76b4d3d524342835acc", self.client.out)
 
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
@@ -469,8 +468,8 @@ class Pkg(ConanFile):
         self.assertIn("Hello/1.2.0@user/testing:24173945aa3b189def01170b0b30d28e48bdc68d - Cache",
                       self.client.out)
 
-    def base_compatible_test(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.base_compatible()",
+    def intel_compatible_test(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.intel_compatible()",
                      channel="user/testing",
                      settings='"compiler"')
         self.client.run('install Hello/1.2.0@user/testing '

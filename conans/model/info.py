@@ -315,7 +315,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
-        result.base_compatibility()
+        result.intel_compatibility()
 
         return result
 
@@ -477,14 +477,18 @@ class ConanInfo(object):
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
 
-    def base_compatibility(self):
+    def intel_compatibility(self):
+        if self.full_settings.compiler != "intel":
+            return
         if getattr(self.full_settings.compiler, "base", None):
             if self.full_settings.compiler.base_incompatible:
-                self.base_incompatible()
+                self.intel_incompatible()
             else:
-                self.base_compatible()
+                self.intel_compatible()
 
-    def base_compatible(self):
+    def intel_compatible(self):
+        if self.full_settings.compiler != "intel":
+            return
         if getattr(self.full_settings.compiler, "base", None):
             # Unfortunately assigning values is shallow
             self.settings.compiler = (
@@ -499,7 +503,9 @@ class ConanInfo(object):
                     attr = getattr(attr, token)
                 setattr(attr, tokens[-1], value)
 
-    def base_incompatible(self):
+    def intel_incompatible(self):
+        if self.full_settings.compiler != "intel":
+            return
         if getattr(self.full_settings.compiler, "base", None):
             # Method to opt out of binary compatibility
             self.settings.compiler = (
