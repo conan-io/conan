@@ -1127,9 +1127,14 @@ class GenConanfile(object):
             return ""
         line = ", ".join('"%s": %s' % (k, v) for k, v in self._options.items())
         tmp = "options = {%s}" % line
-        if self._default_options:
-            line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
-            tmp += "\n    default_options = {%s}" % line
+        return tmp
+
+    @property
+    def _default_options_line(self):
+        if not self._default_options:
+            return ""
+        line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
+        tmp = "default_options = {%s}" % line
         return tmp
 
     @property
@@ -1235,6 +1240,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._settings_line))
         if self._options_line:
             ret.append("    {}".format(self._options_line))
+        if self._default_options_line:
+            ret.append("    {}".format(self._default_options_line))
         if self._build_method:
             ret.append("    {}".format(self._build_method))
         if self._package_method:
