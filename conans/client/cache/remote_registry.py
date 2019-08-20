@@ -222,8 +222,9 @@ class Remotes(object):
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
 
-
     def __delitem__(self, remote_name):
+        if remote_name in self._remotes and self._remotes[remote_name].disabled:
+            raise ConanException("Remote '%s' is disabled" % (remote_name))
         try:
             del self._remotes[remote_name]
         except KeyError:
