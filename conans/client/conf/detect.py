@@ -195,7 +195,7 @@ def _detect_os_arch(result, output):
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
         elif OSInfo().is_aix:
-            arch = OSInfo.get_aix_architecture()
+            arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
         result.append(("arch_build", arch))
