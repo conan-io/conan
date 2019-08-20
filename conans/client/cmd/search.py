@@ -24,10 +24,9 @@ class Search(object):
             # Deprecate: 2.0 can remove this check
             if 'all' not in self._remotes:
                 for remote in self._remotes.values():
-                    if not remote.disabled:
-                        refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-                        if refs:
-                            references[remote.name] = refs
+                    refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+                    if refs:
+                        references[remote.name] = refs
                 return references
         # single remote
         remote = self._remotes[remote_name]
