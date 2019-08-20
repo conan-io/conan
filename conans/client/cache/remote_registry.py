@@ -172,6 +172,8 @@ class Remotes(object):
         if new_remote_name in self._remotes:
             raise ConanException("Remote '%s' already exists" %
                                  new_remote_name)
+        elif self._remotes[remote_name].disabled:
+            raise ConanException("Remote '%s' is disabled" % remote_name)
 
         remote = self._remotes[remote_name]
         new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl,
