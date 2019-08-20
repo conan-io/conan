@@ -123,10 +123,17 @@ class Remotes(object):
         self._remotes.clear()
 
     def items(self):
-        return self._remotes.items()
+        return OrderedDict(
+            (key, value) for (key, value) in self._remotes.items() if not value.disabled)
 
     def values(self):
+        return [value for value in self._remotes.values() if not value.disabled]
+
+    def all_values(self):
         return self._remotes.values()
+
+    def all_items(self):
+        return self._remotes.items()
 
     @staticmethod
     def loads(text):
@@ -256,6 +263,8 @@ class Remotes(object):
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         if remote_name not in self._remotes:
             raise ConanException("Remote '%s' not found in remotes" % remote_name)
+        elif self._remotes[remote_name].disabled:
+            raise ConanException("Remote '%s' is disabled" % remote_name)
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
