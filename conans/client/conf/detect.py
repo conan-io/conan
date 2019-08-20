@@ -194,14 +194,8 @@ def _detect_os_arch(result, output):
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
-        elif the_os == 'AIX':
-            processor = platform.processor()
-            if "powerpc" in processor:
-                kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
-                if kernel_bitness:
-                    arch = "ppc64" if kernel_bitness == "64" else "ppc32"
-            elif "rs6000" in processor:
-                arch = "ppc32"
+        elif OSInfo().is_aix:
+            arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
         result.append(("arch_build", arch))
