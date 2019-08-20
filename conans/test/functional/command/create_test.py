@@ -649,7 +649,7 @@ class TestConanLib(ConanFile):
         dep_profile = textwrap.dedent("""
         [settings]
         compiler = intel
-        compiler.version = 16.0
+        compiler.version = 16
         compiler.base = Visual Studio
         compiler.base.version = 8
         compiler.base.runtime = MD
