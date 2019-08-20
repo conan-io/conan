@@ -49,12 +49,17 @@ def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
     os_info = OSInfo()
+    arch = None
 
     if os_info.is_solaris:
-        return OSInfo.get_solaris_architecture()
+        arch = OSInfo.get_solaris_architecture()
     elif os_info.is_aix:
-        return OSInfo.get_aix_architecture()
-    elif "ppc64le" in machine:
+        arch = OSInfo.get_aix_architecture()
+
+    if arch:
+        return arch
+
+    if "ppc64le" in machine:
         return "ppc64le"
     elif "ppc64" in machine:
         return "ppc64"
