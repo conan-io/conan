@@ -323,27 +323,6 @@ class HelloConan(ConanFile):
             with self.assertRaises(KeyError):
                 disabled = remote["disabled"]
 
-    def remove_disabled_remote_test(self):
-        client = TestClient()
-        client.run("remote add my-remote3 http://someurl0")
-        client.run("remote disable my-remote3")
-        client.run("remote remove my-remote3", assert_error=True)
-        self.assertIn("ERROR: Remote 'my-remote3' is disabled", client.out)
-
-    def rename_disabled_remote_test(self):
-        client = TestClient()
-        client.run("remote add my-remote3 http://someurl0")
-        client.run("remote disable my-remote3")
-        client.run("remote rename my-remote3 new_name", assert_error=True)
-        self.assertIn("ERROR: Remote 'my-remote3' is disabled", client.out)
-
-    def update_disabled_remote_test(self):
-        client = TestClient()
-        client.run("remote add my-remote3 http://someurl0")
-        client.run("remote disable my-remote3")
-        client.run("remote update my-remote3 http://someurl1 True", assert_error=True)
-        self.assertIn("ERROR: Remote 'my-remote3' is disabled", client.out)
-
     def verify_ssl_error_test(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)

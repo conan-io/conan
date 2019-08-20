@@ -172,8 +172,6 @@ class Remotes(object):
         if new_remote_name in self._remotes:
             raise ConanException("Remote '%s' already exists" %
                                  new_remote_name)
-        elif self._remotes[remote_name].disabled:
-            raise ConanException("Remote '%s' is disabled" % remote_name)
 
         remote = self._remotes[remote_name]
         new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl,
@@ -223,8 +221,6 @@ class Remotes(object):
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
 
     def __delitem__(self, remote_name):
-        if remote_name in self._remotes and self._remotes[remote_name].disabled:
-            raise ConanException("Remote '%s' is disabled" % (remote_name))
         try:
             del self._remotes[remote_name]
         except KeyError:
@@ -266,8 +262,6 @@ class Remotes(object):
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         if remote_name not in self._remotes:
             raise ConanException("Remote '%s' not found in remotes" % remote_name)
-        elif self._remotes[remote_name].disabled:
-            raise ConanException("Remote '%s' is disabled" % remote_name)
         self._add_update(remote_name, url, verify_ssl, insert)
 
     def _add_update(self, remote_name, url, verify_ssl, insert=None):
