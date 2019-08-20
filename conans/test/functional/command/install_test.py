@@ -7,10 +7,9 @@ from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 from conans.util.files import load, mkdir, rmdir
 
 
@@ -27,7 +26,7 @@ class InstallTest(unittest.TestCase):
         # it will be cleared
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": TestConanFile("Hello", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
         client.run("upload * --all --confirm")
         client.run('remove "*" -f')
@@ -592,7 +591,7 @@ class TestConan(ConanFile):
         # https://github.com/conan-io/conan/issues/4871
         servers = {"default": TestServer()}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
+        client.save({"conanfile.py": str(GenConanfile().with_name("Pkg").with_version("0.1"))})
         client.run("create . lasote/testing")
         client.run("upload * --confirm --all")
 
