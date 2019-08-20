@@ -35,7 +35,7 @@ bye_ref = ConanFileReference.loads("Bye/0.2@user/testing")
 say_content = GenConanfile().with_name("Say").with_version("0.1")
 say_content2 = GenConanfile().with_name("Say").with_version("0.2")
 hello_content = GenConanfile().with_name("Hello").with_version("1.2")\
-                              .with_requirement_plain(say_ref)
+                              .with_requirement(say_ref)
 chat_content = GenConanfile().with_name("Chat").with_version("2.3")\
                              .with_requirement(hello_ref)
 bye_content = GenConanfile().with_name("Bye").with_version("0.1")\
