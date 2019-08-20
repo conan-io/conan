@@ -294,8 +294,6 @@ class OSInfo(object):
         elif "rs6000" in processor:
             return "ppc32"
 
-        return None
-
     @staticmethod
     def get_solaris_architecture():
         # under intel solaris, platform.machine()=='i86pc' so we need to handle
