@@ -59,7 +59,7 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
             settings = "os"  # , "arch", "compiler", "build_type"
 
             def build_requirements(self):
-                self.build_requires("breq/testing@user/channel", context="build")
+                self.build_requires("breq/testing@user/channel")
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -76,7 +76,7 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
             requires = "lib/testing@user/channel"
 
             def build_requirements(self):
-                self.build_requires("breq/testing@user/channel", context="build")
+                self.build_requires("breq/testing@user/channel")
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))

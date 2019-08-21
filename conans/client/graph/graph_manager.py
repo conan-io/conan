@@ -32,11 +32,9 @@ class _RecipeBuildRequires(OrderedDict):
             build_require = ConanFileReference.loads(build_require)
         self[(build_require.name, context)] = build_require
 
-    def __call__(self, build_require, context=None):
-        assert not context or context in [CONTEXT_HOST, CONTEXT_BUILD], \
-            "Invalid context '{}' for build_require" \
-            " '{}' in conanfile '{}'".format(context, build_require, self._conanfile)
-        self.add(build_require, context or self._default_context)
+    def __call__(self, build_require, force_host_context=False):
+        context = CONTEXT_HOST if force_host_context else self._default_context
+        self.add(build_require, context)
 
     def update(self, build_requires):
         for build_require in build_requires:

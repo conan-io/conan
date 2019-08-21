@@ -44,7 +44,7 @@ class BuildRequireOfBuildRequire(GraphManagerTest):
             settings = "os"
             
             def build_requirements(self):
-                self.build_requires("cmake/testing@user/channel", context="build")
+                self.build_requires("cmake/testing@user/channel")
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
@@ -60,8 +60,8 @@ class BuildRequireOfBuildRequire(GraphManagerTest):
             settings = "os"
 
             def build_requirements(self):
-                self.build_requires("cmake/testing@user/channel", context="build")
-                self.build_requires("gtest/testing@user/channel", context="host")
+                self.build_requires("cmake/testing@user/channel")
+                self.build_requires("gtest/testing@user/channel", force_host_context=True)
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
