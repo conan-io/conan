@@ -58,12 +58,12 @@ class BuildRequiresTest(unittest.TestCase):
         libA_ref = ConanFileReference.loads("LibA/0.1@user/testing")
 
         t = TestClient()
-        t.save({"conanfile.py": GenConanfile()
-               .with_package_info(cpp_info={"libs": ["mylibcatch0.1lib"]},
-                                  env_info={"MYENV": ["myenvcatch0.1env"]})})
-        t.run("create . {}".format(catch_ref))
+        t.save({"conanfile.py":
+                    GenConanfile().with_package_info(cpp_info={"libs": ["mylibcatch0.1lib"]},
+                                                     env_info={"MYENV": ["myenvcatch0.1env"]})})
+        t.run("create . catch/0.1@user/testing")
         t.save({"conanfile.py": GenConanfile().with_requirement(catch_ref, private=True)})
-        t.run("create . {}".format(libA_ref))
+        t.run("create . LibA/0.1@user/testing")
         t.save({"conanfile.py": GenConanfile().with_requirement(libA_ref)
                                               .with_build_requirement(catch_ref)})
         t.run("install .")
@@ -78,21 +78,20 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertIn("mylibcatch0.1lib", conanbuildinfo)
 
     def test_build_requires_diamond(self):
-        libA_ref = ConanFileReference.loads("LibA/0.1@user/testing")
-        libB_ref = ConanFileReference.loads("LibB/0.1@user/testing")
-        libC_ref = ConanFileReference.loads("LibC/0.1@user/testing")
+        libA_ref = ConanFileReference.loads("libA/0.1@user/testing")
+        libB_ref = ConanFileReference.loads("libB/0.1@user/testing")
 
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . {}".format(libA_ref))
+        t.run("create . libA/0.1@user/testing")
 
         t.save({"conanfile.py": GenConanfile().with_requirement(libA_ref)})
-        t.run("create . {}".format(libB_ref))
+        t.run("create . libB/0.1@user/testing")
 
         t.save({"conanfile.py": GenConanfile().with_build_requirement(libB_ref)
                                               .with_build_requirement(libA_ref)})
-        t.run("create . {}".format(libC_ref))
-        self.assertIn("LibC/0.1@user/testing: Created package", t.out)
+        t.run("create . libC/0.1@user/testing")
+        self.assertIn("libC/0.1@user/testing: Created package", t.out)
 
     def create_with_tests_and_build_requires_test(self):
         client = TestClient()
