@@ -996,6 +996,7 @@ class GenConanfile(object):
         self._package_files_env = {}
         self._build_messages = []
         self._scm = {}
+        self._requires = []
         self._requirements = []
         self._build_requirements = []
         self._revision_mode = None
@@ -1020,6 +1021,10 @@ class GenConanfile(object):
 
     def with_generator(self, generator):
         self._generators.append(generator)
+        return self
+
+    def with_require(self, ref, private=False, override=False):
+        self._requires.append((ref.full_str(), private, override))
         return self
 
     def with_requirement(self, ref, private=False, override=False):
@@ -1146,6 +1151,21 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _requires_line(self):
+        if not self._requires:
+            return ""
+        items = []
+        for ref, private, override in self._requires:
+            if private or override:
+                private_str = ", 'private'" if private else ""
+                override_str = ", 'override'" if override else ""
+                items.append('("{}"{}{})'.format(ref, private_str, override_str))
+            else:
+                items.append('"{}"'.format(ref))
+        tmp = "requires = ({})".format(", ".join(items))
+        return tmp
+
+    @property
     def _requirements_method(self):
         if not self._requirements:
             return ""
@@ -1228,6 +1248,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._version_line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
+        if self._requires_line:
+            ret.append("    {}".format(self._requires_line))
         if self._requirements_method:
             ret.append("    {}".format(self._requirements_method))
         if self._build_requires_line:

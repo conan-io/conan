@@ -300,7 +300,7 @@ class TransitiveGraphTest(GraphManagerTest):
         with six.assertRaisesRegex(self, ConanException, "Loop detected: 'base/aaa@user/testing' "
                                    "requires 'base/aaa@user/testing'"):
             self.build_graph(GenConanfile().with_name("base").with_version("aaa")
-                                           .with_requirement(ref1), ref=ref, create_ref=ref)
+                                           .with_require(ref1), ref=ref, create_ref=ref)
 
     @parameterized.expand([("recipe", ), ("profile", )])
     def test_basic_build_require(self, build_require):
