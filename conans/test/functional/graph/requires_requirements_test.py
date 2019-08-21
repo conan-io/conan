@@ -33,4 +33,4 @@ class SelfLoopTestCase(GraphManagerTest):
         with six.assertRaisesRegex(self, ConanException, emsg):
             self.build_graph(conanfile, ref=basea_ref, create_ref=basea_ref)
 
-        self.assertEqual(emsg_requires, emsg_requirements) # FIXME: Both messages should be the same
+        self.assertEqual(emsg_requires, emsg_requirements)  # FIXME: Both messages should be the same
