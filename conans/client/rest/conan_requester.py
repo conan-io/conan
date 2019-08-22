@@ -7,6 +7,7 @@ import warnings
 
 import requests
 from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 
 from conans import __version__ as client_version
 from conans.util.files import save
@@ -17,6 +18,15 @@ from conans.util.tracer import log_client_rest_api_call
 # TODO: Fix this security warning
 logging.captureWarnings(True)
 
+class SSLContextAdapter(HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        context = create_urllib3_context()
+        kwargs['ssl_context'] = context
+        try:
+            context.load_default_certs()
+        except AttributeError:
+            pass # load_default_certs is not available on Mac OS X
+        return super(SSLContextAdapter, self).init_poolmanager(*args, **kwargs)
 
 class ConanRequester(object):
 
@@ -27,7 +37,8 @@ class ConanRequester(object):
             self._http_requester = requests.Session()
             adapter = HTTPAdapter(max_retries=config.retry)
             self._http_requester.mount("http://", adapter)
-            self._http_requester.mount("https://", adapter)
+            ssladapter = SSLContextAdapter()
+            self._http_requester.mount("https://", ssladapter)
 
         self._timeout_seconds = config.request_timeout
         self.proxies = config.proxies or {}
