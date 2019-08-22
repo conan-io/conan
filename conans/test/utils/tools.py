@@ -907,6 +907,22 @@ class TurboTestClient(TestClient):
     def remove_all(self):
         self.run("remove '*' -f")
 
+    def export_pkg(self, ref, conanfile=None, args=None, assert_error=False):
+        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        self.save({"conanfile.py": conanfile})
+        self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
+                                                       args or "", self.tmp_json_name),
+                 assert_error=assert_error)
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        json_path = os.path.join(self.current_folder, self.tmp_json_name)
+        data = json.loads(load(json_path))
+        if assert_error:
+            return None
+        package_id = data["installed"][0]["packages"][0]["id"]
+        package_ref = PackageReference(ref, package_id)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        return package_ref.copy_with_revs(rrev, prev)
+
     def recipe_exists(self, ref):
         return self.cache.package_layout(ref).recipe_exists()
 
