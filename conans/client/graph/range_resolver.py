@@ -1,4 +1,3 @@
-import fnmatch
 import re
 
 from conans.errors import ConanException
@@ -145,19 +144,15 @@ class RangeResolver(object):
             return self._resolve_version(version_range, local_found)
 
     def _search_remotes(self, search_ref, remotes):
-        remote = remotes.selected
-        if remote:
-            search_result = self._remote_manager.search_recipes(remote, search_ref.name,
-                                                                ignorecase=False)
-            return search_result, remote.name
-
         for remote in remotes.values():
-            search_result = self._remote_manager.search_recipes(remote, search_ref.name,
-                                                                ignorecase=False)
-            search_result = [ref for ref in search_result
-                             if ref.user == search_ref.user and ref.channel == search_ref.channel]
-            if search_result:
-                return search_result, remote.name
+            if not remotes.selected or remote == remotes.selected:
+                search_result = self._remote_manager.search_recipes(remote, search_ref.name,
+                                                                    ignorecase=False)
+                search_result = [ref for ref in search_result
+                                 if ref.user == search_ref.user and
+                                 ref.channel == search_ref.channel]
+                if search_result:
+                    return search_result, remote.name
         return None, None
 
     def _resolve_remote(self, search_ref, version_range, remotes):
