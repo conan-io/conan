@@ -162,9 +162,6 @@ class RangeResolver(object):
             # Searching for just the name is much faster in remotes like Artifactory
             found_refs, remote_name = self._search_remotes(search_ref, remotes)
             if found_refs:
-                found_refs = [r for r in found_refs
-                              if r.user == search_ref.user and r.channel == search_ref.channel]
-            if found_refs:
                 self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
             else:
                 self._result.append("%s versions not found in remotes")
