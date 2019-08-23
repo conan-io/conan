@@ -64,16 +64,16 @@ class UserTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
                       client.out)
         localdb = LocalDB.create(client.cache.localdb)
-        self.assertEqual(('john', None), localdb.get_login(test_server.fake_url))
+        self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user will')
         self.assertIn("Changed user of remote 'default' from 'john' to 'will'", client.out)
-        self.assertEqual(('will', None), localdb.get_login(test_server.fake_url))
+        self.assertEqual(('will', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user None')
         self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
                       client.out)
-        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
@@ -96,7 +96,7 @@ class UserTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
                       client.out)
         localdb = LocalDB.create(client.cache.localdb)
-        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 

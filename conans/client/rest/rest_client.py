@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
@@ -15,6 +15,7 @@ class RestApiClient(object):
 
         # Set to instance
         self.token = None
+        self.refresh_token = None
         self.remote_url = None
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
@@ -83,9 +84,24 @@ class RestApiClient(object):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
-        return self._get_api().authenticate(user, password)
+        api = self._get_api()
+        # FIXME: Remove the True when capabilities from Arti are fixed
+        #        Now only when it is authenticated is returning the capability
+        #if True or (OAUTH_TOKEN in self._cached_capabilities[self.remote_url]):
+        if OAUTH_TOKEN in self._cached_capabilities[self.remote_url]:
+            if not self.refresh_token or not self.token:
+                token, refresh_token = api.authenticate_oauth_token(user, password)
+            else:
+                token, refresh_token = api.refresh_token(self.token, self.refresh_token)
+        else:
+            token, refresh_token = api.authenticate(user, password), None
+
+        return token, refresh_token
 
     def check_credentials(self):
+        # FIXME: Remove this, this is to force the token refresh and see if it works
+        # from conans.errors import AuthenticationException
+        # raise AuthenticationException("aa")
         return self._get_api().check_credentials()
 
     def search(self, pattern=None, ignorecase=True):

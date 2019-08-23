@@ -72,7 +72,7 @@ class RestApiTest(unittest.TestCase):
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 
             # Authenticate user
-            token = cls.api.authenticate("private_user", "private_pass")
+            token, _ = cls.api.authenticate("private_user", "private_pass")
             cls.api.token = token
 
     @classmethod

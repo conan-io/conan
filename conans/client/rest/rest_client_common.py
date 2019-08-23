@@ -78,6 +78,15 @@ class RestCommonMethods(object):
     def auth(self):
         return JWTAuth(self.token)
 
+    @staticmethod
+    def _check_error_response(ret):
+        if ret.status_code == 401:
+            raise AuthenticationException("Wrong credentials")
+        # Cannot check content-type=text/html, conan server is doing it wrong
+        if not ret.ok or "html>" in str(ret.content):
+            raise ConanException("%s\n\nInvalid server response, check remote URL and "
+                                 "try again" % str(ret.content))
+
     @handle_return_deserializer()
     def authenticate(self, user, password):
         """Sends user + password to get a token"""
@@ -86,13 +95,52 @@ class RestCommonMethods(object):
         logger.debug("REST: Authenticate: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
-        if ret.status_code == 401:
-            raise AuthenticationException("Wrong user or password")
-        # Cannot check content-type=text/html, conan server is doing it wrong
-        if not ret.ok or "html>" in str(ret.content):
-            raise ConanException("%s\n\nInvalid server response, check remote URL and "
-                                 "try again" % str(ret.content))
+
+        self._check_error_response(ret)
+
         return ret
+
+    def authenticate_oauth_token(self, user, password):
+        """Sends user + password to get an access_token and a refresh token"""
+        auth = HTTPBasicAuth(user, password)
+        url = self.router.common_authenticate()
+        params = {"oauth_token": "true"}
+        logger.debug("REST: Authenticate to get access_token: %s" % url)
+        ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
+                                 verify=self.verify_ssl, params=params)
+
+        self._check_error_response(ret)
+
+        data = ret.json()
+        access_token = data["access_token"]
+        refresh_token = data["refresh_token"]
+        logger.debug("REST: Obtained refresh and access tokens")
+        return access_token, refresh_token
+
+    def refresh_token(self, token, refresh_token):
+        """Sends access_token and the refresh_token to get a pair of
+        access_token and refresh token"""
+        url = self.router.common_authenticate()
+        logger.debug("REST: Refreshing Token: %s" % url)
+        payload = {'access_token': token, 'refresh_token': refresh_token,
+                   'grant_type': 'refresh_token'}
+        ret = self.requester.post(url, headers=self.custom_headers, verify=self.verify_ssl,
+                                  data=payload)
+        self._check_error_response(ret)
+
+        data = ret.json()
+        if "access_token" not in data:
+            # TODO: I don't know why artifactory returns 200 but then the json says it is an error!
+            #       Probably this is an Artifactory bug, remove later and try
+            if data.get("statusCode") == 401:
+                raise AuthenticationException("Error refreshing the token: "
+                                              "{}".format(data.get("internalErrorMsg")))
+            raise ConanException("Error refreshing the token")
+
+        new_access_token = data["access_token"]
+        new_refresh_token = data["refresh_token"]
+
+        return new_access_token, new_refresh_token
 
     @handle_return_deserializer()
     def check_credentials(self):
