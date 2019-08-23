@@ -47,7 +47,7 @@ def input_credentials_if_unauthorized(func):
                 return retry_with_new_token(self, *args, **kwargs)
             elif self._rest_client.token and self._rest_client.refresh_token:
                 try:
-                    self._authenticate(self.user, None)
+                    self.authenticate(self.user, None)
                 except AuthenticationException as exc:
                     logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
                     self._clear_user_tokens(self.user)
@@ -70,7 +70,7 @@ def input_credentials_if_unauthorized(func):
         for _ in range(LOGIN_RETRIES):
             user, password = self._user_io.request_login(self._remote.name, self.user)
             try:
-                self._authenticate(user, password)
+                self.authenticate(user, password)
             except AuthenticationException:
                 if self.user is None:
                     self._user_io.out.error('Wrong user or password')
@@ -221,7 +221,7 @@ class ConanApiAuthManager(object):
     def get_latest_package_revision(self, pref):
         return self._rest_client.get_latest_package_revision(pref)
 
-    def _authenticate(self, user, password):
+    def authenticate(self, user, password):
         if user is None:  # The user is already in DB, just need the passwd
             prev_user = self._localdb.get_username(self._remote.url)
             if prev_user is None:

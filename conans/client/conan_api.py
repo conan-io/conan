@@ -821,8 +821,8 @@ class ConanAPIV1(object):
         if not password:
             name, password = self.user_io.request_login(remote_name=remote_name, username=name)
 
-        _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
-                                                                               password)
+        _, _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
+                                                                                  password)
         return remote_name, prev_user, user
 
     @api_method

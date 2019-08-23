@@ -81,7 +81,7 @@ class RestCommonMethods(object):
     @staticmethod
     def _check_error_response(ret):
         if ret.status_code == 401:
-            raise AuthenticationException("Wrong credentials")
+            raise AuthenticationException("Wrong user or password")
         # Cannot check content-type=text/html, conan server is doing it wrong
         if not ret.ok or "html>" in str(ret.content):
             raise ConanException("%s\n\nInvalid server response, check remote URL and "
