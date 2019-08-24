@@ -320,8 +320,7 @@ class HelloConan(ConanFile):
         registry = load(client.cache.registry_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
-            with self.assertRaises(KeyError):
-                disabled = remote["disabled"]
+            self.assertNotIn("disabled", remote)
 
     def verify_ssl_error_test(self):
         client = TestClient()
