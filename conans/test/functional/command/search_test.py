@@ -259,7 +259,7 @@ class SearchTest(unittest.TestCase):
         self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
         self.client.run("remote disable local")
         self.client.run("search Hello* -r all")
-        self.assertNotIn("Remote 'local':", self.client.out)
+        self.assertNotIn("local", self.client.out)
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
