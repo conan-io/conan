@@ -20,6 +20,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, use_lock=False, recorder=None):
     """ Fetch and build all dependencies for the given reference
+    :param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
     @param install_folder: where the output files will be saved
     @param build_modes: List of build_modes specified
@@ -31,6 +32,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     @param generators: List of generators from command line. If False, no generator will be
     written
     @param no_imports: Install specified packages but avoid running imports
+
     """
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
@@ -81,6 +83,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         if install_folder:
             install_folder = os.path.join(install_folder, layout.build)
     if install_folder:
+        conanfile.install_folder = install_folder
         # Write generators
         output = conanfile.output if conanfile.display_name != "virtual" else out
         if generators is not False:

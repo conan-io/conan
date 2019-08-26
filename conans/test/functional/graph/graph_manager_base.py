@@ -18,9 +18,8 @@ from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput, GenConanfile
 from conans.util.files import save
 
 
@@ -42,10 +41,12 @@ class GraphManagerTest(unittest.TestCase):
         self.binary_installer = BinaryInstaller(cache, self.output, self.remote_manager, recorder,
                                                 hook_manager)
 
-    def _cache_recipe(self, reference, test_conanfile, revision=None):
-        if isinstance(test_conanfile, TestConanFile):
-            test_conanfile.info = True
-        ref = ConanFileReference.loads(reference)
+    def _cache_recipe(self, ref, test_conanfile, revision=None):
+        if isinstance(test_conanfile, GenConanfile):
+            name, version = test_conanfile._name, test_conanfile._version
+            test_conanfile = test_conanfile.with_package_info(
+                cpp_info={"libs": ["mylib{}{}lib".format(name, version)]},
+                env_info={"MYENV": ["myenv{}{}env".format(name, version)]})
         save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
