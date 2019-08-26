@@ -707,7 +707,7 @@ class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
     def local_build_test(self):
         client = TestClient()
         client.save({"conanfile.py": "var=42\n"+
-                                     str(GenConanfile().with_name("Tool").with_version("0.1"))})
+                                     GenConanfile().with_name("Tool").with_version("0.1")})
         client.run("export . Tool/0.1@user/channel")
 
         conanfile = """from conans import ConanFile, python_requires

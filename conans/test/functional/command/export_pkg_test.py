@@ -21,7 +21,7 @@ class ExportPkgTest(unittest.TestCase):
                             requester_class=None,
                             users={"default": [("lasote", "mypass")]})
 
-        client.save({"conanfile.py": str(GenConanfile().with_name("Pkg").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
 
@@ -33,7 +33,7 @@ class ExportPkgTest(unittest.TestCase):
             [build_requires]
             some/other@pkg/notexists
             """)
-        client.save({"conanfile.py": str(GenConanfile()),
+        client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
         client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
 

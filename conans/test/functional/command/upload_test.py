@@ -78,7 +78,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(GenConanfile())})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/testing")
         client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
         self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)

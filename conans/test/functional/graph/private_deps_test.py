@@ -170,18 +170,17 @@ class V3D(ConanFile):
         liba_ref = ConanFileReference.loads("LibA/0.1@conan/stable")
 
         client = TestClient()
-        client.save({"conanfile.py":
-                         str(GenConanfile().with_name("LibA").with_version("0.1")
-                             .with_package_info(cpp_info={"libs": ["mylibLibA0.1lib"]},
-                                                env_info={"MYENV": ["myenvLibA0.1env"]}))})
+        client.save({"conanfile.py": GenConanfile().with_name("LibA").with_version("0.1")
+                                        .with_package_info(cpp_info={"libs": ["mylibLibA0.1lib"]},
+                                                           env_info={"MYENV": ["myenvLibA0.1env"]})})
         client.run("create . LibA/0.1@conan/stable")
 
-        client.save({"conanfile.py": str(GenConanfile().with_name("LibB").with_version("0.1")
-                                                       .with_requirement(liba_ref))})
+        client.save({"conanfile.py": GenConanfile().with_name("LibB").with_version("0.1")
+                                                   .with_requirement(liba_ref)})
         client.run("create . LibB/0.1@conan/stable")
 
-        client.save({"conanfile.py": str(GenConanfile().with_name("LibC").with_version("0.1")
-                                                       .with_requirement(liba_ref, private=True))})
+        client.save({"conanfile.py": GenConanfile().with_name("LibC").with_version("0.1")
+                                                   .with_requirement(liba_ref, private=True)})
         client.run("create . LibC/0.1@conan/stable")
 
         for requires in (["LibB/0.1@conan/stable", "LibC/0.1@conan/stable"],
