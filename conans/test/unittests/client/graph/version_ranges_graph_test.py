@@ -67,7 +67,7 @@ class VersionRangesTest(GraphTest):
                                ]:
             req = ConanFileReference.loads("Say/[%s]@myuser/testing" % expr)
             deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
-                                                        .with_requirement(req))
+                                                        .with_require(req))
 
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
@@ -101,7 +101,7 @@ class VersionRangesTest(GraphTest):
                                ]:
             req = ConanFileReference.loads("Say/[%s]@myuser/testing" % expr)
             deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
-                                                        .with_requirement(req),
+                                                        .with_require(req),
                                           update=True)
             self.assertEqual(self.remote_manager.count, {'Say': 1})
             self.assertEqual(2, len(deps_graph.nodes))
@@ -166,7 +166,7 @@ class HelloConan(ConanFile):
                            ])
     def transitive_test(self, version_range, solution, override, valid):
         hello_text = GenConanfile().with_name("Hello").with_version("1.2")\
-                                   .with_requirement_plain("Say/[>0.1, <1]@myuser/testing")
+                                   .with_require_plain("Say/[>0.1, <1]@myuser/testing")
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
         self.retriever.save_recipe(hello_ref, hello_text)
 

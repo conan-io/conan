@@ -25,9 +25,9 @@ class PackageIDGraphTests(GraphManagerTest):
             libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
             self._cache_recipe(ref_arg, GenConanfile().with_name("liba").with_version("0.1.1"))
             self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
-                                                       .with_requirement(ref_arg))
+                                                       .with_require(ref_arg))
             deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                                        .with_requirement(libb_ref))
+                                                        .with_require(libb_ref))
 
             self.assertEqual(3, len(deps_graph.nodes))
             app = deps_graph.root
@@ -51,10 +51,10 @@ class PackageIDGraphTests(GraphManagerTest):
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
         self._cache_recipe(liba_ref1, GenConanfile().with_name("liba").with_version("0.1.1"))
         self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
-                                                   .with_requirement(liba_ref1))
+                                                   .with_require(liba_ref1))
 
         deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                                    .with_requirement(libb_ref),
+                                                    .with_require(libb_ref),
                                       install=False)
 
         self.assertEqual(3, len(deps_graph.nodes))

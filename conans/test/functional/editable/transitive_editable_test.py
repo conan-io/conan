@@ -21,15 +21,14 @@ class TransitiveEditableTest(unittest.TestCase):
         client.run("editable add . LibC/0.1@user/testing")
 
         client2 = TestClient(client.cache_folder)
-        conanfileB = GenConanfile().with_name("LibB").with_version("0.1")\
-                                   .with_requirement(libc_ref)
+        conanfileB = GenConanfile().with_name("LibB").with_version("0.1").with_require(libc_ref)
 
         client2.save({"conanfile.py": str(conanfileB)})
         client2.run("create . user/testing")
 
         conanfileA = GenConanfile().with_name("LibA").with_version("0.1")\
-                                   .with_requirement(libb_ref)\
-                                   .with_requirement(libc_ref)
+                                   .with_require(libb_ref)\
+                                   .with_require(libc_ref)
         client2.save({"conanfile.py": str(conanfileA)})
         client2.run("install .")
         client2.current_folder = os.path.join(client2.current_folder, "build")

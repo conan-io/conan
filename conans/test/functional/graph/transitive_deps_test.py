@@ -21,13 +21,13 @@ class TransitiveDepsTest(unittest.TestCase):
         self.t.run("export A user/channel")
 
         aaaa_ref = ConanFileReference.loads("AAAA/1.0@user/channel")
-        self.t.save({"B/conanfile.py": GenConanfile().with_name("BBBB").with_version("1.0")\
-                                                     .with_requirement(aaaa_ref)})
+        self.t.save({"B/conanfile.py": GenConanfile().with_name("BBBB").with_version("1.0")
+                                                     .with_require(aaaa_ref)})
         self.t.run("export B user/channel")
 
         bbbb_ref = ConanFileReference.loads("BBBB/1.0@user/channel")
-        self.t.save({"C/conanfile.py": GenConanfile().with_name("CCCC").with_version("1.0")\
-                                                     .with_requirement(bbbb_ref)\
+        self.t.save({"C/conanfile.py": GenConanfile().with_name("CCCC").with_version("1.0")
+                                                     .with_require(bbbb_ref)
                                                      .with_generator("cmake")})
         self.t.run("export C user/channel")
 
@@ -39,7 +39,7 @@ class TransitiveDepsTest(unittest.TestCase):
         conanfile = GenConanfile().with_name("DDDD").with_version("1.0")
         for dep in deps:
             ref = ConanFileReference.loads(dep)
-            conanfile = conanfile.with_requirement(ref)
+            conanfile = conanfile.with_require(ref)
         self.t.save({"D/conanfile.py": conanfile})
         self.t.run("create ./D user/channel --build=missing")
 
