@@ -67,11 +67,11 @@ class GraphLockCustomFilesTest(unittest.TestCase):
 class GraphLockVersionRangeTest(unittest.TestCase):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
                              .with_require_plain("PkgA/[>=0.1]@user/channel")
-    pkg_b_revision = "3b2aab3a9cd211f6e5575ed84bcb669b"
+    pkg_b_revision = "e8cabe5f1c737bcb8223b667f071842d"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    pkg_b_package_revision = "#96ed6206dbaf09b60d3c36acd1a6351d"
-    modified_pkg_b_revision = "5a00596c704e7f96ad13f538b21270a2"
-    modified_pkg_b_package_revision = "#6405a8dcd0e7fc6c2dee6fad9d01d7f4"
+    pkg_b_package_revision = "#97d1695f4e456433cc5a1dfa14655a0f"
+    modified_pkg_b_revision = "6073b7f447ba8d88f43a610a15481f2a"
+    modified_pkg_b_package_revision = "#ecc8f5e8fbe7847fbd9673ddd29f4f10"
     graph_lock_command = "install ."
 
     def setUp(self):
