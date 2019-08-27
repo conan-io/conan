@@ -88,12 +88,17 @@ class BuildRequiresInRecipeExample(GraphManagerTest):
             Build:
     """)
 
+    breq_lib_ref = ConanFileReference.loads("breq_lib/testing@user/channel")
+    breq_ref = ConanFileReference.loads("breq/testing@user/channel")
+    lib_ref = ConanFileReference.loads("lib/testing@user/channel")
+    application_ref = ConanFileReference.loads("application/testing@user/channel")
+
     def setUp(self):
         super(BuildRequiresInRecipeExample, self).setUp()
-        self._cache_recipe("breq_lib/testing@user/channel", self.breq_lib)
-        self._cache_recipe("breq/testing@user/channel", self.breq)
-        self._cache_recipe("lib/testing@user/channel", self.lib)
-        self._cache_recipe("application/testing@user/channel", self.application)
+        self._cache_recipe(self.breq_lib_ref, self.breq_lib)
+        self._cache_recipe(self.breq_ref, self.breq)
+        self._cache_recipe(self.lib_ref, self.lib)
+        self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
 

@@ -75,11 +75,15 @@ class NoWayBackToHost(GraphManagerTest):
             Build:
     """)
 
+    host_tool_ref = ConanFileReference.loads("host_tool/testing@user/channel")
+    build_tool_ref = ConanFileReference.loads("build_tool/testing@user/channel")
+    application_ref = ConanFileReference.loads("application/testing@user/channel")
+
     def setUp(self):
         super(NoWayBackToHost, self).setUp()
-        self._cache_recipe("host_tool/testing@user/channel", self.host_tool)
-        self._cache_recipe("build_tool/testing@user/channel", self.build_tool)
-        self._cache_recipe("application/testing@user/channel", self.application)
+        self._cache_recipe(self.host_tool_ref, self.host_tool)
+        self._cache_recipe(self.build_tool_ref, self.build_tool)
+        self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
 

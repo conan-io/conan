@@ -70,11 +70,15 @@ class BuildRequiresInProfileExample(GraphManagerTest):
             Build:
     """)
 
+    cmake_ref = ConanFileReference.loads("cmake/testing@user/channel")
+    lib_ref = ConanFileReference.loads("lib/testing@user/channel")
+    application_ref = ConanFileReference.loads("application/testing@user/channel")
+
     def setUp(self):
         super(BuildRequiresInProfileExample, self).setUp()
-        self._cache_recipe("cmake/testing@user/channel", self.cmake)
-        self._cache_recipe("lib/testing@user/channel", self.lib)
-        self._cache_recipe("application/testing@user/channel", self.application)
+        self._cache_recipe(self.cmake_ref, self.cmake)
+        self._cache_recipe(self.lib_ref, self.lib)
+        self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
 

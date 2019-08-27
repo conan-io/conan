@@ -73,11 +73,15 @@ class BuildRequireOfBuildRequire(GraphManagerTest):
             Build:
     """)
 
+    cmake_ref = ConanFileReference.loads("cmake/testing@user/channel")
+    gtest_ref = ConanFileReference.loads("gtest/testing@user/channel")
+    application_ref = ConanFileReference.loads("application/testing@user/channel")
+
     def setUp(self):
         super(BuildRequireOfBuildRequire, self).setUp()
-        self._cache_recipe("cmake/testing@user/channel", self.cmake)
-        self._cache_recipe("gtest/testing@user/channel", self.gtest)
-        self._cache_recipe("application/testing@user/channel", self.application)
+        self._cache_recipe(self.cmake_ref, self.cmake)
+        self._cache_recipe(self.gtest_ref, self.gtest)
+        self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
 

@@ -77,11 +77,15 @@ class ClassicProtocExampleBase(GraphManagerTest):
             Build:
     """)
 
+    protobuf_ref = ConanFileReference.loads("protobuf/testing@user/channel")
+    protoc_ref = ConanFileReference.loads("protoc/testing@user/channel")
+    application_ref = ConanFileReference.loads("application/testing@user/channel")
+
     def setUp(self):
         super(ClassicProtocExampleBase, self).setUp()
-        self._cache_recipe("protobuf/testing@user/channel", self.protobuf)
-        self._cache_recipe("protoc/testing@user/channel", self.protoc)
-        self._cache_recipe("application/testing@user/channel", self.application)
+        self._cache_recipe(self.protobuf_ref, self.protobuf)
+        self._cache_recipe(self.protoc_ref, self.protoc)
+        self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
 

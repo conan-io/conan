@@ -4,6 +4,7 @@ import textwrap
 
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.model.profile import Profile
+from conans.model.ref import ConanFileReference
 from conans.test.functional.cross_building.graph.protoc_basic_test import ClassicProtocExampleBase
 from conans.util.files import save
 
@@ -49,10 +50,13 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
                 self.output.info(">> settings.os:".format(self.settings.os))
     """)
 
+    gtest_ref = ConanFileReference.loads("gtest/testing@user/channel")
+    application_ref = ConanFileReference.loads("application/testing@user/channel")
+
     def setUp(self):
         super(ProtocWithGTestExample, self).setUp()
-        self._cache_recipe("gtest/testing@user/channel", self.protobuf)
-        self._cache_recipe("application/testing@user/channel", self.application)
+        self._cache_recipe(self.gtest_ref, self.protobuf)
+        self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
 
