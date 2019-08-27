@@ -27,6 +27,7 @@ class SCMData(object):
             self.password = data.get("password")
             self.subfolder = data.get("subfolder")
             self.submodule = data.get("submodule")
+            self.shallow_clone = data.get("shallow")
         else:
             raise ConanException("Not SCM enabled in conanfile")
 
@@ -47,7 +48,7 @@ class SCMData(object):
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
-             "subfolder": self.subfolder, "submodule": self.submodule}
+             "subfolder": self.subfolder, "submodule": self.submodule, "shallow": self.shallow_clone}
         d = {k: v for k, v in d.items() if v is not None}
         return json.dumps(d, sort_keys=True)
 
@@ -88,18 +89,31 @@ class SCM(object):
     def checkout(self):
         output = ""
         if self._data.type == "git":
-            try:
-                output += self.repo.clone(url=self._data.url, branch=self._data.revision,
-                                          shallow=True)
-            except subprocess.CalledProcessError:
-                # remove the .git directory, otherwise, fallback clone cannot be successful
-                # it's completely safe to do here, as clone without branch expects empty directory
-                rmdir(os.path.join(self.repo_folder, ".git"))
-                output += self.repo.clone(url=self._data.url, shallow=False)
-                output += self.repo.checkout(element=self._data.revision,
+            def use_not_shallow():
+                out = self.repo.clone(url=self._data.url, shallow=False)
+                out += self.repo.checkout(element=self._data.revision,
                                              submodule=self._data.submodule)
+                return out
+
+            def use_shallow():
+                try:
+                    out = self.repo.clone(url=self._data.url, branch=self._data.revision,
+                                             shallow=True)
+                except subprocess.CalledProcessError:
+                    # remove the .git directory, otherwise, fallback clone cannot be successful
+                    # it's completely safe to do here, as clone without branch expects
+                    # empty directory
+                    rmdir(os.path.join(self.repo_folder, ".git"))
+                    out = use_not_shallow()
+                else:
+                    out += self.repo.checkout_submodules(submodule=self._data.submodule)
+                return out
+
+            if self._data.shallow_clone:
+                output += use_shallow()
             else:
-                output += self.repo.checkout_submodules(submodule=self._data.submodule)
+                output += use_not_shallow()
+
         else:
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output
