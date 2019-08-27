@@ -1,13 +1,14 @@
 # coding=utf-8
 
+import os
 import textwrap
 import unittest
-import os
 
 from parameterized.parameterized import parameterized_class
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, create_local_git_repo
-from conans.util.files import load, rmdir
+from conans.util.files import load
 
 
 @parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, ])
