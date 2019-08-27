@@ -16,6 +16,13 @@ def get_scm_data(conanfile):
 
 class SCMData(object):
 
+    @staticmethod
+    def _boolean(value, default):
+        if value is None:
+            return default
+        else:
+            return "True" if value in [True, "True"] else "False"
+
     def __init__(self, conanfile):
         data = getattr(conanfile, "scm", None)
         if data is not None and isinstance(data, dict):
@@ -27,7 +34,7 @@ class SCMData(object):
             self.password = data.get("password")
             self.subfolder = data.get("subfolder")
             self.submodule = data.get("submodule")
-            self.shallow = data.get("shallow")
+            self._shallow = SCMData._boolean(data.get("shallow"), None)
         else:
             raise ConanException("Not SCM enabled in conanfile")
 
@@ -45,10 +52,16 @@ class SCMData(object):
             return self.revision
         raise ConanException("Not implemented recipe revision for %s" % self.type)
 
+    @property
+    def shallow(self):
+        return self._shallow in [None, "True"]
+
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
-             "subfolder": self.subfolder, "submodule": self.submodule, "shallow": self.shallow}
+             "subfolder": self.subfolder, "submodule": self.submodule}
+        if self._shallow is not None:
+            d.update({"shallow": self._shallow})
         d = {k: v for k, v in d.items() if v is not None}
         return json.dumps(d, sort_keys=True)
 
