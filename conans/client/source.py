@@ -238,7 +238,7 @@ def _run_scm(conanfile, src_folder, local_sources_path, output, cache):
         output.info("Getting sources from folder: %s" % local_sources_path)
         merge_directories(local_sources_path, dest_dir, excluded=excluded)
     else:
-        output.info("Getting sources from url: '%s'" % scm_data.url)
+        output.info("Getting sources from url: '%s' (shallow=%s)" % (scm_data.url, scm_data.shallow))
         scm = SCM(scm_data, dest_dir, output)
         scm.checkout()
 
