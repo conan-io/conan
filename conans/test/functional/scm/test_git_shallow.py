@@ -27,7 +27,7 @@ class GitShallowTestCase(unittest.TestCase):
                     out = self.run("git describe --tags", output=mybuf)
                     self.output.info(">>> tags: {{}}".format(mybuf.getvalue()))
                 except ConanException:
-                    pass
+                    self.output.info(">>> describe-fails")
     """)
 
     ref = ConanFileReference.loads("name/version@user/channel")
@@ -58,8 +58,7 @@ class GitShallowTestCase(unittest.TestCase):
 
         client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
 
-    @parameterized.expand([("c6cc15fa2f4b576bd70c9df11942e61e5cc7d746", False),
-                           ("0.22.1", True)])
+    @parameterized.expand([("c6cc15fa2f4b576bd", False), ("0.22.1", True)])
     def test_remote_build(self, revision, shallow_works):
         # Shallow works only with branches or tags
         client = TestClient()
@@ -71,6 +70,6 @@ class GitShallowTestCase(unittest.TestCase):
         client.run("create . {}".format(self.ref))
 
         if (self.shallow is None or self.shallow) and shallow_works:
-            self.assertNotIn(">>> tags:", client.out)
+            self.assertIn(">>> describe-fails", client.out)
         else:
             self.assertIn(">>> tags: 0.22.1", client.out)
