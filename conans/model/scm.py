@@ -27,7 +27,7 @@ class SCMData(object):
             self.password = data.get("password")
             self.subfolder = data.get("subfolder")
             self.submodule = data.get("submodule")
-            self.shallow_clone = data.get("shallow")
+            self.shallow = data.get("shallow")
         else:
             raise ConanException("Not SCM enabled in conanfile")
 
@@ -48,7 +48,7 @@ class SCMData(object):
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
-             "subfolder": self.subfolder, "submodule": self.submodule, "shallow": self.shallow_clone}
+             "subfolder": self.subfolder, "submodule": self.submodule, "shallow": self.shallow}
         d = {k: v for k, v in d.items() if v is not None}
         return json.dumps(d, sort_keys=True)
 
@@ -92,13 +92,13 @@ class SCM(object):
             def use_not_shallow():
                 out = self.repo.clone(url=self._data.url, shallow=False)
                 out += self.repo.checkout(element=self._data.revision,
-                                             submodule=self._data.submodule)
+                                          submodule=self._data.submodule)
                 return out
 
             def use_shallow():
                 try:
                     out = self.repo.clone(url=self._data.url, branch=self._data.revision,
-                                             shallow=True)
+                                          shallow=True)
                 except subprocess.CalledProcessError:
                     # remove the .git directory, otherwise, fallback clone cannot be successful
                     # it's completely safe to do here, as clone without branch expects
@@ -109,7 +109,7 @@ class SCM(object):
                     out += self.repo.checkout_submodules(submodule=self._data.submodule)
                 return out
 
-            if self._data.shallow_clone:
+            if self._data.shallow:
                 output += use_shallow()
             else:
                 output += use_not_shallow()
