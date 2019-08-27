@@ -21,7 +21,7 @@ def _split_pair(pair, split_char):
 
 
 def _noneize(text):
-    if not text or text == "None":
+    if not text or text == "None" or text == "_":
         return None
     return text
 
@@ -158,10 +158,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
 
         version = Version(version) if version is not None else None
-        if user == "_":
-            user = None
-        if channel == "_":
-            channel = None
+        user = _noneize(user)
+        channel = _noneize(channel)
+
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj._validate()
