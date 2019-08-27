@@ -6,15 +6,15 @@ from conans.paths import CONAN_MANIFEST, CONANINFO
 
 
 def _format_ref(url, ref):
-    url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                     channel=ref.channel, revision=ref.revision)
+    url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                     channel=ref.channel or "_", revision=ref.revision)
     return url
 
 
 def _format_pref(url, pref):
     ref = pref.ref
-    url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                     channel=ref.channel, revision=ref.revision, package_id=pref.id,
+    url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                     channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
                      p_revision=pref.revision)
     return url
 

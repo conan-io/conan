@@ -720,3 +720,24 @@ class Pkg(ConanFile):
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with '--package'", client.out)
+
+    def upload_without_user_channel_test(self):
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        client.save({"conanfile.py": GenConanfile()})
+
+        client.run('create . lib/1.0@')
+        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+        client.run('upload lib/1.0 -c --all')
+        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
+
+        # Verify that in the remote it is stored as "_"
+        pref = PackageReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
+        path = server.server_store.export(pref.ref)
+        self.assertIn("/lib/1.0/_/_/0/export", path.replace("\\", "/"))
+
+        path = server.server_store.package(pref)
+        self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
