@@ -8,7 +8,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
-from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.test.utils.tools import test_processed_profile
 
 
@@ -41,7 +41,7 @@ class VersionRangesTest(GraphTest):
         super(VersionRangesTest, self).setUp()
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
-            say_content = TestConanFile("Say", v)
+            say_content = GenConanfile().with_name("Say").with_version(v)
             say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % v)
             self.retriever.save_recipe(say_ref, say_content)
 
@@ -66,8 +66,9 @@ class VersionRangesTest(GraphTest):
                                ("~=2", "2.2.1"),
                                ("~=2.1", "2.1"),
                                ]:
-            deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
-                                                        requires=["Say/[%s]@myuser/testing" % expr]))
+            req = ConanFileReference.loads("Say/[%s]@myuser/testing" % expr)
+            deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
+                                                        .with_requirement(req))
 
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
@@ -99,8 +100,9 @@ class VersionRangesTest(GraphTest):
                                ("~=2", "2.2.1"),
                                ("~=2.1", "2.1"),
                                ]:
-            deps_graph = self.build_graph(TestConanFile("Hello", "1.2",
-                                                        requires=["Say/[%s]@myuser/testing" % expr]),
+            req = ConanFileReference.loads("Say/[%s]@myuser/testing" % expr)
+            deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
+                                                        .with_requirement(req),
                                           update=True)
             self.assertEqual(self.remote_manager.count, {'Say': 1})
             self.assertEqual(2, len(deps_graph.nodes))
@@ -164,8 +166,8 @@ class HelloConan(ConanFile):
                            ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True),
                            ])
     def transitive_test(self, version_range, solution, override, valid):
-        hello_text = TestConanFile("Hello", "1.2",
-                                   requires=["Say/[>0.1, <1]@myuser/testing"])
+        hello_text = GenConanfile().with_name("Hello").with_version("1.2")\
+                                   .with_requirement_plain("Say/[>0.1, <1]@myuser/testing")
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
         self.retriever.save_recipe(hello_ref, hello_text)
 
@@ -211,7 +213,7 @@ class ChatConan(ConanFile):
         self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
     def duplicated_error_test(self):
-        content = TestConanFile("log4cpp", "1.1.1")
+        content = GenConanfile().with_name("log4cpp").with_version("1.1.1")
         log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
         self.retriever.save_recipe(log4cpp_ref, content)
 
