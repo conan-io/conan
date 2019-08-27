@@ -24,7 +24,6 @@ BINARY_EDITABLE = "Editable"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
-CONTEXT_UNDEFINED = "undefined"
 
 
 class _NodeOrderedDict(object):
@@ -62,7 +61,7 @@ class _NodeOrderedDict(object):
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, context=CONTEXT_UNDEFINED, recipe=None):
+    def __init__(self, ref, conanfile, context, recipe=None):
         self.ref = ref
         self._package_id = None
         self.prev = None
