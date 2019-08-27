@@ -241,12 +241,13 @@ class ClientV2Router(ClientCommonRouter):
 
     @staticmethod
     def _format_ref_path(url, ref, path):
-        return url.format(name=ref.name, version=ref.version, username=ref.user,
-                          channel=ref.channel, revision=ref.revision, path=path)
+        ret = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                         channel=ref.channel or "_", revision=ref.revision, path=path)
+        return ret
 
     @staticmethod
     def _format_pref_path(url, pref, path):
         ref = pref.ref
-        return url.format(name=ref.name, version=ref.version, username=ref.user,
-                          channel=ref.channel, revision=ref.revision, package_id=pref.id,
+        return url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                          channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
                           p_revision=pref.revision, path=path)
