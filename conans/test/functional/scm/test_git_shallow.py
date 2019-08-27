@@ -1,14 +1,14 @@
 # coding=utf-8
 
-import os
 import textwrap
 import unittest
 
+from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, create_local_git_repo
-from conans.util.files import load, rmdir
+from conans.util.files import load
 
 
 @parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, ])
@@ -19,11 +19,11 @@ class GitShallowTestCase(unittest.TestCase):
         from six import StringIO
         
         class Lib(ConanFile):
-            scm = {{"type": "git", "url": "auto", "revision": "auto", {shallow_attrib} }}
+            scm = {{"type": "git", "url": "{url}", "revision": "{rev}", {shallow_attrib} }}
             
             def build(self):
-                mybuf = StringIO()
                 try:
+                    mybuf = StringIO()
                     out = self.run("git describe --tags", output=mybuf)
                     self.output.info(">>> tags: {{}}".format(mybuf.getvalue()))
                 except ConanException:
@@ -32,21 +32,23 @@ class GitShallowTestCase(unittest.TestCase):
 
     ref = ConanFileReference.loads("name/version@user/channel")
 
-    def setUp(self):
-        self.client = TestClient()
-
-        # Create a local repo
+    def _shallow_attrib_str(self):
         shallow_attrib_str = ""
         if self.shallow is not None:
             shallow_attrib_str = '"shallow": {}'.format(self.shallow)
-        files = {'conanfile.py': self.conanfile.format(shallow_attrib=shallow_attrib_str)}
-        url, _ = create_local_git_repo(files=files, commits=4, tags=['v0', ])
-        self.client.run_command('git clone "{}" .'.format(url))
+        return shallow_attrib_str
 
     def test_export(self):
         # Check the shallow value is substituted with the proper value
-        self.client.run("export . {}".format(self.ref))
-        content = load(self.client.cache.package_layout(self.ref).conanfile())
+        client = TestClient()
+        files = {'conanfile.py': self.conanfile.format(shallow_attrib=self._shallow_attrib_str(),
+                                                       url='auto', rev='auto')}
+        url, _ = create_local_git_repo(files=files)
+
+        client.run_command('git clone "{}" .'.format(url))
+
+        client.run("export . {}".format(self.ref))
+        content = load(client.cache.package_layout(self.ref).conanfile())
         if self.shallow is None:
             self.assertNotIn("shallow", content)
         elif self.shallow:
@@ -54,20 +56,21 @@ class GitShallowTestCase(unittest.TestCase):
         else:
             self.assertIn('"shallow": "False"', content)
 
-        self.client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
+        client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
 
-    def test_local_build(self):
-        self.client.run("install . -if if")
-        self.client.run("build . -if if -bf bf")
+    @parameterized.expand([("c6cc15fa2f4b576bd70c9df11942e61e5cc7d746", False),
+                           ("0.22.1", True)])
+    def test_remote_build(self, revision, shallow_works):
+        # Shallow works only with branches or tags
+        client = TestClient()
+        client.save({'conanfile.py':
+                         self.conanfile.format(shallow_attrib=self._shallow_attrib_str(),
+                                               url="https://github.com/conan-io/conan.git",
+                                               rev=revision)})
 
-        self.assertIn(">>> tags: v0", self.client.out)
+        client.run("create . {}".format(self.ref))
 
-    def test_remote_build(self):
-        self.client.run("export . {}".format(self.ref))
-        rmdir(os.path.join(self.client.current_folder, ".git"))
-        self.client.run("install {} --build".format(self.ref))
-
-        if self.shallow is None or self.shallow:
-            self.assertNotIn(">>> tags: v0", self.client.out)
+        if (self.shallow is None or self.shallow) and shallow_works:
+            self.assertNotIn(">>> tags:", client.out)
         else:
-            self.assertIn(">>> tags: v0", self.client.out)
+            self.assertIn(">>> tags: 0.22.1", client.out)
