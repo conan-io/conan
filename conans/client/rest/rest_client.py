@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
@@ -85,16 +85,10 @@ class RestApiClient(object):
 
     def authenticate(self, user, password):
         api = self._get_api()
-        # FIXME: Remove the True when capabilities from Arti are fixed
-        #        Now only when it is authenticated is returning the capability
-        #if True or (OAUTH_TOKEN in self._cached_capabilities[self.remote_url]):
-        if OAUTH_TOKEN in self._cached_capabilities[self.remote_url]:
-            if not self.refresh_token or not self.token:
-                token, refresh_token = api.authenticate_oauth_token(user, password)
-            else:
-                token, refresh_token = api.refresh_token(self.token, self.refresh_token)
+        if not self.refresh_token or not self.token:
+            token, refresh_token = api.authenticate(user, password)
         else:
-            token, refresh_token = api.authenticate(user, password), None
+            token, refresh_token = api.refresh_token(self.token, self.refresh_token)
 
         return token, refresh_token
 

@@ -87,21 +87,11 @@ class RestCommonMethods(object):
             raise ConanException("%s\n\nInvalid server response, check remote URL and "
                                  "try again" % str(ret.content))
 
-    @handle_return_deserializer()
     def authenticate(self, user, password):
-        """Sends user + password to get a token"""
-        auth = HTTPBasicAuth(user, password)
-        url = self.router.common_authenticate()
-        logger.debug("REST: Authenticate: %s" % url)
-        ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl)
-
-        self._check_error_response(ret)
-
-        return ret
-
-    def authenticate_oauth_token(self, user, password):
-        """Sends user + password to get an access_token and a refresh token"""
+        """Sends user + password to get:
+          - A json with an access_token and a refresh token (if supported in the remote)
+          - A plain response with a regular token (not supported refresh in the remote) and None
+        """
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
         params = {"oauth_token": "true"}
@@ -111,11 +101,14 @@ class RestCommonMethods(object):
 
         self._check_error_response(ret)
 
-        data = ret.json()
-        access_token = data["access_token"]
-        refresh_token = data["refresh_token"]
-        logger.debug("REST: Obtained refresh and access tokens")
-        return access_token, refresh_token
+        try:
+            data = ret.json()
+            access_token = data["access_token"]
+            refresh_token = data["refresh_token"]
+            logger.debug("REST: Obtained refresh and access tokens")
+            return access_token, refresh_token
+        except ValueError:
+            return decode_text(ret.content), None
 
     def refresh_token(self, token, refresh_token):
         """Sends access_token and the refresh_token to get a pair of
@@ -126,9 +119,11 @@ class RestCommonMethods(object):
                    'grant_type': 'refresh_token'}
         ret = self.requester.post(url, headers=self.custom_headers, verify=self.verify_ssl,
                                   data=payload)
+        print(ret)
         self._check_error_response(ret)
 
         data = ret.json()
+        print(data)
         if "access_token" not in data:
             # TODO: I don't know why artifactory returns 200 but then the json says it is an error!
             #       Probably this is an Artifactory bug, remove later and try
