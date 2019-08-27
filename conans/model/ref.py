@@ -21,7 +21,7 @@ def _split_pair(pair, split_char):
 
 
 def _noneize(text):
-    if not text or text == "None" or text == "_":
+    if not text or text == "_":
         return None
     return text
 
@@ -210,7 +210,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
 
     def __repr__(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
+        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user or "_", self.channel or "_",
+                                  str_rev)
 
     def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""
