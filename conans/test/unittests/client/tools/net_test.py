@@ -27,7 +27,9 @@ class ToolsNetTest(unittest.TestCase):
         net.ftp_download("test.rebex.net", filename, "demo", "password")
         self.assertTrue(os.path.exists(os.path.basename(filename)))
 
+    # The service is down
     def test_ftp_anonymous(self):
+        self.fail("I'm running test_ftp_anonymous")
         filename = "1KB.zip"
         net.ftp_download("speedtest.tele2.net", filename)
         self.assertTrue(os.path.exists(os.path.basename(filename)))
