@@ -8,7 +8,7 @@ from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, create_local_git_repo
-from conans.util.files import load
+from conans.util.files import load, rmdir
 
 
 @parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, ])
@@ -64,7 +64,7 @@ class GitShallowTestCase(unittest.TestCase):
 
     def test_remote_build(self):
         self.client.run("export . {}".format(self.ref))
-        os.unlink(self.client.cache.package_layout(self.ref).scm_folder())
+        rmdir(os.path.join(self.client.current_folder, ".git"))
         self.client.run("install {} --build".format(self.ref))
 
         if self.shallow is None or self.shallow:
