@@ -41,6 +41,9 @@ class ConflictDiamondTest(unittest.TestCase):
                      export=False)
         self.client.run("install . --build missing", assert_error=True)
         self.assertIn("Conflict in Hello2/0.1@lasote/stable", self.client.out)
+        self.assertIn("Requirement Hello0/0.2@lasote/stable conflicts with already defined "
+                      "Hello0/0.1@lasote/stable in Hello1/0.1@lasote/stable", self.client.out)
+        self.assertIn("To change it, override it in your base requirements", self.client.out)
         self.assertNotIn("Generated conaninfo.txt", self.client.out)
 
     def test_override_silent(self):

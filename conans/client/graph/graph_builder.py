@@ -184,7 +184,7 @@ class DepsGraphBuilder(object):
             if alias_ref:
                 require.ref = alias_ref
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-            self._conflicting_references(previous.ref, require.ref, node.ref)
+            self._conflicting_references(previous, require.ref, node.ref)
 
             # Add current ancestors to the previous node and upstream deps
             union = node.ancestors.union([node.name])
@@ -214,18 +214,19 @@ class DepsGraphBuilder(object):
                                 update, remotes, processed_profile, graph_lock)
 
     @staticmethod
-    def _conflicting_references(previous_ref, new_ref, consumer_ref=None):
-        if previous_ref.copy_clear_rev() != new_ref.copy_clear_rev():
+    def _conflicting_references(previous, new_ref, consumer_ref=None):
+        if previous.ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
                 raise ConanException("Conflict in %s\n"
-                                     "    Requirement %s conflicts with already defined %s\n"
+                                     "    Requirement %s conflicts with already defined %s in %s\n"
                                      "    To change it, override it in your base requirements"
-                                     % (consumer_ref, new_ref, previous_ref))
+                                     % (consumer_ref, new_ref, previous.ref,
+                                        next(iter(previous.dependants)).src))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
-        if previous_ref.revision and new_ref.revision and previous_ref.revision != new_ref.revision:
+        if previous.ref.revision and new_ref.revision and previous.ref.revision != new_ref.revision:
             if consumer_ref:
                 raise ConanException("Conflict in %s\n"
                                      "    Different revisions of %s has been requested"
@@ -239,7 +240,7 @@ class DepsGraphBuilder(object):
         then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.ref.name)
-            if n and self._conflicting_references(n.ref, req.ref):
+            if n and self._conflicting_references(n, req.ref):
                 return True
         for pkg_name, options_values in new_options.items():
             n = closure.get(pkg_name)
