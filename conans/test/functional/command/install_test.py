@@ -635,8 +635,8 @@ class TestConan(ConanFile):
     def install_disabled_remote_test(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
-        client.run("create . lasote/testing")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload * --confirm --all -r default")
         client.run("remote disable default")
         client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
@@ -653,8 +653,8 @@ class TestConan(ConanFile):
                                                  "server3": TestServer()}),
                             users={"default": [("lasote", "mypass")],
                                    "server3": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile("Pkg", "0.1"))})
-        client.run("create . lasote/testing")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload * --confirm --all -r default")
         client.run("upload * --confirm --all -r server3")
         client.run("remove * -f")
