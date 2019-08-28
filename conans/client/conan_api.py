@@ -601,6 +601,10 @@ class ConanAPIV1(object):
                                      args=args,
                                      source_folder=source_folder, target_folder=target_folder)
 
+    @api_method
+    def config_home(self):
+        return self.cache_folder
+
     def _info_args(self, reference_or_path, install_folder, profile_names, settings, options, env,
                    lockfile=None):
         cwd = get_cwd()

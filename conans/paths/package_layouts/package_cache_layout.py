@@ -102,7 +102,7 @@ class PackageCacheLayout(object):
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
