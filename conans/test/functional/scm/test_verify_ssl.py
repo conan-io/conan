@@ -10,7 +10,8 @@ from conans.test.utils.tools import TestClient, create_local_git_repo
 from conans.util.files import load
 
 
-@parameterized_class([{"verify_ssl": True}, {"verify_ssl": False}, {"verify_ssl": None}, ])
+@parameterized_class([{"verify_ssl": True}, {"verify_ssl": False},
+                      {"verify_ssl": None},{"verify_ssl": "None"}, ])
 class GitVerifySSLTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -37,7 +38,7 @@ class GitVerifySSLTestCase(unittest.TestCase):
         # Check the shallow value is substituted with the proper value
         self.client.run("export . {}".format(self.ref))
         content = load(self.client.cache.package_layout(self.ref).conanfile())
-        if self.verify_ssl is None or self.verify_ssl:
+        if self.verify_ssl in [None, True, "None"]:
             self.assertNotIn("verify_ssl", content)
         else:
             self.assertIn('"verify_ssl": False', content)

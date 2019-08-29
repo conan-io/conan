@@ -37,3 +37,15 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
         self.assertIn("ERROR: SCM value for 'verify_ssl' must be of type 'bool' (found 'str')",
                       client.out)
+
+    def test_ok_none(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Lib(ConanFile):
+                scm = {"type": "git", "revision": None, "shallow": False}
+        """)
+
+        client = TestClient()
+        client.save({'conanfile.py': conanfile})
+        client.run("export . name/version@user/channel")

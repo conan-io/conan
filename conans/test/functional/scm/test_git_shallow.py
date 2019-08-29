@@ -11,7 +11,7 @@ from conans.test.utils.tools import TestClient, create_local_git_repo
 from conans.util.files import load
 
 
-@parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, ])
+@parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, {"shallow": "None"}])
 class GitShallowTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -49,7 +49,7 @@ class GitShallowTestCase(unittest.TestCase):
 
         client.run("export . {}".format(self.ref))
         content = load(client.cache.package_layout(self.ref).conanfile())
-        if self.shallow is None or self.shallow:
+        if self.shallow in [None, True, "None"]:
             self.assertNotIn("shallow", content)
         else:
             self.assertIn('"shallow": False', content)
@@ -67,7 +67,7 @@ class GitShallowTestCase(unittest.TestCase):
 
         client.run("create . {}".format(self.ref))
 
-        if (self.shallow is None or self.shallow) and shallow_works:
+        if self.shallow in [None, True, "None"] and shallow_works:
             self.assertIn(">>> describe-fails", client.out)
         else:
             self.assertIn(">>> tags: 0.22.1", client.out)
