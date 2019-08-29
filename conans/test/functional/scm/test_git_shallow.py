@@ -49,12 +49,10 @@ class GitShallowTestCase(unittest.TestCase):
 
         client.run("export . {}".format(self.ref))
         content = load(client.cache.package_layout(self.ref).conanfile())
-        if self.shallow is None:
+        if self.shallow is None or self.shallow:
             self.assertNotIn("shallow", content)
-        elif self.shallow:
-            self.assertIn('"shallow": "True"', content)
         else:
-            self.assertIn('"shallow": "False"', content)
+            self.assertIn('"shallow": False', content)
 
         client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py
 

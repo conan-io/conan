@@ -24,14 +24,14 @@ class SCMDetectRepoTest(unittest.TestCase):
 
     def test_svn(self):
         with mock.patch("conans.client.tools.scm.SVN.check_repo", return_value=None):
-            r = SCM.detect_scm(folder=tempfile.gettempdir())
+            r = SCM.detect_scm(folder=self.folder)
             self.assertEqual(r, "svn")
 
     def test_git(self):
         with mock.patch("conans.client.tools.scm.Git.check_repo", return_value=None):
-            r = SCM.detect_scm(folder=tempfile.gettempdir())
+            r = SCM.detect_scm(folder=self.folder)
             self.assertEqual(r, "git")
 
     def test_none(self):
-        r = SCM.detect_scm(folder=tempfile.gettempdir())
+        r = SCM.detect_scm(folder=self.folder)
         self.assertEqual(r, None)

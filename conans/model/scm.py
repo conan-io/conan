@@ -1,6 +1,7 @@
-import json
 import os
 import subprocess
+
+from six import string_types
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
@@ -8,35 +9,40 @@ from conans.util.files import rmdir
 
 
 def get_scm_data(conanfile):
-    try:
+    data = getattr(conanfile, "scm", None)
+    if data is not None and isinstance(data, dict):
         return SCMData(conanfile)
-    except ConanException:
+    else:
         return None
 
 
-class SCMData(object):
+def _get_dict_value(data, key, expected_type, default=None):
+    if key in data:
+        r = data.get(key)
+        if not isinstance(r, expected_type):
+            type_str = "' or '".join([it.__name__ for it in expected_type]) \
+                if isinstance(expected_type, tuple) else expected_type.__name__
+            raise ConanException("SCM value for '{}' must be of type '{}'"
+                                 " (found '{}')".format(key, type_str, type(r).__name__))
+        return r
+    return default
 
-    @staticmethod
-    def _boolean(value, default):
-        if value is None:
-            return default
-        else:
-            return "True" if value in [True, "True"] else "False"
+
+class SCMData(object):
+    VERIFY_SSL_DEFAULT = True
+    SHALLOW_DEFAULT = True
 
     def __init__(self, conanfile):
-        data = getattr(conanfile, "scm", None)
-        if data is not None and isinstance(data, dict):
-            self.type = data.get("type")
-            self.url = data.get("url")
-            self.revision = data.get("revision")
-            self.verify_ssl = data.get("verify_ssl")
-            self.username = data.get("username")
-            self.password = data.get("password")
-            self.subfolder = data.get("subfolder")
-            self.submodule = data.get("submodule")
-            self._shallow = SCMData._boolean(data.get("shallow"), None)
-        else:
-            raise ConanException("Not SCM enabled in conanfile")
+        data = getattr(conanfile, "scm")
+        self.type = _get_dict_value(data, "type", string_types)
+        self.url = _get_dict_value(data, "url", string_types)
+        self.revision = _get_dict_value(data, "revision", (string_types, int))
+        self.verify_ssl = _get_dict_value(data, "verify_ssl", bool, SCMData.VERIFY_SSL_DEFAULT)
+        self.username = _get_dict_value(data, "username", string_types)
+        self.password = _get_dict_value(data, "password", string_types)
+        self.subfolder = _get_dict_value(data, "subfolder", string_types)
+        self.submodule = _get_dict_value(data, "submodule", string_types)
+        self.shallow = _get_dict_value(data, "shallow", bool, SCMData.SHALLOW_DEFAULT)
 
     @property
     def capture_origin(self):
@@ -52,18 +58,24 @@ class SCMData(object):
             return self.revision
         raise ConanException("Not implemented recipe revision for %s" % self.type)
 
-    @property
-    def shallow(self):
-        return self._shallow in [None, "True"]
-
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
-             "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
+             "password": self.password, "type": self.type,
              "subfolder": self.subfolder, "submodule": self.submodule}
-        if self._shallow is not None:
-            d.update({"shallow": self._shallow})
+        if self.shallow != self.SHALLOW_DEFAULT:
+            d.update({"shallow": self.shallow})
+        if self.verify_ssl != self.VERIFY_SSL_DEFAULT:
+            d.update({"verify_ssl": self.verify_ssl})
         d = {k: v for k, v in d.items() if v is not None}
-        return json.dumps(d, sort_keys=True)
+
+        def _kv_to_string(key, value):
+            if isinstance(value, bool):
+                return '"{}": {}'.format(key, value)
+            else:
+                value_str = str(value).replace('"', r'\"')
+                return '"{}": "{}"'.format(key, value_str)
+
+        return '{' + ', '.join([_kv_to_string(k, v) for k, v in sorted(d.items())]) + '}'
 
 
 class SCM(object):
