@@ -33,6 +33,7 @@ class ToolsNetTest(unittest.TestCase):
     #     net.ftp_download("speedtest.tele2.net", filename)
     #     self.assertTrue(os.path.exists(os.path.basename(filename)))
 
+
     def test_ftp_invalid_path(self):
         with six.assertRaisesRegex(self, ConanException,
                                      "550 The system cannot find the file specified."):
