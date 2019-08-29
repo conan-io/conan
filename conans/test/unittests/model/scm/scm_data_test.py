@@ -18,21 +18,21 @@ class GetDictValueTestCase(unittest.TestCase):
         def get_string():
             return "value"
         self.assertEqual(_get_dict_value({"str": get_string()}, "str", six.string_types), "value")
+        self.assertEqual(_get_dict_value({"str": None}, "str", six.string_types), None)
 
     def test_no_string_type(self):
-        with six.assertRaisesRegex(self, ConanException, "must be of type 'str' \(found 'int'\)"):
+        str_type_name = 'str' if six.PY3 else 'basestring'
+        exception_msg = "must be of type '{}' \(found '{{found}}'\)".format(str_type_name)
+        with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="int")):
             _get_dict_value({"str": 23}, "str", six.string_types)
 
-        with six.assertRaisesRegex(self, ConanException, "must be of type 'str' \(found 'bytes'\)"):
-            _get_dict_value({"str": b"value"}, "str", six.string_types)
+        with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="bytes")):
+                _get_dict_value({"str": b"value"}, "str", six.string_types)
 
-        with six.assertRaisesRegex(self, ConanException, "must be of type 'str' \(found 'bool'\)"):
+        with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="bool")):
             _get_dict_value({"str": True}, "str", six.string_types)
 
-        with six.assertRaisesRegex(self, ConanException, "must be of type 'str' \(found 'NoneType'\)"):
-            _get_dict_value({"str": None}, "str", six.string_types)
-
-        with six.assertRaisesRegex(self, ConanException, "must be of type 'str' \(found 'function'\)"):
+        with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="function")):
             _get_dict_value({"str": lambda: "value"}, "str", six.string_types)
 
     def test_boolean_type(self):
@@ -40,9 +40,6 @@ class GetDictValueTestCase(unittest.TestCase):
         self.assertEqual(_get_dict_value({"key": False}, "key", bool), False)
 
     def test_no_boolean_type(self):
-        with six.assertRaisesRegex(self, ConanException, "must be of type 'bool' \(found 'NoneType'\)"):
-            _get_dict_value({"key": None}, "key", bool)
-
         with six.assertRaisesRegex(self, ConanException, "must be of type 'bool' \(found 'int'\)"):
             _get_dict_value({"key": 123}, "key", bool)
 

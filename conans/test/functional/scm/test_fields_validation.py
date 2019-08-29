@@ -3,6 +3,8 @@
 import textwrap
 import unittest
 
+import six
+
 from conans.test.utils.tools import TestClient
 
 
@@ -20,8 +22,9 @@ class SCMDataFieldsValdation(unittest.TestCase):
         client.save({'conanfile.py': conanfile})
         client.run("export . name/version@user/channel", assert_error=True)
 
-        self.assertIn("ERROR: SCM value for 'username' must be of type 'str' (found 'bool')",
-                      client.out)
+        str_type_name = 'str' if six.PY3 else 'basestring'
+        self.assertIn("ERROR: SCM value for 'username' must be of"
+                      " type '{}' (found 'bool')".format(str_type_name), client.out)
 
     def test_fail_boolean(self):
         conanfile = textwrap.dedent("""
