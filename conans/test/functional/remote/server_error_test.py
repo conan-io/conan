@@ -14,7 +14,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                return namedtuple("Response", "status_code headers content")(200, {}, b'<>')
+                return namedtuple("Response", "status_code headers content ok")(200, {}, b'<>',
+                                                                                True)
 
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
@@ -33,7 +34,8 @@ class Error200NoJson(unittest.TestCase):
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
                 headers = {"Content-Type": "application/json"}
-                return namedtuple("Response", "status_code headers content")(200, headers, b'<>')
+                return namedtuple("Response", "status_code headers content ok")(200, headers,
+                                                                                b'<>', True)
 
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
@@ -51,8 +53,8 @@ class Error200NoJson(unittest.TestCase):
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
                 headers = {"Content-Type": "application/json"}
-                return namedtuple("Response", "status_code headers content")(200, headers,
-                                                                             b'[1, 2, 3]')
+                return namedtuple("Response", "status_code headers content ok")(200, headers,
+                                                                                b'[1, 2, 3]', True)
 
         # https://github.com/conan-io/conan/issues/3432
         client = TestClient(servers={"default": TestServer()},
