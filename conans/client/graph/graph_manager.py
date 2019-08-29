@@ -214,6 +214,12 @@ class GraphManager(object):
     def _recurse_build_requires(self, graph, subgraph, builder, binaries_analyzer, check_updates,
                                 update, build_mode, remotes, profile_build_requires, recorder,
                                 processed_profile, graph_lock, apply_build_requires=True):
+        """
+        :param graph: This is the full dependency graph with all nodes from all recursions
+        :param subgraph: A partial graph of the nodes that need to be evaluated and expanded
+            at this recursion. Only the nodes belonging to this subgraph will get their package_id
+            computed, and they will resolve build_requires if they need to be built from sources
+        """
 
         binaries_analyzer.evaluate_graph(subgraph, build_mode, update, remotes)
         if not apply_build_requires:
