@@ -442,7 +442,7 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build")
         conanfile = GenConanfile().with_name("Hello1").with_version("0.1")\
-                                  .with_requirement(hello_ref)
+                                  .with_require(hello_ref)
 
         conanfile = str(conanfile) + """\n    def package_info(self):
         self.cpp_info.libs = self.collect_libs()

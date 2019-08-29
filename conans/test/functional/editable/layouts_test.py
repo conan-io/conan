@@ -26,7 +26,7 @@ class LayoutTest(unittest.TestCase):
         client.run("editable add . {} --layout mylayout".format(ref))
         client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": GenConanfile().with_name("app").with_version("1.0")
-                                                    .with_requirement(ref)})
+                                                    .with_require(ref)})
         client2.run("create . user/testing")
         graph_info = os.path.join(client.current_folder, "build", "graph_info.json")
         self.assertTrue(os.path.exists(graph_info))
