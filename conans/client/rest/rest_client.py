@@ -87,7 +87,8 @@ class RestApiClient(object):
     def authenticate(self, user, password):
         apiv1 = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                               self.requester, self.verify_ssl, self._put_headers)
-        # Use v1 for the capabilities because the "ping" could be also protected
+        # Use v1 for the auth because the "ping" could be also protected so we don't know if
+        # we can use v2
         return apiv1.authenticate(user, password)
 
     def check_credentials(self):
