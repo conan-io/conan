@@ -92,8 +92,10 @@ class RestCommonMethods(object):
           - A json with an access_token and a refresh token (if supported in the remote)
           - A plain response with a regular token (not supported refresh in the remote) and None
         """
+        print("QUE ASE")
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
+        print("HOLA")
         params = {"oauth_token": "true"}
         logger.debug("REST: Authenticate to get access_token: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
@@ -115,8 +117,9 @@ class RestCommonMethods(object):
         access_token and refresh token"""
         url = self.router.common_authenticate()
         logger.debug("REST: Refreshing Token: %s" % url)
-        payload = {'access_token': token, 'refresh_token': refresh_token,
+        payload = {'access_token': token[:-1], 'refresh_token': refresh_token,
                    'grant_type': 'refresh_token'}
+        print(payload)
         ret = self.requester.post(url, headers=self.custom_headers, verify=self.verify_ssl,
                                   data=payload)
         print(ret)
@@ -156,6 +159,9 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
         if ret.status_code == 404:
             raise NotFoundException("Not implemented endpoint")
+
+        if ret.status_code == 401:
+            raise AuthenticationException("")
 
         version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
         server_version = ret.headers.get('X-Conan-Server-Version', None)
