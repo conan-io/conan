@@ -40,7 +40,7 @@ class SCMDataFieldsValdation(unittest.TestCase):
 
         str_type_name = 'str' if six.PY3 else 'basestring'
         self.assertIn("ERROR: SCM value for 'revision' must be of type"
-                      " 'str' or 'int' (found 'bool')".format(str_type_name), client.out)
+                      " '{}' or 'int' (found 'bool')".format(str_type_name), client.out)
 
     def test_fail_boolean(self):
         conanfile = textwrap.dedent("""
