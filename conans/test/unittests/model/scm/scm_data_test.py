@@ -26,7 +26,8 @@ class GetDictValueTestCase(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="int")):
             _get_dict_value({"str": 23}, "str", six.string_types)
 
-        with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="bytes")):
+        if six.PY3:  # For py2, bytes is instance of str
+            with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="bytes")):
                 _get_dict_value({"str": b"value"}, "str", six.string_types)
 
         with six.assertRaisesRegex(self, ConanException, exception_msg.format(found="bool")):
