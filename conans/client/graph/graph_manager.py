@@ -226,7 +226,7 @@ class GraphManager(object):
         """
 
         xbuilding = bool(processed_profile_build)  # If build profile is provided, then it is xbuild
-        binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
+        binaries_analyzer.evaluate_graph(subgraph, build_mode, update, remotes)
         if not apply_build_requires:
             return
 
