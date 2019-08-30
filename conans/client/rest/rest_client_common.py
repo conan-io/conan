@@ -92,10 +92,8 @@ class RestCommonMethods(object):
           - A json with an access_token and a refresh token (if supported in the remote)
           - A plain response with a regular token (not supported refresh in the remote) and None
         """
-        print("QUE ASE")
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
-        print("HOLA")
         params = {"oauth_token": "true"}
         logger.debug("REST: Authenticate to get access_token: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
@@ -117,16 +115,13 @@ class RestCommonMethods(object):
         access_token and refresh token"""
         url = self.router.common_authenticate()
         logger.debug("REST: Refreshing Token: %s" % url)
-        payload = {'access_token': token[:-1], 'refresh_token': refresh_token,
+        payload = {'access_token': token, 'refresh_token': refresh_token,
                    'grant_type': 'refresh_token'}
-        print(payload)
         ret = self.requester.post(url, headers=self.custom_headers, verify=self.verify_ssl,
                                   data=payload)
-        print(ret)
         self._check_error_response(ret)
 
         data = ret.json()
-        print(data)
         if "access_token" not in data:
             # TODO: I don't know why artifactory returns 200 but then the json says it is an error!
             #       Probably this is an Artifactory bug, remove later and try

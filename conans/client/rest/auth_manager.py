@@ -230,8 +230,6 @@ class ConanApiAuthManager(object):
                 user = prev_user
 
         try:
-            print("AKI")
-            print(self._rest_client)
             token, refresh_token = self._rest_client.authenticate(user, password)
         except UnicodeDecodeError:
             raise ConanException("Password contains not allowed symbols")
