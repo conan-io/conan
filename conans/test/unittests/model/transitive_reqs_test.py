@@ -34,14 +34,10 @@ bye_ref = ConanFileReference.loads("Bye/0.2@user/testing")
 
 say_content = GenConanfile().with_name("Say").with_version("0.1")
 say_content2 = GenConanfile().with_name("Say").with_version("0.2")
-hello_content = GenConanfile().with_name("Hello").with_version("1.2")\
-                              .with_requirement(say_ref)
-chat_content = GenConanfile().with_name("Chat").with_version("2.3")\
-                             .with_requirement(hello_ref)
-bye_content = GenConanfile().with_name("Bye").with_version("0.1")\
-                            .with_requirement(say_ref)
-bye_content2 = GenConanfile().with_name("Bye").with_version("0.2")\
-                             .with_requirement(say_ref2)
+hello_content = GenConanfile().with_name("Hello").with_version("1.2").with_require(say_ref)
+chat_content = GenConanfile().with_name("Chat").with_version("2.3").with_require(hello_ref)
+bye_content = GenConanfile().with_name("Bye").with_version("0.1").with_require(say_ref)
+bye_content2 = GenConanfile().with_name("Bye").with_version("0.2").with_require(say_ref2)
 
 
 def _get_nodes(graph, name):
@@ -1105,8 +1101,8 @@ class HelloConan(ConanFile):
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
             self.build_graph(GenConanfile().with_name("Chat").with_version("2.3")
-                                           .with_requirement(say_ref)
-                                           .with_requirement(hello_ref))
+                                           .with_require(say_ref)
+                                           .with_require(hello_ref))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)
@@ -1555,10 +1551,10 @@ class LibDConan(ConanFile):
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
 
         self.retriever.save_recipe(libd_ref, GenConanfile().with_name("LibD").with_version("0.1")
-                                                           .with_requirement(libb_ref)
+                                                           .with_require(libb_ref)
                                                            .with_default_option("LibA:shared", True))
         self.retriever.save_recipe(libc_ref, GenConanfile().with_name("LibC").with_version("0.1")
-                                                           .with_requirement(libb_ref)
+                                                           .with_require(libb_ref)
                                                            .with_default_option("LibA:shared", False))
 
         with six.assertRaisesRegex(self, ConanException,

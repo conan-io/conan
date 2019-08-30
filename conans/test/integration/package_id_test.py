@@ -42,7 +42,7 @@ class Pkg(ConanFile):
 
         if requires:
             for require in requires:
-                conanfile = conanfile.with_requirement(ConanFileReference.loads(require))
+                conanfile = conanfile.with_require(ConanFileReference.loads(require))
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         revisions_enabled = self.client.cache.config.revisions_enabled
