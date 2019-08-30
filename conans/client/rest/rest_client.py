@@ -4,6 +4,7 @@ from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
+from conans.util.log import logger
 
 
 class RestApiClient(object):
@@ -33,6 +34,7 @@ class RestApiClient(object):
                                 self.requester, self.verify_ssl, self._put_headers)
             _, _, cap = tmp.server_info()
             self._cached_capabilities[self.remote_url] = cap
+            logger.debug("REST: Cached capabilities for the remote: %s" % cap)
             if not self._revisions_enabled and ONLY_V2 in cap:
                 raise OnlyV2Available(self.remote_url)
 
@@ -83,7 +85,11 @@ class RestApiClient(object):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
-        return self._get_api().authenticate(user, password)
+        apiv1 = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
+                              self.requester, self.verify_ssl, self._put_headers)
+        # Use v1 for the auth because the "ping" could be also protected so we don't know if
+        # we can use v2
+        return apiv1.authenticate(user, password)
 
     def check_credentials(self):
         return self._get_api().check_credentials()

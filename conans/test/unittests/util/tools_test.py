@@ -285,7 +285,8 @@ class HelloConan(ConanFile):
                                            arch="x86", output=self.output)
             self.assertEqual(len(w), 2)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
+                      '/p:UseEnv=false /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
@@ -310,7 +311,8 @@ class HelloConan(ConanFile):
             cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
             self.assertEqual(len(w), 2)
             self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" /p:Platform="x86"', cmd)
+        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
+                      '/p:UseEnv=false /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")

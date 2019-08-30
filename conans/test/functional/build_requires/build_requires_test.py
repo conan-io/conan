@@ -1,10 +1,12 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
 
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 from conans.test.utils.conanfile import TestConanFile
 
@@ -379,3 +381,40 @@ class package(ConanFile):
         client.save({"conanfile.py": consumer})
         client.run("install . --build=missing -o Pkg:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.out)
+
+    def failed_assert_test(self):
+        # https://github.com/conan-io/conan/issues/5685
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . common/1.0@test/test")
+
+        req = textwrap.dedent("""
+            from conans import ConanFile
+            class BuildReqConan(ConanFile):
+                requires = "common/1.0@test/test"
+            """)
+        client.save({"conanfile.py": req})
+        client.run("export . req/1.0@test/test")
+        client.run("export . build_req/1.0@test/test")
+
+        build_req_req = textwrap.dedent("""
+            from conans import ConanFile
+            class BuildReqConan(ConanFile):
+                requires = "common/1.0@test/test"
+                build_requires = "build_req/1.0@test/test"
+        """)
+        client.save({"conanfile.py": build_req_req})
+        client.run("export . build_req_req/1.0@test/test")
+
+        consumer = textwrap.dedent("""
+                    [requires]
+                    req/1.0@test/test
+                    [build_requires]
+                    build_req_req/1.0@test/test
+                """)
+        client.save({"conanfile.txt": consumer}, clean_first=True)
+        client.run("install . --build=missing")
+        # This used to assert and trace, now it works
+        self.assertIn("conanfile.txt: Applying build-requirement: build_req_req/1.0@test/test",
+                      client.out)
+
