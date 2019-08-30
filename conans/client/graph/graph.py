@@ -37,9 +37,7 @@ class _NodeOrderedDict(object):
 
     def add(self, node):
         key = self._key(node)
-        inserted = key not in self._nodes
         self._nodes[key] = node
-        return inserted
 
     def get(self, name, context):
         return self._nodes.get((name, context))
@@ -75,7 +73,7 @@ class Node(object):
         self.build_require = False
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
-        self._context = context
+        self.context = context
 
         # A subset of the graph that will conflict by package name
         self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
@@ -114,12 +112,6 @@ class Node(object):
     def pref(self):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
         return PackageReference(self.ref, self.package_id, self.prev)
-
-    @property
-    def context(self):
-        assert self._context in [CONTEXT_HOST, CONTEXT_BUILD], \
-            "Using node '{}' with undefined context '{}'".format(self.ref, self._context)
-        return self._context
 
     @property
     def public_deps(self):
