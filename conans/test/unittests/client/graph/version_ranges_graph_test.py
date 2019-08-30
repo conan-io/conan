@@ -1,4 +1,4 @@
-
+from collections import OrderedDict
 from collections import namedtuple
 
 import six
@@ -8,7 +8,8 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import GenConanfile, TurboTestClient, TestServer, \
+    NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import test_processed_profile
 
 
@@ -268,3 +269,23 @@ class Project(ConanFile):
         conanfile = other.conanfile
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")
+
+    def different_user_channel_resolved_correctly_test(self):
+        server1 = TestServer()
+        server2 = TestServer()
+        servers = OrderedDict([("server1", server1), ("server2", server2)])
+
+        client = TurboTestClient(servers=servers)
+        ref1 = ConanFileReference.loads("lib/1.0@conan/stable")
+        ref2 = ConanFileReference.loads("lib/1.0@conan/testing")
+
+        client.create(ref1, conanfile=GenConanfile())
+        client.upload_all(ref1, remote="server1")
+
+        client.create(ref2, conanfile=GenConanfile())
+        client.upload_all(ref2, remote="server2")
+
+        client2 = TurboTestClient(servers=servers)
+        client2.run("install lib/[>=1.0]@conan/testing")
+        self.assertIn("lib/1.0@conan/testing: Retrieving package {} "
+                      "from remote 'server2' ".format(NO_SETTINGS_PACKAGE_ID), client2.out)

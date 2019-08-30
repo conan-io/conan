@@ -211,15 +211,21 @@ class GraphManager(object):
 
         return conanfile.build_requires
 
-    def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
-                                build_mode, remotes, profile_build_requires, recorder,
+    def _recurse_build_requires(self, graph, subgraph, builder, binaries_analyzer, check_updates,
+                                update, build_mode, remotes, profile_build_requires, recorder,
                                 processed_profile, graph_lock, apply_build_requires=True):
+        """
+        :param graph: This is the full dependency graph with all nodes from all recursions
+        :param subgraph: A partial graph of the nodes that need to be evaluated and expanded
+            at this recursion. Only the nodes belonging to this subgraph will get their package_id
+            computed, and they will resolve build_requires if they need to be built from sources
+        """
 
-        binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
+        binaries_analyzer.evaluate_graph(subgraph, build_mode, update, remotes)
         if not apply_build_requires:
             return
 
-        for node in graph.ordered_iterate():
+        for node in subgraph.ordered_iterate():
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
             if node.recipe == RECIPE_VIRTUAL:
@@ -249,8 +255,8 @@ class GraphManager(object):
                                                          package_build_requires.values(),
                                                          check_updates, update, remotes,
                                                          processed_profile, graph_lock)
-                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
-                                             update, build_mode,
+                self._recurse_build_requires(graph, subgraph, builder, binaries_analyzer,
+                                             check_updates, update, build_mode,
                                              remotes, profile_build_requires, recorder,
                                              processed_profile, graph_lock)
                 graph.nodes.update(subgraph.nodes)
@@ -259,8 +265,8 @@ class GraphManager(object):
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
                                                          processed_profile, graph_lock)
-                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
-                                             update, build_mode,
+                self._recurse_build_requires(graph, subgraph, builder, binaries_analyzer,
+                                             check_updates, update, build_mode,
                                              remotes, {}, recorder,
                                              processed_profile, graph_lock)
                 graph.nodes.update(subgraph.nodes)
@@ -277,7 +283,7 @@ class GraphManager(object):
         binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
                                                   self._remote_manager)
 
-        self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
+        self._recurse_build_requires(graph, graph, builder, binaries_analyzer, check_updates, update,
                                      build_mode, remotes,
                                      profile_build_requires, recorder, processed_profile,
                                      graph_lock,
