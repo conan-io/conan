@@ -9,7 +9,7 @@ class VersionRangesErrorTest(unittest.TestCase):
     def verbose_version_test(self):
         client = TestClient()
         conanfile = GenConanfile().with_name("MyPkg").with_version("0.1")\
-                                  .with_requirement_plain("MyOtherPkg/[~0.1]@user/testing")
+                                  .with_require_plain("MyOtherPkg/[~0.1]@user/testing")
         client.save({CONANFILE: str(conanfile)})
         client.run("install . --build", assert_error=True)
         self.assertIn("from requirement 'MyOtherPkg/[~0.1]@user/testing'", client.out)
@@ -22,7 +22,7 @@ class VersionRangesErrorTest(unittest.TestCase):
             if requires:
                 for req in requires:
                     ref = ConanFileReference.loads(req)
-                    conanfile = conanfile.with_requirement(ref)
+                    conanfile = conanfile.with_require(ref)
             client.save({CONANFILE: str(conanfile)})
             client.run("export . user/testing")
 

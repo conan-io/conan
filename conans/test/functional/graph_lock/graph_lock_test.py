@@ -29,7 +29,7 @@ class GraphLockErrorsTest(unittest.TestCase):
 
 class GraphLockCustomFilesTest(unittest.TestCase):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
-                             .with_requirement_plain("PkgA/[>=0.1]@user/channel")
+                             .with_require_plain("PkgA/[>=0.1]@user/channel")
     pkg_b_revision = "180919b324d7823f2683af9381d11431"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
     pkg_b_package_revision = "#2913f67cea630aee496fe70fd38b5b0f"
@@ -66,12 +66,12 @@ class GraphLockCustomFilesTest(unittest.TestCase):
 
 class GraphLockVersionRangeTest(unittest.TestCase):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
-                             .with_requirement_plain("PkgA/[>=0.1]@user/channel")
-    pkg_b_revision = "3b2aab3a9cd211f6e5575ed84bcb669b"
+                             .with_require_plain("PkgA/[>=0.1]@user/channel")
+    pkg_b_revision = "e8cabe5f1c737bcb8223b667f071842d"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    pkg_b_package_revision = "#96ed6206dbaf09b60d3c36acd1a6351d"
-    modified_pkg_b_revision = "5a00596c704e7f96ad13f538b21270a2"
-    modified_pkg_b_package_revision = "#6405a8dcd0e7fc6c2dee6fad9d01d7f4"
+    pkg_b_package_revision = "#97d1695f4e456433cc5a1dfa14655a0f"
+    modified_pkg_b_revision = "6073b7f447ba8d88f43a610a15481f2a"
+    modified_pkg_b_package_revision = "#ecc8f5e8fbe7847fbd9673ddd29f4f10"
     graph_lock_command = "install ."
 
     def setUp(self):
@@ -183,7 +183,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
 class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
-                             .with_build_requirement_plain("PkgA/[>=0.1]@user/channel")
+                             .with_build_require_plain("PkgA/[>=0.1]@user/channel")
     pkg_b_revision = "b6f49e5ba6dd3d64af09a2f288e71330"
     pkg_b_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
     pkg_b_package_revision = "#33a5634bbd9ec26b369d3900d91ea9a0"
@@ -235,9 +235,8 @@ class GraphLockRevisionTest(unittest.TestCase):
         # If we create a new PkgA revision, for example adding info
         client.save({"conanfile.py":
                          str(GenConanfile().with_name("PkgA").with_version("0.1")
-                             .with_package_info(
-                             cpp_info={"libs": ["mylibPkgA0.1lib"]},
-                             env_info={"MYENV": ["myenvPkgA0.1env"]}))})
+                             .with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
+                                                env_info={"MYENV": ["myenvPkgA0.1env"]}))})
 
         client.run("create . PkgA/0.1@user/channel")
         client.save({"conanfile.py": str(consumer)})

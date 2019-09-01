@@ -520,9 +520,11 @@ class ConanLib(ConanFile):
                 "subfolder": "mysubfolder"}
         conanfile = namedtuple("ConanfileMock", "scm")(data)
         scm_data = SCMData(conanfile)
-        the_json = str(scm_data)
-        data2 = json.loads(the_json)
-        self.assertEqual(data, data2)
+
+        expected_output = '{"password": "mypassword", "revision": "myrevision",' \
+                          ' "subfolder": "mysubfolder", "type": "git", "url": "myurl",' \
+                          ' "username": "myusername"}'
+        self.assertEqual(str(scm_data), expected_output)
 
     def test_git_delegated_function(self):
         conanfile = """
@@ -898,16 +900,6 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         self.assertIn("BUILD METHOD CALLED", self.client.out)
-
-    def test_scm_serialization(self):
-        data = {"url": "myurl", "revision": "23", "username": "myusername",
-                "password": "mypassword", "type": "svn", "verify_ssl": False,
-                "subfolder": "mysubfolder"}
-        conanfile = namedtuple("ConanfileMock", "scm")(data)
-        scm_data = SCMData(conanfile)
-        the_json = str(scm_data)
-        data2 = json.loads(the_json)
-        self.assertEqual(data, data2)
 
 
 @attr('svn')
