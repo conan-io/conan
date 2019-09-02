@@ -4,6 +4,7 @@ import shutil
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
@@ -16,7 +17,6 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
-from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
@@ -118,15 +118,18 @@ def _get_prefs(layout):
 
 
 def migrate_localdb_refresh_token(cache, out):
-    localdb = cache.localdb
+    from conans.client.store.localdb import LocalDB
+    from sqlite3 import OperationalError
+
+    localdb = LocalDB.create(cache.localdb)
     with localdb._connect() as connection:
         try:
             statement = connection.cursor()
-            statement.execute("ALTER TABLE users_remotes ADD "
-                              "refresh_token TEXT if exists users_remotes;")
-            connection.commit()
-        except Exception as e:
-            raise ConanException("Could not migrate local database: %s" % str(e))
+            statement.execute("ALTER TABLE users_remotes ADD refresh_token TEXT;")
+        except OperationalError:
+            # This likely means the column is already there (fresh created table)
+            # In the worst scenario the user will be requested to remove the file by hand
+            pass
 
 
 def _migrate_full_metadata(cache, out):
