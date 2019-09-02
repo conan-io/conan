@@ -46,6 +46,7 @@ def input_credentials_if_unauthorized(func):
                                            'https://bintray.com/signup/oss')
                 return retry_with_new_token(self, *args, **kwargs)
             elif self._rest_client.token and self._rest_client.refresh_token:
+                # If we have a refresh token try to refresh the access token
                 try:
                     self.authenticate(self.user, None)
                 except AuthenticationException as exc:
