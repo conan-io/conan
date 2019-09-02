@@ -38,6 +38,16 @@ class ClassicProtocExampleBase(GraphManagerTest):
             
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
+                
+            def package_info(self):
+                protobuf_str = "protobuf-host" if self.settings.os == "Host" else "protobuf-build"
+
+                self.cpp_info.includedirs = [protobuf_str, ]
+                self.cpp_info.libdirs = [protobuf_str, ]
+                self.cpp_info.bindirs = [protobuf_str, ]
+                
+                self.env_info.PATH.append(protobuf_str)
+                self.env_info.OTHERVAR = protobuf_str
     """)
 
     protoc = textwrap.dedent("""
@@ -52,6 +62,16 @@ class ClassicProtocExampleBase(GraphManagerTest):
             
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
+
+            def package_info(self):
+                protoc_str = "protoc-host" if self.settings.os == "Host" else "protoc-build"
+                
+                self.cpp_info.includedirs = [protoc_str, ]
+                self.cpp_info.libdirs = [protoc_str, ]
+                self.cpp_info.bindirs = [protoc_str, ]
+                
+                self.env_info.PATH.append(protoc_str)
+                self.env_info.OTHERVAR = protoc_str
     """)
 
     application = textwrap.dedent("""
@@ -105,6 +125,8 @@ class ClassicProtocExampleBase(GraphManagerTest):
         deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
                                                 build_mode=[], check_updates=False, update=False,
                                                 remotes=Remotes(), recorder=ActionRecorder())
+        if True:
+            self.binary_installer.install(deps_graph, None, False, graph_info)
         return deps_graph
 
 
@@ -126,26 +148,49 @@ class ClassicProtocExample(ClassicProtocExampleBase):
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
 
         # Check HOST packages
+        #   - application
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 2)
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
+        if xbuilding:
+            # cpp_info:
+            protobuf_host_cpp_info = application.conanfile.deps_cpp_info["protobuf"]
+            self.assertEqual(protobuf_host_cpp_info.includedirs, ['protobuf-host'])
+            self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
+            self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
+            with self.assertRaises(KeyError):
+                application.conanfile.deps_cpp_info["protoc"]
 
+            # env_info:
+            protoc_env_info = application.conanfile.deps_env_info["protoc"]
+            self.assertEqual(protoc_env_info.PATH, ['protoc-build'])
+            self.assertEqual(protoc_env_info.OTHERVAR, 'protoc-build')
+
+            protobuf_env_info = application.conanfile.deps_env_info["protobuf"]
+            self.assertEqual(protobuf_env_info.PATH, ['protobuf-build'])
+            self.assertEqual(protobuf_env_info.OTHERVAR, 'protobuf-build')
+
+        #   - protobuf host
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
         self.assertEqual(protobuf_host.context, CONTEXT_HOST)
         self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
 
         # Check BUILD packages (default behavior changes if we use profile_build)
+        #   - protoc
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
         self.assertEqual(protoc_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
         self.assertEqual(str(protoc_build.conanfile.settings.os),
                          (profile_build if xbuilding else profile_host).settings['os'])
 
+        #   - protobuf build
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
         self.assertEqual(protoc_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
         self.assertEqual(str(protobuf_build.conanfile.settings.os),
                          (profile_build if xbuilding else profile_host).settings['os'])
+
+

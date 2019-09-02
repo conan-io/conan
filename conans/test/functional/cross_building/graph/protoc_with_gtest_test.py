@@ -26,6 +26,16 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
+                
+            def package_info(self):
+                gtest_str = "gtest-host" if self.settings.os == "Host" else "gtest-build"
+
+                self.cpp_info.includedirs = [gtest_str, ]
+                self.cpp_info.libdirs = [gtest_str, ]
+                self.cpp_info.bindirs = [gtest_str, ]
+                
+                self.env_info.PATH.append(gtest_str)
+                self.env_info.OTHERVAR = gtest_str
     """)
 
     application = textwrap.dedent("""
@@ -55,7 +65,7 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
 
     def setUp(self):
         super(ProtocWithGTestExample, self).setUp()
-        self._cache_recipe(self.gtest_ref, self.protobuf)
+        self._cache_recipe(self.gtest_ref, self.gtest)
         self._cache_recipe(self.application_ref, self.application)
 
         save(self.cache.settings_path, self.settings_yml)
@@ -115,6 +125,34 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
+        if True:
+            # cpp_info:
+            protobuf_cpp_info = application.conanfile.deps_cpp_info["protobuf"]
+            self.assertEqual(protobuf_cpp_info.includedirs, ['protobuf-host'])
+            self.assertEqual(protobuf_cpp_info.libdirs, ['protobuf-host'])
+            self.assertEqual(protobuf_cpp_info.bindirs, ['protobuf-host'])
+
+            protoc_cpp_info = application.conanfile.deps_cpp_info["protoc"]
+            self.assertEqual(protoc_cpp_info.includedirs, ['protoc-host'])
+            self.assertEqual(protoc_cpp_info.libdirs, ['protoc-host'])
+            self.assertEqual(protoc_cpp_info.bindirs, ['protoc-host'])
+
+            gtest_cpp_info = application.conanfile.deps_cpp_info["gtest"]
+            self.assertEqual(gtest_cpp_info.includedirs, ['gtest-host'])
+            self.assertEqual(gtest_cpp_info.libdirs, ['gtest-host'])
+            self.assertEqual(gtest_cpp_info.bindirs, ['gtest-host'])
+
+            # env_info:
+            protoc_env_info = application.conanfile.deps_env_info["protoc"]
+            self.assertEqual(protoc_env_info.PATH, ['protoc-build'])
+            self.assertEqual(protoc_env_info.OTHERVAR, 'protoc-build')
+
+            protobuf_env_info = application.conanfile.deps_env_info["protobuf"]
+            self.assertEqual(protobuf_env_info.PATH, ['protobuf-build'])
+            self.assertEqual(protobuf_env_info.OTHERVAR, 'protobuf-build')
+
+            with self.assertRaises(KeyError):
+                application.conanfile.deps_env_info["gtest"]
 
         protobuf_host = application.dependencies[0].dst
         self.assertEqual(protobuf_host.conanfile.name, "protobuf")
