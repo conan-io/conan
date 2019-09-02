@@ -136,7 +136,9 @@ class ToolChainTest(unittest.TestCase):
         # Local flow
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
-
+        # client.run('install . --build_folder="build_layout.file"')
+        # client.run('install . -s build_type=Debug --build_folder="build_layout.file"')
+        # client.run('editable add . pkg/0.1@user/testing --build_folder="build_layout.file"')
         client.run("install .")
         client.run("editable add . pkg/0.1@user/testing")
         client.run("build .")
