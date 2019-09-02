@@ -1,5 +1,6 @@
 import os
 import unittest
+from collections import namedtuple
 
 from mock import Mock
 
@@ -38,8 +39,9 @@ class GraphManagerTest(unittest.TestCase):
                                     self.resolver)
         hook_manager = Mock()
         recorder = Mock()
-        self.binary_installer = BinaryInstaller(cache, self.output, self.remote_manager, recorder,
-                                                hook_manager)
+        app_type = namedtuple("ConanApp", "cache output remote_manager hook_manager")
+        app = app_type(self.cache, self.output, self.remote_manager, hook_manager)
+        self.binary_installer = BinaryInstaller(app, recorder)
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
         if isinstance(test_conanfile, GenConanfile):
