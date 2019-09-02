@@ -20,4 +20,3 @@ SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, REVISIONS]  # Server is always
 DEFAULT_REVISION_V1 = "0"
 
 __version__ = '1.19.0-dev'
-

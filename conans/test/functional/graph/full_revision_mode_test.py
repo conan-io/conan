@@ -27,12 +27,12 @@ class FullRevisionModeTest(unittest.TestCase):
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
         clientb.save({"conanfile.py": str(GenConanfile().with_name("libb").with_version("0.1")
-                                                        .with_requirement(liba_ref))})
+                                                        .with_require(liba_ref))})
         clientb.run("create . user/testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
         clientc.save({"conanfile.py": str(GenConanfile().with_name("libc").with_version("0.1")
-                                                        .with_requirement(libb_ref))})
+                                                        .with_require(libb_ref))})
         clientc.run("install . user/testing")
 
         # Do a minor change to the recipe, it will change the recipe revision

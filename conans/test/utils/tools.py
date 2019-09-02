@@ -1020,7 +1020,7 @@ class GenConanfile(object):
         self._scm = {}
         self._requires = []
         self._requirements = []
-        self._build_requirements = []
+        self._build_requires = []
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
@@ -1046,7 +1046,10 @@ class GenConanfile(object):
         return self
 
     def with_require(self, ref, private=False, override=False):
-        self._requires.append((ref.full_str(), private, override))
+        return self.with_require_plain(ref.full_str(), private, override)
+
+    def with_require_plain(self, ref_str, private=False, override=False):
+        self._requires.append((ref_str, private, override))
         return self
 
     def with_requirement(self, ref, private=False, override=False):
@@ -1056,11 +1059,11 @@ class GenConanfile(object):
         self._requirements.append((ref_str, private, override))
         return self
 
-    def with_build_requirement(self, ref):
-        return self.with_build_requirement_plain(ref.full_str())
+    def with_build_require(self, ref):
+        return self.with_build_require_plain(ref.full_str())
 
-    def with_build_requirement_plain(self, ref_str):
-        self._build_requirements.append(ref_str)
+    def with_build_require_plain(self, ref_str):
+        self._build_requires.append(ref_str)
         return self
 
     def with_import(self, i):
@@ -1166,9 +1169,9 @@ class GenConanfile(object):
 
     @property
     def _build_requires_line(self):
-        if not self._build_requirements:
+        if not self._build_requires:
             return ""
-        line = ", ".join(['"{}"'.format(r) for r in self._build_requirements])
+        line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
         return tmp
 
@@ -1184,7 +1187,7 @@ class GenConanfile(object):
                 items.append('("{}"{}{})'.format(ref, private_str, override_str))
             else:
                 items.append('"{}"'.format(ref))
-        tmp = "requires = ({})".format(", ".join(items))
+        tmp = "requires = ({}, )".format(", ".join(items))
         return tmp
 
     @property
