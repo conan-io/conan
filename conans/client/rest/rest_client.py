@@ -96,9 +96,6 @@ class RestApiClient(object):
         return token, refresh_token
 
     def check_credentials(self):
-        # FIXME: Remove this, this is to force the token refresh and see if it works
-        # from conans.errors import AuthenticationException
-        # raise AuthenticationException("aa")
         return self._get_api().check_credentials()
 
     def search(self, pattern=None, ignorecase=True):
