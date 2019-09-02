@@ -39,7 +39,7 @@ class GraphManagerTest(unittest.TestCase):
                                     self.resolver)
         hook_manager = Mock()
         recorder = Mock()
-        app_type = namedtuple("ConanApp", "cache output remote_manager hook_manager")
+        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager")
         app = app_type(self.cache, self.output, self.remote_manager, hook_manager)
         self.binary_installer = BinaryInstaller(app, recorder)
 
