@@ -591,7 +591,7 @@ class TestConan(ConanFile):
         # https://github.com/conan-io/conan/issues/4871
         servers = {"default": TestServer()}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(GenConanfile().with_name("Pkg").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("create . lasote/testing")
         client.run("upload * --confirm --all")
 

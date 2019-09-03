@@ -872,7 +872,7 @@ class TurboTestClient(TestClient):
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
     def export(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""),
                  assert_error=assert_error)
@@ -880,7 +880,7 @@ class TurboTestClient(TestClient):
         return ref.copy_with_rev(rrev)
 
     def create(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("create . {} {} --json {}".format(ref.full_str(),
                                                    args or "", self.tmp_json_name),
@@ -908,7 +908,7 @@ class TurboTestClient(TestClient):
         self.run("remove '*' -f")
 
     def export_pkg(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
                                                        args or "", self.tmp_json_name),

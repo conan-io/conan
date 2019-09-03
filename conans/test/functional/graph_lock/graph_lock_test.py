@@ -12,13 +12,13 @@ from conans.util.files import load
 class GraphLockErrorsTest(unittest.TestCase):
     def missing_lock_error_test(self):
         client = TestClient()
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("ERROR: Missing lockfile in", client.out)
 
     def update_different_profile_test(self):
         client = TestClient()
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("install . -if=conf1 -s os=Windows")
         client.run("install . -if=conf2 -s os=Linux")
         client.run("graph update-lock conf1 conf2", assert_error=True)
@@ -48,7 +48,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
     def test(self):
         client = TestClient()
         self.client = client
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
 
         # Use a consumer with a version rang
@@ -57,7 +57,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA version
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.2"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.2")})
         client.run("create . PkgA/0.2@user/channel")
         client.save({"conanfile.py": self.consumer})
         client.run("install . --lockfile=custom.lock")
@@ -77,7 +77,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     def setUp(self):
         client = TestClient()
         self.client = client
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
 
         # Use a consumer with a version range
@@ -87,7 +87,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA version
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.2"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.2")})
         client.run("create . PkgA/0.2@user/channel")
         client.save({"conanfile.py": str(self.consumer)})
 
@@ -211,7 +211,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         # Important to activate revisions
         client.run("config set general.revisions_enabled=True")
         self.client = client
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
         client.run("upload PkgA/0.1@user/channel --all")
 
@@ -233,10 +233,9 @@ class GraphLockRevisionTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA revision, for example adding info
-        client.save({"conanfile.py":
-                         str(GenConanfile().with_name("PkgA").with_version("0.1")
-                             .with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
-                                                env_info={"MYENV": ["myenvPkgA0.1env"]}))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")
+                                        .with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
+                                                           env_info={"MYENV": ["myenvPkgA0.1env"]})})
 
         client.run("create . PkgA/0.1@user/channel")
         client.save({"conanfile.py": str(consumer)})
