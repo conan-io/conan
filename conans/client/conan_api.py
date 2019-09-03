@@ -2,8 +2,7 @@ import os
 import sys
 from collections import OrderedDict
 
-from conans.client.manager import deps_install
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
+from six import StringIO
 
 import conans
 from conans import __version__ as client_version
@@ -14,6 +13,7 @@ from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
+from conans.client.cmd.new import cmd_new
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.search import Search
@@ -31,6 +31,7 @@ from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
+from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
@@ -45,6 +46,7 @@ from conans.client.rest.rest_client import RestApiClient
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
 from conans.client.store.localdb import LocalDB
+from conans.client.tools.env import environment_append, no_op
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
@@ -56,6 +58,7 @@ from conans.model.ref import ConanFileReference, PackageReference, check_valid_r
 from conans.model.version import Version
 from conans.model.workspace import Workspace
 from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
@@ -63,28 +66,36 @@ from conans.util.files import exception_message_safe, mkdir, save_files
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 
-
 default_manifest_folder = '.conan_manifests'
 
 
 def api_method(f):
-    def wrapper(*args, **kwargs):
-        api = args[0]
-        api.create_app()
-        try:
-            curdir = get_cwd()
-            log_command(f.__name__, kwargs)
-            with tools.environment_append(api.app.cache.config.env_vars):
-                return f(*args, **kwargs)
-        except Exception as exc:
-            msg = exception_message_safe(exc)
+    def wrapper(api, *args, **kwargs):
+        silence = kwargs.pop("silence", False)
+        old_curdir = get_cwd()
+        old_output = api.user_io.out
+        with environment_append({"CONAN_NON_INTERACTIVE": "True"}) if silence else no_op():
             try:
-                log_exception(exc, msg)
-            except BaseException:
-                pass
-            raise
-        finally:
-            os.chdir(curdir)
+                if silence:
+                    api.user_io.out = ConanOutput(StringIO(), api.color)
+                api.create_app()
+
+                log_command(f.__name__, kwargs)
+                with tools.environment_append(api.app.cache.config.env_vars):
+                    return f(api, *args, **kwargs)
+            except Exception as exc:
+                if silence:
+                    old_output.write(api.user_io.out._stream.getvalue())
+                    old_output.flush()
+                msg = exception_message_safe(exc)
+                try:
+                    log_exception(exc, msg)
+                except BaseException:
+                    pass
+                raise
+            finally:
+                os.chdir(old_curdir)
+                api.user_io.out = old_output
     return wrapper
 
 
@@ -193,19 +204,18 @@ class ConanAPIV1(object):
 
     def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None,
                  runner=None):
-        color = colorama_initialize()
-        self.out = output or ConanOutput(sys.stdout, sys.stderr, color)
-        self.user_io = user_io or UserIO(out=self.out)
+        self.color = colorama_initialize()
+        output = output or ConanOutput(sys.stdout, sys.stderr, self.color)
+        self.user_io = user_io or UserIO(out=output)
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
-        cache = ClientCache(self.cache_folder, self.out)
         self.http_requester = http_requester
         self.runner = runner
         self.app = None  # Api calls will create a new one every call
         # Migration system
-        migrator = ClientMigrator(cache, Version(client_version), self.out)
+        migrator = ClientMigrator(self.cache_folder, Version(client_version), output)
         migrator.migrate()
-        # Remove in Conan 2.0
-        sys.path.append(os.path.join(cache.cache_folder, "python"))
+        # FIXME Remove in Conan 2.0
+        sys.path.append(os.path.join(self.cache_folder, "python"))
 
     def create_app(self):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester, self.runner)
@@ -217,7 +227,6 @@ class ConanAPIV1(object):
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
             template=None):
-        from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or get_cwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare,

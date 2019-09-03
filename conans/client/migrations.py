@@ -4,6 +4,8 @@ import shutil
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
 from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
+from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
 from conans.client.tools import replace_in_file
 from conans.errors import ConanException
@@ -16,14 +18,13 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
-from conans.client.cache.remote_registry import migrate_registry_file
 
 
 class ClientMigrator(Migrator):
 
-    def __init__(self, cache, current_version, out):
-        self.cache = cache
-        super(ClientMigrator, self).__init__(cache.cache_folder, cache.store,
+    def __init__(self, cache_folder, current_version, out):
+        self.cache = ClientCache(cache_folder, out)
+        super(ClientMigrator, self).__init__(self.cache.cache_folder, self.cache.store,
                                              current_version, out)
 
     def _update_settings_yml(self, old_version):

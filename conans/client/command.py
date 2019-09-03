@@ -115,7 +115,7 @@ class Command(object):
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._out = conan_api.out
+        self._out = conan_api.user_io.out
 
     @property
     def _outputer(self):
@@ -250,8 +250,9 @@ class Command(object):
             raise ConanException("Argument '--raw' is incompatible with '--json'")
 
         attributes = [args.raw, ] if args.raw else args.attribute
+        silence = bool(args.raw)
 
-        result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
+        result = self._conan.inspect(args.path_or_reference, attributes, args.remote, silence=silence)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
             json_output = json.dumps(result)

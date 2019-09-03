@@ -3,8 +3,9 @@ import os
 import textwrap
 import unittest
 
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import load
+from parameterized.parameterized import parameterized
 
 
 class ConanInspectTest(unittest.TestCase):
@@ -419,3 +420,20 @@ class InspectRawTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("inspect . --raw=default_options")
         self.assertEqual("dict=True\nlist=False", client.out)
+
+    @parameterized.expand([(True, ), (False, )])
+    def test_message_raw(self, use_raw):
+        # Using the argument 'raw' all the extra output is not shown in screen
+        servers = {"default": TestServer(users={"user": "passwd"})}
+        client = TestClient(servers=servers, users={"default": [("user", "passwd")], })
+        client.save({"conanfile.py": GenConanfile().with_name("name")})
+        client.run("export . name/version@user/channel")
+        client.run("upload name/version@user/channel --all")
+        client.run("remove * -f")
+
+        if use_raw:
+            client.run("inspect name/version@user/channel --raw name")
+            self.assertEqual(client.out, "name")
+        else:
+            client.run("inspect name/version@user/channel --attribute name")
+            self.assertIn("name/version@user/channel: Not found in local cache,", client.out)
