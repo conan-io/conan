@@ -48,13 +48,15 @@ def check_casing_conflict(cache, ref):
                              % (str(ref), " ".join(str(s) for s in refs)))
 
 
-def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisions_enabled,
-               output, hook_manager, loader, cache, export=True, graph_lock=None):
+def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
+               export=True, graph_lock=None):
 
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
+    loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
+    revisions_enabled = app.config.revisions_enabled
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
 
     # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
