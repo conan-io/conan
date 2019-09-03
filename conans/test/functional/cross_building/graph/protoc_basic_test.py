@@ -125,8 +125,7 @@ class ClassicProtocExampleBase(GraphManagerTest):
         deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
                                                 build_mode=[], check_updates=False, update=False,
                                                 remotes=Remotes(), recorder=ActionRecorder())
-        if True:
-            self.binary_installer.install(deps_graph, None, False, graph_info)
+        self.binary_installer.install(deps_graph, None, False, graph_info)
         return deps_graph
 
 
@@ -155,7 +154,7 @@ class ClassicProtocExample(ClassicProtocExampleBase):
         self.assertEqual(application.context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
         if xbuilding:
-            # cpp_info:
+            #   - application::deps_cpp_info:
             protobuf_host_cpp_info = application.conanfile.deps_cpp_info["protobuf"]
             self.assertEqual(protobuf_host_cpp_info.includedirs, ['protobuf-host'])
             self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
@@ -163,7 +162,7 @@ class ClassicProtocExample(ClassicProtocExampleBase):
             with self.assertRaises(KeyError):
                 application.conanfile.deps_cpp_info["protoc"]
 
-            # env_info:
+            #   - application::deps_env_info:
             protoc_env_info = application.conanfile.deps_env_info["protoc"]
             self.assertEqual(protoc_env_info.PATH, ['protoc-build'])
             self.assertEqual(protoc_env_info.OTHERVAR, 'protoc-build')
@@ -186,7 +185,7 @@ class ClassicProtocExample(ClassicProtocExampleBase):
         self.assertEqual(str(protoc_build.conanfile.settings.os),
                          (profile_build if xbuilding else profile_host).settings['os'])
 
-        #   - protobuf build
+        #   - protobuf
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
         self.assertEqual(protoc_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)

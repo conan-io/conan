@@ -123,8 +123,7 @@ class NoWayBackToHost(GraphManagerTest):
         deps_graph, _ = self.manager.load_graph(path, create_reference=None, graph_info=graph_info,
                                                 build_mode=[], check_updates=False, update=False,
                                                 remotes=Remotes(), recorder=ActionRecorder())
-        if True:
-            self.binary_installer.install(deps_graph, None, False, graph_info)
+        self.binary_installer.install(deps_graph, None, False, graph_info)
         return deps_graph
 
     def test_crossbuilding(self):
@@ -139,41 +138,44 @@ class NoWayBackToHost(GraphManagerTest):
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
 
         # Check HOST packages
+        #   - Application
         application = deps_graph.root.dependencies[0].dst
         self.assertEqual(len(application.dependencies), 1)
         self.assertEqual(application.conanfile.name, "application")
         self.assertEqual(application.context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
-        if True:
-            # cpp_info:
-            with self.assertRaises(KeyError):
-                application.conanfile.deps_cpp_info["host_tool"]
-            with self.assertRaises(KeyError):
-                application.conanfile.deps_cpp_info["build_tool"]
 
-            # env_info:
-            with self.assertRaises(KeyError):
-                application.conanfile.deps_env_info["host_tool"]
-            build_tool_env_info = application.conanfile.deps_env_info["build_tool"]
-            self.assertEqual(build_tool_env_info.PATH, ['build_tool-build'])
-            self.assertEqual(build_tool_env_info.OTHERVAR, 'build_tool-build')
+        #   - Application::deps_cpp_info:
+        with self.assertRaises(KeyError):
+            application.conanfile.deps_cpp_info["host_tool"]
+        with self.assertRaises(KeyError):
+            application.conanfile.deps_cpp_info["build_tool"]
+
+        #   - Application::deps_env_info:
+        with self.assertRaises(KeyError):
+            application.conanfile.deps_env_info["host_tool"]
+        build_tool_env_info = application.conanfile.deps_env_info["build_tool"]
+        self.assertEqual(build_tool_env_info.PATH, ['build_tool-build'])
+        self.assertEqual(build_tool_env_info.OTHERVAR, 'build_tool-build')
 
         # Check BUILD package
+        #   - BuildTool
         build_tool = application.dependencies[0].dst
         self.assertEqual(build_tool.conanfile.name, "build_tool")
         self.assertEqual(build_tool.context, CONTEXT_BUILD)
         self.assertEqual(build_tool.conanfile.settings.os, profile_build.settings['os'])
-        if True:
-            # cpp_info:
-            host_tool_cpp_info = build_tool.conanfile.deps_cpp_info["host_tool"]
-            self.assertEqual(host_tool_cpp_info.includedirs, ['host_tool-build'])
-            self.assertEqual(host_tool_cpp_info.libdirs, ['host_tool-build'])
-            self.assertEqual(host_tool_cpp_info.bindirs, ['host_tool-build'])
 
-            # env_info
-            with self.assertRaises(KeyError):
-                build_tool.conanfile.deps_env_info["host_tool"]
+        #   - BuildTool::deps_cpp_info:
+        host_tool_cpp_info = build_tool.conanfile.deps_cpp_info["host_tool"]
+        self.assertEqual(host_tool_cpp_info.includedirs, ['host_tool-build'])
+        self.assertEqual(host_tool_cpp_info.libdirs, ['host_tool-build'])
+        self.assertEqual(host_tool_cpp_info.bindirs, ['host_tool-build'])
 
+        #   - BuildTool::deps_env_info
+        with self.assertRaises(KeyError):
+            build_tool.conanfile.deps_env_info["host_tool"]
+
+        #   - HostTool
         # There is no way back to host profile from build one (host=build)
         host_tool = build_tool.dependencies[0].dst
         self.assertEqual(host_tool.conanfile.name, "host_tool")
