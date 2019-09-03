@@ -259,7 +259,6 @@ class GraphManager(object):
                                              check_updates, update, build_mode,
                                              remotes, profile_build_requires, recorder,
                                              processed_profile, graph_lock)
-                graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
@@ -269,7 +268,6 @@ class GraphManager(object):
                                              check_updates, update, build_mode,
                                              remotes, {}, recorder,
                                              processed_profile, graph_lock)
-                graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     profile_build_requires, recorder, processed_profile, apply_build_requires,
