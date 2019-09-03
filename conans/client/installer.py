@@ -305,6 +305,8 @@ class BinaryInstaller(object):
         self._build(nodes_by_level, keep_build, root_node, graph_info, remotes)
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes):
+        xbuilding = bool(graph_info.profile_build)  # If build profile is provided, then it is xbuild
+
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
@@ -316,7 +318,7 @@ class BinaryInstaller(object):
                     raise_package_not_found_error(conan_file, ref, package_id, dependencies,
                                                   out=output, recorder=self._recorder)
 
-                self._propagate_info(node)
+                self._propagate_info(node, xbuilding)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                 else:
@@ -327,7 +329,7 @@ class BinaryInstaller(object):
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node)
+        self._propagate_info(root_node, xbuilding)
 
     def _node_concurrently_installed(self, node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
@@ -436,7 +438,7 @@ class BinaryInstaller(object):
         return pref
 
     @staticmethod
-    def _propagate_info(node):
+    def _propagate_info(node, xbuilding):
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
@@ -444,9 +446,16 @@ class BinaryInstaller(object):
         for n in node_order:
             if n.build_require:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
-            conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
+
             conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
+            if not xbuilding:  # Do not touch anything
+                conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
+            else:
+                if not n.build_require or n.build_require_host:
+                    conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
+                else:
+                    conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.

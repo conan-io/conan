@@ -24,7 +24,7 @@ def print_graph(deps_graph, out):
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         pref = PackageReference(node.ref, node.package_id)
-        if node.build_require:
+        if node.build_require:  # TODO: May use BR-host BR-build
             build_requires.setdefault(pref, []).append(node)
         else:
             requires.setdefault(pref, []).append(node)

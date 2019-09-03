@@ -1,6 +1,7 @@
 import time
 
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
+    CONTEXT_BUILD, CONTEXT_BR_HOST
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -65,7 +66,8 @@ class DepsGraphBuilder(object):
         for require, ctxt in zip(requires, contexts):
             name = require.ref.name
             require.build_require = True
-            context = ctxt if node.context == CONTEXT_HOST else node.context
+            require.build_require_host = bool(ctxt == CONTEXT_BR_HOST)
+            context = ctxt if node.context == CONTEXT_HOST and not require.build_require_host else node.context
             self._handle_require(name, node, require, graph, check_updates, update,
                                  remotes, processed_profile_host, processed_profile_build,
                                  new_reqs, new_options, graph_lock, context=context)
@@ -378,6 +380,7 @@ class DepsGraphBuilder(object):
         # Or if the require specify that property, then it will get it too
         new_node.build_require = current_node.build_require or requirement.build_require
         new_node.private = current_node.private or requirement.private
+        new_node.build_require_host = requirement.build_require_host
 
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)

@@ -72,7 +72,7 @@ class ConanHTMLGrapher(object):
             fulllabel.append("<ul>")
             fulllabel = "".join(fulllabel)
 
-            if node.build_require:
+            if node.build_require:  # TODO: May use BR-host BR-build
                 shape = "ellipse"
             else:
                 shape = "box"

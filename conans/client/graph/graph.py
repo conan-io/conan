@@ -23,6 +23,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 
 CONTEXT_HOST = "host"
+CONTEXT_BR_HOST = "br-host"
 CONTEXT_BUILD = "build"
 
 
@@ -71,6 +72,7 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.build_require = False
+        self.build_require_host = False
         self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
         self.context = context
@@ -131,6 +133,7 @@ class Node(object):
         result.remote = self.remote
         result.binary_remote = self.binary_remote
         result.build_require = self.build_require
+        result.build_require_host = self.build_require_host
         return result
 
     def add_edge(self, edge):

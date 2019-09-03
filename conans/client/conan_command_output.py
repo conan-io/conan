@@ -187,7 +187,7 @@ class CommandOutputer(object):
 
             depends = node.neighbors()
             requires = [d for d in depends if not d.build_require]
-            build_requires = [d for d in depends if d.build_require]
+            build_requires = [d for d in depends if d.build_require]  # TODO: May use BR-host BR-build
 
             if requires:
                 item_data["requires"] = [repr(d.ref.copy_clear_rev()) for d in requires]

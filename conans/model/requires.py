@@ -21,6 +21,7 @@ class Requirement(object):
         self.override = override
         self.private = private
         self.build_require = False
+        self.build_require_host = False
         self._locked_id = None
 
     def lock(self, locked_ref, locked_id):
