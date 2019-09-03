@@ -86,7 +86,7 @@ class HelloConan(ConanFile):
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
-        output = re.sub("http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
+        output = re.sub(r"http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
@@ -154,6 +154,22 @@ class HelloConan(ConanFile):
         self.client.run("remote clean")
         self.client.run("remote list")
         self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def clean_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def remove_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote remove remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 

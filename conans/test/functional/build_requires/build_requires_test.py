@@ -1,4 +1,5 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
@@ -62,10 +63,10 @@ class BuildRequiresTest(unittest.TestCase):
                     GenConanfile().with_package_info(cpp_info={"libs": ["mylibcatch0.1lib"]},
                                                      env_info={"MYENV": ["myenvcatch0.1env"]})})
         t.run("create . catch/0.1@user/testing")
-        t.save({"conanfile.py": GenConanfile().with_requirement(catch_ref, private=True)})
+        t.save({"conanfile.py": GenConanfile().with_require(catch_ref, private=True)})
         t.run("create . LibA/0.1@user/testing")
-        t.save({"conanfile.py": GenConanfile().with_requirement(libA_ref)
-                                              .with_build_requirement(catch_ref)})
+        t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
+                                              .with_build_require(catch_ref)})
         t.run("install .")
         self.assertIn("catch/0.1@user/testing from local cache", t.out)
         self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
@@ -85,11 +86,11 @@ class BuildRequiresTest(unittest.TestCase):
         t.save({"conanfile.py": GenConanfile()})
         t.run("create . libA/0.1@user/testing")
 
-        t.save({"conanfile.py": GenConanfile().with_requirement(libA_ref)})
+        t.save({"conanfile.py": GenConanfile().with_require(libA_ref)})
         t.run("create . libB/0.1@user/testing")
 
-        t.save({"conanfile.py": GenConanfile().with_build_requirement(libB_ref)
-                                              .with_build_requirement(libA_ref)})
+        t.save({"conanfile.py": GenConanfile().with_build_require(libB_ref)
+                                              .with_build_require(libA_ref)})
         t.run("create . libC/0.1@user/testing")
         self.assertIn("libC/0.1@user/testing: Created package", t.out)
 
@@ -383,3 +384,40 @@ class package(ConanFile):
         client.save({"conanfile.py": consumer})
         client.run("install . --build=missing -o Pkg:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.out)
+
+    def failed_assert_test(self):
+        # https://github.com/conan-io/conan/issues/5685
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . common/1.0@test/test")
+
+        req = textwrap.dedent("""
+            from conans import ConanFile
+            class BuildReqConan(ConanFile):
+                requires = "common/1.0@test/test"
+            """)
+        client.save({"conanfile.py": req})
+        client.run("export . req/1.0@test/test")
+        client.run("export . build_req/1.0@test/test")
+
+        build_req_req = textwrap.dedent("""
+            from conans import ConanFile
+            class BuildReqConan(ConanFile):
+                requires = "common/1.0@test/test"
+                build_requires = "build_req/1.0@test/test"
+        """)
+        client.save({"conanfile.py": build_req_req})
+        client.run("export . build_req_req/1.0@test/test")
+
+        consumer = textwrap.dedent("""
+                    [requires]
+                    req/1.0@test/test
+                    [build_requires]
+                    build_req_req/1.0@test/test
+                """)
+        client.save({"conanfile.txt": consumer}, clean_first=True)
+        client.run("install . --build=missing")
+        # This used to assert and trace, now it works
+        self.assertIn("conanfile.txt: Applying build-requirement: build_req_req/1.0@test/test",
+                      client.out)
+

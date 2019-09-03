@@ -176,11 +176,11 @@ class V3D(ConanFile):
         client.run("create . LibA/0.1@conan/stable")
 
         client.save({"conanfile.py": GenConanfile().with_name("LibB").with_version("0.1")
-                                                   .with_requirement(liba_ref)})
+                                                   .with_require(liba_ref)})
         client.run("create . LibB/0.1@conan/stable")
 
         client.save({"conanfile.py": GenConanfile().with_name("LibC").with_version("0.1")
-                                                   .with_requirement(liba_ref, private=True)})
+                                                   .with_require(liba_ref, private=True)})
         client.run("create . LibC/0.1@conan/stable")
 
         for requires in (["LibB/0.1@conan/stable", "LibC/0.1@conan/stable"],
@@ -188,7 +188,7 @@ class V3D(ConanFile):
             conanfile = GenConanfile().with_name("LibD").with_version("0.1")
             for it in requires:
                 ref = ConanFileReference.loads(it)
-                conanfile = conanfile.with_requirement(ref)
+                conanfile = conanfile.with_require(ref)
             client.save({"conanfile.py": conanfile})
             client.run("install . -g cmake")
             self.assertIn("LibA/0.1@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",

@@ -20,7 +20,7 @@ class HalfDiamondTest(unittest.TestCase):
         if deps:
             for dep in deps:
                 ref = ConanFileReference.loads(dep)
-                conanfile = conanfile.with_requirement(ref)
+                conanfile = conanfile.with_require(ref)
 
         conanfile = str(conanfile) + """
     def config_options(self):

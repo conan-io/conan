@@ -625,3 +625,4 @@ settings_1_17_2 = settings_1_17_1
 
 settings_1_18_0 = settings_1_17_2
 settings_1_18_1 = settings_1_18_0
+settings_1_18_2 = settings_1_18_1
