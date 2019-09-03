@@ -1,7 +1,7 @@
 import time
 
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
-    CONTEXT_BUILD, CONTEXT_BR_HOST
+    CONTEXT_BUILD
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
@@ -52,23 +52,23 @@ class DepsGraphBuilder(object):
         conanfile = node.conanfile
         scope = conanfile.display_name
 
-        requires = []
+        build_requires = []
         contexts = []  # FIXME: Using two lists is not the best implementation
         for ref, context in build_requires_refs:
-            requires.append(Requirement(ref))
+            build_requires.append(Requirement(ref))
             contexts.append(context)
 
         if graph_lock:
-            graph_lock.lock_node(node, requires)  # TODO: Add info about context?
+            graph_lock.lock_node(node, build_requires)  # TODO: Add info about context?
 
-        self._resolve_ranges(graph, requires, scope, update, remotes)
+        self._resolve_ranges(graph, build_requires, scope, update, remotes)
 
-        for require, ctxt in zip(requires, contexts):
-            name = require.ref.name
-            require.build_require = True
-            require.build_require_host = bool(ctxt == CONTEXT_BR_HOST)
-            context = ctxt if node.context == CONTEXT_HOST and not require.build_require_host else node.context
-            self._handle_require(name, node, require, graph, check_updates, update,
+        for build_require, ctxt in zip(build_requires, contexts):
+            name = build_require.ref.name
+            build_require.build_require = True
+            build_require.build_require_host = bool(ctxt == CONTEXT_HOST)
+            context = ctxt if node.context == CONTEXT_HOST else node.context
+            self._handle_require(name, node, build_require, graph, check_updates, update,
                                  remotes, processed_profile_host, processed_profile_build,
                                  new_reqs, new_options, graph_lock, context=context)
 

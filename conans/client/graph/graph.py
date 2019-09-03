@@ -23,7 +23,6 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 
 CONTEXT_HOST = "host"
-CONTEXT_BR_HOST = "br-host"
 CONTEXT_BUILD = "build"
 
 

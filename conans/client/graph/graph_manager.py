@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, \
-    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, CONTEXT_BR_HOST
+    RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
@@ -33,7 +33,7 @@ class _RecipeBuildRequires(OrderedDict):
         self[(build_require.name, context)] = build_require
 
     def __call__(self, build_require, force_host_context=False):
-        context = CONTEXT_BR_HOST if force_host_context else self._default_context
+        context = CONTEXT_HOST if force_host_context else self._default_context
         self.add(build_require, context)
 
     def update(self, build_requires):
