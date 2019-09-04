@@ -21,9 +21,9 @@ logging.captureWarnings(True)
 class SSLContextAdapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
         context = create_urllib3_context()
-        kwargs['ssl_context'] = context
         try:
             context.load_default_certs()
+            kwargs['ssl_context'] = context
         except AttributeError:
             pass # load_default_certs is not available on Mac OS X
         return super(SSLContextAdapter, self).init_poolmanager(*args, **kwargs)
