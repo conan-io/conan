@@ -113,11 +113,11 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     return refs
 
 
-def _partial_match(pattern, ref):
+def _partial_match(pattern, reference):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = ref.replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
+    tokens = reference.replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
 
     def partial_sums(iterable):
         partial = ''
