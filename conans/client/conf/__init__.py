@@ -149,6 +149,7 @@ default_package_id_mode = semver_direct_mode # environment CONAN_DEFAULT_PACKAGE
 # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
 # cacert_path                         # environment CONAN_CACERT_PATH
+# use_system_certs                    # environment CONAN_USE_SYSTEM_CERTS
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
@@ -247,6 +248,8 @@ class ConanClientConfigParser(ConfigParser, object):
                                                       "CONAN_MSBUILD_VERBOSITY",
                                                       None),
                "CONAN_CACERT_PATH": self._env_c("general.cacert_path", "CONAN_CACERT_PATH", None),
+               "CONAN_USE_SYSTEM_CERTS": self._env_c("general.use_system_certs",
+                                                     "CONAN_USE_SYSTEM_CERTS", None),
                "CONAN_DEFAULT_PACKAGE_ID_MODE": self._env_c("general.default_package_id_mode",
                                                             "CONAN_DEFAULT_PACKAGE_ID_MODE", None),
                }
@@ -464,6 +467,16 @@ class ConanClientConfigParser(ConfigParser, object):
                 raise ConanException("Configured file for 'cacert_path'"
                                      " doesn't exists: '{}'".format(cacert_path))
         return cacert_path
+
+    @property
+    def use_system_certs(self):
+        try:
+            use_system_certs = get_env("CONAN_USE_SYSTEM_CERTS")
+            if use_system_certs is None:
+                use_system_certs = self.get_item("general.use_system_certs")
+            return use_system_certs.lower() in ("1", "true")
+        except ConanException:
+            return False  # FIXME Conan 2.0: It could be an opt-out
 
     @property
     def client_cert_path(self):

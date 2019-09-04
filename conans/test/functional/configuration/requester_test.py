@@ -4,11 +4,12 @@ import os
 import unittest
 
 import six
-from mock import Mock
+from mock import Mock, patch
+from parameterized import parameterized
 
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import default_client_conf, ConanClientConfigParser
-from conans.client.rest.conan_requester import ConanRequester
+from conans.client.rest.conan_requester import ConanRequester, HTTPAdapter, SSLContextAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import replace_in_file, save
 from conans.errors import ConanException
@@ -19,9 +20,13 @@ from conans.util.files import normalize
 
 class MockRequesterGet(Mock):
     verify = None
+    adapters = {}
 
     def get(self, _, **kwargs):
         self.verify = kwargs.get('verify', None)
+
+    def mount(self, prefix, adapter):
+        self.adapters[prefix] = adapter
 
 
 class ConanRequesterCacertPathTests(unittest.TestCase):
@@ -82,3 +87,50 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         requester.get(url="aaa", verify=True)
         self.assertEqual(mocked_requester.verify, cache.config.cacert_path)
         self.assertEqual(cache.config.cacert_path, default_cacert_path)
+
+
+class ConanRequesterSystemCerts(unittest.TestCase):
+
+    @patch("requests.Session", return_value=MockRequesterGet())
+    def test_default(self, mock):
+        cache = ClientCache(temp_folder(), TestBufferConanOutput())
+        ConanRequester(cache.config)
+
+        mocked_session = mock.return_value
+        self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
+        self.assertEqual(type(mocked_session.adapters["https://"]), HTTPAdapter)
+
+    @parameterized.expand([("1", ), ("True", ), ("true", )])
+    @patch("requests.Session", return_value=MockRequesterGet())
+    def test_activate_environment(self, env_value, mock):
+        with environment_append({"CONAN_USE_SYSTEM_CERTS": env_value}):
+            cache = ClientCache(temp_folder(), TestBufferConanOutput())
+            ConanRequester(cache.config)
+
+            mocked_session = mock.return_value
+            self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
+            self.assertEqual(type(mocked_session.adapters["https://"]), SSLContextAdapter)
+
+    @patch("requests.Session", return_value=MockRequesterGet())
+    def test_activate_cli(self, mock):
+        output = TestBufferConanOutput()
+        cache = ClientCache(temp_folder(), output)
+        replace_in_file(cache.conan_conf_path, "[general]",
+                        "[general]\nuse_system_certs=True", output=output)
+        cache._config = None  # Force reading conan.conf again
+        ConanRequester(cache.config)
+
+        mocked_session = mock.return_value
+        self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
+        self.assertEqual(type(mocked_session.adapters["https://"]), SSLContextAdapter)
+
+    @parameterized.expand([("0", ), ("False", ), ("false", ), ("any-other-thing", )])
+    @patch("requests.Session", return_value=MockRequesterGet())
+    def test_deactivate_environment(self, env_value, mock):
+        with environment_append({"CONAN_USE_SYSTEM_CERTS": env_value}):
+            cache = ClientCache(temp_folder(), TestBufferConanOutput())
+            ConanRequester(cache.config)
+
+            mocked_session = mock.return_value
+            self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
+            self.assertEqual(type(mocked_session.adapters["https://"]), HTTPAdapter)
