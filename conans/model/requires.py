@@ -147,6 +147,9 @@ class Requirements(OrderedDict):
                     msg = "%s %s" % (own_ref, msg)
                     output.warn(msg)
                     req.ref = other_ref
+                    # FIXME: We should compute the intersection of version_ranges
+                    assert not req.locked_id, "We cannot override a locked requirement"
+                    req.range_ref = other_req.range_ref
 
             new_reqs[name] = req
         return new_reqs
