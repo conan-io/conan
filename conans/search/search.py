@@ -108,7 +108,7 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     refs = [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        refs = [r for r in refs if _partial_match(pattern, r)]
+        refs = [r for r in refs if _partial_match(pattern, repr(r))]
     refs = sorted(refs)
     return refs
 
@@ -117,7 +117,7 @@ def _partial_match(pattern, ref):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
+    tokens = ref.replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
 
     def partial_sums(iterable):
         partial = ''
