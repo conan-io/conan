@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import platform
 import unittest
 
 import six
@@ -105,11 +106,18 @@ class ConanRequesterSystemCerts(unittest.TestCase):
     def test_activate_environment(self, env_value, mock):
         with environment_append({"CONAN_USE_SYSTEM_CERTS": env_value}):
             cache = ClientCache(temp_folder(), TestBufferConanOutput())
-            ConanRequester(cache.config)
 
-            mocked_session = mock.return_value
-            self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
-            self.assertEqual(type(mocked_session.adapters["https://"]), SSLContextAdapter)
+            try:
+                ConanRequester(cache.config)
+            except ConanException as e:
+                # Some 'requests' versions running in MacOS doesn't support this feature, see
+                #   https://github.com/conan-io/conan/pull/5659#issuecomment-528262969
+                self.assertEqual(platform.system(), "Darwin")
+                self.assertIn("The system SSL cert storage cannot be used", str(e))
+            else:
+                mocked_session = mock.return_value
+                self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
+                self.assertEqual(type(mocked_session.adapters["https://"]), SSLContextAdapter)
 
     @patch("requests.Session", return_value=MockRequesterGet())
     def test_activate_cli(self, mock):
@@ -118,11 +126,17 @@ class ConanRequesterSystemCerts(unittest.TestCase):
         replace_in_file(cache.conan_conf_path, "[general]",
                         "[general]\nuse_system_certs=True", output=output)
         cache._config = None  # Force reading conan.conf again
-        ConanRequester(cache.config)
-
-        mocked_session = mock.return_value
-        self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
-        self.assertEqual(type(mocked_session.adapters["https://"]), SSLContextAdapter)
+        try:
+            ConanRequester(cache.config)
+        except ConanException as e:
+            # Some 'requests' versions running in MacOS doesn't support this feature, see
+            #   https://github.com/conan-io/conan/pull/5659#issuecomment-528262969
+            self.assertEqual(platform.system(), "Darwin")
+            self.assertIn("The system SSL cert storage cannot be used", str(e))
+        else:
+            mocked_session = mock.return_value
+            self.assertEqual(type(mocked_session.adapters["http://"]), HTTPAdapter)
+            self.assertEqual(type(mocked_session.adapters["https://"]), SSLContextAdapter)
 
     @parameterized.expand([("0", ), ("False", ), ("false", ), ("any-other-thing", )])
     @patch("requests.Session", return_value=MockRequesterGet())
