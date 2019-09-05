@@ -7,9 +7,9 @@ import warnings
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.ssl_ import create_urllib3_context
 
 from conans import __version__ as client_version
+from conans.errors import ConanException
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
 
@@ -20,12 +20,17 @@ logging.captureWarnings(True)
 
 class SSLContextAdapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
-        context = create_urllib3_context()
         try:
+            from requests.packages.urllib3.util.ssl_ import create_urllib3_context
+            context = create_urllib3_context()
             context.load_default_certs()
             kwargs['ssl_context'] = context
-        except AttributeError:
-            pass # load_default_certs is not available on Mac OS X
+        except (AttributeError, ImportError):
+            raise ConanException("The system SSL cert storage cannot be used. "
+                                 "This feature is not supported by the requests/urllib3 "
+                                 "modules on this system. The feature can be disabled by "
+                                 "'conan config set general.use_system_certs=0'")
+
         return super(SSLContextAdapter, self).init_poolmanager(*args, **kwargs)
 
 class ConanRequester(object):
