@@ -23,22 +23,15 @@ class VersionRangeOverrideTestCase(unittest.TestCase):
         self.assertIn("libB/2.0@user/channel", self.t.out)
 
     def test_override_fix(self):
-        # Override downstreams with a fixed version
+        # Override downstream with a fixed version
         self.t.save({"conanfile.py": GenConanfile().with_require_plain("libB/3.0@user/channel")
                                                    .with_require_plain("libC/1.0@user/channel")})
         self.t.run("info . --only requires")
         self.assertIn("libB/3.0@user/channel", self.t.out)
 
     def test_override_version_range(self):
-        # Override downstreams with a different version range
+        # Override downstream with a different version range
         self.t.save({"conanfile.py": GenConanfile().with_require_plain("libB/[>=2.x]@user/channel")
                                                    .with_require_plain("libC/1.0@user/channel")})
         self.t.run("info . --only requires")
         self.assertIn("libB/3.0@user/channel", self.t.out)
-
-    def test_intersect_version_range(self):
-        # Override downstreams with a different version range
-        self.t.save({"conanfile.py": GenConanfile().with_require_plain("libB/[<=3.0]@user/channel")
-                                                   .with_require_plain("libC/1.0@user/channel")})
-        self.t.run("info . --only requires")
-        self.assertIn("libB/2.0@user/channel", self.t.out)
