@@ -197,12 +197,9 @@ class ChatConan(ConanFile):
         if override is False:
             edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
 
-        if is_vrange:
-            if valid is True:
-                self.assertIn(" valid", self.output)
-                self.assertNotIn("not valid", self.output)
-            elif valid is False:
-                self.assertIn("not valid", self.output)
+        if is_vrange is True:
+            self.assertIn(" valid", self.output)
+            self.assertNotIn("not valid", self.output)
         self.assertEqual(3, len(deps_graph.nodes))
 
         self.assertEqual(_get_edges(deps_graph), edges)
