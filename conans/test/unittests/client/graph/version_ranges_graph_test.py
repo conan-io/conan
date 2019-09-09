@@ -159,10 +159,10 @@ class HelloConan(ConanFile):
                            ('("Say/1.1@myuser/testing", "override")', "1.1", True, True, False),
                            ('("Say/0.2@myuser/testing", "override")', "0.2", True, True, False),
                            # ranges
-                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, True, True),
+                           ('"Say/[<=1.2]@myuser/testing"', "1.2.1", False, False, True),
                            ('"Say/[>=0.2,<=1.0]@myuser/testing"', "0.3", False, True, True),
                            ('"Say/[>=0.2 <=1.0]@myuser/testing"', "0.3", False, True, True),
-                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, True, True),
+                           ('("Say/[<=1.2]@myuser/testing", "override")', "1.2.1", True, False, True),
                            ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True, True),
                            ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True, True),
                            ])
