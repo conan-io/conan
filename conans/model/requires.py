@@ -138,7 +138,7 @@ class Requirements(OrderedDict):
                 # update dependency
                 other_ref = other_req.ref
                 if other_ref and other_ref != req.ref:
-                    down_reference_str = str(down_ref)
+                    down_reference_str = str(down_ref) if down_ref else ""
                     msg = "requirement %s overridden by %s to %s " \
                           % (req.ref, down_reference_str or "your conanfile", other_ref)
 
