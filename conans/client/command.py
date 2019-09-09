@@ -1866,7 +1866,6 @@ class Command(object):
         """
         ret_code = SUCCESS
         try:
-            self._warn_python2()
             try:
                 command = args[0][0]
                 commands = self._commands()
@@ -1875,6 +1874,9 @@ class Command(object):
                 if command in ["-v", "--version"]:
                     self._out.success("Conan version %s" % client_version)
                     return False
+
+                self._warn_python2()
+
                 if command in ["-h", "--help"]:
                     self._show_help()
                     return False
