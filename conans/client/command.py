@@ -1882,7 +1882,7 @@ class Command(object):
                     return False
 
                 self._out.writeln(
-                    "'%s' is not a Conan command. See 'conan --help'" % command)
+                    "'%s' is not a Conan command. See 'conan --help'." % command)
                 self._out.writeln("")
 
                 self._print_similar(command)
