@@ -911,7 +911,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return list(self.app.cache.registry.load_remotes().values())
+        return list(self.app.cache.registry.load_remotes().all_values())
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
@@ -920,6 +920,10 @@ class ConanAPIV1(object):
     @api_method
     def remote_remove(self, remote_name):
         return self.app.cache.registry.remove(remote_name)
+
+    @api_method
+    def remote_set_disabled_state(self, remote_name, state):
+        return self.app.cache.registry.set_disabled_state(remote_name, state)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):
