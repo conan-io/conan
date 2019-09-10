@@ -10,10 +10,7 @@ from conans.util.files import load
 class DownloadTest(unittest.TestCase):
 
     def download_recipe_test(self):
-        server = TestServer()
-        servers = {"default": server}
-        client = TurboTestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-
+        client = TurboTestClient(default_server_user={"lasote": "pass"})
         # Test download of the recipe only
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
