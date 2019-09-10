@@ -1842,14 +1842,14 @@ class Command(object):
             return
 
         if len(matches) > 1:
-            self._user_io.out.writeln("The most similar commands are")
+            self._out.writeln("The most similar commands are")
         else:
-            self._user_io.out.writeln("The most similar command is")
+            self._out.writeln("The most similar command is")
 
         for match in matches:
-            print("    %s" % match)
+            self._out.writeln("    %s" % match)
 
-        self._user_io.out.writeln("")
+        self._out.writeln("")
 
     def _warn_python2(self):
         if six.PY2:
@@ -1881,9 +1881,9 @@ class Command(object):
                     self._show_help()
                     return False
 
-                self._user_io.out.writeln(
+                self._out.writeln(
                     "'%s' is not a Conan command. See 'conan --help'" % command)
-                self._user_io.out.writeln("")
+                self._out.writeln("")
 
                 self._print_similar(command)
 
