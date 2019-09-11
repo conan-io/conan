@@ -37,9 +37,6 @@ class TestServerLauncher(object):
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES)
 
-        if TestServerLauncher.port == 0:
-            TestServerLauncher.port = server_config.port
-
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
                                                    server_config.authorize_timeout)
@@ -66,7 +63,7 @@ class TestServerLauncher(object):
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
 
-        self.port = TestServerLauncher.port
+        self.port = server_config.port
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.server_store,
                               server_capabilities)
