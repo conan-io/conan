@@ -18,7 +18,6 @@ TESTING_REMOTE_PRIVATE_PASS = "private_pass"
 
 
 class TestServerLauncher(object):
-    port = 0
 
     def __init__(self, base_path=None, read_permissions=None,
                  write_permissions=None, users=None, base_url=None, plugins=None,
