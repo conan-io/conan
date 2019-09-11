@@ -56,61 +56,6 @@ class MockConanfile(ConanFile):
             self.runner(*args, **kwargs)
 
 
-class TestConanFile(object):
-    def __init__(self, name="Hello", version="0.1", settings=None, requires=None, options=None,
-                 default_options=None, package_id=None, build_requires=None, info=None,
-                 private_requires=None, private_first=False):
-        self.name = name
-        self.version = version
-        self.settings = settings
-        self.requires = requires
-        self.private_requires = private_requires
-        self.build_requires = build_requires
-        self.options = options
-        self.default_options = default_options
-        self.package_id = package_id
-        self.info = info
-        self.private_first = private_first
-
-    def __repr__(self):
-        base = """from conans import ConanFile
-
-class {name}Conan(ConanFile):
-    name = "{name}"
-    version = "{version}"
-""".format(name=self.name, version=self.version)
-        if self.settings:
-            base += "    settings = %s\n" % self.settings
-        if self.requires or self.private_requires:
-            if self.private_first:
-                reqs_list = ["('%s', 'private')" % r for r in self.private_requires or []]
-                reqs_list.extend(['"%s"' % r for r in self.requires or []])
-            else:
-                reqs_list = ['"%s"' % r for r in self.requires or []]
-                reqs_list.extend(["('%s', 'private')" % r for r in self.private_requires or []])
-            reqs_list.append("")
-            base += "    requires = %s\n" % (", ".join(reqs_list))
-        if self.build_requires:
-            base += "    build_requires = %s\n" % (", ".join('"%s"' % r
-                                                             for r in self.build_requires))
-        if self.options:
-            base += "    options = %s\n" % str(self.options)
-        if self.default_options:
-            if isinstance(self.default_options, str):
-                base += "    default_options = '%s'\n" % str(self.default_options)
-            else:
-                base += "    default_options = %s\n" % str(self.default_options)
-        if self.package_id:
-            base += "    def package_id(self):\n        %s\n" % self.package_id
-        if self.info:
-            base += """
-    def package_info(self):
-        self.cpp_info.libs = ["mylib{name}{version}lib"]
-        self.env_info.MYENV = ["myenv{name}{version}env"]
-""".format(name=self.name, version=self.version)
-        return base
-
-
 class ConanFileMock(ConanFile):
 
     def __init__(self, shared=None, options=None, options_values=None):

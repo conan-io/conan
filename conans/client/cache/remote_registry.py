@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 from collections import OrderedDict, namedtuple
@@ -9,7 +10,7 @@ from conans.util.files import load, save
 from conans.model.ref import PackageReference, ConanFileReference
 
 
-Remote = namedtuple("Remote", "name url verify_ssl")
+Remote = namedtuple("Remote", "name url verify_ssl disabled")
 
 
 def load_registry_txt(contents):
@@ -106,7 +107,7 @@ class Remotes(object):
     @classmethod
     def defaults(cls):
         result = Remotes()
-        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True)
+        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True, False)
         return result
 
     def select(self, remote_name):
@@ -122,29 +123,44 @@ class Remotes(object):
         self._remotes.clear()
 
     def items(self):
-        return self._remotes.items()
+        return OrderedDict(
+            (key, value) for (key, value) in self._remotes.items() if not value.disabled)
 
     def values(self):
+        return [value for value in self._remotes.values() if not value.disabled]
+
+    def all_values(self):
         return self._remotes.values()
+
+    def all_items(self):
+        return self._remotes.items()
 
     @staticmethod
     def loads(text):
         result = Remotes()
         data = json.loads(text)
         for r in data.get("remotes", []):
-            result._remotes[r["name"]] = Remote(r["name"], r["url"], r["verify_ssl"])
+            disabled = r.get("disabled", False)
+            result._remotes[r["name"]] = Remote(r["name"], r["url"],
+                                                r["verify_ssl"], disabled)
 
         return result
 
     def dumps(self):
         result = []
         for remote in self._remotes.values():
-            result.append("%s: %s [Verify SSL: %s]" % (remote.name, remote.url, remote.verify_ssl))
+            disabled_str = ", Disabled: True" if remote.disabled else ""
+            result.append("%s: %s [Verify SSL: %s%s]" %
+                          (remote.name, remote.url, remote.verify_ssl, disabled_str))
         return "\n".join(result)
 
     def save(self, filename):
-        ret = {"remotes": [{"name": r, "url": u, "verify_ssl": v}
-                           for r, (_, u, v) in self._remotes.items()]}
+        ret = {"remotes": []}
+        for r, (_, u, v, d) in self._remotes.items():
+            remote = {"name": r, "url": u, "verify_ssl": v}
+            if d:
+                remote["disabled"] = True
+            ret["remotes"].append(remote)
         save(filename, json.dumps(ret, indent=True))
 
     def _get_by_url(self, url):
@@ -154,12 +170,27 @@ class Remotes(object):
 
     def rename(self, remote_name, new_remote_name):
         if new_remote_name in self._remotes:
-            raise ConanException("Remote '%s' already exists" % new_remote_name)
+            raise ConanException("Remote '%s' already exists" %
+                                 new_remote_name)
 
         remote = self._remotes[remote_name]
-        new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl)
-        self._remotes = OrderedDict([(new_remote_name, new_remote) if k == remote_name
-                                     else (k, v) for k, v in self._remotes.items()])
+        new_remote = Remote(new_remote_name, remote.url, remote.verify_ssl,
+                            remote.disabled)
+        self._remotes = OrderedDict([
+            (new_remote_name, new_remote) if k == remote_name else (k, v)
+            for k, v in self._remotes.items()
+        ])
+
+    def set_disabled_state(self, remote_name, state):
+        filtered_remotes = []
+        for remote in self._remotes.values():
+            if fnmatch.fnmatch(remote.name, remote_name):
+                if remote.disabled != state:
+                    filtered_remotes.append(remote.name)
+        for r in filtered_remotes:
+            remote = self._remotes[r]
+            self._remotes[r] = Remote(remote.name, remote.url,
+                                      remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
@@ -181,7 +212,11 @@ class Remotes(object):
 
     def __getitem__(self, remote_name):
         try:
-            return self._remotes[remote_name]
+            remote = self._remotes[remote_name]
+            if remote.disabled:
+                raise ConanException("Remote '%s' is disabled" % (remote_name))
+            else:
+                return remote
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % (remote_name))
 
@@ -193,7 +228,7 @@ class Remotes(object):
 
     def _upsert(self, remote_name, url, verify_ssl, insert):
         # Remove duplicates
-        updated_remote = Remote(remote_name, url, verify_ssl)
+        updated_remote = Remote(remote_name, url, verify_ssl, False)
         self._remotes.pop(remote_name, None)
         remotes_list = []
         renamed = None
@@ -233,7 +268,8 @@ class Remotes(object):
         prev_remote = self._get_by_url(url)
         if prev_remote and verify_ssl == prev_remote.verify_ssl and insert is None:
             raise ConanException("Remote '%s' already exists with same URL" % prev_remote.name)
-        updated_remote = Remote(remote_name, url, verify_ssl)
+        disabled = True if prev_remote and prev_remote.disabled else False
+        updated_remote = Remote(remote_name, url, verify_ssl, disabled)
         if insert is not None:
             try:
                 insert_index = int(insert)
@@ -350,6 +386,11 @@ class RemoteRegistry(object):
                             pkg_metadata.remote = new_remote_name
 
             remotes.save(self._filename)
+
+    def set_disabled_state(self, remote_name, state):
+        remotes = self.load_remotes()
+        remotes.set_disabled_state(remote_name, state)
+        remotes.save(self._filename)
 
     @property
     def refs_list(self):

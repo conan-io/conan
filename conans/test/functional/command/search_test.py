@@ -14,7 +14,8 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient, \
+    GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
@@ -246,6 +247,20 @@ class SearchTest(unittest.TestCase):
                         lib/1.0
                         lib/1.0@foo/bar
                         lib/1.0@user/channel"""), client.out)
+
+    def search_disabled_remote_test(self):
+        self.client.run("remote disable search_able")
+        self.client.run("search * -r search_able", assert_error=True)
+        self.assertIn("ERROR: Remote 'search_able' is disabled", self.client.out)
+
+    def search_skip_disabled_remote_test(self):
+        os.rmdir(self.servers["local"].server_store.store)
+        self._copy_to_server(self.client.cache, self.servers["local"].server_store)
+        os.rmdir(self.servers["search_able"].server_store.store)
+        self._copy_to_server(self.client.cache, self.servers["search_able"].server_store)
+        self.client.run("remote disable local")
+        self.client.run("search Hello* -r all")
+        self.assertNotIn("local", self.client.out)
 
     def recipe_search_all_test(self):
         os.rmdir(self.servers["local"].server_store.store)
@@ -1137,8 +1152,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         }
         self.assertEqual(expected_output, output)
 
-
-
     def search_packages_with_reference_not_exported_test(self):
         self.client.run("search my_pkg/1.0@conan/stable", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'my_pkg/1.0@conan/stable'", self.client.out)
@@ -1190,6 +1203,34 @@ class Test(ConanFile):
         # This is by ref
         client.run("search lib/1.0@ -r default")
         self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+
+class SearchOrder(unittest.TestCase):
+    def search_test(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.1@user/testing")
+        client.run("create . pkg/1.2@user/testing")
+        client.run("create . pkg/1.11@user/testing")
+        client.run("create . pkg/1.21@user/testing")
+        client.run("create . pkg/1.21.3@user/testing")
+        client.run("create . pkg/1.21.34@user/testing")
+        client.run("create . pkg/1.21.4@user/testing")
+        client.run("search")
+        output = textwrap.dedent("""
+            pkg/1.1@user/testing
+            pkg/1.2@user/testing
+            pkg/1.11@user/testing
+            pkg/1.21@user/testing
+            pkg/1.21.3@user/testing
+            pkg/1.21.4@user/testing
+            pkg/1.21.34@user/testing""")
+        self.assertIn(output, client.out)
+
+        client.run("upload * -r=default -c --all")
+        # This is by pattern
+        client.run("search -r=default")
+        self.assertIn(output, client.out)
 
 
 @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")

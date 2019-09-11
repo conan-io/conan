@@ -331,10 +331,8 @@ class ConanAPIV1(object):
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
-            new_ref = cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                                 self.app.cache.config.revisions_enabled, self.app.out,
-                                 self.app.hook_manager, self.app.loader, self.app.cache, not not_export,
-                                 graph_lock=graph_info.graph_lock)
+            new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
+                                 not not_export, graph_lock=graph_info.graph_lock)
 
             # The new_ref contains the revision
             # To not break existing things, that they used this ref without revision
@@ -401,9 +399,7 @@ class ConanAPIV1(object):
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, install_folder,
                                         self.app.cache, self.app.out, lockfile=lockfile)
 
-            new_ref = cmd_export(conanfile_path, name, version, user, channel, True,
-                                 self.app.cache.config.revisions_enabled, self.app.out,
-                                 self.app.hook_manager, self.app.loader, self.app.cache,
+            new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, True,
                                  graph_lock=graph_info.graph_lock)
             ref = new_ref.copy_clear_rev()
             # new_ref has revision
@@ -439,9 +435,7 @@ class ConanAPIV1(object):
             self.app.python_requires.enable_remotes(remotes=remotes)
             remote = remotes.get_remote(remote_name)
             recorder = ActionRecorder()
-            download(ref, packages, remote, recipe, self.app.remote_manager,
-                     self.app.cache, self.app.out, recorder, self.app.loader,
-                     self.app.hook_manager, remotes=remotes)
+            download(self.app, ref, packages, remote, recipe, recorder, remotes=remotes)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
 
@@ -480,8 +474,7 @@ class ConanAPIV1(object):
                     tmp.extend([g for g in generators if g not in tmp])
                     node.conanfile.generators = tmp
 
-        installer = BinaryInstaller(self.app.cache, self.app.out, self.app.remote_manager,
-                                    recorder=recorder, hook_manager=self.app.hook_manager)
+        installer = BinaryInstaller(self.app, recorder=recorder)
         installer.install(deps_graph, remotes, keep_build=False, graph_info=graph_info)
 
         install_folder = install_folder or cwd
@@ -777,9 +770,8 @@ class ConanAPIV1(object):
 
         remotes = self.app.cache.registry.load_remotes()
         self.app.python_requires.enable_remotes(remotes=remotes)
-        cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                   self.app.cache.config.revisions_enabled, self.app.out,
-                   self.app.hook_manager, self.app.loader, self.app.cache, graph_lock=graph_lock)
+        cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
+                   graph_lock=graph_lock)
 
         if lockfile:
             graph_lock_file.save(lockfile)
@@ -919,7 +911,7 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list(self):
-        return list(self.app.cache.registry.load_remotes().values())
+        return list(self.app.cache.registry.load_remotes().all_values())
 
     @api_method
     def remote_add(self, remote_name, url, verify_ssl=True, insert=None, force=None):
@@ -928,6 +920,10 @@ class ConanAPIV1(object):
     @api_method
     def remote_remove(self, remote_name):
         return self.app.cache.registry.remove(remote_name)
+
+    @api_method
+    def remote_set_disabled_state(self, remote_name, state):
+        return self.app.cache.registry.set_disabled_state(remote_name, state)
 
     @api_method
     def remote_update(self, remote_name, url, verify_ssl=True, insert=None):

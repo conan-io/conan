@@ -21,7 +21,7 @@ def _split_pair(pair, split_char):
 
 
 def _noneize(text):
-    if not text or text == "None":
+    if not text or text == "_":
         return None
     return text
 
@@ -158,6 +158,9 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             raise InvalidNameException("Specify the 'user' and the 'channel' or neither of them")
 
         version = Version(version) if version is not None else None
+        user = _noneize(user)
+        channel = _noneize(channel)
+
         obj = super(cls, ConanFileReference).__new__(cls, name, version, user, channel, revision)
         if validate:
             obj._validate()
@@ -207,7 +210,8 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
 
     def __repr__(self):
         str_rev = "#%s" % self.revision if self.revision else ""
-        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user, self.channel, str_rev)
+        return "%s/%s@%s/%s%s" % (self.name, self.version, self.user or "_", self.channel or "_",
+                                  str_rev)
 
     def full_str(self):
         str_rev = "#%s" % self.revision if self.revision else ""

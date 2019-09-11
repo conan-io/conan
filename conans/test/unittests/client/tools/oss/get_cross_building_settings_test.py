@@ -91,3 +91,11 @@ class GetCrossBuildSettingsTest(unittest.TestCase):
             build_os, build_arch, _, _ = get_cross_building_settings(settings)
             self.assertEqual("SunOS", build_os)
             self.assertEqual("x86_64", build_arch)
+
+    def test_aix(self):
+        with mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
+             mock.patch("platform.machine", mock.MagicMock(return_value="x86_64")):
+            settings = MockSettings({})
+            build_os, build_arch, _, _ = get_cross_building_settings(settings)
+            self.assertEqual("AIX", build_os)
+            self.assertEqual("x86_64", build_arch)
