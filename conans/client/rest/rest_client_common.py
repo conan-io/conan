@@ -111,9 +111,9 @@ class RestCommonMethods(object):
 
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
-        if ret.status_code == 404:
-            raise NotFoundException("Not implemented endpoint")
 
+        if not ret.ok:
+            raise get_exception_from_error(ret.status_code)("")
         version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
         server_version = ret.headers.get('X-Conan-Server-Version', None)
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")

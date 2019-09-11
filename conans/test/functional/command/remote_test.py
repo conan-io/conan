@@ -86,7 +86,7 @@ class HelloConan(ConanFile):
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
-        output = re.sub("http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
+        output = re.sub(r"http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
@@ -154,6 +154,22 @@ class HelloConan(ConanFile):
         self.client.run("remote clean")
         self.client.run("remote list")
         self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def clean_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def remove_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote remove remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
@@ -292,6 +308,35 @@ class HelloConan(ConanFile):
         self.assertEqual(data["remotes"][3]["name"], "my-remote4")
         self.assertEqual(data["remotes"][3]["url"], "http://someurl4")
         self.assertEqual(data["remotes"][3]["verify_ssl"], False)
+
+    def remote_disable_test(self):
+        client = TestClient()
+        client.run("remote add my-remote0 http://someurl0")
+        client.run("remote add my-remote1 http://someurl1")
+        client.run("remote add my-remote2 http://someurl2")
+        client.run("remote add my-remote3 http://someurl3")
+        client.run("remote disable my-remote0")
+        client.run("remote disable my-remote3")
+        registry = load(client.cache.registry_path)
+        data = json.loads(registry)
+        self.assertEqual(data["remotes"][0]["name"], "my-remote0")
+        self.assertEqual(data["remotes"][0]["url"], "http://someurl0")
+        self.assertEqual(data["remotes"][0]["disabled"], True)
+        self.assertEqual(data["remotes"][3]["name"], "my-remote3")
+        self.assertEqual(data["remotes"][3]["url"], "http://someurl3")
+        self.assertEqual(data["remotes"][3]["disabled"], True)
+
+        client.run("remote disable *")
+        registry = load(client.cache.registry_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertEqual(remote["disabled"], True)
+
+        client.run("remote enable *")
+        registry = load(client.cache.registry_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertNotIn("disabled", remote)
 
     def verify_ssl_error_test(self):
         client = TestClient()

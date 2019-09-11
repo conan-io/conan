@@ -7,9 +7,8 @@ import unittest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
-from conans.test.utils.conanfile import TestConanFile
 
 
 class InfoTest(unittest.TestCase):
@@ -22,7 +21,7 @@ class InfoTest(unittest.TestCase):
         client.run("info nothing/0.1@user/testing", assert_error=True)
         self.assertEqual(os.listdir(client.cache.store), [])
         # This used to fail in Windows, because of the different case
-        client.save({"conanfile.py": TestConanFile("Nothing", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("Nothing").with_version("0.1")})
         client.run("export . user/testing")
 
     def failed_info_test(self):
@@ -627,7 +626,7 @@ class MyTest(ConanFile):
 
     def wrong_graph_info_test(self):
         # https://github.com/conan-io/conan/issues/4443
-        conanfile = TestConanFile()
+        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
         client = TestClient()
         client.save({"conanfile.py": str(conanfile)})
         client.run("install .")
@@ -645,11 +644,11 @@ class MyTest(ConanFile):
     def previous_lockfile_error_test(self):
         # https://github.com/conan-io/conan/issues/5479
         client = TestClient()
-        client.save({"conanfile.py": TestConanFile("pkg", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("create . user/testing")
-        client.save({"conanfile.py": TestConanFile("other", "0.1",
-                                                   options="{'shared': [True, False]}",
-                                                   default_options='shared=False')})
+        client.save({"conanfile.py": GenConanfile().with_name("other").with_version("0.1")
+                                                   .with_option("shared", [True, False])
+                                                   .with_default_option("shared", False)})
         client.run("install . -o shared=True")
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)

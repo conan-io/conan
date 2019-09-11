@@ -6,6 +6,7 @@ import sys
 import argparse
 import six
 from argparse import ArgumentError
+from difflib import get_close_matches
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -1455,6 +1456,11 @@ class Command(object):
         subparsers.add_parser('clean', help="Clean the list of remotes and all "
                                             "recipe-remote associations")
 
+        parser_enable = subparsers.add_parser('enable', help='Enable a remote')
+        parser_enable.add_argument('remote', help='Name of the remote')
+        parser_disable = subparsers.add_parser('disable', help='Disable a remote')
+        parser_disable.add_argument('remote', help='Name of the remote')
+
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
@@ -1497,6 +1503,10 @@ class Command(object):
             return self._conan.remote_update_pref(package_reference, remote_name)
         elif args.subcommand == "clean":
             return self._conan.remote_clean()
+        elif args.subcommand == "enable":
+            return self._conan.remote_set_disabled_state(remote_name, False)
+        elif args.subcommand == "disable":
+            return self._conan.remote_set_disabled_state(remote_name, True)
 
     def profile(self, *args):
         """
@@ -1831,6 +1841,25 @@ class Command(object):
                     result[method_name] = method
         return result
 
+    def _print_similar(self, command):
+        """ looks for a similar commands and prints them if found
+        """
+        matches = get_close_matches(
+            word=command, possibilities=self._commands().keys(), n=5, cutoff=0.75)
+
+        if len(matches) == 0:
+            return
+
+        if len(matches) > 1:
+            self._out.writeln("The most similar commands are")
+        else:
+            self._out.writeln("The most similar command is")
+
+        for match in matches:
+            self._out.writeln("    %s" % match)
+
+        self._out.writeln("")
+
     def _warn_python2(self):
         if six.PY2:
             self._out.writeln("")
@@ -1854,10 +1883,19 @@ class Command(object):
                 if command in ["-v", "--version"]:
                     self._out.success("Conan version %s" % client_version)
                     return False
+
                 self._warn_python2()
-                self._show_help()
+
                 if command in ["-h", "--help"]:
+                    self._show_help()
                     return False
+
+                self._out.writeln(
+                    "'%s' is not a Conan command. See 'conan --help'." % command)
+                self._out.writeln("")
+
+                self._print_similar(command)
+
                 raise ConanException("Unknown command %s" % str(exc))
             except IndexError:  # No parameters
                 self._show_help()

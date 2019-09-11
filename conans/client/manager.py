@@ -60,9 +60,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     except ConanException:  # Setting os doesn't exist
         pass
 
-    installer = BinaryInstaller(cache, out, remote_manager, recorder=recorder,
-                                hook_manager=hook_manager)
-
+    installer = BinaryInstaller(app, recorder=recorder)
     installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
     if graph_info.graph_lock:
         graph_info.graph_lock.update_check_graph(deps_graph, out)
