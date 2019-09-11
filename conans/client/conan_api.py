@@ -13,7 +13,6 @@ from conans.client.cmd.create import create
 from conans.client.cmd.download import download
 from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
-from conans.client.cmd.new import cmd_new
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
 from conans.client.cmd.search import Search
@@ -227,6 +226,7 @@ class ConanAPIV1(object):
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
             template=None):
+        from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or get_cwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare,
