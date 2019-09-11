@@ -2,7 +2,7 @@
 
 import unittest
 
-from conans.test.utils.tools import TestClient, GenConanfile, TestServer
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class QuietOutputTestCase(unittest.TestCase):

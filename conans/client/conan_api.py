@@ -73,28 +73,24 @@ def api_method(f):
         quiet = kwargs.pop("quiet", False)
         old_curdir = get_cwd()
         old_output = api.user_io.out
-        with environment_append({"CONAN_NON_INTERACTIVE": "True"}) if quiet else no_op():
+        quiet_output = ConanOutput(StringIO(), api.color) if quiet else None
+        try:
+            api.create_app(quiet_output=quiet_output)
+            log_command(f.__name__, kwargs)
+            with tools.environment_append(api.app.cache.config.env_vars):
+                return f(api, *args, **kwargs)
+        except Exception as exc:
+            if quiet_output:
+                old_output.write(quiet_output._stream.getvalue())
+                old_output.flush()
+            msg = exception_message_safe(exc)
             try:
-                if quiet:
-                    api.user_io.out = ConanOutput(StringIO(), api.color)
-                api.create_app()
-
-                log_command(f.__name__, kwargs)
-                with tools.environment_append(api.app.cache.config.env_vars):
-                    return f(api, *args, **kwargs)
-            except Exception as exc:
-                if quiet:
-                    old_output.write(api.user_io.out._stream.getvalue())
-                    old_output.flush()
-                msg = exception_message_safe(exc)
-                try:
-                    log_exception(exc, msg)
-                except BaseException:
-                    pass
-                raise
-            finally:
-                os.chdir(old_curdir)
-                api.user_io.out = old_output
+                log_exception(exc, msg)
+            except BaseException:
+                pass
+            raise
+        finally:
+            os.chdir(old_curdir)
     return wrapper
 
 
@@ -147,15 +143,18 @@ def _get_conanfile_path(path, cwd, py):
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder, user_io, http_requester=None, runner=None):
+    def __init__(self, cache_folder, user_io, http_requester=None, runner=None, quiet_output=None):
         # User IO, interaction and logging
         self.user_io = user_io
         self.out = self.user_io.out
+        if quiet_output:
+            self.user_io.out = quiet_output
+            self.out = quiet_output
+
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, self.out)
         self.config = self.cache.config
-        interactive = not self.config.non_interactive
-        if not interactive:
+        if self.config.non_interactive or quiet_output:
             self.user_io.disable_input()
 
         # Adjust CONAN_LOGGING_LEVEL with the env readed
@@ -216,8 +215,9 @@ class ConanAPIV1(object):
         # FIXME Remove in Conan 2.0
         sys.path.append(os.path.join(self.cache_folder, "python"))
 
-    def create_app(self):
-        self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester, self.runner)
+    def create_app(self, quiet_output):
+        self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
+                            self.runner, quiet_output=quiet_output)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -789,7 +789,7 @@ class ConanAPIV1(object):
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
                remote_name=None, outdated=False):
         remotes = self.app.cache.registry.load_remotes()
-        remover = ConanRemover(self.app.cache, self.app.remote_manager, self.user_io, remotes)
+        remover = ConanRemover(self.app.cache, self.app.remote_manager, self.app.user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
                        packages_query=query, outdated=outdated)
 
@@ -804,7 +804,7 @@ class ConanAPIV1(object):
         # FIXME: conan copy does not support short-paths in Windows
         ref = ConanFileReference.loads(reference)
         cmd_copy(ref, user_channel, packages, self.app.cache,
-                 self.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
+                 self.app.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
 
     @api_method
     def authenticate(self, name, password, remote_name, skip_auth=False):
@@ -820,7 +820,7 @@ class ConanAPIV1(object):
         if skip_auth and token_present(self.app.cache.localdb, remote, name):
             return remote.name, name, name
         if not password:
-            name, password = self.user_io.request_login(remote_name=remote_name, username=name)
+            name, password = self.app.user_io.request_login(remote_name=remote_name, username=name)
 
         _, remote_name, prev_user, user = self.app.remote_manager.authenticate(remote, name,
                                                                                password)
@@ -904,7 +904,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         upload_recorder = UploadRecorder()
-        uploader = CmdUpload(self.app.cache, self.user_io, self.app.remote_manager,
+        uploader = CmdUpload(self.app.cache, self.app.user_io, self.app.remote_manager,
                              self.app.loader, self.app.hook_manager)
         remotes = self.app.cache.registry.load_remotes()
         remotes.select(remote_name)
