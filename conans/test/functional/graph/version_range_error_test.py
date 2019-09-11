@@ -1,14 +1,15 @@
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class VersionRangesErrorTest(unittest.TestCase):
     def verbose_version_test(self):
         client = TestClient()
-        conanfile = TestConanFile("MyPkg", "0.1", requires=["MyOtherPkg/[~0.1]@user/testing"])
+        conanfile = GenConanfile().with_name("MyPkg").with_version("0.1")\
+                                  .with_require_plain("MyOtherPkg/[~0.1]@user/testing")
         client.save({CONANFILE: str(conanfile)})
         client.run("install . --build", assert_error=True)
         self.assertIn("from requirement 'MyOtherPkg/[~0.1]@user/testing'", client.out)
@@ -17,7 +18,11 @@ class VersionRangesErrorTest(unittest.TestCase):
         client = TestClient()
 
         def add(name, version, requires=None):
-            conanfile = TestConanFile(name, version, requires=requires)
+            conanfile = GenConanfile().with_name(name).with_version(version)
+            if requires:
+                for req in requires:
+                    ref = ConanFileReference.loads(req)
+                    conanfile = conanfile.with_require(ref)
             client.save({CONANFILE: str(conanfile)})
             client.run("export . user/testing")
 

@@ -1,8 +1,9 @@
-import os
-import unittest
+import time
 from collections import OrderedDict
 
-import time
+import json
+import os
+import unittest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -369,10 +370,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
     def test_json_output(self):
         client = TurboTestClient()
-        client.save({"conanfile.py": str(GenConanfile())})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . {} --json file.json".format(self.ref.full_str()))
         json_path = os.path.join(client.current_folder, "file.json")
-        import json
         data = json.loads(load(json_path))
         ref = ConanFileReference.loads(data["installed"][0]["recipe"]["id"])
         self.assertIsNotNone(ref.revision)

@@ -7,9 +7,8 @@ import unittest
 
 from conans.model.editable_layout import LAYOUTS_FOLDER
 from conans.model.ref import ConanFileReference
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save_files, save
 
 
@@ -22,12 +21,12 @@ class LayoutTest(unittest.TestCase):
                     [build_folder]
                     build
                     """)
-        client.save({"conanfile.py": TestConanFile("lib", "1.0"),
+        client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0"),
                      "mylayout": layout})
         client.run("editable add . {} --layout mylayout".format(ref))
         client2 = TestClient(cache_folder=client.cache_folder)
-        client2.save({"conanfile.py": TestConanFile("app", "1.0",
-                                                    requires=["lib/1.0@conan/stable"])})
+        client2.save({"conanfile.py": GenConanfile().with_name("app").with_version("1.0")
+                                                    .with_require(ref)})
         client2.run("create . user/testing")
         graph_info = os.path.join(client.current_folder, "build", "graph_info.json")
         self.assertTrue(os.path.exists(graph_info))

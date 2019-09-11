@@ -48,6 +48,17 @@ def detected_os():
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
+    os_info = OSInfo()
+    arch = None
+
+    if os_info.is_solaris:
+        arch = OSInfo.get_solaris_architecture()
+    elif os_info.is_aix:
+        arch = OSInfo.get_aix_architecture()
+
+    if arch:
+        return arch
+
     if "ppc64le" in machine:
         return "ppc64le"
     elif "ppc64" in machine:
@@ -78,15 +89,6 @@ def detected_architecture():
         return "s390x"
     elif "s390" in machine:
         return "s390"
-
-    if OSInfo().is_aix:
-        processor = platform.processor()
-        if "powerpc" in processor:
-            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
-            if kernel_bitness:
-                return "ppc64" if kernel_bitness == "64" else "ppc32"
-        elif "rs6000" in processor:
-            return "ppc32"
 
     return None
 
@@ -281,6 +283,27 @@ class OSInfo(object):
             return "Puma"
         elif version.minor() == "10.0.Z":
             return "Cheetha"
+
+    @staticmethod
+    def get_aix_architecture():
+        processor = platform.processor()
+        if "powerpc" in processor:
+            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
+            if kernel_bitness:
+                return "ppc64" if kernel_bitness == "64" else "ppc32"
+        elif "rs6000" in processor:
+            return "ppc32"
+
+    @staticmethod
+    def get_solaris_architecture():
+        # under intel solaris, platform.machine()=='i86pc' so we need to handle
+        # it early to suport 64-bit
+        processor = platform.processor()
+        kernel_bitness, elf = platform.architecture()
+        if "sparc" in processor:
+            return "sparcv9" if kernel_bitness == "64bit" else "sparc"
+        elif "i386" in processor:
+            return "x86_64" if kernel_bitness == "64bit" else "x86"
 
     @staticmethod
     def get_freebsd_version():

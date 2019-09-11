@@ -1,10 +1,10 @@
+import itertools
 import os
 import platform
 import stat
 import unittest
 from collections import OrderedDict
 
-import itertools
 from mock import mock, patch
 from nose.plugins.attrib import attr
 
@@ -13,7 +13,6 @@ from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile
@@ -79,7 +78,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/testing")
         client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
         self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)
@@ -720,3 +719,24 @@ class Pkg(ConanFile):
                    assert_error=True)
 
         self.assertIn("'--query' argument cannot be used together with '--package'", client.out)
+
+    def upload_without_user_channel_test(self):
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        client.save({"conanfile.py": GenConanfile()})
+
+        client.run('create . lib/1.0@')
+        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
+
+        client.run('upload lib/1.0 -c --all')
+        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
+
+        # Verify that in the remote it is stored as "_"
+        pref = PackageReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
+        path = server.server_store.export(pref.ref)
+        self.assertIn("/lib/1.0/_/_/0/export", path.replace("\\", "/"))
+
+        path = server.server_store.package(pref)
+        self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
