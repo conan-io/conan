@@ -215,7 +215,7 @@ class ConanAPIV1(object):
         # FIXME Remove in Conan 2.0
         sys.path.append(os.path.join(self.cache_folder, "python"))
 
-    def create_app(self, quiet_output):
+    def create_app(self, quiet_output=None):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
                             self.runner, quiet_output=quiet_output)
 
