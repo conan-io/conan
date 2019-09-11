@@ -8,8 +8,7 @@ from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 class QuietOutputTestCase(unittest.TestCase):
 
     def test_inspect(self):
-        servers = {"default": TestServer(users={"user": "passwd"})}
-        client = TestClient(servers=servers, users={"default": [("user", "passwd")], })
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_name("name")})
         client.run("export . name/version@user/channel")
         client.run("upload name/version@user/channel --all")
