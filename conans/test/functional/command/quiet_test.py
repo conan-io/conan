@@ -5,7 +5,7 @@ import unittest
 from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 
 
-class SilenceOutputTestCase(unittest.TestCase):
+class QuietOutputTestCase(unittest.TestCase):
 
     def test_inspect(self):
         servers = {"default": TestServer(users={"user": "passwd"})}

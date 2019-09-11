@@ -71,12 +71,12 @@ default_manifest_folder = '.conan_manifests'
 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
-        silence = kwargs.pop("silence", False)
+        quiet = kwargs.pop("quiet", False)
         old_curdir = get_cwd()
         old_output = api.user_io.out
-        with environment_append({"CONAN_NON_INTERACTIVE": "True"}) if silence else no_op():
+        with environment_append({"CONAN_NON_INTERACTIVE": "True"}) if quiet else no_op():
             try:
-                if silence:
+                if quiet:
                     api.user_io.out = ConanOutput(StringIO(), api.color)
                 api.create_app()
 
@@ -84,7 +84,7 @@ def api_method(f):
                 with tools.environment_append(api.app.cache.config.env_vars):
                     return f(api, *args, **kwargs)
             except Exception as exc:
-                if silence:
+                if quiet:
                     old_output.write(api.user_io.out._stream.getvalue())
                     old_output.flush()
                 msg = exception_message_safe(exc)
