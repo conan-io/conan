@@ -88,7 +88,8 @@ compiler:
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     intel:
         version: ["11", "12", "13", "14", "15", "16", "17", "18", "19"]
-        base_incompatible: [None, True]
+        runtime: ["shared", "static"]
+        base_compatible: [None, True, False]
         base:
             gcc:
                 <<: *gcc
@@ -96,7 +97,6 @@ compiler:
                 exception: [None]
             Visual Studio:
                 <<: *visual_studio
-                toolset: [None]
     qcc:
         version: ["4.4", "5.4"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]

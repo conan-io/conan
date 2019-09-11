@@ -480,44 +480,72 @@ class ConanInfo(object):
     def intel_compatibility(self):
         if self.full_settings.compiler != "intel":
             return
-        if getattr(self.full_settings.compiler, "base", None):
-            if self.full_settings.compiler.base_incompatible:
-                self.intel_incompatible()
+        if self.full_settings.compiler.base_compatible is None or \
+                self.full_settings.compiler.base_compatible == "None":
+            if self.full_settings.compiler.runtime == "static":
+                self._base_compatible()
             else:
-                self.intel_compatible()
+                self.base_incompatible()
+        elif self.full_settings.compiler.base_compatible:
+            self._base_compatible()
+        else:  # False
+            self._base_incompatible()
 
-    def intel_compatible(self):
+    def _base_compatible(self):
+        """
+        Make Intel compiler compatible with the base compiler by assigning base compiler settings
+        to the package ID instead of the full Intel ones.
+        """
         if self.full_settings.compiler != "intel":
             return
-        if getattr(self.full_settings.compiler, "base", None):
-            # Unfortunately assigning values is shallow
-            self.settings.compiler = (
-                self.full_settings.compiler.base
-            )  # So now self.settings.compiler is basically just a string
+        # Unfortunately assigning values is shallow
+        self.settings.compiler = (
+            self.full_settings.compiler.base
+        )  # So now self.settings.compiler is basically just a string
 
-            # Deep copy everything
-            for field, value in self.full_settings.compiler.base.as_list():
-                tokens = field.split(".")
-                attr = self.settings.compiler
-                for token in tokens[:-1]:
-                    attr = getattr(attr, token)
-                setattr(attr, tokens[-1], value)
+        # Deep copy everything
+        for field, value in self.full_settings.compiler.base.as_list():
+            tokens = field.split(".")
+            attr = self.settings.compiler
+            for token in tokens[:-1]:
+                attr = getattr(attr, token)
+            setattr(attr, tokens[-1], value)
 
-    def intel_incompatible(self):
+    def _base_incompatible(self):
+        """
+        Make intel compiler incompatible with the base compiler by assigning the full settings of
+        the compiler to the package ID
+        """
         if self.full_settings.compiler != "intel":
             return
-        if getattr(self.full_settings.compiler, "base", None):
-            # Method to opt out of binary compatibility
-            self.settings.compiler = (
-                self.full_settings.compiler
-            )
-            # Set base_incompatible=True in order to make packages compatible
-            self.settings.compiler.base_incompatible = True
+        # Method to opt out of binary compatibility
+        self.settings.compiler = (
+            self.full_settings.compiler
+        )
 
-            # Deep copy everything
-            for field, value in self.full_settings.compiler.as_list():
-                tokens = field.split(".")
-                attr = self.settings.compiler
-                for token in tokens[:-1]:
-                    attr = getattr(attr, token)
-                setattr(attr, tokens[-1], value)
+        # Deep copy everything
+        for field, value in self.full_settings.compiler.as_list():
+            tokens = field.split(".")
+            attr = self.settings.compiler
+            for token in tokens[:-1]:
+                attr = getattr(attr, token)
+            setattr(attr, tokens[-1], value)
+
+        # Set base_compatible=False in order to make packages incompatible
+        self.settings.compiler.base_compatible = False
+
+    def base_compatible(self):
+        if self.full_settings.compiler != "intel":
+            return
+        if self.full_settings.compiler.base_compatible is False:
+            return
+        else:
+            self._base_compatible()
+
+    def base_incompatible(self):
+        if self.full_settings.compiler != "intel":
+            return
+        if self.full_settings.compiler.base_compatible is True:
+            return
+        else:
+            self._base_incompatible()

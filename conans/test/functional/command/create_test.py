@@ -609,7 +609,11 @@ class TestConanLib(ConanFile):
         self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
                       conaninfo)
 
-    def intel_compiler_compatible_test(self):
+    def intel_compiler_static_default_test(self):
+        """
+        Package created with intel compiler static (compatible by default - base_coampatible=None)
+        can be consumed from a base compiler but not from pure intel one (base_compatible=False)
+        """
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         dep_conanfile = GenConanfile().with_setting("compiler")
@@ -617,6 +621,7 @@ class TestConanLib(ConanFile):
         [settings]
         compiler = intel
         compiler.version = 16
+        compiler.runtime = static
         compiler.base = Visual Studio
         compiler.base.version = 8
         compiler.base.runtime = MD
@@ -638,10 +643,16 @@ class TestConanLib(ConanFile):
         client.run("install conanfile.py --profile intel_profile")
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
         client.run("install conanfile.py --profile intel_profile -s "
-                   "compiler.base_incompatible=True", assert_error=True)
-        self.assertIn("Bye/0.1@us/ch:24173945aa3b189def01170b0b30d28e48bdc68d - Missing", client.out)
+                   "compiler.base_compatible=False", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:ed5a665740443b9bebbc0d64d2af3c67eda46b2e - Missing", client.out)
+        client.run("install conanfile.py --profile intel_profile -s compiler.base_compatible=True")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
 
-    def intel_compiler_incompatible_test(self):
+    def intel_compiler_static_incompatible_test(self):
+        """
+        Package created with pure intel compiler static settings (base_compatible=False) cannot be
+        consumed from a base compiler profile but can be from a pure intel compiler static one
+        """
         client = TestClient()
         ref = ConanFileReference.loads("Bye/0.1@us/ch")
         dep_conanfile = GenConanfile().with_setting("compiler")
@@ -649,10 +660,11 @@ class TestConanLib(ConanFile):
         [settings]
         compiler = intel
         compiler.version = 16
+        compiler.runtime = static
         compiler.base = Visual Studio
         compiler.base.version = 8
         compiler.base.runtime = MD
-        compiler.base_incompatible = True
+        compiler.base_compatible = False
         """)
         client.save({"dep_conanfile.py": dep_conanfile,
                      "intel_profile": dep_profile})
@@ -670,8 +682,182 @@ class TestConanLib(ConanFile):
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
 
         client.run("install conanfile.py --profile intel_profile")
-        self.assertIn("Bye/0.1@us/ch:24173945aa3b189def01170b0b30d28e48bdc68d - Cache", client.out)
+        self.assertIn("Bye/0.1@us/ch:ed5a665740443b9bebbc0d64d2af3c67eda46b2e - Cache", client.out)
 
         client.run("install conanfile.py --profile intel_profile "
-                   "-s compiler.base_incompatible=None", assert_error=True)
+                   "-s compiler.base_compatible=None", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
+
+        client.run("install conanfile.py --profile intel_profile "
+                   "-s compiler.base_compatible=True", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
+
+    def intel_compiler_static_compatible_test(self):
+        """
+        Package created with pure intel compiler static settings (base_compatible=True) can be
+        consumed from base compiler profile but not from a pure intel one.
+        """
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        dep_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 16
+        compiler.runtime = static
+        compiler.base = Visual Studio
+        compiler.base.version = 8
+        compiler.base.runtime = MD
+        compiler.base_compatible = True
+        """)
+        client.save({"dep_conanfile.py": dep_conanfile,
+                     "intel_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile intel_profile" % ref.full_str())
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
+        profile = textwrap.dedent("""
+                [settings]
+                compiler = Visual Studio
+                compiler.version = 8
+                compiler.runtime = MD
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": profile})
+        client.run("install conanfile.py --profile visual_profile")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+
+        client.run("install conanfile.py --profile intel_profile")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+
+        client.run("install conanfile.py --profile intel_profile -s compiler.base_compatible=None")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+
+        client.run("install conanfile.py --profile intel_profile "
+                   "-s compiler.base_compatible=False", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:ed5a665740443b9bebbc0d64d2af3c67eda46b2e - Missing", client.out)
+
+    def intel_compiler_shared_default_test(self):
+        """
+        Package created with intel compiler shared (incompatible by default -
+        base_compiler = None) cannot be consumed from a base compiler profile but can be from a
+        pure intel one.
+        """
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        dep_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 16
+        compiler.runtime = shared
+        compiler.base = Visual Studio
+        compiler.base.version = 8
+        compiler.base.runtime = MD
+        """)
+        client.save({"dep_conanfile.py": dep_conanfile,
+                     "intel_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile intel_profile" % ref.full_str())
+        print(client.out)
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
+        profile = textwrap.dedent("""
+                [settings]
+                compiler = Visual Studio
+                compiler.version = 8
+                compiler.runtime = MD
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": profile})
+        client.run("install conanfile.py --profile visual_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
+        client.run("install conanfile.py --profile intel_profile")
+        self.assertIn("Bye/0.1@us/ch:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Cache", client.out)
+        client.run("install conanfile.py --profile intel_profile -s "
+                   "compiler.base_compatible=True", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
+        client.run("install conanfile.py --profile intel_profile -s "
+                   "compiler.base_compatible=False")
+        self.assertIn("Bye/0.1@us/ch:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Cache", client.out)
+
+    def intel_compiler_shared_compatible_test(self):
+        """
+        Package created with intel compiler shared forced to be compatible with base compiler can
+        be consumed from a base compiler profile but not from a pure intel one
+        """
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        dep_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 16
+        compiler.runtime = shared
+        compiler.base_compatible = True
+        compiler.base = Visual Studio
+        compiler.base.version = 8
+        compiler.base.runtime = MD
+        """)
+        client.save({"dep_conanfile.py": dep_conanfile,
+                     "intel_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile intel_profile" % ref.full_str())
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
+        profile = textwrap.dedent("""
+                [settings]
+                compiler = Visual Studio
+                compiler.version = 8
+                compiler.runtime = MD
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": profile})
+        client.run("install conanfile.py --profile visual_profile")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+        client.run("install conanfile.py --profile intel_profile")
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Cache", client.out)
+        client.run("install conanfile.py --profile intel_profile -s "
+                   "compiler.base_compatible=False", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Missing", client.out)
+        client.run("install conanfile.py --profile intel_profile -s "
+                   "compiler.base_compatible=None", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Missing",
+                      client.out)
+
+    def intel_compiler_shared_incompatible_test(self):
+        """
+        Package created with intel compiler shared settings incompatible with base compiler (
+        base_compatible=False) cannot be consumed from a base compiler profile but
+        """
+        client = TestClient()
+        ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        dep_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 16
+        compiler.runtime = shared
+        compiler.base = Visual Studio
+        compiler.base.version = 8
+        compiler.base.runtime = MD
+        compiler.base_compatible = False
+        """)
+        client.save({"dep_conanfile.py": dep_conanfile,
+                     "intel_profile": dep_profile})
+        client.run("create dep_conanfile.py %s --profile intel_profile" % ref.full_str())
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(ref)
+        profile = textwrap.dedent("""
+                [settings]
+                compiler = Visual Studio
+                compiler.version = 8
+                compiler.runtime = MD
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "visual_profile": profile})
+        client.run("install conanfile.py --profile visual_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)
+
+        client.run("install conanfile.py --profile intel_profile")
+        self.assertIn("Bye/0.1@us/ch:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Cache", client.out)
+
+        client.run("install conanfile.py --profile intel_profile -s compiler.base_compatible=None")  #TODO: REVIEW
+        self.assertIn("Bye/0.1@us/ch:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Cache", client.out)
+
+        client.run("install conanfile.py --profile intel_profile "
+                   "-s compiler.base_compatible=True", assert_error=True)
         self.assertIn("Bye/0.1@us/ch:1151fe341e6b310f7645a76b4d3d524342835acc - Missing", client.out)

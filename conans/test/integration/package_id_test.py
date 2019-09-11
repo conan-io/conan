@@ -431,50 +431,14 @@ class Pkg(ConanFile):
                         ' -s compiler.version=7.2 -s compiler.cppstd=gnu14')
         self.assertIn("Hello/1.2.0@user/testing: Already installed!", self.client.out)
 
-    def intel_incompatible_test(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.intel_incompatible()",
-                     channel="user/testing",
-                     settings='"compiler"')
-        self.client.run('install Hello/1.2.0@user/testing '
-                        '-s compiler="intel" '
-                        '-s compiler.version="16" '
-                        '-s compiler.base="Visual Studio" '
-                        '-s compiler.base.version=8 '
-                        '-s compiler.base.runtime=MD --build')
-
-        self.client.run('install Hello/1.2.0@user/testing '
-                        '-s compiler="Visual Studio" '
-                        '-s compiler.version=8 '
-                        '-s compiler.runtime=MD', assert_error=True)
-        self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Missing",
-                      self.client.out)
-
-        self.client.run('install Hello/1.2.0@user/testing '
-                        '-s compiler="intel" '
-                        '-s compiler.version="16" '
-                        '-s compiler.base="Visual Studio" '
-                        '-s compiler.base.version=8 '
-                        '-s compiler.base.runtime=MD')
-        self.assertIn("Hello/1.2.0@user/testing:24173945aa3b189def01170b0b30d28e48bdc68d - Cache",
-                      self.client.out)
-
-        self.client.run('install Hello/1.2.0@user/testing '
-                        '-s compiler="intel" '
-                        '-s compiler.version="16" '
-                        '-s compiler.base_incompatible=True '
-                        '-s compiler.base="Visual Studio" '
-                        '-s compiler.base.version=8 '
-                        '-s compiler.base.runtime=MD')
-        self.assertIn("Hello/1.2.0@user/testing:24173945aa3b189def01170b0b30d28e48bdc68d - Cache",
-                      self.client.out)
-
     def intel_compatible_test(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.intel_compatible()",
+        self._export("Hello", "1.2.0", package_id_text="self.info.base_compatible()",
                      channel="user/testing",
                      settings='"compiler"')
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
                         '-s compiler.version="16" '
+                        '-s compiler.runtime=shared '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD --build')
@@ -489,19 +453,60 @@ class Pkg(ConanFile):
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
                         '-s compiler.version="16" '
+                        '-s compiler.runtime=shared '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD')
         self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Cache",
                       self.client.out)
-        self.client.run("search Hello/1.2.0@user/testing")
 
         self.client.run('install Hello/1.2.0@user/testing '
                         '-s compiler="intel" '
                         '-s compiler.version="16" '
-                        '-s compiler.base_incompatible=True '
+                        '-s compiler.runtime=shared '
+                        '-s compiler.base_compatible=False '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD', assert_error=True)
+        self.assertIn("Hello/1.2.0@user/testing:5c0ce50add8f041a1432dee229b0ae3b34a34d04 - Missing",
+                      self.client.out)
+
+    def intel_incompatible_test(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.base_incompatible()",
+                     channel="user/testing",
+                     settings='"compiler"')
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.version="16" '
+                        '-s compiler.runtime=static '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD --build')
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="Visual Studio" '
+                        '-s compiler.version=8 '
+                        '-s compiler.runtime=MD', assert_error=True)
+        self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Missing",
+                      self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.version="16" '
+                        '-s compiler.runtime=static '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD')
-        self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Cache",
+        self.assertIn("Hello/1.2.0@user/testing:ed5a665740443b9bebbc0d64d2af3c67eda46b2e - Cache",
+                      self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.version="16" '
+                        '-s compiler.runtime=static '
+                        '-s compiler.base_compatible=True '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD', assert_error=True)
+        self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Missing",
                       self.client.out)
