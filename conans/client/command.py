@@ -115,7 +115,7 @@ class Command(object):
     def __init__(self, conan_api):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
-        self._out = conan_api.user_io.out
+        self._out = conan_api.out
 
     @property
     def _outputer(self):

@@ -203,14 +203,14 @@ class ConanAPIV1(object):
     def __init__(self, cache_folder=None, output=None, user_io=None, http_requester=None,
                  runner=None):
         self.color = colorama_initialize()
-        output = output or ConanOutput(sys.stdout, sys.stderr, self.color)
-        self.user_io = user_io or UserIO(out=output)
+        self.out = output or ConanOutput(sys.stdout, sys.stderr, self.color)
+        self.user_io = user_io or UserIO(out=self.out)
         self.cache_folder = cache_folder or os.path.join(get_conan_user_home(), ".conan")
         self.http_requester = http_requester
         self.runner = runner
         self.app = None  # Api calls will create a new one every call
         # Migration system
-        migrator = ClientMigrator(self.cache_folder, Version(client_version), output)
+        migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
         # FIXME Remove in Conan 2.0
         sys.path.append(os.path.join(self.cache_folder, "python"))
