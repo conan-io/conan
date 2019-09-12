@@ -166,9 +166,3 @@ class ConanGetTest(unittest.TestCase):
                                                              pkg_id=NO_SETTINGS_PACKAGE_ID))
         self.assertIn("WARN: Usage of `--package` argument is deprecated. Use a full reference "
                       "instead: `conan get [...] ", self.client.out)
-
-    def test_get_not_found_reference(self):
-        """ Conan get must return 'Recipe not found' when the server answer is 404
-        """
-        self.client.run('get foobar/0.1.0@qux/channel -r default', assert_error=True)
-        self.assertIn("Recipe not found: 'foobar/0.1.0@qux/channel'. [Remote: default]", self.client.out)
