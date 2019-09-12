@@ -1,13 +1,13 @@
-from conans.client.generators.virtualenv import VirtualEnvGenerator
+from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
 
 
-class VirtualEnvPythonGenerator(VirtualEnvGenerator):
+class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
 
     def __init__(self, conanfile):
         super(VirtualEnvPythonGenerator, self).__init__(conanfile)
         self.venv_name = "conanenvpython"
         ppath = conanfile.env.get("PYTHONPATH")
-        self.env = {"PYTHONPATH": [ppath, ] if not isinstance(ppath, list) else ppath}
+        self.env.update({"PYTHONPATH": [ppath, ] if not isinstance(ppath, list) else ppath})
 
     @property
     def content(self):

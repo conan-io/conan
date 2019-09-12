@@ -22,5 +22,5 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
         content = gen.content
 
         self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH+:$PYTHONPATH}',
-                      content["activate_python.sh"])
+                      content["activate_run_python.sh"])
 

@@ -21,6 +21,9 @@ class BaseConan(ConanFile):
 
     def package_info(self):
         self.env_info.PYTHONPATH="/path/to/something"
+        self.env_info.LD_LIBRARY_PATH="/path/ld_library"
+        self.env_info.DYLD_LIBRARY_PATH="/path/dyld_library"
+        self.env_info.PATH="/path/path"
         self.env_info.OTHER="23"
 """
 
@@ -34,9 +37,12 @@ virtualenv
         client.run("create . ")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
-        name = "activate_python.sh" if platform.system() != "Windows" else "activate_python.bat"
+        name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_python.bat"
         contents = load(os.path.join(client.current_folder, name))
         self.assertNotIn("OTHER", contents)
+        self.assertIn("PATH=", contents)
+        self.assertIn("LD_LIBRARY_PATH=", contents)
+        self.assertIn("DYLD_LIBRARY_PATH=", contents)
         if platform.system != "Windows":
             self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH+:$PYTHONPATH}', contents)
         else:
@@ -66,7 +72,7 @@ class BaseConan(ConanFile):
             client.run("create . ")
             client.save({"conanfile.txt": base}, clean_first=True)
             client.run("install . -g virtualenv_python")
-            name = "activate_python.sh" if platform.system() != "Windows" else "activate_python.bat"
+            name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_python.bat"
             contents = load(os.path.join(client.current_folder, name))
             self.assertNotIn("OTHER", contents)
             if platform.system != "Windows":
