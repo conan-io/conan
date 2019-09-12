@@ -37,7 +37,7 @@ virtualenv
         name = "activate_python.sh" if platform.system() != "Windows" else "activate_python.bat"
         contents = load(os.path.join(client.current_folder, name))
         self.assertNotIn("OTHER", contents)
-        if platform.system != "Windows":
+        if platform.system() != "Windows":
             self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH+:$PYTHONPATH}', contents)
         else:
             self.assertIn('SET PYTHONPATH=/path/to/something;%PYTHONPATH%', contents)
@@ -69,8 +69,8 @@ class BaseConan(ConanFile):
             name = "activate_python.sh" if platform.system() != "Windows" else "activate_python.bat"
             contents = load(os.path.join(client.current_folder, name))
             self.assertNotIn("OTHER", contents)
-            if platform.system != "Windows":
+            if platform.system() != "Windows":
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'
                               '${PYTHONPATH+:$PYTHONPATH}', contents)
             else:
-                self.assertIn('SET PYTHONPATH=/path/to/something;%PYTHONPATH%', contents)
+                self.assertIn('SET PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
