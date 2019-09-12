@@ -537,7 +537,7 @@ class ConanInfo(object):
     def base_compatible(self):
         if self.full_settings.compiler != "intel":
             return
-        if self.full_settings.compiler.base_compatible is False:
+        if self.full_settings.compiler.base_compatible == "False":
             return
         else:
             self._base_compatible()
@@ -545,7 +545,7 @@ class ConanInfo(object):
     def base_incompatible(self):
         if self.full_settings.compiler != "intel":
             return
-        if self.full_settings.compiler.base_compatible is True:
+        if self.full_settings.compiler.base_compatible == "True":
             return
         else:
             self._base_incompatible()
