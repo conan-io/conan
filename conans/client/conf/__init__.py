@@ -172,6 +172,7 @@ path = ./data
 
 [hooks]    # environment CONAN_HOOKS
 attribute_checker
+recipe_typo_checker
 
 # Default settings now declared in the default profile
 

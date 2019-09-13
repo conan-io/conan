@@ -19,6 +19,37 @@ def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
                         % field)
 """
 
+recipe_typo_checker_hook = """
+import inspect
+from difflib import get_close_matches
+
+from conans import ConanFile
+
+
+def pre_export(output, conanfile, conanfile_path, reference, **kwargs):
+    def get_members(conanfile):
+        return [m[0] for m in inspect.getmembers(conanfile) if not m[0].startswith('_')]
+
+    base_members = get_members(ConanFile)
+    base_members.extend(["requires", "build_requires", "requirements",
+                         "build_requirements", "python_requires", "keep_imports",
+                         "imports", "build_id", "deploy", "scm", "conan_data",
+                         "display_name", "output"])
+
+    for member in get_members(conanfile):
+        if member in base_members:
+            continue
+
+        matches = get_close_matches(
+            word=member, possibilities=base_members, n=5, cutoff=0.80)
+        if len(matches) == 0:
+            continue
+
+        output.warn("The '%s' member looks like a typo. Similar to:" % member)
+        for match in matches:
+            output.warn("    %s" % match)
+"""
+
 valid_hook_methods = ["pre_export", "post_export",
                       "pre_source", "post_source",
                       "pre_build", "post_build",
@@ -40,12 +71,15 @@ class HookManager(object):
         self.hooks = defaultdict(list)
         self.output = output
         self._attribute_checker_path = os.path.join(self._hooks_folder, "attribute_checker.py")
+        self._recipe_typo_checker_path = os.path.join(self._hooks_folder, "recipe_typo_checker.py")
 
     def create_default_hooks(self):
         save(self._attribute_checker_path, attribute_checker_hook)
+        save(self._recipe_typo_checker_path, recipe_typo_checker_hook)
 
     def execute(self, method_name, **kwargs):
-        if not os.path.exists(self._attribute_checker_path):
+        if any(not os.path.exists(path) for path in [self._attribute_checker_path,
+                                                     self._recipe_typo_checker_path]):
             self.create_default_hooks()
         if not self.hooks:
             self.load_hooks()
