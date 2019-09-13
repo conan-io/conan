@@ -1,14 +1,14 @@
-import platform
 import unittest
 
 from conans import ConanFile, Settings
 from conans.client.generators.virtualenv_python import VirtualEnvPythonGenerator
+from conans.model.env_info import DepsEnvInfo
 from conans.model.env_info import EnvValues
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.model.env_info import DepsEnvInfo
 
 
 class VirtualEnvPythonGeneratorTest(unittest.TestCase):
+
     def pythonpath_test(self):
         """
         Check PYTHONPATH env variable
@@ -21,23 +21,6 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
         gen = VirtualEnvPythonGenerator(conanfile)
         content = gen.content
 
-        file_extension = {"Linux": ".sh", "Windows": ".bat"}.get(platform.system(), ".sh")
-        delimiter = {"Linux": ":", "Windows": ";"}.get(platform.system(), ":")
+        self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH+:$PYTHONPATH}',
+                      content["activate_run_python.sh"])
 
-        actual_pythonpath_value = [
-            line
-            for line in content["activate_run" + file_extension].splitlines()
-            if line.startswith("PYTHONPATH")
-        ][0].split("=")[1]
-
-        assert actual_pythonpath_value.endswith("${PYTHONPATH+:$PYTHONPATH}")
-
-        actual_pythonpath_set = set(
-            actual_pythonpath_value[: -len("${PYTHONPATH+:$PYTHONPATH}")].split(
-                delimiter
-            )
-        )
-
-        assert actual_pythonpath_set == set(
-            ['"1"', '"2"', '"three"', '"DepAPath"', '"DepBPath"']
-        )
