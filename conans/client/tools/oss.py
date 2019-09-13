@@ -45,7 +45,6 @@ class CpuProperties(object):
 
 def cpu_count(output=None):
     try:
-        cpu = CpuProperties()
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         if env_cpu_count is not None and not env_cpu_count.isdigit():
             raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
