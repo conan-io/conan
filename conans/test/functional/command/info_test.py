@@ -7,7 +7,7 @@ import unittest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import load, save
 
 
@@ -653,3 +653,34 @@ class MyTest(ConanFile):
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)
         self.assertNotIn("shared", client.out)
+
+    def test_info_update_package(self):
+        """ Conan info --update must update from upstream
+        """
+        conanfile = """from conans import ConanFile
+from conans.util.files import save
+
+class MyTest(ConanFile):
+    name = "pkg"
+    version = "0.1"
+    settings = "build_type"
+    author = "dummy"
+
+"""
+
+        test_server = TestServer(users={"lu": "mypass"})
+        servers = {"default": test_server}
+        client_a = TestClient(servers=servers, users={"default": [("lu", "mypass")]})
+        client_a.save({"conanfile.py": conanfile})
+        client_a.run("export . lu/channel")
+        client_a.run("upload pkg/0.1@lu/channel")
+        client_a.run("info pkg/0.1@lu/channel")
+        self.assertIn("Author: dummy", str(client_a.out))
+
+        client_b = TestClient(servers=servers, users={"default": [("lu", "mypass")]})
+        client_b.save({"conanfile.py": conanfile.replace("dummy", "foobar")})
+        client_b.run("export . lu/channel")
+        client_b.run("upload pkg/0.1@lu/channel")
+
+        client_a.run("info --update pkg/0.1@lu/channel")
+        self.assertIn("Author: foobar", str(client_a.out))
