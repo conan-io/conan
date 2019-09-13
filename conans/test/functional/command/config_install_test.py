@@ -122,6 +122,7 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertIn("foo", hooks)
         self.assertIn("custom/custom", hooks)
         self.assertIn("attribute_checker", hooks)
+        self.assertIn("recipe_typo_checker", hooks)
         client.run('config install "%s"' % folder)
         self.assertIn("Processing conan.conf", client.out)
         content = load(client.cache.conan_conf_path)

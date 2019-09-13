@@ -10,7 +10,24 @@ from conans import ConanFile
 class AConan(ConanFile):
     name = "basic"
     version = "0.1"
-    
+    def package_info(self):
+        self.cpp_info.defines = ["ACONAN"]
+"""
+
+conanfile_with_typos = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    name = "basic"
+    version = "0.1"
+
+    export_sources = "OH_NO"
+
+    require = "Hello/0.1@oh_no/stable"
+
+    def requirement(self):
+        self.requires("Hello/0.1@oh_no/stable")
+
     def package_info(self):
         self.cpp_info.defines = ["ACONAN"]
 """
@@ -132,7 +149,7 @@ def post_download_package(output, conanfile_path, reference, package_id, remote,
     output.info("reference=%s" % reference.full_str())
     output.info("package_id=%s" % package_id)
     output.info("remote.name=%s" % remote.name)
-    
+
 def pre_package_info(output, conanfile, reference, **kwargs):
     output.info("reference=%s" % reference.full_str())
     output.info("conanfile.cpp_info.defines=%s" % conanfile.cpp_info.defines)
@@ -164,6 +181,7 @@ class HookTest(unittest.TestCase):
 
     def default_hook_test(self):
         client = TestClient()
+
         self.assertTrue(client.cache.hooks_path.endswith("hooks"))
         client.save({"conanfile.py": conanfile_basic})
         client.run("export . danimtb/testing")
@@ -173,6 +191,19 @@ class HookTest(unittest.TestCase):
                       "WARN: Conanfile doesn't have 'description'", client.out)
         self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
                       "WARN: Conanfile doesn't have 'license'", client.out)
+        self.assertNotIn("member looks like a typo", client.out)
+
+        client.save({"conanfile.py": conanfile_with_typos})
+        client.run("export . danimtb/testing")
+        recipe_typo_checker_output = """
+[HOOK - recipe_typo_checker.py] pre_export(): WARN: The 'export_sources' member looks like a typo. Similar to:
+[HOOK - recipe_typo_checker.py] pre_export(): WARN:     exports_sources
+[HOOK - recipe_typo_checker.py] pre_export(): WARN: The 'require' member looks like a typo. Similar to:
+[HOOK - recipe_typo_checker.py] pre_export(): WARN:     requires
+[HOOK - recipe_typo_checker.py] pre_export(): WARN: The 'requirement' member looks like a typo. Similar to:
+[HOOK - recipe_typo_checker.py] pre_export(): WARN:     requirements
+"""
+        self.assertIn(recipe_typo_checker_output, client.out)
 
     def complete_hook_test(self):
         server = TestServer([], users={"danimtb": "pass"})
