@@ -1,6 +1,7 @@
 import os
 
 from conans.client.generators import write_generators
+from conans.client.toolchain import write_toolchain
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
@@ -85,6 +86,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
             write_generators(conanfile, install_folder, output)
+            write_toolchain(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference) or use_lock:
             # Write conaninfo
             content = normalize(conanfile.info.dumps())

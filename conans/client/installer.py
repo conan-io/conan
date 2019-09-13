@@ -5,13 +5,14 @@ import time
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
-from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
+    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
+from conans.client.toolchain import write_toolchain
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
@@ -106,6 +107,9 @@ class _PackageBuilder(object):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
         write_generators(conanfile, build_folder, self._output)
+
+        logger.info("TOOLCHAIN: Writing toolchain")
+        write_toolchain(conanfile, build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -359,6 +363,7 @@ class BinaryInstaller(object):
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
                 write_generators(node.conanfile, build_folder, output)
+                write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
                 graph_info_node = GraphInfo(graph_info.profile, root_ref=node.ref)
