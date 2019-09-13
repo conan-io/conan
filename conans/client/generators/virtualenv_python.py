@@ -7,7 +7,8 @@ class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
         super(VirtualEnvPythonGenerator, self).__init__(conanfile)
         self.venv_name = "conanenvpython"
         ppath = conanfile.env.get("PYTHONPATH")
-        self.env.update({"PYTHONPATH": [ppath, ] if not isinstance(ppath, list) else ppath})
+        if ppath:
+            self.env.update({"PYTHONPATH": [ppath, ] if not isinstance(ppath, list) else ppath})
 
     @property
     def content(self):

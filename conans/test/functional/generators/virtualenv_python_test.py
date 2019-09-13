@@ -4,7 +4,7 @@ import os
 
 from conans.util.files import load
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class VirtualEnvPythonGeneratorTest(unittest.TestCase):
@@ -82,3 +82,21 @@ class BaseConan(ConanFile):
                               '${PYTHONPATH+:$PYTHONPATH}', contents)
             else:
                 self.assertIn('SET PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
+
+    def no_value_declared_test(self):
+        client = TestClient()
+        dep1 = GenConanfile()
+
+        base = '''
+[requires]
+base/0.1
+[generators]
+virtualenv
+    '''
+        client.save({"conanfile.py": dep1})
+        client.run("create . base/0.1@")
+        client.save({"conanfile.txt": base}, clean_first=True)
+        client.run("install . -g virtualenv_python")
+        name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_python.bat"
+        contents = load(os.path.join(client.current_folder, name))
+        self.assertNotIn("PYTHONPATH", contents)
