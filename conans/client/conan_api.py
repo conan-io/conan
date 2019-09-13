@@ -657,6 +657,7 @@ class ConanAPIV1(object):
         remotes = self.app.cache.registry.load_remotes()
         remotes.select(remote_name)
         # FIXME: Using update as check_update?
+        # TODO (uilian): https://github.com/conan-io/conan/issues/5738
         self.app.python_requires.enable_remotes(check_updates=update, remotes=remotes)
         deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info, build,
                                                                update, False, remotes,
