@@ -93,17 +93,13 @@ class HelloReuseConan(ConanFile):
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_USERNAME environment "
-                      "variable not defined, but self.user is used", self.client.out)
+        self.assertIn("Failed requirement 'Say/0.1@None/None'", self.client.out)
+        self.assertNotIn("ERROR: conanfile.py (Hello/0.1): "
+                         "Error in requirements() method, line 10", self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_CHANNEL environment "
-                      "variable not defined, but self.channel is used", self.client.out)
+        self.assertIn("Failed requirement 'Say/0.1@lasote/None'", self.client.out)
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install .")
@@ -129,7 +125,7 @@ class SayConan(ConanFile):
     version = "0.1"
     build_policy = "missing"
     default_user = "userfoo"
-    
+
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 
