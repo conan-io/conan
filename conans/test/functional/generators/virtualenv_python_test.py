@@ -97,6 +97,6 @@ virtualenv
         client.run("create . base/0.1@")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install . -g virtualenv_python")
-        name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_python.bat"
+        name = "activate_run_python.sh" if platform.system() != "Windows" else "activate_run_python.bat"
         contents = load(os.path.join(client.current_folder, name))
         self.assertNotIn("PYTHONPATH", contents)
