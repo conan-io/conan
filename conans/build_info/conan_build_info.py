@@ -17,7 +17,8 @@ def _extract_uploads_from_conan_trace(path):
                 doc = json.loads(line)
                 if doc["_action"] in ("UPLOADED_RECIPE", "UPLOADED_PACKAGE"):
                     module_type = "recipe" if doc["_action"] == "UPLOADED_RECIPE" else "package"
-                    modules[doc["_id"]] = {"remote": doc["remote"], "files": [], "type": module_type}
+                    modules[doc["_id"]] = {"remote": doc["remote"],
+                                           "files": [], "type": module_type}
                     modules[doc["_id"]]["files"].extend(doc["files"])
     except ValueError as exc:
         raise Exception("INVALID TRACE FILE! %s" % exc)
@@ -68,8 +69,9 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
                 conan_info = conan_infos[0]["path"]
                 info = ConanInfo.loads(load(conan_info))
                 for pref in info.full_requires:
-                    deps[str(ref_or_pref.ref)].add(str(pref.ref))
-                    deps[str(ref_or_pref)].add(str(pref))
+                    clear_pref = pref.copy_clear_revs()
+                    deps[repr(ref_or_pref.ref.copy_clear_rev())].add(repr(clear_pref.ref))
+                    deps[repr(ref_or_pref.copy_clear_revs())].add(repr(clear_pref))
 
     # Add the modules
     for module_id, mod_doc in uploaded_files.items():

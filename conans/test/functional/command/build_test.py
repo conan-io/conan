@@ -1,10 +1,12 @@
 import os
+import textwrap
 import unittest
 
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load, mkdir
+
 
 conanfile_scope_env = """
 from conans import ConanFile
@@ -124,11 +126,11 @@ class AConan(ConanFile):
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py")
         pref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package(pref).replace("\\", "/")
+        package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/")
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
-                      % package_folder, client.user_io.out)
+                      % package_folder, client.out)
 
     def build_different_folders_test(self):
         conanfile = """
@@ -321,7 +323,7 @@ class FooConan(ConanFile):
 """
         client.save({CONANFILE: conanfile})
         client.run("create --build foo/1.0@user/stable . user/stable")
-        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
+        self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
 
     def build_multiple_full_reference_test(self):
         client = TestClient()
@@ -345,5 +347,31 @@ class BarConan(ConanFile):
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("create --build foo/1.0@user/stable --build bar/1.0@user/testing . user/testing")
-        self.assertIn("foo/1.0@user/stable: WARN: Forced build from source", client.out)
-        self.assertIn("bar/1.0@user/testing: WARN: Forced build from source", client.out)
+        self.assertIn("foo/1.0@user/stable: Forced build from source", client.out)
+        self.assertIn("bar/1.0@user/testing: Forced build from source", client.out)
+
+    def debug_build_release_deps_test(self):
+        # https://github.com/conan-io/conan/issues/2899
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Conan(ConanFile):
+                name = "{name}"
+                {requires}
+                settings = "build_type"
+                def build(self):
+                    self.output.info("BUILD: %s BuildType=%s!"
+                                     % (self.name, self.settings.build_type))
+                def package_info(self):
+                    self.output.info("PACKAGE_INFO: %s BuildType=%s!"
+                                     % (self.name, self.settings.build_type))
+            """)
+        client.save({CONANFILE: conanfile.format(name="Dep", requires="")})
+        client.run("create . Dep/0.1@user/testing -s build_type=Release")
+        client.save({CONANFILE: conanfile.format(name="MyPkg",
+                                                 requires="requires = 'Dep/0.1@user/testing'")})
+        client.run("install . -s MyPkg:build_type=Debug -s build_type=Release")
+        self.assertIn("Dep/0.1@user/testing: PACKAGE_INFO: Dep BuildType=Release!", client.out)
+        client.run("build .")
+        self.assertIn("conanfile.py (MyPkg/None): BUILD: MyPkg BuildType=Debug!",
+                      client.out)

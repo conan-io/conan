@@ -26,7 +26,7 @@ class ProfileTest(unittest.TestCase):
     def empty_test(self):
         client = TestClient()
         client.run("profile list")
-        self.assertIn("No profiles defined", client.user_io.out)
+        self.assertIn("No profiles defined", client.out)
 
     def list_test(self):
         client = TestClient()
@@ -59,16 +59,21 @@ class ProfileTest(unittest.TestCase):
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("[settings]\nos=Windows", client.user_io.out)
-        self.assertIn("MyOption=32", client.user_io.out)
+        self.assertIn("[settings]\nos=Windows", client.out)
+        self.assertIn("MyOption=32", client.out)
         client.run("profile show profile3")
-        self.assertIn("CC=/path/tomy/gcc_build", client.user_io.out)
-        self.assertIn("CXX=/path/tomy/g++_build", client.user_io.out)
-        self.assertIn("package:VAR=value", client.user_io.out)
+        self.assertIn("CC=/path/tomy/gcc_build", client.out)
+        self.assertIn("CXX=/path/tomy/g++_build", client.out)
+        self.assertIn("package:VAR=value", client.out)
 
     def profile_update_and_get_test(self):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
+        if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
+            self.assertIn("Or edit '{}/MyProfile' and "
+                          "set compiler.libcxx=libstdc++11".format(client.current_folder),
+                          client.out)
+
         pr_path = os.path.join(client.current_folder, "MyProfile")
 
         client.run("profile update settings.os=FakeOS ./MyProfile")
@@ -129,13 +134,13 @@ class ProfileTest(unittest.TestCase):
 
         # Remove a non existent key
         client.run("profile remove settings.os ./MyProfile", assert_error=True)
-        self.assertIn("Profile key 'settings.os' doesn't exist", client.user_io.out)
+        self.assertIn("Profile key 'settings.os' doesn't exist", client.out)
 
         client.run("profile remove options.foo ./MyProfile", assert_error=True)
-        self.assertIn("Profile key 'options.foo' doesn't exist", client.user_io.out)
+        self.assertIn("Profile key 'options.foo' doesn't exist", client.out)
 
         client.run("profile remove env.foo ./MyProfile", assert_error=True)
-        self.assertIn("Profile key 'env.foo' doesn't exist", client.user_io.out)
+        self.assertIn("Profile key 'env.foo' doesn't exist", client.out)
 
     def profile_update_env_test(self):
         client = TestClient()
@@ -169,9 +174,46 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("os=", load(pr_path))
 
         client.run("profile new ./MyProfile2 --detect", assert_error=True)
-        self.assertIn("Profile already exists", client.user_io.out)
+        self.assertIn("Profile already exists", client.out)
 
         client.run("profile new MyProfile3")
         pr_path = os.path.join(client.cache.profiles_path, "MyProfile3")
         self.assertTrue(os.path.exists(pr_path))
         self.assertNotIn("os=", load(pr_path))
+
+    def profile_force_new_test(self):
+        client = TestClient()
+
+        empty_profile = """[settings]
+[options]
+[build_requires]
+[env]
+"""
+        client.run("profile new ./MyProfile")
+        pr_path = os.path.join(client.current_folder, "MyProfile")
+        self.assertTrue(os.path.exists(pr_path))
+        self.assertEqual(load(pr_path), empty_profile)
+
+        client.run("profile new ./MyProfile --detect", assert_error=True)
+        self.assertIn("Profile already exists", client.out)
+
+        client.run("profile new ./MyProfile --detect --force", assert_error=False)
+        self.assertNotEqual(load(pr_path), empty_profile)
+
+        detected_profile = load(pr_path)
+
+        client.run("profile update settings.os=FakeOS ./MyProfile")
+        self.assertIn("\nos=FakeOS", load(pr_path))
+
+        client.run("profile update env.MyEnv=MYVALUe ./MyProfile")
+        self.assertIn("[env]\nMyEnv=MYVALUe", load(pr_path))
+
+        client.run("profile new ./MyProfile --detect --force", assert_error=False)
+        self.assertNotIn("\nos=FakeOS", load(pr_path))
+        self.assertNotIn("[env]\nMyEnv=MYVALUe", load(pr_path))
+        self.assertEqual(load(pr_path), detected_profile)
+
+    def missing_subarguments_test(self):
+        client = TestClient()
+        client.run("profile", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)

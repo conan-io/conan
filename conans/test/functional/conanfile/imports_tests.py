@@ -55,7 +55,7 @@ class TestConan(ConanFile):
                       client.out)
         pref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),
                                 "e6f2dac07251ad9958120a7f7c324366fb3b6f2a")
-        pkg_folder = client.cache.package(pref)
+        pkg_folder = client.cache.package_layout(pref.ref).package(pref)
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))
@@ -72,7 +72,7 @@ class TestConan(ConanFile):
 """
         client.save({"conanfile.py": testconanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertIn("IMPORTED FOLDERS: [", client.user_io.out)
+        self.assertIn("IMPORTED FOLDERS: [", client.out)
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibB/LICENSE.md")),

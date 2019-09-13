@@ -1,5 +1,6 @@
 import re
 import traceback
+from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model import Generator
@@ -83,9 +84,10 @@ class TXTGenerator(Generator):
     @staticmethod
     def _loads_cpp_info(text):
         pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
-        result = DepsCppInfo()
 
         try:
+            # Parse the text
+            data = defaultdict(lambda: defaultdict(dict))
             for m in pattern.finditer(text):
                 var_name = m.group(1)
                 lines = []
@@ -96,6 +98,7 @@ class TXTGenerator(Generator):
                     lines.append(line)
                 if not lines:
                     continue
+
                 tokens = var_name.split(":")
                 if len(tokens) == 2:  # has config
                     var_name, config = tokens
@@ -103,30 +106,31 @@ class TXTGenerator(Generator):
                     config = None
                 tokens = var_name.split("_", 1)
                 field = tokens[0]
-                if len(tokens) == 2:
-                    dep = tokens[1]
-                    dep_cpp_info = result._dependencies.setdefault(dep, CppInfo(root_folder=""))
-                    if field in ["rootpath", "sysroot"]:
-                        lines = lines[0]
-                    item_to_apply = dep_cpp_info
-                else:
-                    if field == "sysroot":
-                        lines = lines[0]
-                    item_to_apply = result
-
+                dep = tokens[1] if len(tokens) == 2 else None
                 if field == "cppflags":
                     field = "cxxflags"
+                data[dep][config][field] = lines
 
-                if config:
-                    config_deps = getattr(item_to_apply, config)
-                    setattr(config_deps, field, lines)
+            # Build the data structures
+            deps_cpp_info = DepsCppInfo()
+            for dep, configs_cpp_info in data.items():
+                if dep is None:
+                    cpp_info = deps_cpp_info
                 else:
-                    setattr(item_to_apply, field, lines)
+                    cpp_info = deps_cpp_info._dependencies.setdefault(dep, CppInfo(root_folder=""))
+
+                for config, fields in configs_cpp_info.items():
+                    item_to_apply = cpp_info if not config else getattr(cpp_info, config)
+
+                    for key, value in fields.items():
+                        if key in ['rootpath', 'sysroot']:
+                            value = value[0]
+                        setattr(item_to_apply, key, value)
+            return deps_cpp_info
+
         except Exception as e:
             logger.error(traceback.format_exc())
             raise ConanException("There was an error parsing conanbuildinfo.txt: %s" % str(e))
-
-        return result
 
     @property
     def content(self):

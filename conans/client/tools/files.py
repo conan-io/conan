@@ -15,6 +15,8 @@ from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
 UNIT_SIZE = 1000.0
+# Library extensions supported by collect_libs
+VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 @contextmanager
@@ -54,7 +56,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     """
     Unzip a zipped file
     :param filename: Path to the zip file
-    :param destination: Destination folder
+    :param destination: Destination folder (or file for .gz files)
     :param keep_permissions: Keep the zip permissions. WARNING: Can be
     dangerous if the zip was not created in a NIX system, the bits could
     produce undefined permission schema. Use this option only if you are sure
@@ -70,6 +72,13 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
+    if filename.endswith(".gz"):
+        import gzip
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
+        return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
@@ -141,7 +150,7 @@ def untargz(filename, destination=".", pattern=None):
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature:
+    if real_signature != signature.lower():
         raise ConanException("%s signature failed for '%s' file. \n"
                              " Provided signature: %s  \n"
                              " Computed signature: %s" % (algorithm_name,
@@ -169,7 +178,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     class PatchLogHandler(logging.Handler):
         def __init__(self):
             logging.Handler.__init__(self, logging.DEBUG)
-            self.output = output or ConanOutput(sys.stdout, True)
+            self.output = output or ConanOutput(sys.stdout, sys.stderr, color=True)
             self.patchname = patch_file if patch_file else "patch"
 
         def emit(self, record):
@@ -201,7 +210,9 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         return path
 
     def strip_path(path):
-        tokens = path.split("/")[strip:]
+        tokens = path.split("/")
+        if len(tokens) > 1:
+            tokens = tokens[strip:]
         path = "/".join(tokens)
         if base_path:
             path = os.path.join(base_path, path)
@@ -314,7 +325,7 @@ def collect_libs(conanfile, folder=None):
         files = os.listdir(lib_folder)
         for f in files:
             name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib"):
+            if ext in VALID_LIB_EXTENSIONS:
                 if ext != ".lib" and name.startswith("lib"):
                     name = name[3:]
                 if name in result:

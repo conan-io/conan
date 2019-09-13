@@ -10,7 +10,6 @@ from parameterized import parameterized
 
 from conans.client.tools.oss import detected_architecture
 
-
 class DetectedArchitectureTest(unittest.TestCase):
 
     @parameterized.expand([
@@ -36,3 +35,35 @@ class DetectedArchitectureTest(unittest.TestCase):
 
         with mock.patch("platform.machine", mock.MagicMock(return_value=mocked_machine)):
             self.assertEqual(expected_arch, detected_architecture(), "given '%s' expected '%s'" % (mocked_machine, expected_arch))
+
+
+    def test_aix(self):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
+                mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value='32')),\
+                mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
+            self.assertEqual('ppc32', detected_architecture())
+
+        with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='powerpc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='AIX')),\
+                mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value='64')),\
+                mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
+            self.assertEqual('ppc64', detected_architecture())
+
+
+    def test_solaris(self):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='sun4v')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='sparc')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='SunOS')),\
+                mock.patch("platform.architecture", mock.MagicMock(return_value=('64bit', 'ELF'))),\
+                mock.patch("platform.release", mock.MagicMock(return_value='5.11')):
+            self.assertEqual('sparcv9', detected_architecture())
+
+        with mock.patch("platform.machine", mock.MagicMock(return_value='i86pc')),\
+                mock.patch("platform.processor", mock.MagicMock(return_value='i386')),\
+                mock.patch("platform.system", mock.MagicMock(return_value='SunOS')),\
+                mock.patch("platform.architecture", mock.MagicMock(return_value=('64bit', 'ELF'))),\
+                mock.patch("platform.release", mock.MagicMock(return_value='5.11')):
+            self.assertEqual('x86_64', detected_architecture())

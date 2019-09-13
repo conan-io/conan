@@ -49,14 +49,14 @@ def filter_packages(query, package_infos):
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
         for package_id, info in package_infos.items():
-            if evaluate_postfix_with_info(postfix, info):
+            if _evaluate_postfix_with_info(postfix, info):
                 result[package_id] = info
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def evaluate_postfix_with_info(postfix, conan_vars_info):
+def _evaluate_postfix_with_info(postfix, conan_vars_info):
 
     # Evaluate conaninfo with the expression
 
@@ -65,12 +65,12 @@ def evaluate_postfix_with_info(postfix, conan_vars_info):
         Uses conan_vars_info in the closure to evaluate it"""
         name, value = expression.split("=", 1)
         value = value.replace("\"", "")
-        return evaluate(name, value, conan_vars_info)
+        return _evaluate(name, value, conan_vars_info)
 
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def evaluate(prop_name, prop_value, conan_vars_info):
+def _evaluate(prop_name, prop_value, conan_vars_info):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -81,9 +81,16 @@ def evaluate(prop_name, prop_value, conan_vars_info):
 
     info_settings = conan_vars_info.get("settings", [])
     info_options = conan_vars_info.get("options", [])
+    properties = ["os", "os_build", "compiler", "arch", "arch_build", "build_type"]
 
-    if (prop_name in ["os", "os_build", "compiler", "arch", "arch_build", "build_type"] or
-            prop_name.startswith("compiler.")):
+    def starts_with_common_settings(prop_name):
+        for setting in properties:
+            if prop_name.startswith(setting + '.'):
+                return True
+        return False
+
+    if (prop_name in properties or
+            starts_with_common_settings(prop_name)):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)
@@ -93,24 +100,24 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
     if pattern:
         if isinstance(pattern, ConanFileReference):
-            pattern = str(pattern)
+            pattern = repr(pattern)
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
     subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-    refs = [ConanFileReference(*folder.split("/")) for folder in subdirs]
+    refs = [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        refs = [r for r in refs if _partial_match(pattern, r)]
+        refs = [r for r in refs if _partial_match(pattern, repr(r))]
     refs = sorted(refs)
     return refs
 
 
-def _partial_match(pattern, ref):
+def _partial_match(pattern, reference):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
+    tokens = reference.replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
 
     def partial_sums(iterable):
         partial = ''
@@ -129,7 +136,7 @@ def search_packages(package_layout, query):
                            settings: {os: Windows}}}
     param package_layout: Layout for the given reference
     """
-    if not os.path.exists(package_layout.conan()) or (
+    if not os.path.exists(package_layout.base_folder()) or (
             package_layout.ref.revision and
             package_layout.recipe_revision() != package_layout.ref.revision):
         raise RecipeNotFoundException(package_layout.ref, print_rev=True)

@@ -5,6 +5,7 @@
 import unittest
 from mock import mock
 from conans.client.tools.oss import detected_os, OSInfo
+from conans import tools
 
 
 class DetectedOSTest(unittest.TestCase):
@@ -44,3 +45,7 @@ class DetectedOSTest(unittest.TestCase):
     def test_solaris(self):
         with mock.patch("platform.system", mock.MagicMock(return_value='SunOS')):
             self.assertEqual(detected_os(), "SunOS")
+
+    def test_export_tools(self):
+        with mock.patch("platform.system", mock.MagicMock(return_value='FreeBSD')):
+            self.assertEqual(tools.detected_os(), "FreeBSD")

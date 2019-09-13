@@ -2,10 +2,6 @@
 class RestRoutes(object):
 
     @property
-    def ping(self):
-        return "ping"
-
-    @property
     def recipe(self):
         return 'conans/{name}/{version}/{username}/{channel}'
 

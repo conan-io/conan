@@ -4,8 +4,8 @@ import re
 from subprocess import PIPE, Popen, STDOUT
 
 from conans.client.output import Color
+from conans.client.tools import detected_os, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
-from conans.client.tools import detected_os
 from conans.model.version import Version
 
 
@@ -44,12 +44,8 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         # number ("7.1.1").
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
-            major = installed_version.split(".")[0]
-            if int(major) >= 5:
-                output.info("gcc>=5, using the major as version")
-                installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -65,12 +61,8 @@ def _clang_compiler(output, compiler_exe="clang"):
         installed_version = re.search("([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
-            major = installed_version.split(".")[0]
-            if int(major) >= 8 and compiler == "clang":
-                output.info("clang>=8, using the major as version")
-                installed_version = major
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -82,7 +74,7 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
-    except:
+    except Exception:
         return None
 
 
@@ -125,33 +117,45 @@ def _get_default_compiler(output):
         return gcc or clang
 
 
-def _detect_compiler_version(result, output):
+def _get_profile_compiler_version(compiler, version, output):
+    major = version.split(".")[0]
+    if compiler == "clang" and int(major) >= 8:
+        output.info("clang>=8, using the major as version")
+        return major
+    elif compiler == "gcc" and int(major) >= 5:
+        output.info("gcc>=5, using the major as version")
+        return major
+    return version
+
+
+def _detect_compiler_version(result, output, profile_path):
     try:
         compiler, version = _get_default_compiler(output)
-    except:
+    except Exception:
         compiler, version = None, None
     if not compiler or not version:
         output.error("Unable to find a working compiler")
     else:
         result.append(("compiler", compiler))
-        result.append(("compiler.version", version))
+        result.append(("compiler.version",
+                       _get_profile_compiler_version(compiler, version, output)))
         if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
             if Version(version) >= Version("5.1"):
-
+                profile_name = os.path.basename(profile_path)
                 msg = """
 Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
 'libstdc++' for backwards compatibility.
 Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
 
-If you want Conan to use the new ABI, edit the default profile at:
+If you want Conan to use the new ABI for the {profile} profile, run:
 
-    ~/.conan/profiles/default
+    $ conan profile update settings.compiler.libcxx=libstdc++11 {profile}
 
-adjusting 'compiler.libcxx=libstdc++11'
-"""
+Or edit '{profile_path}' and set compiler.libcxx=libstdc++11
+""".format(profile=profile_name, profile_path=profile_path)
                 output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
                                "***********************\n %s\n************************************"
                                "************************************************\n\n\n" % msg,
@@ -178,6 +182,7 @@ def _detect_os_arch(result, output):
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
+
     platform_machine = platform.machine().lower()
     if platform_machine:
         arch = architectures.get(platform_machine, platform_machine)
@@ -189,16 +194,22 @@ def _detect_os_arch(result, output):
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
+        elif OSInfo().is_aix:
+            arch = OSInfo.get_aix_architecture() or arch
+
         result.append(("arch", arch))
         result.append(("arch_build", arch))
 
 
-def detect_defaults_settings(output):
+def detect_defaults_settings(output, profile_path):
     """ try to deduce current machine values without any constraints at all
+    :param output: Conan Output instance
+    :param profile_path: Conan profile file path
+    :return: A list with default settings
     """
     result = []
     _detect_os_arch(result, output)
-    _detect_compiler_version(result, output)
+    _detect_compiler_version(result, output, profile_path)
     result.append(("build_type", "Release"))
 
     return result

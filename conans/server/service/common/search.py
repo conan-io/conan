@@ -100,12 +100,13 @@ class SearchService(object):
 
         subdirs = list_folder_subdirs(basedir=self._server_store.store, level=5)
         if not pattern:
-            return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
+            return sorted([ConanFileReference(*folder.split("/")).copy_clear_rev()
+                           for folder in subdirs])
         else:
             ret = set()
             for subdir in subdirs:
                 new_ref = ConanFileReference(*subdir.split("/"))
-                if _partial_match(b_pattern, new_ref.full_repr()):
+                if _partial_match(b_pattern, repr(new_ref)):
                     ret.add(new_ref.copy_clear_rev())
 
             return sorted(ret)

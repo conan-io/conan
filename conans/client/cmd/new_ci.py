@@ -11,9 +11,8 @@ env:
 linux: &linux
    os: linux
    dist: xenial
-   sudo: required
    language: python
-   python: "3.6"
+   python: "3.7"
    services:
      - docker
 osx: &osx
@@ -247,6 +246,7 @@ workflows:
 circleci_job = """      - {job}
 """
 
+
 def get_build_py(name, shared):
     shared = 'shared_option_name="{}:shared"'.format(name) if shared else ""
     return build_py.format(name=name, shared=shared)
@@ -315,8 +315,9 @@ def get_gitlab(name, version, user, channel, linux_gcc_versions, linux_clang_ver
                                              configs=configs, upload=upload)}
     return files
 
+
 def get_circleci(name, version, user, channel, linux_gcc_versions, linux_clang_versions,
-               osx_clang_versions, upload_url):
+                 osx_clang_versions, upload_url):
     config = []
     jobs = []
 
@@ -343,8 +344,9 @@ def get_circleci(name, version, user, channel, linux_gcc_versions, linux_clang_v
     configs = "".join(config)
     workflow = circleci_workflow.format(jobs="".join(jobs))
     upload = ('CONAN_UPLOAD: "%s"\n' % upload_url) if upload_url else ""
-    files = {".circleci/config.yml": circleci.format(name=name, version=version, user=user, channel=channel,
-                                             configs=configs, workflow=workflow, upload=upload),
+    files = {".circleci/config.yml": circleci.format(name=name, version=version, user=user,
+                                                     channel=channel, configs=configs,
+                                                     workflow=workflow, upload=upload),
              ".circleci/install.sh": circleci_install,
              ".circleci/run.sh": circleci_run}
     return files
@@ -352,7 +354,8 @@ def get_circleci(name, version, user, channel, linux_gcc_versions, linux_clang_v
 
 def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versions,
                  linux_clang_versions, osx_clang_versions, shared, upload_url, gitlab_gcc_versions,
-                 gitlab_clang_versions, circleci_gcc_versions, circleci_clang_versions, circleci_osx_versions):
+                 gitlab_clang_versions, circleci_gcc_versions, circleci_clang_versions,
+                 circleci_osx_versions):
     if shared and not (visual_versions or linux_gcc_versions or linux_clang_versions or
                        osx_clang_versions or gitlab_gcc_versions or gitlab_clang_versions or
                        circleci_gcc_versions or circleci_clang_versions or circleci_osx_versions):
@@ -362,7 +365,7 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
             circleci_clang_versions or circleci_osx_versions):
         return {}
     gcc_versions = ["4.9", "5", "6", "7", "8"]
-    clang_versions = ["3.9", "4.0", "5.0", "6.0", "7.0"]
+    clang_versions = ["3.9", "4.0", "5.0", "6.0", "7.0", "7.1"]
     if visual_versions is True:
         visual_versions = ["12", "14", "15"]
     if linux_gcc_versions is True:
@@ -410,7 +413,7 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
 
     if circleci_gcc_versions or circleci_clang_versions or circleci_osx_versions:
         files.update(get_circleci(name, version, user, channel, circleci_gcc_versions,
-                                circleci_clang_versions, circleci_osx_versions, upload_url))
+                                  circleci_clang_versions, circleci_osx_versions, upload_url))
 
     if visual_versions:
         files.update(get_appveyor(name, version, user, channel, visual_versions, upload_url))

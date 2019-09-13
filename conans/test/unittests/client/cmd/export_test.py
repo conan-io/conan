@@ -9,7 +9,7 @@ from conans.client.tools import chdir
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCMData
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, TurboTestClient
 from conans.util.files import load, save
 
 
@@ -82,6 +82,56 @@ class ConanLib(ConanFile):
         after_recipe = ''
         self._do_actual_test(scm_data=scm_data, after_scm=after_scm, after_recipe=after_recipe)
 
+    def scm_from_superclass_test(self):
+        client = TurboTestClient()
+        conanfile = '''from conans import ConanFile
+
+def get_conanfile():
+    
+    class BaseConanFile(ConanFile):
+        scm = {
+            "type": "git", 
+            "url": "auto",
+            "revision": "auto"
+        }
+    
+    return BaseConanFile
+
+class Baseline(ConanFile):
+    name = "Base"
+    version = "1.0.0"
+'''
+        client.init_git_repo({"conanfile.py": conanfile}, origin_url="http://whatever.com/c.git")
+        client.run("export . conan/stable")
+        conanfile1 = """from conans import ConanFile, python_requires, tools
+
+baseline = "Base/1.0.0@conan/stable"
+
+# recipe inherits properties from the conanfile defined in the baseline
+class ModuleConan(python_requires(baseline).get_conanfile()):
+    name = "module_name"
+    version = "1.0.0"
+"""
+        conanfile2 = """from conans import ConanFile, python_requires, tools
+
+baseline = "Base/1.0.0@conan/stable"
+
+# recipe inherits properties from the conanfile defined in the baseline
+class ModuleConan(python_requires(baseline).get_conanfile()):
+    pass
+"""
+
+        for conanfile in [conanfile1, conanfile2]:
+            client.save({"conanfile.py": conanfile})
+            client.run("export . module_name/1.0.0@conan/stable")
+            self.assertIn("module_name/1.0.0@conan/stable: "
+                          "A new conanfile.py version was exported", client.out)
+            ref = ConanFileReference.loads("module_name/1.0.0@conan/stable")
+            contents = load(os.path.join(client.cache.package_layout(ref).export(),
+                                         "conanfile.py"))
+            class_str = 'class ModuleConan(python_requires(baseline).get_conanfile()):\n'
+            self.assertIn('%s    scm = {"revision":' % class_str, contents)
+
 
 class SCMUpload(unittest.TestCase):
 
@@ -116,13 +166,12 @@ class TestConan(ConanFile):
            "revision": "auto"}
 """
         client.save({"conanfile.py": conanfile + scm})
-        with chdir(client.current_folder):
-            client.runner("git init")
-            client.runner('git config user.email "you@example.com"')
-            client.runner('git config user.name "Your Name"')
-            client.runner("git remote add origin https://github.com/fake/fake.git")
-            client.runner("git add .")
-            client.runner("git commit -m \"initial commit\"")
+        client.run_command("git init")
+        client.run_command('git config user.email "you@example.com"')
+        client.run_command('git config user.name "Your Name"')
+        client.run_command("git remote add origin https://github.com/fake/fake.git")
+        client.run_command("git add .")
+        client.run_command("git commit -m \"initial commit\"")
         client.run("create . danimtb/testing")
         self.assertIn("Repo origin deduced by 'auto': https://github.com/fake/fake.git", client.out)
         client.run("upload test/1.0@danimtb/testing -r upload_repo")

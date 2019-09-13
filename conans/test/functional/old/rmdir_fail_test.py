@@ -21,11 +21,11 @@ class MyPkg(ConanFile):
         client.run("export . lasote/testing")
         client.run("install MyPkg/0.1@lasote/testing --build")
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/testing")
-        builds = client.cache.builds(ref)
+        builds = client.cache.package_layout(ref).builds()
         build_folder = os.listdir(builds)[0]
         build_folder = os.path.join(builds, build_folder)
         f = open(os.path.join(build_folder, "myfile"), "wb")
         f.write(b"Hello world")
         client.run("install MyPkg/0.1@lasote/testing --build", assert_error=True)
         self.assertIn("Couldn't remove folder, might be busy or open",
-                      client.user_io.out)
+                      client.out)

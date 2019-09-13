@@ -27,20 +27,20 @@ class InLocalCacheTest(unittest.TestCase):
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build missing")
-        self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
-        self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)
+        self.assertIn("build() IN LOCAL CACHE=> True", client.out)
+        self.assertIn("package() IN LOCAL CACHE=> True", client.out)
 
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("install .")
         client.run("build .")
-        self.assertIn("build() IN LOCAL CACHE=> False", client.user_io.out)
+        self.assertIn("build() IN LOCAL CACHE=> False", client.out)
 
         pack_folder = os.path.join(client.current_folder, "package")
         os.mkdir(pack_folder)
         client.current_folder = pack_folder
         client.run("package .. --build-folder ..")
-        self.assertIn("package() IN LOCAL CACHE=> False", client.user_io.out)
+        self.assertIn("package() IN LOCAL CACHE=> False", client.out)
 
         # Confirm that we have the flag depending on the recipe too
         client = TestClient()
@@ -59,11 +59,9 @@ class OtherConan(ConanFile):
 """
         client.save({CONANFILE: conanfile_reuse}, clean_first=True)
         client.run("install . --build")
-        self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
-        self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)
+        self.assertIn("build() IN LOCAL CACHE=> True", client.out)
+        self.assertIn("package() IN LOCAL CACHE=> True", client.out)
         client.run("export . lasote/stable")
         client.run("install Hello1/0.1@lasote/stable --build")
-        self.assertIn("build() IN LOCAL CACHE=> True", client.user_io.out)
-        self.assertIn("package() IN LOCAL CACHE=> True", client.user_io.out)
-
-
+        self.assertIn("build() IN LOCAL CACHE=> True", client.out)
+        self.assertIn("package() IN LOCAL CACHE=> True", client.out)

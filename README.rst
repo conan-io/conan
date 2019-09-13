@@ -1,24 +1,45 @@
+|Logo|
+
 Conan
 =====
 
-A distributed, open-source, C/C++ package manager.
+Decentralized, open-source (MIT), C/C++ package manager.
 
-+------------------------+-------------------------+
-| **master**             | **develop**             |
-+========================+=========================+
-| |Build Status Master|  | |Build Status Develop|  |
-+------------------------+-------------------------+
+- Homepage: https://conan.io/
+- Github: https://github.com/conan-io/conan
+- Docs: https://docs.conan.io/en/latest/
+- Slack: https://cpplang.now.sh/ (#conan channel)
+- Twitter: https://twitter.com/conan_io
 
 
-+------------------------+---------------------------+---------------------------------------------+
-| **Coverage master**    | **Coverage develop**      | **Coverage graph**                          |
-+========================+===========================+=============================================+
-| |Master coverage|      | |Develop coverage|        | |Coverage graph|                            |
-+------------------------+---------------------------+---------------------------------------------+
+Conan is a package manager for C and C++ developers:
+
+- It is fully decentralized. Users can host their packages in their servers, privately. Integrates with Artifactory and Bintray.
+- Portable. Works across all platforms, including Linux, OSX, Windows (with native and first class support, WSL, MinGW),
+  Solaris, FreeBSD, embedded and cross compiling, docker, WSL
+- Manage binaries. It is able to create, upload and download binaries for any configuration and platform,
+  even cross-compiling, saving lots of time in development and continuous integration. The binary compatibility
+  can be configured and customized. Manage all your artifacts in exactly the same way in all platforms.
+- Integrates with any build system, including any propietary and custom one. Provides tested support for major build systems
+  (CMake, MSBuild, Makefiles, Meson, etc).
+- Extensible: Its python based recipes, together with extensions points allows for a great power and flexibility.
+- Large and active community, specially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang.now.sh/ #conan channel).
+  This community also create and maintains packages in Conan-center and Bincrafters repositories in Bintray.
+- Stable. Used in production by many companies, since 1.0 there is a committment not to break package recipes and documented behavior. 
+
+
+
++------------------------+-------------------------+-------------------------+-------------------------+
+| **master**             | **develop**             |  **Coverage**           |    **Code Climate**     |
++========================+=========================+=========================+=========================+
+| |Build Status Master|  | |Build Status Develop|  |  |Develop coverage|     |   |Develop climate|     |
++------------------------+-------------------------+-------------------------+-------------------------+
 
 
 Setup
 =====
+
+Please read https://docs.conan.io/en/latest/installation.html
 
 From binaries
 -------------
@@ -116,7 +137,7 @@ Contributing to the project
 ===========================
 
 Feedback and contribution is always welcome in this project.
-Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+Please read our `contributing guide <https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md>`_.
 
 Running the tests
 =================
@@ -250,6 +271,12 @@ License
    :height: 50px
    :width: 50 px
    :alt: Conan develop coverage
+
+.. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
+   :target: https://codeclimate.com/github/conan-io/conan/maintainability
+   
+.. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
+
 
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 

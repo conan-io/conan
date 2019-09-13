@@ -1,10 +1,10 @@
 import unittest
 
-from conans.client.graph.proxy import ConanProxy
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
+from conans.client.cache.remote_registry import Remotes
 
 myconan1 = """
 from conans import ConanFile
@@ -43,20 +43,22 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
+        proxy = client2.proxy
 
+        remotes = Remotes()
+        remotes.add("remotename", "url")
         with self.assertRaises(NotFoundException):
-            installer.get_recipe(ref, False, False, None, ActionRecorder())
+            proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
                 return Response(False, 500)
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
-        installer = ConanProxy(client2.cache, client2.user_io.out, client2.remote_manager)
+        proxy = client2.proxy
 
         try:
-            installer.get_recipe(ref, False, False, None, ActionRecorder())
+            proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
         except NotFoundException:
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:

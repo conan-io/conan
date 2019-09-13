@@ -6,15 +6,15 @@ from conans.paths import CONAN_MANIFEST, CONANINFO
 
 
 def _format_ref(url, ref):
-    url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                     channel=ref.channel, revision=ref.revision)
+    url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                     channel=ref.channel or "_", revision=ref.revision)
     return url
 
 
 def _format_pref(url, pref):
     ref = pref.ref
-    url = url.format(name=ref.name, version=ref.version, username=ref.user,
-                     channel=ref.channel, revision=ref.revision, package_id=pref.id,
+    url = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                     channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
                      p_revision=pref.revision)
     return url
 
@@ -33,7 +33,7 @@ class ClientCommonRouter(object):
         query = ''
         if pattern:
             if isinstance(pattern, ConanFileReference):
-                pattern = pattern.full_repr()
+                pattern = repr(pattern)
             params = {"q": pattern}
             if not ignorecase:
                 params["ignorecase"] = "False"
@@ -128,10 +128,6 @@ class ClientV2Router(ClientCommonRouter):
 
     def __init__(self, base_url):
         self.base_url = "{}/v2/".format(base_url)
-
-    def recipe_latest(self, ref, path):
-        """Recipe file url"""
-        return self.base_url + self._for_recipe(ref, path)
 
     def recipe_file(self, ref, path):
         """Recipe file url"""
@@ -245,12 +241,13 @@ class ClientV2Router(ClientCommonRouter):
 
     @staticmethod
     def _format_ref_path(url, ref, path):
-        return url.format(name=ref.name, version=ref.version, username=ref.user,
-                          channel=ref.channel, revision=ref.revision, path=path)
+        ret = url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                         channel=ref.channel or "_", revision=ref.revision, path=path)
+        return ret
 
     @staticmethod
     def _format_pref_path(url, pref, path):
         ref = pref.ref
-        return url.format(name=ref.name, version=ref.version, username=ref.user,
-                          channel=ref.channel, revision=ref.revision, package_id=pref.id,
+        return url.format(name=ref.name, version=ref.version, username=ref.user or "_",
+                          channel=ref.channel or "_", revision=ref.revision, package_id=pref.id,
                           p_revision=pref.revision, path=path)

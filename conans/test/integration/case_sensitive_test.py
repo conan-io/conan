@@ -1,8 +1,9 @@
 import unittest
 
-from conans.paths import CONANFILE, is_case_insensitive_os
+from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
+from conans.client.cache.cache import is_case_insensitive_os
 
 conanfile = '''
 from conans import ConanFile
@@ -40,9 +41,9 @@ class CaseSensitiveTest(unittest.TestCase):
     def _check(self, error, client):
         self.assertTrue(error)
         if is_case_insensitive_os():
-            self.assertIn("case incompatible 'Hello0'", client.user_io.out)
+            self.assertIn("case incompatible 'Hello0'", client.out)
         else:
-            self.assertNotIn("case incompatible 'Hello0'", client.user_io.out)
+            self.assertNotIn("case incompatible 'Hello0'", client.out)
 
     def install_same_test(self):
         client = TestClient()
