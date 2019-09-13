@@ -53,7 +53,7 @@ def cpu_count(output=None):
         if env_cpu_count:
             return int(env_cpu_count)
         else:
-            return cpu.get_cpus()
+            return CpuProperties().get_cpus()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
