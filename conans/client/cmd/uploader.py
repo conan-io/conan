@@ -4,8 +4,7 @@ import tarfile
 import time
 from collections import defaultdict
 
-from tqdm import tqdm
-
+from conans.util import progress_bar
 from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
@@ -512,43 +511,21 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             tgz.addfile(tarinfo=info)
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
-        i_file = 0
-        n_files = len(files)
-        last_progress = None
-        if output and n_files > 1 and not output.is_terminal:
-            output.write("[")
-        elif output and n_files > 1 and output.is_terminal:
-            progress_bar = tqdm(total=len(files), desc="Compressing %s" % name,
-                                unit="files", leave=True, dynamic_ncols=False,
-                                ascii=True, file=output)
-
-        for filename, abs_path in sorted(files.items()):
-            info = tarfile.TarInfo(name=filename)
-            info.size = os.stat(abs_path).st_size
-            info.mode = os.stat(abs_path).st_mode & mask
-            if os.path.islink(abs_path):
-                info.type = tarfile.SYMTYPE
-                info.size = 0  # A symlink shouldn't have size
-                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                tgz.addfile(tarinfo=info)
-            else:
-                with open(abs_path, 'rb') as file_handler:
-                    tgz.addfile(tarinfo=info, fileobj=file_handler)
-            if output and n_files > 1:
-                i_file = i_file + 1
-                units = min(50, int(50 * i_file / n_files))
-                if last_progress != units:  # Avoid screen refresh if nothing has change
-                    if not output.is_terminal:
-                        output.write('=' * (units - (last_progress or 0)))
-                    last_progress = units
-                if output.is_terminal:
-                    progress_bar.update()
-
-        if output and n_files > 1:
-            if output.is_terminal:
-                progress_bar.close()
-            else:
-                output.writeln("]")
+        with progress_bar.open_file_list(sorted(files.items()), desc="Compressing %s" % name,
+                                    output=output) as pg_file_list:
+            for filename, abs_path in pg_file_list:
+                info = tarfile.TarInfo(name=filename)
+                info.size = os.stat(abs_path).st_size
+                info.mode = os.stat(abs_path).st_mode & mask
+                if os.path.islink(abs_path):
+                    info.type = tarfile.SYMTYPE
+                    info.size = 0  # A symlink shouldn't have size
+                    info.linkname = os.readlink(abs_path)  # @UndefinedVariable
+                    tgz.addfile(tarinfo=info)
+                else:
+                    with open(abs_path, 'rb') as file_handler:
+                        tgz.addfile(tarinfo=info, fileobj=file_handler)
+                pg_file_list.update()
         tgz.close()
 
     duration = time.time() - t1
