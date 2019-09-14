@@ -185,11 +185,11 @@ class ConanApp(object):
                                           self.remote_manager, self.loader, self.proxy,
                                           resolver)
 
-    def load_remotes(self, remote_name=None, update=False, check_update=False):
+    def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
         if remote_name:
             remotes.select(remote_name)
-        self.python_requires.enable_remotes(update=update, check_update=check_update,
+        self.python_requires.enable_remotes(update=update, check_updates=check_updates,
                                             remotes=remotes)
         return remotes
 
@@ -613,7 +613,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        remotes = self.app.load_remotes(remote_name=remote_name, check_update=check_updates)
+        remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
         deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
                                                           check_updates, False, remotes, recorder)
         return deps_graph.build_order(build_order)
@@ -625,7 +625,7 @@ class ConanAPIV1(object):
         reference, graph_info = self._info_args(reference, install_folder, profile_names,
                                                 settings, options, env)
         recorder = ActionRecorder()
-        remotes = self.app.load_remotes(remote_name=remote_name, check_update=check_updates)
+        remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
         deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info,
                                                                   build_modes, check_updates,
                                                                   False, remotes, recorder)
@@ -639,7 +639,7 @@ class ConanAPIV1(object):
                                                 settings, options, env, lockfile=lockfile)
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
-        remotes = self.app.load_remotes(remote_name=remote_name, check_update=update)
+        remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info, build,
                                                                   update, False, remotes, recorder)
 
