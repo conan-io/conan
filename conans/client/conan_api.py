@@ -25,7 +25,7 @@ from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
 from conans.client.graph.proxy import ConanProxy
-from conans.client.graph.python_requires import ConanPythonRequire
+from conans.client.graph.python_requires import ConanPythonRequire, PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
@@ -179,7 +179,8 @@ class ConanApp(object):
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         resolver = RangeResolver(self.cache, self.remote_manager)
         self.python_requires = ConanPythonRequire(self.proxy, resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
+        self.py_requires = PyRequireLoader(self.proxy, resolver)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.py_requires)
 
         self.graph_manager = GraphManager(self.out, self.cache,
                                           self.remote_manager, self.loader, self.proxy,
@@ -324,7 +325,7 @@ class ConanAPIV1(object):
             remotes = self.app.cache.registry.load_remotes()
             remotes.select(remote_name)
             self.app.python_requires.enable_remotes(update=update, remotes=remotes)
-
+            self.app.py_requires.enable_remotes(update=update, remotes=remotes)
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             graph_info = get_graph_info(profile_names, settings, options, env, cwd, None,
                                         self.app.cache, self.app.out, lockfile=lockfile)
