@@ -4,6 +4,7 @@ import time
 
 from tqdm import tqdm
 
+from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException
@@ -52,21 +53,12 @@ class FileUploader(object):
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
-        if not self.output.is_terminal:
-            self.output.info("")
-        # Actual transfer of the real content
-        it = load_in_chunks(abs_path, self.chunk_size)
-        # Now it is a chunked read file
-        file_size = os.stat(abs_path).st_size
-        file_name = os.path.basename(abs_path)
-        it = upload_with_progress(file_size, it, self.chunk_size, self.output, file_name)
-        # Now it will print progress in each iteration
-        iterable_to_file = IterableToFileAdapter(it, file_size)
-        # Now it is prepared to work with request
-        ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                              data=iterable_to_file, headers=headers, auth=auth)
-
-        return ret
+        with progress_bar.open_binary(abs_path,
+                                      desc="Uploading {}".format(os.path.basename(abs_path)),
+                                      output=self.output) as file_handler:
+            ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
+                                  data=file_handler, headers=headers, auth=auth)
+            return ret
 
     def _upload_file(self, url, data,  headers, auth):
         try:
@@ -92,67 +84,6 @@ class FileUploader(object):
             raise ConanException(exc)
 
         return response
-
-
-class IterableToFileAdapter(object):
-    def __init__(self, iterable, total_size):
-        self.iterator = iter(iterable)
-        self.total_size = total_size
-
-    def read(self, size=-1):  # @UnusedVariable
-        return next(self.iterator, b'')
-
-    def __len__(self):
-        return self.total_size
-
-    def __iter__(self):
-        return self.iterator.__iter__()
-
-
-class upload_with_progress(object):
-    def __init__(self, totalsize, iterator, chunk_size, output, file_name):
-        self.totalsize = totalsize
-        self.output = output
-        self.chunk_size = chunk_size
-        self.aprox_chunks = self.totalsize * 1.0 / chunk_size
-        self.groups = iterator
-        self.file_name = file_name
-        self.last_time = 0
-
-    def __iter__(self):
-        progress_bar = None
-        if self.output and self.output.is_terminal:
-            progress_bar = tqdm(total=self.totalsize, unit='B', unit_scale=True,
-                                unit_divisor=1024, desc="Uploading {}".format(self.file_name),
-                                leave=True, dynamic_ncols=False, ascii=True, file=self.output)
-        for index, chunk in enumerate(self.groups):
-            if progress_bar is not None:
-                update_size = self.chunk_size if (index + 1) * self.chunk_size < self.totalsize \
-                    else self.totalsize - self.chunk_size * index
-                progress_bar.update(update_size)
-            elif self.output and time.time() - self.last_time > TIMEOUT_BEAT_SECONDS:
-                self.last_time = time.time()
-                self.output.write(TIMEOUT_BEAT_CHARACTER)
-            yield chunk
-
-        if progress_bar is not None:
-            progress_bar.close()
-        elif self.output:
-            self.output.writeln(TIMEOUT_BEAT_CHARACTER)
-
-    def __len__(self):
-        return self.totalsize
-
-
-def load_in_chunks(path, chunk_size=1024):
-    """Lazy function (generator) to read a file piece by piece.
-    Default chunk size: 1k."""
-    with open(path, 'rb') as file_object:
-        while True:
-            data = file_object.read(chunk_size)
-            if not data:
-                break
-            yield data
 
 
 class FileDownloader(object):
