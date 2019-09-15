@@ -63,7 +63,7 @@ class _NoTerminalOutput(object):
         self._output.flush()
 
 
-class _FileListReaderWithProgressBar(object):
+class _FileListIteratorWithProgressBar(object):
 
     def __init__(self, files_list, output, desc=None):
         self._files_list = files_list
@@ -124,7 +124,7 @@ def open_binary(path, output, **kwargs):
 
 @contextmanager
 def open_file_list(files_list, output, **kwargs):
-    list_wrapped = _FileListReaderWithProgressBar(files_list, output=output, **kwargs)
+    list_wrapped = _FileListIteratorWithProgressBar(files_list, output=output, **kwargs)
     yield list_wrapped
     list_wrapped.pb_close()
     if not output.is_terminal:
