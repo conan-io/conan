@@ -171,6 +171,21 @@ class FileDownloader(object):
                                        % str(e))
 
 
+class IterableToFileAdapter(object):
+    def __init__(self, iterable, total_size):
+        self.iterator = iter(iterable)
+        self.total_size = total_size
+
+    def read(self, size=-1):  # @UnusedVariable
+        return next(self.iterator, b'')
+
+    def __len__(self):
+        return self.total_size
+
+    def __iter__(self):
+        return self.iterator.__iter__()
+
+
 def print_progress(output, units, progress=""):
     if output.is_terminal:
         output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), progress))
