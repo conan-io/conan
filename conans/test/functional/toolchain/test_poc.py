@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import os
 import platform
 import textwrap
 import unittest
@@ -15,20 +16,17 @@ class ToolchainTestCase(unittest.TestCase):
         CMakeLists.txt should get both values
     """
 
-    br = textwrap.dedent("""
+    cmake_conanfile = textwrap.dedent("""
         import os
         import stat
         from conans import ConanFile
         
-        class Lib(ConanFile):
+        class CMakeBuilRequire(ConanFile):
             name = "build_require"
             version = "version"
             
             def build(self):
                 with open("cmake", "w") as f:
-                    #f.write("#! /bin/sh\\n")
-                    #f.write("{} $@ -DBR_WRAPPER:BOOL=True".format(cmake))
-
                     f.write("#! /bin/sh - \\n")
                     f.write("while test $# -gt 0\\n")
                     f.write("do\\n")
@@ -59,11 +57,12 @@ class ToolchainTestCase(unittest.TestCase):
             name = "app"
             version = "version"
             settings = "os", "arch", "compiler", "build_type"
-            options = {"toolchain": [True, False]}
-            default_options = {"toolchain": True}
+            default_options = {"requirement:shared": True}
             exports = "*.cpp", "*.txt"
+            generators = "cmake_find_package"
             
             build_requires = "build_require/version"
+            requires = "requirement/version"
             
             def toolchain(self):
                 tc = CMakeToolchain(self)
@@ -71,13 +70,9 @@ class ToolchainTestCase(unittest.TestCase):
                 return tc
                 
             def build(self):
-                if self.options.toolchain:
-                    self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
-                    self.run("cmake --build .")
-                else:
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
+                # A build helper could be easily added to replace this
+                self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
+                self.run("cmake --build .")
     """)
 
     cmakelist = textwrap.dedent("""
@@ -86,24 +81,36 @@ class ToolchainTestCase(unittest.TestCase):
     
         message("environment variable BUILD_REQUIRE=$ENV{BUILD_REQUIRE}")
         message("cmd argument BR_WRAPPER=${BR_WRAPPER}")
+        message("environment variable TOOLCHAIN_ENV=$ENV{TOOLCHAIN_ENV}")
+        message("variable TOOLCHAIN_VAR=${TOOLCHAIN_VAR}")
+    
+        find_package(requirement REQUIRED)
     
         add_executable(app src/app.cpp)
+        target_link_libraries(app requirement::requirement)
     """)
 
     app_cpp = textwrap.dedent("""
         #include <iostream>
+        #include "hello.h"
         
         int main() {
-            std::cout << "Hello Conan!" <<std::endl;
+            hello();
             return 0;
         }
     """)
 
     def setUp(self):
         self.t = TestClient(path_with_spaces=False)
-        self.t.save({"conanfile.py": self.br})
+        # Create the CMake build requires
+        self.t.save({"conanfile.py": self.cmake_conanfile})
         self.t.run("create .")
 
+        # Create the 'Requirement' require
+        self.t.run("new requirement/version -s")
+        self.t.run("create . requirement/version@ -o shared=True")
+
+        # Prepare the actual consumer package
         self.t.save({"conanfile.py": self.conanfile,
                      "CMakeLists.txt": self.cmakelist,
                      "src/app.cpp": self.app_cpp}, clean_first=True)
@@ -114,6 +121,8 @@ class ToolchainTestCase(unittest.TestCase):
                       self.t.out)
         self.assertIn("environment variable BUILD_REQUIRE=build_require", self.t.out)
         self.assertIn("cmd argument BR_WRAPPER=True", self.t.out)
+        self.assertIn("environment variable TOOLCHAIN_ENV=toolchain_environment", self.t.out)
+        self.assertIn("variable TOOLCHAIN_VAR=toolchain_variable", self.t.out)
 
     def test_cache_create(self):
         self.t.run("create .")
@@ -131,18 +140,11 @@ class ToolchainTestCase(unittest.TestCase):
             self.t.run("build ..")
             self._check_cmake_configure_output(self.t.out)
 
-        self.t.run_command("./build/app")
-        self.assertEqual("Hello Conan!", str(self.t.out).strip())
+        run_app = venv_comamnd("./build/app", scripts_folder="build")
+        self.t.run_command(run_app)
+        self.assertEqual("Hello World Release!", str(self.t.out).strip())
 
     def test_local_cmake(self):
-        # The user will run this using their custom IDE, need to activate virtualenv
-        def venv_comamnd(command):
-            if platform.system() == "Windows":
-                cmd_line = "activate.bat && {command} && deactivate.bat'"
-            else:
-                cmd_line = "bash -c 'source activate.sh && {command} && source deactivate.sh'"
-            return cmd_line.format(command=command)
-
         with self.t.chdir("build"):
             self.t.run("install ..")
 
@@ -152,7 +154,20 @@ class ToolchainTestCase(unittest.TestCase):
             self._check_cmake_configure_output(self.t.out)
 
             # Build
-            self.t.run_command("cmake --build .")
+            self.t.run_command("cmake --build .")  # This doesn't need to run inside the venv
 
-        self.t.run_command("./build/app")
-        self.assertEqual("Hello Conan!", str(self.t.out).strip())
+        run_app = venv_comamnd("./build/app", scripts_folder="build")
+        self.t.run_command(run_app)
+        self.assertEqual("Hello World Release!", str(self.t.out).strip())
+
+
+def venv_comamnd(command, scripts_folder="."):
+    # Helper function to activate/deactivate the virtualenv
+    activate = os.path.join(scripts_folder, "activate")
+    deactivate = os.path.join(scripts_folder, "deactivate")
+
+    if platform.system() == "Windows":
+        cmd_line = "{}.bat && {{command}} && {}.bat'".format(activate, deactivate)
+    else:
+        cmd_line = "bash -c 'source {}.sh && {{command}} && source {}.sh'".format(activate, deactivate)
+    return cmd_line.format(command=command)
