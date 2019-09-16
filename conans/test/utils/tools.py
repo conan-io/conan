@@ -31,7 +31,6 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
-from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -52,6 +51,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.client.runner import ConanRunner
+from conans.util.progress_bar import FileReaderWithProgressBar
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -210,7 +210,7 @@ class TestRequester(object):
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
-                if isinstance(kwargs["data"], IterableToFileAdapter):
+                if isinstance(kwargs["data"], FileReaderWithProgressBar):
                     data_accum = b""
                     for tmp in kwargs["data"]:
                         data_accum += tmp

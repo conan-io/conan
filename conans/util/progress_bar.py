@@ -9,7 +9,7 @@ TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
 
-class _FileReaderWithProgressBar(object):
+class FileReaderWithProgressBar(object):
     tqdm_defaults = {'unit': 'B',
                      'unit_scale': True,
                      'unit_divisor': 1024,
@@ -27,7 +27,8 @@ class _FileReaderWithProgressBar(object):
 
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        self._tqdm_bar = tqdm(total=self.tell(), desc=desc, file=output, **pb_kwargs)
+        self._total_size = self.tell()
+        self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=output, **pb_kwargs)
         self.seek(0)
 
     def description(self):
@@ -47,6 +48,17 @@ class _FileReaderWithProgressBar(object):
         ret = self._fileobj.read(size)
         self._tqdm_bar.update(self.tell() - prev)
         return ret
+
+    def __len__(self):
+        return self._total_size
+
+    def __iter__(self):
+        chunk_size = 1024
+        chunk = self._fileobj.read(chunk_size)
+        if chunk:
+            yield chunk
+        else:
+            return
 
     def pb_close(self):
         self._tqdm_bar.close()
@@ -222,7 +234,7 @@ class _NoTerminalOutput(object):
 @contextmanager
 def open_binary(path, output, **kwargs):
     with open(path, mode='rb') as f:
-        file_wrapped = _FileReaderWithProgressBar(f, output=output, **kwargs)
+        file_wrapped = FileReaderWithProgressBar(f, output=output, **kwargs)
         yield file_wrapped
         file_wrapped.pb_close()
         if not output.is_terminal:
