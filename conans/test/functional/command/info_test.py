@@ -3,6 +3,7 @@ import os
 import re
 import textwrap
 import unittest
+import time
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
@@ -668,19 +669,30 @@ class MyTest(ConanFile):
 
 """
 
-        test_server = TestServer(users={"lu": "mypass"})
-        servers = {"default": test_server}
-        client_a = TestClient(servers=servers, users={"default": [("lu", "mypass")]})
+        test_server = TestServer(users={"lasote": "mypass"}, complete_urls=True)
+        server_name = "default"
+        ref = "pkg/0.1@lasote/channel"
+        servers = {server_name: test_server}
+        client_a = TestClient(servers=servers, users={server_name: [("lasote", "mypass")]})
+        client_a.enable_revisions()
         client_a.save({"conanfile.py": conanfile})
-        client_a.run("export . lu/channel")
-        client_a.run("upload pkg/0.1@lu/channel")
-        client_a.run("info pkg/0.1@lu/channel")
+        client_a.run("export . %s" % ref)
+        client_a.run("upload %s -r %s" % (ref, server_name))
+        client_a.run("info %s" % ref)
         self.assertIn("Author: dummy", str(client_a.out))
 
-        client_b = TestClient(servers=servers, users={"default": [("lu", "mypass")]})
-        client_b.save({"conanfile.py": conanfile.replace("dummy", "foobar")})
-        client_b.run("export . lu/channel")
-        client_b.run("upload pkg/0.1@lu/channel")
+        # XXX: Python2.7 sometimes fail due same recipe creating time
+        time.sleep(2)
 
-        client_a.run("info --update pkg/0.1@lu/channel")
+        client_b = TestClient(servers=servers, users={server_name: [("lasote", "mypass")]})
+        client_b.enable_revisions()
+        client_b.save({"conanfile.py": conanfile.replace("dummy", "foobar")})
+        client_b.run("export . %s" % ref)
+        self.assertIn("A new conanfile.py version was exported\n%s" % ref, str(client_b.out))
+        client_b.run("upload %s -r %s --force" % (ref, server_name))
+
+        client_a.run("info -r %s %s --update" % (server_name, ref))
         self.assertIn("Author: foobar", str(client_a.out))
+
+        client_b.run("info -r %s %s" % (server_name, ref))
+        self.assertIn("Author: foobar", str(client_b.out))
