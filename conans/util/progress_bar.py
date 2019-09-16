@@ -55,11 +55,11 @@ class FileReaderWithProgressBar(object):
 
     def file_iterable(self):
         chunk_size = 1024
-        chunk = self._fileobj.read(chunk_size)
-        if chunk:
-            yield chunk
-        else:
-            return
+        while True:
+            data = self._fileobj.read(chunk_size)
+            if not data:
+                break
+            yield data
 
     def __iter__(self):
         return self._file_iterator.__iter__()
