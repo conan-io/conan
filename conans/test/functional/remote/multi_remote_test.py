@@ -56,14 +56,14 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Update available", client_b.out)
+        self.assertIn("Recipe: Updated", client_b.out)
         self.assertIn("Binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.out))
         client_b.run("install Hello0/0.0@lasote/stable -u --build")
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client_b.out)
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Cache", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.out))
 
@@ -80,10 +80,10 @@ class MultiRemotesTest(unittest.TestCase):
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
         client_b.run("info Hello0/0.0@lasote/stable -r default -u")
-        self.assertIn("Remote: local", client_b.out)
-        self.assertIn("Recipe: Update available", client_b.out)
+        self.assertIn("Remote: default", client_b.out)
+        self.assertIn("Recipe: Updated", client_b.out)
         client_b.run("remote list_ref")
-        self.assertIn(": local", str(client_b.out))
+        self.assertIn(": default", str(client_b.out))
 
         # Well, now try to update the package with -r default -u
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
