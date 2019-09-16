@@ -86,6 +86,26 @@ class FileUploader(object):
         return response
 
 
+def _download_data(downloader):
+    if downloader.finished_download:
+        downloader.save()
+    else:
+        total_length = downloader.total_length
+        encoding = downloader.encoding
+        gzip = (encoding == "gzip")
+        # chunked can be a problem:
+        # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+        # It will not send content-length or should be ignored
+        dl_size = downloader.download()
+        if dl_size != total_length and not gzip:
+            raise ConanException("Transfer interrupted before "
+                                 "complete: %s < %s" % (dl_size, total_length))
+    if downloader.data is not None:
+        return bytes(downloader.data)
+    else:
+        return None
+
+
 class FileDownloader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
@@ -138,93 +158,17 @@ class FileDownloader(object):
 
         try:
             logger.debug("DOWNLOAD: %s" % url)
-            data = self._download_data(response, file_path)
-            duration = time.time() - t1
-            log_download(url, duration)
-            return data
+            with progress_bar.download_file(file_path, response, self.output) as downloader:
+                data = _download_data(downloader)
+                duration = time.time() - t1
+                log_download(url, duration)
+                return data
         except Exception as e:
             logger.debug(e.__class__)
             logger.debug(traceback.format_exc())
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
-
-    def _download_data(self, response, file_path):
-        ret = bytearray()
-        total_length = response.headers.get('content-length')
-
-        progress_bar = None
-        if self.output and self.output.is_terminal:
-            progress_bar = tqdm(unit='B', unit_scale=True,
-                                unit_divisor=1024, dynamic_ncols=False,
-                                leave=True, ascii=True, file=self.output)
-
-        if total_length is None:  # no content length header
-            if not file_path:
-                ret += response.content
-            else:
-                if self.output:
-                    total_length = len(response.content)
-                    if progress_bar is not None:
-                        progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
-                        progress_bar.total = total_length
-                        progress_bar.update(total_length)
-
-                save_append(file_path, response.content)
-        else:
-            total_length = int(total_length)
-            encoding = response.headers.get('content-encoding')
-            gzip = (encoding == "gzip")
-            # chunked can be a problem:
-            # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
-            # It will not send content-length or should be ignored
-            if progress_bar is not None:
-                progress_bar.total = total_length
-
-            def download_chunks(file_handler=None, ret_buffer=None):
-                """Write to a buffer or to a file handler"""
-                chunk_size = 1024 if not file_path else 1024 * 100
-                download_size = 0
-                last_time = 0
-                if progress_bar is not None:
-                    progress_bar.desc = "Downloading {}".format(os.path.basename(file_path))
-
-                for data in response.iter_content(chunk_size):
-                    download_size += len(data)
-                    if ret_buffer is not None:
-                        ret_buffer.extend(data)
-                    if file_handler is not None:
-                        file_handler.write(to_file_bytes(data))
-                    if progress_bar is not None:
-                        progress_bar.update(len(data))
-                    elif self.output and time.time() - last_time > TIMEOUT_BEAT_SECONDS:
-                        last_time = time.time()
-                        self.output.write(TIMEOUT_BEAT_CHARACTER)
-
-                return download_size
-
-            if file_path:
-                mkdir(os.path.dirname(file_path))
-                with open(file_path, 'wb') as handle:
-                    dl_size = download_chunks(file_handler=handle)
-            else:
-                dl_size = download_chunks(ret_buffer=ret)
-
-            response.close()
-
-            if dl_size != total_length and not gzip:
-                raise ConanException("Transfer interrupted before "
-                                     "complete: %s < %s" % (dl_size, total_length))
-
-        if progress_bar is not None:
-            progress_bar.close()
-        elif self.output:
-            self.output.writeln(TIMEOUT_BEAT_CHARACTER)
-
-        if not file_path:
-            return bytes(ret)
-        else:
-            return
 
 
 def print_progress(output, units, progress=""):
