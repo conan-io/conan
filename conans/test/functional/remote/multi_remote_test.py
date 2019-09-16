@@ -73,22 +73,18 @@ class MultiRemotesTest(unittest.TestCase):
         self._create(client_a, "Hello0", "0.0", modifier="\n\n")
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
 
-        # Now client_b checks for updates without -r parameter
-        client_b.run("info Hello0/0.0@lasote/stable -u")
+        # Conan info should not update without -u
+        client_b.run("info Hello0/0.0@lasote/stable -r default")
         self.assertIn("Remote: local", client_b.out)
         self.assertIn("Recipe: Cache", client_b.out)
-
-        # But if we connect to default, should tell us that there is an update IN DEFAULT!
-        client_b.run("info Hello0/0.0@lasote/stable -r default -u")
-        self.assertIn("Remote: default", client_b.out)
-        self.assertIn("Recipe: Updated", client_b.out)
         client_b.run("remote list_ref")
-        self.assertIn(": default", str(client_b.out))
+        self.assertIn(": local", str(client_b.out))
 
         # Well, now try to update the package with -r default -u
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
-        self.assertIn("Hello0/0.0@lasote/stable: Calling build()",
-                      str(client_b.out))
+        self.assertIn("Hello0/0.0@lasote/stable: Calling build()", str(client_b.out))
+
+        # Info update won't result in new update because conan install already did it
         client_b.run("info Hello0/0.0@lasote/stable -u")
         self.assertIn("Recipe: Cache", client_b.out)
         self.assertIn("Binary: Cache", client_b.out)
