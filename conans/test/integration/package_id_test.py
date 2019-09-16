@@ -464,6 +464,17 @@ class Pkg(ConanFile):
                         '-s compiler="intel" '
                         '-s compiler.version="16" '
                         '-s compiler.runtime=shared '
+                        '-s compiler.base_compatible=True '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD')
+        self.assertIn("Hello/1.2.0@user/testing:1151fe341e6b310f7645a76b4d3d524342835acc - Cache",
+                      self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.version="16" '
+                        '-s compiler.runtime=shared '
                         '-s compiler.base_compatible=False '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
@@ -494,6 +505,17 @@ class Pkg(ConanFile):
                         '-s compiler="intel" '
                         '-s compiler.version="16" '
                         '-s compiler.runtime=static '
+                        '-s compiler.base="Visual Studio" '
+                        '-s compiler.base.version=8 '
+                        '-s compiler.base.runtime=MD')
+        self.assertIn("Hello/1.2.0@user/testing:ed5a665740443b9bebbc0d64d2af3c67eda46b2e - Cache",
+                      self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        '-s compiler="intel" '
+                        '-s compiler.version="16" '
+                        '-s compiler.runtime=static '
+                        '-s compiler.base_compatible=False '
                         '-s compiler.base="Visual Studio" '
                         '-s compiler.base.version=8 '
                         '-s compiler.base.runtime=MD')
