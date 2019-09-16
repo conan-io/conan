@@ -30,6 +30,7 @@ class FileReaderWithProgressBar(object):
         self._total_size = self.tell()
         self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=output, **pb_kwargs)
         self.seek(0)
+        self._file_iterator = iter(self.file_iterable())
 
     def description(self):
         return self._tqdm_bar.desc
@@ -52,13 +53,16 @@ class FileReaderWithProgressBar(object):
     def __len__(self):
         return self._total_size
 
-    def __iter__(self):
+    def file_iterable(self):
         chunk_size = 1024
         chunk = self._fileobj.read(chunk_size)
         if chunk:
             yield chunk
         else:
             return
+
+    def __iter__(self):
+        return self._file_iterator.__iter__()
 
     def pb_close(self):
         self._tqdm_bar.close()
