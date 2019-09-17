@@ -53,35 +53,35 @@ class FileUploader(object):
             if response.status_code == 201:  # Artifactory returns 201 if the file is there
                 return response
 
+        ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
+                              abs_path=abs_path, headers=headers, auth=auth)
+        return ret
+
+    def _upload_file(self, url, abs_path,  headers, auth):
         with progress_bar.open_binary(abs_path,
                                       desc="Uploading {}".format(os.path.basename(abs_path)),
-                                      output=self.output) as file_handler:
-            ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                                  data=file_handler, headers=headers, auth=auth)
-            return ret
+                                      output=self.output) as data:
+            try:
+                response = self.requester.put(url, data=data, verify=self.verify,
+                                              headers=headers, auth=auth)
 
-    def _upload_file(self, url, data,  headers, auth):
-        try:
-            response = self.requester.put(url, data=data, verify=self.verify,
-                                          headers=headers, auth=auth)
+                if response.status_code == 400:
+                    raise RequestErrorException(response_to_str(response))
 
-            if response.status_code == 400:
-                raise RequestErrorException(response_to_str(response))
-
-            if response.status_code == 401:
-                raise AuthenticationException(response_to_str(response))
-
-            if response.status_code == 403:
-                if auth.token is None:
+                if response.status_code == 401:
                     raise AuthenticationException(response_to_str(response))
-                raise ForbiddenException(response_to_str(response))
 
-            response.raise_for_status()  # Raise HTTPError for bad http response status
+                if response.status_code == 403:
+                    if auth.token is None:
+                        raise AuthenticationException(response_to_str(response))
+                    raise ForbiddenException(response_to_str(response))
 
-        except ConanException:
-            raise
-        except Exception as exc:
-            raise ConanException(exc)
+                response.raise_for_status()  # Raise HTTPError for bad http response status
+
+            except ConanException:
+                raise
+            except Exception as exc:
+                raise ConanException(exc)
 
         return response
 
