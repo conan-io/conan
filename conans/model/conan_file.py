@@ -133,19 +133,6 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 
-        try:
-            if self.settings.os_build and self.settings.os:
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-                self.output.writeln("  This package defines both 'os' and 'os_build' ",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("  Please use 'os' for libraries and 'os_build'",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("  only for build-requires used for cross-building",
-                                    front=Color.BRIGHT_RED)
-                self.output.writeln("*"*60, front=Color.BRIGHT_RED)
-        except ConanException:
-            pass
-
         if 'cppstd' in self.settings.fields:
             self.output.warn("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
                              " please update your recipe.")
