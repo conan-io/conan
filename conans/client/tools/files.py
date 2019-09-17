@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from fnmatch import fnmatch
 
 import six
-from patch import fromfile, fromstring
+from conans.util.patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
