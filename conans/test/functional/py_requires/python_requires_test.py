@@ -87,6 +87,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
+        # FIXME: fix the output too
         #self.assertIn("Python requires", str(client.out).splitlines())
         #self.assertIn("    MyConanfileBase/1.1@user/testing", str(client.out).splitlines())
         self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
@@ -202,34 +203,36 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Consumer/0.1@user/testing: PKG2F : 234", client.out)
 
     def local_import_test(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("user", "mypass")]})
-        conanfile = """from conans import ConanFile
-import mydata
-class MyConanfileBase(ConanFile):
-    exports = "*.py"
-    def source(self):
-        self.output.info(mydata.src)
-    def build(self):
-        self.output.info(mydata.build)
-    def package(self):
-        self.output.info(mydata.pkg)
-    def package_info(self):
-        self.output.info(mydata.info)
-"""
-        mydata = """src = "My cool source!"
-build = "My cool build!"
-pkg = "My cool package!"
-info = "My cool package_info!"
-"""
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import mydata
+            class MyConanfileBase(ConanFile):
+                exports = "*.py"
+                def source(self):
+                    self.output.info(mydata.src)
+                def build(self):
+                    self.output.info(mydata.build)
+                def package(self):
+                    self.output.info(mydata.pkg)
+                def package_info(self):
+                    self.output.info(mydata.info)
+            """)
+        mydata = textwrap.dedent("""
+            src = "My cool source!"
+            build = "My cool build!"
+            pkg = "My cool package!"
+            info = "My cool package_info!"
+            """)
         client.save({"conanfile.py": conanfile,
                      "mydata.py": mydata})
-        client.run("export . MyConanfileBase/1.1@user/testing")
-        reuse = """from conans import ConanFile, python_requires
-base = python_requires("MyConanfileBase/1.1@user/testing")
-class PkgTest(base.MyConanfileBase):
-    pass
-"""
+        client.run("export . base/1.1@user/testing")
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                py_requires = "base/1.1@user/testing"
+                py_requires_extend = "base.MyConanfileBase"
+            """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
@@ -249,19 +252,21 @@ class PkgTest(base.MyConanfileBase):
 
     def reuse_scm_test(self):
         client = TestClient()
-
-        conanfile = """from conans import ConanFile
-scm = {"type" : "git",
-       "url" : "somerepo",
-       "revision" : "auto"}
-
-class MyConanfileBase(ConanFile):
-    scm = scm
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class SomeBase(object):
+                scm = {"type" : "git",
+                       "url" : "somerepo",
+                       "revision" : "auto"}
+            
+            class MyConanfileBase(SomeBase, ConanFile):
+                pass
+            """)
         create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
                               folder=client.current_folder)
-        client.run("export . MyConanfileBase/1.1@user/testing")
-        client.run("get MyConanfileBase/1.1@user/testing")
+        client.run("export . base/1.1@user/testing")
+        client.run("get base/1.1@user/testing")
+        print client.out
         # The global scm is left as-is
         self.assertIn("""scm = {"type" : "git",
        "url" : "somerepo",
@@ -272,17 +277,17 @@ class MyConanfileBase(ConanFile):
         self.assertIn('"type": "git",', client.out)
         self.assertIn('"url": "somerepo"', client.out)
 
-        reuse = """from conans import python_requires
-base = python_requires("MyConanfileBase/1.1@user/testing")
-class PkgTest(base.MyConanfileBase):
-    scm = base.scm
-    other = 123
-    def _my_method(self):
-        pass
-"""
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            class PkgTest(ConanFile):
+                py_requires = "base/1.1@user/testing"
+                py_requires_extend = "base.SomeBase"
+                scm = 
+            """)
         client.save({"conanfile.py": reuse})
         client.run("export . Pkg/0.1@user/testing")
         client.run("get Pkg/0.1@user/testing")
+        print client.out
         self.assertNotIn("scm = base.scm", client.out)
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
@@ -290,65 +295,51 @@ class PkgTest(base.MyConanfileBase):
 
     def reuse_class_members_test(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class MyConanfileBase(ConanFile):
-    license = "MyLicense"
-    author = "author@company.com"
-    exports = "*.txt"
-    exports_sources = "*.h"
-    short_paths = True
-    generators = "cmake"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export . Base/1.1@user/testing")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyConanfileBase(ConanFile):
+                license = "MyLicense"
+                author = "author@company.com"
+                exports = "*.txt"
+                exports_sources = "*.h"
+                short_paths = True
+                generators = "cmake"
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "some content"})
+        client.run("export . base/1.1@user/testing")
 
-        reuse = """from conans import python_requires
-import os
-base = python_requires("Base/1.1@user/testing")
-class PkgTest(base.MyConanfileBase):
-    def build(self):
-        self.output.info("Exports sources! %s" % self.exports_sources)
-        self.output.info("Short paths! %s" % self.short_paths)
-        self.output.info("License! %s" % self.license)
-        self.output.info("Author! %s" % self.author)
-        assert os.path.exists("conanbuildinfo.cmake")
-"""
+        reuse = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import load
+            import os
+            class PkgTest(ConanFile):
+                py_requires = "base/1.1@user/testing"
+                py_requires_extend = "base.MyConanfileBase"
+                def build(self):
+                    self.output.info("Exports sources! %s" % self.exports_sources)
+                    self.output.info("HEADER CONTENT!: %s" % load("header.h"))
+                    self.output.info("Short paths! %s" % self.short_paths)
+                    self.output.info("License! %s" % self.license)
+                    self.output.info("Author! %s" % self.author)
+                    assert os.path.exists("conanbuildinfo.cmake")
+            """)
         client.save({"conanfile.py": reuse,
-                     "file.h": "header",
+                     "header.h": "pkg new header contents",
                      "other.txt": "text"})
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Exports sources! *.h", client.out)
         self.assertIn("Pkg/0.1@user/testing exports: Copied 1 '.txt' file: other.txt",
                       client.out)
-        self.assertIn("Pkg/0.1@user/testing exports_sources: Copied 1 '.h' file: file.h",
+        self.assertIn("Pkg/0.1@user/testing exports_sources: Copied 1 '.h' file: header.h",
                       client.out)
         self.assertIn("Pkg/0.1@user/testing: Short paths! True", client.out)
         self.assertIn("Pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
+        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
-
-    def reuse_exports_conflict_test(self):
-        conanfile = """from conans import ConanFile
-class Base(ConanFile):
-    exports_sources = "*.h"
-"""
-        client = TestClient()
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "my header Base!!"})
-        client.run("export . Base/0.1@user/testing")
-        conanfile = """from conans import python_requires, load
-base = python_requires("Base/0.1@user/testing")
-class Pkg2(base.Base):
-    def build(self):
-        self.output.info("Exports sources: %s" % self.exports_sources)
-        self.output.info("HEADER CONTENT!: %s" % load("header.h"))
-"""
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "my header Pkg!!"}, clean_first=True)
-        client.run("create . Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: my header Pkg!!", client.out)
 
     def transitive_imports_conflicts_test(self):
         # https://github.com/conan-io/conan/issues/3874
