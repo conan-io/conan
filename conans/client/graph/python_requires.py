@@ -11,6 +11,14 @@ PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
                                              "exports_folder", "exports_sources_folder"])
 
 
+class PyRequires(object):
+    def __init__(self):
+        self._pyrequires = {}
+
+    def __getattr__(self, item):
+        return self._pyrequires[item].module
+
+
 class PyRequireLoader(object):
     def __init__(self, proxy, range_resolver):
         self._proxy = proxy
@@ -45,11 +53,11 @@ class PyRequireLoader(object):
         return py_requires
 
     def _resolve_py_requires(self, py_requires):
-        result = {}
+        result = PyRequires()
         for py_require in py_requires:
             ref = ConanFileReference.loads(py_require)
             requirement = Requirement(ref)
-            self._range_resolver.resolve(requirement, "python_require", update=self._update,
+            self._range_resolver.resolve(requirement, "py_require", update=self._update,
                                          remotes=self._remotes)
             ref = requirement.ref
             recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,

@@ -88,6 +88,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
         # FIXME: fix the output too
+        x
         #self.assertIn("Python requires", str(client.out).splitlines())
         #self.assertIn("    MyConanfileBase/1.1@user/testing", str(client.out).splitlines())
         self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
@@ -172,7 +173,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . Pkg1/1.0@user/channel")
+        client.run("export . pkg1/1.0@user/channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -183,17 +184,17 @@ class PyRequiresExtendTest(unittest.TestCase):
                 pass
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . Pkg2/1.0@user/channel")
+        client.run("export . pkg2/1.0@user/channel")
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
-                py_requires = "Pkg1/1.0@user/channel", "Pkg2/1.0@user/channel"
+                py_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
-                    self.output.info("PKG1 : %s" % pkg1.myvar)
-                    self.output.info("PKG2 : %s" % pkg2.myvar)
-                    self.output.info("PKG1F : %s" % pkg1.myfunct())
-                    self.output.info("PKG2F : %s" % pkg2.myfunct())
+                    self.output.info("PKG1 : %s" % self.py_requires.pkg1.myvar)
+                    self.output.info("PKG2 : %s" % self.py_requires.pkg2.myvar)
+                    self.output.info("PKG1F : %s" % self.py_requires.pkg1.myfunct())
+                    self.output.info("PKG2F : %s" % self.py_requires.pkg2.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . Consumer/0.1@user/testing")
@@ -265,29 +266,16 @@ class PyRequiresExtendTest(unittest.TestCase):
         create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
                               folder=client.current_folder)
         client.run("export . base/1.1@user/testing")
-        client.run("get base/1.1@user/testing")
-        print client.out
-        # The global scm is left as-is
-        self.assertIn("""scm = {"type" : "git",
-       "url" : "somerepo",
-       "revision" : "auto"}""", client.out)
-        # but the class one is replaced
-        self.assertNotIn("scm = scm", client.out)
-        self.assertIn('    scm = {"revision":', client.out)
-        self.assertIn('"type": "git",', client.out)
-        self.assertIn('"url": "somerepo"', client.out)
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class PkgTest(ConanFile):
                 py_requires = "base/1.1@user/testing"
                 py_requires_extend = "base.SomeBase"
-                scm = 
             """)
         client.save({"conanfile.py": reuse})
         client.run("export . Pkg/0.1@user/testing")
         client.run("get Pkg/0.1@user/testing")
-        print client.out
         self.assertNotIn("scm = base.scm", client.out)
         self.assertIn('scm = {"revision":', client.out)
         self.assertIn('"type": "git",', client.out)
