@@ -190,9 +190,9 @@ class _FileListIteratorWithProgressBar(object):
         self._last_progress = None
         self._i_file = 0
         self._output = output
-        if not output.is_terminal:
+        if output and not output.is_terminal:
             output.write("[")
-        else:
+        elif output :
             self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=output, unit="files",
                                   leave=True, dynamic_ncols=False, ascii=True)
 
@@ -203,16 +203,16 @@ class _FileListIteratorWithProgressBar(object):
         self._i_file = self._i_file + 1
         units = min(50, int(50 * self._i_file / len(self._files_list)))
         if self._last_progress != units:  # Avoid screen refresh if nothing has change
-            if not self._output.is_terminal:
+            if self._output and not self._output.is_terminal:
                 self._output.write('=' * (units - (self._last_progress or 0)))
             self._last_progress = units
-        if self._output.is_terminal:
+        if self._output and self._output.is_terminal:
             self._tqdm_bar.update()
 
     def pb_close(self):
-        if self._output.is_terminal:
+        if self._output and self._output.is_terminal:
             self._tqdm_bar.close()
-        else:
+        elif self._output:
             self._output.writeln("]")
 
     def __iter__(self):
@@ -259,5 +259,5 @@ def open_file_list(files_list, output, **kwargs):
     list_wrapped = _FileListIteratorWithProgressBar(files_list, output=output, **kwargs)
     yield list_wrapped
     list_wrapped.pb_close()
-    if not output.is_terminal:
+    if output and not output.is_terminal:
         output.writeln("\n")
