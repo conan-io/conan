@@ -8,6 +8,7 @@ from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
+from conans.util.log import get_log_level_by_name
 import logging
 
 
@@ -98,7 +99,7 @@ default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
 run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
-level = 50                  # environment CONAN_LOGGING_LEVEL
+level = critical            # environment CONAN_LOGGING_LEVEL
 # trace_file =              # environment CONAN_TRACE_FILE
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
@@ -506,7 +507,8 @@ class ConanClientConfigParser(ConfigParser, object):
             if level is None:
                 level = self.get_item("log.level")
             try:
-                level = int(level)
+                parsed_level = get_log_level_by_name(level)
+                level = parsed_level if parsed_level is not None else int(level)
             except Exception:
                 level = logging.CRITICAL
             return level

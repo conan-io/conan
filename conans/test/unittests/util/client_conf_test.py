@@ -1,17 +1,30 @@
 import os
 import unittest
+import logging
 
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conf import ConanClientConfigParser
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
+from conans.client.tools.oss import environment_append
 
 default_client_conf = '''[storage]
 path: ~/.conan/data
 
 [log]
 trace_file = "Path/with/quotes"
+
+[general]
+
+'''
+
+default_client_conf_log = '''[storage]
+path: ~/.conan/data
+
+[log]
+trace_file = "foo/bar/quotes"
+{}
 
 [general]
 
@@ -49,3 +62,58 @@ class ClientConfTest(unittest.TestCase):
         save(os.path.join(tmp_dir, CONAN_CONF), "[proxies]\nno_proxy=localhost")
         config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
         self.assertEqual(config.proxies["no_proxy"], "localhost")
+
+    def test_log_level_numbers(self):
+        tmp_dir = temp_folder()
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf_log.format("level = 10"))
+        save(os.path.join(tmp_dir, DEFAULT_PROFILE_NAME), default_profile)
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.DEBUG, config.logging_level)
+
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf_log.format("level = 50"))
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.CRITICAL, config.logging_level)
+
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf_log.format("level = wakawaka"))
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.CRITICAL, config.logging_level)
+
+        with environment_append({"CONAN_LOGGING_LEVEL": "10"}):
+            save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
+            config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+            self.assertEqual(logging.DEBUG, config.logging_level)
+
+        with environment_append({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
+            save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
+            config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+            self.assertEqual(logging.CRITICAL, config.logging_level)
+
+    def test_log_level_names(self):
+        tmp_dir = temp_folder()
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf_log.format("level = debug"))
+        save(os.path.join(tmp_dir, DEFAULT_PROFILE_NAME), default_profile)
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.DEBUG, config.logging_level)
+
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf_log.format("level = Critical"))
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.CRITICAL, config.logging_level)
+
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf_log.format("level = wakawaka"))
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.CRITICAL, config.logging_level)
+
+        with environment_append({"CONAN_LOGGING_LEVEL": "Debug"}):
+            save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
+            config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+            self.assertEqual(logging.DEBUG, config.logging_level)
+
+        with environment_append({"CONAN_LOGGING_LEVEL": "WARNING"}):
+            save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
+            config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+            self.assertEqual(logging.WARNING, config.logging_level)
+
+        with environment_append({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
+            save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
+            config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+            self.assertEqual(logging.CRITICAL, config.logging_level)
