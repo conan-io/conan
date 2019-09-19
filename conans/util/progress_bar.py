@@ -19,18 +19,18 @@ class FileReaderWithProgressBar(object):
 
     def __init__(self, fileobj, output, desc=None):
         pb_kwargs = self.tqdm_defaults.copy()
-
-        # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
-        if not output.is_terminal:
-            output = _NoTerminalOutput(output)
-            pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
-
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
         self._total_size = self.tell()
-        self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=output, **pb_kwargs)
         self.seek(0)
         self._file_iterator = iter(self.file_iterable())
+        # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
+        if output:
+            if not output.is_terminal:
+                output = _NoTerminalOutput(output)
+                pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
+
+        self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=output, **pb_kwargs)
 
     def description(self):
         return self._tqdm_bar.desc
@@ -97,10 +97,10 @@ class _FileDownloaderWithProgressBar(object):
             if not output.is_terminal and self._file_path:
                 output = _NoTerminalOutput(output)
                 pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
-            elif self._file_path:
-                self._tqdm_bar = tqdm(total=self._total_length,
-                                      desc="Downloading {}".format(os.path.basename(file_path)),
-                                      file=output, **pb_kwargs)
+
+            self._tqdm_bar = tqdm(total=self._total_length,
+                                  desc="Downloading {}".format(os.path.basename(self._file_path)),
+                                  file=output, **pb_kwargs)
 
     @property
     def finished_download(self):
