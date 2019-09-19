@@ -89,9 +89,9 @@ class ConanOutput(object):
         for _ in range(3):
             try:
                 if error:
-                    tqdm.write(data, file=self._stream_err, end=end)
+                    tqdm.write(str(data), file=self._stream_err, end=end)
                 else:
-                    tqdm.write(data, file=self._stream, end=end)
+                    tqdm.write(str(data), file=self._stream, end=end)
                 break
             except IOError:
                 import time

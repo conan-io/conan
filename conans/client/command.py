@@ -1762,7 +1762,7 @@ class Command(object):
             self._conan.update_lock(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "build-order":
             build_order = self._conan.build_order(args.lockfile, args.build)
-            self._out.writeln(str(build_order))
+            self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
