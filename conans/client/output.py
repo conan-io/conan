@@ -2,6 +2,7 @@ import os
 import six
 import sys
 from colorama import Fore, Style
+from tqdm import tqdm
 
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text
@@ -80,17 +81,17 @@ class ConanOutput(object):
 
         if self._color and (front or back):
             data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
-        if newline:
-            data = "%s\n" % data
+
+        end = "\n" if newline else ""
 
         # https://github.com/conan-io/conan/issues/4277
         # Windows output locks produce IOErrors
         for _ in range(3):
             try:
                 if error:
-                    self._stream_err.write(data)
+                    tqdm.write(data, file=self._stream_err, end=end)
                 else:
-                    self._stream.write(data)
+                    tqdm.write(data, file=self._stream, end=end)
                 break
             except IOError:
                 import time
@@ -121,7 +122,7 @@ class ConanOutput(object):
     def rewrite_line(self, line):
         tmp_color = self._color
         self._color = False
-        TOTAL_SIZE = 70
+        TOTAL_SIZE = 76
         LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
         if len(line) > TOTAL_SIZE:
             line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
