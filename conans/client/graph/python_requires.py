@@ -10,13 +10,41 @@ from conans.errors import ConanException, NotFoundException
 PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
                                              "exports_folder", "exports_sources_folder"])
 
+# Necessary to contain the full_reference of the py_require, the module will contain the rest
+PyRequire = namedtuple("PyRequire", ["ref", "module"])
+
 
 class PyRequires(object):
+    """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
+        # including transitive
         self._pyrequires = {}
+        self._direct = set()
 
     def __getattr__(self, item):
+        if item not in self._direct:
+            raise ConanException("'%s' is a transitive py_require, can't be used directly" % item)
         return self._pyrequires[item].module
+
+    def __getitem__(self, item):
+        return self._pyrequires[item]
+
+    def __setitem__(self, key, value):
+        # single item assignment, direct
+        existing = self._pyrequires.get(key)
+        if existing and existing.ref.name == value.ref.name and existing.ref != value.ref:
+            raise ConanException("The py_requires '%s' already exists" % value.ref.name)
+        self._direct.add(key)
+        self._pyrequires[key] = value
+
+    def _update(self, other, alias=False):
+        for key, value in other._pyrequires.items():
+            existing = self._pyrequires.get(key)
+            if existing and existing.ref.name == value.ref.name and existing.ref != value.ref:
+                raise ConanException("The py_requires '%s' already exists" % value.ref.name)
+            self._pyrequires[key] = value
+        if alias:
+            self._direct.update(other._direct)
 
 
 class PyRequireLoader(object):
@@ -31,6 +59,7 @@ class PyRequireLoader(object):
 
     @contextmanager
     def capture_requires(self):
+        # DO nothing, just to stay compatible with the interface of python_requires
         yield []
 
     def load_py_requires(self, conanfile):
@@ -46,9 +75,9 @@ class PyRequireLoader(object):
             if isinstance(py_requires_extend, str):
                 py_requires_extend = [py_requires_extend, ]
             for p in py_requires_extend:
-                pkg, class_name = p.split(".")
-                pkg_module = getattr(py_requires[pkg].module, class_name)
-                conanfile.__bases__ = (pkg_module,) + conanfile.__bases__
+                pkg_name, base_class_name = p.split(".")
+                base_class = getattr(getattr(py_requires, pkg_name), base_class_name)
+                conanfile.__bases__ = (base_class,) + conanfile.__bases__
         conanfile.py_requires = py_requires
         return py_requires
 
@@ -68,14 +97,12 @@ class PyRequireLoader(object):
             if getattr(conanfile, "alias", None):
                 # Will register also the aliased
                 aliased = self._resolve_py_requires([conanfile.alias])
-                result.update(aliased)
+                result._update(aliased, alias=True)
             else:
-                py_req = PythonRequire(new_ref, module, conanfile, None, None)
-                result[ref.name] = py_req
+                result[new_ref.name] = PyRequire(new_ref, module)
                 child = self.load_py_requires(conanfile)
-                # FIXME: Deal with conflicts here instead of updating
                 if child is not None:
-                    result.update(child)
+                    result._update(child)
         return result
 
 

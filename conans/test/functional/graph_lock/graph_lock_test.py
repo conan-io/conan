@@ -379,3 +379,33 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
+
+
+class GraphLockPyRequiresTest(unittest.TestCase):
+    def transitive_py_requires_test(self):
+        # https://github.com/conan-io/conan/issues/5529
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . base/1.0@user/channel")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class PackageInfo(ConanFile):
+                py_requires = "base/1.0@user/channel"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . helper/1.0@user/channel")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class MyConanfileBase(ConanFile):
+                py_requires = "helper/1.0@user/channel"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install . pkg/0.1@user/channel")
+        lockfile = load(os.path.join(client.current_folder, "conan.lock"))
+        print lockfile
+        self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
+        self.assertIn("helper/1.0@user/channel#98457e1f8d9174ed053747634ce0ea1a", lockfile)
+        client.run("source .")
+        self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
