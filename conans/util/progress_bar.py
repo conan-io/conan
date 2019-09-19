@@ -48,12 +48,15 @@ class FileReaderWithProgressBar(object):
     def read(self, size):
         prev = self.tell()
         ret = self._fileobj.read(size)
+        self.update_progress(self.tell() - prev)
+        return ret
+
+    def update_progress(self, size):
         if self._tqdm_bar is not None:
-            self._tqdm_bar.update(self.tell() - prev)
+            self._tqdm_bar.update(size)
         elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
             self._last_time = time.time()
             self._output.write(TIMEOUT_BEAT_CHARACTER)
-        return ret
 
     def __len__(self):
         return self._total_size
@@ -61,16 +64,12 @@ class FileReaderWithProgressBar(object):
     def file_iterable(self):
         chunk_size = 1024
         while True:
-            if self._tqdm_bar is not None:
-                self._tqdm_bar.update(chunk_size)
-            elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
-                self._last_time = time.time()
-                self._output.write(TIMEOUT_BEAT_CHARACTER)
-
             data = self._fileobj.read(chunk_size)
-            if not data:
+            if data:
+                self.update_progress(chunk_size)
+                yield data
+            else:
                 break
-            yield data
 
     def __iter__(self):
         return self._file_iterator.__iter__()
