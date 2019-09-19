@@ -1,6 +1,4 @@
-import json
 import os
-import textwrap
 import unittest
 from collections import namedtuple
 
@@ -597,30 +595,6 @@ class MyLib(ConanFile):
         exported_conanfile = client.cache.package_layout(ref).conanfile()
         content = load(exported_conanfile)
         self.assertIn(commit, content)
-
-    def reuse_scm_baseclass_test(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class SomeBase(object):
-                scm = {"type" : "git",
-                       "url" : "somerepo",
-                       "revision" : "auto"}
-
-            class MyConanfileBase(SomeBase, ConanFile):
-                pass
-            """)
-        create_local_git_repo({"conanfile.py": conanfile}, branch="my_release",
-                              folder=client.current_folder)
-        client.run("export . base/1.1@user/testing")
-        client.run("get base/1.1@user/testing")
-        self.assertIn(textwrap.dedent("""
-            from conans import ConanFile
-            class SomeBase(object):
-                scm = {"type" : "git",
-                       "url" : "somerepo",
-                       "revision" : "auto"}"""), client.out)
-        self.assertIn('"url": "somerepo"', client.out)
 
 
 @attr('svn')

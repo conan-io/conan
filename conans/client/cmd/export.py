@@ -242,7 +242,7 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     class_line = None
     tab_size = 4
     for i_body, item in enumerate(tree.body):
-        if isinstance(item, ast.ClassDef) and "ConanFile" in [b.id for b in item.bases]:
+        if isinstance(item, ast.ClassDef):
             statements = item.body
             class_line = item.lineno
             for i, stmt in enumerate(item.body):
