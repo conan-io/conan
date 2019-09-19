@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+import time
 
 from tqdm import tqdm
 
@@ -18,6 +19,7 @@ class FileReaderWithProgressBar(object):
                      'ascii': True}
 
     def __init__(self, fileobj, output, desc=None):
+        self._tqdm_bar = None
         pb_kwargs = self.tqdm_defaults.copy()
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
@@ -25,15 +27,14 @@ class FileReaderWithProgressBar(object):
         self.seek(0)
         self._file_iterator = iter(self.file_iterable())
         # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
-        if output:
-            if not output.is_terminal:
-                output = _NoTerminalOutput(output)
-                pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
-
-        self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=output, **pb_kwargs)
+        self._desc = desc
+        self._output = output
+        self._last_time = 0
+        if self._output and self._output.is_terminal:
+            self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=self._output, **pb_kwargs)
 
     def description(self):
-        return self._tqdm_bar.desc
+        return self._desc
 
     def seekable(self):
         return self._fileobj.seekable()
@@ -47,7 +48,11 @@ class FileReaderWithProgressBar(object):
     def read(self, size):
         prev = self.tell()
         ret = self._fileobj.read(size)
-        self._tqdm_bar.update(self.tell() - prev)
+        if self._tqdm_bar is not None:
+            self._tqdm_bar.update(self.tell() - prev)
+        elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
+            self._last_time = time.time()
+            self._output.write(TIMEOUT_BEAT_CHARACTER)
         return ret
 
     def __len__(self):
@@ -56,7 +61,12 @@ class FileReaderWithProgressBar(object):
     def file_iterable(self):
         chunk_size = 1024
         while True:
-            self._tqdm_bar.update(chunk_size)
+            if self._tqdm_bar is not None:
+                self._tqdm_bar.update(chunk_size)
+            elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
+                self._last_time = time.time()
+                self._output.write(TIMEOUT_BEAT_CHARACTER)
+
             data = self._fileobj.read(chunk_size)
             if not data:
                 break
@@ -66,7 +76,8 @@ class FileReaderWithProgressBar(object):
         return self._file_iterator.__iter__()
 
     def pb_close(self):
-        self._tqdm_bar.close()
+        if self._tqdm_bar is not None:
+            self._tqdm_bar.close()
 
 
 class _FileDownloaderWithProgressBar(object):
@@ -84,24 +95,21 @@ class _FileDownloaderWithProgressBar(object):
         self._file_path = file_path
         self._total_length = response.headers.get('content-length')
         self._finished_download = False
+        self._output = output
         pb_kwargs = self.tqdm_defaults.copy()
         if self._total_length is None:  # no content length header
             if not file_path:
                 self._ret += self._response.content
             else:
                 self._total_length = len(response.content)
-                self.finished_download = True
+                self._finished_download = True
         else:
             self._total_length = int(self._total_length)
 
-        if output:
-            if not output.is_terminal and self._file_path:
-                output = _NoTerminalOutput(output)
-                pb_kwargs['mininterval'] = TIMEOUT_BEAT_SECONDS
-
+        if self._output and self._output.is_terminal and self._file_path:
             self._tqdm_bar = tqdm(total=self._total_length,
                                   desc="Downloading {}".format(os.path.basename(self._file_path)),
-                                  file=output, **pb_kwargs)
+                                  file=self._output, **pb_kwargs)
 
     @property
     def finished_download(self):
@@ -171,19 +179,6 @@ class _FileDownloaderWithProgressBar(object):
             self._tqdm_bar.close()
 
 
-class _NoTerminalOutput(object):
-    """ Helper class: Replace every message sent to it with a fixed one """
-
-    def __init__(self, output):
-        self._output = output
-
-    def write(self, *args, **kwargs):
-        self._output.write(TIMEOUT_BEAT_CHARACTER)
-
-    def flush(self):
-        self._output.flush()
-
-
 class _FileListIteratorWithProgressBar(object):
 
     def __init__(self, files_list, output, desc=None):
@@ -191,14 +186,15 @@ class _FileListIteratorWithProgressBar(object):
         self._last_progress = None
         self._i_file = 0
         self._output = output
-        if output and not output.is_terminal:
+        self._desc = desc
+        if self._output and not self._output.is_terminal:
             output.write("[")
-        elif output :
-            self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=output, unit="files",
+        elif self._output:
+            self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=self._output, unit="files",
                                   leave=True, dynamic_ncols=False, ascii=True)
 
     def description(self):
-        return self._tqdm_bar.desc
+        return self._desc
 
     def update(self):
         self._i_file = self._i_file + 1
@@ -221,19 +217,6 @@ class _FileListIteratorWithProgressBar(object):
 
     def __next__(self):
         return self._files_list.__iter__().__next__()
-
-
-class _NoTerminalOutput(object):
-    """ Helper class: Replace every message sent to it with a fixed one """
-
-    def __init__(self, output):
-        self._output = output
-
-    def write(self, *args, **kwargs):
-        self._output.write(TIMEOUT_BEAT_CHARACTER)
-
-    def flush(self):
-        self._output.flush()
 
 
 @contextmanager
