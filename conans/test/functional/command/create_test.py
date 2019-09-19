@@ -6,7 +6,7 @@ from parameterized.parameterized import parameterized
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load
 
 
@@ -608,3 +608,179 @@ class TestConanLib(ConanFile):
         self.assertNotIn("/_", conaninfo)
         self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
                       conaninfo)
+
+
+class IntelCompatibilityTest(unittest.TestCase):
+
+    def setUp(self):
+        self.client = TestClient()
+        visual_intel_compatible_profile = textwrap.dedent("""
+        [settings]
+        compiler = Visual Studio
+        compiler.version = 15
+        compiler.runtime = MD
+        compiler.intel=compatible
+        compiler.intel.version = 14
+        """)
+        visual_intel_incompatible_profile = textwrap.dedent("""
+        [settings]
+        compiler = Visual Studio
+        compiler.version = 15
+        compiler.runtime = MD
+        compiler.intel=incompatible
+        compiler.intel.version = 14
+        """)
+        visual_profile = textwrap.dedent("""
+        [settings]
+        compiler = Visual Studio
+        compiler.version = 15
+        compiler.runtime = MD
+        """)
+        intel_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 14
+        compiler.base = Visual Studio
+        compiler.base.version = 15
+        compiler.base.runtime = MD
+        """)
+        self.client.save({"visual_intel_compatible_profile": visual_intel_compatible_profile,
+                          "visual_profile": visual_profile,
+                          "visual_intel_incompatible_profile": visual_intel_incompatible_profile,
+                          "intel_profile": intel_profile})
+
+        self.ref = ConanFileReference.loads("Bye/0.1@us/ch")
+        dep_conanfile = GenConanfile().with_setting("compiler")
+        conanfile = GenConanfile().with_setting("compiler").with_requirement(self.ref)
+        self.client.save({"dep_conanfile.py": dep_conanfile,
+                          "conanfile.py": conanfile})
+
+    def compatible_test(self):
+        self.client.run("create dep_conanfile.py %s --profile visual_intel_compatible_profile" %
+                        self.ref.full_str())
+
+        self.client.run("install conanfile.py --profile visual_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:2b6e26ab2d6455a1d35faba368342f882651680a - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_profile -s compiler.intel=compatible")
+        self.assertIn("Bye/0.1@us/ch:7094466fd54823dd2f7d4169b657048e23f72acb - Cache",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_compatible_profile")
+        self.assertIn("Bye/0.1@us/ch:7094466fd54823dd2f7d4169b657048e23f72acb - Cache",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_incompatible_profile",
+                        assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr intel_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Missing",
+                      self.client.out)
+
+    def incompatible_test(self):
+        self.client.run("create dep_conanfile.py %s -pr visual_intel_incompatible_profile" %
+                        self.ref.full_str())
+
+        self.client.run("install conanfile.py -pr visual_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:2b6e26ab2d6455a1d35faba368342f882651680a - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_compatible_profile",
+                        assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:7094466fd54823dd2f7d4169b657048e23f72acb - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_incompatible_profile")
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Cache",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_profile -s "
+                        "compiler.intel=incompatible", assert_error=True)
+        self.assertIn("ERROR: : 'settings.compiler.intel.version' value not defined",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr intel_profile")
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Cache",
+                      self.client.out)
+
+    def intel_test(self):
+        self.client.run("create dep_conanfile.py %s -pr intel_profile" %
+                        self.ref.full_str())
+
+        self.client.run("install conanfile.py -pr visual_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:2b6e26ab2d6455a1d35faba368342f882651680a - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_compatible_profile",
+                        assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:7094466fd54823dd2f7d4169b657048e23f72acb - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_incompatible_profile")
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Cache",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr intel_profile")
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Cache",
+                      self.client.out)
+
+    def visual_test(self):
+        self.client.run("create dep_conanfile.py %s -pr visual_profile" %
+                        self.ref.full_str())
+
+        self.client.run("install conanfile.py -pr visual_profile")
+        self.assertIn("Bye/0.1@us/ch:2b6e26ab2d6455a1d35faba368342f882651680a - Cache",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_compatible_profile",
+                        assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:7094466fd54823dd2f7d4169b657048e23f72acb - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr visual_intel_incompatible_profile",
+                        assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Missing",
+                      self.client.out)
+
+        self.client.run("install conanfile.py -pr intel_profile", assert_error=True)
+        self.assertIn("Bye/0.1@us/ch:975a99a89454e927efac5355b5f0206baabf7a8f - Missing",
+                      self.client.out)
+
+    def not_allowed_profiles_test(self):
+        intel_visual_wrong_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 14
+        compiler.base = Visual Studio
+        compiler.base.version = 15
+        compiler.base.runtime = MD
+        compiler.base.intel = compatible
+        compiler.base.intel.version = 14
+        """)
+        intel_gcc_wrong_profile = textwrap.dedent("""
+        [settings]
+        compiler = intel
+        compiler.version = 14
+        compiler.base = gcc
+        compiler.base.version = 8
+        compiler.base.libcxx = libstdc++
+        compiler.base.intel = compatible
+        compiler.base.intel.version = 14
+        """)
+        self.client.save({"intel_visual_wrong_profile": intel_visual_wrong_profile,
+                          "intel_gcc_wrong_profile": intel_gcc_wrong_profile})
+
+        self.client.run("create dep_conanfile.py %s -pr intel_visual_wrong_profile" %
+                        self.ref.full_str(), assert_error=True)
+        self.assertIn("ERROR: Invalid setting 'compatible' is not a valid "
+                      "'settings.compiler.base.intel' value.", self.client.out)
+        self.assertIn("Possible values are ['None']", self.client.out)
+
+        self.client.run("create dep_conanfile.py %s -pr intel_gcc_wrong_profile" %
+                        self.ref.full_str(), assert_error=True)
+        self.assertIn("ERROR: Invalid setting 'compatible' is not a valid "
+                      "'settings.compiler.base.intel' value.", self.client.out)
+        self.assertIn("Possible values are ['None']", self.client.out)

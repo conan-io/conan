@@ -315,6 +315,7 @@ class ConanInfo(object):
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
+        result.intel_compatibility()
 
         return result
 
@@ -475,3 +476,25 @@ class ConanInfo(object):
 
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
+
+    def intel_compatibility(self):
+        if not self.full_settings.compiler:
+            return
+        if self.full_settings.compiler.intel is None:
+            return
+
+        if self.full_settings.compiler.intel == "compatible":
+            self.settings.compiler.intel = "compatible"  # Discard intel version
+        if self.full_settings.compiler.intel == "incompatible":
+            self.settings.compiler = "intel"
+            self.settings.compiler.version = self.full_settings.compiler.intel.version
+            self.settings.compiler.base = self.full_settings.compiler
+
+            for field, value in self.full_settings.compiler.as_list():
+                tokens = field.split(".")
+                if "intel" in tokens:
+                    continue
+                attr = self.settings.compiler.base
+                for token in tokens[:-1]:
+                    attr = getattr(attr, token)
+                setattr(attr, tokens[-1], value)
