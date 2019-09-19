@@ -215,17 +215,19 @@ class AptTool(BaseTool):
         return exit_code == 0
 
     def get_package_name(self, package, arch, arch_names):
-        if arch_names is None:
-            arch_names = {"x86_64": "amd64",
-                         "x86": "i386",
-                         "ppc32": "powerpc",
-                         "ppc64le": "ppc64el",
-                         "armv7": "arm",
-                         "armv7hf": "armhf",
-                         "armv8": "arm64",
-                         "s390x": "s390x"}
-        if arch in arch_names:
-            return "%s:%s" % (package, arch_names[arch])
+        if not package.endswith(":all"):
+            if arch_names is None:
+                arch_names = {"x86_64": "amd64",
+                              "x86": "i386",
+                              "ppc32": "powerpc",
+                              "ppc64le": "ppc64el",
+                              "armv7": "arm",
+                              "armv7hf": "armhf",
+                              "armv8": "arm64",
+                              "s390x": "s390x"}
+
+            if arch in arch_names:
+                return "%s:%s" % (package, arch_names[arch])
         return package
 
 
