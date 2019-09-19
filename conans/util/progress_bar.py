@@ -11,27 +11,20 @@ TIMEOUT_BEAT_CHARACTER = '.'
 
 
 class FileReaderWithProgressBar(object):
-    tqdm_defaults = {'unit': 'B',
-                     'unit_scale': True,
-                     'unit_divisor': 1024,
-                     'dynamic_ncols': False,
-                     'leave': True,
-                     'ascii': True}
-
     def __init__(self, fileobj, output, desc=None):
         self._tqdm_bar = None
-        pb_kwargs = self.tqdm_defaults.copy()
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
         self._total_size = self.tell()
         self.seek(0)
         self._file_iterator = iter(self.file_iterable())
-        # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
         self._desc = desc
         self._output = output
         self._last_time = time.time()
         if self._output and self._output.is_terminal:
-            self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=self._output, **pb_kwargs)
+            self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=self._output, unit="B",
+                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
+                                  unit_divisor=1024)
 
     def description(self):
         return self._desc
@@ -80,13 +73,6 @@ class FileReaderWithProgressBar(object):
 
 
 class _FileDownloaderWithProgressBar(object):
-    tqdm_defaults = {'unit': 'B',
-                     'unit_scale': True,
-                     'unit_divisor': 1024,
-                     'dynamic_ncols': False,
-                     'leave': True,
-                     'ascii': True}
-
     def __init__(self, file_path, response, output, desc=None):
         self._tqdm_bar = None
         self._ret = bytearray()
@@ -95,7 +81,6 @@ class _FileDownloaderWithProgressBar(object):
         self._total_length = response.headers.get('content-length')
         self._finished_download = False
         self._output = output
-        pb_kwargs = self.tqdm_defaults.copy()
         if self._total_length is None:  # no content length header
             if not file_path:
                 self._ret += self._response.content
@@ -108,7 +93,9 @@ class _FileDownloaderWithProgressBar(object):
         if self._output and self._output.is_terminal and self._file_path:
             self._tqdm_bar = tqdm(total=self._total_length,
                                   desc="Downloading {}".format(os.path.basename(self._file_path)),
-                                  file=self._output, **pb_kwargs)
+                                  file=self._output, unit="B",
+                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
+                                  unit_divisor=1024)
 
     @property
     def finished_download(self):
