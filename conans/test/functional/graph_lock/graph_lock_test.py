@@ -379,3 +379,27 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
+
+
+class GraphLockWarningsTestCase(unittest.TestCase):
+
+    def test_override(self):
+        client = TestClient()
+        harfbuzz_ref = ConanFileReference.loads("harfbuzz/1.0")
+        ffmpeg_ref = ConanFileReference.loads("ffmpeg/1.0")
+        harfbuzz_ref2 = harfbuzz_ref.copy_with_rev('f6aa6ab1b36fd9d454de25deaff4ef23')
+        client.save({"harfbuzz.py": GenConanfile().with_name("harfbuzz").with_version("1.0"),
+                     "ffmpeg.py": GenConanfile().with_name("ffmpeg").with_version("1.0")
+                                                .with_requirement(harfbuzz_ref),
+                     "meta.py": GenConanfile().with_name("meta").with_version("1.0")
+                                              .with_requirement(ffmpeg_ref)
+                                              .with_requirement_plain(harfbuzz_ref2)
+                     })
+        client.run("export harfbuzz.py")
+        client.run("export ffmpeg.py")
+        client.run("export meta.py")
+
+        client.run("graph lock meta.py")
+        client.run("graph build-order conan.lock")
+
+        self.assertNotIn("overridden", client.out)
