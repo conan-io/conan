@@ -70,15 +70,15 @@ class ClientConfLogTest(unittest.TestCase):
         self.tmp_dir = temp_folder()
         save(os.path.join(self.tmp_dir, DEFAULT_PROFILE_NAME), default_profile)
 
-    def test_log_level_numbers_debug(self):
-        save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf_log.format("level = 10"))
-        config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
-        self.assertEqual(logging.DEBUG, config.logging_level)
-
     def test_log_level_numbers_critical(self):
         save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf_log.format("level = 50"))
         config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
         self.assertEqual(logging.CRITICAL, config.logging_level)
+
+    def test_log_level_numbers_debug(self):
+        save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf_log.format("level = 10"))
+        config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
+        self.assertEqual(logging.DEBUG, config.logging_level)
 
     def test_log_level_numbers_invalid(self):
         save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf_log.format("level = wakawaka"))
