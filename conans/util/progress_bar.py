@@ -56,6 +56,7 @@ class FileReaderWithProgressBar(object):
     def file_iterable(self):
         chunk_size = 1024
         while True:
+            self._tqdm_bar.update(chunk_size)
             data = self._fileobj.read(chunk_size)
             if not data:
                 break
