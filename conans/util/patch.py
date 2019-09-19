@@ -60,7 +60,7 @@ def tostr(b):
 # Logging is controlled by logger named after the
 # module name (e.g. 'patch' for patch.py module)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("patch")
 
 debug = logger.debug
 info = logger.info
@@ -380,7 +380,7 @@ class PatchSet(object):
                     header.append(fe.line)
                     fe.next()
                 if fe.is_empty:
-                    if p == None:
+                    if p is None:
                         debug("no patch data found")  # error is shown later
                         self.errors += 1
                     else:
@@ -956,8 +956,8 @@ class PatchSet(object):
                 backupname = filename + b".orig"
                 if exists(backupname):
                     warning("can't backup original file to %s - aborting" % backupname)
+                    errors += 1
                 else:
-                    import shutil
                     shutil.move(filename, backupname)
                     if self.write_hunks(backupname, filename, p.hunks):
                         info("successfully patched %d/%d:\t %s" % (i + 1, total, filename))
@@ -1018,7 +1018,6 @@ class PatchSet(object):
 
         lineno = 1
         line = fp.readline()
-        hno = None
         try:
             for hno, h in enumerate(hunks):
                 # skip to first line of the hunk
