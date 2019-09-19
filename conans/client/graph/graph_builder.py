@@ -8,7 +8,6 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
-from conans.util.env_reader import get_env
 
 
 class DepsGraphBuilder(object):
@@ -118,14 +117,14 @@ class DepsGraphBuilder(object):
         # basic node configuration: calling configure() and requirements()
         new_options = self._config_node(dep_graph, node, down_ref, down_options)
 
-        # TODO: version ranges should be expanded before applying the graph-lock
-
-        # Work on requires if there is a graph_lock available
         if graph_lock:
             graph_lock.lock_node(node, node.conanfile.requires.values())
 
-        # Check for requires and overrides
-        new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
+        try:
+            # Check for requires and overrides
+            new_reqs = node.conanfile.requires.update(down_reqs, self._output, node.ref, down_ref)
+        except ConanException as e:
+            raise ConanException("%s: %s" % (node.ref or "Conanfile", str(e)))
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         self._resolve_deps(dep_graph, node, update, remotes)
