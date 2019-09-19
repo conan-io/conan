@@ -29,7 +29,7 @@ class FileReaderWithProgressBar(object):
         # If there is no terminal, just print a beat every TIMEOUT_BEAT seconds.
         self._desc = desc
         self._output = output
-        self._last_time = 0
+        self._last_time = time.time()
         if self._output and self._output.is_terminal:
             self._tqdm_bar = tqdm(total=self._total_size, desc=desc, file=self._output, **pb_kwargs)
 
