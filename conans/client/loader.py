@@ -22,7 +22,7 @@ from conans.util.files import load
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, output, python_requires, py_requires):
+    def __init__(self, runner, output, python_requires, py_requires=None):
         self._runner = runner
         self._output = output
         self._py_requires = py_requires
@@ -44,7 +44,8 @@ class ConanFileLoader(object):
 
             self._python_requires.locked_versions = None
 
-            self._py_requires.load_py_requires(conanfile)
+            if self._py_requires:
+                self._py_requires.load_py_requires(conanfile)
             self.cached_conanfiles[conanfile_path] = (conanfile, lock_python_requires)
 
             conanfile.conan_data = self._load_data(conanfile_path)
