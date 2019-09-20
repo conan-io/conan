@@ -130,7 +130,7 @@ class SystemPackageTool(object):
         :param arch_names: Package suffix/prefix name used by installer tool
         :return: list with all parsed names e.g. ["libusb-dev:armhf libfoobar-dev:armhf"]
         """
-        if self._conanfile and self._conanfile.settings and cross_building(self._conanfile.settings):
+        if self._conanfile and self._conanfile.settings:
             _, build_arch, _, host_arch = get_cross_building_settings(self._conanfile.settings)
             arch = host_arch or build_arch
             parsed_packages = []
