@@ -491,9 +491,6 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("conanfile.py: Pkg1 package: 42", client.out)
         client.run("export-pkg . pkg1/0.1@user/testing")
 
-
-class PythonRequiresNestedTest(unittest.TestCase):
-
     @parameterized.expand([(False, False), (True, False), (True, True), ])
     def test_python_requires_with_alias(self, use_alias, use_alias_of_alias):
         assert use_alias if use_alias_of_alias else True
@@ -501,45 +498,39 @@ class PythonRequiresNestedTest(unittest.TestCase):
         client = TestClient()
 
         # Create python_requires
-        client.save({CONANFILE: """
-from conans import ConanFile
-
-class PythonRequires0(ConanFile):
-
-    def build(self):
-        super(PythonRequires0, self).build()
-        self.output.info(">>> PythonRequires0::build (v={{}})".format(self.version))
-        """.format(v=version_str)})
+        client.save({CONANFILE: textwrap.dedent("""
+            from conans import ConanFile  
+            class PythonRequires0(ConanFile):
+                def build(self):
+                    super(PythonRequires0, self).build()
+                    self.output.info(">>> PythonRequires0::build (v={{}})".format(self.version))
+                    """).format(v=version_str)})
         client.run("export . python_requires0/1.0@jgsogo/test")
-        client.run("alias python_requires0/latest@jgsogo/test "
-                   "python_requires0/1.0@jgsogo/test")
-        client.run("alias python_requires0/latest2@jgsogo/test "
-                   "python_requires0/latest@jgsogo/test")
+        client.run("alias python_requires0/latest@jgsogo/test python_requires0/1.0@jgsogo/test")
+        client.run("alias python_requires0/latest2@jgsogo/test python_requires0/latest@jgsogo/test")
 
         # Create python requires, that require the previous one
-        client.save({CONANFILE: """
-from conans import ConanFile, python_requires
-
-base = python_requires("python_requires0/{v}@jgsogo/test")
-
-class PythonRequires1(base.PythonRequires0):
-    def build(self):
-        super(PythonRequires1, self).build()
-        self.output.info(">>> PythonRequires1::build (v={{}})".format(self.version))
-        """.format(v=version_str)})
+        client.save({CONANFILE: textwrap.dedent("""
+            from conans import ConanFile
+            class PythonRequires1(ConanFile):
+                py_requires = "python_requires0/{v}@jgsogo/test"
+                py_requires_extend = "python_requires0.PythonRequires0"
+                def build(self):
+                    super(PythonRequires1, self).build()
+                    self.output.info(">>> PythonRequires1::build (v={{}})".format(self.version))
+            """).format(v=version_str)})
         client.run("export . python_requires1/1.0@jgsogo/test")
         client.run("alias python_requires1/latest@jgsogo/test python_requires1/1.0@jgsogo/test")
         client.run("alias python_requires1/latest2@jgsogo/test python_requires1/latest@jgsogo/test")
 
         # Create python requires
-        client.save({CONANFILE: """
-from conans import ConanFile, python_requires
-
-class PythonRequires11(ConanFile):
-    def build(self):
-        super(PythonRequires11, self).build()
-        self.output.info(">>> PythonRequires11::build (v={{}})".format(self.version))
-        """.format(v=version_str)})
+        client.save({CONANFILE: textwrap.dedent("""
+            from conans import ConanFile
+            
+            class PythonRequires11(ConanFile):
+                def build(self):
+                    self.output.info(">>> PythonRequires11::build (v={{}})".format(self.version))
+                    """).format(v=version_str)})
         client.run("export . python_requires11/1.0@jgsogo/test")
         client.run("alias python_requires11/latest@jgsogo/test python_requires11/1.0@jgsogo/test")
         client.run("alias python_requires11/latest2@jgsogo/test "
