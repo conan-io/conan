@@ -57,6 +57,8 @@ class SystemPackageTool(object):
     def _create_tool(os_info, output):
         if os_info.with_apt:
             return AptTool(output=output)
+        elif os_info.with_dnf:
+            return DnfTool(output=output)
         elif os_info.with_yum:
             return YumTool(output=output)
         elif os_info.with_pacman:
@@ -228,6 +230,36 @@ class AptTool(BaseTool):
             return "%s:%s" % (package, arch_names[arch])
         return package
 
+
+class DnfTool(BaseTool):
+    def add_repository(self, repository, repo_key=None):
+        raise ConanException("DnfTool::add_repository not implemented")
+
+    def update(self):
+        _run(self._runner, "%sdnf check-update -y" % self._sudo_str, accepted_returns=[0, 100],
+             output=self._output)
+
+    def install(self, package_name):
+        _run(self._runner, "%sdnf install -y %s" % (self._sudo_str, package_name),
+             output=self._output)
+
+    def installed(self, package_name):
+        exit_code = self._runner("rpm -q %s" % package_name, None)
+        return exit_code == 0
+
+    def get_package_name(self, package, arch, arch_names):
+        if arch_names is None:
+            arch_names = {"x86_64": "x86_64",
+                         "x86": "i?86",
+                         "ppc32": "powerpc",
+                         "ppc64le": "ppc64le",
+                         "armv7": "armv7",
+                         "armv7hf": "armv7hl",
+                         "armv8": "aarch64",
+                         "s390x": "s390x"}
+        if arch in arch_names:
+            return "%s.%s" % (package, arch_names[arch])
+        return package
 
 class YumTool(BaseTool):
     def add_repository(self, repository, repo_key=None):

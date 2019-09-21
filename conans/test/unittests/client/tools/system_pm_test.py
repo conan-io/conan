@@ -452,6 +452,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 update_command = "sudo -A apt-get update"
             elif os_info.with_yum:
                 update_command = "sudo -A yum check-update -y"
+            elif os_info.with_dnf:
+                update_command = "sudo -A dnf check-update -y"
             elif os_info.with_zypper:
                 update_command = "sudo -A zypper --non-interactive ref"
             elif os_info.with_pacman:
