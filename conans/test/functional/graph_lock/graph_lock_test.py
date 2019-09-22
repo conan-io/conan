@@ -404,8 +404,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
         lockfile = load(os.path.join(client.current_folder, "conan.lock"))
-        print lockfile
         self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
-        self.assertIn("helper/1.0@user/channel#98457e1f8d9174ed053747634ce0ea1a", lockfile)
+        self.assertIn("helper/1.0@user/channel#e6699bb7e977cf024b31c7228355a129", lockfile)
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)

@@ -124,6 +124,12 @@ class GraphLock(object):
                     reqs = partial
 
                 python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
+
+                py_requires = getattr(node.conanfile, "py_requires", None)
+                if py_requires is not None:
+                    if python_reqs:
+                        raise ConanException("Deprecated python_requires in use, don't mix them")
+                    python_reqs = [r.ref for r in py_requires._pyrequires.values()]
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
                                            node.conanfile.options.values, False, requires)
                 self._nodes[node.id] = graph_node
