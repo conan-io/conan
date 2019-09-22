@@ -45,7 +45,7 @@ class ConanFileLoader(object):
             self._python_requires.locked_versions = None
 
             if self._py_requires:
-                self._py_requires.load_py_requires(conanfile)
+                self._py_requires.load_py_requires(conanfile, lock_python_requires)
             self.cached_conanfiles[conanfile_path] = (conanfile, lock_python_requires)
 
             conanfile.conan_data = self._load_data(conanfile_path)

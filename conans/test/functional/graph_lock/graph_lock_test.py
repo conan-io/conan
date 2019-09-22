@@ -408,3 +408,90 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("helper/1.0@user/channel#e6699bb7e977cf024b31c7228355a129", lockfile)
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
+
+    def setUp(self):
+        client = TestClient()
+        self.client = client
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            var = 42
+            class Pkg(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Tool/0.1@user/channel")
+
+        # Use a consumer with a version range
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "Pkg"
+                py_requires = "Tool/[>=0.1]@user/channel"
+                def configure(self):
+                    self.output.info("CONFIGURE VAR=%s" % self.py_requires.Tool.var)
+                def build(self):
+                    self.output.info("BUILD VAR=%s" % self.py_requires.Tool.var)
+            """)
+        client.save({"conanfile.py": consumer})
+        client.run("install .")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self._check_lock("Pkg/None@")
+
+        client.run("build .")
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
+
+        # If we create a new Tool version
+        client.save({"conanfile.py": conanfile.replace("42", "111")})
+        client.run("export . Tool/0.2@user/channel")
+        client.save({"conanfile.py": consumer})
+
+    def _check_lock(self, ref_b):
+        ref_b = repr(ConanFileReference.loads(ref_b, validate=False))
+        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
+        self.assertIn("Tool/0.1@user/channel", lock_file)
+        self.assertNotIn("Tool/0.2@user/channel", lock_file)
+        lock_file_json = json.loads(lock_file)
+        self.assertEqual(1, len(lock_file_json["graph_lock"]["nodes"]))
+        self.assertIn("%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref_b,
+                      lock_file)
+        self.assertIn('"Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"', lock_file)
+
+    def install_info_test(self):
+        client = self.client
+        # Make sure to use temporary if to not change graph_info.json
+        client.run("install . -if=tmp")
+        self.assertIn("Tool/0.2@user/channel", client.out)
+        client.run("build . -if=tmp")
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=111", client.out)
+        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=111", client.out)
+
+        client.run("install . --lockfile")
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2@user/channel", client.out)
+        self._check_lock("Pkg/None@")
+        client.run("build .")
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+        self.assertIn("conanfile.py (Pkg/None): BUILD VAR=42", client.out)
+
+        client.run("package .")
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+
+        client.run("info . --lockfile")
+        self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=42", client.out)
+
+    def create_test(self):
+        client = self.client
+        client.run("create . Pkg/0.1@user/channel --lockfile")
+        self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
+        self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
+        self.assertIn("Tool/0.1@user/channel", client.out)
+        self.assertNotIn("Tool/0.2@user/channel", client.out)
+        self._check_lock("Pkg/0.1@user/channel#9765ea0c98c4e591ca745680ac7a08f5")
+
+    def export_pkg_test(self):
+        client = self.client
+        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
+        self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
+        self._check_lock("Pkg/0.1@user/channel#9765ea0c98c4e591ca745680ac7a08f5")

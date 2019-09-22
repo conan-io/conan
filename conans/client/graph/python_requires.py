@@ -62,14 +62,16 @@ class PyRequireLoader(object):
         # DO nothing, just to stay compatible with the interface of python_requires
         yield []
 
-    def load_py_requires(self, conanfile):
+    def load_py_requires(self, conanfile, lock_python_requires):
         if not hasattr(conanfile, "py_requires"):
             return
         py_requires = conanfile.py_requires
         if isinstance(py_requires, str):
             py_requires = [py_requires, ]
 
-        py_requires = self._resolve_py_requires(py_requires)
+        if lock_python_requires and not isinstance(lock_python_requires, dict):
+            lock_python_requires = {r.name: r for r in lock_python_requires}
+        py_requires = self._resolve_py_requires(py_requires, lock_python_requires)
         if hasattr(conanfile, "py_requires_extend"):
             py_requires_extend = conanfile.py_requires_extend
             if isinstance(py_requires_extend, str):
@@ -81,10 +83,13 @@ class PyRequireLoader(object):
         conanfile.py_requires = py_requires
         return py_requires
 
-    def _resolve_py_requires(self, py_requires):
+    def _resolve_py_requires(self, py_requires, lock_python_requires):
         result = PyRequires()
         for py_require in py_requires:
             ref = ConanFileReference.loads(py_require)
+            if lock_python_requires:
+                locked = lock_python_requires[ref.name]
+                ref = locked
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "py_require", update=self._update,
                                          remotes=self._remotes)
@@ -96,11 +101,11 @@ class PyRequireLoader(object):
             module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
             if getattr(conanfile, "alias", None):
                 # Will register also the aliased
-                aliased = self._resolve_py_requires([conanfile.alias])
+                aliased = self._resolve_py_requires([conanfile.alias], lock_python_requires)
                 result._update(aliased, alias=True)
             else:
                 result[new_ref.name] = PyRequire(new_ref, module)
-                child = self.load_py_requires(conanfile)
+                child = self.load_py_requires(conanfile, lock_python_requires)
                 if child is not None:
                     result._update(child)
         return result
