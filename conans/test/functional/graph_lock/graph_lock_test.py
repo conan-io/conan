@@ -400,7 +400,7 @@ class GraphLockWarningsTestCase(unittest.TestCase):
 
         # Building the graphlock we get the message
         client.run("graph lock meta.py")
-        self.assertIn("WARN: ffmpeg/1.0 requirement harfbuzz/[>=1.0] overridden by meta/1.0"
+        self.assertIn("WARN: ffmpeg/1.0: requirement harfbuzz/[>=1.0] overridden by meta/1.0"
                       " to harfbuzz/1.0", client.out)
 
         # Using the graphlock there is no warning message
