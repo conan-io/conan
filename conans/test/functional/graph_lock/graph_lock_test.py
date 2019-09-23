@@ -393,6 +393,6 @@ class GraphLockuserTest(unittest.TestCase):
         client.save({"conanfile.py": consumer})
         client.run("export conanfile.py")
         client.run("graph lock conanfile.py")
-        print load(os.path.join(client.current_folder, "conan.lock"))
+        print (load(os.path.join(client.current_folder, "conan.lock")))
         client.run("graph build-order conan.lock")
         print(client.out)
