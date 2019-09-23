@@ -64,12 +64,13 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    def __init__(self, pref, python_requires, options, modified, requires):
+    def __init__(self, pref, python_requires, options, modified, requires, path):
         self.pref = pref
         self.python_requires = python_requires
         self.options = options
         self.modified = modified
         self.requires = requires
+        self.path = path
 
     @staticmethod
     def from_dict(data):
@@ -84,7 +85,8 @@ class GraphLockNode(object):
         options = OptionsValues.loads(data["options"])
         modified = data.get("modified")
         requires = data.get("requires", {})
-        return GraphLockNode(pref, python_requires, options, modified, requires)
+        path = data.get("path")
+        return GraphLockNode(pref, python_requires, options, modified, requires, path)
 
     def as_dict(self):
         """ returns the object serialized as a dict of plain python types
@@ -99,6 +101,8 @@ class GraphLockNode(object):
             result["modified"] = self.modified
         if self.requires:
             result["requires"] = self.requires
+        if self.path:
+            result["path"] = self.path
         return result
 
 
@@ -124,8 +128,9 @@ class GraphLock(object):
                     reqs = partial
 
                 python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
-                graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                           node.conanfile.options.values, False, requires)
+                graph_node = GraphLockNode(node.pref if node.ref else None,
+                                           python_reqs, node.conanfile.options.values, False,
+                                           requires, node.path)
                 self._nodes[node.id] = graph_node
 
     def root_node(self):

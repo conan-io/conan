@@ -24,8 +24,9 @@ BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, recipe=None):
+    def __init__(self, ref, conanfile, recipe=None, path=None):
         self.ref = ref
+        self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
         self.conanfile = conanfile

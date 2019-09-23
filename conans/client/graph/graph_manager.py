@@ -100,7 +100,7 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True):
+                   remotes, recorder, apply_build_requires=True, revision_from_lock=False):
 
         def _inject_require(conanfile, ref):
             """ test_package functionality requires injecting the tested package as requirement
@@ -125,7 +125,7 @@ class GraphManager(object):
                                                   scope_options=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
-            if not self._cache.config.revisions_enabled and reference.revision is not None:
+            if not revision_from_lock and not self._cache.config.revisions_enabled and reference.revision is not None:
                 raise ConanException("Revisions not enabled in the client, specify a "
                                      "reference without revision")
             # create without test_package and install <ref>
@@ -167,7 +167,7 @@ class GraphManager(object):
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile,
                                                             ref=graph_info.root)
 
-            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
+            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
 
             if graph_lock:  # Find the Node ID in the lock of current root
                 graph_lock.find_consumer_node(root_node, create_reference)

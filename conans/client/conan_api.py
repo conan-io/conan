@@ -1203,9 +1203,14 @@ class ConanAPIV1(object):
                                     cwd=cwd, install_folder=None,
                                     cache=self.app.cache, output=self.app.out,
                                     lockfile=lockfile)
-        reference = graph_info.graph_lock.root_node().pref.ref.copy_clear_rev()
+        root_node = graph_info.graph_lock.root_node()
+        if root_node.path:
+            reference = root_node.path
+        else:
+            reference = root_node.pref.ref  # This will contain a locked revision
         deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                          False, False, remotes, recorder)
+                                                          False, False, remotes, recorder,
+                                                          revision_from_lock=True)
 
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)

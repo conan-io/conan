@@ -379,3 +379,20 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
+
+
+class GraphLockuserTest(unittest.TestCase):
+
+    def user_test(self):
+        client = TestClient(default_server_user=True)
+        client.run("config set general.revisions_enabled=1")
+
+        consumer_ref = ConanFileReference("test4", "0.1", None, None, None)
+        consumer = GenConanfile().with_name(consumer_ref.name).with_version(consumer_ref.version)
+
+        client.save({"conanfile.py": consumer})
+        client.run("export conanfile.py")
+        client.run("graph lock conanfile.py")
+        print load(os.path.join(client.current_folder, "conan.lock"))
+        client.run("graph build-order conan.lock")
+        print(client.out)
