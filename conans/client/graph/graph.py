@@ -80,11 +80,10 @@ class Node(object):
 
     def partial_copy(self):
         # Used for collapse_graph
-        result = Node(self.ref, self.conanfile)
+        result = Node(self.ref, self.conanfile, self.recipe, self.path)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
-        result.recipe = self.recipe
         result.remote = self.remote
         result.binary_remote = self.binary_remote
         result.build_require = self.build_require
