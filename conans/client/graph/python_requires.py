@@ -52,8 +52,6 @@ class PyRequireLoader(object):
         if isinstance(py_requires_refs, str):
             py_requires_refs = [py_requires_refs, ]
 
-        if lock_python_requires and not isinstance(lock_python_requires, dict):
-            lock_python_requires = {r.name: r for r in lock_python_requires}
         py_requires, all_refs = self._resolve_py_requires(py_requires_refs, lock_python_requires,
                                                           loader)
         if hasattr(conanfile, "py_requires_extend"):
@@ -89,7 +87,7 @@ class PyRequireLoader(object):
     def _load_conanfile(self, loader, lock_python_requires, py_requires_ref):
         ref = ConanFileReference.loads(py_requires_ref)
         if lock_python_requires:
-            locked = lock_python_requires[ref.name]
+            locked = {r.name: r for r in lock_python_requires}[ref.name]
             ref = locked
         else:
             requirement = Requirement(ref)
