@@ -98,7 +98,8 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0d561e10e25511b9bfa339d06360d7c1",
                       lock_file)
-        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)), self.pkg_b_id, rev_b), lock_file)
+        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)), self.pkg_b_id, rev_b),
+                      lock_file)
 
     def install_info_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
@@ -381,7 +382,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
 
 
-class GraphLockPyRequiresTest(unittest.TestCase):
+class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
     def transitive_py_requires_test(self):
         # https://github.com/conan-io/conan/issues/5529
         client = TestClient()
@@ -391,7 +392,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class PackageInfo(ConanFile):
-                py_requires = "base/1.0@user/channel"
+                python_requires = "base/1.0@user/channel"
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . helper/1.0@user/channel")
@@ -399,16 +400,18 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class MyConanfileBase(ConanFile):
-                py_requires = "helper/1.0@user/channel"
+                python_requires = "helper/1.0@user/channel"
             """)
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
         lockfile = load(os.path.join(client.current_folder, "conan.lock"))
         self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
-        self.assertIn("helper/1.0@user/channel#e6699bb7e977cf024b31c7228355a129", lockfile)
+        self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
 
+
+class GraphLockPyRequiresTest(unittest.TestCase):
     def setUp(self):
         client = TestClient()
         self.client = client
@@ -426,11 +429,11 @@ class GraphLockPyRequiresTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 name = "Pkg"
-                py_requires = "Tool/[>=0.1]@user/channel"
+                python_requires = "Tool/[>=0.1]@user/channel"
                 def configure(self):
-                    self.output.info("CONFIGURE VAR=%s" % self.py_requires.Tool.var)
+                    self.output.info("CONFIGURE VAR=%s" % self.python_requires.Tool.var)
                 def build(self):
-                    self.output.info("BUILD VAR=%s" % self.py_requires.Tool.var)
+                    self.output.info("BUILD VAR=%s" % self.python_requires.Tool.var)
             """)
         client.save({"conanfile.py": consumer})
         client.run("install .")
@@ -488,10 +491,10 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/channel: BUILD VAR=42", client.out)
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
-        self._check_lock("Pkg/0.1@user/channel#9765ea0c98c4e591ca745680ac7a08f5")
+        self._check_lock("Pkg/0.1@user/channel#4e5797887a0f2937e6f0643e8ac6714e")
 
     def export_pkg_test(self):
         client = self.client
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
-        self._check_lock("Pkg/0.1@user/channel#9765ea0c98c4e591ca745680ac7a08f5")
+        self._check_lock("Pkg/0.1@user/channel#4e5797887a0f2937e6f0643e8ac6714e")
