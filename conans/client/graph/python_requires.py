@@ -10,41 +10,24 @@ from conans.errors import ConanException, NotFoundException
 PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
                                              "exports_folder", "exports_sources_folder"])
 
-# Necessary to contain the full_reference of the py_require, the module will contain the rest
-PyRequire = namedtuple("PyRequire", ["ref", "module"])
-
 
 class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
-        # including transitive
-        self._pyrequires = {}
-        self._direct = set()
+        self._pyrequires = {}  # {pkg-name: module}
 
     def __getattr__(self, item):
-        if item not in self._direct:
-            raise ConanException("'%s' is a transitive py_require, can't be used directly" % item)
-        return self._pyrequires[item].module
-
-    def __getitem__(self, item):
-        return self._pyrequires[item]
+        try:
+            return self._pyrequires[item]
+        except KeyError:
+            raise ConanException("'%s' is not a py_require" % item)
 
     def __setitem__(self, key, value):
         # single item assignment, direct
         existing = self._pyrequires.get(key)
-        if existing and existing.ref.name == value.ref.name and existing.ref != value.ref:
-            raise ConanException("The py_requires '%s' already exists" % value.ref.name)
-        self._direct.add(key)
+        if existing:
+            raise ConanException("The py_requires '%s' already exists" % key)
         self._pyrequires[key] = value
-
-    def _update(self, other, alias=False):
-        for key, value in other._pyrequires.items():
-            existing = self._pyrequires.get(key)
-            if existing and existing.ref.name == value.ref.name and existing.ref != value.ref:
-                raise ConanException("The py_requires '%s' already exists" % value.ref.name)
-            self._pyrequires[key] = value
-        if alias:
-            self._direct.update(other._direct)
 
 
 class PyRequireLoader(object):
@@ -62,16 +45,17 @@ class PyRequireLoader(object):
         # DO nothing, just to stay compatible with the interface of python_requires
         yield []
 
-    def load_py_requires(self, conanfile, lock_python_requires):
+    def load_py_requires(self, conanfile, lock_python_requires, loader):
         if not hasattr(conanfile, "py_requires"):
             return
-        py_requires = conanfile.py_requires
-        if isinstance(py_requires, str):
-            py_requires = [py_requires, ]
+        py_requires_refs = conanfile.py_requires
+        if isinstance(py_requires_refs, str):
+            py_requires_refs = [py_requires_refs, ]
 
         if lock_python_requires and not isinstance(lock_python_requires, dict):
             lock_python_requires = {r.name: r for r in lock_python_requires}
-        py_requires = self._resolve_py_requires(py_requires, lock_python_requires)
+        py_requires, all_refs = self._resolve_py_requires(py_requires_refs, lock_python_requires,
+                                                          loader)
         if hasattr(conanfile, "py_requires_extend"):
             py_requires_extend = conanfile.py_requires_extend
             if isinstance(py_requires_extend, str):
@@ -81,34 +65,46 @@ class PyRequireLoader(object):
                 base_class = getattr(getattr(py_requires, pkg_name), base_class_name)
                 conanfile.__bases__ = (base_class,) + conanfile.__bases__
         conanfile.py_requires = py_requires
-        return py_requires
+        conanfile.py_requires_all_refs = all_refs
 
-    def _resolve_py_requires(self, py_requires, lock_python_requires):
+    def _resolve_py_requires(self, py_requires_refs, lock_python_requires, loader):
         result = PyRequires()
-        for py_require in py_requires:
-            ref = ConanFileReference.loads(py_require)
-            if lock_python_requires:
-                locked = lock_python_requires[ref.name]
-                ref = locked
+        all_refs = {}
+        for py_requires_ref in py_requires_refs:
+            conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires,
+                                                              py_requires_ref)
+            result[new_ref.name] = module
+            # Update the list of transitive, detecting conflicts
+            existing = all_refs.get(new_ref.name)
+            if existing and existing != new_ref:
+                raise ConanException("Conflict in py_requires %s - %s" % (existing, new_ref))
+            all_refs[new_ref.name] = new_ref
+            for name, ref in getattr(conanfile, "py_requires_all_refs", {}).items():
+                existing = all_refs.get(name)
+                if existing and existing != ref:
+                    raise ConanException("Conflict in py_requires %s - %s" % (existing, ref))
+                all_refs[name] = ref
+        return result, all_refs
+
+    def _load_conanfile(self, loader, lock_python_requires, py_requires_ref):
+        ref = ConanFileReference.loads(py_requires_ref)
+        if lock_python_requires:
+            locked = lock_python_requires[ref.name]
+            ref = locked
+        else:
             requirement = Requirement(ref)
             self._range_resolver.resolve(requirement, "py_require", update=self._update,
                                          remotes=self._remotes)
             ref = requirement.ref
-            recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
-                                            remotes=self._remotes,
-                                            recorder=ActionRecorder())
-            path, _, _, new_ref = recipe
-            module, conanfile = parse_conanfile(conanfile_path=path, python_requires=self)
-            if getattr(conanfile, "alias", None):
-                # Will register also the aliased
-                aliased = self._resolve_py_requires([conanfile.alias], lock_python_requires)
-                result._update(aliased, alias=True)
-            else:
-                result[new_ref.name] = PyRequire(new_ref, module)
-                child = self.load_py_requires(conanfile, lock_python_requires)
-                if child is not None:
-                    result._update(child)
-        return result
+        recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
+                                        remotes=self._remotes, recorder=ActionRecorder())
+        path, _, _, new_ref = recipe
+        conanfile, module = loader.load_class_module(conanfile_path=path,
+                                                     lock_python_requires=lock_python_requires)
+        if getattr(conanfile, "alias", None):
+            conanfile, module, new_ref = self._load_conanfile(loader, lock_python_requires,
+                                                              conanfile.alias)
+        return conanfile, module, new_ref
 
 
 class ConanPythonRequire(object):

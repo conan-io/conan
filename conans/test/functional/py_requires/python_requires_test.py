@@ -154,7 +154,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("base' is a transitive py_require, can't be used directly", client.out)
+        self.assertIn("'base' is not a py_require", client.out)
 
         conanfile = textwrap.dedent("""
                     from conans import ConanFile
@@ -164,7 +164,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                     """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("base' is a transitive py_require, can't be used directly", client.out)
+        self.assertIn("'base' is not a py_require", client.out)
 
     def multiple_requires_error_test(self):
         client = TestClient()

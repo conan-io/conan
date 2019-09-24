@@ -13,10 +13,7 @@ def _get_python_requires(conanfile):
         result.add(py_require.ref)
         result.update(_get_python_requires(py_require.conanfile))
 
-    py_requires = getattr(conanfile, "py_requires", None)
-    if py_requires is not None:
-        for py_require in py_requires._pyrequires.values():
-            result.add(py_require.ref)
+    result.update(getattr(conanfile, "py_requires_all_refs", {}).values())
 
     return result
 

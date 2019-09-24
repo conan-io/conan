@@ -31,26 +31,32 @@ class ConanFileLoader(object):
         self.cached_conanfiles = {}
 
     def load_class(self, conanfile_path, lock_python_requires=None):
+        # FIXME: Using a temp method to avoid changing many places
+        conanfile, _ = self.load_class_module(conanfile_path, lock_python_requires)
+        return conanfile
+
+    def load_class_module(self, conanfile_path, lock_python_requires=None):
         cached = self.cached_conanfiles.get(conanfile_path)
-        if cached and cached[1] == lock_python_requires:
-            return cached[0]
+        if cached and cached[2] == lock_python_requires:
+            return cached[0], cached[1]
 
         if lock_python_requires is not None:
             self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
         try:
             self._python_requires.valid = True
-            _, conanfile = parse_conanfile(conanfile_path, self._python_requires)
+            module, conanfile = parse_conanfile(conanfile_path, self._python_requires)
             self._python_requires.valid = False
 
             self._python_requires.locked_versions = None
 
+            # This is the new py_requires feature, to supersede the old python_requires
             if self._py_requires:
-                self._py_requires.load_py_requires(conanfile, lock_python_requires)
-            self.cached_conanfiles[conanfile_path] = (conanfile, lock_python_requires)
+                self._py_requires.load_py_requires(conanfile, lock_python_requires, self)
+            self.cached_conanfiles[conanfile_path] = (conanfile, module, lock_python_requires)
 
             conanfile.conan_data = self._load_data(conanfile_path)
 
-            return conanfile
+            return conanfile, module
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
