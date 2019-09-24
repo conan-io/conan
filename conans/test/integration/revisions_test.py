@@ -327,26 +327,22 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client = self.c_v1 if v1 else self.c_v2
         ref = client.export(self.ref)
         command = "install {}#fakerevision".format(ref)
-        if v1:
-            client.run(command, assert_error=True)
-            self.assertIn("ERROR: Revisions not enabled in the client, "
-                          "specify a reference without revision", client.out)
-        else:
-            client.run(command, assert_error=True)
-            self.assertIn("The recipe in the local cache doesn't match the specified revision. "
-                          "Use '--update' to check in the remote", client.out)
-            command = "install {}#fakerevision --update".format(ref)
-            client.run(command, assert_error=True)
-            self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
-            # Now create a new revision with other client and upload it, we will request it
-            new_client = TurboTestClient(revisions_enabled=True, servers=self.servers)
-            pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-            new_client.upload_all(self.ref)
+        client.run(command, assert_error=True)
+        self.assertIn("The recipe in the local cache doesn't match the specified revision. "
+                      "Use '--update' to check in the remote", client.out)
+        command = "install {}#fakerevision --update".format(ref)
+        client.run(command, assert_error=True)
+        self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
-            # Repeat the install --update pointing to the new reference
-            client.run("install {} --update".format(pref.ref.full_str()))
-            self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
+        # Now create a new revision with other client and upload it, we will request it
+        new_client = TurboTestClient(revisions_enabled=True, servers=self.servers)
+        pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
+        new_client.upload_all(self.ref)
+
+        # Repeat the install --update pointing to the new reference
+        client.run("install {} --update".format(pref.ref.full_str()))
+        self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     @parameterized.expand([(True,), (False,)])
     def test_revision_mismatch_packages_remote(self, v1):
