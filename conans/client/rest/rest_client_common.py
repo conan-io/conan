@@ -89,7 +89,6 @@ class RestCommonMethods(object):
 
     def authenticate(self, user, password):
         """Sends user + password to get:
-          - A json with an access_token and a refresh token (if supported in the remote)
           - A plain response with a regular token (not supported refresh in the remote) and None
         """
         auth = HTTPBasicAuth(user, password)
@@ -102,6 +101,10 @@ class RestCommonMethods(object):
         return decode_text(ret.content), None
 
     def authenticate_oauth(self, user, password):
+        """Sends user + password to get:
+            - A json with an access_token and a refresh token (if supported in the remote)
+                    Artifactory >= 6.13.X
+        """
         url = self.router.oauth_authenticate()
         auth = HTTPBasicAuth(user, password)
         headers = {}
@@ -119,7 +122,10 @@ class RestCommonMethods(object):
 
     def refresh_token(self, token, refresh_token):
         """Sends access_token and the refresh_token to get a pair of
-        access_token and refresh token"""
+        access_token and refresh token
+
+        Artifactory >= 6.13.X
+        """
         url = self.router.oauth_authenticate()
         logger.debug("REST: Refreshing Token: %s" % url)
         headers = {}

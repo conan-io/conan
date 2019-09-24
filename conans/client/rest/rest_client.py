@@ -90,7 +90,8 @@ class RestApiClient(object):
                                self.requester, self.verify_ssl, self._put_headers)
 
         if not self.refresh_token or not self.token:
-            if REFRESH_TOKEN in self._cached_capabilities[self.remote_url]:
+            if False and REFRESH_TOKEN in self._cached_capabilities[self.remote_url]:
+                # Artifactory >= 6.13.X
                 token, refresh_token = api_v1.authenticate_oauth(user, password)
             else:
                 token, refresh_token = api_v1.authenticate(user, password)
