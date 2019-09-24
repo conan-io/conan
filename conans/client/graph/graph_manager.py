@@ -125,9 +125,6 @@ class GraphManager(object):
                                                   scope_options=False)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
         elif isinstance(reference, ConanFileReference):
-            if not self._cache.config.revisions_enabled and reference.revision is not None:
-                raise ConanException("Revisions not enabled in the client, specify a "
-                                     "reference without revision")
             # create without test_package and install <ref>
             conanfile = self._loader.load_virtual([reference], processed_profile)
             root_node = Node(ref, conanfile, recipe=RECIPE_VIRTUAL)
