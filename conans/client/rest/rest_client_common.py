@@ -94,45 +94,50 @@ class RestCommonMethods(object):
         """
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
-        params = {"oauth_token": "true"}
         logger.debug("REST: Authenticate to get access_token: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl, params=params)
+                                 verify=self.verify_ssl)
 
         self._check_error_response(ret)
+        return decode_text(ret.content), None
 
-        try:
-            data = ret.json()
-            access_token = data["access_token"]
-            refresh_token = data["refresh_token"]
-            logger.debug("REST: Obtained refresh and access tokens")
-            return access_token, refresh_token
-        except ValueError:
-            return decode_text(ret.content), None
+    def authenticate_oauth(self, user, password):
+        url = self.router.oauth_authenticate()
+        auth = HTTPBasicAuth(user, password)
+        headers = {}
+        headers.update(self.custom_headers)
+        headers["Content-type"] = "application/x-www-form-urlencoded"
+        logger.debug("REST: Authenticating with OAUTH: %s" % url)
+        ret = self.requester.post(url, auth=auth, headers=headers, verify=self.verify_ssl)
+        self._check_error_response(ret)
+
+        data = ret.json()
+        access_token = data["access_token"]
+        refresh_token = data["refresh_token"]
+        logger.debug("REST: Obtained refresh and access tokens")
+        return access_token, refresh_token
 
     def refresh_token(self, token, refresh_token):
         """Sends access_token and the refresh_token to get a pair of
         access_token and refresh token"""
-        url = self.router.common_authenticate()
+        url = self.router.oauth_authenticate()
         logger.debug("REST: Refreshing Token: %s" % url)
+        headers = {}
+        headers.update(self.custom_headers)
+        headers["Content-type"] = "application/x-www-form-urlencoded"
         payload = {'access_token': token, 'refresh_token': refresh_token,
                    'grant_type': 'refresh_token'}
-        ret = self.requester.post(url, headers=self.custom_headers, verify=self.verify_ssl,
-                                  data=payload)
+        ret = self.requester.post(url, headers=headers, verify=self.verify_ssl, data=payload)
         self._check_error_response(ret)
 
         data = ret.json()
         if "access_token" not in data:
-            # TODO: I don't know why artifactory returns 200 but then the json says it is an error!
-            #       Probably this is an Artifactory bug, remove later and try
-            if data.get("statusCode") == 401:
-                raise AuthenticationException("Error refreshing the token: "
-                                              "{}".format(data.get("internalErrorMsg")))
+            logger.debug("REST: unexpected data from server: {}".format(data))
             raise ConanException("Error refreshing the token")
 
         new_access_token = data["access_token"]
         new_refresh_token = data["refresh_token"]
-
+        logger.debug("REST: Obtained new refresh and access tokens")
         return new_access_token, new_refresh_token
 
     @handle_return_deserializer()
