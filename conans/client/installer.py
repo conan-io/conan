@@ -423,11 +423,16 @@ class BinaryInstaller(object):
     def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
-        for python_require in conanfile.python_requires.values():
-            assert python_require.ref.revision is not None, \
-                "Installer should receive python_require.ref always"
-            complete_recipe_sources(self._remote_manager, self._cache,
-                                    conanfile, python_require.ref, remotes)
+        python_requires = getattr(conanfile, "python_requires", None)
+        if isinstance(python_requires, dict):
+            for python_require in conanfile.python_requires.values():
+                assert python_require.ref.revision is not None, \
+                    "Installer should receive python_require.ref always"
+                complete_recipe_sources(self._remote_manager, self._cache,
+                                        conanfile, python_require.ref, remotes)
+        else:
+            # TODO: implement complete sources for new py_requires
+            pass
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)

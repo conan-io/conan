@@ -20,13 +20,13 @@ class PyRequires(object):
         try:
             return self._pyrequires[item]
         except KeyError:
-            raise ConanException("'%s' is not a py_require" % item)
+            raise ConanException("'%s' is not a python_require" % item)
 
     def __setitem__(self, key, value):
         # single item assignment, direct
         existing = self._pyrequires.get(key)
         if existing:
-            raise ConanException("The py_requires '%s' already exists" % key)
+            raise ConanException("The python_require '%s' already exists" % key)
         self._pyrequires[key] = value
 
 
@@ -46,23 +46,23 @@ class PyRequireLoader(object):
         yield []
 
     def load_py_requires(self, conanfile, lock_python_requires, loader):
-        if not hasattr(conanfile, "py_requires"):
+        if not hasattr(conanfile, "python_requires") or isinstance(conanfile.python_requires, dict):
             return
-        py_requires_refs = conanfile.py_requires
+        py_requires_refs = conanfile.python_requires
         if isinstance(py_requires_refs, str):
             py_requires_refs = [py_requires_refs, ]
 
         py_requires, all_refs = self._resolve_py_requires(py_requires_refs, lock_python_requires,
                                                           loader)
-        if hasattr(conanfile, "py_requires_extend"):
-            py_requires_extend = conanfile.py_requires_extend
+        if hasattr(conanfile, "python_requires_extend"):
+            py_requires_extend = conanfile.python_requires_extend
             if isinstance(py_requires_extend, str):
                 py_requires_extend = [py_requires_extend, ]
             for p in py_requires_extend:
                 pkg_name, base_class_name = p.split(".")
                 base_class = getattr(getattr(py_requires, pkg_name), base_class_name)
                 conanfile.__bases__ = (base_class,) + conanfile.__bases__
-        conanfile.py_requires = py_requires
+        conanfile.python_requires = py_requires
         conanfile.py_requires_all_refs = all_refs
 
     def _resolve_py_requires(self, py_requires_refs, lock_python_requires, loader):

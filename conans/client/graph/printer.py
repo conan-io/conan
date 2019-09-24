@@ -9,11 +9,13 @@ from conans.model.ref import PackageReference
 
 def _get_python_requires(conanfile):
     result = set()
-    for _, py_require in getattr(conanfile, "python_requires", {}).items():
-        result.add(py_require.ref)
-        result.update(_get_python_requires(py_require.conanfile))
-
-    result.update(getattr(conanfile, "py_requires_all_refs", {}).values())
+    python_requires = getattr(conanfile, "python_requires", None)
+    if isinstance(python_requires, dict):  # Old python requires
+        for _, py_require in python_requires.items():
+            result.add(py_require.ref)
+            result.update(_get_python_requires(py_require.conanfile))
+    elif python_requires:
+        result.update(conanfile.py_requires_all_refs.values())
 
     return result
 

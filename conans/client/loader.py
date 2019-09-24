@@ -22,10 +22,10 @@ from conans.util.files import load
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, output, python_requires, py_requires=None):
+    def __init__(self, runner, output, python_requires, pyreq_loader=None):
         self._runner = runner
         self._output = output
-        self._py_requires = py_requires
+        self._pyreq_loader = pyreq_loader
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
         self.cached_conanfiles = {}
@@ -50,8 +50,8 @@ class ConanFileLoader(object):
             self._python_requires.locked_versions = None
 
             # This is the new py_requires feature, to supersede the old python_requires
-            if self._py_requires:
-                self._py_requires.load_py_requires(conanfile, lock_python_requires, self)
+            if self._pyreq_loader:
+                self._pyreq_loader.load_py_requires(conanfile, lock_python_requires, self)
             self.cached_conanfiles[conanfile_path] = (conanfile, module, lock_python_requires)
 
             conanfile.conan_data = self._load_data(conanfile_path)
@@ -75,7 +75,7 @@ class ConanFileLoader(object):
 
     def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
         conanfile = self.load_class(conanfile_path, lock_python_requires)
-        if getattr(conanfile, "py_requires_extend", None):
+        if getattr(conanfile, "python_requires_extend", None):
             try:
                 conanfile.name = conanfile.get_name()
             except Exception:
@@ -289,7 +289,8 @@ def parse_conanfile(conanfile_path, python_requires):
                 py_reqs[it.ref.name] = it
 
             # Make them available to the conanfile itself
-            conanfile.python_requires = py_reqs
+            if py_reqs:
+                conanfile.python_requires = py_reqs
             return module, conanfile
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))

@@ -179,8 +179,8 @@ class ConanApp(object):
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         resolver = RangeResolver(self.cache, self.remote_manager)
         self.python_requires = ConanPythonRequire(self.proxy, resolver)
-        self.py_requires = PyRequireLoader(self.proxy, resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.py_requires)
+        self.pyreq_loader = PyRequireLoader(self.proxy, resolver)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
 
         self.graph_manager = GraphManager(self.out, self.cache,
                                           self.remote_manager, self.loader, self.proxy,
@@ -192,7 +192,7 @@ class ConanApp(object):
             remotes.select(remote_name)
         self.python_requires.enable_remotes(update=update, check_updates=check_updates,
                                             remotes=remotes)
-        self.py_requires.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
+        self.pyreq_loader.enable_remotes(update=update, check_updates=check_updates, remotes=remotes)
         return remotes
 
 
