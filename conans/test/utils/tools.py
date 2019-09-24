@@ -648,13 +648,26 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1):
+                 revisions_enabled=None, cpu_count=1, default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        if default_server_user is not None:
+            if servers is not None:
+                raise Exception("Cannot define both 'servers' and 'default_server_user'")
+            if users is not None:
+                raise Exception("Cannot define both 'users' and 'default_server_user'")
+            if default_server_user is True:
+                server_users = {"user": "password"}
+                users = {"default": [("user", "password")]}
+            else:
+                server_users = default_server_user
+                users = {"default": list(default_server_user.items())}
+            server = TestServer(users=server_users)
+            servers = {"default": server}
 
         self.users = users
         if self.users is None:
@@ -871,14 +884,14 @@ class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"
 
     def __init__(self, *args, **kwargs):
-        if "users" not in kwargs:
+        if "users" not in kwargs and "default_server_user" not in kwargs:
             from collections import defaultdict
             kwargs["users"] = defaultdict(lambda: [("conan", "password")])
 
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
     def export(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""),
                  assert_error=assert_error)
@@ -886,7 +899,7 @@ class TurboTestClient(TestClient):
         return ref.copy_with_rev(rrev)
 
     def create(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("create . {} {} --json {}".format(ref.full_str(),
                                                    args or "", self.tmp_json_name),
@@ -914,7 +927,7 @@ class TurboTestClient(TestClient):
         self.run("remove '*' -f")
 
     def export_pkg(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
                                                        args or "", self.tmp_json_name),

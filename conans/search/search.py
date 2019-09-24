@@ -49,14 +49,14 @@ def filter_packages(query, package_infos):
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
         for package_id, info in package_infos.items():
-            if evaluate_postfix_with_info(postfix, info):
+            if _evaluate_postfix_with_info(postfix, info):
                 result[package_id] = info
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def evaluate_postfix_with_info(postfix, conan_vars_info):
+def _evaluate_postfix_with_info(postfix, conan_vars_info):
 
     # Evaluate conaninfo with the expression
 
@@ -65,12 +65,12 @@ def evaluate_postfix_with_info(postfix, conan_vars_info):
         Uses conan_vars_info in the closure to evaluate it"""
         name, value = expression.split("=", 1)
         value = value.replace("\"", "")
-        return evaluate(name, value, conan_vars_info)
+        return _evaluate(name, value, conan_vars_info)
 
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def evaluate(prop_name, prop_value, conan_vars_info):
+def _evaluate(prop_name, prop_value, conan_vars_info):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -108,16 +108,16 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     refs = [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        refs = [r for r in refs if _partial_match(pattern, r)]
+        refs = [r for r in refs if _partial_match(pattern, repr(r))]
     refs = sorted(refs)
     return refs
 
 
-def _partial_match(pattern, ref):
+def _partial_match(pattern, reference):
     """
     Finds if pattern matches any of partial sums of tokens of conan reference
     """
-    tokens = str(ref).replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
+    tokens = reference.replace('/', ' / ').replace('@', ' @ ').replace('#', ' # ').split()
 
     def partial_sums(iterable):
         partial = ''
