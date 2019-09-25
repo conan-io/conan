@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, REFRESH_TOKEN
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
@@ -90,7 +90,7 @@ class RestApiClient(object):
                                self.requester, self.verify_ssl, self._put_headers)
 
         if not self.refresh_token or not self.token:
-            if False and REFRESH_TOKEN in self._cached_capabilities[self.remote_url]:
+            if OAUTH_TOKEN in self._cached_capabilities[self.remote_url]:
                 # Artifactory >= 6.13.X
                 token, refresh_token = api_v1.authenticate_oauth(user, password)
             else:
