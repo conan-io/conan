@@ -235,10 +235,6 @@ class ConanApiAuthManager(object):
         except UnicodeDecodeError:
             raise ConanException("Password contains not allowed symbols")
 
-        logger.debug("Got token")
-        if refresh_token:
-            logger.debug("Got refresh token")
-
         # Store result in DB
         remote_name, prev_user, user = update_localdb(self._localdb, user, token, refresh_token,
                                                       self._remote)
