@@ -1,9 +1,10 @@
 from collections import defaultdict
 
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, COMPLEX_SEARCH_CAPABILITY
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available
+from conans.search.search import filter_packages
 from conans.util.log import logger
 
 
@@ -33,7 +34,7 @@ class RestApiClient(object):
         if self.remote_url not in self._cached_capabilities:
             tmp = RestV1Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                 self.requester, self.verify_ssl, self._put_headers)
-            _, _, cap = tmp.server_info()
+            cap = tmp.server_capabilities()
             self._cached_capabilities[self.remote_url] = cap
             logger.debug("REST: Cached capabilities for the remote: %s" % cap)
             if not self._revisions_enabled and ONLY_V2 in cap:
@@ -107,7 +108,10 @@ class RestApiClient(object):
         return self._get_api().search(pattern, ignorecase)
 
     def search_packages(self, reference, query):
-        return self._get_api().search_packages(reference, query)
+        package_infos = self._get_api().search_packages(reference, query)
+        if query and COMPLEX_SEARCH_CAPABILITY not in self._cached_capabilities[self.remote_url]:
+            return filter_packages(query, package_infos)
+        return package_infos
 
     def remove_conanfile(self, ref):
         return self._get_api().remove_conanfile(ref)
@@ -115,8 +119,8 @@ class RestApiClient(object):
     def remove_packages(self, ref, package_ids=None):
         return self._get_api().remove_packages(ref, package_ids)
 
-    def server_info(self):
-        return self._get_api().server_info()
+    def server_capabilities(self):
+        return self._get_api().server_capabilities()
 
     def get_recipe_revisions(self, ref):
         return self._get_api().get_recipe_revisions(ref)

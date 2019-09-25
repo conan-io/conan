@@ -2,13 +2,11 @@ import json
 
 from requests.auth import AuthBase, HTTPBasicAuth
 
-from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.client.rest import response_to_str
-from conans.errors import (EXCEPTION_CODE_MAPPING, NotFoundException, ConanException,
+from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
 from conans.model.ref import ConanFileReference
-from conans.search.search import filter_packages
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -156,7 +154,7 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
         return ret
 
-    def server_info(self):
+    def server_capabilities(self):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
         logger.debug("REST: ping: %s" % url)
@@ -164,15 +162,13 @@ class RestCommonMethods(object):
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
 
-        if not ret.ok:
-            raise get_exception_from_error(ret.status_code)("")
-
-        version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
-        server_version = ret.headers.get('X-Conan-Server-Version', None)
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
-        server_capabilities = [cap.strip() for cap in server_capabilities.split(",") if cap]
+        if not server_capabilities and not ret.ok:
+            # Old Artifactory might return 401/403 without capabilities, we don't want
+            # to cache them #5687, so raise the exception and force authentication
+            raise get_exception_from_error(ret.status_code)(response_to_str(ret))
 
-        return version_check, server_version, server_capabilities
+        return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
     def get_json(self, url, data=None):
         headers = self.custom_headers
@@ -246,26 +242,10 @@ class RestCommonMethods(object):
         return [ConanFileReference.loads(reference) for reference in response]
 
     def search_packages(self, ref, query):
-
-        if not query:
-            url = self.router.search_packages(ref)
-            package_infos = self.get_json(url)
-            return package_infos
-
-        # Read capabilities
-        try:
-            _, _, capabilities = self.server_info()
-        except NotFoundException:
-            capabilities = []
-
-        if COMPLEX_SEARCH_CAPABILITY in capabilities:
-            url = self.router.search_packages(ref, query)
-            package_infos = self.get_json(url)
-            return package_infos
-        else:
-            url = self.router.search_packages(ref)
-            package_infos = self.get_json(url)
-            return filter_packages(query, package_infos)
+        """Client is filtering by the query"""
+        url = self.router.search_packages(ref, query)
+        package_infos = self.get_json(url)
+        return package_infos
 
     def _post_json(self, url, payload):
         logger.debug("REST: post: %s" % url)

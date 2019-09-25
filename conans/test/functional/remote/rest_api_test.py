@@ -82,8 +82,8 @@ class RestApiTest(unittest.TestCase):
     def tearDown(self):
         RestApiTest.server.clean()
 
-    def server_info_test(self):
-        _, _, capabilities = self.api.server_info()
+    def server_capabilities_test(self):
+        capabilities = self.api.server_capabilities()
         self.assertEqual(capabilities, ["ImCool", "TooCool"])
 
     def get_conan_test(self):
