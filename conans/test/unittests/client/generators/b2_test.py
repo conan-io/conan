@@ -298,7 +298,7 @@ constant-if usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release) :
 # mypkg
 if $(__define_targets__) {
     call-in-project $(mypkg-mod) : lib MyLib1
-        :
+        : ''' + '''
         : <name>MyLib1 <search>$(libdirs(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg,32,x86,17,gnu,linux,gcc-6.3,release)) ;
@@ -315,7 +315,7 @@ if $(__define_targets__) {
 # mypkg2
 if $(__define_targets__) {
     call-in-project $(mypkg2-mod) : lib MyLib2
-        :
+        : /MyPkg//libs
         : <name>MyLib2 <search>$(libdirs(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) $(requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
@@ -323,7 +323,7 @@ if $(__define_targets__) {
 
 if $(__define_targets__) {
     call-in-project $(mypkg2-mod) : alias libs
-        : MyLib2
+        : /MyPkg//libs MyLib2
         : $(requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release))
         :
         : $(usage-requirements(mypkg2,32,x86,17,gnu,linux,gcc-6.3,release)) ;
