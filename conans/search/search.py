@@ -92,16 +92,18 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
         return compatible_prop(info_options.get(prop_name, None), prop_value)
 
 
-def search_recipes(cache, pattern, ignorecase=True):
+def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
-    if isinstance(pattern, ConanFileReference):
-        pattern = repr(pattern)
-    pattern = translate(pattern)
-    pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
+    if pattern:
+        if isinstance(pattern, ConanFileReference):
+            pattern = repr(pattern)
+        pattern = translate(pattern)
+        pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
     refs = cache.all_refs()
     refs.extend(cache.editable_packages.edited_refs.keys())
-    refs = [r for r in refs if _partial_match(pattern, repr(r))]
+    if pattern:
+        refs = [r for r in refs if _partial_match(pattern, repr(r))]
     refs = sorted(refs)
     return refs
 
