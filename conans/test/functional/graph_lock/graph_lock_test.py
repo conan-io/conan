@@ -417,5 +417,32 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
         client.run("export .")
         client.run("graph lock test4/0.1@")
         client.run("graph build-order conan.lock --build=missing")
-        print client.out
         self.assertIn("test4/0.1", client.out)
+
+
+class GraphLockWarningsTestCase(unittest.TestCase):
+
+    def test_override(self):
+        client = TestClient()
+        harfbuzz_ref = ConanFileReference.loads("harfbuzz/1.0")
+        ffmpeg_ref = ConanFileReference.loads("ffmpeg/1.0")
+        client.save({"harfbuzz.py": GenConanfile().with_name("harfbuzz").with_version("1.0"),
+                     "ffmpeg.py": GenConanfile().with_name("ffmpeg").with_version("1.0")
+                                                .with_requirement_plain("harfbuzz/[>=1.0]"),
+                     "meta.py": GenConanfile().with_name("meta").with_version("1.0")
+                                              .with_requirement(ffmpeg_ref)
+                                              .with_requirement(harfbuzz_ref)
+                     })
+        client.run("export harfbuzz.py")
+        client.run("export ffmpeg.py")
+        client.run("export meta.py")
+
+        # Building the graphlock we get the message
+        client.run("graph lock meta.py")
+        self.assertIn("WARN: ffmpeg/1.0: requirement harfbuzz/[>=1.0] overridden by meta/1.0"
+                      " to harfbuzz/1.0", client.out)
+
+        # Using the graphlock there is no warning message
+        client.run("graph build-order conan.lock")
+        self.assertNotIn("overridden", client.out)
+        self.assertNotIn("WARN", client.out)

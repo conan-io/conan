@@ -138,13 +138,12 @@ class Requirements(OrderedDict):
                 # update dependency
                 other_ref = other_req.ref
                 if other_ref and other_ref != req.ref:
-                    msg = "requirement %s overridden by %s to %s " \
-                          % (req.ref, down_ref or "your conanfile", other_ref)
+                    msg = "%s: requirement %s overridden by %s to %s " \
+                          % (own_ref, req.ref, down_ref or "your conanfile", other_ref)
 
                     if error_on_override and not other_req.override:
                         raise ConanException(msg)
 
-                    msg = "%s %s" % (own_ref, msg)
                     output.warn(msg)
                     req.ref = other_ref
 
