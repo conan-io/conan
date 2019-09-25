@@ -108,15 +108,22 @@ class GraphLockNode(object):
 
 class GraphLock(object):
 
-    def __init__(self, graph=None):
+    def __init__(self, graph=None, revisions_enabled=False):
         self._nodes = {}  # {numeric id: PREF or None}
+
+        def _revs(_ref):
+            return _ref if revisions_enabled else _ref.copy_clear_rev()
+
+        def _prevs(_pref):
+            return _pref if revisions_enabled else _pref.copy_clear_revs()
+
         if graph:
             for node in graph.nodes:
                 if node.recipe == RECIPE_VIRTUAL:
                     continue
                 requires = {}
                 for edge in node.dependencies:
-                    requires[repr(edge.require.ref)] = edge.dst.id
+                    requires[repr(_revs(edge.require.ref))] = edge.dst.id
                 # It is necessary to lock the transitive python-requires too, for this node
                 python_reqs = {}
                 reqs = getattr(node.conanfile, "python_requires", {})
@@ -127,8 +134,8 @@ class GraphLock(object):
                         partial.update(getattr(req.conanfile, "python_requires", {}))
                     reqs = partial
 
-                python_reqs = [r.ref for _, r in python_reqs.items()] if python_reqs else None
-                graph_node = GraphLockNode(node.pref if node.ref else None,
+                python_reqs = [_revs(r.ref) for _, r in python_reqs.items()] if python_reqs else None
+                graph_node = GraphLockNode(_prevs(node.pref) if node.ref else None,
                                            python_reqs, node.conanfile.options.values, False,
                                            requires, node.path)
                 self._nodes[node.id] = graph_node
@@ -208,11 +215,15 @@ class GraphLock(object):
                 result.append(id_)
         return result
 
-    def update_check_graph(self, deps_graph, output):
+    def update_check_graph(self, deps_graph, output, revisions_enabled):
         """ update the lockfile, checking for security that only nodes that are being built
         from sources can change their PREF, or nodes that depend on some other "modified"
         package, because their binary-id can change too
         """
+
+        def _prevs(_pref):
+            return _pref if revisions_enabled else _pref.copy_clear_revs()
+
         affected = self._closure_affected()
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
@@ -228,7 +239,7 @@ class GraphLock(object):
                 # been build, then update the graph
                 if lock_node.pref.is_compatible_with(node.pref) or \
                         node.binary == BINARY_BUILD or node.id in affected:
-                    lock_node.pref = node.pref
+                    lock_node.pref = _prevs(node.pref)
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(lock_node.pref), repr(node.pref)))

@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+from parameterized.parameterized import parameterized
+
 from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
@@ -47,6 +49,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
 
     def test(self):
         client = TestClient()
+        client.run("config set general.revisions_enabled=True")
         self.client = client
         client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
@@ -77,6 +80,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     def setUp(self):
         client = TestClient()
         self.client = client
+        self.client.run("config set general.revisions_enabled=True")
         client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
 
@@ -294,6 +298,7 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
 
     def setUp(self):
         client = TestClient()
+        client.run("config set general.revisions_enabled=True")
         self.client = client
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -381,18 +386,36 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
 
 
-class GraphLockuserTest(unittest.TestCase):
+class GraphLockConsumerBuildOrderTest(unittest.TestCase):
 
-    def user_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def consumer_build_order_local_test(self, enable_revisions):
+        # https://github.com/conan-io/conan/issues/5727
         client = TestClient(default_server_user=True)
-        #client.run("config set general.revisions_enabled=1")
+        if enable_revisions:
+            client.run("config set general.revisions_enabled=1")
 
         consumer_ref = ConanFileReference("test4", "0.1", None, None, None)
         consumer = GenConanfile().with_name(consumer_ref.name).with_version(consumer_ref.version)
 
         client.save({"conanfile.py": consumer})
-        #client.run("export conanfile.py")
-        client.run("graph lock conanfile.py")
-        print (load(os.path.join(client.current_folder, "conan.lock")))
-        client.run("graph build-order conan.lock")
-        print(client.out)
+        client.run("graph lock .")
+        client.run("graph build-order conan.lock --build=missing")
+        self.assertIn("[]", client.out)
+
+    @parameterized.expand([(True,), (False,)])
+    def consumer_build_order_test(self, enable_revisions):
+        # https://github.com/conan-io/conan/issues/5727
+        client = TestClient(default_server_user=True)
+        if enable_revisions:
+            client.run("config set general.revisions_enabled=1")
+
+        consumer_ref = ConanFileReference("test4", "0.1", None, None, None)
+        consumer = GenConanfile().with_name(consumer_ref.name).with_version(consumer_ref.version)
+
+        client.save({"conanfile.py": consumer})
+        client.run("export .")
+        client.run("graph lock test4/0.1@")
+        client.run("graph build-order conan.lock --build=missing")
+        print client.out
+        self.assertIn("test4/0.1", client.out)

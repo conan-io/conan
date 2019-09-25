@@ -61,5 +61,5 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     if graph_info.graph_lock:
         # after the package has been created we need to update the node PREV
         nodes[0].prev = pref.revision
-        graph_info.graph_lock.update_check_graph(deps_graph, output)
+        graph_info.graph_lock.update_check_graph(deps_graph, output, app.config.revisions_enabled)
     recorder.package_exported(pref)

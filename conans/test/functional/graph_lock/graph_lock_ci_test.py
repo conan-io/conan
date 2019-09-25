@@ -449,7 +449,6 @@ class GraphLockCITest(unittest.TestCase):
             lock_fileaux = load(os.path.join(client_aux.current_folder, LOCKFILE))
             client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
             client.run("graph update-lock . new_lock")
-
             client.run("graph build-order . --build=missing")
             lock_fileaux = load(os.path.join(client.current_folder, LOCKFILE))
             output = str(client.out).splitlines()[-1]

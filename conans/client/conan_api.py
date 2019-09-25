@@ -1204,14 +1204,22 @@ class ConanAPIV1(object):
         if root_node.path:
             reference = root_node.path
         else:
-            reference = root_node.pref.ref  # This will contain a locked revision
+            reference = root_node.pref.ref
         deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                          False, False, remotes, recorder,
-                                                          revision_from_lock=True)
+                                                          False, False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)
-        return deps_graph.new_build_order()
+        build_order = deps_graph.new_build_order()
+        result = []
+        if not self.app.config.revisions_enabled:
+            for level in build_order:
+                result.append([(id_, repr(pref.copy_clear_revs())) for id_, pref in level])
+        else:
+            for level in build_order:
+                result.append([(id_, repr(pref)) for id_, pref in level])
+        build_order = result
+        return build_order
 
     @api_method
     def create_lock(self, reference, remote_name=None, settings=None, options=None, env=None,
