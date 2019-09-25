@@ -1201,10 +1201,8 @@ class ConanAPIV1(object):
                                     cache=self.app.cache, output=self.app.out,
                                     lockfile=lockfile)
         root_node = graph_info.graph_lock.root_node()
-        if root_node.path:
-            reference = root_node.path
-        else:
-            reference = root_node.pref.ref
+        # The reference of the root node could be a local path or a ref
+        reference = root_node.path or root_node.pref.ref
         deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
                                                           False, False, remotes, recorder)
 
