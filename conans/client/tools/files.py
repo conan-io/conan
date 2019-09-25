@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from fnmatch import fnmatch
 
 import six
-from conans.util.patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
@@ -195,10 +194,8 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
 
     if not patch_file and not patch_string:
         return
-    if patch_file:
-        patchset = fromfile(patch_file)
-    else:
-        patchset = fromstring(patch_string.encode())
+
+    raise NotImplementedError("To be Defined")
 
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
