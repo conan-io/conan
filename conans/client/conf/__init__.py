@@ -8,7 +8,6 @@ from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
 from conans.util.env_reader import get_env
 from conans.util.files import load
-from conans.util.log import get_log_level_by_name
 import logging
 
 
@@ -507,7 +506,7 @@ class ConanClientConfigParser(ConfigParser, object):
             if level is None:
                 level = self.get_item("log.level")
             try:
-                parsed_level = get_log_level_by_name(level)
+                parsed_level = ConanClientConfigParser.get_log_level_by_name(level)
                 level = parsed_level if parsed_level is not None else int(level)
             except Exception:
                 level = logging.CRITICAL
@@ -576,3 +575,16 @@ class ConanClientConfigParser(ConfigParser, object):
             return log_run_to_output.lower() in ("1", "true")
         except ConanException:
             return True
+
+    @staticmethod
+    def get_log_level_by_name(level_name):
+        levels = {
+            "critical": logging.CRITICAL,
+            "error": logging.ERROR,
+            "warning": logging.WARNING,
+            "warn": logging.WARNING,
+            "info": logging.INFO,
+            "debug": logging.DEBUG,
+            "notset": logging.NOTSET
+        }
+        return levels.get(str(level_name).lower())

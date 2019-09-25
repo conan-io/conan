@@ -19,17 +19,6 @@ trace_file = "Path/with/quotes"
 
 '''
 
-default_client_conf_log = '''[storage]
-path: ~/.conan/data
-
-[log]
-trace_file = "foo/bar/quotes"
-{}
-
-[general]
-
-'''
-
 default_profile = '''
 [settings]
 arch=x86_64
@@ -62,6 +51,18 @@ class ClientConfTest(unittest.TestCase):
         save(os.path.join(tmp_dir, CONAN_CONF), "[proxies]\nno_proxy=localhost")
         config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
         self.assertEqual(config.proxies["no_proxy"], "localhost")
+
+
+default_client_conf_log = '''[storage]
+path: ~/.conan/data
+
+[log]
+trace_file = "foo/bar/quotes"
+{}
+
+[general]
+
+'''
 
 
 class ClientConfLogTest(unittest.TestCase):

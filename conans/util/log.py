@@ -36,19 +36,6 @@ def configure_logger(logging_level=logging.CRITICAL, logging_file=None):
     return logger
 
 
-def get_log_level_by_name(level_name):
-    levels = {
-        "critical": logging.CRITICAL,
-        "error": logging.ERROR,
-        "warning": logging.WARNING,
-        "warn": logging.WARNING,
-        "info": logging.INFO,
-        "debug": logging.DEBUG,
-        "notset": logging.NOTSET
-    }
-    return levels.get(str(level_name).lower())
-
-
 logger = configure_logger()
 
 # CRITICAL = 50
