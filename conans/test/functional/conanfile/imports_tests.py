@@ -3,7 +3,6 @@ import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 conanfile = """from conans import ConanFile
 
@@ -73,12 +72,9 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": testconanfile}, clean_first=True)
         client.run("install . --build=missing")
         self.assertIn("IMPORTED FOLDERS: [", client.out)
-        self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
-                         "LicenseA")
-        self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibB/LICENSE.md")),
-                         "LicenseB")
-        self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibC/license.txt")),
-                         "LicenseC")
+        self.assertEqual(client.load("licenses/LibA/LICENSE.txt"), "LicenseA")
+        self.assertEqual(client.load("licenses/LibB/LICENSE.md"), "LicenseB")
+        self.assertEqual(client.load("licenses/LibC/license.txt"), "LicenseC")
 
     def imports_folders_txt_test(self):
         client = self._set_up()
@@ -90,12 +86,10 @@ LibC/0.1@lasote/testing
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
-                         "LicenseA")
+        self.assertEqual(client.load("licenses/LibA/LICENSE.txt"), "LicenseA")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder,
                                                      "licenses/LibB/LICENSE.md")))
-        self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibC/license.txt")),
-                         "LicenseC")
+        self.assertEqual(client.load("licenses/LibC/license.txt"), "LicenseC")
 
     def imports_wrong_args_txt_test(self):
         client = TestClient()
@@ -130,12 +124,9 @@ LibC/0.1@lasote/testing
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/LibA/LICENSE.txt")),
-                         "LicenseA")
-        self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/LICENSE.md")),
-                         "LicenseB")
-        self.assertEqual(load(os.path.join(client.current_folder, "lic@myfolder/LibC/license.txt")),
-                         "LicenseC")
+        self.assertEqual(client.load("lic@myfolder/LibA/LICENSE.txt"), "LicenseA")
+        self.assertEqual(client.load("lic@myfolder/LICENSE.md"), "LicenseB")
+        self.assertEqual(client.load("lic@myfolder/LibC/license.txt"), "LicenseC")
 
     def conanfile_txt_multi_excludes_test(self):
         # https://github.com/conan-io/conan/issues/2293

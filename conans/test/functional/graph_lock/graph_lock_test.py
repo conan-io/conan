@@ -114,7 +114,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         self.assertIn("PkgA/0.1/user/channel", cmake)
         self.assertNotIn("PkgA/0.2/user/channel", cmake)
 

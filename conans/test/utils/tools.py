@@ -688,6 +688,9 @@ servers["r2"] = TestServer()
             self.update_servers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
+    def load(self, filename):
+        return load(os.path.join(self.current_folder, filename))
+
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it

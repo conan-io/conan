@@ -25,7 +25,7 @@ class Pkg(ConanFile):
         client.run('install . -s os=Windows -s compiler="Visual Studio" '
                    '-s compiler.version=15 -s compiler.runtime=MD '
                    '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
-        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        conaninfo = client.load("conaninfo.txt")
         self.assertNotIn("compiler.toolset=None", conaninfo)
         self.assertNotIn("os_build=None", conaninfo)
         self.assertNotIn("arch_build=None", conaninfo)
