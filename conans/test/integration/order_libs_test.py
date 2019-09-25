@@ -37,7 +37,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
         # Change private
         conanfile = """from conans import ConanFile
@@ -46,7 +46,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
         # Change order
         conanfile = """from conans import ConanFile
@@ -55,7 +55,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
         # Change order
         conanfile = """from conans import ConanFile
@@ -64,7 +64,7 @@ class LibCConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
 
     def _export(self, name, deps=None, export=True):

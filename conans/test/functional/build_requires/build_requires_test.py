@@ -7,7 +7,6 @@ from parameterized.parameterized import parameterized
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load
 
 tool_conanfile = """from conans import ConanFile
 
@@ -73,7 +72,7 @@ class BuildRequiresTest(unittest.TestCase):
                       t.out)
         self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                       t.out)
-        conanbuildinfo = load(os.path.join(t.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = t.load("conanbuildinfo.txt")
         self.assertIn('MYENV=["myenvcatch0.1env"]', conanbuildinfo)
         self.assertIn('[libs_catch]', conanbuildinfo)
         self.assertIn("mylibcatch0.1lib", conanbuildinfo)
@@ -155,7 +154,7 @@ Boost/1.0@user/channel
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = client.load("conanbuildinfo.txt")
         self.assertIn('PATH=["myboostpath"]', conanbuildinfo)
 
     def test_dependents(self):
