@@ -63,7 +63,7 @@ compiler:
                   "6", "6.1", "6.2", "6.3", "6.4",
                   "7", "7.1", "7.2", "7.3",
                   "8", "8.1", "8.2", "8.3",
-                  "9", "9.1"]
+                  "9", "9.1", "9.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -79,7 +79,7 @@ compiler:
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                   "5.0", "6.0", "7.0", "7.1",
-                  "8"]
+                  "8", "9"]
         libcxx: [libstdc++, libstdc++11, libc++, c++_shared, c++_static]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     apple-clang:
