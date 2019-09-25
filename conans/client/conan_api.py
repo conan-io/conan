@@ -1211,14 +1211,12 @@ class ConanAPIV1(object):
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)
         build_order = deps_graph.new_build_order()
-        result = []
-        if not self.app.config.revisions_enabled:
-            for level in build_order:
-                result.append([(id_, repr(pref.copy_clear_revs())) for id_, pref in level])
-        else:
-            for level in build_order:
-                result.append([(id_, repr(pref)) for id_, pref in level])
-        build_order = result
+        # Build order returns refs, we need to convert to flat python primitives
+        for level in build_order:
+            if self.app.config.revisions_enabled:
+                level[:] = [(id_, repr(pref)) for id_, pref in level]
+            else:
+                level[:] = [(id_, repr(pref.copy_clear_revs())) for id_, pref in level]
         return build_order
 
     @api_method
