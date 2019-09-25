@@ -214,7 +214,7 @@ class B2Generator(Generator):
         """
         if not getattr(self, "_b2_variation_key", None):
             self._b2_variation = {}
-            self._b2_variation['toolset'] = self.b2_toolset_name + '-' + self.b2_toolset_version
+            self._b2_variation['toolset'] = self.b2_toolset
             self._b2_variation['architecture'] = {
                 'x86': 'x86', 'x86_64': 'x86',
                 'ppc64le': 'power', 'ppc64': 'power', 'ppc32': 'power',
@@ -279,7 +279,7 @@ class B2Generator(Generator):
         return self._b2_variation
 
     @property
-    def b2_toolset_name(self):
+    def b2_toolset(self):
         compiler = {
             'sun-cc': 'sun',
             'gcc': 'gcc',
@@ -287,16 +287,17 @@ class B2Generator(Generator):
             'clang': 'clang',
             'apple-clang': 'clang'
         }.get(self.conanfile.settings.get_safe('compiler'))
-        return str(compiler)
+        if not compiler:
+            return
 
-    @property
-    def b2_toolset_version(self):
-        if self.conanfile.settings.get_safe('compiler') == 'Visual Studio':
+        if compiler == 'msvc':
             if self.conanfile.settings.compiler.version == '15':
-                return '14.1'
+                version = '14.1'
             else:
-                return str(self.conanfile.settings.compiler.version)+'.0'
-        return str(self.conanfile.settings.get_safe('compiler.version'))
+                version = str(self.conanfile.settings.compiler.version)+'.0'
+        else:
+            version = str(self.conanfile.settings.get_safe('compiler.version'))
+        return compiler + '-' + version
 
     conanbuildinfo_header_text = """\
 #|
