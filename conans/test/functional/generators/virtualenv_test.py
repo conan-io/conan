@@ -66,12 +66,15 @@ class VirtualEnvGeneratorTestCase(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile().with_requirement(dummy_ref))
         generator = VirtualEnvGenerator(deps_graph.root.conanfile)
 
-        self.assertEqual(generator.env["BASE_LIST"], ['dummyValue1', 'dummyValue2', 'baseValue1', 'baseValue2'])
+        self.assertEqual(generator.env["BASE_LIST"],
+                         ['dummyValue1', 'dummyValue2', 'baseValue1', 'baseValue2'])
         self.assertEqual(generator.env["BASE_VAR"], 'baseValue')
         self.assertEqual(generator.env["BCKW_SLASH"], 'dummy\\value')
         self.assertEqual(generator.env["CPPFLAGS"], ['-flag1', '-flag2', '-baseFlag1', '-baseFlag2'])
-        self.assertEqual(generator.env["LD_LIBRARY_PATH"], ['dummydir/lib', 'basedir/lib'])
-        self.assertEqual(generator.env["PATH"], ['dummydir/bin', 'basedir/bin', 'samebin'])
+        self.assertEqual(generator.env["LD_LIBRARY_PATH"],
+                         [os.path.join("dummydir", "lib"), os.path.join("basedir", "lib")])
+        self.assertEqual(generator.env["PATH"], [os.path.join("dummydir", "bin"),
+                                                 os.path.join("basedir", "bin"), 'samebin'])
         self.assertEqual(generator.env["SPECIAL_VAR"], 'dummyValue')
 
 
@@ -204,9 +207,9 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         with environment_append({"CFLAGS": "cflags", "CL": "cl"}):
             _, environment = self._run_virtualenv(generator)
-
-            self.assertEqual(environment["CFLAGS"], "-O2  cflags")  # FIXME: Extra blank
-            self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2  cl")  # FIXME: Extra blank
+            extra_blank = " " if platform.system() != "Windows" else ""  # FIXME: Extra blank
+            self.assertEqual(environment["CFLAGS"], "-O2 {}cflags".format(extra_blank))
+            self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 {}cl".format(extra_blank))
 
     def test_list_variable(self):
         self.assertNotIn("WHATEVER", os.environ)
@@ -223,8 +226,10 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             os.path.join(self.test_folder, "bin"),
             os.pathsep,
             existing_path))
-        # FIXME: we are using `os.pathsep` for any list
-        self.assertEqual(environment["WHATEVER"], "{}{}{}".format("list", os.pathsep, "other"))
+        # FIXME: extra separator in Windows
+        extra_separator = os.pathsep if platform.system() == "Windows" else ""
+        self.assertEqual(environment["WHATEVER"],
+                         "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
 
     def test_find_program(self):
         # Let's create a fake conan program

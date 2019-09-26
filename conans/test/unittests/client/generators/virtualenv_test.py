@@ -46,16 +46,16 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         self.assertIn("PATH2=\"p1\":\"p2\"${PATH2+:$PATH2}", self.result[self.activate_sh])
 
         if platform.system() == "Windows":
-            self.assertIn("PATH=\"another_path\"${PATH+:$PATH}", self.result[self.activate_bat])
-            self.assertIn("PATH2=\"p1\";\"p2\"${PATH2+:$PATH2}", self.result[self.activate_ps1])
+            self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
+            self.assertIn("PATH2=p1;p2;%PATH2%", self.result[self.activate_ps1])
 
-            self.assertIn("PATH=\"another_path\"${PATH+:$PATH}", self.result[self.activate_bat])
-            self.assertIn("PATH2=\"p1\";\"p2\"${PATH2+:$PATH2}", self.result[self.activate_ps1])
+            self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
+            self.assertIn("PATH2=p1;p2;%PATH2", self.result[self.activate_ps1])
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
         self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result[self.activate_sh])
 
         if platform.system() == "Windows":
-            self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result[self.activate_bat])
-            self.assertIn("CL=\"cl1 cl2 ${CL+ $CL}\"", self.result[self.activate_ps1])
+            self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_bat])
+            self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_ps1])

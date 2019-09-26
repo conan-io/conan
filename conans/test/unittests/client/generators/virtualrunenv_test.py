@@ -44,8 +44,8 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
 
         if platform.system() == "Windows":
             for it_file in [self.activate_bat, self.activate_ps1]:
-                self.assertIn('DYLD_LIBRARY_PATH="lib1";"lib2"${DYLD_LIBRARY_PATH+;$DYLD_LIBRARY_PATH}',
+                self.assertIn('DYLD_LIBRARY_PATH=lib1;lib2;%DYLD_LIBRARY_PATH%',
                               self.result[it_file])
-                self.assertIn('LD_LIBRARY_PATH="lib1";"lib2"${LD_LIBRARY_PATH+;$LD_LIBRARY_PATH}',
+                self.assertIn('LD_LIBRARY_PATH=lib1;lib2;%LD_LIBRARY_PATH%',
                               self.result[it_file])
-                self.assertIn('PATH="bin1";"bin2"${PATH+;$PATH}', self.result[it_file])
+                self.assertIn('PATH=bin1;bin2;%PATH%', self.result[it_file])
