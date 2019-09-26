@@ -244,7 +244,7 @@ class GraphLock(object):
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
                                          % (repr(pref), repr(node.pref)))
 
-    def lock_node(self, node, requires):
+    def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
         the lockfile. Requires remove their version ranges.
         """
@@ -269,7 +269,15 @@ class GraphLock(object):
         node.conanfile.options.values = locked_node.options
         for require in requires:
             # Not new unlocked dependencies at this stage
-            locked_pref, locked_id = prefs[require.ref.name]
+            try:
+                locked_pref, locked_id = prefs[require.ref.name]
+            except KeyError:
+                msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
+                if build_requires:
+                    msg += "Make sure it was locked with --build arguments while creating lockfile"
+                else:
+                    msg += "If it is a new requirement, you need to create a new lockile"
+                raise ConanException(msg)
             require.lock(locked_pref.ref, locked_id)
 
     def python_requires(self, node_id):
