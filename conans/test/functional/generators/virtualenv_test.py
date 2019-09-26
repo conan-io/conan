@@ -1,4 +1,5 @@
 import os
+import platform
 import subprocess
 import textwrap
 import unittest
@@ -166,8 +167,9 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         env_before = _load_env_file(os.path.join(self.test_folder, self.env_before))
         env_after = _load_env_file(os.path.join(self.test_folder, self.env_after))
-        env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
-        env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
+        if platform.system() == "Darwin":
+            env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
+            env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
         self.assertDictEqual(env_before, env_after)  # Environment restored incorrectly
 
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))

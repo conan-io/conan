@@ -33,8 +33,8 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
     def test_environment(self):
         self.assertEqual(self.generator.env["CFLAGS"], ['-O3', '-s', '--sysroot=/path/to/sysroot'])
         self.assertEqual(self.generator.env["CPPFLAGS"], ['-DNDEBUG'])
-        self.assertEqual(self.generator.env["CXXFLAGS"], ['-O3', '-s'])
-        self.assertEqual(self.generator.env["LDFLAGS"], [])
+        self.assertEqual(self.generator.env["CXXFLAGS"], ['-O3', '-s', '--sysroot=/path/to/sysroot'])
+        self.assertEqual(self.generator.env["LDFLAGS"], ['--sysroot=/path/to/sysroot'])
         self.assertEqual(self.generator.env["LIBS"], [])
 
     def test_scripts(self):
@@ -46,5 +46,5 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
                               content)
                 self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"',
                               content)
-                self.assertIn('LDFLAGS="${LDFLAGS+ $LDFLAGS}"', content)
+                self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"', content)
                 self.assertIn('LIBS="${LIBS+ $LIBS}"', content)

@@ -1,9 +1,8 @@
 # coding=utf-8
 
 import platform
-import unittest
 import textwrap
-import os
+import unittest
 
 from conans.client import tools
 from conans.client.tools.oss import check_output
