@@ -43,9 +43,12 @@ class RunEnvironmentTest(unittest.TestCase):
         client.run("build .")
         self.assertIn("Hello Hello0", client.out)
 
-    def test_shared_run_environment(self):
-        servers = {"default": TestServer()}
-        client1 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+class RunEnvironmentSharedTest(unittest.TestCase):
+
+    def setUp(self):
+        self.servers = {"default": TestServer()}
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         cmake = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
@@ -70,7 +73,7 @@ class RunEnvironmentTest(unittest.TestCase):
             #include "hello.h"
             #include <iostream>
             void hello(){
-                std::cout<<"Hello Tool!\n";
+                std::cout << "Hello Tool!\\n";
             }
         """)
 
@@ -98,72 +101,77 @@ class RunEnvironmentTest(unittest.TestCase):
                     self.copy(pattern="*.so", dst="lib", keep_path=False)
         """)
 
-        client1.save({"conanfile.py": conanfile,
+        client.save({"conanfile.py": conanfile,
                       "CMakeLists.txt": cmake,
                       "main.cpp": main,
                       "hello.cpp": hello_cpp,
                       "hello.h": hello_h})
-        client1.run("create . Pkg/0.1@lasote/testing")
-        client1.run("upload Pkg* --all --confirm")
-        client1.run('remove "*" -f')
-        client1.run("search")
-        self.assertIn("There are no packages", client1.out)
+        client.run("create . Pkg/0.1@lasote/testing")
+        client.run("upload Pkg* --all --confirm")
+        client.run('remove "*" -f')
+        client.run("search")
+        self.assertIn("There are no packages", client.out)
 
-        # MAKE SURE WE USE ANOTHER CLIENT, with another USER HOME PATH
-        client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        self.assertNotEqual(client2.cache_folder, client1.cache_folder)
+    def test_run_with_run_environment(self):
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class HelloConan(ConanFile):
                 requires = "Pkg/0.1@lasote/testing"
-            
+
                 def build(self):
                     self.run("say_hello", run_environment=True)
         """)
 
-        client2.save({"conanfile.py": reuse}, clean_first=True)
-        client2.run("install .")
-        client2.run("build .")
-        self.assertIn("Hello Tool!", client2.out)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("Hello Tool!", client.out)
 
-        if platform.system() != "Darwin":
-            # This test is excluded from OSX, because of the SIP protection. CMake helper will
-            # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its
-            # value via run_environment=True doesn't work, because it prepends its value to:
-            # command = "cd [folder] && cmake [cmd]" => "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
-            # and then only applies to the change directory "cd"
-            # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake installed in
-            # system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake" can work
-            reuse = textwrap.dedent("""
-                from conans import ConanFile, CMake, tools
-                class HelloConan(ConanFile):
-                    exports = "CMakeLists.txt"
-                    requires = "Pkg/0.1@lasote/testing"
-                
-                    def build(self):
-                        with tools.run_environment(self):
-                            cmake = CMake(self)
-                            cmake.configure()
-                            cmake.build()
-            """)
+    @unittest.skipIf(platform.system() == "Darwin", "SIP protection (read comment)")
+    def test_with_tools_run_environment(self):
+        # This test is excluded from OSX, because of the SIP protection. CMake helper will
+        # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its
+        # value via run_environment=True doesn't work, because it prepends its value to:
+        # command = "cd [folder] && cmake [cmd]" => "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
+        # and then only applies to the change directory "cd"
+        # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake installed in
+        # system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake" can work
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-            cmake = textwrap.dedent("""
-                set(CMAKE_CXX_COMPILER_WORKS 1)
-                set(CMAKE_CXX_ABI_COMPILED 1)
-                project(MyHello CXX)
-                cmake_minimum_required(VERSION 2.8.12)
-                execute_process(COMMAND say_hello)
-            """)
+        reuse = textwrap.dedent("""
+            from conans import ConanFile, CMake, tools
+            class HelloConan(ConanFile):
+                exports = "CMakeLists.txt"
+                requires = "Pkg/0.1@lasote/testing"
 
-            client2.save({"conanfile.py": reuse,
-                          "CMakeLists.txt": cmake}, clean_first=True)
-            client2.run("install . -g virtualrunenv")
-            client2.run("build .")
-            self.assertIn("Hello Tool!", client2.out)
-        else:
-            client2.run("install . -g virtualrunenv")
+                def build(self):
+                    with tools.run_environment(self):
+                        cmake = CMake(self)
+                        cmake.configure()
+                        cmake.build()
+        """)
 
-        with tools.chdir(client2.current_folder):
+        cmake = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(MyHello CXX)
+            cmake_minimum_required(VERSION 2.8.12)
+            execute_process(COMMAND say_hello)
+        """)
+
+        client.save({"conanfile.py": reuse,
+                      "CMakeLists.txt": cmake}, clean_first=True)
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("Hello Tool!", client.out)
+
+    def test_virtualrunenv(self):
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client.run("install Pkg/0.1@lasote/testing -g virtualrunenv")
+
+        with tools.chdir(client.current_folder):
             if platform.system() == "Windows":
                 command = "activate_run.bat && say_hello"
             else:
