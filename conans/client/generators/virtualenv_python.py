@@ -1,4 +1,4 @@
-from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
+from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator, environment_filename
 
 
 class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
@@ -15,8 +15,11 @@ class VirtualEnvPythonGenerator(VirtualRunEnvGenerator):
         tmp = super(VirtualEnvPythonGenerator, self).content
         ret = {}
         for name, value in tmp.items():
-            tmp = name.split(".")
-            ret["%s_python.%s" % (tmp[0], tmp[1])] = value
+            if name != environment_filename:
+                tmp = name.split(".")
+                ret["%s_python.%s" % (tmp[0], tmp[1])] = value
+            else:
+                ret[environment_filename] = value
 
         return ret
 
