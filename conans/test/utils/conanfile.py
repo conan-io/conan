@@ -3,7 +3,10 @@ from collections import namedtuple
 
 from conans import Options
 from conans.model.conan_file import ConanFile
+from conans.model.env_info import DepsEnvInfo, EnvInfo
+from conans.model.env_info import EnvValues
 from conans.model.options import PackageOptions
+from conans.model.user_info import DepsUserInfo
 from conans.test.utils.tools import TestBufferConanOutput
 
 
@@ -80,6 +83,10 @@ class ConanFileMock(ConanFile):
         self.should_test = True
         self.generators = []
         self.captured_env = {}
+        self.deps_env_info = DepsEnvInfo()
+        self.env_info = EnvInfo()
+        self.deps_user_info = DepsUserInfo()
+        self._conan_env_values = EnvValues()
 
     def run(self, command):
         self.command = command
