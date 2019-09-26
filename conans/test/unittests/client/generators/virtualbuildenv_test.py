@@ -31,7 +31,7 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
     def test_environment(self):
-        self.assertEqual(self.generator.env["CFLAGS"], ['-O3', '-s'])
+        self.assertEqual(self.generator.env["CFLAGS"], ['-O3', '-s', '--sysroot=/path/to/sysroot'])
         self.assertEqual(self.generator.env["CPPFLAGS"], ['-DNDEBUG'])
         self.assertEqual(self.generator.env["CXXFLAGS"], ['-O3', '-s'])
         self.assertEqual(self.generator.env["LDFLAGS"], [])
@@ -42,7 +42,9 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         for filename, content in self.result.items():
             if filename.startswith("activate"):
                 self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', content)
-                self.assertIn('CXXFLAGS="-O3 -s ${CXXFLAGS+ $CXXFLAGS}"', content)
-                self.assertIn('CFLAGS="-O3 -s ${CFLAGS+ $CFLAGS}"', content)
+                self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"',
+                              content)
+                self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"',
+                              content)
                 self.assertIn('LDFLAGS="${LDFLAGS+ $LDFLAGS}"', content)
                 self.assertIn('LIBS="${LIBS+ $LIBS}"', content)
