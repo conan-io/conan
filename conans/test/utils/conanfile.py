@@ -1,5 +1,5 @@
 import os
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from conans import Options
 from conans.model.conan_file import ConanFile
@@ -22,9 +22,21 @@ class MockSettings(object):
 MockOptions = MockSettings
 
 
-class MockDepsCppInfo(object):
+class MockCppInfo(object):
+    def __init__(self):
+        self.bin_paths = []
+        self.lib_paths = []
+        self.include_paths = []
+        self.libs = []
+        self.cflags = []
+        self.cppflags = []
+        self.defines = []
+
+
+class MockDepsCppInfo(defaultdict):
 
     def __init__(self):
+        super(MockDepsCppInfo, self).__init__(MockCppInfo)
         self.include_paths = []
         self.lib_paths = []
         self.libs = []
@@ -34,6 +46,10 @@ class MockDepsCppInfo(object):
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""
+
+    @property
+    def deps(self):
+        return self.keys()
 
 
 class MockConanfile(ConanFile):
@@ -71,7 +87,7 @@ class ConanFileMock(ConanFile):
         if options_values:
             for var, value in options_values.items():
                 self.options._data[var] = value
-        self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
         self.install_folder = "myinstallfolder"

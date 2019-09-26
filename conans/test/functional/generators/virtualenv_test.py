@@ -3,6 +3,7 @@ import subprocess
 import textwrap
 import unittest
 
+import six
 from parameterized.parameterized import parameterized_class
 
 from conans.client.generators.virtualenv import VirtualEnvGenerator
@@ -165,7 +166,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         env_before = _load_env_file(os.path.join(self.test_folder, self.env_before))
         env_after = _load_env_file(os.path.join(self.test_folder, self.env_after))
-        env_after.pop("PS1")  # TODO: FIXME: Needed for the test to pass
+        env_after.pop(six.u("PS1"))  # TODO: FIXME: Needed for the test to pass
         self.assertDictEqual(env_before, env_after)  # Environment restored incorrectly
 
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))
