@@ -96,7 +96,7 @@ class RestCommonMethods(object):
                                  verify=self.verify_ssl)
 
         self._check_error_response(ret)
-        return decode_text(ret.content), None
+        return decode_text(ret.content)
 
     def authenticate_oauth(self, user, password):
         """Sends user + password to get:
