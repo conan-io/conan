@@ -15,8 +15,8 @@ class PythonVersionTest(unittest.TestCase):
 
     @unittest.skipUnless(six.PY2, "Requires Python 2.7")
     def test_py2_warning_message(self):
-        self._validate_message("Python 2 will soon be deprecated. " \
-                               " It is strongly recommended to use Python >= 3.5 with Conan")
+        self._validate_message("Python 2 will soon be deprecated. It is strongly " \
+                               "recommended to use Python >= 3.5 with Conan")
 
     @unittest.skipUnless(six.PY34, "Requires Python 3.4")
     def test_py34_warning_message(self):
