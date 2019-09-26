@@ -88,6 +88,7 @@ class ConanFileMock(ConanFile):
             for var, value in options_values.items():
                 self.options._data[var] = value
         self.deps_cpp_info = MockDepsCppInfo()  # ("deps_cpp_info", "sysroot")("/path/to/sysroot")
+        self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
         self.install_folder = "myinstallfolder"
