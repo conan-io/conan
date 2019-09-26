@@ -242,7 +242,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         generator.env = {"PATH": [os.path.join(self.test_folder, "bin")], }
 
         stdout, environment = self._run_virtualenv(generator)
-        paths = dict(l.split("=", 1) for l in stdout.splitlines())
+        paths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
         self.assertEqual(paths["__conan_pre_path__"], paths["__conan_post_path__"])
         self.assertEqual(paths["__conan_env_path__"], os.path.join(self.test_folder, "bin", "conan"))
 
@@ -251,6 +251,6 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         generator.env = {"PATH": [os.path.join(self.test_folder, "wrong")], }
 
         stdout, environment = self._run_virtualenv(generator)
-        paths = dict(l.split("=", 1) for l in stdout.splitlines())
+        paths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
         self.assertEqual(paths["__conan_pre_path__"], paths["__conan_post_path__"])
         self.assertEqual(paths["__conan_env_path__"], paths["__conan_post_path__"])

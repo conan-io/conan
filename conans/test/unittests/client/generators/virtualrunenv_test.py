@@ -43,9 +43,14 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
         self.assertIn('PATH="bin1":"bin2"${PATH+:$PATH}', self.result[self.activate_sh])
 
         if platform.system() == "Windows":
-            for it_file in [self.activate_bat, self.activate_ps1]:
-                self.assertIn('DYLD_LIBRARY_PATH=lib1;lib2;%DYLD_LIBRARY_PATH%',
-                              self.result[it_file])
-                self.assertIn('LD_LIBRARY_PATH=lib1;lib2;%LD_LIBRARY_PATH%',
-                              self.result[it_file])
-                self.assertIn('PATH=bin1;bin2;%PATH%', self.result[it_file])
+            self.assertIn('DYLD_LIBRARY_PATH=lib1;lib2;%DYLD_LIBRARY_PATH%',
+                          self.result[self.activate_bat])
+            self.assertIn('LD_LIBRARY_PATH=lib1;lib2;%LD_LIBRARY_PATH%',
+                          self.result[self.activate_bat])
+            self.assertIn('PATH=bin1;bin2;%PATH%', self.result[self.activate_bat])
+
+            self.assertIn('$env:DYLD_LIBRARY_PATH = "lib1;lib2;$env:DYLD_LIBRARY_PATH"',
+                          self.result[self.activate_ps1])
+            self.assertIn('$env:LD_LIBRARY_PATH = "lib1;lib2;$env:LD_LIBRARY_PATH"',
+                          self.result[self.activate_ps1])
+            self.assertIn('$env:PATH = "bin1;bin2;$env:PATH"', self.result[self.activate_ps1])

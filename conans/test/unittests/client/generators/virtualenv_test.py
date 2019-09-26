@@ -47,10 +47,10 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
 
         if platform.system() == "Windows":
             self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
-            self.assertIn("PATH2=p1;p2;%PATH2%", self.result[self.activate_ps1])
+            self.assertIn('$env:PATH2 = "p1;p2;$env:PATH2"', self.result[self.activate_ps1])
 
             self.assertIn("PATH=another_path;%PATH%", self.result[self.activate_bat])
-            self.assertIn("PATH2=p1;p2;%PATH2", self.result[self.activate_ps1])
+            self.assertIn('$env:PATH2 = "p1;p2;$env:PATH2"', self.result[self.activate_ps1])
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
@@ -58,4 +58,4 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
 
         if platform.system() == "Windows":
             self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_bat])
-            self.assertIn("CL=cl1 cl2 %CL%", self.result[self.activate_ps1])
+            self.assertIn('$env:CL = "cl1 cl2 $env:CL"', self.result[self.activate_ps1])

@@ -38,13 +38,32 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
         self.assertEqual(self.generator.env["LIBS"], [])
 
     def test_scripts(self):
+        self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', self.result[self.activate_sh])
+        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"',
+                      self.result[self.activate_sh])
+        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"',
+                      self.result[self.activate_sh])
+        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"',
+                      self.result[self.activate_sh])
+        self.assertIn('LIBS="${LIBS+ $LIBS}"', self.result[self.activate_sh])
 
-        for filename, content in self.result.items():
-            if filename.startswith("activate"):
-                self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', content)
-                self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"',
-                              content)
-                self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"',
-                              content)
-                self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"', content)
-                self.assertIn('LIBS="${LIBS+ $LIBS}"', content)
+        if platform.system() == "Windows":
+            self.assertIn('SET CPPFLAGS=-DNDEBUG %CPPFLAGS%',
+                          self.result[self.activate_bat])
+            self.assertIn('SET CXXFLAGS=-O3 -s --sysroot=/path/to/sysroot %CXXFLAGS%',
+                          self.result[self.activate_bat])
+            self.assertIn('SET CFLAGS=-O3 -s --sysroot=/path/to/sysroot %CFLAGS%',
+                          self.result[self.activate_bat])
+            self.assertIn('SET LDFLAGS=--sysroot=/path/to/sysroot %LDFLAGS%',
+                          self.result[self.activate_bat])
+            self.assertIn('SET LIBS=%LIBS%', self.result[self.activate_bat])
+
+            self.assertIn('$env:CPPFLAGS = "-DNDEBUG $env:CPPFLAGS"',
+                          self.result[self.activate_ps1])
+            self.assertIn('$env:CXXFLAGS = "-O3 -s --sysroot=/path/to/sysroot $env:CXXFLAGS"',
+                          self.result[self.activate_ps1])
+            self.assertIn('$env:CFLAGS = "-O3 -s --sysroot=/path/to/sysroot $env:CFLAGS"',
+                          self.result[self.activate_ps1])
+            self.assertIn('$env:LDFLAGS = "--sysroot=/path/to/sysroot $env:LDFLAGS"',
+                          self.result[self.activate_ps1])
+            self.assertIn('$env:LIBS = "$env:LIBS"', self.result[self.activate_ps1])
