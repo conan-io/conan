@@ -1,5 +1,5 @@
 ---
-name: 'Bug: Bug Report'
+name: 'Bug Report'
 about: 'Report a bug, something does not work as it supposed to'
 title: '[bug] SHORT DESCRIPTION'
 labels: bug
@@ -12,11 +12,10 @@ labels: bug
   To help us debug your issue please explain:
 -->
 
-### Package and Environment Details (include every applicable attribute)
-  * Package Name/Version: **zlib/1.2.8**
+### Environment Details (include every applicable attribute)
   * Operating System+version: **Linux Ubuntu 18.04**
   * Compiler+version: **GCC 8**
-  * Docker image: **conanio/gcc8**
+  * Docker image (if applicable): **conanio/gcc8**
   * Conan version: **conan 1.18.0**
   * Python version: **Python 3.7.4**
 
