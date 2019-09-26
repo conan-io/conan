@@ -57,7 +57,7 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder)
+            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile = graph_lock_file.profile
@@ -187,11 +187,9 @@ class GraphManager(object):
         if ref:
             graph_info.root = ref
         if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph,
-                                              revisions_enabled=self._cache.config.revisions_enabled)
+            graph_info.graph_lock = GraphLock(deps_graph)
         else:
-            graph_info.graph_lock.update_check_graph(deps_graph, self._output,
-                                                     self._cache.config.revisions_enabled)
+            graph_info.graph_lock.update_check_graph(deps_graph, self._output)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:

@@ -737,7 +737,7 @@ class ConanAPIV1(object):
         graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile)
+            graph_lock_file = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self.app.out.info("Using lockfile: '{}'".format(lockfile))
 
@@ -1178,9 +1178,9 @@ class ConanAPIV1(object):
     def update_lock(self, old_lockfile, new_lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         old_lockfile = _make_abs_path(old_lockfile, cwd)
-        old_lock = GraphLockFile.load(old_lockfile)
+        old_lock = GraphLockFile.load(old_lockfile, True)
         new_lockfile = _make_abs_path(new_lockfile, cwd)
-        new_lock = GraphLockFile.load(new_lockfile)
+        new_lock = GraphLockFile.load(new_lockfile, True)
         if old_lock.profile.dumps() != new_lock.profile.dumps():
             raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
                                  % (old_lockfile, old_lock.profile.dumps(),
@@ -1200,9 +1200,8 @@ class ConanAPIV1(object):
                                     cwd=cwd, install_folder=None,
                                     cache=self.app.cache, output=self.app.out,
                                     lockfile=lockfile)
-        root_node = graph_info.graph_lock.root_node()
         # The reference of the root node could be a local path or a ref
-        reference = root_node.path or root_node.pref.ref
+        reference = graph_info.graph_lock.root_node_ref()
         deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
                                                           False, False, remotes, recorder)
 
@@ -1211,10 +1210,7 @@ class ConanAPIV1(object):
         build_order = deps_graph.new_build_order()
         # Build order returns refs, we need to convert to flat python primitives
         for level in build_order:
-            if self.app.config.revisions_enabled:
-                level[:] = [(id_, repr(pref)) for id_, pref in level]
-            else:
-                level[:] = [(id_, repr(pref.copy_clear_revs())) for id_, pref in level]
+            level[:] = [(id_, repr(pref)) for id_, pref in level]
         return build_order
 
     @api_method
@@ -1248,7 +1244,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
             root_ref = ConanFileReference(name, version, user, channel, validate=False)
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock_file = GraphLockFile.load(lockfile)
+        graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
         graph_info.profile = graph_lock_file.profile
         graph_info.profile.process_settings(cache, preprocess=False)
         graph_info.graph_lock = graph_lock_file.graph_lock
@@ -1263,7 +1259,7 @@ def get_graph_info(profile_names, settings, options, env, cwd, install_folder, c
                                  % install_folder)
         graph_info = None
     else:
-        graph_lock_file = GraphLockFile.load(install_folder)
+        graph_lock_file = GraphLockFile.load(install_folder, cache.config.revisions_enabled)
         graph_info.profile = graph_lock_file.profile
         graph_info.profile.process_settings(cache, preprocess=False)
 

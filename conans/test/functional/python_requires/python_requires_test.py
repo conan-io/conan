@@ -225,7 +225,6 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
     def transitive_py_requires_test(self):
         # https://github.com/conan-io/conan/issues/5529
         client = TestClient()
-        client.run("config set general.revisions_enabled=True")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Base(ConanFile):

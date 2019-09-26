@@ -49,7 +49,6 @@ class GraphLockCustomFilesTest(unittest.TestCase):
 
     def test(self):
         client = TestClient()
-        client.run("config set general.revisions_enabled=True")
         self.client = client
         client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
@@ -80,7 +79,6 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     def setUp(self):
         client = TestClient()
         self.client = client
-        self.client.run("config set general.revisions_enabled=True")
         client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
 
@@ -298,7 +296,6 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
 
     def setUp(self):
         client = TestClient()
-        client.run("config set general.revisions_enabled=True")
         self.client = client
         conanfile = textwrap.dedent("""
             from conans import ConanFile
