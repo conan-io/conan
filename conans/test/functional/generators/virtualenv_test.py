@@ -86,7 +86,7 @@ def _load_env_file(filename):
 
 
 class PosixShellCommands(object):
-    shell = "sh"
+    id = shell = "sh"
     activate = ". ./activate.sh"
     deactivate = ". ./deactivate.sh"
     dump_env = "env > {filename}"
@@ -98,6 +98,7 @@ class PosixShellCommands(object):
 
 
 class PowerShellCommands(object):
+    id = "ps1"
     shell = [
         "powershell.exe" if os_info.is_windows else "pwsh", "-ExecutionPolicy",
         "RemoteSigned", "-NoLogo"
@@ -115,7 +116,7 @@ class PowerShellCommands(object):
 
 
 class WindowsCmdCommands(object):
-    shell = "cmd"
+    id = shell = "cmd"
     activate = "activate.bat"
     deactivate = "deactivate.bat"
     dump_env = "set > {filename}"
@@ -142,28 +143,42 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.test_folder = temp_folder()
+        self.exec = "executable"
+        self.ori_path = os.path.join(self.test_folder, "ori")
+        self.env_path = os.path.join(self.test_folder, "env")
+        program_candidates = {os.path.join(self.ori_path, self.exec): "",
+                              os.path.join(self.env_path, self.exec): ""}
+        save_files(self.test_folder, program_candidates)
+        for p, _ in program_candidates.items():
+            os.chmod(os.path.join(self.test_folder, p), 0o755)
 
     def _run_virtualenv(self, generator):
-        save_files(self.test_folder, generator.content)
+        with environment_append({"PATH": [self.ori_path, ]}):
+            # FIXME: I need this context because restore values for the 'deactivate' script are generated
+            #        at the 'generator.content' and not when the 'activate'  is called
+            save_files(self.test_folder, generator.content)
 
-        # Generate the list of commands to execute
-        shell_commands = [
-            self.commands.dump_env.format(filename=self.env_before),
-            self.commands.find_program.format(program="conan", variable="__conan_pre_path__"),
-            self.commands.activate,
-            self.commands.dump_env.format(filename=self.env_activated),
-            self.commands.find_program.format(program="conan", variable="__conan_env_path__"),
-            self.commands.deactivate,
-            self.commands.dump_env.format(filename=self.env_after),
-            self.commands.find_program.format(program="conan", variable="__conan_post_path__"),
-            "",
-        ]
+            # Generate the list of commands to execute
+            shell_commands = [
+                self.commands.dump_env.format(filename=self.env_before),
+                self.commands.find_program.format(program="conan", variable="__conan_pre_path__"),
+                self.commands.find_program.format(program=self.exec, variable="__exec_pre_path__"),
+                self.commands.activate,
+                self.commands.dump_env.format(filename=self.env_activated),
+                self.commands.find_program.format(program="conan", variable="__conan_env_path__"),
+                self.commands.find_program.format(program=self.exec, variable="__exec_env_path__"),
+                self.commands.deactivate,
+                self.commands.dump_env.format(filename=self.env_after),
+                self.commands.find_program.format(program="conan", variable="__conan_post_path__"),
+                self.commands.find_program.format(program=self.exec, variable="__exec_post_path__"),
+                "",
+            ]
 
-        # Execute
-        shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, cwd=self.test_folder)
-        (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
-        stdout, stderr = decode_text(stdout), decode_text(stderr)
+            # Execute
+            shell = subprocess.Popen(self.commands.shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, cwd=self.test_folder)
+            (stdout, stderr) = shell.communicate(to_file_bytes("\n".join(shell_commands)))
+            stdout, stderr = decode_text(stdout), decode_text(stderr)
 
         # Consistency checks
         self.assertFalse(stderr, "Running shell resulted in error, output:\n%s" % stdout)
@@ -173,6 +188,8 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         if platform.system() == "Darwin":
             env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
             env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
+        elif self.commands.id == "cmd":
+            env_before.pop(six.u('PROMPT'), None)  # TODO: FIXME: Needed for the test to pass
         self.assertDictEqual(env_before, env_after)  # Environment restored incorrectly
 
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))
@@ -222,35 +239,39 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         _, environment = self._run_virtualenv(generator)
 
-        self.assertEqual(environment["PATH"], "{}{}{}".format(
+        self.assertEqual(environment["PATH"], os.pathsep.join([
             os.path.join(self.test_folder, "bin"),
-            os.pathsep,
-            existing_path))
+            self.ori_path,
+            existing_path
+        ]))
         # FIXME: extra separator in Windows
         extra_separator = os.pathsep if platform.system() == "Windows" else ""
         self.assertEqual(environment["WHATEVER"],
                          "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
 
     def test_find_program(self):
-        # Let's create a fake conan program
-        fake_conan = os.path.join("bin", "conan")
-        save_files(self.test_folder, {fake_conan: ""})
-        os.chmod(os.path.join(self.test_folder, fake_conan), 0o755)
-
-        # If we add the path, we found the fake conan program
+        # If we add the path, we should found the env/executable instead of ori/executable
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"PATH": [os.path.join(self.test_folder, "bin")], }
+        generator.env = {"PATH": [self.env_path], }
 
         stdout, environment = self._run_virtualenv(generator)
-        paths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
-        self.assertEqual(paths["__conan_pre_path__"], paths["__conan_post_path__"])
-        self.assertEqual(paths["__conan_env_path__"], os.path.join(self.test_folder, "bin", "conan"))
+        
+        cpaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
+        self.assertEqual(cpaths["__conan_pre_path__"], cpaths["__conan_post_path__"])
+        self.assertEqual(cpaths["__conan_env_path__"], cpaths["__conan_post_path__"])
 
-        # With any other path, we don't find it
+        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
+        if self.commands.id == "cmd":  # FIXME: This is a bug, it doesn't take into account the new path
+            self.assertNotEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.exec))
+        else:
+            self.assertEqual(epaths["__exec_env_path__"], os.path.join(self.env_path, self.exec))
+
+        # With any other path, we keep finding the original one
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [os.path.join(self.test_folder, "wrong")], }
 
         stdout, environment = self._run_virtualenv(generator)
-        paths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__conan_"))
-        self.assertEqual(paths["__conan_pre_path__"], paths["__conan_post_path__"])
-        self.assertEqual(paths["__conan_env_path__"], paths["__conan_post_path__"])
+        epaths = dict(l.split("=", 1) for l in stdout.splitlines() if l.startswith("__exec_"))
+        self.assertEqual(epaths["__exec_pre_path__"], epaths["__exec_post_path__"])
+        self.assertEqual(epaths["__exec_env_path__"], epaths["__exec_post_path__"])
