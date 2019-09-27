@@ -10,6 +10,11 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 from conans.model.graph_lock import LOCKFILE
 
+def element_content(node):
+    if node.firstChild:
+        return node.firstChild.data
+    else:
+        return ""
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
 
@@ -68,14 +73,12 @@ xcode
         xmldoc = minidom.parse(os.path.join(client.current_folder, BUILD_INFO_VISUAL_STUDIO))
         definition_group = xmldoc.getElementsByTagName('ItemDefinitionGroup')[0]
         compiler = definition_group.getElementsByTagName("ClCompile")[0]
-
-        elem = compiler.getElementsByTagName("AdditionalIncludeDirectories")
-        include_dirs = elem[0].firstChild.data
-        definitions = compiler.getElementsByTagName("PreprocessorDefinitions")[0].firstChild.data
-
         linker = definition_group.getElementsByTagName("Link")[0]
-        lib_dirs = linker.getElementsByTagName("AdditionalLibraryDirectories")[0].firstChild.data
-        libs = linker.getElementsByTagName("AdditionalDependencies")[0].firstChild.data
+
+        include_dirs = element_content(xmldoc.getElementsByTagName("ConanIncludeDirectories")[0])
+        definitions = element_content(xmldoc.getElementsByTagName("ConanPreprocessorDefinitions")[0])
+        lib_dirs = element_content(xmldoc.getElementsByTagName("ConanLibraryDirectories")[0])
+        libs = element_content(linker.getElementsByTagName("AdditionalDependencies")[0])
 
         package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
         pref = PackageReference(ref, package_id)
@@ -88,7 +91,7 @@ xcode
 
         self.assertIn(expected_lib_dirs, lib_dirs)
         self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
-        self.assertEqual("%(PreprocessorDefinitions)", definitions)
+        self.assertEqual("", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
         # CHECK XCODE GENERATOR

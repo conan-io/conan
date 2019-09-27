@@ -199,15 +199,16 @@ def _save_configs(configs_file, configs):
                                   indent=True))
 
 
-def configuration_install(uri, cache, output, verify_ssl, requester, config_type=None,
+def configuration_install(app, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
+    cache, output, requester = app.cache, app.out, app.requester
     configs = []
     configs_file = cache.config_install_file
     if os.path.isfile(configs_file):
         try:
             configs = json.loads(load(configs_file))
         except Exception as e:
-            raise ConanException("Error loading configs-install file: %s\n%"
+            raise ConanException("Error loading configs-install file: %s\n%s"
                                  % (configs_file, str(e)))
         configs = [_ConfigOrigin(config) for config in configs]
     if uri is None:

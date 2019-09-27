@@ -17,6 +17,7 @@ class PkgGeneratorTest(unittest.TestCase):
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = "my_pkg"
         cpp_info.defines = ["MYDEFINE1"]
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
@@ -25,6 +26,7 @@ class PkgGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.name = ref.name
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.version = "2.3"
         cpp_info.exelinkflags = ["-exelinkflag"]
@@ -47,11 +49,11 @@ Cflags: -I${includedir} -cxxflag -DMYDEFINE2
 Requires: MyPkg
 """)
 
-        self.assertEqual(files["MyPkg.pc"], """prefix=dummy_root_folder1
+        self.assertEqual(files["my_pkg.pc"], """prefix=dummy_root_folder1
 libdir=${prefix}/lib
 includedir=${prefix}/include
 
-Name: MyPkg
+Name: my_pkg
 Description: My cool description
 Version: 1.3
 Libs: -L${libdir}

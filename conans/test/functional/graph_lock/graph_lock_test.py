@@ -12,13 +12,13 @@ from conans.util.files import load
 class GraphLockErrorsTest(unittest.TestCase):
     def missing_lock_error_test(self):
         client = TestClient()
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("install . --lockfile", assert_error=True)
         self.assertIn("ERROR: Missing lockfile in", client.out)
 
     def update_different_profile_test(self):
         client = TestClient()
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("install . -if=conf1 -s os=Windows")
         client.run("install . -if=conf2 -s os=Linux")
         client.run("graph update-lock conf1 conf2", assert_error=True)
@@ -48,7 +48,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
     def test(self):
         client = TestClient()
         self.client = client
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
 
         # Use a consumer with a version rang
@@ -57,7 +57,7 @@ class GraphLockCustomFilesTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA version
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.2"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.2")})
         client.run("create . PkgA/0.2@user/channel")
         client.save({"conanfile.py": self.consumer})
         client.run("install . --lockfile=custom.lock")
@@ -77,7 +77,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     def setUp(self):
         client = TestClient()
         self.client = client
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
 
         # Use a consumer with a version range
@@ -87,7 +87,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA version
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.2"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.2")})
         client.run("create . PkgA/0.2@user/channel")
         client.save({"conanfile.py": str(self.consumer)})
 
@@ -114,7 +114,7 @@ class GraphLockVersionRangeTest(unittest.TestCase):
 
         self.assertIn("PkgA/0.1@user/channel", client.out)
         self.assertNotIn("PkgA/0.2@user/channel", client.out)
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         self.assertIn("PkgA/0.1/user/channel", cmake)
         self.assertNotIn("PkgA/0.2/user/channel", cmake)
 
@@ -211,7 +211,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         # Important to activate revisions
         client.run("config set general.revisions_enabled=True")
         self.client = client
-        client.save({"conanfile.py": str(GenConanfile().with_name("PkgA").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
         client.run("create . PkgA/0.1@user/channel")
         client.run("upload PkgA/0.1@user/channel --all")
 
@@ -233,10 +233,9 @@ class GraphLockRevisionTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@")
 
         # If we create a new PkgA revision, for example adding info
-        client.save({"conanfile.py":
-                         str(GenConanfile().with_name("PkgA").with_version("0.1")
-                             .with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
-                                                env_info={"MYENV": ["myenvPkgA0.1env"]}))})
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")
+                                        .with_package_info(cpp_info={"libs": ["mylibPkgA0.1lib"]},
+                                                           env_info={"MYENV": ["myenvPkgA0.1env"]})})
 
         client.run("create . PkgA/0.1@user/channel")
         client.save({"conanfile.py": str(consumer)})
@@ -380,3 +379,31 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=.  --lockfile")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
+
+
+class GraphLockWarningsTestCase(unittest.TestCase):
+
+    def test_override(self):
+        client = TestClient()
+        harfbuzz_ref = ConanFileReference.loads("harfbuzz/1.0")
+        ffmpeg_ref = ConanFileReference.loads("ffmpeg/1.0")
+        client.save({"harfbuzz.py": GenConanfile().with_name("harfbuzz").with_version("1.0"),
+                     "ffmpeg.py": GenConanfile().with_name("ffmpeg").with_version("1.0")
+                                                .with_requirement_plain("harfbuzz/[>=1.0]"),
+                     "meta.py": GenConanfile().with_name("meta").with_version("1.0")
+                                              .with_requirement(ffmpeg_ref)
+                                              .with_requirement(harfbuzz_ref)
+                     })
+        client.run("export harfbuzz.py")
+        client.run("export ffmpeg.py")
+        client.run("export meta.py")
+
+        # Building the graphlock we get the message
+        client.run("graph lock meta.py")
+        self.assertIn("WARN: ffmpeg/1.0: requirement harfbuzz/[>=1.0] overridden by meta/1.0"
+                      " to harfbuzz/1.0", client.out)
+
+        # Using the graphlock there is no warning message
+        client.run("graph build-order conan.lock")
+        self.assertNotIn("overridden", client.out)
+        self.assertNotIn("WARN", client.out)

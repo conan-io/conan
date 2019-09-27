@@ -70,7 +70,7 @@ class TestConan(ConanFile):
         client.run("create . mysrc/0.1@user/testing")
         client.run("install mysrc/0.1@user/testing -g cmake")
 
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
         self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
                       src_dirs)

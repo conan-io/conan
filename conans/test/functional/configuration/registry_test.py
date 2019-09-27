@@ -27,7 +27,7 @@ class RegistryTest(unittest.TestCase):
         migrate_registry_file(cache, output)
         registry = RemoteRegistry(cache, output)
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan.io", "https://server.conan.io", True)])
+                         [("conan.io", "https://server.conan.io", True, False)])
 
     def to_json_migration_test(self):
         cache_folder = temp_folder()
@@ -44,7 +44,7 @@ other/1.0@lasote/testing conan.io
         self.assertIn("conan.io: https://server.conan.io", client.out)
         registry = client.cache.registry
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan.io", "https://server.conan.io", True)])
+                         [("conan.io", "https://server.conan.io", True, False)])
         ref1 = ConanFileReference.loads('lib/1.0@conan/stable')
         ref2 = ConanFileReference.loads('other/1.0@lasote/testing')
         expected = {ref1: 'conan.io', ref2: 'conan.io'}
@@ -65,36 +65,36 @@ other/1.0@lasote/testing conan.io
         # Add
         registry.add("local", "http://localhost:9300")
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True),
-                          ("local", "http://localhost:9300", True)])
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, False)])
         # Add
         registry.add("new", "new_url", False)
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True),
-                          ("local", "http://localhost:9300", True),
-                          ("new", "new_url", False)])
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, False),
+                          ("new", "new_url", False, False)])
         with self.assertRaises(ConanException):
             registry.add("new", "new_url")
         # Update
         registry.update("new", "other_url")
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True),
-                          ("local", "http://localhost:9300", True),
-                          ("new", "other_url", True)])
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, False),
+                          ("new", "other_url", True, False)])
         with self.assertRaises(ConanException):
             registry.update("new2", "new_url")
 
         registry.update("new", "other_url", False)
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True),
-                          ("local", "http://localhost:9300", True),
-                          ("new", "other_url", False)])
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, False),
+                          ("new", "other_url", False, False)])
 
         # Remove
         registry.remove("local")
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True),
-                          ("new", "other_url", False)])
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("new", "other_url", False, False)])
         with self.assertRaises(ConanException):
             registry.remove("new2")
 
@@ -116,17 +116,17 @@ other/1.0@lasote/testing conan.io
         cache = ClientCache(tmp_folder, output)
         registry = RemoteRegistry(cache, output)
         registry.add("repo1", "url1", True, insert=0)
-        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
-                         Remote("conan.io", "https://server.conan.io", True)])
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True, False),
+                         Remote("conan.io", "https://server.conan.io", True, False)])
         registry.add("repo2", "url2", True, insert=1)
-        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
-                         Remote("repo2", "url2", True),
-                         Remote("conan.io", "https://server.conan.io", True)])
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True, False),
+                         Remote("repo2", "url2", True, False),
+                         Remote("conan.io", "https://server.conan.io", True, False)])
         registry.add("repo3", "url3", True, insert=5)
-        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True),
-                         Remote("repo2", "url2", True),
-                         Remote("conan.io", "https://server.conan.io", True),
-                         Remote("repo3", "url3", True)])
+        self.assertEqual(list(registry.load_remotes().values()), [Remote("repo1", "url1", True, False),
+                         Remote("repo2", "url2", True, False),
+                         Remote("conan.io", "https://server.conan.io", True, False),
+                         Remote("repo3", "url3", True, False)])
 
     def test_remote_none(self):
         """ RemoteRegistry should be able to deal when the URL is None
@@ -138,12 +138,42 @@ other/1.0@lasote/testing conan.io
 
         registry.add("foobar", None)
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", "https://conan.bintray.com", True),
-                          ("foobar", None, True)])
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("foobar", None, True, False)])
         self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
         registry.remove("foobar")
 
         registry.update("conan-center", None)
         self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan-center", None, True)])
+                         [("conan-center", None, True, False)])
         self.assertIn("WARN: The URL is empty. It must contain scheme and hostname.", cache._output)
+
+    def enable_disable_remotes_test(self):
+        f = os.path.join(temp_folder(), "aux_file")
+        Remotes().save(f)
+        cache = ClientCache(os.path.dirname(f), TestBufferConanOutput())
+        registry = cache.registry
+
+        registry.add("local", "http://localhost:9300")
+        registry.set_disabled_state("local", True)
+        self.assertEqual(list(registry.load_remotes().all_values()),
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, True)])
+
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, False)])
+
+        registry.set_disabled_state("conan-center", True)
+        self.assertEqual(list(registry.load_remotes().all_values()),
+                         [("conan-center", "https://conan.bintray.com", True, True),
+                          ("local", "http://localhost:9300", True, True)])
+
+        self.assertEqual(list(registry.load_remotes().values()), [])
+
+        registry.set_disabled_state("*", False)
+        self.assertEqual(list(registry.load_remotes().values()),
+                         [("conan-center", "https://conan.bintray.com", True, False),
+                          ("local", "http://localhost:9300", True, False)])
+
+        registry.set_disabled_state("*", True)
+        self.assertEqual(list(registry.load_remotes().values()), [])

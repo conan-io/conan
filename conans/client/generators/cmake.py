@@ -76,7 +76,8 @@ class CMakeGenerator(Generator):
         sections = ["include(CMakeParseArguments)"]
 
         # Per requirement variables
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+        for _, dep_cpp_info in self.deps_build_info.dependencies:
+            dep_name = dep_cpp_info.name
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)

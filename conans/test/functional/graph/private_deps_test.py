@@ -36,7 +36,7 @@ class Pkg(ConanFile):
         self.assertIn("[libs];PkgA;PkgC", ";".join(conanbuildinfo.splitlines()))
         self.assertIn("PkgC/0.1/user/channel/package", conanbuildinfo)
         self.assertIn("[includedirs_PkgC]", conanbuildinfo)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
         html = load(os.path.join(client.current_folder, "file.html"))
@@ -88,7 +88,7 @@ class V3D(ConanFile):
         client.run("install . -g=cmake")
         self.assertIn("bzip2/1.0.6@conan/stable:%s - Skip" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         # The order is dictated by public MyPackage -> zlib dependency
         self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
@@ -126,7 +126,7 @@ class V3D(ConanFile):
         client.run("install . -g=cmake")
         self.assertIn("bzip2/1.0.6@conan/stable:%s - Skip" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         # The order is dictated by V3D declaration order, as other are privates
         self.assertIn("set(CONAN_LIBS zlib mypackage ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
@@ -161,7 +161,7 @@ class V3D(ConanFile):
                       client.out)
         self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         # The order is dictated by public mypackage -> zlib
         self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
@@ -170,18 +170,17 @@ class V3D(ConanFile):
         liba_ref = ConanFileReference.loads("LibA/0.1@conan/stable")
 
         client = TestClient()
-        client.save({"conanfile.py":
-                         str(GenConanfile().with_name("LibA").with_version("0.1")
-                             .with_package_info(cpp_info={"libs": ["mylibLibA0.1lib"]},
-                                                env_info={"MYENV": ["myenvLibA0.1env"]}))})
+        client.save({"conanfile.py": GenConanfile().with_name("LibA").with_version("0.1")
+                                        .with_package_info(cpp_info={"libs": ["mylibLibA0.1lib"]},
+                                                           env_info={"MYENV": ["myenvLibA0.1env"]})})
         client.run("create . LibA/0.1@conan/stable")
 
-        client.save({"conanfile.py": str(GenConanfile().with_name("LibB").with_version("0.1")
-                                                       .with_require(liba_ref))})
+        client.save({"conanfile.py": GenConanfile().with_name("LibB").with_version("0.1")
+                                                   .with_require(liba_ref)})
         client.run("create . LibB/0.1@conan/stable")
 
-        client.save({"conanfile.py": str(GenConanfile().with_name("LibC").with_version("0.1")
-                                                       .with_require(liba_ref, private=True))})
+        client.save({"conanfile.py": GenConanfile().with_name("LibC").with_version("0.1")
+                                                   .with_require(liba_ref, private=True)})
         client.run("create . LibC/0.1@conan/stable")
 
         for requires in (["LibB/0.1@conan/stable", "LibC/0.1@conan/stable"],
@@ -194,7 +193,7 @@ class V3D(ConanFile):
             client.run("install . -g cmake")
             self.assertIn("LibA/0.1@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
-            conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+            conanbuildinfo = client.load("conanbuildinfo.cmake")
             self.assertIn("set(CONAN_LIBS mylibLibA0.1lib ${CONAN_LIBS})", conanbuildinfo)
 
 
