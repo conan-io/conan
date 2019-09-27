@@ -179,7 +179,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         def __init__(self):
             logging.Handler.__init__(self, logging.DEBUG)
             self.output = output or ConanOutput(sys.stdout, sys.stderr, color=True)
-            self.patchname = patch_file if patch_file else "patch"
+            self.patchname = patch_file if patch_file else "patch_ng"
 
         def emit(self, record):
             logstr = self.format(record)
@@ -188,7 +188,7 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
             else:
                 self.output.info("%s: %s" % (self.patchname, logstr))
 
-    patchlog = logging.getLogger("patch")
+    patchlog = logging.getLogger("patch_ng")
     if patchlog:
         patchlog.handlers = []
         patchlog.addHandler(PatchLogHandler())

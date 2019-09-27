@@ -184,6 +184,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.save({"conanfile.py": file_content})
         client.run("install .")
         client.run("build .", assert_error=True)
+        self.assertIn("patch_ng: error: no patch data found!", client.out)
         self.assertIn("ERROR: conanfile.py (test/1.9.10): "
                       "Error in build() method, line 12", client.out)
         self.assertIn("Failed to parse patch: string", client.out)
