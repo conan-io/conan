@@ -307,7 +307,7 @@ class TestConan(ConanFile):
         self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g cmake")
 
-        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
@@ -467,7 +467,7 @@ class TestConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.out)
 
-        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 

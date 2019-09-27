@@ -18,7 +18,6 @@ TESTING_REMOTE_PRIVATE_PASS = "private_pass"
 
 
 class TestServerLauncher(object):
-    port = 0
 
     def __init__(self, base_path=None, read_permissions=None,
                  write_permissions=None, users=None, base_url=None, plugins=None,
@@ -36,9 +35,6 @@ class TestServerLauncher(object):
         server_config = migrate_and_get_server_config(base_path)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES)
-
-        if TestServerLauncher.port == 0:
-            TestServerLauncher.port = server_config.port
 
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
@@ -66,7 +62,7 @@ class TestServerLauncher(object):
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
 
-        self.port = TestServerLauncher.port
+        self.port = server_config.port
         self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
                               authorizer, authenticator, self.server_store,
                               server_capabilities)

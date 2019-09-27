@@ -1,11 +1,9 @@
 import json
-import os
 import unittest
 from collections import OrderedDict
 
 from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
 
 
 class UserTest(unittest.TestCase):
@@ -64,16 +62,16 @@ class UserTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
                       client.out)
         localdb = LocalDB.create(client.cache.localdb)
-        self.assertEqual(('john', None), localdb.get_login(test_server.fake_url))
+        self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user will')
         self.assertIn("Changed user of remote 'default' from 'john' to 'will'", client.out)
-        self.assertEqual(('will', None), localdb.get_login(test_server.fake_url))
+        self.assertEqual(('will', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user None')
         self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
                       client.out)
-        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
@@ -96,7 +94,7 @@ class UserTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
                       client.out)
         localdb = LocalDB.create(client.cache.localdb)
-        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
@@ -226,7 +224,7 @@ class ConanLib(ConanFile):
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -244,7 +242,7 @@ class ConanLib(ConanFile):
 
         client.run('user bad_user')
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -262,7 +260,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -280,7 +278,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote -p mypass")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -298,7 +296,7 @@ class ConanLib(ConanFile):
 
         client.run("user danimtb -p passpass")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -316,7 +314,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote -r other_server")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -334,7 +332,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote -r default")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [

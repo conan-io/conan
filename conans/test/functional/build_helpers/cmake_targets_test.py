@@ -73,7 +73,7 @@ class Alpha(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g cmake")
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         self.assertIn('set(CONAN_SHARED_LINKER_FLAGS '
                       '"CharlieFlag BetaFlag ${CONAN_SHARED_LINKER_FLAGS}")', cmake)
 
@@ -132,7 +132,7 @@ class Alpha(ConanFile):
                      "main.cpp": main}, clean_first=True)
 
         client.run("install . -g cmake")
-        bili = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        bili = client.load("conanbuildinfo.cmake")
         self.assertIn("-framework Foundation", bili)
 
     @unittest.skipUnless(platform.system() == "Darwin", "Requires Macos")
