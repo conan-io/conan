@@ -338,6 +338,9 @@ class HelloConan(ConanFile):
         for remote in data["remotes"]:
             self.assertNotIn("disabled", remote)
 
+    def invalid_remote_disable_test(self):
+        client = TestClient()
+
         client.run("remote disable invalid_remote", assert_error=True)
         self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
                       client.out)
@@ -345,6 +348,19 @@ class HelloConan(ConanFile):
         client.run("remote enable invalid_remote", assert_error=True)
         self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
                       client.out)
+
+    def remote_disable_already_set_test(self):
+        """
+        Check that we don't raise an error if the remote is already in the required state
+        """
+        client = TestClient()
+
+        client.run("remote add my-remote0 http://someurl0")
+        client.run("remote enable my-remote0")
+        client.run("remote enable my-remote0")
+
+        client.run("remote disable my-remote0")
+        client.run("remote disable my-remote0")
 
     def verify_ssl_error_test(self):
         client = TestClient()
