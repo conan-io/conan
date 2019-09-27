@@ -21,7 +21,7 @@ class ExportPkgTest(unittest.TestCase):
                             requester_class=None,
                             users={"default": [("lasote", "mypass")]})
 
-        client.save({"conanfile.py": str(GenConanfile().with_name("Pkg").with_version("0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
         client.run("install .")
         client.run("export-pkg . Pkg/0.1@user/testing")
 
@@ -33,7 +33,7 @@ class ExportPkgTest(unittest.TestCase):
             [build_requires]
             some/other@pkg/notexists
             """)
-        client.save({"conanfile.py": str(GenConanfile()),
+        client.save({"conanfile.py": GenConanfile(),
                      "myprofile": profile})
         client.run("export-pkg . Pkg/0.1@user/testing -pr=myprofile")
 
@@ -307,7 +307,7 @@ class TestConan(ConanFile):
         self.assertIn("Packaged 1 '.a' file: libmycoollib.a", client.out)
         self._consume(client, settings + " . -g cmake")
 
-        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
@@ -467,7 +467,7 @@ class TestConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.out)
 
-        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 

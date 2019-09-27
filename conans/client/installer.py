@@ -289,12 +289,12 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, cache, output, remote_manager, recorder, hook_manager):
-        self._cache = cache
-        self._out = output
-        self._remote_manager = remote_manager
+    def __init__(self, app, recorder):
+        self._cache = app.cache
+        self._out = app.out
+        self._remote_manager = app.remote_manager
         self._recorder = recorder
-        self._hook_manager = hook_manager
+        self._hook_manager = app.hook_manager
 
     def install(self, deps_graph, remotes, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
