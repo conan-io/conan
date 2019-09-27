@@ -17,7 +17,7 @@ from conans.server.store.server_store import ServerStore
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput, TestClient, \
-    TestServer
+    TestServer, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -493,24 +493,14 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
 
     def local_test(self):
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        class Test(ConanFile):
-            pass
-        """)
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
         self.client.run("remove lib/1.0 -f")
         folder = self.client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
         self.assertFalse(os.path.exists(folder))
 
     def remote_test(self):
-        conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        class Test(ConanFile):
-            pass
-        """)
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
         self.client.run("upload lib/1.0 -r default -c --all")
         self.client.run("remove lib/1.0 -f")

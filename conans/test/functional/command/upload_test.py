@@ -729,7 +729,6 @@ class Pkg(ConanFile):
 
         client.run('create . lib/1.0@')
         self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
-
         client.run('upload lib/1.0 -c --all')
         self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
 
@@ -740,3 +739,8 @@ class Pkg(ConanFile):
 
         path = server.server_store.package(pref)
         self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
+
+        # Should be possible with explicit package
+        client.run('upload lib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9')
+        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
+                      client.out)
