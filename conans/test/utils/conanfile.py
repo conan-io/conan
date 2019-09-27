@@ -31,6 +31,7 @@ class MockCppInfo(object):
         self.cflags = []
         self.cppflags = []
         self.defines = []
+        self.framework_paths = []
 
 
 class MockDepsCppInfo(defaultdict):
@@ -46,6 +47,7 @@ class MockDepsCppInfo(defaultdict):
         self.sharedlinkflags = []
         self.exelinkflags = []
         self.sysroot = ""
+        self.framework_paths = []
 
     @property
     def deps(self):

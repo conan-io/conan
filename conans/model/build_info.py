@@ -8,6 +8,8 @@ DEFAULT_LIB = "lib"
 DEFAULT_BIN = "bin"
 DEFAULT_RES = "res"
 DEFAULT_SHARE = "share"
+DEFAULT_BUILD = ""
+DEFAULT_FRAMEWORK = "Frameworks"
 
 
 class _CppInfo(object):
@@ -23,6 +25,8 @@ class _CppInfo(object):
         self.resdirs = []  # Directories to find resources, data, etc
         self.bindirs = []  # Directories to find executables and shared libs
         self.builddirs = []
+        self.frameworks = []  # Macos .framework
+        self.frameworkdirs = []
         self.rootpaths = []
         self.libs = []  # The libs to link against
         self.defines = []  # preprocessor definitions
@@ -38,6 +42,7 @@ class _CppInfo(object):
         self._build_paths = None
         self._res_paths = None
         self._src_paths = None
+        self._framework_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
         # When package is editable, filter_empty=False, so empty dirs are maintained
@@ -87,6 +92,12 @@ class _CppInfo(object):
             self._res_paths = self._filter_paths(self.resdirs)
         return self._res_paths
 
+    @property
+    def framework_paths(self):
+        if self._framework_paths is None:
+            self._framework_paths = self._filter_paths(self.frameworkdirs)
+        return self._framework_paths
+
     # Compatibility for 'cppflags' (old style property to allow decoration)
     @deprecation.deprecated(deprecated_in="1.13", removed_in="2.0", details="Use 'cxxflags' instead")
     def get_cppflags(self):
@@ -112,7 +123,8 @@ class CppInfo(_CppInfo):
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
-        self.builddirs.append("")
+        self.builddirs.append(DEFAULT_BUILD)
+        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
@@ -127,7 +139,8 @@ class CppInfo(_CppInfo):
             result.libdirs.append(DEFAULT_LIB)
             result.bindirs.append(DEFAULT_BIN)
             result.resdirs.append(DEFAULT_RES)
-            result.builddirs.append("")
+            result.builddirs.append(DEFAULT_BUILD)
+            result.frameworkdirs.append(DEFAULT_FRAMEWORK)
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
@@ -148,7 +161,9 @@ class _BaseDepsCppInfo(_CppInfo):
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
         self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
+        self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order
@@ -184,6 +199,10 @@ class _BaseDepsCppInfo(_CppInfo):
     @property
     def res_paths(self):
         return self.resdirs
+
+    @property
+    def framework_paths(self):
+        return self.frameworkdirs
 
 
 class DepsCppInfo(_BaseDepsCppInfo):

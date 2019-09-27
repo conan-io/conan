@@ -1016,6 +1016,13 @@ build_type: [ Release]
                                                 cpu_count(output=conanfile.output)),
                          conanfile.command)
 
+        cmake.generator = "Ninja"
+        cmake.test()
+        self.assertEqual('cmake --build '
+                         '%s' % CMakeTest.scape('. --target test -- -j%i' %
+                                                cpu_count(output=conanfile.output)),
+                         conanfile.command)
+
         cmake.generator = "NMake Makefiles"
         cmake.test()
         self.assertEqual('cmake --build '

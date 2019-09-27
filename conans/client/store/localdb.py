@@ -37,7 +37,8 @@ class LocalDB(object):
                     pass
 
             cursor.execute("create table if not exists %s "
-                           "(remote_url TEXT UNIQUE, user TEXT, token TEXT)" % REMOTES_USER_TABLE)
+                           "(remote_url TEXT UNIQUE, user TEXT, "
+                           "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
         except Exception as e:
             message = "Could not initialize local sqlite database"
             raise ConanException(message, e)
@@ -60,28 +61,31 @@ class LocalDB(object):
         with self._connect() as connection:
             try:
                 statement = connection.cursor()
-                statement.execute('select user, token from %s where remote_url="%s"'
+                statement.execute('select user, token, refresh_token from %s where remote_url="%s"'
                                   % (REMOTES_USER_TABLE, remote_url))
                 rs = statement.fetchone()
                 if not rs:
-                    return None, None
+                    return None, None, None
                 name = rs[0]
                 token = rs[1]
-                return name, token
+                refresh_token = rs[2]
+                return name, token, refresh_token
             except Exception:
                 raise ConanException("Couldn't read login\n Try removing '%s' file" % self.dbfile)
 
     def get_username(self, remote_url):
         return self.get_login(remote_url)[0]
 
-    def set_login(self, login, remote_url):
+    def store(self, user, token, refresh_token, remote_url):
         """ Login is a tuple of (user, token) """
         with self._connect() as connection:
             try:
                 statement = connection.cursor()
-                statement.execute("INSERT OR REPLACE INTO %s (remote_url, user, token) "
-                                  "VALUES (?, ?, ?)" % REMOTES_USER_TABLE,
-                                  (remote_url, login[0], login[1]))
+                statement.execute("INSERT OR REPLACE INTO %s (remote_url, user, token, "
+                                  "refresh_token) "
+                                  "VALUES (?, ?, ?, ?)" % REMOTES_USER_TABLE,
+                                  (remote_url, user, token, refresh_token))
                 connection.commit()
             except Exception as e:
                 raise ConanException("Could not store credentials %s" % str(e))
+

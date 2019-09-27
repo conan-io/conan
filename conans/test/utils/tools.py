@@ -140,6 +140,12 @@ class TestingResponse(object):
     def status_code(self):
         return self.test_response.status_code
 
+    def json(self):
+        try:
+            return json.loads(self.test_response.content)
+        except:
+            raise ValueError("The response is not a JSON")
+
 
 class TestRequester(object):
     """Fake requests module calling server applications

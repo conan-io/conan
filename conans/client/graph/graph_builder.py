@@ -54,7 +54,7 @@ class DepsGraphBuilder(object):
         scope = conanfile.display_name
         requires = [Requirement(ref) for ref in build_requires_refs]
         if graph_lock:
-            graph_lock.lock_node(node, requires)
+            graph_lock.lock_node(node, requires, build_requires=True)
 
         self._resolve_ranges(graph, requires, scope, update, remotes)
 
