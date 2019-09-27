@@ -69,6 +69,7 @@ Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
         conanfile.settings = settings
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = ref.name
         cpp_info.frameworks = ['AudioUnit', 'AudioToolbox']
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
