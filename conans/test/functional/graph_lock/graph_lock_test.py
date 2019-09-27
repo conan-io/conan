@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+from parameterized.parameterized import parameterized
+
 from conans.model.graph_lock import LOCKFILE, LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
@@ -381,6 +383,40 @@ class GraphLockPythonRequiresTest(unittest.TestCase):
         self._check_lock("Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5")
 
 
+class GraphLockConsumerBuildOrderTest(unittest.TestCase):
+
+    @parameterized.expand([(True, ), (False, )])
+    def consumer_build_order_local_test(self, enable_revisions):
+        # https://github.com/conan-io/conan/issues/5727
+        client = TestClient(default_server_user=True)
+        if enable_revisions:
+            client.run("config set general.revisions_enabled=1")
+
+        consumer_ref = ConanFileReference("test4", "0.1", None, None, None)
+        consumer = GenConanfile().with_name(consumer_ref.name).with_version(consumer_ref.version)
+
+        client.save({"conanfile.py": consumer})
+        client.run("graph lock .")
+        client.run("graph build-order conan.lock --build=missing")
+        self.assertIn("[]", client.out)
+
+    @parameterized.expand([(True,), (False,)])
+    def consumer_build_order_test(self, enable_revisions):
+        # https://github.com/conan-io/conan/issues/5727
+        client = TestClient(default_server_user=True)
+        if enable_revisions:
+            client.run("config set general.revisions_enabled=1")
+
+        consumer_ref = ConanFileReference("test4", "0.1", None, None, None)
+        consumer = GenConanfile().with_name(consumer_ref.name).with_version(consumer_ref.version)
+
+        client.save({"conanfile.py": consumer})
+        client.run("export .")
+        client.run("graph lock test4/0.1@")
+        client.run("graph build-order conan.lock --build=missing")
+        self.assertIn("test4/0.1", client.out)
+
+
 class GraphLockWarningsTestCase(unittest.TestCase):
 
     def test_override(self):
@@ -407,3 +443,45 @@ class GraphLockWarningsTestCase(unittest.TestCase):
         client.run("graph build-order conan.lock")
         self.assertNotIn("overridden", client.out)
         self.assertNotIn("WARN", client.out)
+
+
+class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
+
+    def test(self):
+        # https://github.com/conan-io/conan/issues/5807
+        client = TestClient()
+        client.save({"zlib.py": GenConanfile(),
+                     "harfbuzz.py": GenConanfile().with_require_plain("fontconfig/1.0"),
+                     "fontconfig.py": GenConanfile(),
+                     "ffmpeg.py": GenConanfile().with_build_require_plain("fontconfig/1.0")
+                                                .with_build_require_plain("harfbuzz/1.0"),
+                     "variant.py": GenConanfile().with_require_plain("ffmpeg/1.0")
+                                                 .with_require_plain("fontconfig/1.0")
+                                                 .with_require_plain("harfbuzz/1.0")
+                                                 .with_require_plain("zlib/1.0")
+                     })
+        client.run("export zlib.py zlib/1.0@")
+        client.run("export fontconfig.py fontconfig/1.0@")
+        client.run("export harfbuzz.py harfbuzz/1.0@")
+        client.run("export ffmpeg.py ffmpeg/1.0@")
+
+        # Building the graphlock we get the message
+        client.run("graph lock variant.py")
+
+        # Using the graphlock there is no warning message
+        client.run("graph build-order . --build cascade --build outdated", assert_error=True)
+        self.assertIn("ERROR: 'fontconfig' cannot be found in lockfile for this package", client.out)
+        self.assertIn("Make sure it was locked ", client.out)
+
+
+class GraphLockModifyConanfileTestCase(unittest.TestCase):
+
+    def test(self):
+        # https://github.com/conan-io/conan/issues/5807
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("graph lock .")
+        client.save({"conanfile.py": GenConanfile().with_require_plain("zlib/1.0")})
+        client.run("install . --lockfile", assert_error=True)
+        self.assertIn("ERROR: 'zlib' cannot be found in lockfile for this package", client.out)
+        self.assertIn("If it is a new requirement, you need to create a new lockile", client.out)
