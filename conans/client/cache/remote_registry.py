@@ -187,6 +187,10 @@ class Remotes(object):
             if fnmatch.fnmatch(remote.name, remote_name):
                 if remote.disabled != state:
                     filtered_remotes.append(remote.name)
+
+        if not filtered_remotes:
+            raise NoRemoteAvailable("Remote '%s' not found in remotes" % (remote_name))
+
         for r in filtered_remotes:
             remote = self._remotes[r]
             self._remotes[r] = Remote(remote.name, remote.url,
