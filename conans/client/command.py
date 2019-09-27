@@ -1860,25 +1860,22 @@ class Command(object):
 
         self._out.writeln("")
 
-    def _warn_python2(self):
-        if six.PY2:
+    def _warn_python_version(self):
+        version = sys.version_info
+        if version.major == 2:
             self._out.writeln("")
             self._out.writeln("Python 2 will soon be deprecated. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan:", front=Color.BRIGHT_YELLOW)
+                              "recommended to use Python >= 3.5 with Conan:",
+                              front=Color.BRIGHT_YELLOW)
             self._out.writeln("https://docs.conan.io/en/latest/installation.html"
                               "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
-
-    def _warn_python34(self):
-        if six.PY34:
+        elif version.minor == 4:
             self._out.writeln("")
             self._out.writeln("Python 3.4 support has been dropped. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan", front=Color.BRIGHT_YELLOW)
+                              "recommended to use Python >= 3.5 with Conan",
+                              front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
-
-    def _warn_python_version(self):
-        self._warn_python2()
-        self._warn_python34()
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
