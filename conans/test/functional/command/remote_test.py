@@ -338,6 +338,14 @@ class HelloConan(ConanFile):
         for remote in data["remotes"]:
             self.assertNotIn("disabled", remote)
 
+        client.run("remote disable invalid_remote", assert_error=True)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
+                      client.out)
+
+        client.run("remote enable invalid_remote", assert_error=True)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
+                      client.out)
+
     def verify_ssl_error_test(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
