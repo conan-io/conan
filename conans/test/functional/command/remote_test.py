@@ -349,6 +349,8 @@ class HelloConan(ConanFile):
         self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
                       client.out)
 
+        client.run("remote disable invalid_wildcard_*")
+
     def remote_disable_already_set_test(self):
         """
         Check that we don't raise an error if the remote is already in the required state
