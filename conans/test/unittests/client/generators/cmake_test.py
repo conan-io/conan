@@ -328,7 +328,7 @@ endmacro()""", macro)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
-        сpp_info.name = ref.name
+        cpp_info.name = ref.name
         cpp_info.framework_paths.extend(["path/to/Frameworks1", "path/to/Frameworks2"])
         cpp_info.frameworks = ["OpenGL", "OpenCL"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
