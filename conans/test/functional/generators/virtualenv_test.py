@@ -158,6 +158,13 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             #        generated at the 'generator.content' and not when the 'activate' is called.
             save_files(self.test_folder, generator.content)
 
+            rr = generator.content
+            print(rr["activate.sh"])
+            print("*"*20)
+            print(rr["deactivate.sh"])
+            print("*"*20)
+            print(rr["environment.env"])
+
             # Generate the list of commands to execute
             shell_commands = [
                 self.commands.dump_env.format(filename=self.env_before),

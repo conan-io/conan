@@ -1,33 +1,44 @@
 import os
 import textwrap
 
+from jinja2 import Template
+
 from conans.client.tools.oss import OSInfo
 from conans.model import Generator
 
-
 environment_filename = "environment.env"
 
-sh_activate_file = textwrap.dedent("""
+sh_activate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
-    DIR="$( cd "$( dirname "${{BASH_SOURCE[0]}}" )" >/dev/null 2>&1 && pwd )"
+    DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+    {%- for it in modified_vars %}
+    export OLD_{{it}}=${{it}}
+    {%- endfor %}
 
     while read line; do
         LINE="$(eval echo $line)";
         export "$LINE";
-    done < "$DIR/{}"
+    done < "$DIR/{{ environment_file }}"
 
     export CONAN_OLD_PS1=$PS1
     export PS1="(conanenv) $PS1"
 
-""".format(environment_filename))
+"""))  # .format(environment_filename)
 
-sh_deactivate_file = textwrap.dedent("""
+sh_deactivate_tpl = Template(textwrap.dedent("""
     #!/usr/bin/env bash
     export PS1="$CONAN_OLD_PS1"
     unset CONAN_OLD_PS1
 
-""")
-
+    {% for it in modified_vars %}
+    export {{it}}="$OLD_{{it}}"
+    unset OLD_{{it}}
+    {%- endfor %}
+    {%- for it in new_vars %}
+    unset {{it}}
+    {%- endfor %}
+"""))
 
 
 class VirtualEnvGenerator(Generator):
@@ -104,18 +115,21 @@ class VirtualEnvGenerator(Generator):
         return ret
 
     def _sh_lines(self):
+        ret = self.format_values("sh", self.env.items())
+        modified_vars = [it[0] for it in ret if it[2] != '""']
+        new_vars = [it[0] for it in ret if it[2] == '""']
+
+        activate_content = sh_activate_tpl.render(environment_file=environment_filename,
+                                                  modified_vars=modified_vars, new_vars=new_vars)
+        activate_lines = activate_content.splitlines()
+        deactivate_content = sh_deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+        deactivate_lines = deactivate_content.splitlines()
+
         environment_lines = []
-        deactivate_lines = sh_deactivate_file.splitlines()
         for name, activate, deactivate in self.format_values("sh", self.env.items()):
             environment_lines.append("%s=%s" % (name, activate))
-            if deactivate == '""':
-                deactivate_lines.append("unset %s" % name)
-            else:
-                deactivate_lines.append("export %s=%s" % (name, deactivate))
 
         environment_lines.append('')
-        deactivate_lines.append('')
-        activate_lines = sh_activate_file.splitlines()
         return activate_lines, deactivate_lines, environment_lines
 
     def _cmd_lines(self):
