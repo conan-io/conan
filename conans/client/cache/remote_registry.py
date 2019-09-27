@@ -185,16 +185,16 @@ class Remotes(object):
         filtered_remotes = []
         for remote in self._remotes.values():
             if fnmatch.fnmatch(remote.name, remote_name):
-                if remote.disabled != state:
-                    filtered_remotes.append(remote.name)
+                filtered_remotes.append(remote)
 
-        if not filtered_remotes:
+        if not filtered_remotes and not "*" in remote_name:
             raise NoRemoteAvailable("Remote '%s' not found in remotes" % (remote_name))
 
-        for r in filtered_remotes:
-            remote = self._remotes[r]
-            self._remotes[r] = Remote(remote.name, remote.url,
-                                      remote.verify_ssl, state)
+        for remote in filtered_remotes:
+            if remote.disabled == state:
+                continue
+            self._remotes[remote.name] = Remote(remote.name, remote.url,
+                                                remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
