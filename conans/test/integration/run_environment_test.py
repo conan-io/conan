@@ -16,8 +16,9 @@ class RunEnvironmentTest(unittest.TestCase):
     def test_run_environment(self):
         client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1")
-        files[CONANFILE] = files[CONANFILE].replace('self.copy(pattern="*.so", dst="lib", keep_path=False)',
-                                                    '''self.copy(pattern="*.so", dst="lib", keep_path=False)
+        files[CONANFILE] = files[CONANFILE].replace(
+            'self.copy(pattern="*.so", dst="lib", keep_path=False)',
+            '''self.copy(pattern="*.so", dst="lib", keep_path=False)
         self.copy(pattern="*say_hello*", dst="bin", keep_path=False)''')
         client.save(files)
         client.run("export . lasote/stable")
@@ -101,10 +102,10 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         """)
 
         client.save({"conanfile.py": conanfile,
-                      "CMakeLists.txt": cmake,
-                      "main.cpp": main,
-                      "hello.cpp": hello_cpp,
-                      "hello.h": hello_h})
+                     "CMakeLists.txt": cmake,
+                     "main.cpp": main,
+                     "hello.cpp": hello_cpp,
+                     "hello.h": hello_h})
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload Pkg* --all --confirm")
         client.run('remove "*" -f')
@@ -135,8 +136,9 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         # value via run_environment=True doesn't work, because it prepends its value to:
         # command = "cd [folder] && cmake [cmd]" => "DYLD_LIBRARY_PATH=[path] cd [folder] && cmake [cmd]"
         # and then only applies to the change directory "cd"
-        # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake installed in
-        # system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake" can work
+        # If CMake binary is in user folder, it is not under SIP, and it can work. For cmake
+        # installed in system folders, then no possible form of "DYLD_LIBRARY_PATH=[folders] cmake"
+        # can work
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
         reuse = textwrap.dedent("""
@@ -161,7 +163,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         """)
 
         client.save({"conanfile.py": reuse,
-                      "CMakeLists.txt": cmake}, clean_first=True)
+                     "CMakeLists.txt": cmake}, clean_first=True)
         client.run("install .")
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
