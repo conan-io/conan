@@ -316,6 +316,35 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
+    def apple_frameworks_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Macos"
+        settings.compiler = "apple-clang"
+        settings.compiler.version = "9.1"
+        settings.compiler.libcxx = "libc++"
+        settings.arch = "x86_64"
+        settings.build_type = "Debug"
+        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile.initialize(Settings({}), EnvValues())
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.name = ref.name
+        cpp_info.framework_paths.extend(["path/to/Frameworks1", "path/to/Frameworks2"])
+        cpp_info.frameworks = ["OpenGL", "OpenCL"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.settings = settings
+
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        self.assertIn('find_library(CONAN_FRAMEWORK_OPENGL OpenGL PATHS '
+                      '"path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2")', content)
+        self.assertIn('find_library(CONAN_FRAMEWORK_OPENCL OpenCL PATHS '
+                      '"path/to/Frameworks1"\n\t\t\t"path/to/Frameworks2")', content)
+        self.assertIn('set(CONAN_LIBS_MYPKG  ${CONAN_FRAMEWORK_OPENGL} '
+                      '${CONAN_FRAMEWORK_OPENCL})', content)
+        self.assertIn('set(CONAN_LIBS  ${CONAN_FRAMEWORK_OPENGL} '
+                      '${CONAN_FRAMEWORK_OPENCL} ${CONAN_LIBS})', content)
+
     def cpp_info_name_cmake_vars_test(self):
         """
         Test cpp_info.names values are applied instead of the reference name
