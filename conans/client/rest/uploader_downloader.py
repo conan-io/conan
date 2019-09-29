@@ -2,8 +2,6 @@ import os
 import traceback
 import time
 
-from tqdm import tqdm
-
 from conans.util import progress_bar
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
@@ -12,9 +10,6 @@ from conans.util.files import mkdir, save_append, sha1sum, to_file_bytes
 from conans.util.log import logger
 from conans.util.tracer import log_download
 
-TIMEOUT_BEAT_SECONDS = 30
-TIMEOUT_BEAT_CHARACTER = '.'
-CONTENT_CHUNK_SIZE = 10 * 1024
 
 class FileUploader(object):
 
@@ -86,26 +81,6 @@ class FileUploader(object):
         return response
 
 
-def _download_data(downloader):
-    if downloader.finished_download:
-        downloader.save()
-    else:
-        total_length = downloader.total_length
-        encoding = downloader.encoding
-        gzip = (encoding == "gzip")
-        # chunked can be a problem:
-        # https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
-        # It will not send content-length or should be ignored
-        dl_size = downloader.download()
-        if dl_size != total_length and not gzip:
-            raise ConanException("Transfer interrupted before "
-                                 "complete: %s < %s" % (dl_size, total_length))
-    if downloader.data is not None:
-        return bytes(downloader.data)
-    else:
-        return None
-
-
 class FileDownloader(object):
 
     def __init__(self, requester, output, verify, chunk_size=1000):
@@ -137,7 +112,6 @@ class FileDownloader(object):
                                headers, file_path)
 
     def _download_file(self, url, auth, headers, file_path):
-        content_file = open(file_path, 'wb')
         t1 = time.time()
         try:
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
@@ -156,43 +130,50 @@ class FileDownloader(object):
                 raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
-        def read_response(chunk_size):
-            try:
-                # Special case for urllib3.
-                for chunk in response.raw.stream(
-                        chunk_size,
-                        decode_content=False):
-                    yield chunk
-            except AttributeError:
-                # Standard file-like object.
-                while True:
-                    chunk = response.raw.read(chunk_size)
-                    if not chunk:
-                        break
-                    yield chunk
-
-        def written_chunks(chunks):
-            for chunk in chunks:
-                content_file.write(chunk)
+        def read_response(size):
+            for chunk in response.iter_content(size):
                 yield chunk
+
+        def written_chunks(chunks, path):
+            if path:
+                mkdir(os.path.dirname(path))
+                with open(path, 'wb') as file_handler:
+                    for chunk in chunks:
+                        file_handler.write(to_file_bytes(chunk))
+                        yield chunk
+            else:
+                for chunk in chunks:
+                    yield chunk
 
         try:
             logger.debug("DOWNLOAD: %s" % url)
             total_length = response.headers.get('content-length') or len(response.content)
-            _progress_indicator = progress_bar.DownloadProgress(total_length, self.output,
-                                                                description="Downloading {}".format(
-                                                                    os.path.basename(
-                                                                        self._file_path)))
+            total_length = int(total_length)
+            description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
+            progress = progress_bar.DownloadProgress(total_length, self.output, description)
+
+            chunk_size = 1024 if not file_path else 1024 * 100
+            encoding = response.headers.get('content-encoding')
+            gzip = (encoding == "gzip")
+            ret_data = bytearray()
+
             downloaded_chunks = written_chunks(
-                _progress_indicator.update(
-                    read_response(CONTENT_CHUNK_SIZE),
-                    CONTENT_CHUNK_SIZE
-                )
+                progress.update(read_response(chunk_size), chunk_size),
+                file_path
             )
+
+            for data in downloaded_chunks:
+                if not file_path:
+                    ret_data.extend(data)
+
+            response.close()
+            if progress.download_size != total_length and not gzip:
+                raise ConanException("Transfer interrupted before "
+                                     "complete: %s < %s" % (progress.download_size, total_length))
+
             duration = time.time() - t1
             log_download(url, duration)
-            content_file.close()
-            return downloaded_chunks # o consume(downloaded_chunks)
+            return bytes(ret_data)
 
         except Exception as e:
             logger.debug(e.__class__)
