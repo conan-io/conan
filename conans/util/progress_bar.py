@@ -165,6 +165,33 @@ class _FileDownloaderWithProgressBar(object):
             self._tqdm_bar.close()
 
 
+class DownloadProgress(object):
+    def __init__(self, length, output, description=""):
+        self._tqdm_bar = None
+        self._total_length = length
+        self._output = output
+        if self._output and self._output.is_terminal and self._file_path:
+            self._tqdm_bar = tqdm(total=self._total_length,
+                                  desc=description,
+                                  file=self._output, unit="B",
+                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
+                                  unit_divisor=1024)
+
+    def pb_update(self, chunk_size):
+        if self._tqdm_bar is not None:
+            self._tqdm_bar.update(chunk_size)
+
+    def update(self, it, chunk_size=1):
+        for x in it:
+            yield x
+            self.pb_update(chunk_size)
+        self.pb_close()
+
+    def pb_close(self):
+        if self._tqdm_bar is not None:
+            self._tqdm_bar.close()
+
+
 class _FileListIteratorWithProgressBar(object):
 
     def __init__(self, files_list, output, desc=None):

@@ -14,7 +14,7 @@ from conans.util.tracer import log_download
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
-
+CONTENT_CHUNK_SIZE = 10 * 1024
 
 class FileUploader(object):
 
@@ -137,8 +137,8 @@ class FileDownloader(object):
                                headers, file_path)
 
     def _download_file(self, url, auth, headers, file_path):
+        content_file = open(file_path, 'wb')
         t1 = time.time()
-
         try:
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
                                           headers=headers)
@@ -156,34 +156,50 @@ class FileDownloader(object):
                 raise AuthenticationException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
+        def read_response(chunk_size):
+            try:
+                # Special case for urllib3.
+                for chunk in response.raw.stream(
+                        chunk_size,
+                        decode_content=False):
+                    yield chunk
+            except AttributeError:
+                # Standard file-like object.
+                while True:
+                    chunk = response.raw.read(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+
+        def written_chunks(chunks):
+            for chunk in chunks:
+                content_file.write(chunk)
+                yield chunk
+
         try:
             logger.debug("DOWNLOAD: %s" % url)
-            with progress_bar.download_file(file_path, response, self.output) as downloader:
-                data = _download_data(downloader)
-                duration = time.time() - t1
-                log_download(url, duration)
-                return data
+            total_length = response.headers.get('content-length') or len(response.content)
+            _progress_indicator = progress_bar.DownloadProgress(total_length, self.output,
+                                                                description="Downloading {}".format(
+                                                                    os.path.basename(
+                                                                        self._file_path)))
+            downloaded_chunks = written_chunks(
+                _progress_indicator.update(
+                    read_response(CONTENT_CHUNK_SIZE),
+                    CONTENT_CHUNK_SIZE
+                )
+            )
+            duration = time.time() - t1
+            log_download(url, duration)
+            content_file.close()
+            return downloaded_chunks # o consume(downloaded_chunks)
+
         except Exception as e:
             logger.debug(e.__class__)
             logger.debug(traceback.format_exc())
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
-
-
-class IterableToFileAdapter(object):
-    def __init__(self, iterable, total_size):
-        self.iterator = iter(iterable)
-        self.total_size = total_size
-
-    def read(self, size=-1):  # @UnusedVariable
-        return next(self.iterator, b'')
-
-    def __len__(self):
-        return self.total_size
-
-    def __iter__(self):
-        return self.iterator.__iter__()
 
 
 def print_progress(output, units, progress=""):
