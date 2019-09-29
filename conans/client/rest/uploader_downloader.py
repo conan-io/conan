@@ -71,7 +71,6 @@ class FileUploader(object):
             progress = progress_bar.ReadProgress(file_size, self.output, description)
             chunk_size = 1024
             data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
-
             try:
                 response = self.requester.put(url, data=data, verify=self.verify,
                                               headers=headers, auth=auth)
