@@ -12,6 +12,7 @@ import threading
 import unittest
 import textwrap
 import uuid
+import types
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
@@ -51,7 +52,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 from conans.client.runner import ConanRunner
-from conans.util.progress_bar import FileReaderWithProgressBar
 
 NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
@@ -210,7 +210,7 @@ class TestRequester(object):
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
-                if isinstance(kwargs["data"], FileReaderWithProgressBar):
+                if isinstance(kwargs["data"], types.GeneratorType):
                     data_accum = b""
                     for tmp in kwargs["data"]:
                         data_accum += tmp
