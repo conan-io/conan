@@ -29,6 +29,44 @@ class GraphBinariesAnalyzer(object):
             else:
                 output.warn("Current package is newer than remote upstream one")
 
+    def _evaluate_compatible(self, node, remotes):
+        if node.binary != BINARY_MISSING or node.graph_lock_node or not node.conanfile.compatible_ids:
+            return
+
+        ref, conanfile = node.ref, node.conanfile
+        for compatible_info in node.conanfile.compatible_ids:
+            package_id = compatible_info.package_id()
+            remote_info = None
+            pref = PackageReference(ref, package_id)
+            remote = remotes.selected
+            if remote:
+                try:
+                    remote_info, pref = self._remote_manager.get_package_info(pref, remote)
+                except NotFoundException:
+                    pass
+                except Exception:
+                    conanfile.output.error("Error downloading binary package: '{}'".format(pref))
+                    raise
+
+            # If the "remote" came from the registry but the user didn't specified the -r, with
+            # revisions iterate all remotes
+            if not remote or (not remote_info and self._cache.config.revisions_enabled):
+                for r in remotes.values():
+                    try:
+                        remote_info, pref = self._remote_manager.get_package_info(pref, r)
+                    except NotFoundException:
+                        pass
+                    else:
+                        if remote_info:
+                            node.binary_remote = r
+                            break
+
+            if remote_info:
+                node.binary = BINARY_DOWNLOAD
+                node.prev = pref.revision
+            else:
+                node.prev = None
+
     def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
@@ -247,4 +285,5 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, evaluated, remotes)
+            self._evaluate_compatible(node, remotes)
             self._handle_private(node)
