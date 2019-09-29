@@ -511,8 +511,8 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
             tgz.addfile(tarinfo=info)
 
         mask = ~(stat.S_IWOTH | stat.S_IWGRP)
-        with progress_bar.open_file_list(sorted(files.items()), desc="Compressing %s" % name,
-                                    output=output) as pg_file_list:
+        with progress_bar.open_file_list(sorted(files.items()), output,
+                                         "Compressing %s" % name) as pg_file_list:
             for filename, abs_path in pg_file_list:
                 info = tarfile.TarInfo(name=filename)
                 info.size = os.stat(abs_path).st_size

@@ -53,9 +53,25 @@ class FileUploader(object):
         return ret
 
     def _upload_file(self, url, abs_path,  headers, auth):
-        with progress_bar.open_binary(abs_path,
-                                      desc="Uploading {}".format(os.path.basename(abs_path)),
-                                      output=self.output) as data:
+
+        file_size = os.stat(abs_path).st_size
+        file_name = os.path.basename(abs_path)
+        description = "Uploading {}".format(file_name)
+
+        def load_in_chunks(file, size):
+            """Lazy function (generator) to read a file piece by piece.
+            Default chunk size: 1k."""
+            while True:
+                chunk = file.read(size)
+                if not chunk:
+                    break
+                yield chunk
+
+        with open(abs_path, mode='rb') as file_handler:
+            progress = progress_bar.ReadProgress(file_size, self.output, description)
+            chunk_size = 1024
+            data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
+
             try:
                 response = self.requester.put(url, data=data, verify=self.verify,
                                               headers=headers, auth=auth)
@@ -150,7 +166,7 @@ class FileDownloader(object):
             total_length = response.headers.get('content-length') or len(response.content)
             total_length = int(total_length)
             description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
-            progress = progress_bar.DownloadProgress(total_length, self.output, description)
+            progress = progress_bar.WriteProgress(total_length, self.output, description)
 
             chunk_size = 1024 if not file_path else 1024 * 100
             encoding = response.headers.get('content-encoding')
