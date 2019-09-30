@@ -37,16 +37,16 @@ class VerifySSLTest(unittest.TestCase):
         self.client = TestClient(requester_class=RequesterMockTrue)
         self.client.run("remote add myremote https://localhost False")
         self.client.run("remote list")
-        self.assertIn("Verify SSL: False", self.client.user_io.out)
+        self.assertIn("Verify SSL: False", self.client.out)
 
         self.client.run("remote update myremote https://localhost True")
         self.client.run("remote list")
-        self.assertIn("Verify SSL: True", self.client.user_io.out)
+        self.assertIn("Verify SSL: True", self.client.out)
 
         self.client.run("remote remove myremote")
         self.client.run("remote add myremote https://localhost")
         self.client.run("remote list")
-        self.assertIn("Verify SSL: True", self.client.user_io.out)
+        self.assertIn("Verify SSL: True", self.client.out)
 
         # Verify that SSL is checked in requrests
         self.client.run("search op* -r myremote")

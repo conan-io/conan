@@ -7,16 +7,16 @@ from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer, \
-    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
+    NO_SETTINGS_PACKAGE_ID, create_local_git_repo, GenConanfile
+from conans.util.files import load
 
 
 class PythonExtendTest(unittest.TestCase):
     def test_with_python_requires(self):
         # https://github.com/conan-io/conan/issues/5140
         client = TestClient()
-        client.save({"conanfile.py": TestConanFile("dep", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("dep").with_version("0.1")})
         client.run("export . user/testing")
         conanfile = textwrap.dedent("""
             from conans import ConanFile, python_requires
@@ -187,7 +187,7 @@ def my_print():
         self.assertIn("ConanException: Invalid use of python_requires"
                       "(MyConanfileBase/1.0@lasote/testing)", client.out)
 
-    def transitive_multiple_reuse_test(self):
+    def multiple_reuse_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class SourceBuild(ConanFile):
@@ -221,6 +221,40 @@ class MyConanfileBase(source.SourceBuild, package.PackageInfo):
         self.assertIn("Pkg/0.1@lasote/testing: My cool build!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: My cool package_info!", client.out)
+
+    def transitive_py_requires_test(self):
+        # https://github.com/conan-io/conan/issues/5529
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Base(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . base/1.0@user/channel")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+            py_req = python_requires("base/1.0@user/channel")
+            class PackageInfo(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . helper/1.0@user/channel")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, python_requires
+            source = python_requires("helper/1.0@user/channel")
+            class MyConanfileBase(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install . pkg/0.1@user/channel")
+        lockfile = load(os.path.join(client.current_folder, "conan.lock"))
+        self.assertIn("base/1.0@user/channel#e41727b922c6ae54b216a58442893f3a", lockfile)
+        self.assertIn("helper/1.0@user/channel#98457e1f8d9174ed053747634ce0ea1a", lockfile)
+        client.run("source .")
+        self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
 
     def multiple_requires_error_test(self):
         client = TestClient()
@@ -672,7 +706,8 @@ class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
 
     def local_build_test(self):
         client = TestClient()
-        client.save({"conanfile.py": "var=42\n"+str(TestConanFile("Tool", "0.1"))})
+        client.save({"conanfile.py": "var=42\n"+
+                                     str(GenConanfile().with_name("Tool").with_version("0.1"))})
         client.run("export . Tool/0.1@user/channel")
 
         conanfile = """from conans import ConanFile, python_requires

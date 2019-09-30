@@ -44,10 +44,6 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         # number ("7.1.1").
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
-            major = installed_version.split(".")[0]
-            if int(major) >= 5:
-                output.info("gcc>=5, using the major as version")
-                installed_version = major
             return compiler, installed_version
     except Exception:
         return None
@@ -65,10 +61,6 @@ def _clang_compiler(output, compiler_exe="clang"):
         installed_version = re.search("([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
-            major = installed_version.split(".")[0]
-            if int(major) >= 8 and compiler == "clang":
-                output.info("clang>=8, using the major as version")
-                installed_version = major
             return compiler, installed_version
     except Exception:
         return None
@@ -125,6 +117,17 @@ def _get_default_compiler(output):
         return gcc or clang
 
 
+def _get_profile_compiler_version(compiler, version, output):
+    major = version.split(".")[0]
+    if compiler == "clang" and int(major) >= 8:
+        output.info("clang>=8, using the major as version")
+        return major
+    elif compiler == "gcc" and int(major) >= 5:
+        output.info("gcc>=5, using the major as version")
+        return major
+    return version
+
+
 def _detect_compiler_version(result, output, profile_path):
     try:
         compiler, version = _get_default_compiler(output)
@@ -134,7 +137,8 @@ def _detect_compiler_version(result, output, profile_path):
         output.error("Unable to find a working compiler")
     else:
         result.append(("compiler", compiler))
-        result.append(("compiler.version", version))
+        result.append(("compiler.version",
+                       _get_profile_compiler_version(compiler, version, output)))
         if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
@@ -190,14 +194,8 @@ def _detect_os_arch(result, output):
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
-        elif the_os == 'AIX':
-            processor = platform.processor()
-            if "powerpc" in processor:
-                kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
-                if kernel_bitness:
-                    arch = "ppc64" if kernel_bitness == "64" else "ppc32"
-            elif "rs6000" in processor:
-                arch = "ppc32"
+        elif OSInfo().is_aix:
+            arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
         result.append(("arch_build", arch))

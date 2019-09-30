@@ -1,7 +1,7 @@
 import os
+import time
 import traceback
 
-import time
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
 from conans.client.remote_manager import check_compressed_files
@@ -89,7 +89,7 @@ class RestV1Methods(RestCommonMethods):
             return FileTreeManifest.loads(decode_text(content))
         except Exception as e:
             msg = "Error retrieving manifest file for package " \
-                  "'{}' from remote ({}): '{}'".format(pref.full_repr(), self.remote_url, e)
+                  "'{}' from remote ({}): '{}'".format(repr(pref), self.remote_url, e)
             logger.error(msg)
             logger.error(traceback.format_exc())
             raise ConanException(msg)

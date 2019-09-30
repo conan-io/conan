@@ -1,32 +1,51 @@
-import json
 import os
+import subprocess
+
+from six import string_types
 
 from conans.client.tools.scm import Git, SVN
 from conans.errors import ConanException
+from conans.util.files import rmdir
 
 
 def get_scm_data(conanfile):
-    try:
+    data = getattr(conanfile, "scm", None)
+    if data is not None and isinstance(data, dict):
         return SCMData(conanfile)
-    except ConanException:
+    else:
         return None
 
 
+def _get_dict_value(data, key, expected_type, default=None, disallowed_type=None):
+    if key in data:
+        r = data.get(key)
+        if r is None:  # None is always a valid value
+            return r
+        if not isinstance(r, expected_type) or (disallowed_type and isinstance(r, disallowed_type)):
+            type_str = "' or '".join([it.__name__ for it in expected_type]) \
+                if isinstance(expected_type, tuple) else expected_type.__name__
+            raise ConanException("SCM value for '{}' must be of type '{}'"
+                                 " (found '{}')".format(key, type_str, type(r).__name__))
+        return r
+    return default
+
+
 class SCMData(object):
+    VERIFY_SSL_DEFAULT = True
+    SHALLOW_DEFAULT = True
 
     def __init__(self, conanfile):
-        data = getattr(conanfile, "scm", None)
-        if data is not None and isinstance(data, dict):
-            self.type = data.get("type")
-            self.url = data.get("url")
-            self.revision = data.get("revision")
-            self.verify_ssl = data.get("verify_ssl")
-            self.username = data.get("username")
-            self.password = data.get("password")
-            self.subfolder = data.get("subfolder", "")
-            self.submodule = data.get("submodule")
-        else:
-            raise ConanException("Not SCM enabled in conanfile")
+        data = getattr(conanfile, "scm")
+        self.type = _get_dict_value(data, "type", string_types)
+        self.url = _get_dict_value(data, "url", string_types)
+        self.revision = _get_dict_value(data, "revision", string_types + (int, ),
+                                        disallowed_type=bool)  # bool is subclass of integer
+        self.verify_ssl = _get_dict_value(data, "verify_ssl", bool, SCMData.VERIFY_SSL_DEFAULT)
+        self.username = _get_dict_value(data, "username", string_types)
+        self.password = _get_dict_value(data, "password", string_types)
+        self.subfolder = _get_dict_value(data, "subfolder", string_types)
+        self.submodule = _get_dict_value(data, "submodule", string_types)
+        self.shallow = _get_dict_value(data, "shallow", bool, SCMData.SHALLOW_DEFAULT)
 
     @property
     def capture_origin(self):
@@ -44,10 +63,22 @@ class SCMData(object):
 
     def __repr__(self):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
-             "password": self.password, "type": self.type, "verify_ssl": self.verify_ssl,
+             "password": self.password, "type": self.type,
              "subfolder": self.subfolder, "submodule": self.submodule}
-        d = {k: v for k, v in d.items() if v}
-        return json.dumps(d, sort_keys=True)
+        if self.shallow != self.SHALLOW_DEFAULT:
+            d.update({"shallow": self.shallow})
+        if self.verify_ssl != self.VERIFY_SSL_DEFAULT:
+            d.update({"verify_ssl": self.verify_ssl})
+        d = {k: v for k, v in d.items() if v is not None}
+
+        def _kv_to_string(key, value):
+            if isinstance(value, bool):
+                return '"{}": {}'.format(key, value)
+            else:
+                value_str = str(value).replace('"', r'\"')
+                return '"{}": "{}"'.format(key, value_str)
+
+        return '{' + ', '.join([_kv_to_string(k, v) for k, v in sorted(d.items())]) + '}'
 
 
 class SCM(object):
@@ -86,9 +117,31 @@ class SCM(object):
     def checkout(self):
         output = ""
         if self._data.type == "git":
-            output += self.repo.clone(url=self._data.url)
-            output += self.repo.checkout(element=self._data.revision,
-                                         submodule=self._data.submodule)
+            def use_not_shallow():
+                out = self.repo.clone(url=self._data.url, shallow=False)
+                out += self.repo.checkout(element=self._data.revision,
+                                          submodule=self._data.submodule)
+                return out
+
+            def use_shallow():
+                try:
+                    out = self.repo.clone(url=self._data.url, branch=self._data.revision,
+                                          shallow=True)
+                except subprocess.CalledProcessError:
+                    # remove the .git directory, otherwise, fallback clone cannot be successful
+                    # it's completely safe to do here, as clone without branch expects
+                    # empty directory
+                    rmdir(os.path.join(self.repo_folder, ".git"))
+                    out = use_not_shallow()
+                else:
+                    out += self.repo.checkout_submodules(submodule=self._data.submodule)
+                return out
+
+            if self._data.shallow:
+                output += use_shallow()
+            else:
+                output += use_not_shallow()
+
         else:
             output += self.repo.checkout(url=self._data.url, revision=self._data.revision)
         return output

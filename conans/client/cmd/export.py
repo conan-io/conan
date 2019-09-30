@@ -26,15 +26,15 @@ from conans import ConanFile
 class AliasConanfile(ConanFile):
     alias = "%s"
     revision_mode = "%s"
-""" % (target_ref.full_repr(), revision_mode)
+""" % (target_ref.full_str(), revision_mode)
 
     save(package_layout.conanfile(), conanfile)
-    digest = FileTreeManifest.create(package_layout.export())
-    digest.save(folder=package_layout.export())
+    manifest = FileTreeManifest.create(package_layout.export())
+    manifest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
     _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
-                                 output=output, path=None, digest=digest,
+                                 output=output, path=None, manifest=manifest,
                                  revision_mode=revision_mode)
 
 
@@ -48,15 +48,41 @@ def check_casing_conflict(cache, ref):
                              % (str(ref), " ".join(str(s) for s in refs)))
 
 
-def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisions_enabled,
-               output, hook_manager, loader, cache, export=True):
+def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
+               export=True, graph_lock=None):
+
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
+    loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
+    revisions_enabled = app.config.revisions_enabled
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
-    ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
-                             conanfile.channel)
+
+    # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
+    # Take the default from the env vars if they exist to not break behavior
+    try:
+        user = conanfile.user
+    except ConanException:
+        user = None
+
+    try:
+        channel = conanfile.channel
+    except ConanException:
+        channel = None
+
+    ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+
+    # If we receive lock information, python_requires could have been locked
+    if graph_lock:
+        node_id = graph_lock.get_node(ref)
+        python_requires = graph_lock.python_requires(node_id)
+        # TODO: check that the locked python_requires are different from the loaded ones
+        # FIXME: private access, will be improved when api collaborators are improved
+        loader._python_requires._range_resolver.output  # invalidate previous version range output
+        conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
+                                       conanfile.user, conanfile.channel, python_requires)
+
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
 
@@ -64,6 +90,8 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
         ref = ref.copy_with_rev(recipe_revision)
+        if graph_lock:
+            graph_lock.update_exported_ref(node_id, ref)
         return ref
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
@@ -76,9 +104,9 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
 
     # Get previous digest
     try:
-        previous_digest = FileTreeManifest.load(package_layout.export())
+        previous_manifest = FileTreeManifest.load(package_layout.export())
     except IOError:
-        previous_digest = None
+        previous_manifest = None
     finally:
         _recreate_folders(package_layout.export(), package_layout.export_sources())
 
@@ -98,22 +126,22 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
-        digest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
-        modified_recipe = not previous_digest or previous_digest != digest
+        manifest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        modified_recipe = not previous_manifest or previous_manifest != manifest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
             output.info('Folder: %s' % package_layout.export())
         else:
             output.info("The stored package has not changed")
-            digest = previous_digest  # Use the old one, keep old timestamp
-        digest.save(package_layout.export())
+            manifest = previous_manifest  # Use the old one, keep old timestamp
+        manifest.save(package_layout.export())
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
                                             revisions_enabled=revisions_enabled,
                                             output=output,
                                             path=os.path.dirname(conanfile_path),
-                                            digest=digest,
+                                            manifest=manifest,
                                             revision_mode=conanfile.revision_mode)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
@@ -146,6 +174,9 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source, revisi
             remover.remove_packages(package_layout, ids_filter=to_remove)
 
     ref = ref.copy_with_rev(revision)
+    output.info("Exported revision: %s" % revision)
+    if graph_lock:
+        graph_lock.update_exported_ref(node_id, ref)
     return ref
 
 
@@ -273,14 +304,14 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
-def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, digest,
+def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, manifest,
                                  revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
-        revision = digest.summary_hash
+        revision = manifest.summary_hash
         if revisions_enabled:
             output.info("Using the exported files summary hash as the recipe"
                         " revision: {} ".format(revision))

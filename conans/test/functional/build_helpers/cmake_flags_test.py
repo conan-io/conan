@@ -40,10 +40,10 @@ conanfile = """[requires]
 Hello/0.1@lasote/testing
 """
 
-cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+cmake = """cmake_minimum_required(VERSION 2.8.12)
+set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -97,10 +97,10 @@ class App(ConanFile):
         cmake.build()
         self.run(os.sep.join([".", "bin", "myapp"]))
 """
-        cmake_app = """set(CMAKE_CXX_COMPILER_WORKS 1)
+        cmake_app = """cmake_minimum_required(VERSION 2.8.12)
+set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(%s)
@@ -133,8 +133,8 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
-        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        client.run_command("cmake . %s" % generator)
+        cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
         self.assertIn("CMAKE_C_FLAGS= -load C:\some\path", client.out)
@@ -153,11 +153,11 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
-        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        client.run_command("cmake . %s" % generator)
+        cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
-                      client.user_io.out)
+                      client.out)
 
     def targets_flags_test(self):
         client = TestClient()
@@ -175,7 +175,7 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
+        client.run_command("cmake . %s" % generator)
         cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
@@ -202,12 +202,11 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s -DCONAN_CXX_FLAGS=CmdCXXFlag" % generator,
-                      cwd=client.current_folder)
-        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        client.run_command("cmake . %s -DCONAN_CXX_FLAGS=CmdCXXFlag" % generator)
+        cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
-        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.user_io.out)
+        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.out)
         self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
@@ -233,12 +232,12 @@ int main(){
 
         client.run('install . -g cmake')
         generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ""
-        client.runner("cmake . %s" % generator, cwd=client.current_folder)
+        client.run_command("cmake . %s" % generator)
 
-        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        cmake_cxx_flags = self._get_line(client.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
-                      client.user_io.out)
+                      client.out)
         self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
@@ -289,7 +288,7 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile % "True"})
         client.run("build .", assert_error=True)
 
-        self.assertIn("conanbuildinfo.txt file not found", client.user_io.out)
+        self.assertIn("conanbuildinfo.txt file not found", client.out)
 
         client.run("install .")
         client.run("build .")
@@ -317,10 +316,10 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "mylib.cpp": "auto myfunc(){return 3;}",  # c++14 feature
                      "CMakeLists.txt": """
+cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 add_library(mylib mylib.cpp)
@@ -368,10 +367,10 @@ class MyLib(ConanFile):
         cmake.configure()
 """
         cmakelists = """
+cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_set_std()
 """
@@ -385,8 +384,8 @@ conan_set_std()
             return cmake_version < Version("3.12")
 
         with catch_deprecation_warning(self):
-            client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc -s compiler.version=8 "
-                       "-s compiler.libcxx=libstdc++11")
+            client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc "
+                       "-s compiler.version=8 -s compiler.libcxx=libstdc++11")
         if conan_set_std_branch():
             self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
         else:
@@ -418,10 +417,10 @@ class MyLib(ConanFile):
         cmake.configure()
 """
         cmakelists = """
+cmake_minimum_required(VERSION 2.8.12)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
-cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 """

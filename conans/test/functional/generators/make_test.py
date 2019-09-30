@@ -18,8 +18,8 @@ class MakeGeneratorTest(unittest.TestCase):
         conanfile_path = os.path.join(client.current_folder, "conanfile.py")
         replace_in_file(conanfile_path, "{\"shared\": [True, False]}",
                         "{\"shared\": [True, False], \"fPIC\": [True, False]}", output=client.out)
-        replace_in_file(conanfile_path, "\"shared=False\"", "\"shared=False\", \"fPIC=True\"",
-                        output = client.out)
+        replace_in_file(conanfile_path, "{\"shared\": False}", "{\"shared\": False, \"fPIC\": True}",
+                        output=client.out)
         client.run("create . danimtb/testing")
         hellowrapper_include = """
 #pragma once
@@ -213,17 +213,19 @@ hellowrapper/1.0@danimtb/testing
 [generators]
 make
 """
-        client.save({"src/main.cpp": main, "Makefile": makefile, "conanfile.txt": conanfile_txt},
+        client.save({"src/main.cpp": main,
+                     "Makefile": makefile,
+                     "conanfile.txt": conanfile_txt},
                     clean_first=True)
-        with chdir(client.current_folder):
-            client.run("install .")
-            client.runner("make exe")
-            client.runner("./main")
-            self.assertIn("Hello World Release!", client.out)
 
-            # Test it also builds with shared lib
-            client.run("install . -o hellowrapper:shared=True")
-            client.runner("rm main main.o")
-            client.runner("make exe")
-            client.runner("ldd main")
-            self.assertIn("libhellowrapper.so", client.out)
+        client.run("install .")
+        client.run_command("make exe")
+        client.run_command("./main")
+        self.assertIn("Hello World Release!", client.out)
+
+        # Test it also builds with shared lib
+        client.run("install . -o hellowrapper:shared=True")
+        client.run_command("rm main main.o")
+        client.run_command("make exe")
+        client.run_command("ldd main")
+        self.assertIn("libhellowrapper.so", client.out)

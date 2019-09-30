@@ -81,6 +81,7 @@ sources:
         self.assertIn("My URL:", client.out)
 
     @attr("slow")
+    @attr('local_bottle')
     def conan_data_as_source_test(self):
 
         tgz_path = tgz_with_contents({"foo.txt": "bar"})

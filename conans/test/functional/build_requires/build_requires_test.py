@@ -1,12 +1,12 @@
 import os
+import textwrap
 import unittest
 
 from parameterized.parameterized import parameterized
 
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient
-from conans.util.files import load
-from conans.test.utils.conanfile import TestConanFile
+from conans.test.utils.tools import TestClient, GenConanfile
 
 tool_conanfile = """from conans import ConanFile
 
@@ -51,18 +51,45 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 
 class BuildRequiresTest(unittest.TestCase):
-    def test_build_requires_diamond(self):
+
+    def test_consumer(self):
+        # https://github.com/conan-io/conan/issues/5425
+        catch_ref = ConanFileReference.loads("catch/0.1@user/testing")
+        libA_ref = ConanFileReference.loads("LibA/0.1@user/testing")
+
         t = TestClient()
-        t.save({"conanfile.py": str(TestConanFile("libA", "0.1"))})
+        t.save({"conanfile.py":
+                    GenConanfile().with_package_info(cpp_info={"libs": ["mylibcatch0.1lib"]},
+                                                     env_info={"MYENV": ["myenvcatch0.1env"]})})
+        t.run("create . catch/0.1@user/testing")
+        t.save({"conanfile.py": GenConanfile().with_require(catch_ref, private=True)})
+        t.run("create . LibA/0.1@user/testing")
+        t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
+                                              .with_build_require(catch_ref)})
+        t.run("install .")
+        self.assertIn("catch/0.1@user/testing from local cache", t.out)
+        self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
+                      t.out)
+        self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                      t.out)
+        conanbuildinfo = t.load("conanbuildinfo.txt")
+        self.assertIn('MYENV=["myenvcatch0.1env"]', conanbuildinfo)
+        self.assertIn('[libs_catch]', conanbuildinfo)
+        self.assertIn("mylibcatch0.1lib", conanbuildinfo)
+
+    def test_build_requires_diamond(self):
+        libA_ref = ConanFileReference.loads("libA/0.1@user/testing")
+        libB_ref = ConanFileReference.loads("libB/0.1@user/testing")
+
+        t = TestClient()
+        t.save({"conanfile.py": GenConanfile()})
         t.run("create . libA/0.1@user/testing")
 
-        t.save({"conanfile.py": str(TestConanFile("libB", "0.1",
-                                                  requires=["libA/0.1@user/testing"]))})
+        t.save({"conanfile.py": GenConanfile().with_require(libA_ref)})
         t.run("create . libB/0.1@user/testing")
 
-        t.save({"conanfile.py": str(TestConanFile("libC", "0.1",
-                                                  build_requires=["libB/0.1@user/testing",
-                                                                  "libA/0.1@user/testing"]))})
+        t.save({"conanfile.py": GenConanfile().with_build_require(libB_ref)
+                                              .with_build_require(libA_ref)})
         t.run("create . libC/0.1@user/testing")
         self.assertIn("libC/0.1@user/testing: Created package", t.out)
 
@@ -105,9 +132,10 @@ class MyTest(ConanFile):
 
         # Test that the build require is applyed to testing
         client.run("create . Lib/0.1@conan/stable --profile=./myprofile")
-        self.assertEqual(1, str(client.out).count("Lib/0.1@conan/stable: Applying build-requirement:"
+        self.assertEqual(1, str(client.out).count("Lib/0.1@conan/stable: "
+                                                  "Applying build-requirement:"
                                                   " Build1/0.1@conan/stable"))
-        self.assertIn("TESTING!!", client.user_io.out)
+        self.assertIn("TESTING!!", client.out)
 
     def test_dependents_txt(self):
         client = TestClient()
@@ -126,7 +154,7 @@ Boost/1.0@user/channel
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        conanbuildinfo = client.load("conanbuildinfo.txt")
         self.assertIn('PATH=["myboostpath"]', conanbuildinfo)
 
     def test_dependents(self):
@@ -185,10 +213,10 @@ class App(ConanFile):
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("install . -pr=myprofile")
-        self.assertIn("conanfile.py (consumer/None@None/None): Applying build-requirement: "
+        self.assertIn("conanfile.py (consumer/None): Applying build-requirement: "
                       "mingw/0.1@myuser/stable", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (consumer/None@None/None): APP PATH FOR BUILD mymingwpath",
+        self.assertIn("conanfile.py (consumer/None): APP PATH FOR BUILD mymingwpath",
                       client.out)
 
     def test_transitive(self):
@@ -296,12 +324,12 @@ Tool/0.1@lasote/stable
         client.run("export . lasote/stable")
 
         client.run("install MyLib/0.1@lasote/stable --build missing")
-        self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.user_io.out)
-        self.assertIn("ToolPath: MyToolPath", client.user_io.out)
+        self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.out)
+        self.assertIn("ToolPath: MyToolPath", client.out)
 
         client.run("install MyLib/0.1@lasote/stable")
-        self.assertNotIn("Tool", client.user_io.out)
-        self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertNotIn("Tool", client.out)
+        self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
     @parameterized.expand([(requires, ), (requires_range, ), (requirements, ), (override, )])
     def test_profile_override(self, conanfile):
@@ -315,20 +343,20 @@ Tool/0.1@lasote/stable
         client.run("export . lasote/stable")
 
         client.run("install MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
-        self.assertNotIn("Tool/0.1", client.user_io.out)
-        self.assertNotIn("Tool/0.2", client.user_io.out)
-        self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.user_io.out)
-        self.assertIn("ToolPath: MyToolPath", client.user_io.out)
+        self.assertNotIn("Tool/0.1", client.out)
+        self.assertNotIn("Tool/0.2", client.out)
+        self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
+        self.assertIn("ToolPath: MyToolPath", client.out)
 
         client.run("install MyLib/0.1@lasote/stable")
-        self.assertNotIn("Tool", client.user_io.out)
-        self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertNotIn("Tool", client.out)
+        self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.out)
 
         client.run("install MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
-        self.assertNotIn("Tool/0.1", client.user_io.out)
-        self.assertNotIn("Tool/0.2", client.user_io.out)
-        self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.user_io.out)
-        self.assertIn("ToolPath: MyToolPath", client.user_io.out)
+        self.assertNotIn("Tool/0.1", client.out)
+        self.assertNotIn("Tool/0.2", client.out)
+        self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.out)
+        self.assertIn("ToolPath: MyToolPath", client.out)
 
     def options_test(self):
         conanfile = """from conans import ConanFile
@@ -354,4 +382,41 @@ class package(ConanFile):
 """
         client.save({"conanfile.py": consumer})
         client.run("install . --build=missing -o Pkg:someoption=3")
-        self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.user_io.out)
+        self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.out)
+
+    def failed_assert_test(self):
+        # https://github.com/conan-io/conan/issues/5685
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . common/1.0@test/test")
+
+        req = textwrap.dedent("""
+            from conans import ConanFile
+            class BuildReqConan(ConanFile):
+                requires = "common/1.0@test/test"
+            """)
+        client.save({"conanfile.py": req})
+        client.run("export . req/1.0@test/test")
+        client.run("export . build_req/1.0@test/test")
+
+        build_req_req = textwrap.dedent("""
+            from conans import ConanFile
+            class BuildReqConan(ConanFile):
+                requires = "common/1.0@test/test"
+                build_requires = "build_req/1.0@test/test"
+        """)
+        client.save({"conanfile.py": build_req_req})
+        client.run("export . build_req_req/1.0@test/test")
+
+        consumer = textwrap.dedent("""
+                    [requires]
+                    req/1.0@test/test
+                    [build_requires]
+                    build_req_req/1.0@test/test
+                """)
+        client.save({"conanfile.txt": consumer}, clean_first=True)
+        client.run("install . --build=missing")
+        # This used to assert and trace, now it works
+        self.assertIn("conanfile.txt: Applying build-requirement: build_req_req/1.0@test/test",
+                      client.out)
+

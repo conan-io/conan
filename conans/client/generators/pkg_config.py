@@ -1,6 +1,6 @@
 import os
 
-from conans.client.build.compiler_flags import rpath_flags
+from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
 from conans.model import Generator
 
 """
@@ -34,11 +34,12 @@ class PkgConfigGenerator(Generator):
     @property
     def content(self):
         ret = {}
-        for depname, cpp_info in self.deps_build_info.dependencies:
-            ret["%s.pc" % depname] = self.single_pc_file_contents(depname, cpp_info)
+        for _, cpp_info in self.deps_build_info.dependencies:
+            ret["%s.pc" % cpp_info.name] = self.single_pc_file_contents(cpp_info)
         return ret
 
-    def single_pc_file_contents(self, name, cpp_info):
+    def single_pc_file_contents(self, cpp_info):
+        name = cpp_info.name
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -65,10 +66,14 @@ class PkgConfigGenerator(Generator):
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))
         rpaths = rpath_flags(the_os, self.compiler, ["${%s}" % libdir for libdir in libdir_vars])
+        frameworks = format_frameworks(cpp_info.frameworks, compiler=self.compiler)
+        framework_paths = format_framework_paths(cpp_info.framework_paths, compiler=self.compiler)
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
                                                         shared_flags,
-                                                        rpaths]))
+                                                        rpaths,
+                                                        frameworks,
+                                                        framework_paths]))
         include_dirs_flags = ["-I${%s}" % name for name in includedir_vars]
 
         lines.append("Cflags: %s" % _concat_if_not_empty(

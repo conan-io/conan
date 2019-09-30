@@ -5,7 +5,7 @@ import unittest
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import load, mkdir
+from conans.util.files import mkdir
 
 
 conanfile_scope_env = """
@@ -130,7 +130,7 @@ class AConan(ConanFile):
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"
-                      % package_folder, client.user_io.out)
+                      % package_folder, client.out)
 
     def build_different_folders_test(self):
         conanfile = """
@@ -263,7 +263,7 @@ cmake_minimum_required(VERSION 2.8.12)
                      "header.h": "my header h!!"})
         client.run("install .")
         client.run("build .")  # Won't fail, by default the package_folder is build_folder/package
-        header = load(os.path.join(client.current_folder, "package/include/header.h"))
+        header = client.load("package/include/header.h")
         self.assertEqual(header, "my header h!!")
 
         client.save({CONANFILE: conanfile,
@@ -271,7 +271,7 @@ cmake_minimum_required(VERSION 2.8.12)
                      "header.h": "my header3 h!!"}, clean_first=True)
         client.run("install .")
         client.run("build -pf=mypkg ./conanfile.py")
-        header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
+        header = client.load("mypkg/include/header.h")
         self.assertEqual(header, "my header3 h!!")
 
         client.save({CONANFILE: conanfile,
@@ -280,7 +280,7 @@ cmake_minimum_required(VERSION 2.8.12)
         with client.chdir("build"):
             client.run("install ..")
         client.run("build . -pf=mypkg -bf=build")
-        header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
+        header = client.load("mypkg/include/header.h")
         self.assertEqual(header, "my header2 h!!")
 
     def build_with_deps_env_info_test(self):
@@ -373,5 +373,5 @@ class BarConan(ConanFile):
         client.run("install . -s MyPkg:build_type=Debug -s build_type=Release")
         self.assertIn("Dep/0.1@user/testing: PACKAGE_INFO: Dep BuildType=Release!", client.out)
         client.run("build .")
-        self.assertIn("conanfile.py (MyPkg/None@None/None): BUILD: MyPkg BuildType=Debug!",
+        self.assertIn("conanfile.py (MyPkg/None): BUILD: MyPkg BuildType=Debug!",
                       client.out)

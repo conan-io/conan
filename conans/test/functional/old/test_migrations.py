@@ -10,9 +10,8 @@ from conans.client.output import ConanOutput
 from conans.client.tools.version import Version
 from conans.migrations import CONAN_VERSION
 from conans.model.ref import ConanFileReference
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 
 
@@ -37,7 +36,7 @@ class TestMigrations(unittest.TestCase):
     def test_migrate_revision_metadata(self):
         # https://github.com/conan-io/conan/issues/4898
         client = TestClient()
-        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . user/testing")
         ref = ConanFileReference.loads("Hello/0.1@user/testing")
         layout1 = client.cache.package_layout(ref)
@@ -55,15 +54,15 @@ class TestMigrations(unittest.TestCase):
         metadata["recipe"]["revision"] = "Other"
         save(layout2.package_metadata(), json.dumps(metadata))
 
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.14.1")
         client.run("search")  # This will fire a migration
 
         metadata_ref1 = client.cache.package_layout(ref).load_metadata()
-        self.assertEqual(metadata_ref1.recipe.revision, "2e48797069e65568befd81854aa8aaf0")
+        self.assertEqual(metadata_ref1.recipe.revision, "f9e0ab84b47b946f4c7c848d8f82d14e")
         pkg_metadata = metadata_ref1.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]
-        self.assertEqual(pkg_metadata.recipe_revision, "2e48797069e65568befd81854aa8aaf0")
-        self.assertEqual(pkg_metadata.revision, "38d05b42210ca2becb43a05f9265abbe")
+        self.assertEqual(pkg_metadata.recipe_revision, "f9e0ab84b47b946f4c7c848d8f82d14e")
+        self.assertEqual(pkg_metadata.revision, "fa1923ec4342a0d9dc33eff7250432e8")
         self.assertEqual(list(metadata_ref1.packages.keys()),
                          ["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"])
 
@@ -73,7 +72,7 @@ class TestMigrations(unittest.TestCase):
     def test_migrate_config_install(self):
         client = TestClient()
         client.run('config set general.config_install="url, http:/fake.url, None, None"')
-        version_file = os.path.join(client.cache.cache_folder, CONAN_VERSION)
+        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
         save(version_file, "1.12.0")
         client.run("search")
         self.assertEqual(load(version_file), __version__)
@@ -152,7 +151,7 @@ the old general
             save(old_conf_path, "\n[general]\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
             save(old_attribute_checker_plugin, "")
             # Do not adjust cpu_count, it is reusing a cache
-            cache = TestClient(base_folder=old_user_home, cpu_count=False).cache
+            cache = TestClient(cache_folder=old_user_home, cpu_count=False).cache
             assert old_conan_folder == cache.cache_folder
             return old_user_home, old_conan_folder, old_conf_path, \
                 old_attribute_checker_plugin, cache

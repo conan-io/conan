@@ -6,6 +6,7 @@ import unittest
 from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
+from conans.model.graph_lock import LOCKFILE
 
 
 class GeneratorsTest(unittest.TestCase):
@@ -50,7 +51,7 @@ ycm
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 GRAPH_INFO_FILE] + venv_files),
+                                 GRAPH_INFO_FILE, LOCKFILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
 
     def test_srcdirs(self):
@@ -69,7 +70,7 @@ class TestConan(ConanFile):
         client.run("create . mysrc/0.1@user/testing")
         client.run("install mysrc/0.1@user/testing -g cmake")
 
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
         self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
                       src_dirs)

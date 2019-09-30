@@ -62,8 +62,8 @@ class ClientCache(object):
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, base_folder, output):
-        self.cache_folder = base_folder
+    def __init__(self, cache_folder, output):
+        self.cache_folder = cache_folder
         self._output = output
 
         # Caching
@@ -75,7 +75,7 @@ class ClientCache(object):
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference(*folder.split("/")) for folder in subdirs]
+        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
 
     @property
     def store(self):
@@ -251,10 +251,6 @@ class ClientCache(object):
             conan_folder = os.path.join(self._store_folder, folder)
             Lock.clean(conan_folder)
             shutil.rmtree(os.path.join(conan_folder, "locks"), ignore_errors=True)
-
-    def invalidate(self):
-        self._config = None
-        self._no_lock = None
 
 
 def _mix_settings_with_env(settings):

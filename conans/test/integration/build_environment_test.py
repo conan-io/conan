@@ -109,7 +109,7 @@ class ConanReuseLib(ConanFile):
                      "main.cpp": example})
         client.run("install . --build missing")
         client.run("build .")
-        self.assertIn("15", client.user_io.out)
+        self.assertIn("15", client.out)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
     def use_build_virtualenv_windows_test(self):
@@ -142,5 +142,5 @@ class ConanReuseLib(ConanFile):
         client.save(reuse, clean_first=True)
         client.run("install .")
         client.run("build .")
-        client.runner("main.exe", cwd=client.current_folder)
+        client.run_command("main.exe")
         self.assertIn("Hello app;Hello hello2;Hello hello", ";".join(str(client.out).splitlines()))

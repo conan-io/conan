@@ -1,5 +1,6 @@
 import json
 import os
+from contextlib import contextmanager
 from os.path import join, normpath
 
 from conans.model.ref import ConanFileReference
@@ -49,3 +50,14 @@ class EditablePackages(object):
 
     def override(self, workspace_edited):
         self._edited_refs = workspace_edited
+
+    @contextmanager
+    def disable_editables(self):
+        """
+        Temporary disable editables, if we want to make operations on the cache, as updating
+        remotes in packages metadata.
+        """
+        edited_refs = self._edited_refs
+        self._edited_refs = {}
+        yield
+        self._edited_refs = edited_refs

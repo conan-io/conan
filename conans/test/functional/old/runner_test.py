@@ -177,5 +177,5 @@ class ConanFileToolsTest(ConanFile):
         client.save(files)
         client.run("install .")
         client.run("build .", assert_error=True)
-        self.assertIn("Error while executing 'mkdir test_folder'", client.user_io.out)
+        self.assertIn("Error while executing 'mkdir test_folder'", client.out)
         self.assertFalse(os.path.exists(test_folder))

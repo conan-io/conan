@@ -13,12 +13,14 @@ class LocalStoreTest(unittest.TestCase):
         localdb = LocalDB.create(db_file)
 
         # Test write and read login
-        user, token = localdb.get_login("myurl1")
+        user, token, access_token = localdb.get_login("myurl1")
         self.assertIsNone(user)
         self.assertIsNone(token)
+        self.assertIsNone(access_token)
 
-        localdb.set_login(("pepe", "token"), "myurl1")
-        user, token = localdb.get_login("myurl1")
+        localdb.store("pepe", "token", "access_token", "myurl1")
+        user, token, access_token = localdb.get_login("myurl1")
         self.assertEqual("pepe", user)
         self.assertEqual("token", token)
+        self.assertEqual("access_token", access_token)
         self.assertEqual("pepe", localdb.get_username("myurl1"))

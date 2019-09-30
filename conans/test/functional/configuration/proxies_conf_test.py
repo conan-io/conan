@@ -23,7 +23,6 @@ no_proxy=http://someurl,http://otherurl.com
 http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
         with warnings.catch_warnings(record=True) as warn:
             warnings.simplefilter("always")
             requester = ConanRequester(client.cache.config)
@@ -53,7 +52,6 @@ http=http://conan.url
               only.for.the.other.conan.url = http://other.special.url
                     """)
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
         requester = ConanRequester(client.cache.config)
 
         def verify_proxies(url, **kwargs):
@@ -88,7 +86,6 @@ no_proxy_match=MyExcludedUrl*, *otherexcluded_one*
 http=http://conan.url
         """
         save(client.cache.conan_conf_path, conf)
-        client.init_dynamic_vars()
 
         self.assertEqual(client.requester.get("MyUrl"), "not excluded!")
         self.assertEqual(client.requester.get("**otherexcluded_one***"), "excluded!")
@@ -101,7 +98,6 @@ http=http://conan.url
 [proxies]
         """
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
         requester = ConanRequester(client.cache.config)
 
         def verify_env(url, **kwargs):
@@ -119,7 +115,6 @@ http=http://conan.url
 no_proxy_match=MyExcludedUrl*
 """
         save(client.cache.conan_conf_path, conf)
-        client.cache.invalidate()
         requester = ConanRequester(client.cache.config)
 
         def verify_env(url, **kwargs):

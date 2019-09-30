@@ -92,7 +92,7 @@ def html_binary_graph(search_info, reference, table_filename):
     result.append('<br>Selected: <div id="SelectedPackage"></div>')
 
     result.append("<br>Legend<br>"
-                  "<table><tr><td bgcolor=#ffff00>&nbsp;&nbsp;&nbsp;&nbsp;</td"
+                  "<table><tr><td bgcolor=#ffff00>&nbsp;&nbsp;&nbsp;&nbsp;</td>"
                   "<td>Outdated from recipe</td></tr>"
                   "<tr><td bgcolor=#00ff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Updated</td></tr>"
                   "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Non existing</td></tr></table>")

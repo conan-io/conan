@@ -2,7 +2,7 @@ import copy
 import os
 import platform
 
-from conans.client import join_arguments
+from conans.client.build import join_arguments
 from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
                                                 build_type_flags, format_defines,
                                                 format_include_paths, format_libraries,
