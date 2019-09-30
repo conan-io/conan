@@ -24,8 +24,9 @@ BINARY_EDITABLE = "Editable"
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, recipe=None):
+    def __init__(self, ref, conanfile, recipe=None, path=None):
         self.ref = ref
+        self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
         self.conanfile = conanfile
@@ -79,11 +80,10 @@ class Node(object):
 
     def partial_copy(self):
         # Used for collapse_graph
-        result = Node(self.ref, self.conanfile)
+        result = Node(self.ref, self.conanfile, self.recipe, self.path)
         result.dependants = set()
         result.dependencies = []
         result.binary = self.binary
-        result.recipe = self.recipe
         result.remote = self.remote
         result.binary_remote = self.binary_remote
         result.build_require = self.build_require
@@ -284,7 +284,7 @@ class DepsGraph(object):
             new_level = []
             for n in level:
                 if n.binary == BINARY_BUILD and n.pref not in total_prefs:
-                    new_level.append((n.id, repr(n.pref)))
+                    new_level.append((n.id, n.pref.copy_clear_rev()))
                     total_prefs.add(n.pref)
             if new_level:
                 result.append(new_level)
