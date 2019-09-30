@@ -119,7 +119,6 @@ class FileDownloader(object):
         self.output = output
         self.requester = requester
         self.verify = verify
-        self._downloaded_size = 0
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None):
@@ -168,20 +167,20 @@ class FileDownloader(object):
 
         def write_chunks(chunks, path):
             ret = None
-            self._downloaded_size = 0
+            downloaded_size = 0
             if path:
                 mkdir(os.path.dirname(path))
                 with open(path, 'wb') as file_handler:
                     for chunk in chunks:
                         file_handler.write(to_file_bytes(chunk))
-                        self._downloaded_size += len(chunk)
+                        downloaded_size += len(chunk)
             else:
                 ret_data = bytearray()
                 for chunk in chunks:
                     ret_data.extend(chunk)
-                    self._downloaded_size += len(chunk)
+                    downloaded_size += len(chunk)
                 ret = bytes(ret_data)
-            return ret
+            return ret, downloaded_size
 
         try:
             logger.debug("DOWNLOAD: %s" % url)
@@ -194,15 +193,15 @@ class FileDownloader(object):
             encoding = response.headers.get('content-encoding')
             gzip = (encoding == "gzip")
 
-            written_chunks = write_chunks(
+            written_chunks, total_downloaded_size = write_chunks(
                 progress.update(read_response(chunk_size), chunk_size),
                 file_path
             )
 
             response.close()
-            if self._downloaded_size != total_length and not gzip:
+            if total_downloaded_size != total_length and not gzip:
                 raise ConanException("Transfer interrupted before "
-                                     "complete: %s < %s" % (self._downloaded_size, total_length))
+                                     "complete: %s < %s" % (total_downloaded_size, total_length))
 
             duration = time.time() - t1
             log_download(url, duration)
