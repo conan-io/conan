@@ -198,7 +198,7 @@ class FileDownloader(object):
                     ret_data.extend(data)
 
             response.close()
-            if progress.download_size != total_length and not gzip:
+            if progress.read_size != total_length and not gzip:
                 raise ConanException("Transfer interrupted before "
                                      "complete: %s < %s" % (progress.download_size, total_length))
 

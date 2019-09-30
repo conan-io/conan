@@ -13,7 +13,7 @@ class WriteProgress(object):
         self._tqdm_bar = None
         self._total_length = length
         self._output = output
-        self._download_size = 0
+        self._read_size = 0
         self._description = description
         if self._output and self._output.is_terminal and self._description:
             self._tqdm_bar = tqdm(total=self._total_length,
@@ -23,8 +23,8 @@ class WriteProgress(object):
                                   unit_divisor=1024)
 
     @property
-    def download_size(self):
-        return self._download_size
+    def read_size(self):
+        return self._read_size
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
@@ -33,12 +33,12 @@ class WriteProgress(object):
     def update(self, chunks, chunk_size=1):
         for chunk in chunks:
             yield chunk
-            written_size = len(chunk)
-            self._download_size += written_size
-            self.pb_update(written_size)
+            read_size = len(chunk)
+            self._read_size += read_size
+            self.pb_update(read_size)
 
-        if self._total_length > self._download_size:
-            self.pb_update(self._total_length - self._download_size)
+        if self._total_length > self._read_size:
+            self.pb_update(self._total_length - self._read_size)
 
         self.pb_close()
         if self._output and not self._output.is_terminal:
