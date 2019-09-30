@@ -14,7 +14,6 @@ class WriteProgress(object):
         self._total_length = length
         self._output = output
         self._download_size = 0
-        self._downloaded_chunks = 0
         self._description = description
         if self._output and self._output.is_terminal and self._description:
             self._tqdm_bar = tqdm(total=self._total_length,
@@ -34,15 +33,12 @@ class WriteProgress(object):
     def update(self, chunks, chunk_size=1):
         for chunk in chunks:
             yield chunk
-            self._download_size += len(chunk)
-            self._downloaded_chunks += 1
-            if self._total_length < chunk_size * self._downloaded_chunks:
-                self.pb_update(self._total_length)
-            else:
-                self.pb_update(chunk_size)
+            written_size = len(chunk)
+            self._download_size += written_size
+            self.pb_update(written_size)
 
-        if self._total_length > chunk_size * self._downloaded_chunks:
-            self.pb_update(self._total_length - chunk_size * self._downloaded_chunks)
+        if self._total_length > self._download_size:
+            self.pb_update(self._total_length - self._download_size)
 
         self.pb_close()
         if self._output and not self._output.is_terminal:
@@ -58,7 +54,7 @@ class ReadProgress(object):
         self._tqdm_bar = None
         self._total_length = length
         self._output = output
-        self._uploaded_size = 0
+        self._written_size = 0
         self._description = description
         self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
@@ -69,8 +65,8 @@ class ReadProgress(object):
                                   unit_divisor=1024)
 
     @property
-    def upload_size(self):
-        return self._uploaded_size
+    def written_size(self):
+        return self._written_size
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
@@ -83,11 +79,11 @@ class ReadProgress(object):
         for chunk in chunks:
             yield chunk
             data_read_size = len(chunk)
-            self._uploaded_size += data_read_size
+            self._written_size += data_read_size
             self.pb_update(data_read_size)
 
-        if self._total_length > self._uploaded_size:
-            self.pb_update(self._total_length - self._uploaded_size)
+        if self._total_length > self._written_size:
+            self.pb_update(self._total_length - self._written_size)
 
         self.pb_close()
         if self._output and not self._output.is_terminal:
