@@ -23,7 +23,7 @@ class GraphLockFile(object):
         self.graph_lock = graph_lock
 
     @staticmethod
-    def load(path):
+    def load(path, revisions_enabled):
         if not path:
             raise IOError("Invalid path")
         if not os.path.isfile(path):
@@ -33,12 +33,12 @@ class GraphLockFile(object):
             path = p
         content = load(path)
         try:
-            return GraphLockFile.loads(content)
+            return GraphLockFile.loads(content, revisions_enabled)
         except Exception as e:
             raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
     @staticmethod
-    def loads(text):
+    def loads(text, revisions_enabled):
         graph_json = json.loads(text)
         version = graph_json.get("version")
         if version:
@@ -48,6 +48,7 @@ class GraphLockFile(object):
         # FIXME: Reading private very ugly
         profile, _ = _load_profile(profile, None, None)
         graph_lock = GraphLock.from_dict(graph_json["graph_lock"])
+        graph_lock.revisions_enabled = revisions_enabled
         graph_lock_file = GraphLockFile(profile, graph_lock)
         return graph_lock_file
 
@@ -65,12 +66,13 @@ class GraphLockFile(object):
 
 
 class GraphLockNode(object):
-    def __init__(self, pref, python_requires, options, modified, requires):
+    def __init__(self, pref, python_requires, options, modified, requires, path):
         self.pref = pref
         self.python_requires = python_requires
         self.options = options
         self.modified = modified
         self.requires = requires
+        self.path = path
 
     @staticmethod
     def from_dict(data):
@@ -85,7 +87,8 @@ class GraphLockNode(object):
         options = OptionsValues.loads(data["options"])
         modified = data.get("modified")
         requires = data.get("requires", {})
-        return GraphLockNode(pref, python_requires, options, modified, requires)
+        path = data.get("path")
+        return GraphLockNode(pref, python_requires, options, modified, requires, path)
 
     def as_dict(self):
         """ returns the object serialized as a dict of plain python types
@@ -100,6 +103,8 @@ class GraphLockNode(object):
             result["modified"] = self.modified
         if self.requires:
             result["requires"] = self.requires
+        if self.path:
+            result["path"] = self.path
         return result
 
 
@@ -107,6 +112,8 @@ class GraphLock(object):
 
     def __init__(self, graph=None):
         self._nodes = {}  # {numeric id: PREF or None}
+        self.revisions_enabled = None
+
         if graph:
             for node in graph.nodes:
                 if node.recipe == RECIPE_VIRTUAL:
@@ -131,10 +138,10 @@ class GraphLock(object):
                     # If py_requires are defined, they overwrite old python_reqs
                     python_reqs = node.conanfile.py_requires_all_refs.values()
                 graph_node = GraphLockNode(node.pref if node.ref else None, python_reqs,
-                                           node.conanfile.options.values, False, requires)
+                                           node.conanfile.options.values, False, requires, node.path)
                 self._nodes[node.id] = graph_node
 
-    def root_node(self):
+    def root_node_ref(self):
         """ obtain the node in the graph that is not depended by anyone else,
         i.e. the root or downstream consumer
         """
@@ -143,7 +150,12 @@ class GraphLock(object):
             total.extend(node.requires.values())
         roots = set(self._nodes).difference(total)
         assert len(roots) == 1
-        return self._nodes[roots.pop()]
+        root_node = self._nodes[roots.pop()]
+        if root_node.path:
+            return root_node.path
+        if not self.revisions_enabled:
+            return root_node.pref.ref.copy_clear_rev()
+        return root_node.pref.ref
 
     @staticmethod
     def from_dict(data):
@@ -214,6 +226,7 @@ class GraphLock(object):
         from sources can change their PREF, or nodes that depend on some other "modified"
         package, because their binary-id can change too
         """
+
         affected = self._closure_affected()
         for node in deps_graph.nodes:
             if node.recipe == RECIPE_VIRTUAL:
@@ -225,16 +238,18 @@ class GraphLock(object):
                     continue  # If the consumer node is not found, could be a test_package
                 raise
             if lock_node.pref:
+                pref = lock_node.pref.copy_clear_revs() if not self.revisions_enabled else lock_node.pref
+                node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
                 # If the update is compatible (resolved complete PREV) or if the node has
                 # been build, then update the graph
-                if lock_node.pref.is_compatible_with(node.pref) or \
+                if pref.is_compatible_with(node_pref) or \
                         node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
                     raise ConanException("Mismatch between lock and graph:\nLock:  %s\nGraph: %s"
-                                         % (repr(lock_node.pref), repr(node.pref)))
+                                         % (repr(pref), repr(node.pref)))
 
-    def lock_node(self, node, requires):
+    def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
         the lockfile. Requires remove their version ranges.
         """
@@ -248,21 +263,32 @@ class GraphLock(object):
             raise ConanException("The node ID %s was not found in the lock" % node.id)
 
         locked_requires = locked_node.requires or {}
-        prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref, id_)
-                 for id_ in locked_requires.values()}
+        if self.revisions_enabled:
+            prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref, id_)
+                     for id_ in locked_requires.values()}
+        else:
+            prefs = {self._nodes[id_].pref.ref.name: (self._nodes[id_].pref.copy_clear_revs(), id_)
+                     for id_ in locked_requires.values()}
 
         node.graph_lock_node = locked_node
         node.conanfile.options.values = locked_node.options
         for require in requires:
             # Not new unlocked dependencies at this stage
-            locked_pref, locked_id = prefs[require.ref.name]
+            try:
+                locked_pref, locked_id = prefs[require.ref.name]
+            except KeyError:
+                msg = "'%s' cannot be found in lockfile for this package\n" % require.ref.name
+                if build_requires:
+                    msg += "Make sure it was locked with --build arguments while creating lockfile"
+                else:
+                    msg += "If it is a new requirement, you need to create a new lockile"
+                raise ConanException(msg)
             require.lock(locked_pref.ref, locked_id)
 
-    def pref(self, node_id):
-        return self._nodes[node_id].pref
-
     def python_requires(self, node_id):
-        return self._nodes[node_id].python_requires
+        if self.revisions_enabled:
+            return self._nodes[node_id].python_requires
+        return [r.copy_clear_rev() for r in self._nodes[node_id].python_requires or []]
 
     def get_node(self, ref):
         """ given a REF, return the Node of the package in the lockfile that correspond to that
