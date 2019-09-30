@@ -171,7 +171,7 @@ def open_binary(path, output, description):
 
 
 @contextmanager
-def open_file_list(files_list, output, description):
+def iterate_list_with_progress(files_list, output, description):
     list_wrapped = ListWrapper(files_list, output, description)
     yield list_wrapped
     list_wrapped.pb_close()
