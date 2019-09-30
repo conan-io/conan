@@ -759,4 +759,3 @@ class MyConanfileBase(ConanFile):
         client.run("package .")
         self.assertIn("conanfile.py: Pkg1 package: 42", client.out)
         client.run("export-pkg . pkg1/0.1@user/testing")
-
