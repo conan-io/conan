@@ -165,16 +165,19 @@ class FileDownloader(object):
             for chunk in response.iter_content(size):
                 yield chunk
 
-        def written_chunks(chunks, path):
+        def write_chunks(chunks, path):
+            ret = None
             if path:
                 mkdir(os.path.dirname(path))
                 with open(path, 'wb') as file_handler:
                     for chunk in chunks:
                         file_handler.write(to_file_bytes(chunk))
-                        yield chunk
             else:
+                ret_data = bytearray()
                 for chunk in chunks:
-                    yield chunk
+                    ret_data.extend(chunk)
+                ret = bytes(ret_data)
+            return ret
 
         try:
             logger.debug("DOWNLOAD: %s" % url)
@@ -186,16 +189,11 @@ class FileDownloader(object):
             chunk_size = 1024 if not file_path else 1024 * 100
             encoding = response.headers.get('content-encoding')
             gzip = (encoding == "gzip")
-            ret_data = bytearray()
 
-            downloaded_chunks = written_chunks(
+            written_chunks = write_chunks(
                 progress.update(read_response(chunk_size), chunk_size),
                 file_path
             )
-
-            for data in downloaded_chunks:
-                if not file_path:
-                    ret_data.extend(data)
 
             response.close()
             if progress.read_size != total_length and not gzip:
@@ -204,7 +202,7 @@ class FileDownloader(object):
 
             duration = time.time() - t1
             log_download(url, duration)
-            return bytes(ret_data)
+            return written_chunks
 
         except Exception as e:
             logger.debug(e.__class__)
