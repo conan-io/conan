@@ -1877,17 +1877,6 @@ class Command(object):
                               front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
 
-    def _warn_python34(self):
-        if six.PY34:
-            self._out.writeln("")
-            self._out.writeln("Python 3.4 support has been dropped. It is strongly "
-                              "recommended to use Python >= 3.5 with Conan", front=Color.BRIGHT_YELLOW)
-            self._out.writeln("")
-
-    def _warn_python_version(self):
-        self._warn_python2()
-        self._warn_python34()
-
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
         methods

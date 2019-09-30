@@ -394,3 +394,4 @@ endmacro()""", macro)
         self.assertNotIn("MY_PKG", content["FindMyPkG2.cmake"])
         self.assertIn("add_library(MyPkG::MyPkG INTERFACE IMPORTED)", content["FindMyPkG.cmake"])
         self.assertIn("add_library(MyPkG2::MyPkG2 INTERFACE IMPORTED)", content["FindMyPkG2.cmake"])
+
