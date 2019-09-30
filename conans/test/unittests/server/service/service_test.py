@@ -218,7 +218,7 @@ class ConanServiceTest(unittest.TestCase):
         save_files(self.server_store.export(ref4), {"dummy.txt": "//"})
 
         info = self.search_service.search()
-        expected = [ref3, ref4, self.ref, ref2]
+        expected = [r.copy_clear_rev() for r in [ref3, ref4, self.ref, ref2]]
         self.assertEqual(expected, info)
 
         info = self.search_service.search(pattern="Assimp*", ignorecase=False)

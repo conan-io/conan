@@ -1,10 +1,10 @@
+import itertools
 import os
 import platform
 import stat
 import unittest
 from collections import OrderedDict
 
-import itertools
 from mock import mock, patch
 from nose.plugins.attrib import attr
 
@@ -13,7 +13,6 @@ from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile
@@ -79,7 +78,7 @@ class UploadTest(unittest.TestCase):
     def test_upload_not_existing(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile("Hello", "0.1"))})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/testing")
         client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
         self.assertIn("ERROR: Binary package Hello/0.1@lasote/testing:123 not found", client.out)
@@ -730,7 +729,6 @@ class Pkg(ConanFile):
 
         client.run('create . lib/1.0@')
         self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
-
         client.run('upload lib/1.0 -c --all')
         self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
 
@@ -741,3 +739,8 @@ class Pkg(ConanFile):
 
         path = server.server_store.package(pref)
         self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
+
+        # Should be possible with explicit package
+        client.run('upload lib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9')
+        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
+                      client.out)

@@ -55,16 +55,20 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
         path1 = os.path.join("$(USERPROFILE)", "pkg1", "include")
         path2 = os.path.join("$(USERPROFILE)", "pkg2", "include")
-        expected = "<AdditionalIncludeDirectories>%s;%s;" % (path1, path2)
+        expected1 = "<ConanIncludeDirectories>%s;%s;" % (path1, path2)
+        expected2 = "<AdditionalIncludeDirectories>$(ConanIncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>"
+
         with tools.environment_append({"USERPROFILE": tmp_folder}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn(expected, content)
+            self.assertIn(expected1, content)
+            self.assertIn(expected2, content)
 
         with tools.environment_append({"USERPROFILE": tmp_folder.upper()}):
             content = generator.content
             xml.etree.ElementTree.fromstring(content)
-            self.assertIn(expected, content)
+            self.assertIn(expected1, content)
+            self.assertIn(expected2, content)
 
     def multi_config_test(self):
         tmp_folder = temp_folder()
@@ -81,22 +85,25 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
         content = generator.content
 
-        defines_common = "<PreprocessorDefinitions>" \
-                         "_WIN32_WINNT=x0501;%(PreprocessorDefinitions)" \
-                         "</PreprocessorDefinitions>"
-        defines_debug = "<PreprocessorDefinitions>" \
-                        "_DEBUG;DEBUG;%(PreprocessorDefinitions)" \
-                        "</PreprocessorDefinitions>"
-        defines_release = "<PreprocessorDefinitions>" \
-                          "NDEBUG;%(PreprocessorDefinitions)" \
-                          "</PreprocessorDefinitions>"
-        defines_custom = "<PreprocessorDefinitions>" \
-                         "CUSTOM_BUILD;%(PreprocessorDefinitions)" \
-                         "</PreprocessorDefinitions>"
+        defines_common = "<ConanPreprocessorDefinitions>" \
+                         "_WIN32_WINNT=x0501;" \
+                         "</ConanPreprocessorDefinitions>"
+        defines_debug = "<ConanPreprocessorDefinitions>" \
+                        "_DEBUG;DEBUG;" \
+                        "</ConanPreprocessorDefinitions>"
+        defines_release = "<ConanPreprocessorDefinitions>" \
+                          "NDEBUG;" \
+                          "</ConanPreprocessorDefinitions>"
+        defines_custom = "<ConanPreprocessorDefinitions>" \
+                         "CUSTOM_BUILD;" \
+                         "</ConanPreprocessorDefinitions>"
+        defines_always = "<PreprocessorDefinitions>$(ConanPreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>"
+
         self.assertIn(defines_common, content)
         self.assertIn(defines_debug, content)
         self.assertIn(defines_release, content)
         self.assertIn(defines_custom, content)
+        self.assertIn(defines_always, content)
 
         condition_debug = "<ItemDefinitionGroup Condition=\"'$(Configuration)' == 'debug'\">"
         condition_release = "<ItemDefinitionGroup Condition=\"'$(Configuration)' == 'release'\">"

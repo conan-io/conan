@@ -173,3 +173,11 @@ VAR2=23
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
         self.assertEqual(info.bin_paths, [abs_bin,
                                           os.path.join(folder, "local_bindir")])
+
+    def cpp_info_name_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.name = "MyName"
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.update(info, "myname")
+        self.assertIn("MyName", deps_cpp_info["myname"].name)

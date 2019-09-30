@@ -144,6 +144,16 @@ class ToolsTest(unittest.TestCase):
             with six.assertRaisesRegex(self, ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
+    @patch("conans.client.tools.oss.CpuProperties.get_cpu_period")
+    @patch("conans.client.tools.oss.CpuProperties.get_cpu_quota")
+    def test_cpu_count_in_container(self, get_cpu_quota_mock, get_cpu_period_mock):
+        get_cpu_quota_mock.return_value = 12000
+        get_cpu_period_mock.return_value = 1000
+
+        output = ConanOutput(sys.stdout)
+        cpus = tools.cpu_count(output=output)
+        self.assertEqual(12, cpus)
+
     def get_env_unit_test(self):
         """
         Unit tests tools.get_env
@@ -839,6 +849,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertEqual(str, type(result))
 
     @attr('slow')
+    @attr('local_bottle')
     def get_filename_download_test(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
@@ -902,6 +913,7 @@ ProgramFiles(x86)=C:\Program Files (x86)
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     @attr('slow')
+    @attr('local_bottle')
     def get_gunzip_test(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()

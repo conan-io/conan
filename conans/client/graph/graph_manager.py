@@ -57,7 +57,7 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder)
+            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile = graph_lock_file.profile
@@ -167,7 +167,7 @@ class GraphManager(object):
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile,
                                                             ref=graph_info.root)
 
-            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
+            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
 
             if graph_lock:  # Find the Node ID in the lock of current root
                 graph_lock.find_consumer_node(root_node, create_reference)
@@ -259,7 +259,6 @@ class GraphManager(object):
                                              check_updates, update, build_mode,
                                              remotes, profile_build_requires, recorder,
                                              processed_profile, graph_lock)
-                graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
@@ -269,7 +268,6 @@ class GraphManager(object):
                                              check_updates, update, build_mode,
                                              remotes, {}, recorder,
                                              processed_profile, graph_lock)
-                graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     profile_build_requires, recorder, processed_profile, apply_build_requires,

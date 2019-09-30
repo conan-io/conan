@@ -102,7 +102,7 @@ class PackageCacheLayout(object):
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
     def scm_folder(self):
@@ -179,15 +179,6 @@ class PackageCacheLayout(object):
                 metadata = PackageMetadata()
             yield metadata
             save(self.package_metadata(), metadata.dumps())
-
-    # Revisions
-    def package_summary_hash(self, pref):
-        package_folder = self.package(pref)
-        try:
-            read_manifest = FileTreeManifest.load(package_folder)
-        except IOError:
-            raise PackageNotFoundException(pref)
-        return read_manifest.summary_hash
 
     # Locks
     def conanfile_read_lock(self, output):

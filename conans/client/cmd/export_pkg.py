@@ -9,10 +9,11 @@ from conans.model.ref import PackageReference
 from conans.util.files import rmdir
 
 
-def export_pkg(cache, graph_manager, hook_manager, recorder, output,
-               ref, source_folder, build_folder, package_folder, install_folder,
+def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
                graph_info, force, remotes):
-
+    ref = full_ref.copy_clear_rev()
+    cache, output, hook_manager = app.cache, app.out, app.hook_manager
+    graph_manager = app.graph_manager
     conan_file_path = cache.package_layout(ref).conanfile()
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(ref))
@@ -47,22 +48,16 @@ def export_pkg(cache, graph_manager, hook_manager, recorder, output,
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     if package_folder:
-        packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
-                            hook_manager, conan_file_path, ref)
+        prev = packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
+                                   hook_manager, conan_file_path, ref)
     else:
         with get_env_context_manager(conanfile):
-            packager.create_package(conanfile, package_id, source_folder, build_folder,
-                                    dest_package_folder, install_folder, hook_manager,
-                                    conan_file_path, ref, local=True)
+            prev = packager.create_package(conanfile, package_id, source_folder, build_folder,
+                                           dest_package_folder, install_folder, hook_manager,
+                                           conan_file_path, ref, local=True)
 
-    readed_manifest = FileTreeManifest.load(dest_package_folder)
-    pref = PackageReference(pref.ref, pref.id, readed_manifest.summary_hash)
-    output.info("Package revision %s" % pref.revision)
-
-    with layout.update_metadata() as metadata:
-        metadata.packages[package_id].revision = pref.revision
-        metadata.packages[package_id].recipe_revision = metadata.recipe.revision
-
+    packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
+    pref = PackageReference(pref.ref, pref.id, prev)
     if graph_info.graph_lock:
         # after the package has been created we need to update the node PREV
         nodes[0].prev = pref.revision

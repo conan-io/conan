@@ -49,6 +49,9 @@ class ClientCommonRouter(object):
             url += "?%s" % urlencode({"q": query})
         return self.base_url + url
 
+    def oauth_authenticate(self):
+        return self.base_url + routes.oauth_authenticate
+
     def common_authenticate(self):
         return self.base_url + routes.common_authenticate
 
