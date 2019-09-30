@@ -12,7 +12,6 @@ import threading
 import unittest
 import textwrap
 import uuid
-import types
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
 
@@ -32,6 +31,7 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.output import ConanOutput
+from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.tools import environment_append
 from conans.client.tools.files import chdir
 from conans.client.tools.files import replace_in_file
@@ -210,7 +210,7 @@ class TestRequester(object):
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
-                if isinstance(kwargs["data"], types.GeneratorType):
+                if isinstance(kwargs["data"], IterableToFileAdapter):
                     data_accum = b""
                     for tmp in kwargs["data"]:
                         data_accum += tmp

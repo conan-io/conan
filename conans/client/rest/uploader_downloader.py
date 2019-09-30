@@ -71,8 +71,9 @@ class FileUploader(object):
             progress = progress_bar.ReadProgress(file_size, self.output, description)
             chunk_size = 1024
             data = progress.update(load_in_chunks(file_handler, chunk_size), chunk_size)
+            iterable_to_file = IterableToFileAdapter(data, file_size)
             try:
-                response = self.requester.put(url, data=data, verify=self.verify,
+                response = self.requester.put(url, data=iterable_to_file, verify=self.verify,
                                               headers=headers, auth=auth)
 
                 if response.status_code == 400:
@@ -94,6 +95,21 @@ class FileUploader(object):
                 raise ConanException(exc)
 
         return response
+
+
+class IterableToFileAdapter(object):
+    def __init__(self, iterable, total_size):
+        self.iterator = iter(iterable)
+        self.total_size = total_size
+
+    def read(self, size=-1):  # @UnusedVariable
+        return next(self.iterator, b'')
+
+    def __len__(self):
+        return self.total_size
+
+    def __iter__(self):
+        return self.iterator.__iter__()
 
 
 class FileDownloader(object):
