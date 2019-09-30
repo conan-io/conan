@@ -22,10 +22,6 @@ class WriteProgress(object):
                                   leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
                                   unit_divisor=1024)
 
-    @property
-    def read_size(self):
-        return self._read_size
-
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
             self._tqdm_bar.update(chunk_size)
@@ -63,10 +59,6 @@ class ReadProgress(object):
                                   file=self._output, unit="B",
                                   leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
                                   unit_divisor=1024)
-
-    @property
-    def written_size(self):
-        return self._written_size
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
