@@ -122,9 +122,11 @@ class VisualStudioGeneratorTest(unittest.TestCase):
             cpp_info.libs = [lib]
             conanfile.deps_cpp_info.update(cpp_info, ref.name)
             generator = VisualStudioGenerator(conanfile)
+            content = generator.content
+            self.assertIn("<ConanLibraries>%s;</ConanLibraries>" % additional_dep, content)
             self.assertIn("<AdditionalDependencies>"
                           "{};%(AdditionalDependencies)"
-                          "</AdditionalDependencies>".format(additional_dep), generator.content)
+                          "</AdditionalDependencies>".format(additional_dep), content)
 
         # regular
         validate_additional_dependencies("foobar", "foobar.lib")

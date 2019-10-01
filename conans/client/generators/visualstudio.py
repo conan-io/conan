@@ -18,7 +18,7 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    properties_template = '''  <PropertyGroup Label="ConanVariables"{condition}>
+    properties_template = '''<PropertyGroup Label="ConanVariables"{condition}>
     <ConanCompilerFlags>{compiler_flags}</ConanCompilerFlags>
     <ConanPreprocessorDefinitions>{definitions}</ConanPreprocessorDefinitions>
     <ConanIncludeDirectories>{include_dirs}</ConanIncludeDirectories>
