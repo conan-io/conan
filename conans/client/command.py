@@ -238,8 +238,6 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json output file')
-        parser.add_argument("--parallel", action='store_true', default=False,
-                            help='Upload files in parallel using multiple threads\'s')
         parser.add_argument('--raw', default=None, action=OnceArgument,
                             help='Print just the value of the requested attribute')
 
@@ -1322,6 +1320,8 @@ class Command(object):
                             help="Uploads package only if recipe is the same as the remote one")
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
+        parser.add_argument("--parallel", action='store_true', default=False,
+                            help='Upload files in parallel using multiple threads\'s')
 
         args = parser.parse_args(*args)
 
