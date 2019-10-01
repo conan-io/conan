@@ -578,33 +578,29 @@ class PkgTest(base.MyConanfileBase):
 
     def short_paths_test(self):
         # https://github.com/conan-io/conan/issues/5814
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class MyConanfileBase(ConanFile):
-    license = "MyLicense"
-    author = "author@company.com"
-    exports = "*.txt"
-    exports_sources = "*.h"
-    generators = "cmake"
-        """
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class MyConanfileBase(ConanFile):
+            exports = "*.txt"
+            exports_sources = "*.h"
+        """)
         client.save({"conanfile.py": conanfile,
                      "file.h": "header",
                      "other.txt": "text"})
         client.run("create . Base/1.2@lasote/testing")
 
-        reuse = """from conans import python_requires
-base = python_requires("Base/1.2@lasote/testing")
-class PkgTest(base.MyConanfileBase):
-    short_paths = True
-    name = "consumer"
-    version = "1.0.0"
-    def build(self):
-        self.output.info("Package built successfully!")
-        """
+        reuse = textwrap.dedent("""
+        from conans import python_requires
+        base = python_requires("Base/1.2@lasote/testing")
+        class PkgTest(base.MyConanfileBase):
+            short_paths = True
+            name = "consumer"
+            version = "1.0.0"
+        """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . lasote/testing")
-        self.assertIn("Package built successfully!", client.out)
+        self.assertIn("consumer/1.0.0@lasote/testing: Created package revision", client.out)
 
 
 class PythonRequiresNestedTest(unittest.TestCase):
