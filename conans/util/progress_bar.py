@@ -16,11 +16,12 @@ class WriteProgress(object):
         self._read_size = 0
         self._description = description
         if self._output and self._output.is_terminal and self._description:
+            self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
                                   desc=self._description,
                                   file=self._output, unit="B",
-                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
-                                  unit_divisor=1024)
+                                  leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
+                                  unit_divisor=1024, position=self._bar_position)
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
@@ -42,7 +43,11 @@ class WriteProgress(object):
 
     def pb_close(self):
         if self._tqdm_bar is not None:
+            self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
+            self._output.rewrite_line("{}. Completed [{}]".format(self._description,
+                                                                  self._read_size))
+            self._output.writeln("")
 
 
 class ReadProgress(object):
@@ -54,11 +59,11 @@ class ReadProgress(object):
         self._description = description
         self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
+            self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description,
-                                  file=self._output, unit="B",
-                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
-                                  unit_divisor=1024)
+                                  desc=self._description, file=self._output, unit="B",
+                                  leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
+                                  unit_divisor=1024, position=self._bar_position)
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
@@ -83,7 +88,11 @@ class ReadProgress(object):
 
     def pb_close(self):
         if self._tqdm_bar is not None:
+            self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
+            self._output.rewrite_line("{}. Completed [{}]".format(self._description,
+                                                                  self._written_size))
+            self._output.writeln("")
 
 
 class FileWrapper(ReadProgress):
@@ -115,15 +124,15 @@ class ListWrapper(object):
         self._last_progress = None
         self._i_file = 0
         self._output = output
-        self._desc = desc
+        self._description = desc
+        self._total_size = len(files_list)
         if self._output and not self._output.is_terminal:
             output.write("[")
         elif self._output:
-            self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=self._output, unit="files",
-                                  leave=True, dynamic_ncols=False, ascii=True)
-
-    def description(self):
-        return self._desc
+            self._bar_position = self._output.get_bar_pos()
+            self._tqdm_bar = tqdm(total=self._total_size, desc=self._description, file=self._output, unit="files",
+                                  leave=False, dynamic_ncols=False, ascii=True,
+                                  position=self._bar_position)
 
     def update(self):
         self._i_file = self._i_file + 1
@@ -137,7 +146,11 @@ class ListWrapper(object):
 
     def pb_close(self):
         if self._output and self._output.is_terminal:
+            self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
+            self._output.rewrite_line("{}. Completed [{} total files]".format(self._description,
+                                                                              self._total_size))
+            self._output.writeln("")
         elif self._output:
             self._output.writeln("]")
 

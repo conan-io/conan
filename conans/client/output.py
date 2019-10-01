@@ -42,9 +42,9 @@ class Color(object):
     BRIGHT_BLUE = Style.BRIGHT + Fore.BLUE  # @UndefinedVariable
     BRIGHT_YELLOW = Style.BRIGHT + Fore.YELLOW  # @UndefinedVariable
     BRIGHT_GREEN = Style.BRIGHT + Fore.GREEN  # @UndefinedVariable
-    BRIGHT_CYAN = Style.BRIGHT + Fore.CYAN   # @UndefinedVariable
-    BRIGHT_WHITE = Style.BRIGHT + Fore.WHITE   # @UndefinedVariable
-    BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA   # @UndefinedVariable
+    BRIGHT_CYAN = Style.BRIGHT + Fore.CYAN  # @UndefinedVariable
+    BRIGHT_WHITE = Style.BRIGHT + Fore.WHITE  # @UndefinedVariable
+    BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA  # @UndefinedVariable
 
 
 if get_env("CONAN_COLOR_DARK", 0):
@@ -66,6 +66,20 @@ class ConanOutput(object):
         self._stream = stream
         self._stream_err = stream_err or stream
         self._color = color
+        self._bar_slots = []
+
+    def get_bar_pos(self):
+        try:
+            available_slot = self._bar_slots.index(True)
+        except ValueError:
+            self._bar_slots.append(True)
+            available_slot = self._bar_slots.index(True)
+
+        self._bar_slots[available_slot] = False
+        return available_slot
+
+    def release_bar_pos(self, slot_num):
+        self._bar_slots[slot_num] = True
 
     @property
     def is_terminal(self):
@@ -122,8 +136,8 @@ class ConanOutput(object):
     def rewrite_line(self, line):
         tmp_color = self._color
         self._color = False
-        TOTAL_SIZE = 70
-        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
+        TOTAL_SIZE = 100
+        LIMIT_SIZE = 48  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
         if len(line) > TOTAL_SIZE:
             line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
