@@ -238,6 +238,8 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json output file')
+        parser.add_argument("--parallel", action='store_true', default=False,
+                            help='Upload files in parallel using multiple threads\'s')
         parser.add_argument('--raw', default=None, action=OnceArgument,
                             help='Print just the value of the requested attribute')
 
@@ -1374,7 +1376,8 @@ class Command(object):
                                       query=args.query, remote_name=args.remote,
                                       all_packages=args.all, policy=policy,
                                       confirm=args.confirm, retry=args.retry,
-                                      retry_wait=args.retry_wait, integrity_check=args.check)
+                                      retry_wait=args.retry_wait, integrity_check=args.check,
+                                      parallel_upload=args.parallel)
 
         except ConanException as exc:
             info = exc.info

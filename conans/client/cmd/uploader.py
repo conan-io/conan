@@ -75,7 +75,7 @@ class CmdUpload(object):
 
     def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
-               policy=None, query=None):
+               policy=None, query=None, parallel_upload=False):
         t1 = time.time()
         refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
         refs_by_remote = self._collect_packages_to_upload(refs, confirm, remotes, all_packages,
