@@ -125,8 +125,8 @@ class VisualStudioGeneratorTest(unittest.TestCase):
             content = generator.content
             self.assertIn("<ConanLibraries>%s;</ConanLibraries>" % additional_dep, content)
             self.assertIn("<AdditionalDependencies>"
-                          "{};%(AdditionalDependencies)"
-                          "</AdditionalDependencies>".format(additional_dep), content)
+                          "$(ConanLibraries)%(AdditionalDependencies)"
+                          "</AdditionalDependencies>", content)
 
         # regular
         validate_additional_dependencies("foobar", "foobar.lib")

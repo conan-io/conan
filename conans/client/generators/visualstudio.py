@@ -20,6 +20,7 @@ class VisualStudioGenerator(Generator):
 
     properties_template = '''<PropertyGroup Label="ConanVariables"{condition}>
     <ConanCompilerFlags>{compiler_flags}</ConanCompilerFlags>
+    <ConanLinkerFlags>{linker_flags}</ConanLinkerFlags>
     <ConanPreprocessorDefinitions>{definitions}</ConanPreprocessorDefinitions>
     <ConanIncludeDirectories>{include_dirs}</ConanIncludeDirectories>
     <ConanResourceDirectories>{res_dirs}</ConanResourceDirectories>
@@ -39,8 +40,8 @@ class VisualStudioGenerator(Generator):
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(ConanLibraries)%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>$(ConanLinkerFlags) %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Midl>
       <AdditionalIncludeDirectories>$(ConanIncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
