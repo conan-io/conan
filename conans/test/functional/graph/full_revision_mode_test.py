@@ -157,22 +157,16 @@ class FullRevisionModeTest(unittest.TestCase):
         # fire build of downstream
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
-        conanfile = dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                pass
-                %s
-            """)
-        client.save({"conanfile.py": conanfile % ""})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . liba/0.1@user/testing")
 
-        client.save({"conanfile.py": conanfile % "requires = 'liba/0.1@user/testing'"})
+        client.save({"conanfile.py": GenConanfile().with_require_plain('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
 
-        client.save({"conanfile.py": conanfile % "requires = 'libb/0.1@user/testing'"})
+        client.save({"conanfile.py": GenConanfile().with_require_plain('libb/0.1@user/testing')})
         client.run("create . libc/0.1@user/testing")
 
-        client.save({"conanfile.py": conanfile % "requires = 'libc/0.1@user/testing'"})
+        client.save({"conanfile.py": GenConanfile().with_require_plain('libc/0.1@user/testing')})
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . libd/0.1@user/testing --build=liba")
         # So it is not necessary to build the downstream consumers of LibA
