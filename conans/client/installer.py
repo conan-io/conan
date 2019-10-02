@@ -8,7 +8,7 @@ from conans.client.generators import TXTGenerator, write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
     BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import create_package, update_package_metadata
+from conans.client.packager import package_method_run, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
@@ -154,9 +154,9 @@ class _PackageBuilder(object):
             # Could be source or build depends no_copy_source
             source_folder = conanfile.source_folder
             install_folder = build_folder  # While installing, the infos goes to build folder
-            prev = create_package(conanfile, package_id, source_folder, build_folder,
-                                  package_folder, install_folder, self._hook_manager,
-                                  conanfile_path, pref.ref)
+            prev = package_method_run(conanfile, package_id, source_folder, build_folder,
+                                      package_folder, install_folder, self._hook_manager,
+                                      conanfile_path, pref.ref)
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 

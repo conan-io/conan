@@ -683,9 +683,9 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
         with get_env_context_manager(conanfile):
-            packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                    install_folder, self.app.hook_manager, conanfile_path, None,
-                                    local=True, copy_info=True)
+            packager.package_method_run(conanfile, None, source_folder, build_folder, package_folder,
+                                        install_folder, self.app.hook_manager, conanfile_path, None,
+                                        local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
