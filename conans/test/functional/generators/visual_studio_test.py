@@ -7,6 +7,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
+from conans import load
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
 
@@ -24,10 +25,10 @@ Hello1/0.1@lasote/testing
 """
 
 
-@attr('slow')
-@unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class VisualStudioTest(unittest.TestCase):
 
+    @attr('slow')
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def build_vs_project_with_a_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -92,3 +93,42 @@ class VisualStudioTest(unittest.TestCase):
         client.run("build .")
         client.run_command("x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)
+
+    def system_deps_test(self):
+        mylib = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class MyLib(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+
+                def package_info(self):
+                    self.cpp_info.system_deps = ["sys1"]
+                    self.cpp_info.libs = ["lib1"]
+                """)
+        consumer = textwrap.dedent("""
+            import os
+            from conans import ConanFile
+
+            class Consumer(ConanFile):
+                requires = "mylib/1.0@us/ch"
+                generators = "visual_studio"
+                """)
+        client = TestClient()
+        client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer})
+        client.run("create conanfile_mylib.py mylib/1.0@us/ch")
+        client.run("install conanfile_consumer.py")
+
+        content = load(os.path.join(client.current_folder, "conanbuildinfo.props"))
+        expected_content = """    <Link>
+      <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lib1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <Lib>
+      <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>lib1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>"""
+        self.assertIn(expected_content, content.replace("\r", ""))
