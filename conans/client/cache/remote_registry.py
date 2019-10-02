@@ -183,7 +183,10 @@ class Remotes(object):
         ])
 
     def set_disabled_state(self, remote_name, state):
-        filtered_remotes = fnmatch.filter([r.name for r in self._remotes.values()], remote_name)
+        filtered_remotes = []
+        for remote in self._remotes.values():
+            if fnmatch.fnmatch(remote.name, remote_name):
+                filtered_remotes.append(remote)
 
         if not filtered_remotes and "*" not in remote_name:
             raise NoRemoteAvailable("Remote '%s' not found in remotes" % remote_name)
