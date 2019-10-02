@@ -445,7 +445,7 @@ class BinaryInstaller(object):
             assert python_require.ref.revision is not None, \
                 "Installer should receive python_require.ref always"
             complete_recipe_sources(self._remote_manager, self._cache,
-                                    conanfile, python_require.ref, remotes)
+                                    python_require.conanfile, python_require.ref, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager)
         pref = builder.build_package(node, keep_build, self._recorder, remotes)
