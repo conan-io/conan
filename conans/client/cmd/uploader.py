@@ -105,7 +105,10 @@ class CmdUpload(object):
             self._upload_thread_pool.close()
             self._upload_thread_pool.join()
             for exception in self._exceptions_list:
-                raise exception
+                self._user_io.out.error(str(exception))
+
+            if len(self._exceptions_list) > 0:
+                raise ConanException("Errors during upload process")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
