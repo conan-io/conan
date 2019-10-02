@@ -106,6 +106,7 @@ CONAN_BASIC_SETUP()
             from conans import ConanFile
 
             class MyLib(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
 
                 def package_info(self):
                     self.cpp_info.system_deps = ["sys1"]
@@ -119,12 +120,26 @@ CONAN_BASIC_SETUP()
                 requires = "mylib/1.0@us/ch"
                 generators = "cmake"
                 """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer CXX)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup(TARGETS)
+            get_target_property(tmp CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
+            message("Target libs: ${tmp}")
+            """)
         client = TestClient()
-        client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer})
+        client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer,
+                     "CMakeLists.txt": cmakelists})
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py")
+
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
         self.assertIn("set(CONAN_LIBS_MYLIB lib1 sys1)", content)
         self.assertIn("set(CONAN_SYSTEM_DEPS sys1 ${CONAN_SYSTEM_DEPS})", content)
         self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB sys1)", content)
+
+        # Check target has libraries and system deps available
+        client.run_command("cmake .")
+        self.assertIn("Target libs: lib1;sys1;", client.out)
