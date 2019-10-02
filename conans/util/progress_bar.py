@@ -6,6 +6,8 @@ from tqdm import tqdm
 
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
+LEFT_JUSTIFY_DESC = 28
+LEFT_JUSTIFY_MESSAGE = 90
 
 
 class WriteProgress(object):
@@ -18,7 +20,7 @@ class WriteProgress(object):
         if self._output and self._output.is_terminal and self._description:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description.ljust(28),
+                                  desc=self._description.ljust(LEFT_JUSTIFY_DESC),
                                   file=self._output, unit="B",
                                   leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
                                   unit_divisor=1024, position=self._bar_position)
@@ -45,8 +47,8 @@ class WriteProgress(object):
         if self._tqdm_bar is not None:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            self._output.writeln("\r{} completed [{:1.2f}k]".format(self._description,
-                                                                    self._read_size/1024.0).ljust(90))
+            msg = "\r{} completed [{:1.2f}k]".format(self._description, self._read_size/1024.0)
+            self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
 
 
 class ReadProgress(object):
@@ -60,7 +62,7 @@ class ReadProgress(object):
         if self._output and self._output.is_terminal and self._description:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description.ljust(28), file=self._output, unit="B",
+                                  desc=self._description.ljust(LEFT_JUSTIFY_DESC), file=self._output, unit="B",
                                   leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
                                   unit_divisor=1024, position=self._bar_position)
 
@@ -89,8 +91,8 @@ class ReadProgress(object):
         if self._tqdm_bar is not None:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            self._output.writeln("\r{} completed [{:1.2f}k]".format(self._description,
-                                                                    self._written_size/1024.0).ljust(90))
+            msg = "\r{} completed [{:1.2f}k]".format(self._description, self._written_size/1024.0)
+            self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
 
 
 class FileWrapper(ReadProgress):
@@ -128,8 +130,9 @@ class ListWrapper(object):
             output.write("[")
         elif self._output:
             self._bar_position = self._output.get_bar_pos()
-            self._tqdm_bar = tqdm(total=self._total_size, desc=self._description.ljust(28),
-                                  file=self._output, unit="files", leave=False, dynamic_ncols=False,
+            self._tqdm_bar = tqdm(total=self._total_size,
+                                  desc=self._description.ljust(LEFT_JUSTIFY_DESC), file=self._output,
+                                  unit="files", leave=False, dynamic_ncols=False,
                                   ascii=True, position=self._bar_position)
 
     def update(self):
@@ -146,8 +149,8 @@ class ListWrapper(object):
         if self._output and self._output.is_terminal:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            self._output.writeln("\r{} completed [{} files]".format(self._description,
-                                                                    self._total_size).ljust(90))
+            msg = "\r{} completed [{} files]".format(self._description,self._total_size)
+            self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
         elif self._output:
             self._output.writeln("]")
 
