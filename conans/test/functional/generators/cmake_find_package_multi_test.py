@@ -76,3 +76,51 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                         self.assertIn("Hello World {}!".format(bt), c.out)
                         self.assertIn("bye World {}!".format(bt), c.out)
                         os.remove(os.path.join(c.current_folder, "example"))
+
+    @unittest.skipUnless(platform.system() != "Windows", "Skip Visual Studio config for build type")
+    def cmake_find_package_system_deps_test(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+            class Test(ConanFile):
+                name = "Test"
+                version = "0.1"
+                settings = "build_type"
+                def package_info(self):
+                    if self.settings.build_type == "Debug":
+                        self.cpp_info.system_deps.append("sys1d")
+                    else:
+                        self.cpp_info.system_deps.append("sys1")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export .")
+
+        conanfile = textwrap.dedent("""
+            [requires]
+            Test/0.1
+
+            [generators]
+            cmake_find_package_multi
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.1)
+            project(consumer CXX)
+            set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+            set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+            find_package(Test)
+            message("Libraries to Link: ${Test_LIBS}")
+            get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
+            message("Target libs: ${tmp}")
+            """)
+        client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists})
+        for build_type in ["Release", "Debug"]:
+            client.run("install conanfile.txt --build missing -s build_type=%s" % build_type)
+            client.run_command('cmake .. -DCMAKE_BUILD_TYPE={}'.format(build_type))
+            client.run_command('cmake --build .')
+
+            library_name = "sys1d" if build_type == "Debug" else "sys1"
+            self.assertIn("Libraries to Link: %s" % library_name, client.out)
+            self.assertIn("-- Library %s not found in package, might be system one" % library_name,
+                          client.out)
+            self.assertIn("Target libs: %s" % library_name, client.out)
