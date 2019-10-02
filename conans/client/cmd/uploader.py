@@ -4,7 +4,6 @@ import tarfile
 import time
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
-import traceback
 
 from conans.util import progress_bar
 from conans.client.remote_manager import is_package_snapshot_complete
