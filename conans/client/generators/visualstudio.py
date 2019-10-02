@@ -44,7 +44,6 @@ class VisualStudioGenerator(Generator):
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>{system_deps}%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Midl>

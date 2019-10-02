@@ -125,10 +125,5 @@ class VisualStudioTest(unittest.TestCase):
       <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>lib1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
-    </Link>
-    <Lib>
-      <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>lib1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Lib>"""
+    </Link>"""
         self.assertIn(expected_content, content.replace("\r", ""))
