@@ -18,6 +18,8 @@ class GraphBinariesAnalyzer(object):
         self._cache = cache
         self._out = output
         self._remote_manager = remote_manager
+        # These are the nodes with pref (not including PREV) that have been evaluated
+        self._evaluated = {}  # {pref: [nodes]}
 
     @staticmethod
     def _check_update(upstream_manifest, package_folder, output, node):
@@ -132,9 +134,8 @@ class GraphBinariesAnalyzer(object):
 
         return recipe_hash, remote
 
-    @staticmethod
-    def _evaluate_is_cached(node, pref, evaluated_nodes):
-        previous_nodes = evaluated_nodes.get(pref)
+    def _evaluate_is_cached(self, node, pref):
+        previous_nodes = self._evaluated.get(pref)
         if previous_nodes:
             previous_nodes.append(node)
             previous_node = previous_nodes[0]
@@ -148,8 +149,9 @@ class GraphBinariesAnalyzer(object):
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
             return True
+        self._evaluated[pref] = [node]
 
-    def _evaluate_node(self, node, build_mode, update, evaluated_nodes, remotes):
+    def _evaluate_node(self, node, build_mode, update, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.prev is None, "Node.prev should be None"
@@ -168,9 +170,8 @@ class GraphBinariesAnalyzer(object):
             pref = PackageReference(ref, node.package_id)
 
         # Check that this same reference hasn't already been checked
-        if self._evaluate_is_cached(node, pref, evaluated_nodes):
+        if self._evaluate_is_cached(node, pref):
             return
-        evaluated_nodes[pref] = [node]
 
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
@@ -268,10 +269,9 @@ class GraphBinariesAnalyzer(object):
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes):
         default_package_id_mode = self._cache.config.default_package_id_mode
-        evaluated = deps_graph.evaluated
         for node in deps_graph.ordered_iterate():
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            self._evaluate_node(node, build_mode, update, evaluated, remotes)
+            self._evaluate_node(node, build_mode, update, remotes)
             self._handle_private(node)
