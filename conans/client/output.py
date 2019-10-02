@@ -136,8 +136,8 @@ class ConanOutput(object):
     def rewrite_line(self, line):
         tmp_color = self._color
         self._color = False
-        TOTAL_SIZE = 100
-        LIMIT_SIZE = 48  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
+        TOTAL_SIZE = 70
+        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
         if len(line) > TOTAL_SIZE:
             line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
