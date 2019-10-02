@@ -14,8 +14,6 @@ class Version(object):
 
     def __init__(self, value):
         v = str(value).strip()
-        if v.startswith("gnu"):  # settings.compiler.cppstd e.g gnu17
-            v = ''.join(filter(str.isdigit, str(value)))
         try:
             self._semver = SemVer(v, loose=self.loose)
         except ValueError:

@@ -108,10 +108,3 @@ class ToolVersionExtraComponentsTests(unittest.TestCase):
         # Unknown release field, not fail (loose=True) and don't affect compare
         self.assertTrue(Version.loose)
         self.assertTrue(Version("1.2.3.4") == Version("1.2.3"))
-
-    def test_cppstd_version(self):
-        self.assertTrue(Version("11") < Version("14"))
-        self.assertTrue(Version("gnu17") == Version("17"))
-        self.assertTrue(Version("gnu17") > Version("gnu14"))
-        self.assertTrue(Version("gnu17") < Version("20"))
-        self.assertTrue(Version("gnu17") < Version("gnu20"))
