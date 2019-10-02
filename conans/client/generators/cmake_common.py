@@ -325,7 +325,7 @@ endmacro()
 macro(conan_error_compiler_version)
     message(FATAL_ERROR "The installed dependencies are for compiler.version=${CONAN_COMPILER_VERSION},"
         "but the compiler version CMake is using is ${VERSION_MAJOR}.${VERSION_MINOR}.\n"
-        "Please, check your default profile settings (conan profile show default) or your compiler (${CONAN_COMPILER})"
+        "Please, check your default profile settings (conan profile show default) or your compiler (${CONAN_COMPILER})")
 endmacro()
 
 set(_CONAN_CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
