@@ -22,6 +22,7 @@ class DepsCppTXT(object):
         self.build_paths = "\n".join(p.replace("\\", "/")
                                      for p in cpp_info.build_paths)
         self.libs = "\n".join(cpp_info.libs)
+        self.system_deps = "\n".join(cpp_info.system_deps)
         self.defines = "\n".join(cpp_info.defines)
         self.cxxflags = "\n".join(cpp_info.cxxflags)
         self.cflags = "\n".join(cpp_info.cflags)
@@ -143,6 +144,7 @@ class TXTGenerator(Generator):
                     '[resdirs{dep}{config}]\n{deps.res_paths}\n\n'
                     '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
+                    '[system_deps{dep}{config}]\n{deps.system_deps}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
                     '[cppflags{dep}{config}]\n{deps.cxxflags}\n\n'  # Backwards compatibility
                     '[cxxflags{dep}{config}]\n{deps.cxxflags}\n\n'
