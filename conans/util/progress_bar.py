@@ -18,7 +18,7 @@ class WriteProgress(object):
         if self._output and self._output.is_terminal and self._description:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description,
+                                  desc=self._description.ljust(28),
                                   file=self._output, unit="B",
                                   leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
                                   unit_divisor=1024, position=self._bar_position)
@@ -45,9 +45,8 @@ class WriteProgress(object):
         if self._tqdm_bar is not None:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            self._output.rewrite_line("{}. Completed [{}]".format(self._description,
-                                                                  self._read_size))
-            self._output.writeln("")
+            self._output.writeln("\r{} completed [{:1.2f}k]".format(self._description,
+                                                                    self._read_size/1024.0).ljust(90))
 
 
 class ReadProgress(object):
@@ -61,7 +60,7 @@ class ReadProgress(object):
         if self._output and self._output.is_terminal and self._description:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description, file=self._output, unit="B",
+                                  desc=self._description.ljust(28), file=self._output, unit="B",
                                   leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
                                   unit_divisor=1024, position=self._bar_position)
 
@@ -90,9 +89,8 @@ class ReadProgress(object):
         if self._tqdm_bar is not None:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            self._output.rewrite_line("{}. Completed [{}]".format(self._description,
-                                                                  self._written_size))
-            self._output.writeln("")
+            self._output.writeln("\r{} completed [{:1.2f}k]".format(self._description,
+                                                                    self._written_size/1024.0).ljust(90))
 
 
 class FileWrapper(ReadProgress):
@@ -130,9 +128,9 @@ class ListWrapper(object):
             output.write("[")
         elif self._output:
             self._bar_position = self._output.get_bar_pos()
-            self._tqdm_bar = tqdm(total=self._total_size, desc=self._description, file=self._output, unit="files",
-                                  leave=False, dynamic_ncols=False, ascii=True,
-                                  position=self._bar_position)
+            self._tqdm_bar = tqdm(total=self._total_size, desc=self._description.ljust(28),
+                                  file=self._output, unit="files", leave=False, dynamic_ncols=False,
+                                  ascii=True, position=self._bar_position)
 
     def update(self):
         self._i_file = self._i_file + 1
@@ -148,9 +146,8 @@ class ListWrapper(object):
         if self._output and self._output.is_terminal:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            self._output.rewrite_line("{}. Completed [{} total files]".format(self._description,
-                                                                              self._total_size))
-            self._output.writeln("")
+            self._output.writeln("\r{} completed [{} files]".format(self._description,
+                                                                    self._total_size).ljust(90))
         elif self._output:
             self._output.writeln("]")
 
@@ -167,7 +164,7 @@ def open_binary(path, output, description):
         file_wrapped = FileWrapper(file_handler, output, description)
         yield file_wrapped
         file_wrapped.pb_close()
-        if not output.is_terminal:
+        if output and not output.is_terminal:
             output.writeln("\n")
 
 

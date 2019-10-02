@@ -195,8 +195,8 @@ class CmdUpload(object):
         # FIXME: because the recipe can have one and the package a different one
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
                                    reference=ref, remote=recipe_remote)
-
-        self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
+        self._user_io.out.info(("\rUploading %s to remote '%s'" %
+                                (str(ref), recipe_remote.name)).ljust(90))
         self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
@@ -207,9 +207,8 @@ class CmdUpload(object):
 
             def upload_package_index(index_pref):
                 index, pref = index_pref
-                msg = ("Uploading package %d/%d: %s to '%s'" % (index+1, total, str(pref.id),
-                                                                p_remote.name))
-                self._user_io.out.info(msg)
+                self._user_io.out.info(("\rUploading package %d/%d: %s to '%s'" %
+                                        (index+1, total, str(pref.id), p_remote.name)).ljust(90))
                 self._upload_package(pref, retry, retry_wait,
                                      integrity_check, policy, p_remote)
                 upload_recorder.add_package(pref, p_remote.name, p_remote.url)
@@ -404,11 +403,10 @@ class CmdUpload(object):
         return the_files, deleted
 
     def _upload_recipe_end_msg(self, ref, remote):
-        msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
+        msg = "\rUploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
         url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
         msg += ": %s" % url
-        self._user_io.out.writeln("")
-        self._user_io.out.info(msg)
+        self._user_io.out.info(msg.ljust(90))
 
     def _package_integrity_check(self, pref, files, package_folder):
         # If package has been modified remove tgz to regenerate it
