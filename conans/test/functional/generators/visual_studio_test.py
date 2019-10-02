@@ -122,8 +122,8 @@ class VisualStudioTest(unittest.TestCase):
         content = load(os.path.join(client.current_folder, "conanbuildinfo.props"))
         expected_content = """    <Link>
       <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>lib1.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Link>"""
         self.assertIn(expected_content, content.replace("\r", ""))

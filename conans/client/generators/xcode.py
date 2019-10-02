@@ -8,7 +8,7 @@ class XCodeGenerator(Generator):
     template = '''
 HEADER_SEARCH_PATHS = $(inherited) {include_dirs}
 LIBRARY_SEARCH_PATHS = $(inherited) {lib_dirs}
-OTHER_LDFLAGS = $(inherited) {linker_flags} {libs} {frameworks}
+OTHER_LDFLAGS = $(inherited) {linker_flags} {libs} {system_deps} {frameworks}
 
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) {definitions}
 OTHER_CFLAGS = $(inherited) {c_compiler_flags}
@@ -31,6 +31,7 @@ FRAMEWORK_SEARCH_PATHS = $(inherited) {rootpaths} {framework_paths}
         self.rootpaths = " ".join('"%s"' % d.replace("\\", "/") for d in deps_cpp_info.rootpaths)
         self.frameworks = " ".join(format_frameworks(deps_cpp_info.frameworks, compiler="apple-clang"))
         self.framework_paths = " ".join(deps_cpp_info.framework_paths)
+        self.system_deps = " ".join(['-l%s' % lib for lib in deps_cpp_info.system_deps])
 
     @property
     def filename(self):

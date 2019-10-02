@@ -38,8 +38,8 @@ class VisualStudioGenerator(Generator):
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>{system_deps}%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>{system_deps}%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Lib>
