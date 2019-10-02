@@ -6,6 +6,7 @@ import sys
 import argparse
 import six
 from argparse import ArgumentError
+from difflib import get_close_matches
 
 from conans import __version__ as client_version
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
@@ -136,7 +137,7 @@ class Command(object):
         try:
             commands = self._commands()
             method = commands[args.command]
-            self._warn_python2()
+            self._warn_python_version()
             method(["--help"])
         except KeyError:
             raise ConanException("Unknown command '%s'" % args.command)
@@ -204,7 +205,7 @@ class Command(object):
                             help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
-        self._warn_python2()
+        self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
                         visual_versions=args.ci_appveyor_win,
@@ -283,7 +284,7 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
         args = parser.parse_args(*args)
-        self._warn_python2()
+        self._warn_python_version()
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
                                 args.options, args.env, args.remote, args.update,
                                 build_modes=args.build, test_build_folder=args.test_build_folder,
@@ -326,7 +327,7 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
-        self._warn_python2()
+        self._warn_python_version()
 
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
@@ -403,7 +404,7 @@ class Command(object):
                 raise ConanException("Use a full package reference (preferred) or the `--package`"
                                      " command argument, but not both.")
 
-        self._warn_python2()
+        self._warn_python_version()
         return self._conan.download(reference=reference, packages=packages_list,
                                     remote_name=args.remote, recipe=args.recipe)
 
@@ -508,11 +509,13 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
+        get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
+        subparsers.add_parser('home', help='Retrieve the Conan home directory')
+        install_subparser = subparsers.add_parser('install', help='Install a full configuration '
+                                                                  'from a local or remote zip file')
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
-        get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
-        install_subparser = subparsers.add_parser('install', help='install a full configuration '
-                                                                  'from a local or remote zip file')
+
         rm_subparser.add_argument("item", help="Item to remove")
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         set_subparser.add_argument("item", help="'item=value' to set")
@@ -547,6 +550,10 @@ class Command(object):
             return self._conan.config_get(args.item)
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
+        elif args.subcommand == "home":
+            conan_home = self._conan.config_home()
+            self._out.info(conan_home)
+            return conan_home
         elif args.subcommand == "install":
             verify_ssl = get_bool_from_text(args.verify_ssl)
             return self._conan.config_install(args.item, verify_ssl, args.type, args.args,
@@ -710,7 +717,7 @@ class Command(object):
         except ConanException:
             pass
 
-        self._warn_python2()
+        self._warn_python_version()
         return self._conan.source(args.path, args.source_folder, args.install_folder)
 
     def build(self, *args):
@@ -754,7 +761,7 @@ class Command(object):
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         args = parser.parse_args(*args)
 
-        self._warn_python2()
+        self._warn_python_version()
 
         if args.build or args.configure or args.install or args.test:
             build, config, install, test = (bool(args.build), bool(args.configure),
@@ -809,7 +816,7 @@ class Command(object):
         except ConanException:
             pass
 
-        self._warn_python2()
+        self._warn_python_version()
         return self._conan.package(path=args.path,
                                    build_folder=args.build_folder,
                                    package_folder=args.package_folder,
@@ -849,7 +856,7 @@ class Command(object):
                                           "containing a conanfile.py or conanfile.txt file.")
         except ConanException:
             pass
-        self._warn_python2()
+        self._warn_python_version()
         return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
@@ -900,7 +907,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        self._warn_python2()
+        self._warn_python_version()
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
         cwd = os.getcwd()
@@ -951,7 +958,7 @@ class Command(object):
                             "Lockfile will be updated with the exported package")
 
         args = parser.parse_args(*args)
-        self._warn_python2()
+        self._warn_python_version()
         name, version, user, channel, _ = get_reference_fields(args.reference,
                                                                user_channel_input=True)
 
@@ -997,7 +1004,7 @@ class Command(object):
                             help='Remove system_reqs folders')
         args = parser.parse_args(*args)
 
-        self._warn_python2()
+        self._warn_python_version()
 
         if args.packages is not None and args.query:
             raise ConanException("'-q' and '-p' parameters can't be used at the same time")
@@ -1078,7 +1085,7 @@ class Command(object):
             if args.all:
                 raise ConanException("'--all' argument cannot be used together with full reference")
 
-        self._warn_python2()
+        self._warn_python_version()
 
         return self._conan.copy(reference=reference, user_channel=args.user_channel,
                                 force=args.force, packages=packages_list or args.all)
@@ -1348,7 +1355,7 @@ class Command(object):
             raise ConanException("'--skip-upload' argument cannot be used together "
                                  "with '--no-overwrite'")
 
-        self._warn_python2()
+        self._warn_python_version()
 
         if args.force:
             policy = UPLOAD_POLICY_FORCE
@@ -1449,6 +1456,11 @@ class Command(object):
         subparsers.add_parser('clean', help="Clean the list of remotes and all "
                                             "recipe-remote associations")
 
+        parser_enable = subparsers.add_parser('enable', help='Enable a remote')
+        parser_enable.add_argument('remote', help='Name of the remote')
+        parser_disable = subparsers.add_parser('disable', help='Disable a remote')
+        parser_disable.add_argument('remote', help='Name of the remote')
+
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
@@ -1491,6 +1503,10 @@ class Command(object):
             return self._conan.remote_update_pref(package_reference, remote_name)
         elif args.subcommand == "clean":
             return self._conan.remote_clean()
+        elif args.subcommand == "enable":
+            return self._conan.remote_set_disabled_state(remote_name, False)
+        elif args.subcommand == "disable":
+            return self._conan.remote_set_disabled_state(remote_name, True)
 
     def profile(self, *args):
         """
@@ -1621,7 +1637,7 @@ class Command(object):
         parser.add_argument('target', help='Target reference. e.g.: mylib/1.12@user/channel')
         args = parser.parse_args(*args)
 
-        self._warn_python2()
+        self._warn_python_version()
 
         self._conan.export_alias(args.reference, args.target)
 
@@ -1689,7 +1705,7 @@ class Command(object):
         subparsers.add_parser('list', help='List packages in editable mode')
 
         args = parser.parse_args(*args)
-        self._warn_python2()
+        self._warn_python_version()
 
         if args.subcommand == "add":
             self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
@@ -1740,7 +1756,7 @@ class Command(object):
                                       lockfile=False)
 
         args = parser.parse_args(*args)
-        self._warn_python2()
+        self._warn_python_version()
 
         if args.subcommand == "update-lock":
             self._conan.update_lock(args.old_lockfile, args.new_lockfile)
@@ -1825,13 +1841,40 @@ class Command(object):
                     result[method_name] = method
         return result
 
-    def _warn_python2(self):
-        if six.PY2:
+    def _print_similar(self, command):
+        """ looks for a similar commands and prints them if found
+        """
+        matches = get_close_matches(
+            word=command, possibilities=self._commands().keys(), n=5, cutoff=0.75)
+
+        if len(matches) == 0:
+            return
+
+        if len(matches) > 1:
+            self._out.writeln("The most similar commands are")
+        else:
+            self._out.writeln("The most similar command is")
+
+        for match in matches:
+            self._out.writeln("    %s" % match)
+
+        self._out.writeln("")
+
+    def _warn_python_version(self):
+        version = sys.version_info
+        if version.major == 2:
             self._out.writeln("")
             self._out.writeln("Python 2 will soon be deprecated. It is strongly "
-                              "recommended to use Python 3 with Conan:", front=Color.BRIGHT_YELLOW)
+                              "recommended to use Python >= 3.5 with Conan:",
+                              front=Color.BRIGHT_YELLOW)
             self._out.writeln("https://docs.conan.io/en/latest/installation.html"
                               "#python-2-deprecation-notice", front=Color.BRIGHT_YELLOW)
+            self._out.writeln("")
+        elif version.minor == 4:
+            self._out.writeln("")
+            self._out.writeln("Python 3.4 support has been dropped. It is strongly "
+                              "recommended to use Python >= 3.5 with Conan",
+                              front=Color.BRIGHT_YELLOW)
             self._out.writeln("")
 
     def run(self, *args):
@@ -1848,10 +1891,19 @@ class Command(object):
                 if command in ["-v", "--version"]:
                     self._out.success("Conan version %s" % client_version)
                     return False
-                self._warn_python2()
-                self._show_help()
+
+                self._warn_python_version()
+
                 if command in ["-h", "--help"]:
+                    self._show_help()
                     return False
+
+                self._out.writeln(
+                    "'%s' is not a Conan command. See 'conan --help'." % command)
+                self._out.writeln("")
+
+                self._print_similar(command)
+
                 raise ConanException("Unknown command %s" % str(exc))
             except IndexError:  # No parameters
                 self._show_help()

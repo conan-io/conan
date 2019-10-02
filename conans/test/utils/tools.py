@@ -10,6 +10,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import textwrap
 import uuid
 from collections import Counter, OrderedDict
 from contextlib import contextmanager
@@ -138,6 +139,12 @@ class TestingResponse(object):
     @property
     def status_code(self):
         return self.test_response.status_code
+
+    def json(self):
+        try:
+            return json.loads(self.test_response.content)
+        except:
+            raise ValueError("The response is not a JSON")
 
 
 class TestRequester(object):
@@ -641,13 +648,26 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1):
+                 revisions_enabled=None, cpu_count=1, default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        if default_server_user is not None:
+            if servers is not None:
+                raise Exception("Cannot define both 'servers' and 'default_server_user'")
+            if users is not None:
+                raise Exception("Cannot define both 'users' and 'default_server_user'")
+            if default_server_user is True:
+                server_users = {"user": "password"}
+                users = {"default": [("user", "password")]}
+            else:
+                server_users = default_server_user
+                users = {"default": list(default_server_user.items())}
+            server = TestServer(users=server_users)
+            servers = {"default": server}
 
         self.users = users
         if self.users is None:
@@ -673,6 +693,9 @@ servers["r2"] = TestServer()
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+    def load(self, filename):
+        return load(os.path.join(self.current_folder, filename))
 
     @property
     def cache(self):
@@ -864,14 +887,14 @@ class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"
 
     def __init__(self, *args, **kwargs):
-        if "users" not in kwargs:
+        if "users" not in kwargs and "default_server_user" not in kwargs:
             from collections import defaultdict
             kwargs["users"] = defaultdict(lambda: [("conan", "password")])
 
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
     def export(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""),
                  assert_error=assert_error)
@@ -879,7 +902,7 @@ class TurboTestClient(TestClient):
         return ref.copy_with_rev(rrev)
 
     def create(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else str(GenConanfile())
+        conanfile = str(conanfile) if conanfile else GenConanfile()
         self.save({"conanfile.py": conanfile})
         self.run("create . {} {} --json {}".format(ref.full_str(),
                                                    args or "", self.tmp_json_name),
@@ -905,6 +928,22 @@ class TurboTestClient(TestClient):
 
     def remove_all(self):
         self.run("remove '*' -f")
+
+    def export_pkg(self, ref, conanfile=None, args=None, assert_error=False):
+        conanfile = str(conanfile) if conanfile else GenConanfile()
+        self.save({"conanfile.py": conanfile})
+        self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
+                                                       args or "", self.tmp_json_name),
+                 assert_error=assert_error)
+        rrev = self.cache.package_layout(ref).recipe_revision()
+        json_path = os.path.join(self.current_folder, self.tmp_json_name)
+        data = json.loads(load(json_path))
+        if assert_error:
+            return None
+        package_id = data["installed"][0]["packages"][0]["id"]
+        package_ref = PackageReference(ref, package_id)
+        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):
         return self.cache.package_layout(ref).recipe_exists()
@@ -985,15 +1024,30 @@ class GenConanfile(object):
 
     def __init__(self):
         self._imports = ["from conans import ConanFile"]
+        self._name = None
+        self._version = None
         self._settings = []
         self._options = {}
+        self._generators = []
         self._default_options = {}
         self._package_files = {}
         self._package_files_env = {}
         self._build_messages = []
         self._scm = {}
+        self._requires = []
         self._requirements = []
+        self._build_requires = []
         self._revision_mode = None
+        self._package_info = {}
+        self._package_id_lines = []
+
+    def with_name(self, name):
+        self._name = name
+        return self
+
+    def with_version(self, version):
+        self._version = version
+        return self
 
     def with_revision_mode(self, revision_mode):
         self._revision_mode = revision_mode
@@ -1003,8 +1057,29 @@ class GenConanfile(object):
         self._scm = scm
         return self
 
-    def with_requirement(self, ref):
-        self._requirements.append(ref)
+    def with_generator(self, generator):
+        self._generators.append(generator)
+        return self
+
+    def with_require(self, ref, private=False, override=False):
+        return self.with_require_plain(ref.full_str(), private, override)
+
+    def with_require_plain(self, ref_str, private=False, override=False):
+        self._requires.append((ref_str, private, override))
+        return self
+
+    def with_requirement(self, ref, private=False, override=False):
+        return self.with_requirement_plain(ref.full_str(), private, override)
+
+    def with_requirement_plain(self, ref_str, private=False, override=False):
+        self._requirements.append((ref_str, private, override))
+        return self
+
+    def with_build_require(self, ref):
+        return self.with_build_require_plain(ref.full_str())
+
+    def with_build_require_plain(self, ref_str):
+        self._build_requires.append(ref_str)
         return self
 
     def with_import(self, i):
@@ -1039,12 +1114,44 @@ class GenConanfile(object):
         self._build_messages.append(msg)
         return self
 
+    def with_package_info(self, cpp_info=None, env_info=None):
+        assert isinstance(cpp_info, dict), "cpp_info ({}) expects dict".format(type(cpp_info))
+        assert isinstance(env_info, dict), "env_info ({}) expects dict".format(type(env_info))
+        if cpp_info:
+            self._package_info["cpp_info"] = cpp_info
+        if env_info:
+            self._package_info["env_info"] = env_info
+        return self
+
+    def with_package_id(self, line):
+        self._package_id_lines.append(line)
+        return self
+
+    @property
+    def _name_line(self):
+        if not self._name:
+            return ""
+        return "name = '{}'".format(self._name)
+
+    @property
+    def _version_line(self):
+        if not self._version:
+            return ""
+        return "version = '{}'".format(self._version)
+
     @property
     def _scm_line(self):
         if not self._scm:
             return ""
         line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
         return "scm = {%s}" % line
+
+    @property
+    def _generators_line(self):
+        if not self._generators:
+            return ""
+        line = ", ".join('"{}"'.format(generator) for generator in self._generators)
+        return "generators = {}".format(line)
 
     @property
     def _revision_mode_line(self):
@@ -1066,18 +1173,54 @@ class GenConanfile(object):
             return ""
         line = ", ".join('"%s": %s' % (k, v) for k, v in self._options.items())
         tmp = "options = {%s}" % line
-        if self._default_options:
-            line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
-            tmp += "\n    default_options = {%s}" % line
         return tmp
 
     @property
-    def _requirements_line(self):
+    def _default_options_line(self):
+        if not self._default_options:
+            return ""
+        line = ", ".join('"%s": %s' % (k, v) for k, v in self._default_options.items())
+        tmp = "default_options = {%s}" % line
+        return tmp
+
+    @property
+    def _build_requires_line(self):
+        if not self._build_requires:
+            return ""
+        line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
+        tmp = "build_requires = %s" % line
+        return tmp
+
+    @property
+    def _requires_line(self):
+        if not self._requires:
+            return ""
+        items = []
+        for ref, private, override in self._requires:
+            if private or override:
+                private_str = ", 'private'" if private else ""
+                override_str = ", 'override'" if override else ""
+                items.append('("{}"{}{})'.format(ref, private_str, override_str))
+            else:
+                items.append('"{}"'.format(ref))
+        tmp = "requires = ({}, )".format(", ".join(items))
+        return tmp
+
+    @property
+    def _requirements_method(self):
         if not self._requirements:
             return ""
-        line = ", ".join(['"{}"'.format(r.full_str()) for r in self._requirements])
-        tmp = "requires = %s" % line
-        return tmp
+
+        lines = []
+        for ref, private, override in self._requirements:
+            private_str = ", private=True" if private else ""
+            override_str = ", override=True" if override else ""
+            lines.append('        self.requires("{}"{}{})'.format(ref, private_str, override_str))
+
+        return """
+    def requirements(self):
+{}
+        """.format("\n".join(lines))
 
     @property
     def _package_method(self):
@@ -1109,12 +1252,49 @@ class GenConanfile(object):
 {}
     """.format("\n".join(lines))
 
+    @property
+    def _package_info_method(self):
+        if not self._package_info:
+            return ""
+        lines = []
+        if "cpp_info" in self._package_info:
+            for k, v in self._package_info["cpp_info"].items():
+                lines.append('        self.cpp_info.{} = {}'.format(k, str(v)))
+        if "env_info" in self._package_info:
+            for k, v in self._package_info["env_info"].items():
+                lines.append('        self.env_info.{} = {}'.format(k, str(v)))
+
+        return """
+    def package_info(self):
+{}
+        """.format("\n".join(lines))
+
+    @property
+    def _package_id_method(self):
+        if not self._package_id_lines:
+            return ""
+        lines = ['        {}'.format(line) for line in self._package_id_lines]
+        return """
+    def package_id(self):
+{}
+        """.format("\n".join(lines))
+
     def __repr__(self):
         ret = []
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
-        if self._requirements_line:
-            ret.append("    {}".format(self._requirements_line))
+        if self._name_line:
+            ret.append("    {}".format(self._name_line))
+        if self._version_line:
+            ret.append("    {}".format(self._version_line))
+        if self._generators_line:
+            ret.append("    {}".format(self._generators_line))
+        if self._requires_line:
+            ret.append("    {}".format(self._requires_line))
+        if self._requirements_method:
+            ret.append("    {}".format(self._requirements_method))
+        if self._build_requires_line:
+            ret.append("    {}".format(self._build_requires_line))
         if self._scm:
             ret.append("    {}".format(self._scm_line))
         if self._revision_mode_line:
@@ -1123,10 +1303,16 @@ class GenConanfile(object):
             ret.append("    {}".format(self._settings_line))
         if self._options_line:
             ret.append("    {}".format(self._options_line))
+        if self._default_options_line:
+            ret.append("    {}".format(self._default_options_line))
         if self._build_method:
             ret.append("    {}".format(self._build_method))
         if self._package_method:
             ret.append("    {}".format(self._package_method))
+        if self._package_info_method:
+            ret.append("    {}".format(self._package_info_method))
+        if self._package_id_lines:
+            ret.append("    {}".format(self._package_id_method))
         if len(ret) == 2:
             ret.append("    pass")
         return "\n".join(ret)

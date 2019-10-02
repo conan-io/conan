@@ -35,7 +35,7 @@ PkgA/0.1@user/testing"""
         text = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
         txt = ";".join(text.splitlines())
         self.assertIn("[libs];LibB;LibA", txt)
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        cmake = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
 
     def transitive_same_name_test(self):

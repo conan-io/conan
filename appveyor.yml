@@ -6,7 +6,6 @@
     environment:
       matrix:
         - PYTHON: "C:\\Python27"
-        - PYTHON: "C:\\Python34"
         - PYTHON: "C:\\Python35"
     build: false
     cache:

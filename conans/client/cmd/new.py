@@ -22,7 +22,7 @@ class {package_name}Conan(ConanFile):
     topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
-    default_options = "shared=False"
+    default_options = {{"shared": False}}
     generators = "cmake"
 
     def source(self):
@@ -91,7 +91,7 @@ class {package_name}Conan(ConanFile):
     topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
-    default_options = "shared=False"
+    default_options = {{"shared": False}}
     generators = "cmake"
     exports_sources = "src/*"
 

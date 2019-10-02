@@ -2,9 +2,8 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.conanfile import TestConanFile
-from conans.test.utils.tools import TestClient, TestServer,\
-    NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer, \
+    NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import set_dirty
 
 
@@ -12,7 +11,7 @@ class PackageIngrityTest(unittest.TestCase):
 
     def remove_locks_test(self):
         client = TestClient()
-        client.save({"conanfile.py": str(TestConanFile())})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
         self.assertNotIn('does not contain a number!', client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
@@ -33,7 +32,7 @@ class PackageIngrityTest(unittest.TestCase):
         test_server = TestServer([], users={"lasote": "mypass"})
         client = TestClient(servers={"default": test_server},
                             users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": str(TestConanFile())})
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)

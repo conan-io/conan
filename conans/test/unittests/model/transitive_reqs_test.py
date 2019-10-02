@@ -6,6 +6,7 @@ from mock import Mock
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import Remotes
 from conans.client.conf import default_settings_yml
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
@@ -21,24 +22,22 @@ from conans.model.requires import Requirements
 from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestBufferConanOutput,
-                                     test_processed_profile)
-from conans.client.cache.remote_registry import Remotes
-
-say_content = TestConanFile("Say", "0.1")
-say_content2 = TestConanFile("Say", "0.2")
-hello_content = TestConanFile("Hello", "1.2", requires=["Say/0.1@user/testing"])
-chat_content = TestConanFile("Chat", "2.3", requires=["Hello/1.2@user/testing"])
-bye_content = TestConanFile("Bye", "0.1", requires=["Say/0.1@user/testing"])
-bye_content2 = TestConanFile("Bye", "0.2", requires=["Say/0.2@user/testing"])
-
+                                     test_processed_profile, GenConanfile)
 
 hello_ref = ConanFileReference.loads("Hello/1.2@user/testing")
 say_ref = ConanFileReference.loads("Say/0.1@user/testing")
 say_ref2 = ConanFileReference.loads("Say/0.2@user/testing")
 chat_ref = ConanFileReference.loads("Chat/2.3@user/testing")
 bye_ref = ConanFileReference.loads("Bye/0.2@user/testing")
+
+
+say_content = GenConanfile().with_name("Say").with_version("0.1")
+say_content2 = GenConanfile().with_name("Say").with_version("0.2")
+hello_content = GenConanfile().with_name("Hello").with_version("1.2").with_require(say_ref)
+chat_content = GenConanfile().with_name("Chat").with_version("2.3").with_require(hello_ref)
+bye_content = GenConanfile().with_name("Bye").with_version("0.1").with_require(say_ref)
+bye_content2 = GenConanfile().with_name("Bye").with_version("0.2").with_require(say_ref2)
 
 
 def _get_nodes(graph, name):
@@ -437,7 +436,7 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(bye_ref, bye_content2)
         deps_graph = self.build_graph(chat_content)
 
-        self.assertIn("Hello/1.2@user/testing requirement Say/0.1@user/testing overridden by "
+        self.assertIn("Hello/1.2@user/testing: requirement Say/0.1@user/testing overridden by "
                       "your conanfile to Say/0.2@user/testing", self.output)
         self.assertNotIn("Conflict", self.output)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -1090,9 +1089,9 @@ class HelloConan(ConanFile):
         zlib_ref = ConanFileReference.loads("Zlib/0.1@user/testing")
         png_ref = ConanFileReference.loads("png/0.1@user/testing")
         base_ref = ConanFileReference.loads("Base/0.1@user/testing")
-        self.retriever.save_recipe(zlib_ref, TestConanFile("ZLib", "0.1"))
-        self.retriever.save_recipe(base_ref, TestConanFile("Base", "0.1"))
-        self.retriever.save_recipe(png_ref, TestConanFile("png", "0.1"))
+        self.retriever.save_recipe(zlib_ref, GenConanfile().with_name("ZLib").with_version("0.1"))
+        self.retriever.save_recipe(base_ref, GenConanfile().with_name("Base").with_version("0.1"))
+        self.retriever.save_recipe(png_ref, GenConanfile().with_name("png").with_version("0.1"))
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
 
@@ -1100,8 +1099,9 @@ class HelloConan(ConanFile):
     Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
     New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
-            self.build_graph(TestConanFile("Chat", "2.3", requires=["Say/0.1@user/testing",
-                                                                    "Hello/1.2@user/testing"]))
+            self.build_graph(GenConanfile().with_name("Chat").with_version("2.3")
+                                           .with_require(say_ref)
+                                           .with_require(hello_ref))
             self.assert_(False, "Exception not thrown")
         except ConanException as e:
             self.assertEqual(str(e), expected)
@@ -1496,7 +1496,7 @@ class LibDConan(ConanFile):
 
         with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing"):
             self.build_graph(self.consumer_content)
-        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overridden by "
+        self.assertIn("LibB/0.1@user/testing: requirement LibA/0.1@user/testing overridden by "
                       "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
         self.assertEqual(1, str(self.output).count("LibA requirements()"))
         self.assertEqual(1, str(self.output).count("LibA configure()"))
@@ -1543,14 +1543,16 @@ class LibDConan(ConanFile):
         then, the other downstream is discarded there, no need to propagate twice
         upstream
         """
+        libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
-        self.retriever.save_recipe(libd_ref, TestConanFile("LibD", "0.1",
-                                                           requires=["LibB/0.1@user/testing"],
-                                                           default_options="LibA:shared=True"))
         libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
-        self.retriever.save_recipe(libc_ref, TestConanFile("LibC", "0.1",
-                                                           requires=["LibB/0.1@user/testing"],
-                                                           default_options="LibA:shared=False"))
+
+        self.retriever.save_recipe(libd_ref, GenConanfile().with_name("LibD").with_version("0.1")
+                                                           .with_require(libb_ref)
+                                                           .with_default_option("LibA:shared", True))
+        self.retriever.save_recipe(libc_ref, GenConanfile().with_name("LibC").with_version("0.1")
+                                                           .with_require(libb_ref)
+                                                           .with_default_option("LibA:shared", False))
 
         with six.assertRaisesRegex(self, ConanException,
                                    "LibD/0.1@user/testing tried to change LibB/0.1@user/testing "

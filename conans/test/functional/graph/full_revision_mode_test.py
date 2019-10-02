@@ -1,13 +1,16 @@
 import unittest
 from textwrap import dedent
 
-from conans.test.utils.tools import TestClient
-from conans.test.utils.conanfile import TestConanFile
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class FullRevisionModeTest(unittest.TestCase):
 
     def recipe_revision_mode_test(self):
+        liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
+        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
+
         clienta = TestClient()
         clienta.run("config set general.default_package_id_mode=recipe_revision_mode")
         conanfilea = dedent("""
@@ -23,13 +26,13 @@ class FullRevisionModeTest(unittest.TestCase):
         clienta.run("create . liba/0.1@user/testing")
 
         clientb = TestClient(cache_folder=clienta.cache_folder)
-        clientb.save({"conanfile.py": str(TestConanFile("libb", "0.1",
-                                                        requires=["liba/0.1@user/testing"]))})
+        clientb.save({"conanfile.py": GenConanfile().with_name("libb").with_version("0.1")
+                                                    .with_require(liba_ref)})
         clientb.run("create . user/testing")
 
         clientc = TestClient(cache_folder=clienta.cache_folder)
-        clientc.save({"conanfile.py": str(TestConanFile("libc", "0.1",
-                                                        requires=["libb/0.1@user/testing"]))})
+        clientc.save({"conanfile.py": GenConanfile().with_name("libc").with_version("0.1")
+                                                    .with_require(libb_ref)})
         clientc.run("install . user/testing")
 
         # Do a minor change to the recipe, it will change the recipe revision

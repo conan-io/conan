@@ -70,7 +70,8 @@ set_property(TARGET {name}::{name}
         ret = {}
         build_type = self.conanfile.settings.get_safe("build_type")
         build_type_suffix = "_{}".format(build_type.upper()) if build_type else ""
-        for depname, cpp_info in self.deps_build_info.dependencies:
+        for _, cpp_info in self.deps_build_info.dependencies:
+            depname = cpp_info.name
             deps = DepsCppCmake(cpp_info)
             ret["{}Config.cmake".format(depname)] = self._find_for_dep(depname, cpp_info)
 

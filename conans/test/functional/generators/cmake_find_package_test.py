@@ -1,6 +1,7 @@
+import platform
+import six
 import textwrap
 import unittest
-import six
 
 from nose.plugins.attrib import attr
 
@@ -250,3 +251,49 @@ target_link_libraries(say_hello helloHello2)
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("-- Library sys1 not found in package, might be system one", client.out)
         self.assertIn("Target libs: sys1", client.out)
+
+    @unittest.skipUnless(platform.system() == "Darwin", "Requires Apple Frameworks")
+    def cmake_find_package_frameworks_test(self):
+        conanfile = """from conans import ConanFile, tools
+class Test(ConanFile):
+    name = "Test"
+    version = "0.1"
+
+    def package_info(self):
+        self.cpp_info.frameworks.append("Foundation")
+    """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . user/channel")
+
+        conanfile = """from conans import ConanFile, tools, CMake
+class Consumer(ConanFile):
+    name = "consumer"
+    version = "0.1"
+    requires = "Test/0.1@user/channel"
+    generators = "cmake_find_package"
+    exports_sources = "CMakeLists.txt"
+    settings = "os", "arch", "compiler"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+
+    """
+        cmakelists = """
+project(consumer)
+cmake_minimum_required(VERSION 3.1)
+find_package(Test)
+message("Libraries to Link: ${Test_LIBS}")
+message("Version: ${Test_VERSION}")
+
+get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
+message("Target libs: ${tmp}")
+"""
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+        client.run("create . user/channel --build missing")
+        six.assertRegex(self, str(client.out), "-- Library .*Foundation\\.framework not "
+                                               "found in package, might be system one")
+        six.assertRegex(self, str(client.out), "Libraries to Link: .*Foundation\\.framework")
+        six.assertRegex(self, str(client.out), "Target libs: .*Foundation\\.framework")
+        self.assertIn("Version: 0.1", client.out)
