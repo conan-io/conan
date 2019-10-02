@@ -4,6 +4,7 @@ import tarfile
 import time
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
+import traceback
 
 from conans.util import progress_bar
 from conans.client.remote_manager import is_package_snapshot_complete
@@ -75,6 +76,7 @@ class CmdUpload(object):
         self._hook_manager = hook_manager
         self._num_threads = 1
         self._upload_thread_pool = None
+        self._exceptions_list = []
 
     def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
@@ -90,14 +92,22 @@ class CmdUpload(object):
             self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):
-                ref, conanfile, prefs = ref_conanfile_prefs
-                self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
-                                 integrity_check, policy, remote, upload_recorder, remotes)
+                try:
+                    ref, conanfile, prefs = ref_conanfile_prefs
+                    self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
+                                     integrity_check, policy, remote, upload_recorder, remotes)
+                except ConanException as exc:
+                    self._exceptions_list.append(exc)
+                    raise
 
-            self._upload_thread_pool.map(upload_ref, [(ref, conanfile, prefs)
-                                                      for (ref, conanfile, prefs) in refs])
+            self._upload_thread_pool.map(upload_ref,
+                                         [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
+                                          refs])
             self._upload_thread_pool.close()
             self._upload_thread_pool.join()
+            for exception in self._exceptions_list:
+                raise exception
+
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
     def _collects_refs_to_upload(self, package_id, reference_or_pattern, confirm):
@@ -207,13 +217,18 @@ class CmdUpload(object):
             p_remote = recipe_remote
 
             def upload_package_index(index_pref):
-                index, pref = index_pref
-                self._user_io.out.info(("\rUploading package %d/%d: %s to '%s'" %
-                                        (index+1, total, str(pref.id),
-                                         p_remote.name)).ljust(progress_bar.LEFT_JUSTIFY_MESSAGE))
-                self._upload_package(pref, retry, retry_wait,
-                                     integrity_check, policy, p_remote)
-                upload_recorder.add_package(pref, p_remote.name, p_remote.url)
+                try:
+                    index, pref = index_pref
+                    self._user_io.out.info(("\rUploading package %d/%d: %s to '%s'" %
+                                            (index + 1, total, str(pref.id),
+                                             p_remote.name)).ljust(
+                        progress_bar.LEFT_JUSTIFY_MESSAGE))
+                    self._upload_package(pref, retry, retry_wait,
+                                         integrity_check, policy, p_remote)
+                    upload_recorder.add_package(pref, p_remote.name, p_remote.url)
+                except ConanException as exc:
+                    self._exceptions_list.append(exc)
+                    raise
 
             self._upload_thread_pool.map_async(upload_package_index, [(index, pref) for index, pref
                                                                       in enumerate(prefs)])
