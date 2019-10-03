@@ -107,7 +107,8 @@ class Remotes(object):
     @classmethod
     def defaults(cls):
         result = Remotes()
-        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True, False)
+        result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True,
+                                                 False)
         return result
 
     def select(self, remote_name):
@@ -187,14 +188,13 @@ class Remotes(object):
             if fnmatch.fnmatch(remote.name, remote_name):
                 filtered_remotes.append(remote)
 
-        if not filtered_remotes and not "*" in remote_name:
-            raise NoRemoteAvailable("Remote '%s' not found in remotes" % (remote_name))
+        if not filtered_remotes and "*" not in remote_name:
+            raise NoRemoteAvailable("Remote '%s' not found in remotes" % remote_name)
 
         for remote in filtered_remotes:
             if remote.disabled == state:
                 continue
-            self._remotes[remote.name] = Remote(remote.name, remote.url,
-                                                remote.verify_ssl, state)
+            self._remotes[remote.name] = Remote(remote.name, remote.url, remote.verify_ssl, state)
 
     def get_remote(self, remote_name):
         # Returns the remote defined by the name, or the default if is None
