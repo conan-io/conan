@@ -109,6 +109,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
             set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
             find_package(Test)
+            message("System deps: ${Test_SYSTEM_DEPS}")
             message("Libraries to Link: ${Test_LIBS}")
             get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
             message("Target libs: ${tmp}")
@@ -120,6 +121,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             client.run_command('cmake --build .')
 
             library_name = "sys1d" if build_type == "Debug" else "sys1"
+            self.assertIn("System deps: %s" % library_name, client.out)
             self.assertIn("Libraries to Link: %s" % library_name, client.out)
             self.assertIn("-- Library %s not found in package, might be system one" % library_name,
                           client.out)
