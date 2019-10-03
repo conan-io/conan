@@ -327,7 +327,7 @@ class BinaryInstaller(object):
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     if node.package_id == PACKAGE_ID_UNKNOWN:
-                        self._recompute_package_id(node, output, remotes)
+                        self._binaries_analyzer.reevaluate_node(node, remotes)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
@@ -377,17 +377,6 @@ class BinaryInstaller(object):
                 # So execute imports() before build, storing the list of copied_files
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
-
-    def _recompute_package_id(self, node, output, remotes):
-        assert node.binary is None
-        output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-        node._package_id = node.conanfile.info.package_id(update_prevs=True)
-        if node.graph_lock_node:
-            pass  # node.graph_lock_node.pref.package_id = node._package_id
-        output.info("Updated ID: %s" % node.package_id)
-        output.info("Analyzing binary availability for updated ID")
-        self._binaries_analyzer._evaluate_node(node, node.build_mode, node.update, remotes)
-        output.info("Binary for updated ID from: %s" % node.binary)
 
     def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
         pref = node.pref

@@ -1,4 +1,5 @@
 import unittest
+from collections import OrderedDict
 from textwrap import dedent
 
 from conans.model.ref import ConanFileReference
@@ -185,7 +186,7 @@ class PackageRevisionModeTest(unittest.TestCase):
         self.client.run("config set general.default_package_id_mode=package_revision_mode")
 
     def _generate_graph(self, dependencies, names_versions):
-        refs = {}
+        refs = OrderedDict()
         for name, version in names_versions:
             refs[name] = {"ref": ConanFileReference(name, version, None, None, None),
                           "conanfile": GenConanfile().with_name(name).with_version(version)}
@@ -277,18 +278,29 @@ class PackageRevisionModeTest(unittest.TestCase):
                           ("StationinterfaceRpm", "2.2.0")]
         self._generate_graph(dependencies, names_versions)
 
+        # Obtained with with create and reevaluate_node
+        ids = {"Log4Qt/0.3.0": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+               "MccApi/3.0.9": "484784c96c359def1283e7354eec200f9f9c5cd8",
+               "Util/0.3.5": "ba438cd9d192b914edb1669b3e0149822290f7d8",
+               "GenericSU/0.3.5": "c152f6964d097021edab4a508d8fa926bad976fb",
+               "ManagementModule/0.3.5": "c152f6964d097021edab4a508d8fa926bad976fb",
+               "StationInterfaceModule/0.13.0": "7184518aa4cb352204d8b00d5424d3e52e5819d8",
+               "PleniterGenericSuApp/0.1.8": "7184518aa4cb352204d8b00d5424d3e52e5819d8"}
+
+        rev = {"Log4Qt/0.3.0": "ce3408b2884c458b2bcdfeff92404c85",
+               "MccApi/3.0.9": "45aeac67977b1509a2d02f9a205baccb",
+               "Util/0.3.5": "f446fb8e24603baafacda66aadd2503f",
+               "GenericSU/0.3.5": "d5761d4d690ded2003c3cdab86e55d15",
+               "ManagementModule/0.3.5": "743935f4f5664b059d54d361a232bf94",
+               "StationInterfaceModule/0.13.0": "fc81fa83c3c134db6ba5af99fd8460cb",
+               "PleniterGenericSuApp/0.1.8": "7191e6b6eaf79194f1b083c8dc508518"}
+
         self.client.run("install StationinterfaceRpm.py --build missing")
-        self.assertIn("Log4Qt/0.3.0: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created",
-                      self.client.out)
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
-                      self.client.out)
-        self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
-                      self.client.out)
-        self.assertIn("GenericSU/0.3.5: Package '2d950a3e4c53e41a8a8946cc4d0eb8f5ef13510a' created",
-                      self.client.out)
-        self.assertIn("ManagementModule/0.3.5: Package '2d950a3e4c53e41a8a8946cc4d0eb8f5ef13510a' "
-                      "created", self.client.out)
-        self.assertIn("PleniterGenericSuApp/0.1.8: Package "
-                      "'69dda8da2b232bcff8af1579b0f37b34ef7b1829' created", self.client.out)
-        self.assertIn("StationInterfaceModule/0.13.0: Package "
-                      "'69dda8da2b232bcff8af1579b0f37b34ef7b1829' create", self.client.out)
+        for pkg, id_ in ids.items():
+            self.assertIn("%s: Package '%s' created" % (pkg, id_), self.client.out)
+        for pkg, r in rev.items():
+            self.assertIn("%s: Created package revision %s" % (pkg, r), self.client.out)
+
+        self.client.run("install StationinterfaceRpm.py")
+        for pkg, id_ in ids.items():
+            self.assertIn("%s:%s - Cache" % (pkg, id_), self.client.out)
