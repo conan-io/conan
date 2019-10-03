@@ -383,7 +383,7 @@ class BinaryInstaller(object):
         output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
         node._package_id = node.conanfile.info.package_id(update_prevs=True)
         if node.graph_lock_node:
-            pass # node.graph_lock_node.pref.package_id = node._package_id
+            pass  # node.graph_lock_node.pref.package_id = node._package_id
         output.info("Updated ID: %s" % node.package_id)
         output.info("Analyzing binary availability for updated ID")
         self._binaries_analyzer._evaluate_node(node, node.build_mode, node.update, remotes)
