@@ -2,6 +2,7 @@ import os
 import sys
 from collections import OrderedDict
 
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.manager import deps_install
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 
@@ -181,9 +182,9 @@ class ConanApp(object):
         self.python_requires = ConanPythonRequire(self.proxy, resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
 
-        self.graph_manager = GraphManager(self.out, self.cache,
-                                          self.remote_manager, self.loader, self.proxy,
-                                          resolver)
+        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
+        self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
+                                          self.proxy, resolver, self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
@@ -683,9 +684,9 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
         with get_env_context_manager(conanfile):
-            packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                    install_folder, self.app.hook_manager, conanfile_path, None,
-                                    local=True, copy_info=True)
+            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                        install_folder, self.app.hook_manager, conanfile_path, None,
+                                        local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

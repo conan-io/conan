@@ -5,10 +5,10 @@ import time
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
-from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
-    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import create_package, update_package_metadata
+from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import complete_recipe_sources, config_source
@@ -19,6 +19,7 @@ from conans.model.build_info import CppInfo
 from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
+from conans.model.graph_info import GraphInfo
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
@@ -28,7 +29,6 @@ from conans.util.files import (clean_dirty, is_dirty, make_read_only, mkdir, rmd
                                set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
-from conans.model.graph_info import GraphInfo
 
 
 def build_id(conan_file):
@@ -154,9 +154,9 @@ class _PackageBuilder(object):
             # Could be source or build depends no_copy_source
             source_folder = conanfile.source_folder
             install_folder = build_folder  # While installing, the infos goes to build folder
-            prev = create_package(conanfile, package_id, source_folder, build_folder,
-                                  package_folder, install_folder, self._hook_manager,
-                                  conanfile_path, pref.ref)
+            prev = run_package_method(conanfile, package_id, source_folder, build_folder,
+                                      package_folder, install_folder, self._hook_manager,
+                                      conanfile_path, pref.ref)
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 

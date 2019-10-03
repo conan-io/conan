@@ -3,18 +3,13 @@ import re
 import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
+from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-from conans.model.graph_lock import LOCKFILE
 
-def element_content(node):
-    if node.firstChild:
-        return node.firstChild.data
-    else:
-        return ""
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
 
@@ -76,6 +71,9 @@ xcode
         compiler = definition_group.getElementsByTagName("ClCompile")[0]
         linker = definition_group.getElementsByTagName("Link")[0]
 
+        def element_content(node):
+            return node.firstChild.data if node.firstChild else ""
+
         include_dirs = element_content(xmldoc.getElementsByTagName("ConanIncludeDirectories")[0])
         definitions = element_content(xmldoc.getElementsByTagName("ConanPreprocessorDefinitions")[0])
         lib_dirs = element_content(xmldoc.getElementsByTagName("ConanLibraryDirectories")[0])
@@ -92,8 +90,8 @@ xcode
         expected_include_dirs = os.path.join(replaced_path, "include")
 
         self.assertIn(expected_lib_dirs, lib_dirs)
-        self.assertEqual("hello.lib;%(AdditionalDependencies)", libs)
-        self.assertEqual("system_dep1.lib;%(AdditionalDependencies)", system_deps)
+        self.assertEqual("$(ConanLibraries)%(AdditionalDependencies)", libs)
+        self.assertEqual("$(ConanSystemDeps)%(AdditionalDependencies)", system_deps)
         self.assertEqual("", definitions)
         self.assertIn(expected_include_dirs, include_dirs)
 
