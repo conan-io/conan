@@ -8,7 +8,7 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter)
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANINFO
-from conans.util.files import mkdir, rmdir, save, load
+from conans.util.files import mkdir, rmdir, save
 from conans.util.log import logger
 
 
