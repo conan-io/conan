@@ -191,8 +191,8 @@ class OSInfo(object):
 
     @property
     def with_dnf(self):
-        return self.is_linux and self.linux_distro in \
-                                 ("fedora")
+        return self.is_linux and self.linux_distro in ("fedora") \
+            and which('dnf') is not None
 
     @property
     def with_pacman(self):
