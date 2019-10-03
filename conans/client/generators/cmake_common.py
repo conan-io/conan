@@ -323,7 +323,7 @@ macro(conan_split_version VERSION_STRING MAJOR MINOR)
 endmacro()
 
 macro(conan_error_compiler_version)
-    if("${CONAN_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
+    if(NOT "${CONAN_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
         message(FATAL_ERROR "Detected a mismatch between your conan profile settings and the compiler CMake has detected:\n"
                             "Compiler specified in your conan profile: ${CONAN_COMPILER}\n"
                             "Compiler detected in CMake: ${CMAKE_CXX_COMPILER_ID}\n"
