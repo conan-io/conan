@@ -323,9 +323,19 @@ macro(conan_split_version VERSION_STRING MAJOR MINOR)
 endmacro()
 
 macro(conan_error_compiler_version)
-    message(FATAL_ERROR "The installed dependencies are for compiler.version=${CONAN_COMPILER_VERSION},"
-        "but the compiler version CMake is using is ${VERSION_MAJOR}.${VERSION_MINOR}.\n"
-        "Please, check your default profile settings (conan profile show default) or your compiler (${CONAN_COMPILER})")
+    if("${CONAN_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
+        message(FATAL_ERROR "Detected a mismatch between your conan profile settings and the compiler CMake has detected:\n"
+                            "Compiler specified in your conan profile: ${CONAN_COMPILER}\n"
+                            "Compiler detected in CMake: ${CMAKE_CXX_COMPILER_ID}\n"
+                            "Please check your conan profile settings (conan profile show [default|your_profile_name])"
+        )
+    else()
+        message(FATAL_ERROR "Detected a mismatch for the compiler version between your conan profile settings and CMake: \n"
+                            "Compiler version specified in your conan profile: ${CONAN_COMPILER_VERSION}\n"
+                            "Compiler version detected in CMake: ${VERSION_MAJOR}.${VERSION_MINOR}\n"
+                            "Please check your conan profile settings (conan profile show [default|your_profile_name])"
+        )
+    endif()
 endmacro()
 
 set(_CONAN_CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
