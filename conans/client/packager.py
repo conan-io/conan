@@ -41,7 +41,7 @@ def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_m
     return prev
 
 
-def package_method_run(conanfile, package_id, source_folder, build_folder, package_folder,
+def run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
                        install_folder, hook_manager, conanfile_path, ref, local=False,
                        copy_info=False):
     """ calls the recipe "package()" method
