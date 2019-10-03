@@ -740,3 +740,25 @@ class Pkg(ConanFile):
 
         path = server.server_store.package(pref)
         self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
+
+    def upload_parallel_test(self):
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        client.save({"conanfile.py": GenConanfile()})
+
+        num_references = 15
+        for index in range(num_references):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
+            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
+                index,
+                NO_SETTINGS_PACKAGE_ID),
+                client.out)
+
+        client.run('upload lib* --parallel -c --all')
+        print(client.out)
+        for index in range(num_references):
+            self.assertIn("Uploaded conan recipe 'lib{}/1.0@user/channel' to 'default'".format(
+                index),
+                client.out)
