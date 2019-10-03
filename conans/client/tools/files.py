@@ -203,37 +203,6 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
-    def decode_clean(path, prefix):
-        path = path.decode("utf-8").replace("\\", "/")
-        if path.startswith(prefix):
-            path = path[2:]
-        return path
-
-    def strip_path(path):
-        tokens = path.split("/")
-        if len(tokens) > 1:
-            tokens = tokens[strip:]
-        path = "/".join(tokens)
-        if base_path:
-            path = os.path.join(base_path, path)
-        return path
-    # account for new and deleted files, upstream dep won't fix them
-    items = []
-    for p in patchset:
-        source = decode_clean(p.source, "a/")
-        target = decode_clean(p.target, "b/")
-        if "dev/null" in source:
-            target = strip_path(target)
-            hunks = [s.decode("utf-8") for s in p.hunks[0].text]
-            new_file = "".join(hunk[1:] for hunk in hunks)
-            save(target, new_file)
-        elif "dev/null" in target:
-            source = strip_path(source)
-            os.unlink(source)
-        else:
-            items.append(p)
-    patchset.items = items
-
     if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
