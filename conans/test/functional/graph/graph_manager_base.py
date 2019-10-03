@@ -43,9 +43,10 @@ class GraphManagerTest(unittest.TestCase):
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
         hook_manager = Mock()
-        recorder = Mock()
-        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager")
-        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager)
+        app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
+                              " binaries_analyzer")
+        app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
+                       binaries)
         return app
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):

@@ -326,12 +326,15 @@ class BinaryInstaller(object):
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
+                    if node.package_id == PACKAGE_ID_UNKNOWN:
+                        self._recompute_package_id(node, output, remotes)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node)
 
-    def _node_concurrently_installed(self, node, package_folder):
+    @staticmethod
+    def _node_concurrently_installed(node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
             return True
         elif node.binary == BINARY_UPDATE:
@@ -375,26 +378,23 @@ class BinaryInstaller(object):
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
+    def _recompute_package_id(self, node, output, remotes):
+        assert node.binary is None
+        output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
+        node._package_id = node.conanfile.info.package_id(update_prevs=True)
+        if node.graph_lock_node:
+            pass # node.graph_lock_node.pref.package_id = node._package_id
+        output.info("Updated ID: %s" % node.package_id)
+        output.info("Analyzing binary availability for updated ID")
+        self._binaries_analyzer._evaluate_node(node, node.build_mode, node.update, remotes)
+        output.info("Binary for updated ID from: %s" % node.binary)
+
     def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
         pref = node.pref
         assert pref.id, "Package-ID without value"
-
+        assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
-
-        if node.package_id == PACKAGE_ID_UNKNOWN:
-            assert node.binary is None
-            output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-            node._package_id = node.conanfile.info.package_id(update_prevs=True)
-            if node.graph_lock_node:
-                node.graph_lock_node.pref.package_id = node._package_id
-            output.info("Updated ID: %s" % node.package_id)
-            output.info("Analyzing binary availability for updated ID")
-            self._binaries_analyzer._evaluate_node(node, node.build_mode, node.update, remotes)
-            output.info("Binary for updated ID from: %s" % node.binary)
-            pref = node.pref
-
-        assert pref.id and pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
 
         package_folder = self._cache.package_layout(pref.ref, conanfile.short_paths).package(pref)
 
