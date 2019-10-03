@@ -108,7 +108,7 @@ class CmdUpload(object):
                 self._user_io.out.error(str(exception))
 
             if len(self._exceptions_list) > 0:
-                raise ConanException("Errors during upload process")
+                raise ConanException("Errors uploading some packages")
 
         logger.debug("UPLOAD: Time manager upload: %f" % (time.time() - t1))
 
