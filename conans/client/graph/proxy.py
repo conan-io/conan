@@ -58,26 +58,27 @@ class ConanProxy(object):
         selected_remote = remotes.selected or cur_remote
 
         check_updates = check_updates or update
-        # Recipe exists in disk, but no need to check updates
         requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
-        if requested_different_revision and not check_updates:
-            raise NotFoundException("The recipe in the local cache doesn't match the specified "
-                                    "revision. Use '--update' to check in the remote.")
+        if requested_different_revision:
+            if check_updates:
+                remote, new_ref = self._download_recipe(ref, output, remotes, selected_remote,
+                                                        recorder)
+                status = RECIPE_DOWNLOADED
+                return conanfile_path, status, remote, new_ref
+            else:
+                raise NotFoundException("The recipe in the local cache doesn't match the specified "
+                                        "revision. Use '--update' to check in the remote.")
 
-        if not requested_different_revision:
-            if not check_updates:
-                status = RECIPE_INCACHE
-                ref = ref.copy_with_rev(cur_revision)
-                return conanfile_path, status, cur_remote, ref
+        if not check_updates:
+            status = RECIPE_INCACHE
+            ref = ref.copy_with_rev(cur_revision)
+            return conanfile_path, status, cur_remote, ref
 
-            if not selected_remote:
-                status = RECIPE_NO_REMOTE
-                ref = ref.copy_with_rev(cur_revision)
-                return conanfile_path, status, None, ref
-        else:  # Requested different revision and with --update
-            remote, new_ref = self._download_recipe(ref, output, remotes, selected_remote, recorder)
-            status = RECIPE_DOWNLOADED
-            return conanfile_path, status, remote, new_ref
+        # Checking updates in the server
+        if not selected_remote:
+            status = RECIPE_NO_REMOTE
+            ref = ref.copy_with_rev(cur_revision)
+            return conanfile_path, status, None, ref
 
         try:  # get_recipe_manifest can fail, not in server
             upstream_manifest, ref = self._remote_manager.get_recipe_manifest(ref, selected_remote)

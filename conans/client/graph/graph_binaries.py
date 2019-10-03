@@ -162,7 +162,6 @@ class GraphBinariesAnalyzer(object):
             return
 
         ref, conanfile = node.ref, node.conanfile
-        output = conanfile.output
 
         # If it has lock
         locked = node.graph_lock_node

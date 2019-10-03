@@ -62,6 +62,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     installer = BinaryInstaller(app, recorder=recorder)
     installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
+    # GraphLock always != None here (because of graph_manager.load_graph)
     graph_info.graph_lock.update_check_graph(deps_graph, out)
 
     if manifest_folder:
