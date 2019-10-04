@@ -97,7 +97,7 @@ class CmdUpload(object):
                                      integrity_check, policy, remote, upload_recorder, remotes)
                 except ConanException as exc:
                     self._exceptions_list.append(exc)
-                    raise
+                    raise exc
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -230,7 +230,7 @@ class CmdUpload(object):
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
                 except ConanException as exc:
                     self._exceptions_list.append(exc)
-                    raise
+                    raise exc
 
             self._upload_thread_pool.map_async(upload_package_index, [(index, pref) for index, pref
                                                                       in enumerate(prefs)])
