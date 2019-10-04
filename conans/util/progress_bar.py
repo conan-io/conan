@@ -10,7 +10,7 @@ TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 
 
-class OutputAdapter(ConanOutput):
+class ProgressOutput(ConanOutput):
     def __init__(self, output):
         ConanOutput.__init__(self, output._stream, output._stream_err, output._color)
 

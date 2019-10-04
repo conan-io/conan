@@ -69,7 +69,7 @@ class CmdUpload(object):
     def __init__(self, cache, user_io, remote_manager, loader, hook_manager):
         self._cache = cache
         self._user_io = user_io
-        self._output = progress_bar.OutputAdapter(self._user_io.out)
+        self._output = progress_bar.ProgressOutput(self._user_io.out)
         self._remote_manager = remote_manager
         self._loader = loader
         self._hook_manager = hook_manager
