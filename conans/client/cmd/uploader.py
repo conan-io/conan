@@ -69,6 +69,7 @@ class CmdUpload(object):
     def __init__(self, cache, user_io, remote_manager, loader, hook_manager):
         self._cache = cache
         self._user_io = user_io
+        self._output = progress_bar.OutputAdapter(self._user_io.out)
         self._remote_manager = remote_manager
         self._loader = loader
         self._hook_manager = hook_manager
@@ -82,7 +83,7 @@ class CmdUpload(object):
                                                           query, package_id)
         # Do the job
         for remote, refs in refs_by_remote.items():
-            self._user_io.out.info("Uploading to remote '{}':".format(remote.name))
+            self._output.info("Uploading to remote '{}':".format(remote.name))
             for (ref, conanfile, prefs) in refs:
                 self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
                                  integrity_check, policy, remote, upload_recorder, remotes)
@@ -164,7 +165,7 @@ class CmdUpload(object):
                     if self._cache.config.revisions_enabled and ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
                         if ref.revision != rec_rev:
-                            self._user_io.out.warn("Skipping package '%s', it doesn't belong to the"
+                            self._output.warn("Skipping package '%s', it doesn't belong to the"
                                                    " current recipe revision" % package_id)
                             continue
                     package_revision = metadata.packages[package_id].revision
@@ -185,7 +186,7 @@ class CmdUpload(object):
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
                                    reference=ref, remote=recipe_remote)
 
-        self._user_io.out.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
+        self._output.info("Uploading %s to remote '%s'" % (str(ref), recipe_remote.name))
         self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
@@ -196,7 +197,7 @@ class CmdUpload(object):
                 p_remote = recipe_remote
                 msg = ("Uploading package %d/%d: %s to '%s'" % (index+1, total, str(pref.id),
                                                                 p_remote.name))
-                self._user_io.out.info(msg)
+                self._output.info(msg)
                 self._upload_package(pref, retry, retry_wait,
                                      integrity_check, policy, p_remote)
                 upload_recorder.add_package(pref, p_remote.name, p_remote.url)
@@ -235,7 +236,7 @@ class CmdUpload(object):
                                                remote, retry, retry_wait)
             self._upload_recipe_end_msg(ref, remote)
         else:
-            self._user_io.out.info("Recipe is up to date, upload skipped")
+            self._output.info("Recipe is up to date, upload skipped")
         duration = time.time() - t1
         log_recipe_upload(ref, duration, the_files, remote.name)
         self._hook_manager.execute("post_upload_recipe", conanfile_path=conanfile_path,
@@ -271,7 +272,7 @@ class CmdUpload(object):
                                                 retry_wait)
             logger.debug("UPLOAD: Time upload package: %f" % (time.time() - t1))
         else:
-            self._user_io.out.info("Package is up to date, upload skipped")
+            self._output.info("Package is up to date, upload skipped")
 
         duration = time.time() - t1
         log_package_upload(pref, duration, the_files, p_remote)
@@ -294,7 +295,7 @@ class CmdUpload(object):
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
             if is_dirty(tgz_path):
-                self._user_io.out.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
                 os.remove(tgz_path)
                 clean_dirty(tgz_path)
 
@@ -304,7 +305,7 @@ class CmdUpload(object):
         export_src_folder = self._cache.package_layout(ref).export_sources()
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
-                                           self._user_io.out)
+                                           self._output)
         return the_files
 
     def _compress_package_files(self, pref, integrity_check):
@@ -319,7 +320,7 @@ class CmdUpload(object):
                                  % (pref, pref.ref, pref.id))
         tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
         if is_dirty(tgz_path):
-            self._user_io.out.warn("%s: Removing %s, marked as dirty"
+            self._output.warn("%s: Removing %s, marked as dirty"
                                    % (str(pref), PACKAGE_TGZ_NAME))
             os.remove(tgz_path)
             clean_dirty(tgz_path)
@@ -336,7 +337,7 @@ class CmdUpload(object):
             logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
                          % (time.time() - t1))
 
-        the_files = _compress_package_files(files, symlinks, package_folder, self._user_io.out)
+        the_files = _compress_package_files(files, symlinks, package_folder, self._output)
         return the_files
 
     def _recipe_files_to_upload(self, ref, policy, the_files, remote, remote_manifest,
@@ -357,7 +358,7 @@ class CmdUpload(object):
                     remote_manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
                 except NotFoundException:
                     # This is weird, the manifest still not there, better upload everything
-                    self._user_io.out.warn("The remote recipe doesn't have the 'conanmanifest.txt' "
+                    self._output.warn("The remote recipe doesn't have the 'conanmanifest.txt' "
                                            "file and will be uploaded: '{}'".format(ref))
                     return files_to_upload, deleted
 
@@ -391,22 +392,22 @@ class CmdUpload(object):
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
         url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
         msg += ": %s" % url
-        self._user_io.out.writeln("")
-        self._user_io.out.info(msg)
+        self._output.writeln("")
+        self._output.info(msg)
 
     def _package_integrity_check(self, pref, files, package_folder):
         # If package has been modified remove tgz to regenerate it
-        self._user_io.out.rewrite_line("Checking package integrity...")
+        self._output.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
         layout = self._cache.package_layout(pref.ref, short_paths=None)
         read_manifest, expected_manifest = layout.package_manifests(pref)
 
         if read_manifest != expected_manifest:
-            self._user_io.out.writeln("")
+            self._output.writeln("")
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
-                self._user_io.out.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
                                        % (fname, h1, h2))
 
             if PACKAGE_TGZ_NAME in files:
@@ -420,8 +421,8 @@ class CmdUpload(object):
             logger.error("Manifests doesn't match!\n%s" % error_msg)
             raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
         else:
-            self._user_io.out.rewrite_line("Package integrity OK!")
-        self._user_io.out.writeln("")
+            self._output.rewrite_line("Package integrity OK!")
+        self._output.writeln("")
 
     def _check_recipe_date(self, ref, remote, local_manifest):
         try:
@@ -440,23 +441,23 @@ class CmdUpload(object):
 
     def _print_manifest_information(self, remote_recipe_manifest, local_manifest, ref, remote):
         try:
-            self._user_io.out.info("\n%s" % ("-"*40))
-            self._user_io.out.info("Remote manifest:")
-            self._user_io.out.info(remote_recipe_manifest)
-            self._user_io.out.info("Local manifest:")
-            self._user_io.out.info(local_manifest)
+            self._output.info("\n%s" % ("-"*40))
+            self._output.info("Remote manifest:")
+            self._output.info(remote_recipe_manifest)
+            self._output.info("Local manifest:")
+            self._output.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
                 contents = load(self._cache.package_layout(ref).conanfile())
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
-                self._user_io.out.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
+                self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
                                                                        remote=remote)
                 endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
-                self._user_io.out.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
-            self._user_io.out.info("\n%s" % ("-"*40))
+                self._output.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
+            self._output.info("\n%s" % ("-"*40))
         except Exception as e:
-            self._user_io.out.info("Error printing information about the diff: %s" % str(e))
+            self._output.info("Error printing information about the diff: %s" % str(e))
 
 
 def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):
