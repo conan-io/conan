@@ -4,10 +4,25 @@ import time
 
 from tqdm import tqdm
 
+from conans.client.output import ConanOutput
+
 TIMEOUT_BEAT_SECONDS = 30
 TIMEOUT_BEAT_CHARACTER = '.'
 LEFT_JUSTIFY_DESC = 28
 LEFT_JUSTIFY_MESSAGE = 90
+
+
+class ProgressOutput(ConanOutput):
+    def __init__(self, output):
+        ConanOutput.__init__(self, output._stream, output._stream_err, output._color)
+
+    def _write(self, data, newline=False):
+        end = "\n" if newline else ""
+        tqdm.write(str(data), file=self._stream, end=end)
+
+    def _write_err(self, data, newline=False):
+        end = "\n" if newline else ""
+        tqdm.write(str(data), file=self._stream_err, end=end)
 
 
 class WriteProgress(object):
