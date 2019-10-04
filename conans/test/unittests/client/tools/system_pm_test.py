@@ -188,7 +188,7 @@ class SystemPackageToolTest(unittest.TestCase):
             runner.return_ok = True
             spt.install("a_package", force=False)
             self.assertEqual(runner.command_called,
-                             'dpkg-query -W -f=\'${Status}\' a_package | grep -q "ok installed"')
+                                 "grep-status --silent -X -F Status 'install ok installed' --and -F Package -X a_package")
 
             os_info.is_macos = True
             os_info.is_linux = False
@@ -334,8 +334,8 @@ class SystemPackageToolTest(unittest.TestCase):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | '
-                                         'grep -q "ok installed"'])
+            runner = RunnerMultipleMock([
+                "grep-status --silent -X -F Status 'install ok installed' --and -F Package -X another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
             spt.install(packages)
             self.assertEqual(2, runner.calls)

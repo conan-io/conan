@@ -1,5 +1,6 @@
 import os
 import sys
+import string
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
@@ -210,8 +211,17 @@ class AptTool(BaseTool):
              output=self._output)
 
     def installed(self, package_name):
-        exit_code = self._runner("dpkg-query -W -f='${Status}' %s | grep -q \"ok installed\""
-                                 % package_name, None)
+        words = string.rsplit(package_name, ":", 1)
+        package_name = words[0]
+        try:
+            architecture = words[1]
+        except IndexError:
+            architecture = None
+
+        exit_code = self._runner(
+            "grep-status --silent -X -F Status 'install ok installed' --and -F Package -X %s"
+            %  (package_name)
+            + ("" if (architecture is None) else " --and -F Architecture %s" % architecture), None)
         return exit_code == 0
 
     def get_package_name(self, package, arch, arch_names):
