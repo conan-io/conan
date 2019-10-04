@@ -120,10 +120,11 @@ class VisualStudioTest(unittest.TestCase):
         client.run("install conanfile_consumer.py")
 
         content = load(os.path.join(client.current_folder, "conanbuildinfo.props"))
-        expected_content = """    <Link>
-      <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>lib1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>sys1.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
-    </Link>"""
-        self.assertIn(expected_content, content.replace("\r", ""))
+        self.assertIn("<ConanLibraries>lib1.lib;</ConanLibraries>", content)
+        self.assertIn("<ConanSystemDeps>lib1.lib;</ConanSystemDeps>", content)
+        self.assertIn("<AdditionalLibraryDirectories>$(ConanLibraryDirectories)"
+                      "%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>", content)
+        self.assertIn("<AdditionalDependencies>$(ConanLibraries)%(AdditionalDependencies)"
+                      "</AdditionalDependencies>", content)
+        self.assertIn("<AdditionalDependencies>$(ConanSystemDeps)%(AdditionalDependencies)"
+                      "</AdditionalDependencies>", content)
