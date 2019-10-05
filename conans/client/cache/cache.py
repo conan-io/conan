@@ -71,6 +71,7 @@ class ClientCache(object):
         self._config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
+        self.short_paths_home = self.config.short_paths_home
         self._store_folder = self.config.storage_path or self.cache_folder
 
     def all_refs(self):
