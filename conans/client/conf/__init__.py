@@ -405,8 +405,12 @@ class ConanClientConfigParser(ConfigParser, object):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
             current_dir = os.path.dirname(self.filename)
-            if os.path.commonpath([current_dir]) == os.path.commonpath([current_dir, short_paths_home]):
-                raise ConanException("short_paths_home is the same as, or a subdirectory of, the Conan cache.")
+            try:
+                if current_dir == os.path.commonpath([current_dir, short_paths_home]):
+                    raise ConanException("short_paths_home is the same as, or a subdirectory of, the Conan cache.")
+            except ValueError:
+                # os.path.commonpath() will raise a ValueError if the paths do not have the same root drive
+                pass
         return short_paths_home
 
     @property
