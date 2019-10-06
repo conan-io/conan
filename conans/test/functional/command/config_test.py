@@ -108,5 +108,5 @@ class ConfigTest(unittest.TestCase):
         cache_folder = os.path.join(temp_folder(), "custom")
         with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
             client = TestClient(cache_folder=cache_folder)
-            client.run("config home")
-            self.assertIn(cache_folder, client.out)
+            client.run("config home", assert_error=True)
+            self.assertIn("cannot be a subdirectory of the conan cache", client.out)
