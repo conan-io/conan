@@ -24,7 +24,7 @@ class ProgressOutput(ConanOutput):
 
 
 class Progress(object):
-    def __init__(self, length, output, description, print_dot=False):
+    def __init__(self, length, output, description, print_dot):
         self._tqdm_bar = None
         self._total_length = length
         self._output = output

@@ -187,7 +187,7 @@ class FileDownloader(object):
             total_length = response.headers.get('content-length') or len(response.content)
             total_length = int(total_length)
             description = "Downloading {}".format(os.path.basename(file_path)) if file_path else None
-            progress = progress_bar.Progress(total_length, self.output, description)
+            progress = progress_bar.Progress(total_length, self.output, description, print_dot=False)
 
             chunk_size = 1024 if not file_path else 1024 * 100
             encoding = response.headers.get('content-encoding')
