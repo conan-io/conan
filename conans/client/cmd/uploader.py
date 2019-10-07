@@ -526,7 +526,6 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                 else:
                     with open(abs_path, 'rb') as file_handler:
                         tgz.addfile(tarinfo=info, fileobj=file_handler)
-                pg_file_list.update()
         tgz.close()
 
     duration = time.time() - t1

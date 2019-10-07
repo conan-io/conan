@@ -90,6 +90,7 @@ class FileWrapper(Progress):
 class ListWrapper(object):
     def __init__(self, files_list, output, desc=None):
         self._files_list = files_list
+        self._iterator = iter(self._files_list)
         self._last_progress = None
         self._i_file = 0
         self._output = output
@@ -120,10 +121,11 @@ class ListWrapper(object):
             self._output.writeln("]")
 
     def __iter__(self):
-        return self._files_list.__iter__()
+        return self
 
     def __next__(self):
-        return self._files_list.__iter__().__next__()
+        self.update()
+        return next(self._iterator)
 
 
 @contextmanager
