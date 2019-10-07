@@ -208,9 +208,8 @@ class CmdUpload(object):
         # FIXME: because the recipe can have one and the package a different one
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
                                    reference=ref, remote=recipe_remote)
-        self._output.info(("\rUploading %s to remote '%s'" %
-                                (str(ref),
-                                 recipe_remote.name)).ljust(progress_bar.LEFT_JUSTIFY_MESSAGE))
+        self._output.info(("\rUploading %s to remote '%s'" % (str(ref),
+                           recipe_remote.name)).ljust(progress_bar.LEFT_JUSTIFY_MESSAGE))
         self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
         upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
 
