@@ -68,7 +68,7 @@ class FileWrapper(Progress):
     def __init__(self, fileobj, output, description):
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        Progress.__init__(self, self.tell(), output, description, print_dot=True)
+        super(FileWrapper, self).__init__(self.tell(), output, description, print_dot=True)
         self.seek(0)
 
     def seekable(self):
