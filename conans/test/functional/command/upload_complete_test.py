@@ -17,7 +17,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import hello_conan_files, hello_source_files, temp_folder, \
     uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     MockedUserIO, TestBufferConanOutput)
+                                     MockedUserIO, TestBufferConanOutput, GenConanfile)
 from conans.util.files import load, mkdir, save
 
 myconan1 = """
@@ -55,6 +55,19 @@ class FailPairFilesUploader(BadConnectionUploader):
         self.counter_fail += 1
         if self.counter_fail % 2 == 1:
             raise ConnectionError("Pair file, error!")
+        else:
+            return super(BadConnectionUploader, self).put(*args, **kwargs)
+
+
+class FailOnReferencesUploader(BadConnectionUploader):
+    fail_on = ["lib1", "lib3"]
+
+    def __init__(self, *args, **kwargs):
+        super(BadConnectionUploader, self).__init__(*args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        if any(ref in args[0] for ref in self.fail_on):
+            raise ConnectionError("Connection fails with lib2 and lib4 references!")
         else:
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
@@ -252,6 +265,28 @@ class UploadTest(unittest.TestCase):
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
+
+    def upload_parallel_error_test(self):
+        """Cause an error in the transfer and see some message"""
+
+        # For each file will fail the first time and will success in the second one
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(requester_class=FailOnReferencesUploader,
+                            servers=servers, users={"default": [("user", "password")]})
+        client.save({"conanfile.py": GenConanfile()})
+
+        num_references = 4
+        for index in range(num_references):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
+            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
+                index,
+                NO_SETTINGS_PACKAGE_ID),
+                client.out)
+        client.run('user -p password -r default user')
+        client.run('upload lib* --parallel -c --all', assert_error=True)
+        self.assertEqual(str(client.out).count("Connection fails with lib2 and lib4 references!"), 8)
+        self.assertIn("Execute upload again to retry upload the failed files", client.out)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")

@@ -745,9 +745,7 @@ class Pkg(ConanFile):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("user", "password")]})
-
         client.save({"conanfile.py": GenConanfile()})
-
         num_references = 5
         for index in range(num_references):
             client.run('create . lib{}/1.0@user/channel'.format(index))
