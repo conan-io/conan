@@ -424,10 +424,10 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         msg = "Removing the local binary packages from different recipe revisions"
         if v1:
             self.assertNotIn(msg, client.out)
-            self.assertTrue(client.package_exists(pref_outdated.copy_clear_rev()))
+            self.assertTrue(client.package_exists(pref_outdated.copy_clear_revs()))
         else:
             self.assertIn(msg, client.out)
-            self.assertFalse(client.package_exists(pref_outdated.copy_clear_rev()))
+            self.assertFalse(client.package_exists(pref_outdated.copy_clear_revs()))
 
         self.assertTrue(client.package_exists(pref_ok))
 
@@ -492,18 +492,18 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         layout = self.c_v1.cache.package_layout(pref.ref.copy_clear_rev())
 
         # Assert pref (outdated) is in the cache
-        self.assertTrue(layout.package_exists(pref.copy_clear_rev()))
+        self.assertTrue(layout.package_exists(pref.copy_clear_revs()))
 
         # Assert pref2 is also in the cache
-        self.assertTrue(layout.package_exists(pref2.copy_clear_rev()))
+        self.assertTrue(layout.package_exists(pref2.copy_clear_revs()))
 
         self.c_v1.run("remove {} --outdated -f".format(pref.ref))
 
         # Assert pref (outdated) is not in the cache anymore
-        self.assertFalse(layout.package_exists(pref.copy_clear_rev()))
+        self.assertFalse(layout.package_exists(pref.copy_clear_revs()))
 
         # Assert pref2 is in the cache
-        self.assertTrue(layout.package_exists(pref2.copy_clear_rev()))
+        self.assertTrue(layout.package_exists(pref2.copy_clear_revs()))
 
     @parameterized.expand([(True,), (False,)])
     def test_remove_oudated_packages_remote(self, v1):

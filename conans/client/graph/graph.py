@@ -284,7 +284,7 @@ class DepsGraph(object):
             new_level = []
             for n in level:
                 if n.binary == BINARY_BUILD and n.pref not in total_prefs:
-                    new_level.append((n.id, n.pref.copy_with_revs(n.pref.ref.revision, None)))
+                    new_level.append((n.id, n.pref.copy_clear_rev()))
                     total_prefs.add(n.pref)
             if new_level:
                 result.append(new_level)

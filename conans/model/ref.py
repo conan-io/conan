@@ -290,8 +290,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision)
 
     def copy_clear_rev(self):
-        ref = self.ref.copy_clear_rev()
-        return PackageReference(ref, self.id, revision=None)
+        return self.copy_with_revs(self.ref.revision, None)
 
     def copy_clear_revs(self):
         return self.copy_with_revs(None, None)
