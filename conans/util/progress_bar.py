@@ -12,7 +12,7 @@ TIMEOUT_BEAT_CHARACTER = '.'
 
 class ProgressOutput(ConanOutput):
     def __init__(self, output):
-        ConanOutput.__init__(self, output._stream, output._stream_err, output._color)
+        super(ProgressOutput, self).__init__(output._stream, output._stream_err, output._color)
 
     def _write(self, data, newline=False):
         end = "\n" if newline else ""
