@@ -90,6 +90,7 @@ class FileWrapper(Progress):
 class ListWrapper(object):
     def __init__(self, files_list, output, desc=None):
         self._files_list = files_list
+        self._total_length = len(self._files_list)
         self._iterator = iter(self._files_list)
         self._last_progress = None
         self._i_file = 0
@@ -106,7 +107,7 @@ class ListWrapper(object):
 
     def update(self):
         self._i_file = self._i_file + 1
-        units = min(50, int(50 * self._i_file / len(self._files_list)))
+        units = min(50, int(50 * self._i_file / self._total_length))
         if self._last_progress != units:  # Avoid screen refresh if nothing has change
             if self._output and not self._output.is_terminal:
                 self._output.write('=' * (units - (self._last_progress or 0)))
