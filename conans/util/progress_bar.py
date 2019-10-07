@@ -23,74 +23,37 @@ class ProgressOutput(ConanOutput):
         tqdm.write(str(data), file=self._stream_err, end=end)
 
 
-class WriteProgress(object):
-    def __init__(self, length, output, description):
+class Progress(object):
+    def __init__(self, length, output, description, print_dot=False):
         self._tqdm_bar = None
         self._total_length = length
         self._output = output
-        self._read_size = 0
+        self._processed_size = 0
         self._description = description
+        self._print_dot = print_dot
+        if self._print_dot:
+            self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
-            self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description,
-                                  file=self._output, unit="B",
-                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
-                                  unit_divisor=1024)
+            self._tqdm_bar = tqdm(total=self._total_length, desc=self._description,
+                                  file=self._output, unit="B", leave=True, dynamic_ncols=False,
+                                  ascii=True, unit_scale=True, unit_divisor=1024)
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
             self._tqdm_bar.update(chunk_size)
-
-    def update(self, chunks, chunk_size=1):
-        for chunk in chunks:
-            yield chunk
-            read_size = len(chunk)
-            self._read_size += read_size
-            self.pb_update(read_size)
-
-        if self._total_length > self._read_size:
-            self.pb_update(self._total_length - self._read_size)
-
-        self.pb_close()
-        if self._output and not self._output.is_terminal:
-            self._output.writeln("\n")
-
-    def pb_close(self):
-        if self._tqdm_bar is not None:
-            self._tqdm_bar.close()
-
-
-class ReadProgress(object):
-    def __init__(self, length, output, description):
-        self._tqdm_bar = None
-        self._total_length = length
-        self._output = output
-        self._written_size = 0
-        self._description = description
-        self._last_time = time.time()
-        if self._output and self._output.is_terminal and self._description:
-            self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description,
-                                  file=self._output, unit="B",
-                                  leave=True, dynamic_ncols=False, ascii=True, unit_scale=True,
-                                  unit_divisor=1024)
-
-    def pb_update(self, chunk_size):
-        if self._tqdm_bar is not None:
-            self._tqdm_bar.update(chunk_size)
-        elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
+        elif self._print_dot and self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
             self._last_time = time.time()
             self._output.write(TIMEOUT_BEAT_CHARACTER)
 
     def update(self, chunks, chunk_size=1024):
         for chunk in chunks:
             yield chunk
-            data_read_size = len(chunk)
-            self._written_size += data_read_size
-            self.pb_update(data_read_size)
+            data_size = len(chunk)
+            self._processed_size += data_size
+            self.pb_update(data_size)
 
-        if self._total_length > self._written_size:
-            self.pb_update(self._total_length - self._written_size)
+        if self._total_length > self._processed_size:
+            self.pb_update(self._total_length - self._processed_size)
 
         self.pb_close()
         if self._output and not self._output.is_terminal:
@@ -101,11 +64,11 @@ class ReadProgress(object):
             self._tqdm_bar.close()
 
 
-class FileWrapper(ReadProgress):
+class FileWrapper(Progress):
     def __init__(self, fileobj, output, description):
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        ReadProgress.__init__(self, self.tell(), output, description)
+        Progress.__init__(self, self.tell(), output, description, print_dot=True)
         self.seek(0)
 
     def seekable(self):
