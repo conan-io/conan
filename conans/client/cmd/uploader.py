@@ -223,9 +223,8 @@ class CmdUpload(object):
                 try:
                     index, pref = index_pref
                     self._output.info(("\rUploading package %d/%d: %s to '%s'" %
-                                            (index + 1, total, str(pref.id),
-                                             p_remote.name)).ljust(
-                        progress_bar.LEFT_JUSTIFY_MESSAGE))
+                                       (index + 1, total, str(pref.id),
+                                        p_remote.name)).ljust(progress_bar.LEFT_JUSTIFY_MESSAGE))
                     self._upload_package(pref, retry, retry_wait,
                                          integrity_check, policy, p_remote)
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
