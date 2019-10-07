@@ -98,7 +98,7 @@ class ListWrapper(object):
         if self._output and not self._output.is_terminal:
             output.write("[")
         elif self._output:
-            self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=self._output, unit="files",
+            self._tqdm_bar = tqdm(total=len(files_list), desc=desc, file=self._output, unit="files ",
                                   leave=True, dynamic_ncols=False, ascii=True)
 
     def description(self):
