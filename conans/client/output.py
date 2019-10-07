@@ -2,7 +2,6 @@ import os
 import six
 import sys
 from colorama import Fore, Style
-from tqdm import tqdm
 
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text
