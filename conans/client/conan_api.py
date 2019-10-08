@@ -253,17 +253,14 @@ class ConanAPIV1(object):
             ref = ConanFileReference.loads(path)
         except ConanException:
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
-            ref = os.path.basename(conanfile_path)
-            conanfile_class = self.app.loader.load_class(conanfile_path)
+            conanfile = self.app.loader.load_class(conanfile_path)
         else:
             update = True if remote_name else False
             result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
-            conanfile_class = self.app.loader.load_class(conanfile_path)
-            conanfile_class.name = ref.name
-            conanfile_class.version = ref.version
-
-        conanfile = conanfile_class(self.app.out, None, repr(ref))
+            conanfile = self.app.loader.load_class(conanfile_path)
+            conanfile.name = ref.name
+            conanfile.version = ref.version
 
         result = OrderedDict()
         if not attributes:
@@ -1045,8 +1042,7 @@ class ConanAPIV1(object):
         # Do not allow to override an existing package
         alias_conanfile_path = self.app.cache.package_layout(ref).conanfile()
         if os.path.exists(alias_conanfile_path):
-            conanfile_class = self.app.loader.load_class(alias_conanfile_path)
-            conanfile = conanfile_class(self.app.out, None, repr(ref))
+            conanfile = self.app.loader.load_class(alias_conanfile_path)
             if not getattr(conanfile, 'alias', None):
                 raise ConanException("Reference '{}' is already a package, remove it before "
                                      "creating and alias with the same name".format(ref))

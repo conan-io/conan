@@ -29,10 +29,11 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
         self.cached_conanfiles = {}
 
-    def load_class(self, conanfile_path, lock_python_requires=None):
+    def load_class(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
+                   display=""):
         cached = self.cached_conanfiles.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            return cached[0]
+            return cached[0](self._output, self._runner, display, user, channel)
 
         if lock_python_requires is not None:
             self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
@@ -46,7 +47,8 @@ class ConanFileLoader(object):
 
             conanfile.conan_data = self._load_data(conanfile_path)
 
-            return conanfile
+            conanfile_object = conanfile(self._output, self._runner, display, user, channel)
+            return conanfile_object
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
@@ -64,28 +66,29 @@ class ConanFileLoader(object):
         return data or {}
 
     def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
-        conanfile = self.load_class(conanfile_path, lock_python_requires)
+        conanfile = self.load_class(conanfile_path, lock_python_requires, user, channel)
 
         # Export does a check on existing name & version
-        if "name" in conanfile.__dict__:
-            if name and name != conanfile.name:
-                raise ConanException("Package recipe exported with name %s!=%s"
-                                     % (name, conanfile.name))
-        elif not name:
-            raise ConanException("conanfile didn't specify name")
-        else:
+        if name and conanfile.name and name != conanfile.name:
+            raise ConanException("Package recipe exported with name %s!=%s"
+                                 % (name, conanfile.name))
+        if name:
             conanfile.name = name
+        if not conanfile.name:
+            raise ConanException("conanfile didn't specify name")
 
-        if "version" in conanfile.__dict__:
-            if version and version != conanfile.version:
-                raise ConanException("Package recipe exported with version %s!=%s"
-                                     % (version, conanfile.version))
-        elif not version:
-            raise ConanException("conanfile didn't specify version")
-        else:
+        if version and conanfile.version and version != conanfile.version:
+            raise ConanException("Package recipe exported with version %s!=%s"
+                                 % (version, conanfile.version))
+        if version:
             conanfile.version = version
+        if not conanfile.version:
+            raise ConanException("conanfile didn't specify version")
+
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        return conanfile(self._output, self._runner, str(ref), ref.user, ref.channel)
+        conanfile.display_name = str(ref)
+        conanfile.output.scope = conanfile.display_name
+        return conanfile
 
     @staticmethod
     def _initialize_conanfile(conanfile, processed_profile):
@@ -96,6 +99,7 @@ class ConanFileLoader(object):
         if package_settings_values:
             pkg_settings = package_settings_values.get(conanfile.name)
             if pkg_settings is None:
+                # FIXME: This seems broken for packages without user/channel
                 ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
                                        conanfile._conan_user, conanfile._conan_channel)
                 for pattern, settings in package_settings_values.items():
@@ -110,24 +114,24 @@ class ConanFileLoader(object):
     def load_consumer(self, conanfile_path, processed_profile, name=None, version=None, user=None,
                       channel=None, test=None, lock_python_requires=None):
 
-        conanfile_class = self.load_class(conanfile_path, lock_python_requires)
-        if name and conanfile_class.name and name != conanfile_class.name:
-            raise ConanException("Package recipe name %s!=%s" % (name, conanfile_class.name))
-        if version and conanfile_class.version and version != conanfile_class.version:
+        conanfile = self.load_class(conanfile_path, lock_python_requires, user, channel)
+        if name and conanfile.name and name != conanfile.name:
+            raise ConanException("Package recipe name %s!=%s" % (name, conanfile.name))
+        if version and conanfile.version and version != conanfile.version:
             raise ConanException("Package recipe version %s!=%s"
-                                 % (version, conanfile_class.version))
-        conanfile_class.name = name or conanfile_class.name
-        conanfile_class.version = version or conanfile_class.version
+                                 % (version, conanfile.version))
+        conanfile.name = name or conanfile.name
+        conanfile.version = version or conanfile.version
         if test:
-            display_name = "%s (test package)" % str(test)
+            conanfile.display_name = "%s (test package)" % str(test)
         else:
-            ref = ConanFileReference(conanfile_class.name, conanfile_class.version, user, channel,
+            ref = ConanFileReference(conanfile.name, conanfile.version, user, channel,
                                      validate=False)
             if str(ref):
-                display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
+                conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
             else:
-                display_name = os.path.basename(conanfile_path)
-        conanfile = conanfile_class(self._output, self._runner, display_name, user, channel)
+                conanfile.display_name = os.path.basename(conanfile_path)
+        conanfile.output.scope = conanfile.display_name
         conanfile.in_local_cache = False
         try:
             self._initialize_conanfile(conanfile, processed_profile)
@@ -146,10 +150,11 @@ class ConanFileLoader(object):
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     def load_conanfile(self, conanfile_path, processed_profile, ref, lock_python_requires=None):
-        conanfile_class = self.load_class(conanfile_path, lock_python_requires)
-        conanfile_class.name = ref.name
-        conanfile_class.version = ref.version
-        conanfile = conanfile_class(self._output, self._runner, str(ref), ref.user, ref.channel)
+        conanfile = self.load_class(conanfile_path, lock_python_requires, ref.user, ref.channel,
+                                    str(ref))
+        conanfile.name = ref.name
+        conanfile.version = ref.version
+
         if processed_profile.dev_reference and processed_profile.dev_reference == ref:
             conanfile.develop = True
         try:
