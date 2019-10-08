@@ -67,23 +67,20 @@ class ConanFileLoader(object):
         conanfile = self.load_class(conanfile_path, lock_python_requires)
 
         # Export does a check on existing name & version
-        if "name" in conanfile.__dict__:
-            if name and name != conanfile.name:
-                raise ConanException("Package recipe exported with name %s!=%s"
-                                     % (name, conanfile.name))
-        elif not name:
-            raise ConanException("conanfile didn't specify name")
-        else:
+        if name and conanfile.name and name != conanfile.name:
+            raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
+        if name:
             conanfile.name = name
-
-        if "version" in conanfile.__dict__:
-            if version and version != conanfile.version:
-                raise ConanException("Package recipe exported with version %s!=%s"
-                                     % (version, conanfile.version))
-        elif not version:
-            raise ConanException("conanfile didn't specify version")
-        else:
+        if version and conanfile.version and version != conanfile.version:
+            raise ConanException("Package recipe exported with version %s!=%s"
+                                 % (version, conanfile.version))
+        if version:
             conanfile.version = version
+
+        if not conanfile.name:
+            raise ConanException("conanfile didn't specify name")
+        if not conanfile.version:
+            raise ConanException("conanfile didn't specify version")
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         return conanfile(self._output, self._runner, str(ref), ref.user, ref.channel)
 

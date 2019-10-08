@@ -423,6 +423,40 @@ class PkgTest(base.MyConanfileBase):
         self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
                                                     "other.txt")))
 
+    def reuse_user_channel_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class BasePkg(ConanFile):
+                name = "Base"
+                version = "1.1"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . lasote/testing")
+
+        reuse = textwrap.dedent("""
+            from conans import python_requires
+            base = python_requires("Base/1.1@lasote/testing")
+            class PkgTest(base.BasePkg):
+                pass
+            """)
+        client.save({"conanfile.py": reuse})
+        client.run("create . Pkg/0.1@lasote/testing", assert_error=True)
+        self.assertIn("ERROR: Package recipe exported with name Pkg!=Base", client.out)
+
+        reuse = textwrap.dedent("""
+            from conans import python_requires
+            base = python_requires("Base/1.1@lasote/testing")
+            class PkgTest(base.BasePkg):
+                name = "Pkg"
+                version = "0.1"
+            """)
+        client.save({"conanfile.py": reuse})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Created package ", client.out)
+        client.run("create . lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: Created package ", client.out)
+
     def reuse_exports_conflict_test(self):
         conanfile = """from conans import ConanFile
 class Base(ConanFile):
