@@ -84,7 +84,7 @@ set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{bu
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
-set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
+set(CONAN_LIBS{build_type} {deps.libs_and_system_deps} ${{CONAN_LIBS{build_type}}})
 set(CONAN_SYSTEM_DEPS{build_type} {deps.system_deps} ${{CONAN_SYSTEM_DEPS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
@@ -164,7 +164,9 @@ def generate_targets_section(dependencies):
     for _, dep_info in dependencies:
         dep_name = dep_info.name
         use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].name for d in dep_info.public_deps]
+        use_deps.extend(dep_info.system_deps)
         deps = "" if not use_deps else " ".join(use_deps)
+        print("deps:", deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 

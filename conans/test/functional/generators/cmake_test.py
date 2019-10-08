@@ -7,7 +7,8 @@ from nose.plugins.attrib import attr
 
 from conans import load
 from conans.client.tools import replace_in_file
-from conans.test.utils.tools import TestClient
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -136,10 +137,59 @@ CONAN_BASIC_SETUP()
 
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB lib1 sys1)", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB lib1)", content)
         self.assertIn("set(CONAN_SYSTEM_DEPS sys1 ${CONAN_SYSTEM_DEPS})", content)
         self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB sys1)", content)
 
         # Check target has libraries and system deps available
         client.run_command("cmake .")
         self.assertIn("Target libs: lib1;sys1;", client.out)
+
+    def targets_system_deps_test(self):
+        mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
+                                                           "system_deps": ["sys1"]},
+                                                 env_info={})
+        mylib_ref = ConanFileReference("mylib", "1.0", "us", "ch")
+
+        myotherlib = GenConanfile().with_package_info(cpp_info={"libs": ["lib2"],
+                                                                "system_deps": ["sys2"]},
+                                                      env_info={}).with_require(mylib_ref)
+        myotherlib_ref = ConanFileReference("myotherlib", "1.0", "us", "ch")
+
+        client = TurboTestClient()
+        client.create(mylib_ref, mylib)
+        client.create(myotherlib_ref, myotherlib)
+
+        consumer = textwrap.dedent("""
+                    import os
+                    from conans import ConanFile, CMake
+
+                    class Consumer(ConanFile):
+                        requires = "myotherlib/1.0@us/ch"
+                        generators = "cmake"
+                        settings = "os", "compiler", "arch", "build_type"
+                        exports_sources = ["CMakeLists.txt"]
+
+                        def build(self):
+                            cmake = CMake(self)
+                            cmake.configure()
+                            cmake.build()
+                        """)
+        cmakelists = textwrap.dedent("""
+                    cmake_minimum_required(VERSION 3.1)
+                    project(consumer CXX)
+                    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+                    conan_basic_setup(TARGETS)
+                    get_target_property(ml_tlibs CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
+                    get_target_property(mol_tlibs CONAN_PKG::myotherlib INTERFACE_LINK_LIBRARIES)
+                    message("mylib Target libs: ${ml_tlibs}")
+                    message("myotherlib Target libs: ${mol_tlibs}")
+                    """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create conanfile.py consumer/1.0@us/ch")
+        self.assertIn("mylib Target libs: "
+                      "lib1;lib11;$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG"
+                      ":MinSizeRel>:;>;$<$<CONFIG:Debug>:;>;sys1", client.out)
+        self.assertIn("myotherlib Target libs: lib2;$<$<CONFIG:Release>:;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>;"
+                      "CONAN_PKG::mylib;sys2", client.out)

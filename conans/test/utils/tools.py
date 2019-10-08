@@ -1040,6 +1040,7 @@ class GenConanfile(object):
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
+        self._exports_sources = []
 
     def with_name(self, name):
         self._name = name
@@ -1127,6 +1128,10 @@ class GenConanfile(object):
         self._package_id_lines.append(line)
         return self
 
+    def with_exports_sources(self, exports_sources):
+        self._exports_sources = exports_sources
+        return self
+
     @property
     def _name_line(self):
         if not self._name:
@@ -1205,6 +1210,13 @@ class GenConanfile(object):
                 items.append('"{}"'.format(ref))
         tmp = "requires = ({}, )".format(", ".join(items))
         return tmp
+
+    @property
+    def _exports_sources_line(self):
+        if not self._exports_sources:
+            return ""
+        line = ", ".join(['"{}"'.format(r) for r in self._exports_sources])
+        return "exports_sources = %s" % line
 
     @property
     def _requirements_method(self):
@@ -1291,6 +1303,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
             ret.append("    {}".format(self._requires_line))
+        if self._exports_sources_line:
+            ret.append("    {}".format(self._exports_sources_line))
         if self._requirements_method:
             ret.append("    {}".format(self._requirements_method))
         if self._build_requires_line:
