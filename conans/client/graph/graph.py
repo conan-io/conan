@@ -201,8 +201,6 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
-        # These are the nodes with pref (not including PREV) that have been evaluated
-        self.evaluated = {}  # {pref: [nodes]}
 
     def add_node(self, node):
         if not self.nodes:

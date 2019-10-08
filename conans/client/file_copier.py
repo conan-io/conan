@@ -67,6 +67,12 @@ class FileCopier(object):
         if symlinks is not None:
             links = symlinks
 
+        if os.path.isabs(src):
+            # Avoid repeatedly copying absolute paths
+            return self._copy(os.curdir, pattern, src, dst, links,
+                              ignore_case, excludes, keep_path,
+                              excluded_folders=[self._dst_folder])
+
         files = []
         for src_folder in self._src_folders:
             excluded = [self._dst_folder]
