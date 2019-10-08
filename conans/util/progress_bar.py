@@ -11,9 +11,6 @@ TIMEOUT_BEAT_CHARACTER = '.'
 LEFT_JUSTIFY_DESC = 28
 LEFT_JUSTIFY_MESSAGE = 90
 
-    def _write(self, data, newline=False):
-        end = "\n" if newline else ""
-        tqdm.write(str(data), file=self._stream, end=end)
 
 class ProgressOutput(ConanOutput):
     def __init__(self, output):
@@ -153,7 +150,7 @@ def open_binary(path, output, description):
         file_wrapped = FileWrapper(file_handler, output, description)
         yield file_wrapped
         file_wrapped.pb_close()
-        if output and not output.is_terminal:
+        if not output.is_terminal:
             output.writeln("\n")
 
 
