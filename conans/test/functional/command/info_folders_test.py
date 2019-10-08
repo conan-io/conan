@@ -114,7 +114,7 @@ class InfoFoldersTest(unittest.TestCase):
     @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
     def test_short_paths(self):
         cache_folder = temp_folder(False)
-        short_folder = os.path.join(cache_folder, ".cn")
+        short_folder = os.path.join(temp_folder(False), ".cn")
 
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
             client = TestClient(cache_folder=cache_folder)
@@ -156,7 +156,7 @@ class InfoFoldersTest(unittest.TestCase):
                                       % os.path.splitdrive(cache_folder)[0])
         if "NTFS" not in str(out):
             return
-        short_folder = os.path.join(cache_folder, ".cnacls")
+        short_folder = os.path.join(temp_folder(False), ".cnacls")
 
         self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists"
                          % short_folder)
@@ -203,7 +203,7 @@ class InfoFoldersTest(unittest.TestCase):
     def test_short_paths_folders(self):
         # https://github.com/conan-io/conan/issues/4612
         cache_folder = temp_folder(False)
-        short_folder = os.path.join(cache_folder, ".cn")
+        short_folder = os.path.join(temp_folder(False), ".cn")
 
         conanfile = dedent("""
             from conans import ConanFile
