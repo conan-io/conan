@@ -125,9 +125,10 @@ class ListWrapper(object):
         return self
 
     def __next__(self):
+        val = next(self._iterator)
         self.update()
-        return next(self._iterator)
-    
+        return val
+
     def next(self):
         return self.__next__()
 
