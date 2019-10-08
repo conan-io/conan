@@ -1,6 +1,8 @@
 import os
 import unittest
+import six
 
+from conans.errors import ConanException
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 from conans.test.utils.test_files import temp_folder
@@ -107,6 +109,5 @@ class ConfigTest(unittest.TestCase):
     def test_config_home_short_home_dir(self):
         cache_folder = os.path.join(temp_folder(), "custom")
         with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
-            client = TestClient(cache_folder=cache_folder)
-            client.run("config home", assert_error=True)
-            self.assertIn("cannot be a subdirectory of the conan cache", client.out)
+            with six.assertRaisesRegex(self, ConanException, "cannot be a subdirectory of the conan cache"):
+                TestClient(cache_folder=cache_folder)
