@@ -127,7 +127,9 @@ class ListWrapper(object):
     def __next__(self):
         self.update()
         return next(self._iterator)
-
+    
+    def next(self):
+        return self.__next__()
 
 @contextmanager
 def open_binary(path, output, description):
