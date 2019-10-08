@@ -225,12 +225,12 @@ You can run the actual tests like this:
     $ nosetests .
 
 
-There are a couple of test attributes defined, as ``slow``, or ``golang`` that you can use
+There are a couple of test attributes defined, as ``slow`` that you can use
 to filter the tests, and do not execute them:
 
 .. code-block:: bash
 
-    $ nosetests . -a !golang
+    $ nosetests . -a !slow
 
 A few minutes later it should print ``OK``:
 

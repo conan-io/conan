@@ -11,10 +11,13 @@ TIMEOUT_BEAT_CHARACTER = '.'
 LEFT_JUSTIFY_DESC = 28
 LEFT_JUSTIFY_MESSAGE = 90
 
+    def _write(self, data, newline=False):
+        end = "\n" if newline else ""
+        tqdm.write(str(data), file=self._stream, end=end)
 
 class ProgressOutput(ConanOutput):
     def __init__(self, output):
-        ConanOutput.__init__(self, output._stream, output._stream_err, output._color)
+        super(ProgressOutput, self).__init__(output._stream, output._stream_err, output._color)
 
     def _write(self, data, newline=False):
         end = "\n" if newline else ""
@@ -25,78 +28,40 @@ class ProgressOutput(ConanOutput):
         tqdm.write(str(data), file=self._stream_err, end=end)
 
 
-class WriteProgress(object):
-    def __init__(self, length, output, description):
+class Progress(object):
+    def __init__(self, length, output, description, print_dot):
         self._tqdm_bar = None
         self._total_length = length
         self._output = output
-        self._read_size = 0
+        self._processed_size = 0
         self._description = description
+        self._print_dot = print_dot
+        if self._print_dot:
+            self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
                                   desc=self._description.ljust(LEFT_JUSTIFY_DESC),
-                                  file=self._output, unit="B",
-                                  leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
-                                  unit_divisor=1024, position=self._bar_position)
+                                  file=self._output, unit="B", leave=False, dynamic_ncols=False,
+                                  ascii=True, unit_scale=True, unit_divisor=1024,
+                                  position=self._bar_position)
 
     def pb_update(self, chunk_size):
         if self._tqdm_bar is not None:
             self._tqdm_bar.update(chunk_size)
-
-    def update(self, chunks, chunk_size=1):
-        for chunk in chunks:
-            yield chunk
-            read_size = len(chunk)
-            self._read_size += read_size
-            self.pb_update(read_size)
-
-        if self._total_length > self._read_size:
-            self.pb_update(self._total_length - self._read_size)
-
-        self.pb_close()
-        if self._output and not self._output.is_terminal:
-            self._output.writeln("\n")
-
-    def pb_close(self):
-        if self._tqdm_bar is not None:
-            self._output.release_bar_pos(self._bar_position)
-            self._tqdm_bar.close()
-            msg = "\r{} completed [{:1.2f}k]".format(self._description, self._read_size/1024.0)
-            self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
-
-
-class ReadProgress(object):
-    def __init__(self, length, output, description):
-        self._tqdm_bar = None
-        self._total_length = length
-        self._output = output
-        self._written_size = 0
-        self._description = description
-        self._last_time = time.time()
-        if self._output and self._output.is_terminal and self._description:
-            self._bar_position = self._output.get_bar_pos()
-            self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description.ljust(LEFT_JUSTIFY_DESC), file=self._output, unit="B",
-                                  leave=False, dynamic_ncols=False, ascii=True, unit_scale=True,
-                                  unit_divisor=1024, position=self._bar_position)
-
-    def pb_update(self, chunk_size):
-        if self._tqdm_bar is not None:
-            self._tqdm_bar.update(chunk_size)
-        elif self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
+        elif self._print_dot and self._output and time.time() - self._last_time > TIMEOUT_BEAT_SECONDS:
             self._last_time = time.time()
             self._output.write(TIMEOUT_BEAT_CHARACTER)
 
     def update(self, chunks, chunk_size=1024):
         for chunk in chunks:
             yield chunk
-            data_read_size = len(chunk)
-            self._written_size += data_read_size
-            self.pb_update(data_read_size)
+            data_size = len(chunk)
+            self._processed_size += data_size
+            self.pb_update(data_size)
 
-        if self._total_length > self._written_size:
-            self.pb_update(self._total_length - self._written_size)
+        if self._total_length > self._processed_size:
+            self.pb_update(self._total_length - self._processed_size)
 
         self.pb_close()
         if self._output and not self._output.is_terminal:
@@ -106,15 +71,15 @@ class ReadProgress(object):
         if self._tqdm_bar is not None:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            msg = "\r{} completed [{:1.2f}k]".format(self._description, self._written_size/1024.0)
+            msg = "\r{} completed [{:1.2f}k]".format(self._description, self._processed_size/1024.0)
             self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
 
 
-class FileWrapper(ReadProgress):
+class FileWrapper(Progress):
     def __init__(self, fileobj, output, description):
         self._fileobj = fileobj
         self.seek(0, os.SEEK_END)
-        ReadProgress.__init__(self, self.tell(), output, description)
+        super(FileWrapper, self).__init__(self.tell(), output, description, print_dot=True)
         self.seek(0)
 
     def seekable(self):
@@ -136,23 +101,24 @@ class FileWrapper(ReadProgress):
 class ListWrapper(object):
     def __init__(self, files_list, output, desc=None):
         self._files_list = files_list
+        self._total_length = len(self._files_list)
+        self._iterator = iter(self._files_list)
         self._last_progress = None
         self._i_file = 0
         self._output = output
         self._description = desc
-        self._total_size = len(files_list)
         if self._output and not self._output.is_terminal:
             output.write("[")
         elif self._output:
             self._bar_position = self._output.get_bar_pos()
-            self._tqdm_bar = tqdm(total=self._total_size,
+            self._tqdm_bar = tqdm(total=len(files_list),
                                   desc=self._description.ljust(LEFT_JUSTIFY_DESC), file=self._output,
-                                  unit="files", leave=False, dynamic_ncols=False,
-                                  ascii=True, position=self._bar_position)
+                                  unit="files ", leave=False, dynamic_ncols=False, ascii=True,
+                                  position=self._bar_position)
 
     def update(self):
         self._i_file = self._i_file + 1
-        units = min(50, int(50 * self._i_file / len(self._files_list)))
+        units = min(50, int(50 * self._i_file / self._total_length))
         if self._last_progress != units:  # Avoid screen refresh if nothing has change
             if self._output and not self._output.is_terminal:
                 self._output.write('=' * (units - (self._last_progress or 0)))
@@ -164,16 +130,21 @@ class ListWrapper(object):
         if self._output and self._output.is_terminal:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            msg = "\r{} completed [{} files]".format(self._description,self._total_size)
+            msg = "\r{} completed [{} files]".format(self._description, self._total_size)
             self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
         elif self._output:
             self._output.writeln("]")
 
     def __iter__(self):
-        return self._files_list.__iter__()
+        return self
 
     def __next__(self):
-        return self._files_list.__iter__().__next__()
+        val = next(self._iterator)
+        self.update()
+        return val
+
+    def next(self):
+        return self.__next__()
 
 
 @contextmanager

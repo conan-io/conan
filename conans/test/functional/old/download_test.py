@@ -28,6 +28,7 @@ class DownloadTest(unittest.TestCase):
             charset = None
             text = ""
             headers = {}
+            content = ""
 
             def __init__(self, ok, status_code):
                 self.ok = ok
