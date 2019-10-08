@@ -41,9 +41,9 @@ class Color(object):
     BRIGHT_BLUE = Style.BRIGHT + Fore.BLUE  # @UndefinedVariable
     BRIGHT_YELLOW = Style.BRIGHT + Fore.YELLOW  # @UndefinedVariable
     BRIGHT_GREEN = Style.BRIGHT + Fore.GREEN  # @UndefinedVariable
-    BRIGHT_CYAN = Style.BRIGHT + Fore.CYAN  # @UndefinedVariable
-    BRIGHT_WHITE = Style.BRIGHT + Fore.WHITE  # @UndefinedVariable
-    BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA  # @UndefinedVariable
+    BRIGHT_CYAN = Style.BRIGHT + Fore.CYAN   # @UndefinedVariable
+    BRIGHT_WHITE = Style.BRIGHT + Fore.WHITE   # @UndefinedVariable
+    BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA   # @UndefinedVariable
 
 
 if get_env("CONAN_COLOR_DARK", 0):
