@@ -120,7 +120,7 @@ class InfoFoldersTest(unittest.TestCase):
             client = TestClient(cache_folder=cache_folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
-            client.run("info %s --paths" % (self.reference1))
+            client.run("info %s --paths" % self.reference1)
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             output = client.out
             self.assertIn(os.path.join(base_path, "export"), output)
@@ -135,7 +135,7 @@ class InfoFoldersTest(unittest.TestCase):
             # Ensure that the inner folders are not created (that could affect
             # pkg creation flow
             ref = ConanFileReference.loads(self.reference1)
-            id_ = re.search('ID:\s*([a-z0-9]*)', str(client.out)).group(1)
+            id_ = re.search(r'ID:\s*([a-z0-9]*)', str(client.out)).group(1)
             pref = PackageReference(ref, id_)
             for path in (client.cache.package_layout(ref, True).source(),
                          client.cache.package_layout(ref, True).build(pref),
