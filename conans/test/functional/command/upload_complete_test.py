@@ -285,7 +285,7 @@ class UploadTest(unittest.TestCase):
                 client.out)
         client.run('user -p password -r default user')
         client.run('upload lib* --parallel -c --all', assert_error=True)
-        self.assertEqual(str(client.out).count("Connection fails with lib2 and lib4 references!"), 8)
+        self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
         self.assertIn("Execute upload again to retry upload the failed files", client.out)
 
     def upload_with_pattern_and_package_error_test(self):
