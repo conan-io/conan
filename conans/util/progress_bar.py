@@ -132,6 +132,7 @@ class ListWrapper(object):
     def next(self):
         return self.__next__()
 
+
 @contextmanager
 def open_binary(path, output, description):
     with open(path, mode='rb') as file_handler:
