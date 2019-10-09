@@ -1485,12 +1485,12 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(pref2.ref.revision, pref3.ref.revision)
         self.assertEqual(pref3.ref.revision, server_pref3.revision)
 
-        pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
+        pref = pref1.copy_clear_prev().copy_with_revs(pref1.ref.revision, None)
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref3.revision, pref2.revision, pref1.revision])
         self.assertEqual(self.server.server_store.get_last_package_revision(pref).revision,
-                          pref3.revision)
+                         pref3.revision)
 
         # Delete the latest from the server
         self.c_v2.run("remove {} -p {}#{} -r default -f".format(pref3.ref.full_str(),
@@ -1552,7 +1552,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
             pref4 = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref)
 
-        pref = pref1.copy_clear_rev().copy_with_revs(pref1.ref.revision, None)
+        pref = pref1.copy_clear_prev().copy_with_revs(pref1.ref.revision, None)
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref4.revision])
