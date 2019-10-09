@@ -747,7 +747,7 @@ class Pkg(ConanFile):
         self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
                       client.out)
 
-    def upload_without_logged_user_test(self):
+    def upload_without_cleaned_user_test(self):
         """ When a user is not authenticated, uploads failed first time
         https://github.com/conan-io/conan/issues/5878
         """
