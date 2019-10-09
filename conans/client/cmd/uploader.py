@@ -85,8 +85,11 @@ class CmdUpload(object):
         refs, confirm = self._collects_refs_to_upload(package_id, reference_or_pattern, confirm)
         refs_by_remote = self._collect_packages_to_upload(refs, confirm, remotes, all_packages,
                                                           query, package_id)
-        # Do the job
-        self._num_threads = 8 if parallel_upload else 1
+
+        if parallel_upload:
+            self._num_threads = 8
+            self._user_io.disable_input()
+
         self._upload_thread_pool = ThreadPool(self._num_threads)
         for remote, refs in refs_by_remote.items():
             self._output.info("Uploading to remote '{}':".format(remote.name))
