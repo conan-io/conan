@@ -46,6 +46,7 @@ class TestConan(ConanFile):
             else:
                 return "bash -c 'source %s && env'" % script_name
 
+        self.maxDiff = None
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
