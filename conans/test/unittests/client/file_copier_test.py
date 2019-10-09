@@ -1,3 +1,4 @@
+import mock
 import os
 import platform
 import unittest
@@ -171,3 +172,31 @@ class FileCopierTest(unittest.TestCase):
         copier = FileCopier([folder1], folder2)
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
+
+    def multifolder_test(self):
+        src_folder1 = temp_folder()
+        src_folder2 = temp_folder()
+        save(os.path.join(src_folder1, "file1.txt"), "Hello1")
+        save(os.path.join(src_folder2, "file2.txt"), "Hello2")
+
+        dst_folder = temp_folder()
+        copier = FileCopier([src_folder1, src_folder2], dst_folder)
+        copier("*")
+        self.assertEqual(['file1.txt', 'file2.txt'],
+                         sorted(os.listdir(dst_folder)))
+
+    @mock.patch('shutil.copy2')
+    def avoid_repeat_copies_test(self, copy2_mock):
+        src_folders = [temp_folder() for _ in range(2)]
+        for index, src_folder in enumerate(src_folders):
+            save(os.path.join(src_folder, "sub", "file%d.txt" % index),
+                 "Hello%d" % index)
+
+        dst_folder = temp_folder()
+        copier = FileCopier(src_folders, dst_folder)
+
+
+        for src_folder in src_folders:
+            copier("*", src=os.path.join(src_folder, "sub"))
+
+        self.assertEqual(copy2_mock.call_count, len(src_folders))
