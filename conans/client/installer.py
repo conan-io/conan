@@ -440,9 +440,9 @@ class BinaryInstaller(object):
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
+        transitive = node.transitive_closure.values()
         for n in node_order:
-            # FIXME: Very ineficient
-            if n not in node.transitive_closure.values():
+            if n not in transitive:
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)

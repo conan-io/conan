@@ -47,7 +47,7 @@ class ConanHTMLGrapher(object):
         nodes = []
         nodes_map = {}
         graph_nodes = self._deps_graph.by_levels()
-        library_requires = self._deps_graph.non_build_requires()
+        build_time_nodes = self._deps_graph.build_time_nodes()
         graph_nodes = reversed([n for level in graph_nodes for n in level])
         for i, node in enumerate(graph_nodes):
             ref, conanfile = node.ref, node.conanfile
@@ -73,7 +73,7 @@ class ConanHTMLGrapher(object):
             fulllabel.append("<ul>")
             fulllabel = "".join(fulllabel)
 
-            if node not in library_requires:
+            if node in build_time_nodes:
                 shape = "ellipse"
             else:
                 shape = "box"

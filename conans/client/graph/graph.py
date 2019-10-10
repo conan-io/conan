@@ -205,8 +205,8 @@ class DepsGraph(object):
         src.add_edge(edge)
         dst.add_edge(edge)
 
-    def ordered_iterate(self):
-        ordered = self.by_levels()
+    def ordered_iterate(self, nodes_subset=None):
+        ordered = self.by_levels(nodes_subset)
         for level in ordered:
             for node in level:
                 yield node
@@ -300,20 +300,20 @@ class DepsGraph(object):
                     ret.append(node.ref.copy_clear_rev())
         return ret
 
-    def by_levels(self):
-        return self._order_levels(True)
+    def by_levels(self, nodes_subset=None):
+        return self._order_levels(True, nodes_subset)
 
     def inverse_levels(self):
         return self._order_levels(False)
 
-    def _order_levels(self, direct):
+    def _order_levels(self, direct, nodes_subset=None):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = self.nodes
+        opened = nodes_subset if nodes_subset is not None else self.nodes
         while opened:
             current_level = []
             for o in opened:
@@ -328,9 +328,13 @@ class DepsGraph(object):
 
         return result
 
-    def public(self):
+    def private_skip_binaries(self, nodes_subset=None, root=None):
+        """ check which nodes are reachable from the root, mark the non reachable as BINARY_SKIP.
+        Used in the GraphBinaryAnalyzer"""
         public_nodes = set()
-        current = [self.root]
+        root = root if root is not None else self.root
+        nodes = nodes_subset if nodes_subset is not None else self.nodes
+        current = [root]
         while current:
             new_current = set()
             public_nodes.update(current)
@@ -343,9 +347,17 @@ class DepsGraph(object):
                     to_add = set(n.neighbors()).difference(public_nodes)
                 new_current.update(to_add)
             current = new_current
-        return public_nodes
 
-    def non_build_requires(self):
+        for node in nodes:
+            if node not in public_nodes:
+                node.binary_non_skip = node.binary
+                node.binary = BINARY_SKIP
+
+    def build_time_nodes(self):
+        """ return all the connected nodes to the root that are not build-requires. This
+        includes normal and private requires (libraries to be linked).
+        Use for output: graph.html, printing, and search info.
+        """
         public_nodes = set()
         current = [self.root]
         while current:
@@ -356,4 +368,5 @@ class DepsGraph(object):
                 to_add = [d.dst for d in n.dependencies if not d.build_require]
                 new_current.update(to_add)
             current = new_current
-        return public_nodes
+
+        return [n for n in self.nodes if n not in public_nodes]

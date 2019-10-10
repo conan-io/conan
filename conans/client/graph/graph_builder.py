@@ -70,13 +70,7 @@ class DepsGraphBuilder(object):
         ordered_closure = list(node.public_closure.items())
         ordered_closure.sort(key=lambda x: x[1] not in new_nodes)
         node.public_closure = OrderedDict(ordered_closure)
-
-        subgraph = DepsGraph()
-        subgraph.aliased = graph.aliased
-        subgraph.nodes = new_nodes
-        # TODO: A bit ugly to pass the root not belonging to nodes, but needed for _handle_private
-        subgraph.root = node
-        return subgraph
+        return new_nodes
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:

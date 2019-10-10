@@ -1,11 +1,9 @@
 import os
 
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
-                                       BINARY_SKIP, BINARY_UPDATE,
-                                       RECIPE_EDITABLE, BINARY_EDITABLE,
-                                       RECIPE_CONSUMER, RECIPE_VIRTUAL)
-from conans.errors import NoRemoteAvailable, NotFoundException, \
-    conanfile_exception_formatter
+                                       BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
+                                       RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP)
+from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -139,7 +137,13 @@ class GraphBinariesAnalyzer(object):
         if previous_nodes:
             previous_nodes.append(node)
             previous_node = previous_nodes[0]
-            node.binary = previous_node.binary
+            # The previous node might have been skipped, but current one not necessarily
+            # keep the original node.binary value (before being skipped), and if it will be
+            # defined as SKIP again by self._handle_private(node) if it is really private
+            if previous_node.binary == BINARY_SKIP:
+                node.binary = previous_node.binary_non_skip
+            else:
+                node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
             return True
@@ -247,19 +251,11 @@ class GraphBinariesAnalyzer(object):
         info = conanfile.info
         node.package_id = info.package_id()
 
-    @staticmethod
-    def _handle_private(deps_graph):
-        public_nodes = deps_graph.public()
-
-        for node in deps_graph.nodes:
-            if node not in public_nodes:
-                node.binary = BINARY_SKIP
-
-    def evaluate_graph(self, deps_graph, build_mode, update, remotes):
+    def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         default_package_id_mode = self._cache.config.default_package_id_mode
-        for node in deps_graph.ordered_iterate():
+        for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
-        self._handle_private(deps_graph)
+        deps_graph.private_skip_binaries(nodes_subset=nodes_subset, root=root)
