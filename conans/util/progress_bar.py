@@ -135,7 +135,7 @@ class ListWrapper(object):
         if self._output and self._output.is_terminal:
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            msg = "\r{} completed [{} files]".format(self._description, self._total_size)
+            msg = "\r{} completed [{} files]".format(self._description, self._total_length)
             self._output.writeln(left_justify_message(msg))
         elif self._output:
             self._output.writeln("]")
