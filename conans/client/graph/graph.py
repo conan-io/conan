@@ -36,8 +36,6 @@ class Node(object):
         self.recipe = recipe
         self.remote = None
         self.binary_remote = None
-        self.build_require = False
-        self.private = False
         self.revision_pinned = False  # The revision has been specified by the user
 
         # A subset of the graph that will conflict by package name
@@ -45,6 +43,7 @@ class Node(object):
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
         self.public_closure = None  # {ref.name: Node}
+        self.transitive_closure = None  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
         self._id = None  # Unique ID (uuid at the moment) of a node in the graph
@@ -86,7 +85,6 @@ class Node(object):
         result.binary = self.binary
         result.remote = self.remote
         result.binary_remote = self.binary_remote
-        result.build_require = self.build_require
         return result
 
     def add_edge(self, edge):
@@ -101,12 +99,6 @@ class Node(object):
 
     def private_neighbors(self):
         return [edge.dst for edge in self.dependencies if edge.private]
-
-    def make_public(self):
-        self.private = False
-        for edge in self.dependencies:
-            if not edge.private:
-                edge.dst.make_public()
 
     def connect_closure(self, other_node):
         # When 2 nodes of the graph become connected, their closures information has
@@ -335,3 +327,33 @@ class DepsGraph(object):
             opened = opened.difference(current_level)
 
         return result
+
+    def public(self):
+        public_nodes = set()
+        current = [self.root]
+        while current:
+            new_current = set()
+            public_nodes.update(current)
+            for n in current:
+                if n.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
+                    # Might skip deps
+                    to_add = [d.dst for d in n.dependencies if not d.private]
+                else:
+                    # sure deps doesn't skip
+                    to_add = set(n.neighbors()).difference(public_nodes)
+                new_current.update(to_add)
+            current = new_current
+        return public_nodes
+
+    def non_build_requires(self):
+        public_nodes = set()
+        current = [self.root]
+        while current:
+            new_current = set()
+            public_nodes.update(current)
+            for n in current:
+                # Might skip deps
+                to_add = [d.dst for d in n.dependencies if not d.build_require]
+                new_current.update(to_add)
+            current = new_current
+        return public_nodes

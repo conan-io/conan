@@ -139,13 +139,7 @@ class GraphBinariesAnalyzer(object):
         if previous_nodes:
             previous_nodes.append(node)
             previous_node = previous_nodes[0]
-            # The previous node might have been skipped, but current one not necessarily
-            # keep the original node.binary value (before being skipped), and if it will be
-            # defined as SKIP again by self._handle_private(node) if it is really private
-            if previous_node.binary == BINARY_SKIP:
-                node.binary = previous_node.binary_non_skip
-            else:
-                node.binary = previous_node.binary
+            node.binary = previous_node.binary
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
             return True
@@ -253,19 +247,13 @@ class GraphBinariesAnalyzer(object):
         info = conanfile.info
         node.package_id = info.package_id()
 
-    def _handle_private(self, node):
-        if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
-            private_neighbours = node.private_neighbors()
-            for neigh in private_neighbours:
-                if not neigh.private:
-                    continue
-                # Current closure contains own node to be skipped
-                for n in neigh.public_closure.values():
-                    if n.private:
-                        # store the binary origin before being overwritten by SKIP
-                        n.binary_non_skip = n.binary
-                        n.binary = BINARY_SKIP
-                        self._handle_private(n)
+    @staticmethod
+    def _handle_private(deps_graph):
+        public_nodes = deps_graph.public()
+
+        for node in deps_graph.nodes:
+            if node not in public_nodes:
+                node.binary = BINARY_SKIP
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes):
         default_package_id_mode = self._cache.config.default_package_id_mode
@@ -274,4 +262,4 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
-            self._handle_private(node)
+        self._handle_private(deps_graph)
