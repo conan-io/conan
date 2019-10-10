@@ -12,6 +12,10 @@ LEFT_JUSTIFY_DESC = 28
 LEFT_JUSTIFY_MESSAGE = 90
 
 
+def left_justify_message(msg):
+    return msg.ljust(LEFT_JUSTIFY_MESSAGE)
+
+
 class ProgressOutput(ConanOutput):
     def __init__(self, output):
         super(ProgressOutput, self).__init__(output._stream, output._stream_err, output._color)
