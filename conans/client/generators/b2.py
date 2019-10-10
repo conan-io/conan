@@ -130,15 +130,14 @@ class B2Generator(Generator):
             return []
         name = name.lower()
         result = []
+        deps = ['/%s//libs' % dep for dep in info.public_deps]
         if info.libs:
             for lib in info.libs:
                 result += [self.conanbuildinfo_variation_lib_template.format(
-                    name=name, lib=lib, variation=self.b2_variation_id)]
-            result += [self.conanbuildinfo_variation_alias_template.format(
-                name=name, libs=" ".join(info.libs), variation=self.b2_variation_id)]
-        else:
-            result += [self.conanbuildinfo_variation_alias_template.format(
-                name=name, libs="", variation=self.b2_variation_id)]
+                    name=name, lib=lib, deps=" ".join(deps), variation=self.b2_variation_id)]
+            deps.extend(info.libs)
+        result += [self.conanbuildinfo_variation_alias_template.format(
+            name=name, libs=" ".join(deps), variation=self.b2_variation_id)]
 
         return result
 
@@ -414,7 +413,7 @@ constant-if {var}({name},{variation}) :
     conanbuildinfo_variation_lib_template = """\
 if $(__define_targets__) {{
     call-in-project $({name}-mod) : lib {lib}
-        :
+        : {deps}
         : <name>{lib} <search>$(libdirs({name},{variation})) $(requirements({name},{variation}))
         :
         : $(usage-requirements({name},{variation})) ;
