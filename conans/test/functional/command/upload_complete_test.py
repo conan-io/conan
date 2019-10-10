@@ -289,7 +289,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Execute upload again to retry upload the failed files", client.out)
 
     def upload_parallel_success_test(self):
-        """Upload 4 packages in parallel with success"""
+        """Upload 2 packages in parallel with success"""
 
         # For each file will fail the first time and will success in the second one
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
@@ -297,19 +297,16 @@ class UploadTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("user", "password")]})
         client.save({"conanfile.py": GenConanfile()})
 
-        num_references = 4
-        for index in range(num_references):
-            client.run('create . lib{}/1.0@user/channel'.format(index))
-            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
-                index,
-                NO_SETTINGS_PACKAGE_ID),
-                client.out)
+        client.run('create . lib0/1.0@user/channel')
+        self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
+        client.run('create . lib1/1.0@user/channel')
+        self.assertIn("lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
+                      client.out)
         client.run('user -p password -r default user')
         client.run('upload lib* --parallel -c --all -r default')
         self.assertIn("Uploading lib0/1.0@user/channel to remote 'default'", client.out)
         self.assertIn("Uploading lib1/1.0@user/channel to remote 'default'", client.out)
-        self.assertIn("Uploading lib2/1.0@user/channel to remote 'default'", client.out)
-        self.assertIn("Uploading lib3/1.0@user/channel to remote 'default'", client.out)
 
     def upload_parallel_fail_on_interaction_test(self):
         """Upload 2 packages in parallel and fail because non_interactive forced"""
