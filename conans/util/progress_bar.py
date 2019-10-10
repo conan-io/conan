@@ -16,6 +16,10 @@ def left_justify_message(msg):
     return msg.ljust(LEFT_JUSTIFY_MESSAGE)
 
 
+def left_justify_description(msg):
+    return msg.ljust(LEFT_JUSTIFY_DESC)
+
+
 class ProgressOutput(ConanOutput):
     def __init__(self, output):
         super(ProgressOutput, self).__init__(output._stream, output._stream_err, output._color)
@@ -42,7 +46,7 @@ class Progress(object):
         if self._output and self._output.is_terminal and self._description:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
-                                  desc=self._description.ljust(LEFT_JUSTIFY_DESC),
+                                  desc=left_justify_description(self._description),
                                   file=self._output, unit="B", leave=False, dynamic_ncols=False,
                                   ascii=True, unit_scale=True, unit_divisor=1024,
                                   position=self._bar_position)
@@ -73,7 +77,7 @@ class Progress(object):
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
             msg = "\r{} completed [{:1.2f}k]".format(self._description, self._processed_size/1024.0)
-            self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
+            self._output.writeln(left_justify_message(msg))
 
 
 class FileWrapper(Progress):
@@ -113,9 +117,9 @@ class ListWrapper(object):
         elif self._output:
             self._bar_position = self._output.get_bar_pos()
             self._tqdm_bar = tqdm(total=len(files_list),
-                                  desc=self._description.ljust(LEFT_JUSTIFY_DESC), file=self._output,
-                                  unit="files ", leave=False, dynamic_ncols=False, ascii=True,
-                                  position=self._bar_position)
+                                  desc=left_justify_description(self._description),
+                                  file=self._output, unit="files ", leave=False, dynamic_ncols=False,
+                                  ascii=True, position=self._bar_position)
 
     def update(self):
         self._i_file = self._i_file + 1
@@ -132,7 +136,7 @@ class ListWrapper(object):
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
             msg = "\r{} completed [{} files]".format(self._description, self._total_size)
-            self._output.writeln(msg.ljust(LEFT_JUSTIFY_MESSAGE))
+            self._output.writeln(left_justify_message(msg))
         elif self._output:
             self._output.writeln("]")
 
