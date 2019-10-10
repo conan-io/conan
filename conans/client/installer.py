@@ -437,17 +437,12 @@ class BinaryInstaller(object):
     @staticmethod
     def _propagate_info(node):
         # Get deps_cpp_info from upstream nodes
-        print "NODE ", node
-        print "Transitive ", node.transitive_closure
-        print "PUBLIC ", node.public_closure
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
         conan_file = node.conanfile
         for n in node_order:
             # FIXME: Very ineficient
             if n not in node.transitive_closure.values():
-                print "     DEP ", n
-
                 conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)

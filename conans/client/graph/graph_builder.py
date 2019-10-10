@@ -204,7 +204,6 @@ class DepsGraphBuilder(object):
                 # All the upstream dependencies (public_closure) of the previously existing node
                 # now will be also connected to the node and to all its dependants
                 for name, n in previous.transitive_closure.items():
-                    print "CLOSING LOOP ", node, " -> ", n
                     node.connect_closure(n)
                     for dep_node in node.inverse_closure:
                         dep_node.connect_closure(n)
