@@ -102,7 +102,6 @@ class CmdUpload(object):
                                      integrity_check, policy, remote, upload_recorder, remotes)
                 except ConanException as exc:
                     self._exceptions_list.append(exc)
-                    raise exc
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -232,17 +231,23 @@ class CmdUpload(object):
                     self._upload_package(pref, retry, retry_wait,
                                          integrity_check, policy, p_remote)
                     upload_recorder.add_package(pref, p_remote.name, p_remote.url)
+                    return conanfile_path, ref, recipe_remote, None
                 except ConanException as exc:
-                    self._exceptions_list.append(exc)
-                    raise exc
+                    return None, None, None, exc
 
-            self._upload_thread_pool.map_async(upload_package_index, [(index, pref) for index, pref
-                                                                      in enumerate(prefs)])
+            def upload_package_callback(ret):
+                for cf_path, r_ref, r_rem, exc in ret:
+                    if exc is None:
+                        # FIXME: I think it makes no sense to specify a remote to "post_upload"
+                        # FIXME: because the recipe can have one and the package a different one
+                        self._hook_manager.execute("post_upload", conanfile_path=cf_path,
+                                                   reference=r_ref, remote=r_rem)
+                    else:
+                        self._exceptions_list.append(exc)
 
-        # FIXME: I think it makes no sense to specify a remote to "post_upload"
-        # FIXME: because the recipe can have one and the package a different one
-        self._hook_manager.execute("post_upload", conanfile_path=conanfile_path, reference=ref,
-                                   remote=recipe_remote)
+            self._upload_thread_pool.map_async(upload_package_index, [(index, pref, ref) for index, pref
+                                                                      in enumerate(prefs)],
+                                               callback=upload_package_callback)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
         current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
