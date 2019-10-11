@@ -63,6 +63,9 @@ class PackageOptionValues(object):
     def __bool__(self):
         return bool(self._dict)
 
+    def __contains__(self, key):
+        return key in self._dict
+
     def __nonzero__(self):
         return self.__bool__()
 
