@@ -249,6 +249,11 @@ class CmdUpload(object):
                                                [(index, pref, ref) for index, pref
                                                 in enumerate(prefs)],
                                                callback=upload_package_callback)
+        else:
+            # FIXME: I think it makes no sense to specify a remote to "post_upload"
+            # FIXME: because the recipe can have one and the package a different one
+            self._hook_manager.execute("post_upload", conanfile_path=conanfile_path, reference=ref,
+                                       remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
         current_remote_name = self._cache.package_layout(ref).load_metadata().recipe.remote
