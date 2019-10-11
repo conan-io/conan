@@ -245,8 +245,9 @@ class CmdUpload(object):
                     else:
                         self._exceptions_list.append(exc)
 
-            self._upload_thread_pool.map_async(upload_package_index, [(index, pref, ref) for index, pref
-                                                                      in enumerate(prefs)],
+            self._upload_thread_pool.map_async(upload_package_index,
+                                               [(index, pref, ref) for index, pref
+                                                in enumerate(prefs)],
                                                callback=upload_package_callback)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
