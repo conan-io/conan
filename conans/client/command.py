@@ -994,7 +994,7 @@ class Command(object):
                             help="Remove only outdated from recipe packages. "
                                  "This flag can only be used with a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
-                            help="Select package to remove specifying the package ID")
+                            help="Remove all packages of the specified reference")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help='Will remove from the specified remote')
