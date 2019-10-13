@@ -6,6 +6,7 @@ from mock import Mock
 
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
@@ -83,6 +84,7 @@ class GraphManagerTest(unittest.TestCase):
                                                   check_updates, update, remotes, recorder)
         if install:
             binary_installer = BinaryInstaller(app, recorder)
+            build_mode = BuildMode(build_mode, app.out)
             binary_installer.install(deps_graph, None, build_mode, update, False, graph_info)
         return deps_graph
 
