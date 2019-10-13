@@ -72,6 +72,8 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or self.cache_folder
+        # Just call it to make it raise in case of short_paths misconfiguration
+        self.config.short_paths_home
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)

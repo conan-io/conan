@@ -79,9 +79,8 @@ class GraphManagerTest(unittest.TestCase):
         options = OptionsValues()
         graph_info = GraphInfo(profile, options, root_ref=ref)
         app = self._get_app()
-        deps_graph, _ = app.graph_manager.load_graph(path, create_ref, graph_info,
-                                                     build_mode, check_updates, update,
-                                                     remotes, recorder)
+        deps_graph = app.graph_manager.load_graph(path, create_ref, graph_info, build_mode,
+                                                  check_updates, update, remotes, recorder)
         if install:
             binary_installer = BinaryInstaller(app, recorder)
             binary_installer.install(deps_graph, None, False, graph_info)

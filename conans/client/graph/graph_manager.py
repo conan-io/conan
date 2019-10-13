@@ -200,7 +200,7 @@ class GraphManager(object):
             self._output.writeln("")
 
         build_mode.report_matches()
-        return deps_graph, conanfile
+        return deps_graph
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):
