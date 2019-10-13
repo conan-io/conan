@@ -220,7 +220,35 @@ class GraphBinariesAnalyzer(object):
         node.binary_remote = remote
 
     @staticmethod
-    def _compute_package_id(node, default_package_id_mode, process_options=True):
+    def _propagate_options(node):
+        # TODO: This has to be moved to the graph computation, not here in the BinaryAnalyzer
+        # as this is the graph model
+        conanfile = node.conanfile
+        neighbors = node.neighbors()
+        transitive_reqs = set()  # of PackageReference, avoid duplicates
+        for neighbor in neighbors:
+            ref, nconan = neighbor.ref, neighbor.conanfile
+            transitive_reqs.add(neighbor.pref)
+            transitive_reqs.update(nconan.info.requires.refs())
+
+            conanfile.options.propagate_downstream(ref, nconan.info.full_options)
+            # Might be never used, but update original requirement, just in case
+            conanfile.requires[ref.name].ref = ref
+
+        # There might be options that are not upstream, backup them, might be for build-requires
+        conanfile.build_requires_options = conanfile.options.values
+        conanfile.options.clear_unused(transitive_reqs)
+        conanfile.options.freeze()
+
+    @staticmethod
+    def _compute_package_id(node, default_package_id_mode):
+        """
+        Compute the binary package ID of this node
+        :param node: the node to compute the package-ID
+        :param default_package_id_mode: configuration of the package-ID mode
+        """
+        # TODO Conan 2.0. To separate the propagation of the graph (options) of the package-ID
+        # A bit risky to be done now
         conanfile = node.conanfile
         neighbors = node.neighbors()
         direct_reqs = []  # of PackageReference
@@ -229,19 +257,9 @@ class GraphBinariesAnalyzer(object):
             ref, nconan = neighbor.ref, neighbor.conanfile
             direct_reqs.append(neighbor.pref)
             indirect_reqs.update(nconan.info.requires.refs())
-            if process_options:
-                conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-                # Might be never used, but update original requirement, just in case
-                conanfile.requires[ref.name].ref = ref
 
         # Make sure not duplicated
         indirect_reqs.difference_update(direct_reqs)
-        # There might be options that are not upstream, backup them, might be for build-requires
-        if process_options:
-            conanfile.build_requires_options = conanfile.options.values
-            conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
-            conanfile.options.freeze()
-
         conanfile.info = ConanInfo.create(conanfile.settings.values,
                                           conanfile.options.values,
                                           direct_reqs,
@@ -270,10 +288,9 @@ class GraphBinariesAnalyzer(object):
                         self._handle_private(n)
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes):
-        self._build_mode = build_mode
-        self._update = update
         default_package_id_mode = self._cache.config.default_package_id_mode
         for node in deps_graph.ordered_iterate():
+            self._propagate_options(node)
             self._compute_package_id(node, default_package_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
@@ -283,16 +300,16 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_node(node, build_mode, update, remotes)
             self._handle_private(node)
 
-    def reevaluate_node(self, node, remotes):
+    def reevaluate_node(self, node, remotes, build_mode, update):
         assert node.binary is None
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed
         default_package_id_mode = self._cache.config.default_package_id_mode
         output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-        self._compute_package_id(node, default_package_id_mode, process_options=False)
+        self._compute_package_id(node, default_package_id_mode)
         output.info("Updated ID: %s" % node.package_id)
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return
         assert node.package_id != PACKAGE_ID_UNKNOWN
-        self._evaluate_node(node, self._build_mode, self._update, remotes)
+        self._evaluate_node(node, build_mode, update, remotes)
         output.info("Binary for updated ID from: %s" % node.binary)

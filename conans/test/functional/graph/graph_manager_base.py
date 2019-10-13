@@ -83,7 +83,7 @@ class GraphManagerTest(unittest.TestCase):
                                                   check_updates, update, remotes, recorder)
         if install:
             binary_installer = BinaryInstaller(app, recorder)
-            binary_installer.install(deps_graph, None, False, graph_info)
+            binary_installer.install(deps_graph, None, build_mode, update, False, graph_info)
         return deps_graph
 
     def _check_node(self, node, ref, deps, build_deps, dependents, closure):
