@@ -27,7 +27,6 @@ from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, 
     rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
-from conans.client.tools.cppstd import Cppstd
 
 
 # This global variables are intended to store the configuration of the running Conan application

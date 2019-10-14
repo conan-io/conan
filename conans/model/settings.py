@@ -2,6 +2,7 @@ import yaml
 
 from conans.errors import ConanException
 from conans.model.values import Values
+from functools import total_ordering
 
 
 def bad_value_msg(name, value, value_range):
@@ -25,6 +26,7 @@ def undefined_value(name):
     return ConanException("'%s' value not defined" % name)
 
 
+@total_ordering
 class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
@@ -97,10 +99,17 @@ class SettingsItem(object):
         other = str(other)
         if self._not_any() and other not in self.values_range:
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
-        return other == self.__str__()
+        if self._name != "settings.compiler.cppstd":
+            return other == self.__str__()
+        return int(self._value.replace("gnu", "")) == int(str(other).replace("gnu", ""))
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if self._name != "settings.compiler.cppstd":
+            return super(SettingsItem, self).__lt__(other)
+        return int(self._value.replace("gnu", "")) < int(str(other).replace("gnu", ""))
 
     def __delattr__(self, item):
         """ This is necessary to remove libcxx subsetting from compiler in config()
