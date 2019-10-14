@@ -108,3 +108,4 @@ class ToolVersionExtraComponentsTests(unittest.TestCase):
         # Unknown release field, not fail (loose=True) and don't affect compare
         self.assertTrue(Version.loose)
         self.assertTrue(Version("1.2.3.4") == Version("1.2.3"))
+
