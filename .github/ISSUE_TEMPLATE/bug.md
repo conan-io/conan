@@ -19,13 +19,6 @@ labels: bug
   * Conan version: **conan 1.18.0**
   * Python version: **Python 3.7.4**
 
-
-### Conan profile (output of `conan profile show default` or `conan profile show <profile>` if custom profile is in use)
-```
-Put your profile output here
-```
-
-
 ### Steps to reproduce (Include if Applicable)
 
 
