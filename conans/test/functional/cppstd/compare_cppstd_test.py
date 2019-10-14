@@ -8,8 +8,9 @@ from conans.test.utils.tools import TestClient
 
 
 class SettingsCppStdCompareTests(unittest.TestCase):
-    # Validation of scoped settings is delayed until graph computation, a conanfile can
-    #   declare a different set of settings, so we should wait until then to validate it.
+    """ Validate compiler.cppstd as usual version, ignoring 'gnu' prefix
+
+    """
 
     default_profile = textwrap.dedent("""
         [settings]
