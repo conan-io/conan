@@ -246,7 +246,7 @@ class CmdUpload(object):
                         self._exceptions_list.append(exc)
 
             self._upload_thread_pool.map_async(upload_package_index,
-                                               [(index, pref, ref) for index, pref
+                                               [(index, pref) for index, pref
                                                 in enumerate(prefs)],
                                                callback=upload_package_callback)
         else:
