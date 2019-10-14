@@ -14,7 +14,7 @@ from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
-                               gzopen_without_timestamps, set_dirty_context_manager)
+                               gzopen_without_timestamps, set_dirty_context_manager, md5sum, sha1sum)
 from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
@@ -249,6 +249,14 @@ class CmdUpload(object):
 
         return ref
 
+    def _update_package_metadata_checksums(self, ref, pref, files):
+        with self._cache.package_layout(ref).update_metadata() as metadata:
+            for file, path in files.items():
+                md5 = md5sum(path)
+                sha1 = sha1sum(path)
+                metadata.packages[pref].properties[file] = {"actual_md5": md5,
+                                                            "actual_sha1": sha1}
+
     def _upload_package(self, pref, retry=None, retry_wait=None, integrity_check=False,
                         policy=None, p_remote=None):
 
@@ -263,6 +271,8 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
+        self._update_package_metadata_checksums(pref.ref, pref.id, the_files)
+
         if policy == UPLOAD_POLICY_SKIP:
             return None
         files_to_upload, deleted = self._package_files_to_upload(pref, policy, the_files, p_remote)
@@ -291,7 +301,6 @@ class CmdUpload(object):
 
     def _compress_recipe_files(self, ref):
         export_folder = self._cache.package_layout(ref).export()
-
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
             if is_dirty(tgz_path):
@@ -306,7 +315,16 @@ class CmdUpload(object):
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
+        self._update_recipe_metadata_checksums(ref, the_files)
         return the_files
+
+    def _update_recipe_metadata_checksums(self, ref, files):
+        with self._cache.package_layout(ref).update_metadata() as metadata:
+            for file, path in files.items():
+                md5 = md5sum(path)
+                sha1 = sha1sum(path)
+                metadata.recipe.properties[file] = {"actual_md5": md5,
+                                                    "actual_sha1": sha1}
 
     def _compress_package_files(self, pref, integrity_check):
 
