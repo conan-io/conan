@@ -4,7 +4,7 @@ import unittest
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
-class PythonBuildTest(unittest.TestCase):
+class CompatibleIDsTest(unittest.TestCase):
 
     def compatible_test(self):
         client = TestClient()

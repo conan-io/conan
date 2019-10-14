@@ -237,8 +237,3 @@ class DepsCppInfo(_BaseDepsCppInfo):
         super(DepsCppInfo, self).update(dep_cpp_info)
         for config, cpp_info in dep_cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
-
-    def update_deps_cpp_info(self, dep_cpp_info):
-        assert isinstance(dep_cpp_info, DepsCppInfo)
-        for pkg_name, cpp_info in dep_cpp_info.dependencies:
-            self.update(cpp_info, pkg_name)

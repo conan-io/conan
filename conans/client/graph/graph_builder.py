@@ -72,7 +72,6 @@ class DepsGraphBuilder(object):
 
         subgraph = DepsGraph()
         subgraph.aliased = graph.aliased
-        subgraph.evaluated = graph.evaluated
         subgraph.nodes = new_nodes
         for n in subgraph.nodes:
             n.build_require = True

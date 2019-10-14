@@ -42,11 +42,11 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     out.info("Configuration:")
     out.writeln(graph_info.profile.dumps())
-    result = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
-                                      False, update, remotes, recorder)
-    deps_graph, conanfile = result
-
-    if conanfile.display_name == "virtual":
+    deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
+                                          False, update, remotes, recorder)
+    root_node = deps_graph.root
+    conanfile = root_node.conanfile
+    if root_node.recipe == RECIPE_VIRTUAL:
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
@@ -62,8 +62,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     installer = BinaryInstaller(app, recorder=recorder)
     installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
-    if graph_info.graph_lock:
-        graph_info.graph_lock.update_check_graph(deps_graph, out)
+    # GraphLock always != None here (because of graph_manager.load_graph)
+    graph_info.graph_lock.update_check_graph(deps_graph, out)
 
     if manifest_folder:
         manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)
@@ -79,7 +79,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     if install_folder:
         conanfile.install_folder = install_folder
         # Write generators
-        output = conanfile.output if conanfile.display_name != "virtual" else out
+        output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
         if generators is not False:
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])

@@ -401,6 +401,18 @@ class ConanClientConfigParser(ConfigParser, object):
         return default_package_id_mode
 
     @property
+    def short_paths_home(self):
+        short_paths_home = get_env("CONAN_USER_HOME_SHORT")
+        if short_paths_home:
+            current_dir = os.path.dirname(self.filename)
+            if current_dir == os.path.commonprefix([current_dir, short_paths_home]):
+                raise ConanException("Short path home '{}' (defined by conan.conf variable "
+                                     "'user_home_short', or environment variable "
+                                     "'CONAN_USER_HOME_SHORT') cannot be a subdirectory of "
+                                     "the conan cache '{}'.".format(short_paths_home, current_dir))
+        return short_paths_home
+
+    @property
     def storage_path(self):
         # Try with CONAN_STORAGE_PATH
         result = get_env('CONAN_STORAGE_PATH', None)

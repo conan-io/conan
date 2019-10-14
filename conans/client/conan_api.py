@@ -2,6 +2,7 @@ import os
 import sys
 from collections import OrderedDict
 
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.manager import deps_install
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 
@@ -181,9 +182,9 @@ class ConanApp(object):
         self.python_requires = ConanPythonRequire(self.proxy, resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires)
 
-        self.graph_manager = GraphManager(self.out, self.cache,
-                                          self.remote_manager, self.loader, self.proxy,
-                                          resolver)
+        self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
+        self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
+                                          self.proxy, resolver, self.binaries_analyzer)
 
     def load_remotes(self, remote_name=None, update=False, check_updates=False):
         remotes = self.cache.registry.load_remotes()
@@ -454,7 +455,7 @@ class ConanAPIV1(object):
         self.app.cache.editable_packages.override(workspace.get_editable_dict())
 
         recorder = ActionRecorder()
-        deps_graph, _ = self.app.graph_manager.load_graph(workspace.root, None, graph_info, build,
+        deps_graph = self.app.graph_manager.load_graph(workspace.root, None, graph_info, build,
                                                        False, update, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
@@ -611,8 +612,8 @@ class ConanAPIV1(object):
                                                 settings, options, env)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
-                                                          check_updates, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
+                                                       check_updates, False, remotes, recorder)
         return deps_graph.build_order(build_order)
 
     @api_method
@@ -623,11 +624,10 @@ class ConanAPIV1(object):
                                                 settings, options, env)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info,
-                                                                  build_modes, check_updates,
-                                                                  False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build_modes,
+                                                       check_updates, False, remotes, recorder)
         nodes_to_build = deps_graph.nodes_to_build()
-        return nodes_to_build, conanfile
+        return nodes_to_build, deps_graph.root.conanfile
 
     @api_method
     def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
@@ -637,14 +637,14 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph, conanfile = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                                  update, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
+                                                       update, False, remotes, recorder)
 
         if install_folder:
             output_folder = _make_abs_path(install_folder)
             graph_info.save(output_folder)
             self.app.out.info("Generated graphinfo")
-        return deps_graph, conanfile
+        return deps_graph, deps_graph.root.conanfile
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
@@ -683,9 +683,9 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
         with get_env_context_manager(conanfile):
-            packager.create_package(conanfile, None, source_folder, build_folder, package_folder,
-                                    install_folder, self.app.hook_manager, conanfile_path, None,
-                                    local=True, copy_info=True)
+            packager.run_package_method(conanfile, None, source_folder, build_folder, package_folder,
+                                        install_folder, self.app.hook_manager, conanfile_path, None,
+                                        local=True, copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
@@ -1202,8 +1202,8 @@ class ConanAPIV1(object):
                                     lockfile=lockfile)
         # The reference of the root node could be a local path or a ref
         reference = graph_info.graph_lock.root_node_ref()
-        deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build,
-                                                          False, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
+                                                       False, False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
         graph_info.save_lock(lockfile)
@@ -1221,8 +1221,8 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph, _ = self.app.graph_manager.load_graph(reference, None, graph_info, build, update,
-                                                          False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build, update,
+                                                       False, remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
         lockfile = _make_abs_path(lockfile)
