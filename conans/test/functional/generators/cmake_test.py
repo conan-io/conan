@@ -187,9 +187,11 @@ CONAN_BASIC_SETUP()
                     """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create conanfile.py consumer/1.0@us/ch")
+        self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
         self.assertIn("mylib Target libs: "
                       "lib1;lib11;$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG"
                       ":MinSizeRel>:;>;$<$<CONFIG:Debug>:;>;sys1", client.out)
+        self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
         self.assertIn("myotherlib Target libs: lib2;$<$<CONFIG:Release>:;>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>;"
                       "CONAN_PKG::mylib;sys2", client.out)
