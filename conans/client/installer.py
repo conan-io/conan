@@ -380,9 +380,10 @@ class BinaryInstaller(object):
         conanfile = node.conanfile
         output = conanfile.output
 
-        package_folder = self._cache.package_layout(pref.ref, conanfile.short_paths).package(pref)
+        layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+        package_folder = layout.package(pref)
 
-        with self._cache.package_layout(pref.ref).package_lock(pref):
+        with layout.package_lock(pref):
             if pref not in processed_package_references:
                 processed_package_references.add(pref)
                 if node.binary == BINARY_BUILD:
@@ -404,7 +405,7 @@ class BinaryInstaller(object):
                                                              node.binary_remote, output,
                                                              self._recorder)
                             output.info("Downloaded package revision %s" % pref.revision)
-                            with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+                            with layout.update_metadata() as metadata:
                                 metadata.packages[pref.id].remote = node.binary_remote.name
                     else:
                         output.success('Download skipped. Probable concurrent download')
