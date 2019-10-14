@@ -247,28 +247,30 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
         return False
 
 
-def replace_in_file(file_path, search, replace, strict=True, output=None):
+def replace_in_file(file_path, search, replace, strict=True, output=None, encoding_in="auto",
+                    encoding_out="utf-8"):
     output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
-    content = load(file_path)
+    content = load(file_path, encoding=encoding_in)
     if -1 == content.find(search):
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
-    content = content.encode("utf-8")
-    with open(file_path, "wb") as handle:
-        handle.write(content)
+    content = content.encode(encoding_out)
+    save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
-def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None):
+def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
+                         encoding_in="auto", encoding_out="utf-8"):
     output = default_output(output, 'conans.client.tools.files.replace_path_in_file')
 
     if windows_paths is False or (windows_paths is None and platform.system() != "Windows"):
-        return replace_in_file(file_path, search, replace, strict=strict, output=output)
+        return replace_in_file(file_path, search, replace, strict=strict, output=output,
+                               encoding_in=encoding_in, encoding_out=encoding_out)
 
     def normalized_text(text):
         return text.replace("\\", "/").lower()
 
-    content = load(file_path)
+    content = load(file_path, encoding=encoding_in)
     normalized_content = normalized_text(content)
     normalized_search = normalized_text(search)
     index = normalized_content.find(normalized_search)
@@ -281,9 +283,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
         normalized_content = normalized_text(content)
         index = normalized_content.find(normalized_search)
 
-    content = content.encode("utf-8")
-    with open(file_path, "wb") as handle:
-        handle.write(content)
+    content = content.encode(encoding_out)
+    save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
     return True
 
