@@ -108,6 +108,10 @@ CONAN_BASIC_SETUP()
 
             class MyLib(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
+                exports_sources = "*"
+
+                def package(self):
+                    self.copy("*", dst="lib")
 
                 def package_info(self):
                     self.cpp_info.system_deps = ["sys1"]
@@ -128,10 +132,12 @@ CONAN_BASIC_SETUP()
             conan_basic_setup(TARGETS)
             get_target_property(tmp CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
             message("Target libs: ${tmp}")
+            get_target_property(tmpp CONAN_LIB::mylib_lib1 INTERFACE_LINK_LIBRARIES)
+            message("CONAN_LIB::mylib_lib1 system libs: ${tmpp}")
             """)
         client = TestClient()
         client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer,
-                     "CMakeLists.txt": cmakelists})
+                     "CMakeLists.txt": cmakelists, "lib1.lib": "", "lib1.a": ""})
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py")
 
@@ -143,17 +149,22 @@ CONAN_BASIC_SETUP()
 
         # Check target has libraries and system deps available
         client.run_command("cmake .")
-        self.assertIn("Target libs: lib1;sys1;", client.out)
+        self.assertIn("Target libs: CONAN_LIB::mylib_lib1;", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib1 system libs: sys1", client.out)
+        print(client.out)
 
     def targets_system_deps_test(self):
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
                                                            "system_deps": ["sys1"]},
-                                                 env_info={})
+                                                 env_info={})\
+            .with_package_file("lib/lib1.lib", " ").with_package_file("lib/lib1.a", " ")\
+            .with_package_file("lib/lib11.lib", " ").with_package_file("lib/lib11.a", " ")
         mylib_ref = ConanFileReference("mylib", "1.0", "us", "ch")
 
         myotherlib = GenConanfile().with_package_info(cpp_info={"libs": ["lib2"],
                                                                 "system_deps": ["sys2"]},
-                                                      env_info={}).with_require(mylib_ref)
+                                                      env_info={}).with_require(mylib_ref) \
+            .with_package_file("lib/lib2.lib", " ").with_package_file("lib/lib2.a", " ")
         myotherlib_ref = ConanFileReference("myotherlib", "1.0", "us", "ch")
 
         client = TurboTestClient()
@@ -179,19 +190,35 @@ CONAN_BASIC_SETUP()
                     cmake_minimum_required(VERSION 3.1)
                     project(consumer CXX)
                     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-                    conan_basic_setup(TARGETS)
-                    get_target_property(ml_tlibs CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
-                    get_target_property(mol_tlibs CONAN_PKG::myotherlib INTERFACE_LINK_LIBRARIES)
-                    message("mylib Target libs: ${ml_tlibs}")
-                    message("myotherlib Target libs: ${mol_tlibs}")
+                    conan_basic_setup("TARGETS")
+
+                    get_target_property(ml_pkg_libs CONAN_PKG::mylib INTERFACE_LINK_LIBRARIES)
+                    message("CONAN_PKG::mylib libs: ${ml_pkg_libs}")
+                    get_target_property(ml_lib1_libs CONAN_LIB::mylib_lib1 INTERFACE_LINK_LIBRARIES)
+                    message("CONAN_LIB::mylib_lib1 libs: ${ml_lib1_libs}")
+                    get_target_property(ml_lib11_libs CONAN_LIB::mylib_lib11 INTERFACE_LINK_LIBRARIES)
+                    message("CONAN_LIB::mylib_lib11 libs: ${ml_lib11_libs}")
+
+                    get_target_property(mol_pkg_libs CONAN_PKG::myotherlib INTERFACE_LINK_LIBRARIES)
+                    message("CONAN_PKG::myotherlib libs: ${mol_pkg_libs}")
+                    get_target_property(ml_lib2_libs CONAN_LIB::myotherlib_lib2 INTERFACE_LINK_LIBRARIES)
+                    message("CONAN_LIB::myotherlib_lib2 libs: ${ml_lib2_libs}")
                     """)
+
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create conanfile.py consumer/1.0@us/ch")
+
         self.assertNotIn("Library sys1 not found in package, might be system one", client.out)
-        self.assertIn("mylib Target libs: "
-                      "lib1;lib11;$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG"
-                      ":MinSizeRel>:;>;$<$<CONFIG:Debug>:;>;sys1", client.out)
+        self.assertIn("CONAN_PKG::mylib libs: "
+                      "CONAN_LIB::mylib_lib1;CONAN_LIB::mylib_lib11;$<$<CONFIG:Release>:;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
+                      client.out)
+        self.assertIn("CONAN_LIB::mylib_lib1 libs: sys1", client.out)
+        self.assertIn("CONAN_LIB::mylib_lib11 libs: sys1", client.out)
+
         self.assertNotIn("Library sys2 not found in package, might be system one", client.out)
-        self.assertIn("myotherlib Target libs: lib2;$<$<CONFIG:Release>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>;"
-                      "CONAN_PKG::mylib;sys2", client.out)
+        self.assertIn("CONAN_PKG::myotherlib libs: "
+                      "CONAN_LIB::myotherlib_lib2;$<$<CONFIG:Release>:;>;"
+                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>",
+                      client.out)
+        self.assertIn("CONAN_LIB::myotherlib_lib2 libs: sys2;CONAN_PKG::mylib", client.out)
