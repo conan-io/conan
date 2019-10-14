@@ -140,6 +140,12 @@ class TestingResponse(object):
     def status_code(self):
         return self.test_response.status_code
 
+    def json(self):
+        try:
+            return json.loads(self.test_response.content)
+        except:
+            raise ValueError("The response is not a JSON")
+
 
 class TestRequester(object):
     """Fake requests module calling server applications
@@ -687,6 +693,9 @@ servers["r2"] = TestServer()
         if servers is not False:  # Do not mess with registry remotes
             self.update_servers()
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+    def load(self, filename):
+        return load(os.path.join(self.current_folder, filename))
 
     @property
     def cache(self):

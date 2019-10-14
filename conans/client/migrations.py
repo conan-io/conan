@@ -103,6 +103,9 @@ class ClientMigrator(Migrator):
         if old_version < Version("1.15.0"):
             migrate_registry_file(self.cache, self.out)
 
+        if old_version < Version("1.19.0"):
+            migrate_localdb_refresh_token(self.cache, self.out)
+
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
@@ -113,6 +116,21 @@ def _get_prefs(layout):
     packages_folder = layout.packages()
     folders = list_folder_subdirs(packages_folder, 1)
     return [PackageReference(layout.ref, s) for s in folders]
+
+
+def migrate_localdb_refresh_token(cache, out):
+    from conans.client.store.localdb import LocalDB
+    from sqlite3 import OperationalError
+
+    localdb = LocalDB.create(cache.localdb)
+    with localdb._connect() as connection:
+        try:
+            statement = connection.cursor()
+            statement.execute("ALTER TABLE users_remotes ADD refresh_token TEXT;")
+        except OperationalError:
+            # This likely means the column is already there (fresh created table)
+            # In the worst scenario the user will be requested to remove the file by hand
+            pass
 
 
 def _migrate_full_metadata(cache, out):

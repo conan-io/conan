@@ -18,13 +18,15 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    properties_template = '''  <PropertyGroup Label="ConanVariables"{condition}>
+    properties_template = '''<PropertyGroup Label="ConanVariables"{condition}>
     <ConanCompilerFlags>{compiler_flags}</ConanCompilerFlags>
+    <ConanLinkerFlags>{linker_flags}</ConanLinkerFlags>
     <ConanPreprocessorDefinitions>{definitions}</ConanPreprocessorDefinitions>
     <ConanIncludeDirectories>{include_dirs}</ConanIncludeDirectories>
     <ConanResourceDirectories>{res_dirs}</ConanResourceDirectories>
     <ConanLibraryDirectories>{lib_dirs}</ConanLibraryDirectories>
     <ConanBinaryDirectories>{bin_dirs}</ConanBinaryDirectories>
+    <ConanLibraries>{libs}</ConanLibraries>
   </PropertyGroup>
   <PropertyGroup{condition}>
     <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
@@ -38,13 +40,9 @@ class VisualStudioGenerator(Generator):
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>$(ConanLibraries)%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>$(ConanLinkerFlags) %(AdditionalOptions)</AdditionalOptions>
     </Link>
-    <Lib>
-      <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
-    </Lib>
     <Midl>
       <AdditionalIncludeDirectories>$(ConanIncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </Midl>

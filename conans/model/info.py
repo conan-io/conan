@@ -141,8 +141,8 @@ class RequirementInfo(object):
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
+        self.package_id = self.full_package_id
         self.recipe_revision = self.full_recipe_revision
-        self.package_id = None
         self.package_revision = None
 
     def package_revision_mode(self):

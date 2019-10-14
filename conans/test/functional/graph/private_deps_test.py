@@ -36,7 +36,7 @@ class Pkg(ConanFile):
         self.assertIn("[libs];PkgA;PkgC", ";".join(conanbuildinfo.splitlines()))
         self.assertIn("PkgC/0.1/user/channel/package", conanbuildinfo)
         self.assertIn("[includedirs_PkgC]", conanbuildinfo)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
         html = load(os.path.join(client.current_folder, "file.html"))
@@ -88,7 +88,7 @@ class V3D(ConanFile):
         client.run("install . -g=cmake")
         self.assertIn("bzip2/1.0.6@conan/stable:%s - Skip" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         # The order is dictated by public MyPackage -> zlib dependency
         self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
@@ -126,7 +126,7 @@ class V3D(ConanFile):
         client.run("install . -g=cmake")
         self.assertIn("bzip2/1.0.6@conan/stable:%s - Skip" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         # The order is dictated by V3D declaration order, as other are privates
         self.assertIn("set(CONAN_LIBS zlib mypackage ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
@@ -161,7 +161,7 @@ class V3D(ConanFile):
                       client.out)
         self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
-        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        conanbuildinfo = client.load("conanbuildinfo.cmake")
         # The order is dictated by public mypackage -> zlib
         self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
@@ -193,7 +193,7 @@ class V3D(ConanFile):
             client.run("install . -g cmake")
             self.assertIn("LibA/0.1@conan/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
-            conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+            conanbuildinfo = client.load("conanbuildinfo.cmake")
             self.assertIn("set(CONAN_LIBS mylibLibA0.1lib ${CONAN_LIBS})", conanbuildinfo)
 
 

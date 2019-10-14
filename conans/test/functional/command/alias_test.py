@@ -456,7 +456,7 @@ class Pkg(ConanFile):
 
         self.assertIn("Hello/0.1@lasote/channel from local", client.out)
         self.assertNotIn("Hello/0.X@lasote/channel", client.out)
-        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        conaninfo = client.load("conaninfo.txt")
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
         self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
 
