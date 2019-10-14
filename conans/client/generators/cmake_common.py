@@ -113,15 +113,20 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 _target_template = """
     conan_package_library_targets("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
-                                  CONAN_PACKAGE_TARGETS_{uname} "{deps}" "" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname} "${{CONAN_SYSTEM_DEPS_{uname}}} {deps}"
+                                  "" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "{deps}" "debug" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname}_DEBUG "${{CONAN_SYSTEM_DEPS_{uname}_DEBUG}} {deps}"
+                                  "debug" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "{deps}" "release" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELEASE "${{CONAN_SYSTEM_DEPS_{uname}_RELEASE}} {deps}"
+                                  "release" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_RELWITHDEBINFO}}" "${{CONAN_LIB_DIRS_{uname}_RELWITHDEBINFO}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "{deps}" "relwithdebinfo" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname}_RELWITHDEBINFO "${{CONAN_SYSTEM_DEPS_{uname}_RELWITHDEBINFO}} {deps}"
+                                  "relwithdebinfo" {pkg_name})
     conan_package_library_targets("${{CONAN_LIBS_{uname}_MINSIZEREL}}" "${{CONAN_LIB_DIRS_{uname}_MINSIZEREL}}"
-                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "{deps}" "minsizerel" {pkg_name})
+                                  CONAN_PACKAGE_TARGETS_{uname}_MINSIZEREL "${{CONAN_SYSTEM_DEPS_{uname}_MINSIZEREL}} {deps}"
+                                  "minsizerel" {pkg_name})
 
     add_library({name} INTERFACE IMPORTED)
 
@@ -164,9 +169,7 @@ def generate_targets_section(dependencies):
     for _, dep_info in dependencies:
         dep_name = dep_info.name
         use_deps = ["CONAN_PKG::%s" % dependencies_dict[d].name for d in dep_info.public_deps]
-        use_deps.extend(dep_info.system_deps)
         deps = "" if not use_deps else " ".join(use_deps)
-        print("deps:", deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper(), pkg_name=dep_name))
 
