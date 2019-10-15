@@ -69,6 +69,7 @@ def get_reference_fields(arg_reference, user_channel_input=False):
 
 def check_valid_ref(reference, strict_mode=True):
     """
+    :param reference: string to be analyzed if it is a reference or not
     :param strict_mode: Only if the reference contains the "@" is valid, used to disambiguate"""
     try:
 
@@ -76,7 +77,7 @@ def check_valid_ref(reference, strict_mode=True):
             return False
         if strict_mode and "@" not in reference:
             return False
-        if strict_mode and "*" in reference:
+        if strict_mode and "*" in reference and "[*]" not in reference:
             return False
         ConanFileReference.loads(reference, validate=True)
         return True
