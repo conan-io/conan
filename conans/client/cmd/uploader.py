@@ -40,7 +40,7 @@ class CmdUpload(object):
     - Execute the upload. For every ref:
         - Upload the recipe of the ref: "_upload_recipe"
             - If not FORCE, check the date "_check_recipe_date", i.e. if there are
-              changes, do not allow uploading if the remote date is newer than the
+              changes, do not allouploading if the remote date is newer than the
               local cache one
             - Retrieve the sources (exports_sources), if they are not cached, and
               uploading to a different remote. "complete_recipe_sources"
@@ -265,8 +265,7 @@ class CmdUpload(object):
         the_files = self._compress_package_files(pref, integrity_check)
 
         with self._cache.package_layout(pref.ref).update_metadata() as metadata:
-            package_checksums = calc_files_checksum(the_files)
-            metadata.packages[pref.id].checksums = package_checksums
+            metadata.packages[pref.id].checksums = calc_files_checksum(the_files)
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -311,8 +310,7 @@ class CmdUpload(object):
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
         with self._cache.package_layout(ref).update_metadata() as metadata:
-            recipe_checksums = calc_files_checksum(the_files)
-            metadata.recipe.checksums = recipe_checksums
+            metadata.recipe.checksums = calc_files_checksum(the_files)
 
         return the_files
 
