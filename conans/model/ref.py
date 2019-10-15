@@ -79,8 +79,9 @@ def check_valid_ref(reference, strict_mode=True):
                 return False
             if "*" in reference:
                 ref = ConanFileReference.loads(reference, validate=True)
-                if ref.version != "*":
+                if str(ref.version) != "*":
                     return True
+                return False
         ConanFileReference.loads(reference, validate=True)
         return True
     except ConanException:
