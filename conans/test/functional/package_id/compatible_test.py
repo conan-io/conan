@@ -9,14 +9,16 @@ class CompatibleIDsTest(unittest.TestCase):
     def compatible_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conans import ConanFile, CompatibleId
+
             class Pkg(ConanFile):
                 settings = "os", "compiler"
-                def compatible_package_ids(self):
+                def package_id(self):
                     if self.settings.compiler == "gcc":
                         for version in ("4.8", "4.7", "4.6"):
-                            info = self.compatible_ids.append()
+                            info = CompatibleId(self)
                             info.settings.compiler.version = version
+                            self.compatible.append(info)
             """)
         profile = textwrap.dedent("""
             [settings]
