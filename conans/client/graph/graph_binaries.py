@@ -169,7 +169,9 @@ class GraphBinariesAnalyzer(object):
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
-            if node.binary == BINARY_MISSING:
+            if node.binary == BINARY_MISSING and hasattr(node.conanfile, "compatible_package_ids"):
+                with conanfile_exception_formatter(str(node.conanfile), "compatible_package_ids"):
+                    node.conanfile.compatible_package_ids()
                 for compatible_info in node.conanfile.compatible_ids:
                     node.binary = None  # Invalidate it
                     package_id = compatible_info.package_id()
