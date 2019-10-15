@@ -13,20 +13,29 @@ labels: bug
 -->
 
 ### Environment Details (include every applicable attribute)
-  * Operating System+version: **Linux Ubuntu 18.04**
-  * Compiler+version: **GCC 8**
-  * Conan version: **conan 1.18.0**
-  * Python version: **Python 3.7.4**
+  * Operating System+version:
+  * Compiler+version:
+  * Conan version:
+  * Python version:
 
 ### Steps to reproduce (Include if Applicable)
 
 
-
 ### Logs (Include/Attach if Applicable)
+
+<!--
+  Your log content should be related to the bug description, it can be:
+  - Conan command output
+  - Server output (Artifactory, conan_server)
+
+  To increase the logging level, you can configure the [Conan Logging Level](https://docs.conan.io/en/latest/reference/env_vars.html#conan-logging-level).
+  Also, you can configure [Conan logs](https://docs.conan.io/en/latest/mastering/logging.html) if you need.
+-->
+
 <details><summary>Click to expand log</summary>
 
 ```
-Put your log output here
+Put your log output here.
 ```
 
 </details>
