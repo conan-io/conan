@@ -78,7 +78,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                         os.remove(os.path.join(c.current_folder, "example"))
 
     @unittest.skipUnless(platform.system() != "Windows", "Skip Visual Studio config for build type")
-    def cmake_find_package_system_deps_test(self):
+    def cmake_find_package_system_libs_test(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools
 
@@ -88,9 +88,9 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 settings = "build_type"
                 def package_info(self):
                     if self.settings.build_type == "Debug":
-                        self.cpp_info.system_deps.append("sys1d")
+                        self.cpp_info.system_libs.append("sys1d")
                     else:
-                        self.cpp_info.system_deps.append("sys1")
+                        self.cpp_info.system_libs.append("sys1")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -109,7 +109,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
             set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
             find_package(Test)
-            message("System deps: ${Test_SYSTEM_DEPS}")
+            message("System libs: ${Test_SYSTEM_LIBS}")
             message("Libraries to Link: ${Test_LIBS}")
             get_target_property(tmp Test::Test INTERFACE_LINK_LIBRARIES)
             message("Target libs: ${tmp}")

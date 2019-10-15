@@ -41,7 +41,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.exelinkflags = ['-framework QuartzCore']
         cpp_info.frameworks = ['AudioUnit']
         cpp_info.frameworkdirs = ['SystemFrameworks']
-        cpp_info.system_deps = ["system_dep1"]
+        cpp_info.system_libs = ["system_lib1"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
         cpp_info = CppInfo(tmp_folder2)
@@ -55,7 +55,7 @@ class MakeGeneratorTest(unittest.TestCase):
         cpp_info.cxxflags = ['-pthread']
         cpp_info.sharedlinkflags = ['-framework AudioFoundation']
         cpp_info.exelinkflags = ['-framework VideoToolbox']
-        cpp_info.system_deps = ["system_dep2"]
+        cpp_info.system_libs = ["system_lib2"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = MakeGenerator(conanfile)
         content = generator.content
@@ -85,8 +85,8 @@ CONAN_RES_DIRS_MYPKG1 +=  \\
 CONAN_LIBS_MYPKG1 +=  \\
 libfoo
 
-CONAN_SYSTEM_DEPS_MYPKG1 +=  \\
-system_dep1
+CONAN_SYSTEM_LIBS_MYPKG1 +=  \\
+system_lib1
 
 CONAN_DEFINES_MYPKG1 +=  \\
 MYDEFINE1
@@ -133,8 +133,8 @@ CONAN_RES_DIRS_MYPKG2 +=  \\
 CONAN_LIBS_MYPKG2 +=  \\
 libbar
 
-CONAN_SYSTEM_DEPS_MYPKG2 +=  \\
-system_dep2
+CONAN_SYSTEM_LIBS_MYPKG2 +=  \\
+system_lib2
 
 CONAN_DEFINES_MYPKG2 +=  \\
 MYDEFINE2

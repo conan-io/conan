@@ -94,7 +94,7 @@ class VisualStudioTest(unittest.TestCase):
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)
 
-    def system_deps_test(self):
+    def system_libs_test(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -103,7 +103,7 @@ class VisualStudioTest(unittest.TestCase):
                 settings = "os", "compiler", "arch", "build_type"
 
                 def package_info(self):
-                    self.cpp_info.system_deps = ["sys1"]
+                    self.cpp_info.system_libs = ["sys1"]
                     self.cpp_info.libs = ["lib1"]
                 """)
         consumer = textwrap.dedent("""

@@ -136,7 +136,7 @@ class PkgConfigConan(ConanFile):
         pc_content = load(pc_path)
         self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)
 
-    def system_deps_test(self):
+    def system_libs_test(self):
         conanfile = """
 from conans import ConanFile
 
@@ -146,7 +146,7 @@ class PkgConfigConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["mylib1", "mylib2"]
-        self.cpp_info.system_deps = ["system_dep1", "system_dep2"]
+        self.cpp_info.system_libs = ["system_lib1", "system_lib2"]
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -155,5 +155,5 @@ class PkgConfigConan(ConanFile):
 
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         pc_content = load(pc_path)
-        self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_dep1  -lsystem_dep2 ",
+        self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ",
                       pc_content)

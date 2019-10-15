@@ -272,9 +272,9 @@ class HelloConan(ConanFile):
             self.assertIn("Hello Release Hello0", client.out)
 
 
-class CMakeMultiSystemDepsTest(unittest.TestCase):
+class CMakeMultiSystemLibsTest(unittest.TestCase):
 
-    def system_deps_test(self):
+    def system_libs_test(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -282,8 +282,8 @@ class CMakeMultiSystemDepsTest(unittest.TestCase):
             class MyLib(ConanFile):
 
                 def package_info(self):
-                    self.cpp_info.debug.system_deps = ["sys1d"]
-                    self.cpp_info.release.system_deps = ["sys1"]
+                    self.cpp_info.debug.system_libs = ["sys1d"]
+                    self.cpp_info.release.system_libs = ["sys1"]
                     self.cpp_info.libs = ["lib1"]
                 """)
         consumer = textwrap.dedent("""
@@ -306,12 +306,12 @@ class CMakeMultiSystemDepsTest(unittest.TestCase):
         self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE )", content)
         self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG )", content)
 
-        self.assertIn("set(CONAN_SYSTEM_DEPS  ${CONAN_SYSTEM_DEPS})", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS_DEBUG sys1d ${CONAN_SYSTEM_DEPS_DEBUG})", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS_RELEASE sys1 ${CONAN_SYSTEM_DEPS_RELEASE})", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB )", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB_RELEASE sys1)", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB_DEBUG sys1d)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS  ${CONAN_SYSTEM_LIBS})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_DEBUG sys1d ${CONAN_SYSTEM_LIBS_DEBUG})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_RELEASE sys1 ${CONAN_SYSTEM_LIBS_RELEASE})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB )", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_RELEASE sys1)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB_DEBUG sys1d)", content)
 
 
 class CMakeMultiSyntaxTest(unittest.TestCase):
@@ -347,4 +347,3 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         self.assertTrue("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
         self.assertTrue("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
                         self.client.out)
-

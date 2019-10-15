@@ -62,7 +62,7 @@ class CompilerArgsGenerator(Generator):
         flags.extend(rpath_flags(the_os, self.compiler, self._deps_build_info.lib_paths))
         flags.extend(format_library_paths(self._deps_build_info.lib_paths, compiler=self.compiler))
         flags.extend(format_libraries(self._deps_build_info.libs, compiler=self.compiler))
-        flags.extend(format_libraries(self._deps_build_info.system_deps, compiler=self.compiler))
+        flags.extend(format_libraries(self._deps_build_info.system_libs, compiler=self.compiler))
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())

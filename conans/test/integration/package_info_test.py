@@ -89,14 +89,14 @@ class HelloConan(ConanFile):
         self.assertIn("intermediate name: intermediate", client.out)
         self.assertIn("dep name: MyCustomGreatName", client.out)
 
-    def package_info_system_deps_test(self):
+    def package_info_system_libs_test(self):
         dep = textwrap.dedent("""
             from conans import ConanFile
 
             class Dep(ConanFile):
 
                 def package_info(self):
-                    self.cpp_info.system_deps = ["sysdep1"]
+                    self.cpp_info.system_libs = ["sysdep1"]
                 """)
         intermediate = textwrap.dedent("""
             from conans import ConanFile
@@ -105,7 +105,7 @@ class HelloConan(ConanFile):
                 requires = "dep/1.0@us/ch"
 
                 def package_info(self):
-                    self.cpp_info.system_deps = ["sysdep2", "sysdep3"]
+                    self.cpp_info.system_libs = ["sysdep2", "sysdep3"]
                 """)
         consumer = textwrap.dedent("""
             from conans import ConanFile
@@ -114,9 +114,9 @@ class HelloConan(ConanFile):
                 requires = "intermediate/1.0@us/ch"
 
                 def build(self):
-                    self.output.info("System deps: %s" % self.deps_cpp_info.system_deps)
+                    self.output.info("System deps: %s" % self.deps_cpp_info.system_libs)
                     for dep_key, dep_value in self.deps_cpp_info.dependencies:
-                        self.output.info("%s system deps: %s" % (dep_key, dep_value.system_deps))
+                        self.output.info("%s system deps: %s" % (dep_key, dep_value.system_libs))
                 """)
 
         client = TestClient()
@@ -126,9 +126,9 @@ class HelloConan(ConanFile):
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_intermediate.py intermediate/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
-        dep_system_deps = ["sysdep1"]
-        intermediate_system_deps = ["sysdep2", "sysdep3"]
-        merged_system_deps = intermediate_system_deps + dep_system_deps
-        self.assertIn("System deps: %s" % merged_system_deps, client.out)
-        self.assertIn("intermediate system deps: %s" % intermediate_system_deps, client.out)
-        self.assertIn("dep system deps: %s" % dep_system_deps, client.out)
+        dep_system_libs = ["sysdep1"]
+        intermediate_system_libs = ["sysdep2", "sysdep3"]
+        merged_system_libs = intermediate_system_libs + dep_system_libs
+        self.assertIn("System deps: %s" % merged_system_libs, client.out)
+        self.assertIn("intermediate system deps: %s" % intermediate_system_libs, client.out)
+        self.assertIn("dep system deps: %s" % dep_system_libs, client.out)

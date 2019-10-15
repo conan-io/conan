@@ -8,7 +8,7 @@ set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
-set({name}_SYSTEM_DEPS{build_type_suffix} {deps.system_deps})
+set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
 
 {deps.find_frameworks}
 

@@ -35,7 +35,7 @@ class CompilerArgsTest(unittest.TestCase):
         self.assertEqual('-O2 -Ob2 -DNDEBUG -link mylib.lib other.lib', gen.content)
 
     @staticmethod
-    def _get_conanfile(settings, frameworks=False, system_deps=False):
+    def _get_conanfile(settings, frameworks=False, system_libs=False):
         conan_file = ConanFileMock()
         conan_file.settings = settings
         conan_file.source_folder = "my_cache_source_folder"
@@ -51,8 +51,8 @@ class CompilerArgsTest(unittest.TestCase):
         cpp_info.cflags.append("c_flag1")
         cpp_info.cxxflags.append("cxx_flag1")
         cpp_info.defines.append("mydefine1")
-        if system_deps:
-            cpp_info.system_deps.append("system_dep1")
+        if system_libs:
+            cpp_info.system_libs.append("system_lib1")
         if frameworks:
             cpp_info.frameworks = ["AVFoundation", "VideoToolbox"]
             cpp_info.framework_paths.extend(['path/to/Frameworks1', 'path/to/Frameworks2'])
@@ -157,7 +157,7 @@ class CompilerArgsTest(unittest.TestCase):
                          '-framework AVFoundation -framework VideoToolbox '
                          '-F path/to/Frameworks1 -F path/to/Frameworks2', args.content)
 
-    def system_deps_test(self):
+    def system_libs_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
         settings.compiler = "gcc"
@@ -165,8 +165,8 @@ class CompilerArgsTest(unittest.TestCase):
         settings.arch = "x86_64"
         settings.build_type = "Release"
 
-        conan_file = self._get_conanfile(settings, system_deps=True)
+        conan_file = self._get_conanfile(settings, system_libs=True)
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -O3 -s -DNDEBUG '
-                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib -lsystem_dep1',
+                         '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib -lsystem_lib1',
                          args.content)

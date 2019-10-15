@@ -118,7 +118,7 @@ class HelloConan(ConanFile):
             self.assertEqual(deps_info[dupe], deps_info_debug[dupe])
             self.assertEqual(deps_info[dupe], deps_info_release[dupe])
 
-    def system_deps_test(self):
+    def system_libs_test(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -128,7 +128,7 @@ class HelloConan(ConanFile):
 
                 def package_info(self):
                     self.cpp_info.libs = ["LIB1"]
-                    self.cpp_info.system_deps = ["SYSTEM_DEP1"]
+                    self.cpp_info.system_libs = ["SYSTEM_LIB1"]
             """)
         client = TestClient()
         client.save({'conanfile.py': conanfile})
@@ -139,4 +139,4 @@ class HelloConan(ConanFile):
         my_json = load(os.path.join(client.current_folder, "conanbuildinfo.json"))
         my_json = json.loads(my_json)
         self.assertListEqual(my_json["dependencies"][0]["libs"], ["LIB1"])
-        self.assertListEqual(my_json["dependencies"][0]["system_deps"], ["SYSTEM_DEP1"])
+        self.assertListEqual(my_json["dependencies"][0]["system_libs"], ["SYSTEM_LIB1"])

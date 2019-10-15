@@ -101,7 +101,7 @@ CONAN_BASIC_SETUP()
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
 
-    def system_deps_test(self):
+    def system_libs_test(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -114,7 +114,7 @@ CONAN_BASIC_SETUP()
                     self.copy("*", dst="lib")
 
                 def package_info(self):
-                    self.cpp_info.system_deps = ["sys1"]
+                    self.cpp_info.system_libs = ["sys1"]
                     self.cpp_info.libs = ["lib1"]
                 """)
         consumer = textwrap.dedent("""
@@ -144,8 +144,8 @@ CONAN_BASIC_SETUP()
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS lib1 sys1 ${CONAN_LIBS})", content)
         self.assertIn("set(CONAN_LIBS_MYLIB lib1)", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS sys1 ${CONAN_SYSTEM_DEPS})", content)
-        self.assertIn("set(CONAN_SYSTEM_DEPS_MYLIB sys1)", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS sys1 ${CONAN_SYSTEM_LIBS})", content)
+        self.assertIn("set(CONAN_SYSTEM_LIBS_MYLIB sys1)", content)
 
         # Check target has libraries and system deps available
         client.run_command("cmake .")
@@ -153,16 +153,16 @@ CONAN_BASIC_SETUP()
         self.assertIn("CONAN_LIB::mylib_lib1 system libs: sys1", client.out)
         print(client.out)
 
-    def targets_system_deps_test(self):
+    def targets_system_libs_test(self):
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
-                                                           "system_deps": ["sys1"]},
+                                                           "system_libs": ["sys1"]},
                                                  env_info={})\
             .with_package_file("lib/lib1.lib", " ").with_package_file("lib/liblib1.a", " ")\
             .with_package_file("lib/lib11.lib", " ").with_package_file("lib/liblib11.a", " ")
         mylib_ref = ConanFileReference("mylib", "1.0", "us", "ch")
 
         myotherlib = GenConanfile().with_package_info(cpp_info={"libs": ["lib2"],
-                                                                "system_deps": ["sys2"]},
+                                                                "system_libs": ["sys2"]},
                                                       env_info={}).with_require(mylib_ref) \
             .with_package_file("lib/lib2.lib", " ").with_package_file("lib/liblib2.a", " ")
         myotherlib_ref = ConanFileReference("myotherlib", "1.0", "us", "ch")

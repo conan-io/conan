@@ -61,7 +61,7 @@ class PkgConfigGenerator(Generator):
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
-        libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_deps)]
+        libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         the_os = (self.conanfile.settings.get_safe("os_build") or
                   self.conanfile.settings.get_safe("os"))
