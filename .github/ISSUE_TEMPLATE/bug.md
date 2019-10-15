@@ -27,17 +27,4 @@ labels: 'type: bug'
   Your log content should be related to the bug description, it can be:
   - Conan command output
   - Server output (Artifactory, conan_server)
-
-  To increase the logging level, you can configure the environment variable:
-    https://docs.conan.io/en/latest/reference/env_vars.html#conan-logging-level
-  Also, you can configure Conan logs if you need:
-    https://docs.conan.io/en/latest/mastering/logging.html
 -->
-
-<details><summary>Click to expand log</summary>
-
-```
-Put your output here.
-```
-
-</details>
