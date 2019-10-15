@@ -21,7 +21,7 @@ labels: 'type: bug'
 ### Steps to reproduce (Include if Applicable)
 
 
-### Logs (Include/Attach if Applicable)
+### Logs (Executed commands with output) (Include/Attach if Applicable)
 
 <!--
   Your log content should be related to the bug description, it can be:
