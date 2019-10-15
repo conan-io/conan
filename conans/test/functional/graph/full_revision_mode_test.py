@@ -1,5 +1,4 @@
 import unittest
-from collections import OrderedDict
 from textwrap import dedent
 
 from conans.model.ref import ConanFileReference
@@ -100,7 +99,8 @@ class FullRevisionModeTest(unittest.TestCase):
 
         self.assertIn("libc/0.1@user/testing: Unknown binary", clientd.out)
         self.assertIn("libc/0.1@user/testing: Updated ID", clientd.out)
-        self.assertIn("libc/0.1@user/testing: Binary for updated ID from: Build", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Binary for the updated ID has to be built",
+                      clientd.out)
         self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
 
     def binary_id_recomputation_with_build_requires_test(self):
@@ -150,7 +150,8 @@ class FullRevisionModeTest(unittest.TestCase):
 
         self.assertIn("libc/0.1@user/testing: Unknown binary", clientd.out)
         self.assertIn("libc/0.1@user/testing: Updated ID", clientd.out)
-        self.assertIn("libc/0.1@user/testing: Binary for updated ID from: Build", clientd.out)
+        self.assertIn("libc/0.1@user/testing: Binary for the updated ID has to be built",
+                      clientd.out)
         self.assertIn("libc/0.1@user/testing: Calling build()", clientd.out)
 
     def reusing_artifacts_after_build_test(self):
@@ -185,33 +186,24 @@ class PackageRevisionModeTest(unittest.TestCase):
         self.client.run("config set general.revisions_enabled=1")
         self.client.run("config set general.default_package_id_mode=package_revision_mode")
 
-    def _generate_graph(self, dependencies, names_versions):
-        refs = OrderedDict()
-        for name, version in names_versions:
-            refs[name] = {"ref": ConanFileReference(name, version, None, None, None),
-                          "conanfile": GenConanfile().with_name(name).with_version(version)}
-
-        for name, data in refs.items():
-            for dep in dependencies[name]:
-                conanfile = refs[name]["conanfile"]
-                refs[name]["conanfile"] = conanfile.with_require(refs[dep]["ref"])
-
-        for name, data in refs.items():
-            filename = "%s.py" % name
-            self.client.save({filename: data["conanfile"]})
-            self.client.run("export %s" % filename)
-        return refs
+    def _generate_graph(self, dependencies):
+        for ref, deps in dependencies.items():
+            ref = ConanFileReference.loads(ref)
+            conanfile = GenConanfile().with_name(ref.name).with_version(ref.version)
+            for dep in deps:
+                conanfile.with_require(ConanFileReference.loads(dep))
+            filename = "%s.py" % ref.name
+            self.client.save({filename: conanfile})
+            self.client.run("export %s %s@" % (filename, ref))
 
     def simple_dependency_graph_test(self):
         dependencies = {
-            "Log4Qt": [],
-            "MccApi": ["Log4Qt"],
-            "Util": ["MccApi"],
-            "Invent": ["Util"]
+            "Log4Qt/0.3.0": [],
+            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
+            "Util/0.3.5": ["MccApi/3.0.9"],
+            "Invent/1.0": ["Util/0.3.5"]
         }
-        names_versions = [("Log4Qt", "0.3.0"), ("MccApi", "3.0.9"), ("Util", "0.3.5"),
-                          ("Invent", "1.0")]
-        self._generate_graph(dependencies, names_versions)
+        self._generate_graph(dependencies)
 
         self.client.run("install Invent.py --build missing")
         self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
@@ -221,16 +213,12 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def triangle_dependency_graph_test(self):
         dependencies = {
-            "Log4Qt": [],
-            "MccApi": ["Log4Qt"],
-            "Util": ["MccApi"],
-            "GenericSU": ["Log4Qt", "MccApi", "Util"]
+            "Log4Qt/0.3.0": [],
+            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
+            "Util/0.3.5": ["MccApi/3.0.9"],
+            "GenericSU/1.0": ["Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"]
                         }
-        names_versions = [("Log4Qt", "0.3.0"),
-                          ("MccApi", "3.0.9"),
-                          ("Util", "0.3.5"),
-                          ("GenericSU", "0.3.5")]
-        self._generate_graph(dependencies, names_versions)
+        self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
         self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
@@ -240,16 +228,12 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def diamond_dependency_graph_test(self):
         dependencies = {
-            "Log4Qt": [],
-            "MccApi": ["Log4Qt"],
-            "Util": ["Log4Qt"],
-            "GenericSU": ["MccApi", "Util"]
+            "Log4Qt/0.3.0": [],
+            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
+            "Util/0.3.5": ["Log4Qt/0.3.0"],
+            "GenericSU/0.3.5": ["MccApi/3.0.9", "Util/0.3.5"]
                         }
-        names_versions = [("Log4Qt", "0.3.0"),
-                          ("MccApi", "3.0.9"),
-                          ("Util", "0.3.5"),
-                          ("GenericSU", "0.3.5")]
-        self._generate_graph(dependencies, names_versions)
+        self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
         self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
@@ -259,24 +243,18 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def full_dependency_graph_test(self):
         dependencies = {
-            "Log4Qt": [],
-            "MccApi": ["Log4Qt"],
-            "Util": ["MccApi"],
-            "GenericSU": ["Log4Qt", "MccApi", "Util"],
-            "ManagementModule": ["Log4Qt", "MccApi", "Util"],
-            "StationInterfaceModule": ["ManagementModule", "GenericSU"],
-            "PleniterGenericSuApp": ["ManagementModule", "GenericSU", "Log4Qt", "MccApi", "Util"],
-            "StationinterfaceRpm": ["StationInterfaceModule", "PleniterGenericSuApp"]
+            "Log4Qt/0.3.0": [],
+            "MccApi/3.0.9": ["Log4Qt/0.3.0"],
+            "Util/0.3.5": ["MccApi/3.0.9"],
+            "GenericSU/0.3.5": ["Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"],
+            "ManagementModule/0.3.5": ["Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"],
+            "StationInterfaceModule/0.13.0": ["ManagementModule/0.3.5", "GenericSU/0.3.5"],
+            "PleniterGenericSuApp/0.1.8": ["ManagementModule/0.3.5", "GenericSU/0.3.5",
+                                           "Log4Qt/0.3.0", "MccApi/3.0.9", "Util/0.3.5"],
+            "StationinterfaceRpm/2.2.0": ["StationInterfaceModule/0.13.0",
+                                          "PleniterGenericSuApp/0.1.8"]
                         }
-        names_versions = [("Log4Qt", "0.3.0"),
-                          ("MccApi", "3.0.9"),
-                          ("Util", "0.3.5"),
-                          ("GenericSU", "0.3.5"),
-                          ("ManagementModule", "0.3.5"),
-                          ("StationInterfaceModule", "0.13.0"),
-                          ("PleniterGenericSuApp", "0.1.8"),
-                          ("StationinterfaceRpm", "2.2.0")]
-        self._generate_graph(dependencies, names_versions)
+        self._generate_graph(dependencies)
 
         # Obtained with with create and reevaluate_node
         ids = {"Log4Qt/0.3.0": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
