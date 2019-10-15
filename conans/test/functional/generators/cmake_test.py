@@ -137,7 +137,7 @@ CONAN_BASIC_SETUP()
             """)
         client = TestClient()
         client.save({"conanfile_mylib.py": mylib, "conanfile_consumer.py": consumer,
-                     "CMakeLists.txt": cmakelists, "lib1.lib": "", "lib1.a": ""})
+                     "CMakeLists.txt": cmakelists, "lib1.lib": "", "liblib1.a": ""})
         client.run("create conanfile_mylib.py mylib/1.0@us/ch")
         client.run("install conanfile_consumer.py")
 
@@ -157,14 +157,14 @@ CONAN_BASIC_SETUP()
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
                                                            "system_deps": ["sys1"]},
                                                  env_info={})\
-            .with_package_file("lib/lib1.lib", " ").with_package_file("lib/lib1.a", " ")\
-            .with_package_file("lib/lib11.lib", " ").with_package_file("lib/lib11.a", " ")
+            .with_package_file("lib/lib1.lib", " ").with_package_file("lib/liblib1.a", " ")\
+            .with_package_file("lib/lib11.lib", " ").with_package_file("lib/liblib11.a", " ")
         mylib_ref = ConanFileReference("mylib", "1.0", "us", "ch")
 
         myotherlib = GenConanfile().with_package_info(cpp_info={"libs": ["lib2"],
                                                                 "system_deps": ["sys2"]},
                                                       env_info={}).with_require(mylib_ref) \
-            .with_package_file("lib/lib2.lib", " ").with_package_file("lib/lib2.a", " ")
+            .with_package_file("lib/lib2.lib", " ").with_package_file("lib/liblib2.a", " ")
         myotherlib_ref = ConanFileReference("myotherlib", "1.0", "us", "ch")
 
         client = TurboTestClient()
