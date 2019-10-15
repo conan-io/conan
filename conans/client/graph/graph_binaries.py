@@ -258,4 +258,4 @@ class GraphBinariesAnalyzer(object):
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
-        deps_graph.private_skip_binaries(nodes_subset=nodes_subset, root=root)
+        deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)

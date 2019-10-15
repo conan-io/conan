@@ -43,6 +43,8 @@ class Node(object):
         # all the public deps only in the closure of this node
         # The dependencies that will be part of deps_cpp_info, can't conflict
         self.public_closure = None  # {ref.name: Node}
+        # The dependencies of this node that will be propagated to consumers when they depend
+        # on this node. It includes regular (not private and not build requires) dependencies
         self.transitive_closure = None  # {ref.name: Node}
         self.inverse_closure = set()  # set of nodes that have this one in their public
         self.ancestors = None  # set{ref.name}
@@ -328,7 +330,7 @@ class DepsGraph(object):
 
         return result
 
-    def private_skip_binaries(self, nodes_subset=None, root=None):
+    def mark_private_skippable(self, nodes_subset=None, root=None):
         """ check which nodes are reachable from the root, mark the non reachable as BINARY_SKIP.
         Used in the GraphBinaryAnalyzer"""
         public_nodes = set()
@@ -354,9 +356,9 @@ class DepsGraph(object):
                 node.binary = BINARY_SKIP
 
     def build_time_nodes(self):
-        """ return all the connected nodes to the root that are not build-requires. This
-        includes normal and private requires (libraries to be linked).
-        Use for output: graph.html, printing, and search info.
+        """ return all the nodes in the graph that are build-requires (either directly or
+        transitively). Nodes that are both in requires and build_requires will not be returned.
+        This is used just for output purposes, printing deps, HTML graph, etc.
         """
         public_nodes = set()
         current = [self.root]
