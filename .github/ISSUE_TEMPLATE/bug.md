@@ -37,7 +37,7 @@ labels: 'type: bug'
 <details><summary>Click to expand log</summary>
 
 ```
-Put your log output here.
+Put your output here.
 ```
 
 </details>
