@@ -2,6 +2,7 @@ import os
 import unittest
 import textwrap
 import warnings
+import platform
 from mock import patch
 
 
@@ -10,9 +11,161 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
+from requests.adapters import HTTPAdapter
+from mock import mock
+
+
+class ConanAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        super(ConanAdapter, self).__init__(*args, **kwargs)
+        self._proxies = None
+
+    def send(self, request, stream=False, timeout=None, verify=True,
+             cert=None, proxies=None):
+        self._proxies = proxies
+
+        raise ValueError("invalid")
+
+    @property
+    def proxies(self):
+        return dict(self._proxies)
+
 
 @patch.dict('os.environ', {})
 class ProxiesConfTest(unittest.TestCase):
+
+    @property
+    def names_of_platform_proxy_function(self):
+        if platform.system() == "Darwin":
+            try:
+                from urllib.request import getproxies_macosx_sysconf  # pylint: disable=unused-import
+                return "urllib.request.getproxies_macosx_sysconf"
+            except ImportError:
+                from urllib import getproxies_macosx_sysconf  # pylint: disable=unused-import
+                return "urllib.getproxies_macosx_sysconf"
+        elif platform.system() == "Windows":
+            try:
+                from urllib.request import getproxies_registry  # pylint: disable=unused-import
+                return "urllib.request.getproxies_registry"
+            except ImportError:
+                from urllib import getproxies_registry  # pylint: disable=unused-import
+                return "urllib.getproxies_registry"
+
+    @unittest.skipUnless(platform.system() in ["Darwin", "Windows"], "Requires OSX or Windows")
+    def test_no_proxies_section(self):
+        client = TestClient()
+        conf = """
+"""
+        save(client.cache.conan_conf_path, conf)
+
+        requester = ConanRequester(client.cache.config)
+        conan_adapter = ConanAdapter()
+        requester._http_requester.mount("conan", conan_adapter)
+
+        system_proxies = {
+            "http": "example.com:80",
+            "https": "example.com:443"
+        }
+        env_proxies_vars = {
+            'HTTP_PROXY': "conan.io:80",
+            "HTTPS_PROXY": "conan.io:443"
+        }
+        env_proxies = {
+            'http': "conan.io:80",
+            "https": "conan.io:443"
+        }
+
+        with mock.patch(self.names_of_platform_proxy_function,
+                        mock.MagicMock(return_value=system_proxies)):
+            with tools.environment_append(env_proxies_vars):
+                with self.assertRaises(ValueError):
+                    requester.get("conan://MyUrl")
+
+        self.assertEqual(conan_adapter.proxies, env_proxies)
+
+        with mock.patch(self.names_of_platform_proxy_function,
+                        mock.MagicMock(return_value=system_proxies)):
+            with self.assertRaises(ValueError):
+                requester.get("conan://MyUrl")
+
+        self.assertEqual(conan_adapter.proxies, system_proxies)
+
+    @unittest.skipUnless(platform.system() in ["Darwin", "Windows"], "Requires OSX or Windows")
+    def test_empty_proxies_section(self):
+        client = TestClient()
+        conf = """
+[proxies]
+"""
+        save(client.cache.conan_conf_path, conf)
+
+        requester = ConanRequester(client.cache.config)
+        conan_adapter = ConanAdapter()
+        requester._http_requester.mount("conan", conan_adapter)
+
+        system_proxies = {
+            "http": "example.com:80",
+            "https": "example.com:443"
+        }
+        env_proxies_vars = {
+            'HTTP_PROXY': "conan.io:80",
+            "HTTPS_PROXY": "conan.io:443"
+        }
+        env_proxies = {
+            'http': "conan.io:80",
+            "https": "conan.io:443"
+        }
+
+        with mock.patch(self.names_of_platform_proxy_function,
+                        mock.MagicMock(return_value=system_proxies)):
+            with tools.environment_append(env_proxies_vars):
+                with self.assertRaises(ValueError):
+                    requester.get("conan://MyUrl")
+
+        self.assertEqual(conan_adapter.proxies, env_proxies)
+
+        with mock.patch(self.names_of_platform_proxy_function,
+                        mock.MagicMock(return_value=system_proxies)):
+            with self.assertRaises(ValueError):
+                requester.get("conan://MyUrl")
+
+        self.assertEqual(conan_adapter.proxies, system_proxies)
+
+    @unittest.skipUnless(platform.system() in ["Darwin", "Windows"], "Requires OSX or Windows")
+    def test_disable_system_proxy(self):
+        client = TestClient()
+        conf = """
+[proxies]
+use_system_proxy = False
+"""
+        save(client.cache.conan_conf_path, conf)
+
+        requester = ConanRequester(client.cache.config)
+        conan_adapter = ConanAdapter()
+        requester._http_requester.mount("conan", conan_adapter)
+
+        system_proxies = {
+            "http": "example.com:80",
+            "https": "example.com:443"
+        }
+        env_proxies_vars = {
+            'HTTP_PROXY': "conan.io:80",
+            "HTTPS_PROXY": "conan.io:443"
+        }
+
+        with mock.patch(self.names_of_platform_proxy_function,
+                        mock.MagicMock(return_value=system_proxies)):
+            with tools.environment_append(env_proxies_vars):
+                with self.assertRaises(ValueError):
+                    requester.get("conan://MyUrl")
+
+        self.assertEqual(conan_adapter.proxies, {})
+
+        with mock.patch(self.names_of_platform_proxy_function,
+                        mock.MagicMock(return_value=system_proxies)):
+            with self.assertRaises(ValueError):
+                requester.get("conan://MyUrl")
+
+        self.assertEqual(conan_adapter.proxies, {})
 
     def test_requester(self):
         client = TestClient()

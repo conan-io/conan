@@ -170,6 +170,8 @@ path = ./data
 # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
 # no_proxy_match = *bintray.com*, https://myserver.*
 
+# use_system_proxy = True
+
 [hooks]    # environment CONAN_HOOKS
 attribute_checker
 
@@ -451,6 +453,8 @@ class ConanClientConfigParser(ConfigParser, object):
         #   special-host.xyz.com = http://special-proxy.xyz.com
         # (where special-proxy.xyz.com is only used as a proxy when special-host.xyz.com)
         for scheme, proxy_string in proxies or []:
+            if scheme.lower() == "use_system_proxy":
+                continue
             if proxy_string is None or proxy_string == "None":
                 result[scheme] = None
             else:
@@ -461,6 +465,14 @@ class ConanClientConfigParser(ConfigParser, object):
                     elif proxy_value[0]:
                         result[scheme] = proxy_value[0]
         return result
+
+    @property
+    def use_system_proxy(self):
+        try:
+            value = self.get_item("proxies.use_system_proxy")
+            return value.lower() in ("1", "true")
+        except ConanException:
+            return True
 
     @property
     def cacert_path(self):

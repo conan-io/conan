@@ -28,6 +28,7 @@ class ConanRequester(object):
             adapter = HTTPAdapter(max_retries=config.retry)
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
+            self._http_requester.trust_env = config.use_system_proxy
 
         self._timeout_seconds = config.request_timeout
         self.proxies = config.proxies or {}
