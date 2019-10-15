@@ -30,7 +30,8 @@ class DepsCppCmake(object):
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
         self.src_paths = join_paths(cpp_info.src_paths)
-        self.libs_and_system_deps = join_flags(" ", cpp_info.libs + cpp_info.system_deps)
+        # libs_system_frameworks == Package libs, system deps and frameworks
+        self.libs_system_frameworks = join_flags(" ", cpp_info.libs + cpp_info.system_deps)
         self.libs = join_flags(" ", cpp_info.libs)
         self.system_deps = join_flags(" ", cpp_info.system_deps)
 
@@ -45,7 +46,7 @@ class DepsCppCmake(object):
                                                      framework=framework,
                                                      framework_paths=framework_paths)
             var = '${%s}' % var
-            self.libs += " " + var
+            self.libs_system_frameworks += " " + var
             self.find_frameworks += find_framework
 
         self.defines = join_defines(cpp_info.defines, "-D")
