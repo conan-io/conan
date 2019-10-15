@@ -313,6 +313,7 @@ class CmdUpload(object):
         with self._cache.package_layout(ref).update_metadata() as metadata:
             recipe_checksums = calc_files_checksum(the_files)
             metadata.recipe.checksums = recipe_checksums
+            
         return the_files
 
     def _compress_package_files(self, pref, integrity_check):
