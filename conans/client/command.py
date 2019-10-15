@@ -1204,7 +1204,7 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         # Searching foo/bar is considered a pattern (FIXME: 2.0) so use strict mode to disambiguate
-        is_reference = check_valid_ref(args.pattern_or_reference, strict_mode=True)
+        is_reference = check_valid_ref(args.pattern_or_reference)
 
         if is_reference:
             ref = ConanFileReference.loads(args.pattern_or_reference)

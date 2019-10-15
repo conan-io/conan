@@ -669,3 +669,5 @@ class TestConan(ConanFile):
         client.run("create . pkg/0.1@user/channel")
         client.run("install pkg/[*]@user/channel")
         self.assertIn("pkg/0.1@user/channel from local cache - Cache", client.out)
+        client.run("install pkg/[0.*]@user/channel")
+        self.assertIn("pkg/0.1@user/channel from local cache - Cache", client.out)

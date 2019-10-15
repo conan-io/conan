@@ -148,6 +148,7 @@ class CheckValidRefTest(unittest.TestCase):
     def test_string(self):
         self.assertTrue(check_valid_ref("package/1.0@user/channel"))
         self.assertTrue(check_valid_ref("package/1.0@user/channel"))
+        self.assertFalse(check_valid_ref("package/*@user/channel"))
 
     def test_incomplete_refs(self):
         self.assertTrue(check_valid_ref("package/1.0", strict_mode=False))

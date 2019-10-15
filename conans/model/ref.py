@@ -72,13 +72,15 @@ def check_valid_ref(reference, strict_mode=True):
     :param reference: string to be analyzed if it is a reference or not
     :param strict_mode: Only if the reference contains the "@" is valid, used to disambiguate"""
     try:
-
         if not reference:
             return False
-        if strict_mode and "@" not in reference:
-            return False
-        if strict_mode and "*" in reference and "[*]" not in reference:
-            return False
+        if strict_mode:
+            if "@" not in reference:
+                return False
+            if "*" in reference:
+                ref = ConanFileReference.loads(reference, validate=True)
+                if ref.version != "*":
+                    return True
         ConanFileReference.loads(reference, validate=True)
         return True
     except ConanException:
