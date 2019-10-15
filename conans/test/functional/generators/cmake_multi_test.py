@@ -303,8 +303,8 @@ class CMakeMultiSystemDepsTest(unittest.TestCase):
         self.assertIn("set(CONAN_LIBS_DEBUG sys1d ${CONAN_LIBS_DEBUG})", content)
         self.assertIn("set(CONAN_LIBS_RELEASE sys1 ${CONAN_LIBS_RELEASE})", content)
         self.assertIn("set(CONAN_LIBS_MYLIB lib1)", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE sys1)", content)
-        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG sys1d)", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_RELEASE )", content)
+        self.assertIn("set(CONAN_LIBS_MYLIB_DEBUG )", content)
 
         self.assertIn("set(CONAN_SYSTEM_DEPS  ${CONAN_SYSTEM_DEPS})", content)
         self.assertIn("set(CONAN_SYSTEM_DEPS_DEBUG sys1d ${CONAN_SYSTEM_DEPS_DEBUG})", content)
