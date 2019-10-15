@@ -15,7 +15,6 @@ labels: bug
 ### Environment Details (include every applicable attribute)
   * Operating System+version: **Linux Ubuntu 18.04**
   * Compiler+version: **GCC 8**
-  * Docker image (if applicable): **conanio/gcc8**
   * Conan version: **conan 1.18.0**
   * Python version: **Python 3.7.4**
 
