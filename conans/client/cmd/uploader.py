@@ -40,7 +40,7 @@ class CmdUpload(object):
     - Execute the upload. For every ref:
         - Upload the recipe of the ref: "_upload_recipe"
             - If not FORCE, check the date "_check_recipe_date", i.e. if there are
-              changes, do not allouploading if the remote date is newer than the
+              changes, do not allow uploading if the remote date is newer than the
               local cache one
             - Retrieve the sources (exports_sources), if they are not cached, and
               uploading to a different remote. "complete_recipe_sources"
