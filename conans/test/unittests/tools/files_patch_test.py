@@ -189,6 +189,85 @@ class ToolsFilesPatchTest(unittest.TestCase):
                       "Error in build() method, line 12", client.out)
         self.assertIn("Failed to parse patch: string", client.out)
 
+    def test_add_new_file(self):
+        """ Validate issue #5320
+        """
+
+        conanfile = dedent("""
+            from conans import ConanFile
+            from conans import ConanFile, tools, CMake
+
+            class ConanFileToolsTest(ConanFile):
+                name = "foobar"
+                version = "0.1.0"
+                exports_sources = "*"
+                generators = "cmake"
+
+                def build(self):
+                    tools.patch(patch_file="add_cmake.patch")
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+        foobar = dedent("""#include <stdio.h>
+
+
+int main(void) {
+    puts("Hello");
+}
+
+        """)
+        patch = dedent("""
+            From 585b3919d92ce8ebda8d778cfeffe36855e5363b Mon Sep 17 00:00:00 2001
+            From: Uilian Ries <uilianries@gmail.com>
+            Date: Tue, 15 Oct 2019 10:57:59 -0300
+            Subject: [PATCH] add cmake
+
+            ---
+             CMakeLists.txt | 7 +++++++
+             foobar.c       | 2 +-
+             2 files changed, 8 insertions(+), 1 deletion(-)
+             create mode 100644 CMakeLists.txt
+
+            diff --git a/CMakeLists.txt b/CMakeLists.txt
+            new file mode 100644
+            index 0000000..cb1db10
+            --- /dev/null
+            +++ b/CMakeLists.txt
+            @@ -0,0 +1,7 @@
+            +cmake_minimum_required(VERSION 2.8.11)
+            +project(foobar C)
+            +
+            +include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            +conan_basic_setup()
+            +
+            +add_executable(${CMAKE_PROJECT_NAME} foobar.c)
+            \ No newline at end of file
+            diff --git a/foobar.c b/foobar.c
+            index eceef43..297268e 100644
+            --- a/foobar.c
+            +++ b/foobar.c
+            @@ -1,6 +1,6 @@
+             #include <stdio.h>
+
+            -
+             int main(void) {
+                 puts("Hello");
+            +    return 0;
+             }
+            --
+            2.23.0
+
+
+        """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "add_cmake.patch": patch,
+                     "foobar.c": foobar})
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("Running build()", client.out)
+
     def _save_files(self, file_content):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "conanfile.py")
