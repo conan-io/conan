@@ -2,12 +2,13 @@ import json
 import os
 import re
 import textwrap
+import time
 import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile, TestServer
 from conans.util.files import load, save
 
 
@@ -653,3 +654,36 @@ class MyTest(ConanFile):
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)
         self.assertNotIn("shared", client.out)
+
+    def test_update_recipe(self):
+        server = TestServer(users={"user": "password"})
+        t1 = TestClient(servers={"default": server}, users={"default": [("user", "password")]})
+        t2 = TestClient(servers={"default": server}, users={"default": [("user", "password")]})
+
+        ref = ConanFileReference.loads("name/version@user/channel")
+        t1.save({"conanfile.py": GenConanfile().with_name("name").with_attribute("url", "first")})
+        t1.run("create . {}".format(ref))
+        t1.run("upload {} --all".format(ref))
+
+        # Consume the package using the client t2
+        t2.save({"conanfile.txt": "[requires]\n{}".format(ref)})
+        t2.run("install .")
+        t2.run("info . -n url")
+        self.assertIn("URL: first", t2.out)
+
+        # Create a new version for the recipe
+        time.sleep(1)  # Make sure the new timestamp is later
+        t1.save({"conanfile.py": GenConanfile().with_name("name").with_attribute("url", "second")})
+        t1.run("create . {}".format(ref))
+        t1.run("upload {} --all".format(ref))
+
+        # Info should retrieve the updated information
+        t2.run("info . --update -n url")
+        self.assertIn("URL: second", t2.out)
+
+        # After installing again, no need to `info --update`
+        t2.run("install . --update")
+        self.assertIn("name/version@user/channel: WARN: Current"
+                      " package is older than remote upstream one", t2.out)
+        t2.run("info . -n url")
+        self.assertIn("URL: second", t2.out)

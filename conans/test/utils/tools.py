@@ -1040,6 +1040,11 @@ class GenConanfile(object):
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
+        self._attributes = {}
+
+    def with_attribute(self, name, value):
+        self._attributes[name] = value
+        return self
 
     def with_name(self, name):
         self._name = name
@@ -1207,6 +1212,16 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _attributes_lines(self):
+        if not self._attributes:
+            return ""
+        lines = []
+        for item, value in self._attributes.items():
+            value_fmt = '"{}"' if isinstance(value, six.string_types) else '{}'
+            lines.append('    {} = {}'.format(item, value_fmt.format(value)))
+        return "\n".join(lines)
+
+    @property
     def _requirements_method(self):
         if not self._requirements:
             return ""
@@ -1289,6 +1304,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._version_line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
+        if self._attributes_lines:
+            ret.append(self._attributes_lines)
         if self._requires_line:
             ret.append("    {}".format(self._requires_line))
         if self._requirements_method:
