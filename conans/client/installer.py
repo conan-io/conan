@@ -5,8 +5,8 @@ import time
 from conans.client import tools
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_generators
-from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING, \
-    BINARY_SKIP, BINARY_UPDATE, BINARY_EDITABLE
+from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import run_package_method, update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
