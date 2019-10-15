@@ -15,7 +15,8 @@ from conans.paths import EXPORT_SOURCES_DIR_OLD, \
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder
+from conans.util.files import make_read_only, mkdir, rmdir, tar_extract, touch_folder, md5sum, \
+    sha1sum
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -87,6 +88,10 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
+        downloaded_files_checksum = {
+            file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
+            zipped_files.items()}
+
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
         package_layout = self._cache.package_layout(ref)
@@ -96,6 +101,7 @@ class RemoteManager(object):
 
         with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
+            metadata.recipe.properties = downloaded_files_checksum
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
