@@ -79,7 +79,9 @@ def check_valid_ref(reference, strict_mode=True):
                 return False
             if "*" in reference:
                 ref = ConanFileReference.loads(reference, validate=True)
-                if str(ref.version) != "*":
+                if "*" in ref.name or "*" in ref.user or "*" in ref.channel:
+                    return False
+                if str(ref.version).startswith("["):  # It is a version range
                     return True
                 return False
         ConanFileReference.loads(reference, validate=True)
