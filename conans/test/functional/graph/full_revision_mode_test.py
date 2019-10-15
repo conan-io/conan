@@ -183,7 +183,6 @@ class PackageRevisionModeTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        self.client.run("config set general.revisions_enabled=1")
         self.client.run("config set general.default_package_id_mode=package_revision_mode")
 
     def _generate_graph(self, dependencies):
