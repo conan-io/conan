@@ -6,7 +6,7 @@ set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
 set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
 set(CONAN_SRC_DIRS_{dep}{build_type} {deps.src_paths})
 set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
-set(CONAN_LIBS_{dep}{build_type} {deps.libs_system_frameworks})
+set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_SYSTEM_DEPS_{dep}{build_type} {deps.system_deps})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
