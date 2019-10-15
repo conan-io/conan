@@ -121,7 +121,7 @@ class VisualStudioTest(unittest.TestCase):
 
         content = load(os.path.join(client.current_folder, "conanbuildinfo.props"))
         self.assertIn("<ConanLibraries>lib1.lib;</ConanLibraries>", content)
-        self.assertIn("<ConanSystemDeps>lib1.lib;</ConanSystemDeps>", content)
+        self.assertIn("<ConanSystemDeps>sys1.lib;</ConanSystemDeps>", content)
         self.assertIn("<AdditionalLibraryDirectories>$(ConanLibraryDirectories)"
                       "%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>", content)
         self.assertIn("<AdditionalDependencies>$(ConanLibraries)%(AdditionalDependencies)"

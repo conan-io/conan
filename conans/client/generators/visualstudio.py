@@ -27,7 +27,7 @@ class VisualStudioGenerator(Generator):
     <ConanLibraryDirectories>{lib_dirs}</ConanLibraryDirectories>
     <ConanBinaryDirectories>{bin_dirs}</ConanBinaryDirectories>
     <ConanLibraries>{libs}</ConanLibraries>
-    <ConanSystemDeps>{libs}</ConanSystemDeps>
+    <ConanSystemDeps>{system_libs}</ConanSystemDeps>
   </PropertyGroup>
   <PropertyGroup{condition}>
     <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
