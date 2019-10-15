@@ -452,7 +452,7 @@ class Command(object):
 
         # We need @ otherwise it could be a path, so check strict
         path_is_reference = check_valid_ref(args.path_or_reference)
-        print path_is_reference
+
         info = None
         try:
             if not path_is_reference:
