@@ -2,7 +2,7 @@
 name: 'Bug Report'
 about: 'Report a bug, something does not work as it supposed to'
 title: '[bug] SHORT DESCRIPTION'
-labels: bug
+labels: 'type: bug'
 ---
 
 <!--
@@ -28,8 +28,10 @@ labels: bug
   - Conan command output
   - Server output (Artifactory, conan_server)
 
-  To increase the logging level, you can configure the [Conan Logging Level](https://docs.conan.io/en/latest/reference/env_vars.html#conan-logging-level).
-  Also, you can configure [Conan logs](https://docs.conan.io/en/latest/mastering/logging.html) if you need.
+  To increase the logging level, you can configure the environment variable:
+    https://docs.conan.io/en/latest/reference/env_vars.html#conan-logging-level
+  Also, you can configure Conan logs if you need:
+    https://docs.conan.io/en/latest/mastering/logging.html
 -->
 
 <details><summary>Click to expand log</summary>
