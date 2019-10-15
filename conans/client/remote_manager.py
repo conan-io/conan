@@ -88,9 +88,7 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
-        downloaded_recipe_checksums = {
-            file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
-            zipped_files.items()}
+        recipe_checksums = downloaded_files_checksum(zipped_files)
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
@@ -101,7 +99,7 @@ class RemoteManager(object):
 
         with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
-            metadata.recipe.checksums = downloaded_recipe_checksums
+            metadata.recipe.checksums = recipe_checksums
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -144,14 +142,12 @@ class RemoteManager(object):
                 raise PackageNotFoundException(pref)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
-            downloaded_package_checksums = {
-                file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
-                zipped_files.items()}
+            package_checksums = downloaded_files_checksum(zipped_files)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
-                metadata.packages[pref.id].checksums = downloaded_package_checksums
+                metadata.packages[pref.id].checksums = package_checksums
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
@@ -257,6 +253,11 @@ class RemoteManager(object):
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc, remote=remote)
+
+
+def downloaded_files_checksum(files):
+    return {file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
+            files.items()}
 
 
 def is_package_snapshot_complete(snapshot):
