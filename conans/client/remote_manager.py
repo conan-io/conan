@@ -88,7 +88,7 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
-        recipe_checksums = downloaded_files_checksum(zipped_files)
+        recipe_checksums = calc_files_checksum(zipped_files)
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME, output=self._output)
         # Make sure that the source dir is deleted
@@ -142,7 +142,7 @@ class RemoteManager(object):
                 raise PackageNotFoundException(pref)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
-            package_checksums = downloaded_files_checksum(zipped_files)
+            package_checksums = calc_files_checksum(zipped_files)
 
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
@@ -255,7 +255,7 @@ class RemoteManager(object):
             raise ConanException(exc, remote=remote)
 
 
-def downloaded_files_checksum(files):
+def calc_files_checksum(files):
     return {file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
             files.items()}
 
