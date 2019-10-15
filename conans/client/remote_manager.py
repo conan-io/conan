@@ -101,7 +101,7 @@ class RemoteManager(object):
 
         with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
-            metadata.recipe.properties = downloaded_recipe_checksums
+            metadata.recipe.checksums = downloaded_recipe_checksums
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -151,7 +151,7 @@ class RemoteManager(object):
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
-                metadata.packages[pref.id].properties = downloaded_package_checksums
+                metadata.packages[pref.id].checksums = downloaded_package_checksums
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)

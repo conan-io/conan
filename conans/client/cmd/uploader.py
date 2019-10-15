@@ -254,7 +254,7 @@ class CmdUpload(object):
             for file, path in files.items():
                 md5 = md5sum(path)
                 sha1 = sha1sum(path)
-                metadata.packages[pref].properties[file] = {"actual_md5": md5,
+                metadata.packages[pref].checksums[file] = {"actual_md5": md5,
                                                             "actual_sha1": sha1}
 
     def _upload_package(self, pref, retry=None, retry_wait=None, integrity_check=False,
@@ -323,7 +323,7 @@ class CmdUpload(object):
             for file, path in files.items():
                 md5 = md5sum(path)
                 sha1 = sha1sum(path)
-                metadata.recipe.properties[file] = {"actual_md5": md5,
+                metadata.recipe.checksums[file] = {"actual_md5": md5,
                                                     "actual_sha1": sha1}
 
     def _compress_package_files(self, pref, integrity_check):
