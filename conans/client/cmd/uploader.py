@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 
 from conans.util import progress_bar
-from conans.client.remote_manager import is_package_snapshot_complete
+from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
 from conans.client.source import complete_recipe_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
@@ -249,14 +249,6 @@ class CmdUpload(object):
 
         return ref
 
-    def _update_package_metadata_checksums(self, ref, pref, files):
-        with self._cache.package_layout(ref).update_metadata() as metadata:
-            for file, path in files.items():
-                md5 = md5sum(path)
-                sha1 = sha1sum(path)
-                metadata.packages[pref].checksums[file] = {"actual_md5": md5,
-                                                            "actual_sha1": sha1}
-
     def _upload_package(self, pref, retry=None, retry_wait=None, integrity_check=False,
                         policy=None, p_remote=None):
 
@@ -271,7 +263,10 @@ class CmdUpload(object):
 
         t1 = time.time()
         the_files = self._compress_package_files(pref, integrity_check)
-        self._update_package_metadata_checksums(pref.ref, pref.id, the_files)
+
+        with self._cache.package_layout(pref.ref).update_metadata() as metadata:
+            package_checksums = calc_files_checksum(the_files)
+            metadata.packages[pref.id].checksums = package_checksums
 
         if policy == UPLOAD_POLICY_SKIP:
             return None
@@ -315,16 +310,10 @@ class CmdUpload(object):
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)
-        self._update_recipe_metadata_checksums(ref, the_files)
-        return the_files
-
-    def _update_recipe_metadata_checksums(self, ref, files):
         with self._cache.package_layout(ref).update_metadata() as metadata:
-            for file, path in files.items():
-                md5 = md5sum(path)
-                sha1 = sha1sum(path)
-                metadata.recipe.checksums[file] = {"actual_md5": md5,
-                                                    "actual_sha1": sha1}
+            recipe_checksums = calc_files_checksum(the_files)
+            metadata.recipe.checksums = recipe_checksums
+        return the_files
 
     def _compress_package_files(self, pref, integrity_check):
 
