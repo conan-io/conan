@@ -88,7 +88,7 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
-        downloaded_files_checksum = {
+        downloaded_recipe_checksums = {
             file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
             zipped_files.items()}
 
@@ -101,7 +101,7 @@ class RemoteManager(object):
 
         with package_layout.update_metadata() as metadata:
             metadata.recipe.revision = ref.revision
-            metadata.recipe.properties = downloaded_files_checksum
+            metadata.recipe.properties = downloaded_recipe_checksums
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -144,9 +144,14 @@ class RemoteManager(object):
                 raise PackageNotFoundException(pref)
             zipped_files = self._call_remote(remote, "get_package", pref, dest_folder)
 
+            downloaded_package_checksums = {
+                file: {"actual_md5": md5sum(path), "actual_sha1": sha1sum(path)} for file, path in
+                zipped_files.items()}
+
             with self._cache.package_layout(pref.ref).update_metadata() as metadata:
                 metadata.packages[pref.id].revision = pref.revision
                 metadata.packages[pref.id].recipe_revision = pref.ref.revision
+                metadata.packages[pref.id].properties = downloaded_package_checksums
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
