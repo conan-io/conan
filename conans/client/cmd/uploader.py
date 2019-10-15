@@ -14,7 +14,7 @@ from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.search.search import search_packages, search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
-                               gzopen_without_timestamps, set_dirty_context_manager, md5sum, sha1sum)
+                               gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
 from conans.util.tracer import (log_recipe_upload, log_compressed_files,
                                 log_package_upload)
@@ -313,7 +313,7 @@ class CmdUpload(object):
         with self._cache.package_layout(ref).update_metadata() as metadata:
             recipe_checksums = calc_files_checksum(the_files)
             metadata.recipe.checksums = recipe_checksums
-            
+
         return the_files
 
     def _compress_package_files(self, pref, integrity_check):
