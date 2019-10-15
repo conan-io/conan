@@ -295,7 +295,7 @@ class CmdUpload(object):
 
     def _compress_recipe_files(self, ref):
         export_folder = self._cache.package_layout(ref).export()
-        
+
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
             tgz_path = os.path.join(export_folder, f)
             if is_dirty(tgz_path):
