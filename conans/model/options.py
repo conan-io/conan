@@ -610,10 +610,10 @@ class Options(object):
         for k, v in options._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def clear_unused(self, references):
+    def clear_unused(self, prefs):
         """ remove all options not related to the passed references,
         that should be the upstream requirements
         """
-        existing_names = [r.ref.name for r in references]
+        existing_names = [pref.ref.name for pref in prefs]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}
