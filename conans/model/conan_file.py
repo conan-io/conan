@@ -125,7 +125,7 @@ class ConanFile(object):
         self._conan_user = user
         self._conan_channel = channel
 
-        self.compatible_ids = []
+        self.compatible_packages = []
 
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
