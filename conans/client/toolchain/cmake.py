@@ -13,13 +13,20 @@ from conans.client.build.cmake_flags import get_generator, get_generator_platfor
 
 
 class CMakeToolchain:
-    filename = "conan.cmake"
+    filename = "conan_toolchain.cmake"
     conan_adjustements = os.path.join(os.path.dirname(__file__), "conan_adjustments.cmake")
 
     _template = textwrap.dedent("""
         # Conan generated toolchain file
-        message("**************** TOOLCHAIN *************")
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+        
+        # CMAKE_BUILD_TYPE: If it is passed from the command line, do not use value in the toolchain,
+        #   this is needed to allow Conan's multi generators to work: the user will run
+        #   with 'cmake --build . --config Debug|Release|RelWithDebInfo' for multiconfig'
+        get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
+        if(NOT _GENERATOR_IS_MULTI_CONFIG)
+            set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}")
+        endif()
 
         # Configure
         # -- CMake::command_line
@@ -58,7 +65,7 @@ class CMakeToolchain:
             conan_set_std()
             conan_set_fpic()
             
-            conan_check_compiler()
+            #conan_check_compiler()
             conan_set_libcxx()
             conan_set_vs_runtime()
             conan_set_find_paths()
@@ -103,7 +110,7 @@ class CMakeToolchain:
         generator = generator or get_generator(self._conanfile.settings)
         self._context = {
             "conan_adjustements_cmake": self.conan_adjustements,
-            "build_type": build_type or self._conanfile.settings.get_safe("build_type"),
+            #"build_type": build_type or self._conanfile.settings.get_safe("build_type"),
             #"generator": generator,
             "generator_platform": generator_platform or
                                   get_generator_platform(self._conanfile.settings, generator),
@@ -120,6 +127,11 @@ class CMakeToolchain:
                                           forced_build_type=build_type,
                                           output=self._conanfile.output)
         self.definitions = builder.get_definitions()
+        build_type = self.definitions.pop('CMAKE_BUILD_TYPE', None)
+        if build_type:
+            self._context.update({
+                "CMAKE_BUILD_TYPE": build_type
+            })
 
         # Some variables can go to the environment
         # TODO: Do we need this or can we move it to environment stuff
