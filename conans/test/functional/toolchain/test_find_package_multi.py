@@ -4,6 +4,7 @@ import platform
 import textwrap
 import unittest
 
+from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.client.toolchain.cmake import CMakeToolchain
@@ -12,6 +13,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
 
 
+@attr("toolchain")
 class FindPackageMultiTestCase(unittest.TestCase):
     """
         Consume a requirements using 'find_package_multi'
