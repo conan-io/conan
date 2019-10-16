@@ -21,6 +21,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
+from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.model.user_info import UserInfo
@@ -298,17 +299,18 @@ class BinaryInstaller(object):
         self._out = app.out
         self._remote_manager = app.remote_manager
         self._recorder = recorder
+        self._binaries_analyzer = app.binaries_analyzer
         self._hook_manager = app.hook_manager
 
-    def install(self, deps_graph, remotes, keep_build=False, graph_info=None):
+    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes)
+        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes):
+    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         processed_package_refs = set()
         for level in nodes_by_level:
             for node in level:
@@ -328,12 +330,15 @@ class BinaryInstaller(object):
                         continue
                     assert ref.revision is not None, "Installer should receive RREV always"
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
+                    if node.package_id == PACKAGE_ID_UNKNOWN:
+                        self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node)
 
-    def _node_concurrently_installed(self, node, package_folder):
+    @staticmethod
+    def _node_concurrently_installed(node, package_folder):
         if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
             return True
         elif node.binary == BINARY_UPDATE:
@@ -381,7 +386,7 @@ class BinaryInstaller(object):
     def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
         pref = node.pref
         assert pref.id, "Package-ID without value"
-
+        assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
 

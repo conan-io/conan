@@ -1,7 +1,7 @@
 import os
 
 from conans.client.generators import write_generators
-from conans.client.toolchain import write_toolchain
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
@@ -9,6 +9,7 @@ from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
 from conans.client.source import complete_recipe_sources
+from conans.client.toolchain import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -62,7 +63,10 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         pass
 
     installer = BinaryInstaller(app, recorder=recorder)
-    installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
+    # TODO: Extract this from the GraphManager, reuse same object, check args earlier
+    build_modes = BuildMode(build_modes, out)
+    installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
+                      graph_info=graph_info)
     # GraphLock always != None here (because of graph_manager.load_graph)
     graph_info.graph_lock.update_check_graph(deps_graph, out)
 
