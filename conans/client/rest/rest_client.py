@@ -28,7 +28,7 @@ class RestApiClient(object):
         self._put_headers = put_headers
         self._revisions_enabled = revisions_enabled
 
-        self._cached_capabilities = {}
+        self._cached_capabilities = defaultdict(list)
 
     def _get_api(self):
         if self.remote_url not in self._cached_capabilities:
@@ -40,9 +40,8 @@ class RestApiClient(object):
             if not self._revisions_enabled and ONLY_V2 in cap:
                 raise OnlyV2Available(self.remote_url)
 
-        if self._revisions_enabled and REVISIONS in self._cached_capabilities.get(self.remote_url,
-                                                                                  []):
-            checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities.get(self.remote_url, [])
+        if self._revisions_enabled and REVISIONS in self._cached_capabilities[self.remote_url]:
+            checksum_deploy = CHECKSUM_DEPLOY in self._cached_capabilities[self.remote_url]
             return RestV2Methods(self.remote_url, self.token, self.custom_headers, self._output,
                                  self.requester, self.verify_ssl, self._put_headers,
                                  checksum_deploy)
@@ -94,7 +93,7 @@ class RestApiClient(object):
         if self.refresh_token and self.token:
             token, refresh_token = api_v1.refresh_token(self.token, self.refresh_token)
         else:
-            if OAUTH_TOKEN in self._cached_capabilities.get(self.remote_url, []):
+            if OAUTH_TOKEN in self._cached_capabilities[self.remote_url]:
                 # Artifactory >= 6.13.X
                 token, refresh_token = api_v1.authenticate_oauth(user, password)
             else:
@@ -111,8 +110,7 @@ class RestApiClient(object):
 
     def search_packages(self, reference, query):
         package_infos = self._get_api().search_packages(reference, query)
-        if query and COMPLEX_SEARCH_CAPABILITY not in self._cached_capabilities.get(self.remote_url,
-                                                                                    []):
+        if query and COMPLEX_SEARCH_CAPABILITY not in self._cached_capabilities[self.remote_url]:
             return filter_packages(query, package_infos)
         return package_infos
 
