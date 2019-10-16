@@ -4,6 +4,7 @@ import os
 import sys
 
 from conans.build_info.conan_build_info import get_build_info
+from conans.build_info.conan_build_info_v2 import *
 from conans.util.files import save
 from conans.client.output import ConanOutput
 
@@ -53,7 +54,7 @@ def run():
         parser_v2 = ErrorCatchingArgumentParser(description="Generates build info build info from "
                                                             "collected information and lockfiles",
                                                 prog="conan_build_info")
-        subparsers = parser_v2.add_subparsers(help="sub-command help")
+        subparsers = parser_v2.add_subparsers(dest="subcommand", help="sub-command help")
 
         parser_start = subparsers.add_parser("start",
                                              help="Command to incorporate to the "
@@ -62,9 +63,8 @@ def run():
         parser_start.add_argument("build_number", type=int,
                                   help="build number to assign")
 
-        parser_stop = subparsers.add_parser("stop",
-                                            help="Command to remove from the artifacts.properties "
-                                                 "the build name and number")
+        subparsers.add_parser("stop", help="Command to remove from the artifacts.properties "
+                                           "the build name and number")
 
         parser_create = subparsers.add_parser("create",
                                               help="Command to generate a build info json from a "
@@ -80,7 +80,8 @@ def run():
         parser_update.add_argument("build_info_2", type=str, help="build info 2")
 
         parser_publish = subparsers.add_parser("publish",
-                                               help="Command to publish the build info to Artifactory")
+                                               help="Command to publish the build info to "
+                                                    "Artifactory")
         parser_publish.add_argument("build_info_file", type=str,
                                     help="build info to upload")
         parser_publish.add_argument("--url", type=str, required=True, help="url")
@@ -90,7 +91,17 @@ def run():
 
         try:
             args = parser_v2.parse_args()
-            output.info(args)
+            if args.subcommand == "start":
+                build_info_start(args.build_name, args.build_number)
+            if args.subcommand == "stop":
+                build_info_stop()
+            if args.subcommand == "create":
+                build_info_create(args.build_info_file, args.lockfile)
+            if args.subcommand == "update":
+                build_info_update(args.build_info_1, args.build_info_2)
+            if args.subcommand == "publish":
+                build_info_publish(args.build_info_file, args.url, args.user, args.password,
+                                   args.apikey)
         except Exception as exc:
             exc_v2 = exc
             pass
