@@ -24,7 +24,7 @@ class CMakeToolchain:
         #   this is needed to allow Conan's multi generators to work: the user will run
         #   with 'cmake --build . --config Debug|Release|RelWithDebInfo' for multiconfig'
         get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
-        if(NOT _GENERATOR_IS_MULTI_CONFIG)
+        if(NOT ${_GENERATOR_IS_MULTI_CONFIG})
             set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}")
         endif()
 
@@ -166,7 +166,6 @@ class CMakeToolchain:
             content = t.render(**self._context)
 
             f.write(content)
-            print(content)
 
             # TODO: Remove this, intended only for testing
             f.write('set(ENV{TOOLCHAIN_ENV} "toolchain_environment")\n')
