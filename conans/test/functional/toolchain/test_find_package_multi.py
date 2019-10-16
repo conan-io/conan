@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import textwrap
+import platform
 import unittest
 
 from conans.client.toolchain.cmake import CMakeToolchain
@@ -128,12 +129,14 @@ class FindPackageMultiTestCase(unittest.TestCase):
         self.t.run_command("./build/app")
         print(self.t.out)
 
+    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Require multiconfig generator")
     def test_multiconfig_generator(self):
         with self.t.chdir("build"):
             self.t.run("install .. -s build_type=Debug")
             self.t.run("install .. -s build_type=Release")
 
-            with environment_append({"CMAKE_GENERATOR": "Xcode"}):
+            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 15 Win64"
+            with environment_append({"CMAKE_GENERATOR": mgenerator}):
                 cmake_configure = 'cmake .. -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename)
                 self.t.run_command(cmake_configure)
             self._check_cmake_configure_output(self.t.out)
