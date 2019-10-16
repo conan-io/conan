@@ -4,11 +4,13 @@ import platform
 import subprocess
 import sys
 import tempfile
+import math
 from subprocess import CalledProcessError, PIPE
 import six
+
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import load, which
-from conans.errors import ConanException
+from conans.errors import ConanException, CalledProcessErrorWithStderr
 from conans.model.version import Version
 from conans.util.fallbacks import default_output
 
@@ -22,14 +24,35 @@ def args_to_string(args):
         return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
 
 
+class CpuProperties(object):
+
+    def get_cpu_quota(self):
+        return int(load("/sys/fs/cgroup/cpu/cpu.cfs_quota_us"))
+
+    def get_cpu_period(self):
+        return int(load("/sys/fs/cgroup/cpu/cpu.cfs_period_us"))
+
+    def get_cpus(self):
+        try:
+            cfs_quota_us = self.get_cpu_quota()
+            cfs_period_us = self.get_cpu_period()
+            if cfs_quota_us > 0 and cfs_period_us > 0:
+                return int(math.ceil(cfs_quota_us / cfs_period_us))
+        except:
+            pass
+        return multiprocessing.cpu_count()
+
+
 def cpu_count(output=None):
-    output = default_output(output, 'conans.client.tools.oss.cpu_count')
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         if env_cpu_count is not None and not env_cpu_count.isdigit():
             raise ConanException("Invalid CONAN_CPU_COUNT value '%s', "
                                  "please specify a positive integer" % env_cpu_count)
-        return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
+        if env_cpu_count:
+            return int(env_cpu_count)
+        else:
+            return CpuProperties().get_cpus()
     except NotImplementedError:
         output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
@@ -46,6 +69,17 @@ def detected_os():
 def detected_architecture():
     # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
+    os_info = OSInfo()
+    arch = None
+
+    if os_info.is_solaris:
+        arch = OSInfo.get_solaris_architecture()
+    elif os_info.is_aix:
+        arch = OSInfo.get_aix_architecture()
+
+    if arch:
+        return arch
+
     if "ppc64le" in machine:
         return "ppc64le"
     elif "ppc64" in machine:
@@ -76,15 +110,6 @@ def detected_architecture():
         return "s390x"
     elif "s390" in machine:
         return "s390"
-
-    if OSInfo().is_aix:
-        processor = platform.processor()
-        if "powerpc" in processor:
-            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
-            if kernel_bitness:
-                return "ppc64" if kernel_bitness == "64" else "ppc32"
-        elif "rs6000" in processor:
-            return "ppc32"
 
     return None
 
@@ -279,6 +304,27 @@ class OSInfo(object):
             return "Puma"
         elif version.minor() == "10.0.Z":
             return "Cheetha"
+
+    @staticmethod
+    def get_aix_architecture():
+        processor = platform.processor()
+        if "powerpc" in processor:
+            kernel_bitness = OSInfo().get_aix_conf("KERNEL_BITMODE")
+            if kernel_bitness:
+                return "ppc64" if kernel_bitness == "64" else "ppc32"
+        elif "rs6000" in processor:
+            return "ppc32"
+
+    @staticmethod
+    def get_solaris_architecture():
+        # under intel solaris, platform.machine()=='i86pc' so we need to handle
+        # it early to suport 64-bit
+        processor = platform.processor()
+        kernel_bitness, elf = platform.architecture()
+        if "sparc" in processor:
+            return "sparcv9" if kernel_bitness == "64bit" else "sparc"
+        elif "i386" in processor:
+            return "x86_64" if kernel_bitness == "64bit" else "x86"
 
     @staticmethod
     def get_freebsd_version():
@@ -489,17 +535,20 @@ def get_gnu_triplet(os_, arch, compiler=None):
 def check_output(cmd, folder=None, return_code=False, stderr=None):
     tmp_file = tempfile.mktemp()
     try:
+        # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or PIPE
         cmd = cmd if isinstance(cmd, six.string_types) else subprocess.list2cmdline(cmd)
         process = subprocess.Popen("{} > {}".format(cmd, tmp_file), shell=True,
                                    stderr=stderr, cwd=folder)
-        process.communicate()
+
+        _, stderr = process.communicate()
 
         if return_code:
             return process.returncode
 
         if process.returncode:
-            raise CalledProcessError(process.returncode, cmd)
+            # Only in case of error, we print also the stderr to know what happened
+            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
 
         output = load(tmp_file)
         return output

@@ -86,7 +86,7 @@ class HelloConan(ConanFile):
 
     def list_raw_test(self):
         self.client.run("remote list --raw")
-        output = re.sub("http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
+        output = re.sub(r"http:\/\/fake.+\.com", "http://fake.com", str(self.client.out))
         self.assertIn("remote0 http://fake.com True", output)
         self.assertIn("remote1 http://fake.com True", output)
         self.assertIn("remote2 http://fake.com True", output)
@@ -154,6 +154,22 @@ class HelloConan(ConanFile):
         self.client.run("remote clean")
         self.client.run("remote list")
         self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def clean_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertEqual("", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertEqual("", self.client.out)
+
+    def remove_remote_no_user_test(self):
+        self.client.run("remote add_ref Hello/0.1 remote0")
+        self.client.run("remote remove remote0")
+        self.client.run("remote list")
+        self.assertNotIn("remote0", self.client.out)
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
@@ -293,6 +309,61 @@ class HelloConan(ConanFile):
         self.assertEqual(data["remotes"][3]["url"], "http://someurl4")
         self.assertEqual(data["remotes"][3]["verify_ssl"], False)
 
+    def remote_disable_test(self):
+        client = TestClient()
+        client.run("remote add my-remote0 http://someurl0")
+        client.run("remote add my-remote1 http://someurl1")
+        client.run("remote add my-remote2 http://someurl2")
+        client.run("remote add my-remote3 http://someurl3")
+        client.run("remote disable my-remote0")
+        client.run("remote disable my-remote3")
+        registry = load(client.cache.registry_path)
+        data = json.loads(registry)
+        self.assertEqual(data["remotes"][0]["name"], "my-remote0")
+        self.assertEqual(data["remotes"][0]["url"], "http://someurl0")
+        self.assertEqual(data["remotes"][0]["disabled"], True)
+        self.assertEqual(data["remotes"][3]["name"], "my-remote3")
+        self.assertEqual(data["remotes"][3]["url"], "http://someurl3")
+        self.assertEqual(data["remotes"][3]["disabled"], True)
+
+        client.run("remote disable *")
+        registry = load(client.cache.registry_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertEqual(remote["disabled"], True)
+
+        client.run("remote enable *")
+        registry = load(client.cache.registry_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertNotIn("disabled", remote)
+
+    def invalid_remote_disable_test(self):
+        client = TestClient()
+
+        client.run("remote disable invalid_remote", assert_error=True)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
+                      client.out)
+
+        client.run("remote enable invalid_remote", assert_error=True)
+        self.assertIn("ERROR: Remote 'invalid_remote' not found in remotes",
+                      client.out)
+
+        client.run("remote disable invalid_wildcard_*")
+
+    def remote_disable_already_set_test(self):
+        """
+        Check that we don't raise an error if the remote is already in the required state
+        """
+        client = TestClient()
+
+        client.run("remote add my-remote0 http://someurl0")
+        client.run("remote enable my-remote0")
+        client.run("remote enable my-remote0")
+
+        client.run("remote disable my-remote0")
+        client.run("remote disable my-remote0")
+
     def verify_ssl_error_test(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
@@ -392,3 +463,43 @@ class HelloConan(ConanFile):
                       self.client.out)
         self.client.run("remote list")
         self.assertIn("pepe.org", self.client.out)
+
+    def test_metadata_editable_packages(self):
+        """
+        Check that 'conan remote' commands work with editable packages
+        """
+        self.client.save({"conanfile.py": """from conans import ConanFile
+class Conan(ConanFile):
+    pass"""})
+        self.client.run("create . pkg/1.1@lasote/stable")
+        self.client.run("upload pkg/1.1@lasote/stable --all -c --remote remote1")
+        self.client.run("remove -f pkg/1.1@lasote/stable")
+        self.client.run("install pkg/1.1@lasote/stable")
+        self.assertIn("pkg/1.1@lasote/stable: Package installed", self.client.out)
+        self.client.run("remote list_ref")
+        self.assertIn("pkg/1.1@lasote/stable: remote1", self.client.out)
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        # Check add --force, update and rename
+        self.client.run("remote add remote2 %s --force" % self.servers["remote1"].fake_url)
+        self.client.run("remote update remote2 %sfake" % self.servers["remote1"].fake_url)
+        self.client.run("remote rename remote2 remote-fake")
+        self.client.run("editable remove pkg/1.1@lasote/stable")
+        # Check associated remote has changed name
+        self.client.run("remote list_ref")
+        self.assertIn("pkg/1.1@lasote/stable: remote-fake", self.client.out)
+        # Check remove
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        self.client.run("remote remove remote-fake")
+        self.client.run("remote list")
+        self.assertIn("remote0: %s" % self.servers["remote0"].fake_url, self.client.out)
+        self.assertNotIn("remote-fake", self.client.out)
+        # Check clean
+        self.client.run("editable remove pkg/1.1@lasote/stable")
+        self.client.run("remove -f pkg/1.1@lasote/stable")
+        self.client.run("remote add remote1 %s" % self.servers["remote1"].fake_url)
+        self.client.run("install pkg/1.1@lasote/stable")
+        self.client.run("editable add . pkg/1.1@lasote/stable")
+        self.client.run("remote clean")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertNotIn("remote0", self.client.out)

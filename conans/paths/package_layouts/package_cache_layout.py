@@ -102,7 +102,7 @@ class PackageCacheLayout(object):
     @short_path
     def package(self, pref):
         assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
     def package_metadata(self):
@@ -177,15 +177,6 @@ class PackageCacheLayout(object):
             yield metadata
             save(self.package_metadata(), metadata.dumps())
 
-    # Revisions
-    def package_summary_hash(self, pref):
-        package_folder = self.package(pref)
-        try:
-            read_manifest = FileTreeManifest.load(package_folder)
-        except IOError:
-            raise PackageNotFoundException(pref)
-        return read_manifest.summary_hash
-
     # Locks
     def conanfile_read_lock(self, output):
         if self._no_lock:
@@ -236,3 +227,11 @@ class PackageCacheLayout(object):
             return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
         else:
             return load(abs_path)
+
+    def packages_ids(self):
+        packages_folder = self.packages()
+        if os.path.exists(packages_folder):
+            pkg_ids = [d for d in os.listdir(packages_folder)]
+        else:
+            pkg_ids = []
+        return pkg_ids

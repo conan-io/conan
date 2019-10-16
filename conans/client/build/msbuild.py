@@ -154,6 +154,8 @@ class MSBuild(object):
 
         if use_env:
             command.append('/p:UseEnv=true')
+        else:
+            command.append('/p:UseEnv=false')
 
         if msvc_arch:
             command.append('/p:Platform="%s"' % msvc_arch)

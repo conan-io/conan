@@ -143,7 +143,12 @@ class Version(str):
         equals = all(get_el(other.as_list, ind) == get_el(self.as_list, ind)
                      for ind in range(0, max(len(other.as_list), len(self.as_list))))
         if equals:
-            return 0
+            if self.build == other.build:
+                return 0
+            if self.build > other.build:
+                return -1
+            else:
+                return 1
 
         # Check greater than or less than
         other_list = other.as_list

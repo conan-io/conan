@@ -7,17 +7,16 @@ from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.util.files import load
-from conans.test.utils.conanfile import TestConanFile
 from conans.test.utils.tools import TestClient, TestServer, \
-    NO_SETTINGS_PACKAGE_ID, create_local_git_repo
+    NO_SETTINGS_PACKAGE_ID, create_local_git_repo, GenConanfile
+from conans.util.files import load
 
 
 class PythonExtendTest(unittest.TestCase):
     def test_with_python_requires(self):
         # https://github.com/conan-io/conan/issues/5140
         client = TestClient()
-        client.save({"conanfile.py": TestConanFile("dep", "0.1")})
+        client.save({"conanfile.py": GenConanfile().with_name("dep").with_version("0.1")})
         client.run("export . user/testing")
         conanfile = textwrap.dedent("""
             from conans import ConanFile, python_requires
@@ -577,6 +576,32 @@ class PkgTest(base.MyConanfileBase):
         self.assertIn("Same python_requires with different versions not allowed for a conanfile",
                       t.out)
 
+    def short_paths_test(self):
+        # https://github.com/conan-io/conan/issues/5814
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class MyConanfileBase(ConanFile):
+            exports = "*.txt"
+            exports_sources = "*.h"
+        """)
+        client.save({"conanfile.py": conanfile,
+                     "file.h": "header",
+                     "other.txt": "text"})
+        client.run("create . Base/1.2@lasote/testing")
+
+        reuse = textwrap.dedent("""
+        from conans import python_requires
+        base = python_requires("Base/1.2@lasote/testing")
+        class PkgTest(base.MyConanfileBase):
+            short_paths = True
+            name = "consumer"
+            version = "1.0.0"
+        """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . lasote/testing")
+        self.assertIn("consumer/1.0.0@lasote/testing: Created package revision", client.out)
+
 
 class PythonRequiresNestedTest(unittest.TestCase):
 
@@ -707,7 +732,8 @@ class Project(base_class.PythonRequires2, base_class2.PythonRequires22):
 
     def local_build_test(self):
         client = TestClient()
-        client.save({"conanfile.py": "var=42\n"+str(TestConanFile("Tool", "0.1"))})
+        client.save({"conanfile.py": "var=42\n"+
+                                     str(GenConanfile().with_name("Tool").with_version("0.1"))})
         client.run("export . Tool/0.1@user/channel")
 
         conanfile = """from conans import ConanFile, python_requires

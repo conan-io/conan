@@ -18,9 +18,15 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    properties_template = '''  <PropertyGroup Label="ConanVariables"{condition}>
-    <ConanBinaryDirectories>{bin_dirs};%(ConanBinaryDirectories)</ConanBinaryDirectories>
-    <ConanResourceDirectories>{res_dirs};%(ConanResourceDirectories)$(</ConanResourceDirectories>
+    properties_template = '''<PropertyGroup Label="ConanVariables"{condition}>
+    <ConanCompilerFlags>{compiler_flags}</ConanCompilerFlags>
+    <ConanLinkerFlags>{linker_flags}</ConanLinkerFlags>
+    <ConanPreprocessorDefinitions>{definitions}</ConanPreprocessorDefinitions>
+    <ConanIncludeDirectories>{include_dirs}</ConanIncludeDirectories>
+    <ConanResourceDirectories>{res_dirs}</ConanResourceDirectories>
+    <ConanLibraryDirectories>{lib_dirs}</ConanLibraryDirectories>
+    <ConanBinaryDirectories>{bin_dirs}</ConanBinaryDirectories>
+    <ConanLibraries>{libs}</ConanLibraries>
   </PropertyGroup>
   <PropertyGroup{condition}>
     <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
@@ -28,22 +34,22 @@ class VisualStudioGenerator(Generator):
   </PropertyGroup>
   <ItemDefinitionGroup{condition}>
     <ClCompile>
-      <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>{definitions}%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>{compiler_flags} %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ConanIncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(ConanPreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>$(ConanCompilerFlags) %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>{lib_dirs}%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(ConanLibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(ConanLibraries)%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>$(ConanLinkerFlags) %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <Midl>
-      <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ConanIncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </Midl>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>{definitions}%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>{compiler_flags} %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>$(ConanIncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(ConanPreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>$(ConanCompilerFlags) %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
   </ItemDefinitionGroup>'''
 

@@ -6,8 +6,6 @@ language: python
 matrix:
     include:
         - python: 2.7
-        - python: 3.4
-          if: branch =~ ^release.* OR branch =~ ^master
         - python: 3.5
           if: branch =~ ^release.* OR branch =~ ^master
         - python: 3.6

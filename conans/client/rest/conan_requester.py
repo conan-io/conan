@@ -1,4 +1,5 @@
 import fnmatch
+import logging
 import os
 import platform
 import time
@@ -10,6 +11,11 @@ from requests.adapters import HTTPAdapter
 from conans import __version__ as client_version
 from conans.util.files import save
 from conans.util.tracer import log_client_rest_api_call
+
+# Capture SSL warnings as pointed out here:
+# https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
+# TODO: Fix this security warning
+logging.captureWarnings(True)
 
 
 class ConanRequester(object):
@@ -109,7 +115,7 @@ class ConanRequester(object):
         if self.proxies or self._no_proxy_match:
             old_env = dict(os.environ)
             # Clean the proxies from the environ and use the conan specified proxies
-            for var_name in ("http_proxy", "https_proxy", "no_proxy"):
+            for var_name in ("http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy"):
                 popped = True if os.environ.pop(var_name, None) else popped
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:

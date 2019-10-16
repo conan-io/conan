@@ -6,7 +6,6 @@ from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node,\
     RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE
-from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
@@ -15,6 +14,7 @@ from conans.model.graph_lock import GraphLock, GraphLockFile
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO
 from conans.util.files import load
+from conans.model.info import PACKAGE_ID_UNKNOWN
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -43,13 +43,14 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class GraphManager(object):
-    def __init__(self, output, cache, remote_manager, loader, proxy, resolver):
+    def __init__(self, output, cache, remote_manager, loader, proxy, resolver, binary_analyzer):
         self._proxy = proxy
         self._output = output
         self._resolver = resolver
         self._cache = cache
         self._remote_manager = remote_manager
         self._loader = loader
+        self._binary_analyzer = binary_analyzer
 
     def load_consumer_conanfile(self, conanfile_path, info_folder,
                                 deps_info_required=False, test=None):
@@ -57,7 +58,7 @@ class GraphManager(object):
         """
         try:
             graph_info = GraphInfo.load(info_folder)
-            graph_lock_file = GraphLockFile.load(info_folder)
+            graph_lock_file = GraphLockFile.load(info_folder, self._cache.config.revisions_enabled)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile = graph_lock_file.profile
@@ -167,7 +168,7 @@ class GraphManager(object):
                 conanfile = self._loader.load_conanfile_txt(path, processed_profile,
                                                             ref=graph_info.root)
 
-            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER)
+            root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, path=path)
 
             if graph_lock:  # Find the Node ID in the lock of current root
                 graph_lock.find_consumer_node(root_node, create_reference)
@@ -199,7 +200,7 @@ class GraphManager(object):
             self._output.writeln("")
 
         build_mode.report_matches()
-        return deps_graph, conanfile
+        return deps_graph
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):
@@ -211,21 +212,28 @@ class GraphManager(object):
 
         return conanfile.build_requires
 
-    def _recurse_build_requires(self, graph, builder, binaries_analyzer, check_updates, update,
-                                build_mode, remotes, profile_build_requires, recorder,
+    def _recurse_build_requires(self, graph, subgraph, builder, check_updates,
+                                update, build_mode, remotes, profile_build_requires, recorder,
                                 processed_profile, graph_lock, apply_build_requires=True):
+        """
+        :param graph: This is the full dependency graph with all nodes from all recursions
+        :param subgraph: A partial graph of the nodes that need to be evaluated and expanded
+            at this recursion. Only the nodes belonging to this subgraph will get their package_id
+            computed, and they will resolve build_requires if they need to be built from sources
+        """
 
-        binaries_analyzer.evaluate_graph(graph, build_mode, update, remotes)
+        self._binary_analyzer.evaluate_graph(subgraph, build_mode, update, remotes)
         if not apply_build_requires:
             return
 
-        for node in graph.ordered_iterate():
+        for node in subgraph.ordered_iterate():
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
             if node.recipe == RECIPE_VIRTUAL:
                 continue
+            # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE)
-                    and node.recipe != RECIPE_CONSUMER):
+                    and node.recipe != RECIPE_CONSUMER and node.package_id != PACKAGE_ID_UNKNOWN):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile)
             str_ref = str(node.ref)
@@ -235,35 +243,33 @@ class GraphManager(object):
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
-                            for build_require in build_requires:
-                                if build_require.name in package_build_requires:  # Override defined
-                                    # this is a way to have only one package Name for all versions
-                                    # (no conflicts)
-                                    # but the dict key is not used at all
-                                    package_build_requires[build_require.name] = build_require
-                                elif build_require.name != node.name:  # Profile one
-                                    new_profile_build_requires.append(build_require)
+                    for build_require in build_requires:
+                        if build_require.name in package_build_requires:  # Override defined
+                            # this is a way to have only one package Name for all versions
+                            # (no conflicts)
+                            # but the dict key is not used at all
+                            package_build_requires[build_require.name] = build_require
+                        elif build_require.name != node.name:  # Profile one
+                            new_profile_build_requires.append(build_require)
 
             if package_build_requires:
                 subgraph = builder.extend_build_requires(graph, node,
                                                          package_build_requires.values(),
                                                          check_updates, update, remotes,
                                                          processed_profile, graph_lock)
-                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
-                                             update, build_mode,
+                self._recurse_build_requires(graph, subgraph, builder,
+                                             check_updates, update, build_mode,
                                              remotes, profile_build_requires, recorder,
                                              processed_profile, graph_lock)
-                graph.nodes.update(subgraph.nodes)
 
             if new_profile_build_requires:
                 subgraph = builder.extend_build_requires(graph, node, new_profile_build_requires,
                                                          check_updates, update, remotes,
                                                          processed_profile, graph_lock)
-                self._recurse_build_requires(subgraph, builder, binaries_analyzer, check_updates,
-                                             update, build_mode,
+                self._recurse_build_requires(graph, subgraph, builder,
+                                             check_updates, update, build_mode,
                                              remotes, {}, recorder,
                                              processed_profile, graph_lock)
-                graph.nodes.update(subgraph.nodes)
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     profile_build_requires, recorder, processed_profile, apply_build_requires,
@@ -274,14 +280,10 @@ class GraphManager(object):
                                    recorder)
         graph = builder.load_graph(root_node, check_updates, update, remotes, processed_profile,
                                    graph_lock)
-        binaries_analyzer = GraphBinariesAnalyzer(self._cache, self._output,
-                                                  self._remote_manager)
 
-        self._recurse_build_requires(graph, builder, binaries_analyzer, check_updates, update,
-                                     build_mode, remotes,
-                                     profile_build_requires, recorder, processed_profile,
-                                     graph_lock,
-                                     apply_build_requires=apply_build_requires)
+        self._recurse_build_requires(graph, graph, builder, check_updates, update, build_mode,
+                                     remotes, profile_build_requires, recorder, processed_profile,
+                                     graph_lock, apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}

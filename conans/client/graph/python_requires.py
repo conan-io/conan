@@ -28,11 +28,6 @@ class ConanPythonRequire(object):
         self._update = update
         self._remotes = remotes
 
-    def invalidate_caches(self):
-        self._cached_requires = {}
-        self.check_updates = False
-        self.update = False
-
     @contextmanager
     def capture_requires(self):
         old_requires = self._requires

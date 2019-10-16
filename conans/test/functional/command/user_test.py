@@ -1,11 +1,9 @@
 import json
-import os
 import unittest
 from collections import OrderedDict
 
 from conans.client.store.localdb import LocalDB
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load
 
 
 class UserTest(unittest.TestCase):
@@ -64,16 +62,16 @@ class UserTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'john'",
                       client.out)
         localdb = LocalDB.create(client.cache.localdb)
-        self.assertEqual(('john', None), localdb.get_login(test_server.fake_url))
+        self.assertEqual(('john', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user will')
         self.assertIn("Changed user of remote 'default' from 'john' to 'will'", client.out)
-        self.assertEqual(('will', None), localdb.get_login(test_server.fake_url))
+        self.assertEqual(('will', None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user None')
         self.assertIn("Changed user of remote 'default' from 'will' to 'None' (anonymous)",
                       client.out)
-        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
 
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
@@ -96,7 +94,7 @@ class UserTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'lasote' to 'None' (anonymous)",
                       client.out)
         localdb = LocalDB.create(client.cache.localdb)
-        self.assertEqual((None, None), localdb.get_login(test_server.fake_url))
+        self.assertEqual((None, None, None), localdb.get_login(test_server.fake_url))
         client.run('user')
         self.assertIn("Current user of remote 'default' set to: 'None' (anonymous)", client.out)
 
@@ -214,7 +212,6 @@ class ConanLib(ConanFile):
         self.assertNotIn("[Authenticated]", client.out)
 
     def json_test(self):
-
         def _compare_dicts(first_dict, second_dict):
             self.assertTrue(set(first_dict), set(second_dict))
 
@@ -227,7 +224,7 @@ class ConanLib(ConanFile):
                                                                 ("danimtb", "passpass")],
                                                     "other_server": []})
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -245,7 +242,7 @@ class ConanLib(ConanFile):
 
         client.run('user bad_user')
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -263,7 +260,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -281,7 +278,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote -p mypass")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -299,7 +296,7 @@ class ConanLib(ConanFile):
 
         client.run("user danimtb -p passpass")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -317,7 +314,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote -r other_server")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -335,7 +332,7 @@ class ConanLib(ConanFile):
 
         client.run("user lasote -r default")
         client.run("user --json user.json")
-        content = load(os.path.join(client.current_folder, "user.json"))
+        content = client.load("user.json")
         info = json.loads(content)
         _compare_dicts({"error": False,
                         "remotes": [
@@ -350,3 +347,32 @@ class ConanLib(ConanFile):
                                 "user_name": "lasote"
                             }
                         ]}, info)
+
+    def test_skip_auth(self):
+        default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers = OrderedDict()
+        servers["default"] = default_server
+        client = TestClient(servers=servers)
+        # Regular auth
+        client.run("user lasote -r default -p mypass")
+
+        # Now skip the auth
+        client.run("user lasote -r default -p BAD_PASS --skip-auth")
+        self.assertIn("User of remote 'default' is already 'lasote'", client.out)
+
+        client.run("user lasote -r default -p BAD_PASS", assert_error=True)
+        self.assertIn("Wrong user or password", client.out)
+
+        # Login again correctly
+        client.run("user lasote -r default -p mypass")
+
+        # If we try to skip the auth for a user not logged, it will fail, because
+        # we don't have credentials for that user
+        client.run("user danimtb -r default -p BAD_PASS --skip-auth", assert_error=True)
+        self.assertIn("Wrong user or password", client.out)
+
+        # Login again correctly
+        client.run("user lasote -r default -p mypass")
+
+        # Now try to skip without specifying user
+        client.run("user -r default -p BAD_PASS --skip-auth")

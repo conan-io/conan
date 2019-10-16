@@ -4,6 +4,7 @@ import unittest
 from collections import namedtuple
 
 from nose.plugins.attrib import attr
+from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
 from conans.client.tools.win import get_cased_path
@@ -114,7 +115,7 @@ class ConanLib(ConanFile):
             self.client.run_command('git config user.name "Your Name"')
             self.client.run_command("git add .")
             self.client.run_command('git commit -m  "commiting"')
-        self.client.run_command('git clone "%s" .' % repo.replace('\\', '/'))
+        self.client.run_command('git clone "%s" .' % repo)
         self.client.run("export . user/channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         self.client.run("remove lib/0.1* -s -f")  # Remove the source folder, it will get from url
@@ -296,6 +297,38 @@ other_folder/excluded_subfolder
         self.assertFalse(os.path.exists(os.path.join(curdir, "source", "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(curdir, "source", "mysub", "myfile.txt")))
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
+
+    @parameterized.expand([
+        ("local", "v1.0", True),
+        ("local", None, False),
+        ("https://github.com/conan-io/conan.git", "0.22.1", True),
+        ("https://github.com/conan-io/conan.git", "c6cc15fa2f4b576bd70c9df11942e61e5cc7d746", False)])
+    def test_shallow_clone_remote(self, remote, revision, is_tag):
+        # https://github.com/conan-io/conan/issues/5570
+        self.client = TestClient()
+
+        # "remote" git
+        if remote == "local":
+            remote, rev = create_local_git_repo(tags=[revision] if is_tag else None,
+                                                files={"conans/model/username.py": "foo"})
+            if revision is None:  # Get the generated commit
+                revision = rev
+
+        # Use explicit URL to avoid local optimization (scm_folder.txt)
+        conanfile = '''
+import os
+from conans import ConanFile, tools
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    scm = {"type": "git", "url": "%s", "revision": "%s"}
+
+    def build(self):
+        assert os.path.exists(os.path.join(self.build_folder, "conans", "model", "username.py"))
+''' % (remote, revision)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create . user/channel")
 
     def test_install_checked_out(self):
         test_server = TestServer()
@@ -492,9 +525,11 @@ class ConanLib(ConanFile):
                 "subfolder": "mysubfolder"}
         conanfile = namedtuple("ConanfileMock", "scm")(data)
         scm_data = SCMData(conanfile)
-        the_json = str(scm_data)
-        data2 = json.loads(the_json)
-        self.assertEqual(data, data2)
+
+        expected_output = '{"password": "mypassword", "revision": "myrevision",' \
+                          ' "subfolder": "mysubfolder", "type": "git", "url": "myurl",' \
+                          ' "username": "myusername"}'
+        self.assertEqual(str(scm_data), expected_output)
 
     def test_git_delegated_function(self):
         conanfile = """
@@ -866,16 +901,6 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
         self.assertIn("SOURCE METHOD CALLED", self.client.out)
         self.assertIn("BUILD METHOD CALLED", self.client.out)
-
-    def test_scm_serialization(self):
-        data = {"url": "myurl", "revision": "23", "username": "myusername",
-                "password": "mypassword", "type": "svn", "verify_ssl": False,
-                "subfolder": "mysubfolder"}
-        conanfile = namedtuple("ConanfileMock", "scm")(data)
-        scm_data = SCMData(conanfile)
-        the_json = str(scm_data)
-        data2 = json.loads(the_json)
-        self.assertEqual(data, data2)
 
 
 @attr('svn')

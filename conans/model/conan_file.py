@@ -184,8 +184,7 @@ class ConanFile(object):
         if not self._conan_channel:
             self._conan_channel = os.getenv("CONAN_CHANNEL") or self.default_channel
             if not self._conan_channel:
-                raise ConanException("CONAN_CHANNEL environment variable not defined, "
-                                     "but self.channel is used in conanfile")
+                raise ConanException("channel not defined, but self.channel is used in conanfile")
         return self._conan_channel
 
     @property
@@ -193,8 +192,7 @@ class ConanFile(object):
         if not self._conan_user:
             self._conan_user = os.getenv("CONAN_USERNAME") or self.default_user
             if not self._conan_user:
-                raise ConanException("CONAN_USERNAME environment variable not defined, "
-                                     "but self.user is used in conanfile")
+                raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
@@ -263,8 +261,10 @@ class ConanFile(object):
         if run_environment:
             with tools.run_environment(self):
                 if OSInfo().is_macos:
-                    command = 'DYLD_LIBRARY_PATH="%s" %s' % (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                                                             command)
+                    command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
+                              (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                               os.environ.get("DYLD_FRAMEWORK_PATH", ''),
+                               command)
                 retcode = _run()
         else:
             retcode = _run()
