@@ -146,7 +146,6 @@ class Requirements(OrderedDict):
 
                     output.warn(msg)
                     req.ref = other_ref
-
             new_reqs[name] = req
         return new_reqs
 
