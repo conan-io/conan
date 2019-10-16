@@ -12,12 +12,6 @@ import textwrap
 from collections import OrderedDict, defaultdict, namedtuple
 from functools import partial
 
-try:
-    from rtpy import Rtpy
-except ImportError:
-    sys.stderr.write("Install 'rtpy' to use this script: 'pip install rtpy'")
-    sys.exit(1)
-
 pref_pattern = re.compile(r"(?P<name>[^\/@#:]+)\/"
                           r"(?P<version>[^\/@#:]+)"
                           r"@"
@@ -99,25 +93,17 @@ def _get_package_artifacts(pref, remotes, add_prefix, use_id):
     return arts
 
 
-def get_remotes(remotes):
-    for it in remotes:
-        items = it.split(",")
-        if len(items) == 2:
-            yield Rtpy({"af_url": items[0], "api_key": items[1]})
-        elif len(items) == 3:
-            yield Rtpy({"af_url": items[0], "username": items[1], "password": items[2]})
-
-
 def process_lockfile(lockfile, multi_module):
     modules = defaultdict(lambda: {"id": None, "properties": {},
                                    "artifacts": set(), "dependencies": set()})
 
     def _gather_deps(node_uid, contents, func):
-        node_content = contents["graph_lock"]["nodes"].get(node_uid)
-        artifacts = func(node_content["pref"], remotes=remotes, add_prefix=True, use_id=True)
-        for _, id_node in node_content.get("requires", {}).items():
-            artifacts.update(_gather_deps(id_node, contents, func))
-        return artifacts
+        pass
+        # node_content = contents["graph_lock"]["nodes"].get(node_uid)
+        # artifacts = func(node_content["pref"], remotes=remotes, add_prefix=True, use_id=True)
+        # for _, id_node in node_content.get("requires", {}).items():
+        #     artifacts.update(_gather_deps(id_node, contents, func))
+        # return artifacts
 
     with open(lockfile) as json_data:
         data = json.load(json_data)

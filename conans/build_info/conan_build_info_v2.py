@@ -33,7 +33,6 @@ def build_info_stop():
 
 def build_info_create(build_info_file, lockfile):
     create_build_info(build_info_file, lockfile)
-    pass
 
 
 def build_info_update(build_info_1, build_info_2):
