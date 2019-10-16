@@ -292,10 +292,10 @@ class GraphLock(object):
         """
         # None reference
         if ref is None:
-            try:
-                return self._nodes[None].pref
-            except KeyError:
-                raise ConanException("Unspecified reference in graph-lock, please specify")
+            # Is a conanfile.txt consumer
+            for id_, node in self._nodes.items():
+                if not node.pref and node.path:
+                    return id_
 
         # First search by ref (without RREV)
         ids = []

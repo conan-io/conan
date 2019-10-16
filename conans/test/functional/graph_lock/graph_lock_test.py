@@ -29,6 +29,34 @@ class GraphLockErrorsTest(unittest.TestCase):
         self.assertIn("os=Linux", client.out)
 
 
+class GraphLockConanfileTXTTest(unittest.TestCase):
+    def conanfile_txt_test(self):
+        client = TestClient()
+        client.save({"conanfile.txt": ""})
+        client.run("install .")
+        client.run("install . --lockfile")
+        self.assertIn("Using lockfile", client.out)
+
+    def conanfile_txt_deps_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@user/testing")
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.txt": "[requires]\npkg/[>0.0]@user/testing"})
+        client2.run("install .")
+        self.assertIn("pkg/0.1@user/testing from local cache - Cache", client2.out)
+
+        client.run("create . pkg/0.2@user/testing")
+
+        client2.run("install . --lockfile")
+        self.assertIn("pkg/0.1@user/testing from local cache - Cache", client2.out)
+        self.assertNotIn("pkg/0.2", client2.out)
+        client2.run("install .")
+        self.assertIn("pkg/0.2@user/testing from local cache - Cache", client2.out)
+        self.assertNotIn("pkg/0.1", client2.out)
+
+
 class GraphLockCustomFilesTest(unittest.TestCase):
     consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
                              .with_require_plain("PkgA/[>=0.1]@user/channel")
