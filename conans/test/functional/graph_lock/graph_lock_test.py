@@ -428,6 +428,30 @@ class GraphLockConsumerBuildOrderTest(unittest.TestCase):
         client.run("graph build-order conan.lock --build=missing")
         self.assertIn("[]", client.out)
 
+    def build_order_build_requires_test(self):
+        # https://github.com/conan-io/conan/issues/5474
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . CA/1.0@user/channel")
+        client.save({"conanfile.py": GenConanfile().with_build_require_plain("CA/1.0@user/channel")})
+        client.run("create . CB/1.0@user/channel")
+
+        consumer = textwrap.dedent("""
+            [requires]
+            CA/1.0@user/channel
+            CB/1.0@user/channel
+        """)
+        client.save({"conanfile.txt": consumer})
+        client.run("graph lock conanfile.txt --build")
+        client.run("graph build-order . --build --json=bo.json")
+        jsonbo = json.loads(client.load("bo.json"))
+        level0 = jsonbo[0]
+        ca = level0[0]
+        self.assertEqual("CA/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", ca[1])
+        level1 = jsonbo[1]
+        cb = level1[0]
+        self.assertEqual("CB/1.0@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", cb[1])
+
     @parameterized.expand([(True,), (False,)])
     def consumer_build_order_test(self, enable_revisions):
         # https://github.com/conan-io/conan/issues/5727
