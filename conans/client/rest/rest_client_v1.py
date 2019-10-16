@@ -130,7 +130,9 @@ class RestV1Methods(RestCommonMethods):
         url = self.router.package_upload_urls(pref)
         file_sizes = {filename: os.stat(abs_path).st_size for filename,
                       abs_path in files_to_upload.items()}
+        logger.debug("Requesting upload urls...")
         urls = self._get_file_to_url_dict(url, data=file_sizes)
+        logger.debug("Requesting upload urls...Done!")
         self._upload_files(urls, files_to_upload, self._output, retry, retry_wait)
 
     def _upload_files(self, file_urls, files, output, retry, retry_wait):
