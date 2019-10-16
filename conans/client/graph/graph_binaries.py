@@ -150,7 +150,7 @@ class GraphBinariesAnalyzer(object):
             return True
         self._evaluated[pref] = [node]
 
-    def _evaluate_node(self, node, build_mode, update, remotes, default_package_id_mode):
+    def _evaluate_node(self, node, build_mode, update, remotes):
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.package_id != PACKAGE_ID_UNKNOWN, "Node.package_id shouldn't be Unknown"
@@ -171,13 +171,22 @@ class GraphBinariesAnalyzer(object):
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and node.conanfile.compatible_packages:
                 for compatible_package in node.conanfile.compatible_packages:
-                    node.binary = None  # Invalidate it
-                    package_id = compatible_package.package_id(default_package_id_mode)
+                    package_id = compatible_package.package_id()
+                    if package_id == node.package_id:
+                        node.conanfile.output.error("Compatible package ID %s equal to the default "
+                                                    "package ID" % package_id)
+                        continue
                     pref = PackageReference(node.ref, package_id)
+                    node.binary = None  # Invalidate it
                     self._process_node(node, pref, build_mode, update, remotes)
-                    if node.binary != BINARY_MISSING:
+                    if node.binary and node.binary != BINARY_MISSING:
+                        node.conanfile.output.info("Main binary package '%s' missing. Using "
+                                                   "compatible package '%s'"
+                                                   % (node.package_id, package_id))
                         node._package_id = package_id
                         break
+                    else:
+                        node.binary = BINARY_MISSING
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
@@ -308,7 +317,7 @@ class GraphBinariesAnalyzer(object):
             if node.package_id == PACKAGE_ID_UNKNOWN:
                 assert node.binary is None
                 continue
-            self._evaluate_node(node, build_mode, update, remotes, default_package_id_mode)
+            self._evaluate_node(node, build_mode, update, remotes)
             self._handle_private(node)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
@@ -322,7 +331,7 @@ class GraphBinariesAnalyzer(object):
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return
         assert node.package_id != PACKAGE_ID_UNKNOWN
-        self._evaluate_node(node, build_mode, update, remotes, default_package_id_mode)
+        self._evaluate_node(node, build_mode, update, remotes)
         output.info("Binary for updated ID from: %s" % node.binary)
         if node.binary == BINARY_BUILD:
             output.info("Binary for the updated ID has to be built")

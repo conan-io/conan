@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class CompatibleIDsTest(unittest.TestCase):
 
-    def compatible_test(self):
+    def compatible_setting_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CompatiblePackage
@@ -38,6 +38,43 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c", client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
 
+    def compatible_option_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CompatiblePackage
+
+            class Pkg(ConanFile):
+                options = {"optimized": [1, 2, 3]}
+                default_options = {"optimized": 1}
+                def package_id(self):
+                    for optimized in range(int(self.options.optimized), 0, -1):
+                        compatible_pkg = CompatiblePackage(self)
+                        compatible_pkg.options.optimized = optimized
+                        self.compatible_packages.append(compatible_pkg)
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable")
+        self.assertIn("pkg/0.1@user/stable: Package 'a97db2488658dd582a070ba8b6c6975eb1601a33'"
+                      " created", client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_require_plain("pkg/0.1@user/stable")})
+        client.run("install . -o pkg:optimized=2")
+        # Information messages
+        self.assertIn("pkg/0.1@user/stable: ERROR: Compatible package ID "
+                      "d97fb97a840e4ac3b5e7bb8f79c87f1d333a85bc equal to the default package ID",
+                      client.out)
+        self.assertIn("pkg/0.1@user/stable: Main binary package "
+                      "'d97fb97a840e4ac3b5e7bb8f79c87f1d333a85bc' missing. Using compatible package"
+                      " 'a97db2488658dd582a070ba8b6c6975eb1601a33'", client.out)
+        # checking the resulting dependencies
+        self.assertIn("pkg/0.1@user/stable:a97db2488658dd582a070ba8b6c6975eb1601a33 - Cache",
+                      client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+        client.run("install . -o pkg:optimized=3")
+        self.assertIn("pkg/0.1@user/stable:a97db2488658dd582a070ba8b6c6975eb1601a33 - Cache",
+                      client.out)
+        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+
     def error_setting_test(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -57,4 +94,24 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn('compatible_pkg.settings.compiler.version = "bad"', client.out)
         self.assertIn("ConanException: Invalid setting 'bad' is not a valid "
                       "'settings.compiler.version' value", client.out)
+
+    def error_option_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CompatiblePackage
+
+            class Pkg(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": True}
+                def package_id(self):
+                    compatible_pkg = CompatiblePackage(self)
+                    compatible_pkg.options.shared = "bad"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@user/stable",  assert_error=True)
+
+        self.assertIn('ERROR: pkg/0.1@user/stable: Error in package_id() method, line 9',
+                      client.out)
+        self.assertIn('compatible_pkg.options.shared = "bad"', client.out)
+        self.assertIn("ConanException: 'bad' is not a valid 'options.shared' value.", client.out)
 

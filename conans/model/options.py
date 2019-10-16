@@ -308,6 +308,10 @@ class PackageOption(object):
         else:
             self._possible_values = sorted(str(v) for v in possible_values)
 
+    def copy(self):
+        result = PackageOption(self._possible_values, self._name)
+        return result
+
     def __bool__(self):
         if not self._value:
             return False
@@ -371,6 +375,11 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
         self._freeze = False
+
+    def copy(self):
+        result = PackageOptions(None)
+        result._data = {k: v.copy() for k, v in self._data.items()}
+        return result
 
     def __contains__(self, option):
         return str(option) in self._data
@@ -502,6 +511,12 @@ class Options(object):
         # if more than 1 is present, 1 should be "private" requirement and its options
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
+
+    def copy(self):
+        """ deepcopy, same as Settings"""
+        result = Options(self._package_options.copy())
+        result._deps_package_values = {k: v.copy() for k, v in self._deps_package_values.items()}
+        return result
 
     def freeze(self):
         self._package_options.freeze()
