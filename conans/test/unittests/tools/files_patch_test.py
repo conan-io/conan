@@ -194,67 +194,50 @@ class ToolsFilesPatchTest(unittest.TestCase):
         """
 
         conanfile = dedent("""
-            from conans import ConanFile
-            from conans import ConanFile, tools, CMake
-
+            from conans import ConanFile, tools
+            import os
+            
             class ConanFileToolsTest(ConanFile):
                 name = "foobar"
                 version = "0.1.0"
                 exports_sources = "*"
-                generators = "cmake"
-
+            
                 def build(self):
-                    tools.patch(patch_file="add_cmake.patch")
-                    cmake = CMake(self)
-                    cmake.configure()
+                    tools.patch(patch_file="add_files.patch")
+                    assert os.path.isfile("foo.txt")
+                    assert os.path.isfile("bar.txt")
         """)
-        foobar = dedent("""#include <stdio.h>
-
-
-int main(void) {
-    puts("Hello");
-}
-
-        """)
+        bar = "no creo en brujas"
         patch = dedent("""
-            From 585b3919d92ce8ebda8d778cfeffe36855e5363b Mon Sep 17 00:00:00 2001
+            From c66347c66991b6e617d107b505c18b3115624b8a Mon Sep 17 00:00:00 2001
             From: Uilian Ries <uilianries@gmail.com>
-            Date: Tue, 15 Oct 2019 10:57:59 -0300
-            Subject: [PATCH] add cmake
-
+            Date: Wed, 16 Oct 2019 14:31:34 -0300
+            Subject: [PATCH] add foo
+            
             ---
-             CMakeLists.txt | 7 +++++++
-             foobar.c       | 2 +-
-             2 files changed, 8 insertions(+), 1 deletion(-)
-             create mode 100644 CMakeLists.txt
-
-            diff --git a/CMakeLists.txt b/CMakeLists.txt
+             bar.txt | 3 ++-
+             foo.txt | 3 +++
+             2 files changed, 5 insertions(+), 1 deletion(-)
+             create mode 100644 foo.txt
+            
+            diff --git a/bar.txt b/bar.txt
+            index 0f4ff3a..0bd3158 100644
+            --- a/bar.txt
+            +++ b/bar.txt
+            @@ -1 +1,2 @@
+            -no creo en brujas
+            +Yo no creo en brujas, pero que las hay, las hay
+            +
+            diff --git a/foo.txt b/foo.txt
             new file mode 100644
-            index 0000000..cb1db10
+            index 0000000..91e8c0d
             --- /dev/null
-            +++ b/CMakeLists.txt
-            @@ -0,0 +1,7 @@
-            +cmake_minimum_required(VERSION 2.8.11)
-            +project(foobar C)
+            +++ b/foo.txt
+            @@ -0,0 +1,3 @@
+            +For us, there is no spring.
+            +Just the wind that smells fresh before the storm.
             +
-            +include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            +conan_basic_setup()
-            +
-            +add_executable(${CMAKE_PROJECT_NAME} foobar.c)
-            \ No newline at end of file
-            diff --git a/foobar.c b/foobar.c
-            index eceef43..297268e 100644
-            --- a/foobar.c
-            +++ b/foobar.c
-            @@ -1,6 +1,6 @@
-             #include <stdio.h>
-
-            -
-             int main(void) {
-                 puts("Hello");
-            +    return 0;
-             }
-            --
+            -- 
             2.23.0
 
 
@@ -262,11 +245,12 @@ int main(void) {
 
         client = TestClient()
         client.save({"conanfile.py": conanfile,
-                     "add_cmake.patch": patch,
-                     "foobar.c": foobar})
+                     "add_files.patch": patch,
+                     "bar.txt": bar})
         client.run("install .")
         client.run("build .")
         self.assertIn("Running build()", client.out)
+        self.assertNotIn("Warning", client.out)
 
     def _save_files(self, file_content):
         tmp_dir = temp_folder()
