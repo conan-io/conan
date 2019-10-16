@@ -34,7 +34,7 @@ class FindPackageMultiTestCase(unittest.TestCase):
                 return tc
 
             def build(self):
-                # A build helper could be easily added to replace this
+                # A build helper could be easily added to replace this two lines
                 self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
                 self.run("cmake --build .")
                 
@@ -51,7 +51,7 @@ class FindPackageMultiTestCase(unittest.TestCase):
         add_executable(app src/app.cpp)
         target_link_libraries(app requirement::requirement)
         
-        # Pass information to the C++ source so we can print and debug it
+        # Pass information to the C++ source so we can print and assert in the tests
         target_compile_definitions(app PRIVATE CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER}")
         get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
         target_compile_definitions(app PRIVATE GENERATOR_IS_MULTI_CONFIG="${_GENERATOR_IS_MULTI_CONFIG}")
