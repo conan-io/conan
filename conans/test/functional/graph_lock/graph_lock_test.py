@@ -129,7 +129,8 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         self.assertIn("PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0d561e10e25511b9bfa339d06360d7c1",
                       lock_file)
-        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)), self.pkg_b_id, rev_b), lock_file)
+        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)), self.pkg_b_id, rev_b),
+                      lock_file)
 
     def install_info_lock_test(self):
         # Normal install will use it (use install-folder to not change graph-info)
@@ -209,6 +210,125 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         client.save({"conanfile.py": str(self.consumer) + "\n#comment"})
         client.run("export-pkg . PkgB/0.1@user/channel --lockfile --force")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.modified_pkg_b_revision,
+                         self.modified_pkg_b_package_revision)
+
+
+class GraphLockVersionRangeNoUserChannelTest(unittest.TestCase):
+    # This is exactly the same as above, but not using user/channel in packages
+    # https://github.com/conan-io/conan/issues/5873
+    consumer = GenConanfile().with_name("PkgB").with_version("0.1")\
+                             .with_require_plain("PkgA/[>=0.1]")
+    pkg_b_revision = "afa95143c0c11c46ad57670e1e0a0aa0"
+    pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
+    pkg_b_package_revision = "#f97ac3d1bee62d55a35085dd42fa847a"
+    modified_pkg_b_revision = "3bb0f77004b0afde1620c714630aa515"
+    modified_pkg_b_package_revision = "#7f92394bbc66cc7f9d403e764b88bac0"
+    graph_lock_command = "install ."
+
+    def setUp(self):
+        client = TestClient()
+        self.client = client
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.1")})
+        client.run("create .")
+
+        # Use a consumer with a version range
+        client.save({"conanfile.py": str(self.consumer)})
+        client.run(self.graph_lock_command)
+
+        self._check_lock("PkgB/0.1@")
+
+        # If we create a new PkgA version
+        client.save({"conanfile.py": GenConanfile().with_name("PkgA").with_version("0.2")})
+        client.run("create .")
+        client.save({"conanfile.py": str(self.consumer)})
+
+    def _check_lock(self, ref_b, rev_b=""):
+        lock_file = load(os.path.join(self.client.current_folder, LOCKFILE))
+        lock_file_json = json.loads(lock_file)
+        self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
+        self.assertIn("PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a:"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#0d561e10e25511b9bfa339d06360d7c1",
+                      lock_file)
+        self.assertIn('"%s:%s%s"' % (repr(ConanFileReference.loads(ref_b)), self.pkg_b_id, rev_b),
+                      lock_file)
+
+    def install_info_lock_test(self):
+        # Normal install will use it (use install-folder to not change graph-info)
+        client = self.client
+        client.run("install . -if=tmp")  # Output graph_info to temporary
+        self.assertIn("PkgA/0.2", client.out)
+        self.assertNotIn("PkgA/0.1", client.out)
+
+        # Locked install will use PkgA/0.1
+        # To use the stored graph_info.json, it has to be explicit in "--install-folder"
+        client.run("install . -g=cmake --lockfile")
+        self._check_lock("PkgB/0.1@")
+
+        self.assertIn("PkgA/0.1", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+        cmake = client.load("conanbuildinfo.cmake")
+        self.assertIn("PkgA/0.1/_/_", cmake)
+        self.assertNotIn("PkgA/0.2/_/_", cmake)
+
+        # Info also works
+        client.run("info . --lockfile")
+        self.assertIn("PkgA/0.1", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+
+    def install_ref_lock_test(self):
+        client = self.client
+        client.run("install PkgA/[>=0.1]@ -if=tmp")
+        self.assertIn("PkgA/0.2: Already installed!", client.out)
+        self.assertNotIn("PkgA/0.1", client.out)
+        # Explicit one
+        client.run("install PkgA/0.1@ --install-folder=.")
+        self.assertIn("PkgA/0.1: Already installed!", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+        # Range locked one
+        client.run("install PkgA/[>=0.1]@ --lockfile")
+        self.assertIn("PkgA/0.1: Already installed!", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+
+    def export_lock_test(self):
+        # locking a version range at export
+        self.client.run("export . --lockfile")
+        self._check_lock("PkgB/0.1#%s" % self.pkg_b_revision)
+
+    def create_lock_test(self):
+        # Create is also possible
+        client = self.client
+        client.run("create . PkgB/0.1@ --lockfile")
+        self.assertIn("PkgA/0.1", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+        self._check_lock("PkgB/0.1#%s" % self.pkg_b_revision, self.pkg_b_package_revision)
+
+    def create_test_lock_test(self):
+        # Create is also possible
+        client = self.client
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Test(ConanFile):
+                def test(self):
+                    pass
+            """)
+        client.save({"conanfile.py": str(self.consumer),
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . PkgB/0.1@ --lockfile")
+        self.assertIn("PkgA/0.1", client.out)
+        self.assertNotIn("PkgA/0.2", client.out)
+        self._check_lock("PkgB/0.1#%s" % self.pkg_b_revision,
+                         self.pkg_b_package_revision)
+
+    def export_pkg_test(self):
+        client = self.client
+        client.run("export-pkg . PkgB/0.1@ --lockfile")
+        self._check_lock("PkgB/0.1#%s" % self.pkg_b_revision,
+                         self.pkg_b_package_revision)
+
+        # Same, but modifying also PkgB Recipe
+        client.save({"conanfile.py": str(self.consumer) + "\n#comment"})
+        client.run("export-pkg . PkgB/0.1@ --lockfile --force")
+        self._check_lock("PkgB/0.1@#%s" % self.modified_pkg_b_revision,
                          self.modified_pkg_b_package_revision)
 
 

@@ -438,6 +438,8 @@ class GraphLockCITest(unittest.TestCase):
         while to_build:
             _, pkg_ref = to_build[0].pop(0)
             pkg_ref = PackageReference.loads(pkg_ref)
+            self.assertIsNotNone(pkg_ref.ref.revision)
+            self.assertIsNone(pkg_ref.revision)
             client_aux = TestClient(cache_folder=client.cache_folder)
             client_aux.run("config set general.default_package_id_mode=full_package_mode")
             client_aux.save({LOCKFILE: lock_fileaux})
