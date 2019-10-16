@@ -145,14 +145,16 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                             revision_mode=conanfile.revision_mode)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
-    source_folder = package_layout.source()
+
     if local_src_folder and not keep_source:
         # Copy the local folder to the source folder, this enables to work
         # with local sources without committing and pushing changes to the scm remote.
         # https://github.com/conan-io/conan/issues/5195
-        rmdir(source_folder)
-        run_scm(scm_data, source_folder, local_src_folder, output, cache=True)
-    elif os.path.exists(source_folder):
+        export_sources_folder = package_layout.export_sources()
+        run_scm(scm_data, export_sources_folder, local_src_folder, output, cache=True)
+
+    source_folder = package_layout.source()
+    if os.path.exists(source_folder):
         try:
             if is_dirty(source_folder):
                 output.info("Source folder is corrupted, forcing removal")
