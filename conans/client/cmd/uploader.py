@@ -244,7 +244,8 @@ class CmdUpload(object):
                                                    reference=r_ref, remote=r_rem)
                     else:
                         self._exceptions_list.append(exc)
-
+            # This doesn't wait for the packages to end, so the function returns
+            # and the "pool entry" for the recipe is released
             self._upload_thread_pool.map_async(upload_package_index,
                                                [(index, pref) for index, pref
                                                 in enumerate(prefs)],
