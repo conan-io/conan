@@ -47,8 +47,7 @@ class ConanFileLoader(object):
 
             conanfile.conan_data = self._load_data(conanfile_path)
 
-            conanfile_object = conanfile(self._output, self._runner, display, user, channel)
-            return conanfile_object
+            return conanfile(self._output, self._runner, display, user, channel)
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
 
@@ -68,10 +67,18 @@ class ConanFileLoader(object):
     def load_export(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
         conanfile = self.load_class(conanfile_path, lock_python_requires, user, channel)
 
+        if hasattr(conanfile, "get_name"):
+            if conanfile.name:
+                raise ConanException("Conanfile defined package 'name', get_name() redundant")
+            conanfile.name = conanfile.get_name()
+        if hasattr(conanfile, "get_version"):
+            if conanfile.version:
+                raise ConanException("Conanfile defined package 'version', get_version() redundant")
+            conanfile.version = conanfile.get_version()
+
         # Export does a check on existing name & version
         if name and conanfile.name and name != conanfile.name:
-            raise ConanException("Package recipe exported with name %s!=%s"
-                                 % (name, conanfile.name))
+            raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
         if name:
             conanfile.name = name
         if not conanfile.name:
