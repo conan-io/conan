@@ -96,12 +96,9 @@ class CmdUpload(object):
             self._output.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):
-                try:
-                    ref, conanfile, prefs = ref_conanfile_prefs
-                    self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
-                                     integrity_check, policy, remote, upload_recorder, remotes)
-                except ConanException as exc:
-                    self._exceptions_list.append(exc)
+                ref, conanfile, prefs = ref_conanfile_prefs
+                self._upload_ref(conanfile, ref, prefs, retry, retry_wait,
+                                 integrity_check, policy, remote, upload_recorder, remotes)
 
             self._upload_thread_pool.map(upload_ref,
                                          [(ref, conanfile, prefs) for (ref, conanfile, prefs) in
@@ -213,9 +210,11 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._output.info(left_justify_message(msg))
-        self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
-        upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
-
+        try:
+            self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
+            upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
+        except ConanException as exc:
+            self._exceptions_list.append(exc)
         # Now the binaries
         if prefs:
             total = len(prefs)
