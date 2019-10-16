@@ -1,6 +1,7 @@
 import os
 import sys
 
+from conans.build_info.lockfile_buildinfo import create_build_info
 from conans.client.cache.cache import ClientCache
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
@@ -31,7 +32,7 @@ def build_info_stop():
 
 
 def build_info_create(build_info_file, lockfile):
-    print(build_info_file, lockfile)
+    create_build_info(build_info_file, lockfile)
     pass
 
 
