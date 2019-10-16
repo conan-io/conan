@@ -77,7 +77,7 @@ class Progress(object):
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
             msg = "\r{} completed [{:1.2f}k]".format(self._description, self._processed_size/1024.0)
-            self._output.writeln(left_justify_message(msg))
+            tqdm.write(left_justify_message(msg), file=self._output, end="\n")
 
 
 class FileWrapper(Progress):
@@ -136,7 +136,7 @@ class ListWrapper(object):
             self._output.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
             msg = "\r{} completed [{} files]".format(self._description, self._total_length)
-            self._output.writeln(left_justify_message(msg))
+            tqdm.write(left_justify_message(msg), file=self._output, end="\n")
         elif self._output:
             self._output.writeln("]")
 
