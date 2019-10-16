@@ -115,7 +115,7 @@ class ConanLib(ConanFile):
             self.client.run_command('git config user.name "Your Name"')
             self.client.run_command("git add .")
             self.client.run_command('git commit -m  "commiting"')
-        self.client.run_command('git clone "%s" .' % repo.replace('\\', '/'))
+        self.client.run_command('git clone "%s" .' % repo)
         self.client.run("export . user/channel")
         self.assertIn("WARN: Repo origin looks like a local path", self.client.out)
         os.remove(self.client.cache.package_layout(self.ref).scm_folder())
