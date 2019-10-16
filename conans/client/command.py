@@ -1321,7 +1321,8 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
         parser.add_argument("--parallel", action='store_true', default=False,
-                            help='Upload files in parallel using multiple threads')
+                            help='Upload files in parallel using multiple threads '
+                                 'The default number of launched threads is 8')
 
         args = parser.parse_args(*args)
 
