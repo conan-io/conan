@@ -744,3 +744,19 @@ class Pkg(ConanFile):
         client.run('upload lib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9')
         self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
                       client.out)
+
+    def checksums_metadata_test(self):
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+
+        client.save({"conanfile.py": GenConanfile()})
+
+        client.run('create . lib/1.0@user/channel')
+        client.run('upload lib/1.0 -c --all')
+        ref = ConanFileReference("lib", "1.0", "user", "channel")
+        metadata = client.cache.package_layout(ref).load_metadata()
+        self.assertEqual(len(metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]), 32)
+        self.assertEqual(len(metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["sha1"]), 40)
+        self.assertEqual(len(metadata.recipe.checksums["conanfile.py"]["md5"]), 32)
+        self.assertEqual(len(metadata.recipe.checksums["conanfile.py"]["sha1"]), 40)
