@@ -55,6 +55,14 @@ class VersionTest(unittest.TestCase):
         self.assertFalse(Version("4.0.0.1") == "4")
         self.assertTrue(Version("4.0.0.1") >= "4")
 
+    def test_build_metadata_is_not_equal(self):
+        # https://github.com/conan-io/conan/issues/5900
+        self.assertNotEqual(Version("4.0.0+abc"), Version("4.0.0+xyz"))
+        # Shouldn't be an "official" order for build metadata, but as they cannot be equal
+        # the order is alphabetic
+        self.assertTrue(Version("4.0.0+abc") > Version("4.0.0+xyz"))
+        self.assertTrue(Version("4.0.0+xyz") < Version("4.0.0+abc"))
+
     def text_test(self):
         v1 = Version("master+build2")
         self.assertEqual(v1.major(), "master")

@@ -250,8 +250,9 @@ class Command(object):
             raise ConanException("Argument '--raw' is incompatible with '--json'")
 
         attributes = [args.raw, ] if args.raw else args.attribute
+        quiet = bool(args.raw)
 
-        result = self._conan.inspect(args.path_or_reference, attributes, args.remote)
+        result = self._conan.inspect(args.path_or_reference, attributes, args.remote, quiet=quiet)
         Printer(self._out).print_inspect(result, raw=args.raw)
         if args.json:
             json_output = json.dumps(result)
@@ -1204,7 +1205,7 @@ class Command(object):
             raise ConanException("'--table' argument cannot be used together with '--json'")
 
         # Searching foo/bar is considered a pattern (FIXME: 2.0) so use strict mode to disambiguate
-        is_reference = check_valid_ref(args.pattern_or_reference, strict_mode=True)
+        is_reference = check_valid_ref(args.pattern_or_reference)
 
         if is_reference:
             ref = ConanFileReference.loads(args.pattern_or_reference)

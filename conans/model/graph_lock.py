@@ -5,6 +5,7 @@ from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER,\
     BINARY_BUILD
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
+from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load, save
@@ -237,7 +238,7 @@ class GraphLock(object):
                 node_pref = node.pref.copy_clear_revs() if not self.revisions_enabled else node.pref
                 # If the update is compatible (resolved complete PREV) or if the node has
                 # been build, then update the graph
-                if pref.is_compatible_with(node_pref) or \
+                if pref.id == PACKAGE_ID_UNKNOWN or pref.is_compatible_with(node_pref) or \
                         node.binary == BINARY_BUILD or node.id in affected:
                     lock_node.pref = node.pref
                 else:
@@ -292,10 +293,10 @@ class GraphLock(object):
         """
         # None reference
         if ref is None:
-            try:
-                return self._nodes[None].pref
-            except KeyError:
-                raise ConanException("Unspecified reference in graph-lock, please specify")
+            # Is a conanfile.txt consumer
+            for id_, node in self._nodes.items():
+                if not node.pref and node.path:
+                    return id_
 
         # First search by ref (without RREV)
         ids = []
