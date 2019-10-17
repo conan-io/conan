@@ -70,7 +70,7 @@ find_package(Hello0 REQUIRED)
         build_dir = os.path.join(client.current_folder, "build")
         os.mkdir(build_dir)
         with client.chdir(build_dir):
-            ret = client.run_command("cmake ..")
+            ret = client.run_command("cmake ..", assert_error=True)
         shutil.rmtree(build_dir)
         self.assertNotEqual(ret, 0)
 
