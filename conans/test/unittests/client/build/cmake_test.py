@@ -787,8 +787,8 @@ build_type: [ Release]
         settings.compiler.version = "12"
         settings.arch = "x86"
         settings.os = "Windows"
-        cmake = CMake(conanfile)
         if platform.system() == "Windows":
+            cmake = CMake(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
 
         # Now activate cross build and check sysroot and system processor
