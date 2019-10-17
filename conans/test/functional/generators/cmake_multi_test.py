@@ -277,7 +277,7 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
         cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.12)
+            cmake_minimum_required(VERSION 2.18)
             include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
             conan_basic_setup(NO_OUTPUT_DIRS)
             """)
@@ -302,6 +302,6 @@ class CMakeMultiSyntaxTest(unittest.TestCase):
         Check warning when suing NO_OUTPUT_DIRS
         """
         self.client.run_command("cmake .")
-        self.assertTrue("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
-        self.assertTrue("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
-                        self.client.out)
+        self.assertIn("CMake Warning at conanbuildinfo_multi.cmake", self.client.out)
+        self.assertIn("Conan: NO_OUTPUT_DIRS has no effect with cmake_multi generator",
+                      self.client.out)
