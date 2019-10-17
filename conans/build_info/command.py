@@ -14,10 +14,10 @@ from conans.client.output import ConanOutput
 class ErrorCatchingArgumentParser(argparse.ArgumentParser):
     def exit(self, status=0, message=None):
         if status:
-            raise argparse.ArgumentError(f"Exiting because of an error: {message}")
+            return argparse.ArgumentError(f"Exiting because of an error: {message}")
 
-    def error(self, message):
-        raise argparse.ArgumentError(message)
+    def error(self, message=""):
+        return argparse.ArgumentError(message)
 
 
 def run():
@@ -88,8 +88,8 @@ def run():
                                     help="build info to upload")
         parser_publish.add_argument("--url", type=str, required=True, help="url")
         parser_publish.add_argument("--user", type=str, required=True, help="user")
-        parser_publish.add_argument("--password", type=str, required=True, help="password")
-        parser_publish.add_argument("--apikey", type=str, required=True, help="apikey")
+        parser_publish.add_argument("--password", type=str, nargs="?", default=None, help="password")
+        parser_publish.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
 
         try:
             args = parser_v2.parse_args()

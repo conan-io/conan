@@ -1,6 +1,8 @@
 import os
 import sys
 
+from rtpy import Rtpy
+
 from conans.build_info.lockfile_buildinfo import create_build_info
 from conans.client.cache.cache import ClientCache
 from conans.client.output import ConanOutput
@@ -40,6 +42,12 @@ def build_info_update(build_info_1, build_info_2):
     pass
 
 
-def build_info_publish(build_info_file, url, user, password, apikey):
-    print(build_info_file, url, user, password, apikey)
-    pass
+def build_info_publish(build_info_file, url, user, password=None, apikey=None):
+    if apikey:
+        rtpy = Rtpy({"af_url": url, "api_key": apikey})
+    elif password:
+        rtpy = Rtpy({"af_url": url, "username": user, "password": password})
+
+    with open(build_info_file) as json_data:
+        rtpy.builds._request("PUT", "build", "Publish build info", kwargs={},
+                             params={"Content-Type": "application/json"}, data=json_data)

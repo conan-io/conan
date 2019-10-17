@@ -173,12 +173,13 @@ def process_lockfile(lockfile, multi_module):
 
 
 def create_build_info(build_info_file, lockfile, multi_module=True, skip_env=True):
+    paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
+    properties = paths.read_put_headers()
     modules = process_lockfile(lockfile, multi_module)
-
     # Add extra information
     ret = {"version": "1.0.1",
-           # "name": args.build_name,
-           # "number": args.build_number,
+           "name": properties["artifact_property_build.name"],
+           "number": properties["artifact_property_build.number"],
            "type": "GENERIC",
            "started": datetime.datetime.utcnow().isoformat().split(".")[0] + ".000Z",
            "buildAgent": {"name": "Conan Client", "version": "1.X"},
