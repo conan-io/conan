@@ -75,7 +75,6 @@ class CmdUpload(object):
         self._remote_manager = remote_manager
         self._loader = loader
         self._hook_manager = hook_manager
-        self._num_threads = 1
         self._upload_thread_pool = None
         self._exceptions_list = []
 
@@ -88,10 +87,11 @@ class CmdUpload(object):
                                                           query, package_id)
 
         if parallel_upload:
-            self._num_threads = 8
+            self._upload_thread_pool = ThreadPool(8)
             self._user_io.disable_input()
+        else:
+            self._upload_thread_pool = ThreadPool(1)
 
-        self._upload_thread_pool = ThreadPool(self._num_threads)
         for remote, refs in refs_by_remote.items():
             self._output.info("Uploading to remote '{}':".format(remote.name))
 
