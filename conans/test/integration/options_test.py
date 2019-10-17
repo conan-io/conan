@@ -1,8 +1,9 @@
 import os
+import textwrap
 import unittest
 
 from conans.paths import CONANINFO
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load
 
 
@@ -246,3 +247,94 @@ class LibB(ConanFile):
             client.run("install . -o *:shared=True")
             self.assertIn("conanfile.py: shared=True", client.out)
             self.assertIn("libA/0.1@danimtb/testing: shared=True", client.out)
+
+    def overridable_shared_option_test(self):
+        client = TestClient()
+        conanfile = GenConanfile().with_option("shared", [True, False])\
+                                  .with_default_option("shared", "False")
+        client.save({"conanfile.py": conanfile})
+        client.run("create . liba/0.1@user/testing -o liba:shared=False")
+        client.run("create . liba/0.1@user/testing -o liba:shared=True")
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "liba/0.1@user/testing"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                def configure(self):
+                    if self.options.shared:
+                        self.options["*"].shared = True
+
+                def package_id(self):
+                    self.info.shared_library_package_id()
+        """)
+        client.save({"conanfile.py": consumer})
+
+        # LibA STATIC
+        for options in ("",
+                        "-o pkg:shared=False",
+                        "-o liba:shared=False",
+                        "-o pkg:shared=True  -o liba:shared=False",
+                        "-o pkg:shared=False -o liba:shared=False"):
+            client.run("create . pkg/0.1@user/testing %s" % options)
+            self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                          client.out)
+
+        # LibA SHARED
+        for options in ("-o pkg:shared=True",
+                        "-o pkg:shared=True -o liba:shared=True",
+                        "-o pkg:shared=False -o liba:shared=True"):
+            client.run("create . pkg/0.1@user/testing %s" % options)
+            self.assertIn("liba/0.1@user/testing:2a623e3082a38f90cd2c3d12081161412de331b0 - Cache",
+                          client.out)
+
+        # Pkg STATIC
+        for options in ("",
+                        "-o pkg:shared=False",
+                        "-o liba:shared=False",
+                        "-o liba:shared=True",
+                        "-o pkg:shared=False  -o liba:shared=False",
+                        "-o pkg:shared=False -o liba:shared=False"):
+            client.run("create . pkg/0.1@user/testing %s" % options)
+            self.assertIn("pkg/0.1@user/testing:c74ab38053f265e63a1f3d819a41bc4b8332a6fc - Build",
+                          client.out)
+
+        # Pkg SHARED, libA SHARED
+        for options in ("-o pkg:shared=True",
+                        "-o pkg:shared=True  -o liba:shared=True"):
+            client.run("create . pkg/0.1@user/testing %s" % options)
+            self.assertIn("pkg/0.1@user/testing:fcaf52c0d66c3d68e6b6ae6330acafbcaae7dacf - Build",
+                          client.out)
+
+        # Pkg SHARED, libA STATIC
+        options = "-o pkg:shared=True  -o liba:shared=False"
+        client.run("create . pkg/0.1@user/testing %s" % options)
+        self.assertIn("pkg/0.1@user/testing:5e7619965702ca25bdff1b2ce672a8236b8da689 - Build",
+                      client.out)
+
+    def overridable_no_shared_option_test(self):
+        client = TestClient()
+        conanfile = GenConanfile()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . liba/0.1@user/testing")
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                requires = "liba/0.1@user/testing"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                def configure(self):
+                    if self.options.shared:
+                        self.options["*"].shared = True
+
+                def package_id(self):
+                    self.info.shared_library_package_id()
+        """)
+        client.save({"conanfile.py": consumer})
+        # LibA STATIC
+        for options in ("",
+                        "-o pkg:shared=False",
+                        "-o pkg:shared=True"):
+            client.run("create . pkg/0.1@user/testing %s" % options)
+            self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+                          client.out)

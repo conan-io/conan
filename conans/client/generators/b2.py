@@ -43,7 +43,6 @@ class B2Generator(Generator):
         cbi += [self.conanbuildinfo_prefix_text]
         # The sub-project definitions, i.e. 3.
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            cbi += ["", "# %s" % (dep_name.lower())]
             cbi += self.b2_project_for_dep(dep_name, dep_cpp_info)
         # The postfix which does 4.
         cbi += [self.conanbuildinfo_postfix_text]
@@ -390,6 +389,7 @@ local __conanbuildinfo__ = [ GLOB $(__file__:D) : conanbuildinfo-*.jam : downcas
 """
 
     conanbuildinfo_project_template = """\
+
 # {name}
 project-define {name} ;
 """
