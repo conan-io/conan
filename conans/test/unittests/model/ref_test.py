@@ -148,6 +148,24 @@ class CheckValidRefTest(unittest.TestCase):
     def test_string(self):
         self.assertTrue(check_valid_ref("package/1.0@user/channel"))
         self.assertTrue(check_valid_ref("package/1.0@user/channel"))
+        self.assertTrue(check_valid_ref("package/[*]@user/channel"))
+        self.assertTrue(check_valid_ref("package/[>1.0]@user/channel"))
+        self.assertTrue(check_valid_ref("package/[1.*]@user/channel"))
+
+        # Patterns are invalid
+        self.assertFalse(check_valid_ref("package/*@user/channel"))
+        self.assertFalse(check_valid_ref("package/1.0@user/*"))
+        self.assertFalse(check_valid_ref("package/1.0@user/chan*"))
+        self.assertFalse(check_valid_ref("package/[>1.0]@user/chan*"))
+        self.assertFalse(check_valid_ref("*/1.0@user/channel"))
+        self.assertFalse(check_valid_ref("package*/1.0@user/channel"))
+
+        # * pattern is valid in non stric_mode
+        self.assertTrue(check_valid_ref("package/*@user/channel", strict_mode=False))
+        self.assertTrue(check_valid_ref("package/*@user/*", strict_mode=False))
+
+        # But other patterns are not valid in non stric_mode
+        self.assertFalse(check_valid_ref("package/1.0@user/chan*", strict_mode=False))
 
     def test_incomplete_refs(self):
         self.assertTrue(check_valid_ref("package/1.0", strict_mode=False))

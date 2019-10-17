@@ -661,3 +661,13 @@ class TestConan(ConanFile):
         client.run("remote disable default")
         client.run("install Pkg/0.1@lasote/testing", assert_error=False)
         self.assertNotIn("Trying with 'default'...", client.out)
+
+    def install_version_range_reference_test(self):
+        # https://github.com/conan-io/conan/issues/5905
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/0.1@user/channel")
+        client.run("install pkg/[*]@user/channel")
+        self.assertIn("pkg/0.1@user/channel from local cache - Cache", client.out)
+        client.run("install pkg/[0.*]@user/channel")
+        self.assertIn("pkg/0.1@user/channel from local cache - Cache", client.out)
