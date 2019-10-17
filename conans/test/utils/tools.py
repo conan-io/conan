@@ -837,7 +837,7 @@ servers["r2"] = TestServer()
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
-        self._handle_cli_result(command, assert_error=assert_error, error=error)
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):
