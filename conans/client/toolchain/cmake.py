@@ -25,7 +25,8 @@ class CMakeToolchain:
         #   with 'cmake --build . --config Debug|Release|RelWithDebInfo' for multiconfig'
         get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
         if(NOT ${_GENERATOR_IS_MULTI_CONFIG})
-            set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}")
+            set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
+            message(">>>>>>>>>> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         endif()
 
         # Configure

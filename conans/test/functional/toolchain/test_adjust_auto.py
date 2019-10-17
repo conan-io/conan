@@ -15,69 +15,58 @@ from conans.test.utils.tools import TurboTestClient
 from parameterized.parameterized import parameterized_class
 
 
-def compile_local_workflow(client, build_type):
+def compile_local_workflow(testcase, client, profile):
     # Conan local workflow
     with client.chdir("build"):
-        client.run("install .. -s build_type={}".format(build_type))
+        client.run("install .. --profile={}".format(profile))
         client.run("build ..")
-        # client.assertIn("Using Conan toolchain", client.t.out)
-
-    client.run_command("./build/app")
+        testcase.assertIn("Using Conan toolchain", client.out)
 
     cmake_cache = load(os.path.join(client.current_folder, "build", "CMakeCache.txt"))
     return client.out, cmake_cache
 
 
-def _compile_cache_workflow(client, build_type, use_toolchain):
+def _compile_cache_workflow(testcase, client, profile, use_toolchain):
     # Compile the app in the cache
     pref = client.create(ref=ConanFileReference.loads("app/version@user/channel"), conanfile=None,
-                         args=" -s build_type={} -o use_toolchain={}".format(build_type, use_toolchain))
+                         args=" --profile={} -o use_toolchain={}".format(profile, use_toolchain))
     if use_toolchain:
-        #client.assertIn("Using Conan toolchain", client.out)
-        pass
+        testcase.assertIn("Using Conan toolchain", client.out)
     print(client.out)
 
     # Run the app and check it has been properly compiled
     package_layout = client.cache.package_layout(pref.ref)
-    client.run_command("./app", cwd=package_layout.package(pref))
-
     cmake_cache = load(os.path.join(package_layout.build(pref), "CMakeCache.txt"))
     return client.out, cmake_cache
 
 
-def compile_cache_workflow_with_toolchain(client, build_type):
-    return _compile_cache_workflow(client, build_type, use_toolchain=True)
+def compile_cache_workflow_with_toolchain(testcase, client, profile):
+    return _compile_cache_workflow(testcase, client, profile, use_toolchain=True)
 
 
-def compile_cache_workflow_without_toolchain(client, build_type):
-    return _compile_cache_workflow(client, build_type, use_toolchain=False)
+def compile_cache_workflow_without_toolchain(testcase, client, profile):
+    return _compile_cache_workflow(testcase, client, profile, use_toolchain=False)
 
 
-def compile_cmake_workflow(client, build_type):
+def compile_cmake_workflow(testcase, client, profile):
     with client.chdir("build"):
-        client.run("install .. -s build_type={}".format(build_type))
+        client.run("install .. --profile={}".format(profile))
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
-        #test_case.assertIn("Using Conan toolchain", client.out)
-        client.run_command("cmake --build . --config {}".format(build_type))
-
-    client.run_command("./build/app")
+        testcase.assertIn("Using Conan toolchain", client.out)
 
     cmake_cache = load(os.path.join(client.current_folder, "build", "CMakeCache.txt"))
     return client.out, cmake_cache
 
 
-@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "build_type": "Debug"},
-                      #{"function": compile_local_workflow, "build_type": "Debug"},
-                      #{"function": compile_local_workflow, "build_type": "Release"},
-                      #{"function": compile_cache_workflow, "build_type": "Debug"},
-                      #{"function": compile_cache_workflow, "build_type": "Release"},
-                      #{"function": compile_cmake_workflow, "build_type": "Debug"},
-                      #{"function": compile_cmake_workflow, "build_type": "Release"},
+@parameterized_class([{"function": compile_cache_workflow_without_toolchain},
+                      {"function": compile_cache_workflow_with_toolchain},
+                      {"function": compile_local_workflow},
+                      {"function": compile_cmake_workflow},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
     """
-        Consume values from the requirement cpp_info
+        Check that it works adjusting values from the toolchain file
     """
 
     conanfile = textwrap.dedent("""
@@ -92,100 +81,67 @@ class AdjustAutoTestCase(unittest.TestCase):
             options = {"use_toolchain": [True, False]}
             default_options = {"use_toolchain": True}
 
-            requires = "requirement/version"
-
             def toolchain(self):
                 tc = CMakeToolchain(self)
                 return tc
 
             def build(self):
+                # Do not actually build, just configure
                 if self.options.use_toolchain:
-                    # A build helper could be easily added to replace this two lines
+                    # A build helper could be easily added to replace this line
                     self.run('cmake "%s" -DCMAKE_TOOLCHAIN_FILE=""" + CMakeToolchain.filename + """' % (self.source_folder))
-                    self.run("cmake --build .")
                 else:
                     cmake = CMake(self)
                     cmake.configure(source_folder=".")
-                    cmake.build()
-
-            def package(self):
-                self.copy("app*", "", "", keep_path=False)
     """)
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
         project(App CXX)
 
-        find_package(requirement REQUIRED)
-
         add_executable(app src/app.cpp)
-        target_link_libraries(app requirement::requirement)
-
-        # Pass information to the C++ source so we can print and assert in the tests
-        target_compile_definitions(app PRIVATE CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER}")
-        get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-        target_compile_definitions(app PRIVATE GENERATOR_IS_MULTI_CONFIG="${_GENERATOR_IS_MULTI_CONFIG}")
-        if(NOT ${_GENERATOR_IS_MULTI_CONFIG})
-            target_compile_definitions(app PRIVATE CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
-        endif()
-        target_compile_definitions(app PRIVATE "$<$<CONFIG:RELEASE>:NDEBUG>")
-        target_compile_definitions(app PRIVATE CMAKE_GENERATOR="${CMAKE_GENERATOR}")
     """)
 
     app_cpp = textwrap.dedent("""
         #include <iostream>
-        #include "hello.h"
 
         int main() {
-            hello();
-            #ifdef NDEBUG
-                std::cout << "App: Release\\n";
-            #else
-                std::cout << "App: Debug\\n";
-            #endif
-
-            std::cout << "CMAKE_CXX_COMPILER: " << CMAKE_CXX_COMPILER << "\\n";
-            #ifdef CMAKE_BUILD_TYPE
-                std::cout << "CMAKE_BUILD_TYPE: " << CMAKE_BUILD_TYPE << "\\n";
-            #endif
-            std::cout << "CMAKE_GENERATOR: " << CMAKE_GENERATOR << "\\n";
-            std::cout << "GENERATOR_IS_MULTI_CONFIG: " << GENERATOR_IS_MULTI_CONFIG << "\\n";
             return 0;
         }
     """)
 
     @classmethod
     def setUpClass(cls):
-        t = TurboTestClient(path_with_spaces=False)
-        # Create the 'requirement' require
-        t.run("new requirement/version -s")
-        t.run("create . requirement/version@ -s build_type=Release")
-        t.run("create . requirement/version@ -s build_type=Debug")
+        cls.t = TurboTestClient(path_with_spaces=False)
 
         # Prepare the actual consumer package
-        t.save({"conanfile.py": cls.conanfile,
-                "CMakeLists.txt": cls.cmakelist,
-                "src/app.cpp": cls.app_cpp}, clean_first=True)
+        cls.t.save({"conanfile.py": cls.conanfile,
+                    "CMakeLists.txt": cls.cmakelist,
+                    "src/app.cpp": cls.app_cpp})
+        # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
 
-        cls.app_output, cls.cmake_cache = cls.function(client=t, build_type=cls.build_type)
+    def _profile(self, client, settings_dict):
+        settings_lines = "\n".join("{}={}".format(k, v) for k, v in settings_dict.items())
+        profile = textwrap.dedent("""
+            include(default)
+            [settings]
+            {}
+        """.format(settings_lines))
+        client.save({"profile": profile})
+        return os.path.join(client.current_folder, "profile")
 
-    def test_print(self):
-        print(self.app_output)
+    @parameterized.expand([("Debug",), ("Release",)])
+    def test_build_type(self, build_type):
+        profile = self._profile(self.t, {"build_type": build_type})
+        configure_out, cmake_cache = self.function(client=self.t, profile=profile)
+
+        print(configure_out)
         print("*"*200)
-        print(self.cmake_cache)
-        self.fail("AAA")
-
-    def test_build_type(self):
-        # Output from the application
-        self.assertIn("Hello World {}!".format(self.build_type), self.app_output)
-        self.assertIn("App: {}".format(self.build_type), self.app_output)
-        self.assertIn("CMAKE_BUILD_TYPE: {}".format(self.build_type), self.app_output)
+        print(cmake_cache)
 
         # Contents of the CMakeCache
-        self.assertIn("CMAKE_BUILD_TYPE:STRING={}".format(self.build_type), self.cmake_cache)
+        self.assertIn("CMAKE_BUILD_TYPE:STRING={}".format(build_type), cmake_cache)
 
-    def test_rpath(self):
-        # Contents of the CMakeCache
 
 
     """
