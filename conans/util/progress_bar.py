@@ -12,6 +12,25 @@ LEFT_JUSTIFY_DESC = 28
 LEFT_JUSTIFY_MESSAGE = 90
 
 
+class Slots(object):
+    _bar_slots = []
+
+    @classmethod
+    def get_bar_pos(cls):
+        try:
+            available_slot = cls._bar_slots.index(True)
+        except ValueError:
+            cls._bar_slots.append(True)
+            available_slot = cls._bar_slots.index(True)
+
+        cls._bar_slots[available_slot] = False
+        return available_slot
+
+    @classmethod
+    def release_bar_pos(cls, slot_num):
+        cls._bar_slots[slot_num] = True
+
+
 def left_justify_message(msg):
     return msg.ljust(LEFT_JUSTIFY_MESSAGE)
 
@@ -44,7 +63,7 @@ class Progress(object):
         if self._print_dot:
             self._last_time = time.time()
         if self._output and self._output.is_terminal and self._description:
-            self._bar_position = self._output.get_bar_pos()
+            self._bar_position = Slots.get_bar_pos()
             self._tqdm_bar = tqdm(total=self._total_length,
                                   desc=left_justify_description(self._description),
                                   file=self._output, unit="B", leave=False, dynamic_ncols=False,
@@ -61,6 +80,7 @@ class Progress(object):
     def update(self, chunks, chunk_size=1024):
         for chunk in chunks:
             yield chunk
+            time.sleep(0.01)
             data_size = len(chunk)
             self._processed_size += data_size
             self.pb_update(data_size)
@@ -74,9 +94,10 @@ class Progress(object):
 
     def pb_close(self):
         if self._tqdm_bar is not None:
-            self._output.release_bar_pos(self._bar_position)
+            Slots.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
-            msg = "\r{} completed [{:1.2f}k]".format(self._description, self._processed_size/1024.0)
+            msg = "\r{} completed [{:1.2f}k]".format(self._description,
+                                                     self._processed_size / 1024.0)
             tqdm.write(left_justify_message(msg), file=self._output, end="\n")
 
 
@@ -115,7 +136,7 @@ class ListWrapper(object):
         if self._output and not self._output.is_terminal:
             output.write("[")
         elif self._output:
-            self._bar_position = self._output.get_bar_pos()
+            self._bar_position = Slots.get_bar_pos()
             self._tqdm_bar = tqdm(total=len(files_list),
                                   desc=left_justify_description(self._description),
                                   file=self._output, unit="files ", leave=False, dynamic_ncols=False,
@@ -133,7 +154,7 @@ class ListWrapper(object):
 
     def pb_close(self):
         if self._output and self._output.is_terminal:
-            self._output.release_bar_pos(self._bar_position)
+            Slots.release_bar_pos(self._bar_position)
             self._tqdm_bar.close()
             msg = "\r{} completed [{} files]".format(self._description, self._total_length)
             tqdm.write(left_justify_message(msg), file=self._output, end="\n")
