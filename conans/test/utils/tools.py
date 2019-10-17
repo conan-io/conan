@@ -1206,17 +1206,17 @@ class TurboTestClient(TestClient):
 
         super(TurboTestClient, self).__init__(*args, **kwargs)
 
-    def export(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else GenConanfile()
-        self.save({"conanfile.py": conanfile})
+    def export(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""),
                  assert_error=assert_error)
         rrev = self.cache.package_layout(ref).recipe_revision()
         return ref.copy_with_rev(rrev)
 
-    def create(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else GenConanfile()
-        self.save({"conanfile.py": conanfile})
+    def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
         self.run("create . {} {} --json {}".format(ref.full_str(),
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
@@ -1242,9 +1242,9 @@ class TurboTestClient(TestClient):
     def remove_all(self):
         self.run("remove '*' -f")
 
-    def export_pkg(self, ref, conanfile=None, args=None, assert_error=False):
-        conanfile = str(conanfile) if conanfile else GenConanfile()
-        self.save({"conanfile.py": conanfile})
+    def export_pkg(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
+        if conanfile:
+            self.save({"conanfile.py": conanfile})
         self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
                                                        args or "", self.tmp_json_name),
                  assert_error=assert_error)
