@@ -463,9 +463,9 @@ class PkgTest(base.MyConanfileBase):
             from conans import ConanFile, load
             class BasePkg(ConanFile):
                 def get_name(self):
-                    return load("name.txt")
+                    self.name = load("name.txt")
                 def get_version(self):
-                    return load("version.txt")
+                    self.version = load("version.txt")
             """)
         client.save({"conanfile.py": conanfile,
                      "name.txt": "Base",

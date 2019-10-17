@@ -70,11 +70,11 @@ class ConanFileLoader(object):
         if hasattr(conanfile, "get_name"):
             if conanfile.name:
                 raise ConanException("Conanfile defined package 'name', get_name() redundant")
-            conanfile.name = conanfile.get_name()
+            conanfile.get_name()
         if hasattr(conanfile, "get_version"):
             if conanfile.version:
                 raise ConanException("Conanfile defined package 'version', get_version() redundant")
-            conanfile.version = conanfile.get_version()
+            conanfile.get_version()
 
         # Export does a check on existing name & version
         if name and conanfile.name and name != conanfile.name:

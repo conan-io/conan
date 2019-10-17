@@ -12,9 +12,9 @@ class GetVersionNameTest(unittest.TestCase):
             from conans import ConanFile
             class Lib(ConanFile):
                 def get_name(self):
-                    return "pkg"
+                    self.name = "pkg"
                 def get_version(self):
-                    return "2.1"
+                    self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . user/testing")
@@ -32,9 +32,9 @@ class GetVersionNameTest(unittest.TestCase):
             from conans import ConanFile, load
             class Lib(ConanFile):
                 def get_name(self):
-                    return load("name.txt")
+                    self.name = load("name.txt")
                 def get_version(self):
-                    return load("version.txt")
+                    self.version = load("version.txt")
             """)
         client.save({"conanfile.py": conanfile,
                      "name.txt": "pkg",
@@ -54,9 +54,9 @@ class GetVersionNameTest(unittest.TestCase):
             from conans import ConanFile
             class Lib(ConanFile):
                 def get_name(self):
-                    return "pkg"
+                    self.name = "pkg"
                 def get_version(self):
-                    return "2.1"
+                    self.version = "2.1"
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . other/1.1@user/testing", assert_error=True)
