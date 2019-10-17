@@ -1,6 +1,7 @@
 import os
 import stat
 import tarfile
+import threading
 import time
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
@@ -215,6 +216,8 @@ class CmdUpload(object):
             upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         except ConanException as exc:
             self._exceptions_list.append(exc)
+            threading.current_thread().kill = True
+
         # Now the binaries
         if prefs:
             total = len(prefs)
