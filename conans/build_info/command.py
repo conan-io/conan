@@ -4,7 +4,9 @@ import os
 import sys
 
 from conans.build_info.conan_build_info import get_build_info
-from conans.build_info.conan_build_info_v2 import *
+from conans.build_info.conan_build_info_v2 import build_info_start, build_info_stop, \
+    build_info_create, build_info_update, build_info_publish
+from conans.errors import ConanException
 from conans.util.files import save
 from conans.client.output import ConanOutput
 
@@ -12,10 +14,10 @@ from conans.client.output import ConanOutput
 class ErrorCatchingArgumentParser(argparse.ArgumentParser):
     def exit(self, status=0, message=None):
         if status:
-            raise Exception(f"Exiting because of an error: {message}")
+            raise argparse.ArgumentError(f"Exiting because of an error: {message}")
 
     def error(self, message):
-        raise Exception(message)
+        raise argparse.ArgumentError(message)
 
 
 def run():
@@ -46,7 +48,7 @@ def run():
         except Exception as exc:
             exc_v1 = exc
             pass
-    except Exception as exc:
+    except argparse.ArgumentError as exc:
         exc_v1 = exc
         pass
 
@@ -102,9 +104,10 @@ def run():
             if args.subcommand == "publish":
                 build_info_publish(args.build_info_file, args.url, args.user, args.password,
                                    args.apikey)
-        except Exception as exc:
+        except argparse.ArgumentError as exc:
             exc_v2 = exc
-            pass
+        except ConanException as exc:
+            raise exc
 
     if exc_v1 and exc_v2:
         output.error("Error executing conan_build_info. There are two possible uses:")
