@@ -1,6 +1,7 @@
 import os
 
 from conans.client.generators import write_generators
+from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
@@ -42,11 +43,11 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     out.info("Configuration:")
     out.writeln(graph_info.profile.dumps())
-    result = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
-                                      False, update, remotes, recorder)
-    deps_graph, conanfile = result
-
-    if conanfile.display_name == "virtual":
+    deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
+                                          False, update, remotes, recorder)
+    root_node = deps_graph.root
+    conanfile = root_node.conanfile
+    if root_node.recipe == RECIPE_VIRTUAL:
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
@@ -61,7 +62,10 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         pass
 
     installer = BinaryInstaller(app, recorder=recorder)
-    installer.install(deps_graph, remotes, keep_build=keep_build, graph_info=graph_info)
+    # TODO: Extract this from the GraphManager, reuse same object, check args earlier
+    build_modes = BuildMode(build_modes, out)
+    installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
+                      graph_info=graph_info)
     # GraphLock always != None here (because of graph_manager.load_graph)
     graph_info.graph_lock.update_check_graph(deps_graph, out)
 
@@ -79,7 +83,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     if install_folder:
         conanfile.install_folder = install_folder
         # Write generators
-        output = conanfile.output if conanfile.display_name != "virtual" else out
+        output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
         if generators is not False:
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])
