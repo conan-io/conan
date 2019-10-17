@@ -168,9 +168,12 @@ class AdjustAutoTestCase(unittest.TestCase):
                 "src/app.cpp": cls.app_cpp}, clean_first=True)
 
         cls.app_output, cls.cmake_cache = cls.function(client=t, build_type=cls.build_type)
-        print(cls.cmake_cache)
+
+    def test_print(self):
+        print(self.app_output)
         print("*"*200)
-        print(cls.app_output)
+        print(self.cmake_cache)
+        self.fail("AAA")
 
     def test_build_type(self):
         # Output from the application
@@ -180,10 +183,9 @@ class AdjustAutoTestCase(unittest.TestCase):
 
         # Contents of the CMakeCache
         self.assertIn("CMAKE_BUILD_TYPE:STRING={}".format(self.build_type), self.cmake_cache)
-        #self.assertIn("CMAKE_BUILD_TYPE: {}".format(self.build_type), cmake_cache)
 
-
-
+    def test_rpath(self):
+        # Contents of the CMakeCache
 
 
     """
