@@ -15,60 +15,64 @@ from conans.test.utils.tools import TurboTestClient
 from parameterized.parameterized import parameterized_class
 
 
-def compile_local_workflow(test_case):
+def compile_local_workflow(client, build_type):
     # Conan local workflow
-    with test_case.t.chdir("build"):
-        test_case.t.run("install .. -s build_type={}".format(test_case.build_type))
-        test_case.t.run("build ..")
-        test_case.assertIn("Using Conan toolchain", test_case.t.out)
+    with client.chdir("build"):
+        client.run("install .. -s build_type={}".format(build_type))
+        client.run("build ..")
+        # client.assertIn("Using Conan toolchain", client.t.out)
 
-    test_case.t.run_command("./build/app")
+    client.run_command("./build/app")
 
-    cmake_cache = load(os.path.join(test_case.t.current_folder, "build", "CMakeCache.txt"))
-    return test_case.t.out, cmake_cache
+    cmake_cache = load(os.path.join(client.current_folder, "build", "CMakeCache.txt"))
+    return client.out, cmake_cache
 
 
-def _compile_cache_workflow(test_case, use_toolchain):
+def _compile_cache_workflow(client, build_type, use_toolchain):
     # Compile the app in the cache
-    pref = test_case.t.create(ref=test_case.app_ref, conanfile=test_case.conanfile,
-                              args=" -s build_type={} -o use_toolchain={}".format(test_case.build_type, use_toolchain))
-    test_case.assertIn("Using Conan toolchain", test_case.t.out)
+    pref = client.create(ref=ConanFileReference.loads("app/version@user/channel"), conanfile=None,
+                         args=" -s build_type={} -o use_toolchain={}".format(build_type, use_toolchain))
+    if use_toolchain:
+        #client.assertIn("Using Conan toolchain", client.out)
+        pass
+    print(client.out)
 
     # Run the app and check it has been properly compiled
-    package_layout = test_case.t.cache.package_layout(pref.ref)
-    test_case.t.run_command("./app", cwd=package_layout.package(pref))
+    package_layout = client.cache.package_layout(pref.ref)
+    client.run_command("./app", cwd=package_layout.package(pref))
 
     cmake_cache = load(os.path.join(package_layout.build(pref), "CMakeCache.txt"))
-    return test_case.t.out, cmake_cache
+    return client.out, cmake_cache
 
 
-def compile_cache_workflow_with_toolchain(test_case):
-    return _compile_cache_workflow(test_case, use_toolchain=True)
+def compile_cache_workflow_with_toolchain(client, build_type):
+    return _compile_cache_workflow(client, build_type, use_toolchain=True)
 
 
-def compile_cache_workflow_without_toolchain(test_case):
-    return _compile_cache_workflow(test_case, use_toolchain=False)
+def compile_cache_workflow_without_toolchain(client, build_type):
+    return _compile_cache_workflow(client, build_type, use_toolchain=False)
 
 
-def compile_cmake_workflow(test_case):
-    with test_case.t.chdir("build"):
-        test_case.t.run("install .. -s build_type={}".format(test_case.build_type))
-        test_case.t.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
-        test_case.assertIn("Using Conan toolchain", test_case.t.out)
-        test_case.t.run_command("cmake --build . --config {}".format(test_case.build_type))
+def compile_cmake_workflow(client, build_type):
+    with client.chdir("build"):
+        client.run("install .. -s build_type={}".format(build_type))
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE={}".format(CMakeToolchain.filename))
+        #test_case.assertIn("Using Conan toolchain", client.out)
+        client.run_command("cmake --build . --config {}".format(build_type))
 
-    test_case.t.run_command("./build/app")
+    client.run_command("./build/app")
 
-    cmake_cache = load(os.path.join(test_case.t.current_folder, "build", "CMakeCache.txt"))
-    return test_case.t.out, cmake_cache
+    cmake_cache = load(os.path.join(client.current_folder, "build", "CMakeCache.txt"))
+    return client.out, cmake_cache
 
 
-@parameterized_class([#{"function": compile_local_workflow, "build_type": "Debug"},
+@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "build_type": "Debug"},
+                      #{"function": compile_local_workflow, "build_type": "Debug"},
                       #{"function": compile_local_workflow, "build_type": "Release"},
                       #{"function": compile_cache_workflow, "build_type": "Debug"},
                       #{"function": compile_cache_workflow, "build_type": "Release"},
-                      {"function": compile_cmake_workflow, "build_type": "Debug"},
-                      {"function": compile_cmake_workflow, "build_type": "Release"},
+                      #{"function": compile_cmake_workflow, "build_type": "Debug"},
+                      #{"function": compile_cmake_workflow, "build_type": "Release"},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
@@ -101,7 +105,7 @@ class AdjustAutoTestCase(unittest.TestCase):
                     self.run("cmake --build .")
                 else:
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(source_folder=".")
                     cmake.build()
 
             def package(self):
@@ -152,23 +156,30 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.t = TurboTestClient(path_with_spaces=False)
+        t = TurboTestClient(path_with_spaces=False)
         # Create the 'requirement' require
-        cls.t.run("new requirement/version -s")
-        cls.t.run("create . requirement/version@ -s build_type=Release")
-        cls.t.run("create . requirement/version@ -s build_type=Debug")
+        t.run("new requirement/version -s")
+        t.run("create . requirement/version@ -s build_type=Release")
+        t.run("create . requirement/version@ -s build_type=Debug")
 
-    def setUp(self):
         # Prepare the actual consumer package
-        self.app_ref = ConanFileReference.loads("app/version@user/channel")
-        self.t.save({"conanfile.py": self.conanfile,
-                     "CMakeLists.txt": self.cmakelist,
-                     "src/app.cpp": self.app_cpp}, clean_first=True)
+        t.save({"conanfile.py": cls.conanfile,
+                "CMakeLists.txt": cls.cmakelist,
+                "src/app.cpp": cls.app_cpp}, clean_first=True)
+
+        cls.app_output, cls.cmake_cache = cls.function(client=t, build_type=cls.build_type)
+        print(cls.cmake_cache)
+        print("*"*200)
+        print(cls.app_output)
 
     def test_build_type(self):
-        app_output, cmake_cache = self.function()
-        print(cmake_cache)
-        self.assertIn("CMAKE_BUILD_TYPE: {}".format(self.build_type), app_output)
+        # Output from the application
+        self.assertIn("Hello World {}!".format(self.build_type), self.app_output)
+        self.assertIn("App: {}".format(self.build_type), self.app_output)
+        self.assertIn("CMAKE_BUILD_TYPE: {}".format(self.build_type), self.app_output)
+
+        # Contents of the CMakeCache
+        self.assertIn("CMAKE_BUILD_TYPE:STRING={}".format(self.build_type), self.cmake_cache)
         #self.assertIn("CMAKE_BUILD_TYPE: {}".format(self.build_type), cmake_cache)
 
 
