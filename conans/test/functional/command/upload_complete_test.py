@@ -273,7 +273,7 @@ class UploadTest(unittest.TestCase):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
         client = TestClient(requester_class=FailOnReferencesUploader,
-                            servers=servers, users={"default": [("user", "password")]})
+                            servers=servers, default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
 
         num_references = 4
