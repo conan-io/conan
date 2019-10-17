@@ -275,14 +275,6 @@ class UploadTest(unittest.TestCase):
         client = TestClient(requester_class=FailOnReferencesUploader,
                             servers=servers, default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
-
-        num_references = 4
-        for index in range(num_references):
-            client.run('create . lib{}/1.0@user/channel'.format(index))
-            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
-                index,
-                NO_SETTINGS_PACKAGE_ID),
-                client.out)
         client.run('user -p password -r default user')
         client.run('upload lib* --parallel -c --all -r default', assert_error=True)
         self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
