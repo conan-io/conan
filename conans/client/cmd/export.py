@@ -188,7 +188,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     return ref
 
 
-def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output):
+def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, output, ignore_dirty):
 
     scm_data = get_scm_data(conanfile)
     if not scm_data:
@@ -198,26 +198,31 @@ def _capture_export_scm_data(conanfile, conanfile_dir, destination_folder, outpu
     scm = SCM(scm_data, conanfile_dir, output)
     captured = scm_data.capture_origin or scm_data.capture_revision
 
-    if scm_data.url == "auto":
-        origin = scm.get_qualified_remote_url(remove_credentials=True)
-        if not origin:
-            raise ConanException("Repo origin cannot be deduced")
-        if scm.is_local_repository():
-            output.warn("Repo origin looks like a local path: %s" % origin)
-        output.success("Repo origin deduced by 'auto': %s" % origin)
-        scm_data.url = origin
+    if not captured:
+        return scm_data, None
 
-    if scm_data.revision == "auto":
-        if not scm.is_pristine():
-            output.warn("Repo status is not pristine: there might be modified files")
-        else:
+    local_src_path = scm.get_local_path_to_url(scm_data.url)
+
+    if not scm.is_pristine() and not ignore_dirty:
+        output.warn("There are uncommitted changes, skipping the replacement of 'scm.url' and "
+                    "'scm.revision' auto fields. Use --ignore-dirty to force it.")
+    else:
+        if scm_data.url == "auto":
+            origin = scm.get_qualified_remote_url(remove_credentials=True)
+            if not origin:
+                raise ConanException("Repo origin cannot be deduced")
+            if scm.is_local_repository():
+                output.warn("Repo origin looks like a local path: %s" % origin)
+            output.success("Repo origin deduced by 'auto': %s" % origin)
+            scm_data.url = origin
+
+        if scm_data.revision == "auto":
             # If it is pristine by default we don't replace the "auto" unless forcing
             # This prevents the recipe to get uploaded pointing to an invalid commit
             scm_data.revision = scm.get_revision()
             output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
-    local_src_path = scm.get_local_path_to_url(scm_data.url) if captured else None
-    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+        _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
 
     return scm_data, local_src_path
 
