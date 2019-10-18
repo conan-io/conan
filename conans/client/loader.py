@@ -10,7 +10,8 @@ import yaml
 from conans.client.generators import registered_generators
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
-from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration
+from conans.errors import ConanException, NotFoundException, ConanInvalidConfiguration, \
+    conanfile_exception_formatter
 from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
@@ -74,11 +75,13 @@ class ConanFileLoader(object):
         if hasattr(conanfile, "get_name"):
             if conanfile.name:
                 raise ConanException("Conanfile defined package 'name', get_name() redundant")
-            conanfile.get_name()
+            with conanfile_exception_formatter("conanfile.py", "get_name"):
+                conanfile.get_name()
         if hasattr(conanfile, "get_version"):
             if conanfile.version:
                 raise ConanException("Conanfile defined package 'version', get_version() redundant")
-            conanfile.get_version()
+            with conanfile_exception_formatter("conanfile.py", "get_version"):
+                conanfile.get_version()
 
         # Export does a check on existing name & version
         if name:

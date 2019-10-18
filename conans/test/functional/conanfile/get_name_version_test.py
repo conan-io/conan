@@ -77,3 +77,26 @@ class GetVersionNameTest(unittest.TestCase):
         # Local flow should also fail
         client.run("install . other/1.2@", assert_error=True)
         self.assertIn("ERROR: Package recipe with name other!=pkg", client.out)
+
+    def get_version_name_crash_test(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Lib(ConanFile):
+                def get_name(self):
+                    self.name = error
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export .", assert_error=True)
+        self.assertIn("ERROR: conanfile.py: Error in get_name() method, line 5", client.out)
+        self.assertIn("NameError: global name 'error' is not defined", client.out)
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile
+           class Lib(ConanFile):
+               def get_version(self):
+                   self.version = error
+           """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export .", assert_error=True)
+        self.assertIn("ERROR: conanfile.py: Error in get_version() method, line 5", client.out)
+        self.assertIn("NameError: global name 'error' is not defined", client.out)
