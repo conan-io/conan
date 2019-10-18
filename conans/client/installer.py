@@ -83,11 +83,12 @@ class _PackageBuilder(object):
                          build_folder, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
+        scm_sources_folder = package_layout.scm_sources()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
         _remove_folder_raising(build_folder)
 
-        config_source(export_folder, export_source_folder, source_folder,
+        config_source(export_folder, export_source_folder, scm_sources_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
 

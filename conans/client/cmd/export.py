@@ -3,7 +3,7 @@ import os
 import shutil
 
 import six
-from conans.client.source import run_scm
+from conans.client.source import merge_directories
 
 from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
@@ -14,7 +14,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference
 
@@ -49,8 +49,19 @@ def check_casing_conflict(cache, ref):
                              % (str(ref), " ".join(str(s) for s in refs)))
 
 
+def export_scm(scm_data, origin_folder, scm_sources_folder, output):
+
+    # Copy the local folder to the scm_sources folder, this enables to work
+    # with local sources without committing and pushing changes to the scm remote.
+    # https://github.com/conan-io/conan/issues/5195
+    excluded = SCM(scm_data, origin_folder, output).excluded_files
+    excluded.append("conanfile.py")
+    output.info("Getting sources from folder: %s" % origin_folder)
+    merge_directories(origin_folder, scm_sources_folder, excluded=excluded)
+
+
 def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
-               export=True, graph_lock=None):
+               export=True, graph_lock=None, ignore_dirty=False):
 
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
@@ -112,6 +123,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     # Copy sources to target folders
     with package_layout.conanfile_write_lock(output=output):
+
         origin_folder = os.path.dirname(conanfile_path)
         export_recipe(conanfile, origin_folder, package_layout.export())
         export_source(conanfile, origin_folder, package_layout.export_sources())
@@ -119,7 +131,14 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
         scm_data, local_src_folder = _capture_export_scm_data(conanfile,
                                                               os.path.dirname(conanfile_path),
-                                                              package_layout.export(), output)
+                                                              package_layout.export(), output,
+                                                              ignore_dirty)
+        scm_sources_folder = package_layout.scm_sources()
+        rmdir(scm_sources_folder)
+        if local_src_folder and not keep_source:
+            # Copy the local scm folder to scm_sources in the cache
+            mkdir(scm_sources_folder)
+            export_scm(scm_data, local_src_folder, scm_sources_folder, output)
 
         # Execute post-export hook before computing the digest
         hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
@@ -145,14 +164,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                             revision_mode=conanfile.revision_mode)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
-
-    if local_src_folder and not keep_source:
-        # Copy the local folder to the source folder, this enables to work
-        # with local sources without committing and pushing changes to the scm remote.
-        # https://github.com/conan-io/conan/issues/5195
-        export_sources_folder = package_layout.export_sources()
-        run_scm(scm_data, export_sources_folder, local_src_folder, output, cache=True)
-
     source_folder = package_layout.source()
     if os.path.exists(source_folder):
         try:

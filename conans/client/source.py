@@ -101,6 +101,9 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
 
     def get_sources_from_exports():
         if conanfile_folder != src_folder:
+            scm_data = get_scm_data(conanfile)
+            if scm_data:
+                _run_local_scm(scm_data, src_folder, conanfile_folder, output=conanfile.output)
             conanfile.output.info("Executing exports to: %s" % src_folder)
             # FIXME: import loop between source and export
             from conans.client.cmd.export import export_recipe, export_source
@@ -108,12 +111,11 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
             export_source(conanfile, conanfile_folder, src_folder)
 
     _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None, cache=None,
-                local_sources_path=conanfile_folder,
                 get_sources_from_exports=get_sources_from_exports)
 
 
-def config_source(export_folder, export_source_folder, src_folder, conanfile, output,
-                  conanfile_path, reference, hook_manager, cache):
+def config_source(export_folder, export_source_folder, scm_sources_folder,
+                  src_folder, conanfile, output, conanfile_path, reference, hook_manager, cache):
     """ Implements the sources configuration when a package is going to be built in the
     local cache.
     """
@@ -139,24 +141,36 @@ def config_source(export_folder, export_source_folder, src_folder, conanfile, ou
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
 
-    # !!!!!!!!!!!!!! si hemos copiado los sources del scm auto aqui no entra mas :(
     if not os.path.exists(src_folder):  # No source folder, need to get it
         with set_dirty_context_manager(src_folder):
             mkdir(src_folder)
 
             def get_sources_from_exports():
+                # First of all get the exported scm sources
+                if os.path.exists(scm_sources_folder):
+                    merge_directories(scm_sources_folder, src_folder)
+                else:
+                    scm_data = get_scm_data(conanfile)
+                    if scm_data:
+                        dest_dir = os.path.normpath(
+                            os.path.join(src_folder, scm_data.subfolder or ""))
+                        output.info("Getting sources from url: '%s'" % scm_data.url)
+                        scm = SCM(scm_data, dest_dir, output)
+                        scm.checkout()
+                        # This is a bit weird. Why after a SCM should we remove files.
+                        # Maybe check conan 2.0
+                        # TODO: Why removing in the cache? There is no danger.
+                        _clean_source_folder(dest_dir)
                 # so self exported files have precedence over python_requires ones
                 merge_directories(export_folder, src_folder)
                 # Now move the export-sources to the right location
                 merge_directories(export_source_folder, src_folder)
 
             _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                        cache, None,
-                        get_sources_from_exports=get_sources_from_exports)
+                        cache, get_sources_from_exports=get_sources_from_exports)
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache,
-                local_sources_path, get_sources_from_exports):
+def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache, get_sources_from_exports):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
         - Getting sources from SCM
@@ -176,10 +190,6 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
                                      reference=reference)
                 output = conanfile.output
                 output.info('Configuring sources in %s' % src_folder)
-                scm_data = get_scm_data(conanfile)
-                if scm_data:
-                    run_scm(scm_data, src_folder, local_sources_path, output, cache=cache)
-
                 get_sources_from_exports()
 
                 if cache:
@@ -209,21 +219,19 @@ def _clean_source_folder(folder):
         pass
 
 
-def run_scm(scm_data, src_folder, local_sources_path, output, cache):
-
+def _run_local_scm(scm_data, src_folder, local_sources_path, output):
     dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder or ""))
-    if not cache:
-        # In user space, if revision="auto", then copy
-        if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
-            scm = SCM(scm_data, local_sources_path, output)
-            scm_url = scm_data.url if scm_data.url != "auto" else \
-                scm.get_qualified_remote_url(remove_credentials=True)
+    # In user space, if revision="auto", then copy
+    if scm_data.capture_origin or scm_data.capture_revision:  # FIXME: or clause?
+        scm = SCM(scm_data, local_sources_path, output)
+        scm_url = scm_data.url if scm_data.url != "auto" else \
+            scm.get_qualified_remote_url(remove_credentials=True)
 
-            src_path = scm.get_local_path_to_url(url=scm_url)
-            if src_path:
-                local_sources_path = src_path
-        else:
-            local_sources_path = None
+        src_path = scm.get_local_path_to_url(url=scm_url)
+        if src_path:
+            local_sources_path = src_path
+    else:
+        local_sources_path = None
 
     if local_sources_path:
         excluded = SCM(scm_data, local_sources_path, output).excluded_files
@@ -233,7 +241,3 @@ def run_scm(scm_data, src_folder, local_sources_path, output, cache):
         output.info("Getting sources from url: '%s'" % scm_data.url)
         scm = SCM(scm_data, dest_dir, output)
         scm.checkout()
-
-    if cache:
-        # This is a bit weird. Why after a SCM should we remove files. Maybe check conan 2.0
-        _clean_source_folder(dest_dir)  # TODO: Why removing in the cache? There is no danger.
