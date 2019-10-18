@@ -268,14 +268,11 @@ class UploadTest(unittest.TestCase):
 
     def upload_parallel_error_test(self):
         """Cause an error in the parallel transfer and see some message"""
-
-        # For each file will fail the first time and will success in the second one
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
-        servers = {"default": server}
-        client = TestClient(requester_class=FailOnReferencesUploader,
-                            servers=servers, default_server_user=True)
+        client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run('user -p password -r default user')
+        for index in range(4):
+            client.run('create . lib{}/1.0@user/channel'.format(index))
         client.run('upload lib* --parallel -c --all -r default', assert_error=True)
         self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
         self.assertIn("Execute upload again to retry upload the failed files", client.out)
@@ -288,7 +285,7 @@ class UploadTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("user", "password")]})
         client.save({"conanfile.py": GenConanfile()})
-
+        
         client.run('create . lib0/1.0@user/channel')
         self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
                       client.out)
