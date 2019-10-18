@@ -34,8 +34,10 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
+        self.build_modules = []
         self.rootpath = ""
         self.sysroot = ""
+        self._build_modules_paths = None
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None
@@ -52,9 +54,15 @@ class _CppInfo(object):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
         if self.filter_empty:
-            return [p for p in abs_paths if os.path.isdir(p)]
+            return [p for p in abs_paths if os.path.exists(p)]
         else:
             return abs_paths
+
+    @property
+    def build_modules_paths(self):
+        if self._build_modules_paths is None:
+            self._build_modules_paths = self._filter_paths(self.build_modules)
+        return self._build_modules_paths
 
     @property
     def include_paths(self):
@@ -172,9 +180,14 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
 
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
+
+    @property
+    def build_modules_paths(self):
+        return self.build_modules
 
     @property
     def include_paths(self):

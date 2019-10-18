@@ -26,6 +26,15 @@ assign_target_properties = """
 """
 
 
+def _build_modules_section(build_modules):
+    result = []
+    template = 'include({path})'
+    for module in build_modules:
+        if ".cmake" in module:
+            result.append(template.format(path=module))
+    return "\n".join(line for line in result)
+
+
 class CMakeFindPackageGenerator(Generator):
     template = """
 {find_package_header_block}
@@ -66,6 +75,8 @@ endif()
                                    find_libraries_block=find_libraries_block,
                                    find_package_header_block=find_package_header_block,
                                    assign_target_properties_block=target_props)
+        if cpp_info.build_modules_paths:
+            tmp = tmp + _build_modules_section(deps.build_modules_paths)
         return tmp
 
 

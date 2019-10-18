@@ -64,6 +64,7 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
+        self.build_modules_paths = ['"%s"' % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in cpp_info.build_modules_paths]
 
 
 class CMakeGenerator(Generator):
