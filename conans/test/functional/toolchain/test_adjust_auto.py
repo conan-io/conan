@@ -1,19 +1,19 @@
 # coding=utf-8
 
-import platform
-import textwrap
 import os
+import platform
 import re
+import textwrap
 import unittest
 
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
-from conans.util.files import load, save
+from parameterized.parameterized import parameterized_class
+
 from conans.client.toolchain.cmake import CMakeToolchain
-from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TurboTestClient
-from parameterized.parameterized import parameterized_class
+from conans.util.files import load
 
 
 def compile_local_workflow(testcase, client, profile):
@@ -365,7 +365,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         #self.skipTest("Disabled")
         configure_out, cmake_cache, cmake_cache_keys, build_directory, _ = self._run_configure()
 
-        # TODO: CONAN_CMAKE_MODULE_PATH, we are not populating that variable!
+        # TODO: CONAN_CMAKE_MODULE_PATH, we are not populating that variable! never?!
 
         self.assertIn(">> CMAKE_MODULE_PATH: {}".format(build_directory), configure_out)
         self.assertIn(">> CMAKE_PREFIX_PATH: ", configure_out)
