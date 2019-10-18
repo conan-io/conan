@@ -218,7 +218,6 @@ class CmdUpload(object):
         except ConanException as exc:
             self._exceptions_list.append(exc)
             upload_packages = False
-            threading.current_thread().kill = True
 
         # Now the binaries
         if prefs and upload_packages:
