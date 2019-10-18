@@ -249,6 +249,12 @@ class ToolsFilesPatchTest(unittest.TestCase):
                      "bar.txt": bar})
         client.run("install .")
         client.run("build .")
+        bar_content = load(os.path.join(client.current_folder, "bar.txt"))
+        self.assertIn(dedent("""Yo no creo en brujas, pero que las hay, las hay
+                             """), bar_content)
+        foo_content = load(os.path.join(client.current_folder, "foo.txt"))
+        self.assertIn(dedent("""For us, there is no spring.
+Just the wind that smells fresh before the storm."""), foo_content)
         self.assertIn("Running build()", client.out)
         self.assertNotIn("Warning", client.out)
 
