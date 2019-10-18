@@ -3,6 +3,7 @@
 import platform
 import textwrap
 import os
+import re
 import unittest
 
 from nose.plugins.attrib import attr
@@ -32,11 +33,16 @@ def _compile_cache_workflow(testcase, client, profile, use_toolchain):
                          args=" --profile={} -o use_toolchain={}".format(profile, use_toolchain))
     if use_toolchain:
         testcase.assertIn("Using Conan toolchain", client.out)
-    print(client.out)
 
     # Run the app and check it has been properly compiled
     package_layout = client.cache.package_layout(pref.ref)
     cmake_cache = load(os.path.join(package_layout.build(pref), "CMakeCache.txt"))
+
+    if use_toolchain:
+        # TODO: Remove
+        toolcahin = load(os.path.join(package_layout.build(pref), CMakeToolchain.filename))
+        print(toolcahin)
+        print("!"*200)
     return client.out, cmake_cache
 
 
@@ -58,10 +64,10 @@ def compile_cmake_workflow(testcase, client, profile):
     return client.out, cmake_cache
 
 
-@parameterized_class([{"function": compile_cache_workflow_without_toolchain},
-                      {"function": compile_cache_workflow_with_toolchain},
-                      {"function": compile_local_workflow},
-                      {"function": compile_cmake_workflow},
+@parameterized_class([{"function": compile_cache_workflow_without_toolchain, "use_toolchain": False},
+                      {"function": compile_cache_workflow_with_toolchain, "use_toolchain": True},
+                      #{"function": compile_local_workflow, "use_toolchain": True},
+                      #{"function": compile_cmake_workflow, "use_toolchain": True},
                       ])
 @attr("toolchain")
 class AdjustAutoTestCase(unittest.TestCase):
@@ -78,8 +84,9 @@ class AdjustAutoTestCase(unittest.TestCase):
             settings = "os", "arch", "compiler", "build_type"
             exports = "*.cpp", "*.txt"
             generators = "cmake_find_package", "cmake"
-            options = {"use_toolchain": [True, False]}
-            default_options = {"use_toolchain": True}
+            options = {"use_toolchain": [True, False], "fPIC": [True, False]}
+            default_options = {"use_toolchain": True,
+                               "fPIC": False}
 
             def toolchain(self):
                 tc = CMakeToolchain(self)
@@ -97,8 +104,37 @@ class AdjustAutoTestCase(unittest.TestCase):
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8)
-        project(App CXX)
+        project(App C CXX)
+        
+        if(NOT CMAKE_TOOLCHAIN_FILE)
+            message(">> Using toolchain")
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+        endif()
 
+        message(">> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
+        message(">> CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+        message(">> CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
+        message(">> CMAKE_SHARED_LINKER_FLAGS: ${CMAKE_SHARED_LINKER_FLAGS}")
+        message(">> CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
+
+        message(">> CMAKE_CXX_STANDARD: ${CMAKE_CXX_STANDARD}")
+        message(">> CMAKE_CXX_EXTENSIONS: ${CMAKE_CXX_EXTENSIONS}")
+
+        message(">> CMAKE_INSTALL_BINDIR: ${CMAKE_INSTALL_BINDIR}")
+        message(">> CMAKE_INSTALL_DATAROOTDIR: ${CMAKE_INSTALL_DATAROOTDIR}")
+        message(">> CMAKE_INSTALL_INCLUDEDIR: ${CMAKE_INSTALL_INCLUDEDIR}")
+        message(">> CMAKE_INSTALL_LIBDIR: ${CMAKE_INSTALL_LIBDIR}")
+        message(">> CMAKE_INSTALL_LIBEXECDIR: ${CMAKE_INSTALL_LIBEXECDIR}")
+        message(">> CMAKE_INSTALL_OLDINCLUDEDIR: ${CMAKE_INSTALL_OLDINCLUDEDIR}")
+        message(">> CMAKE_INSTALL_SBINDIR: ${CMAKE_INSTALL_SBINDIR}")
+        message(">> CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
+        
+        message(">> CMAKE_POSITION_INDEPENDENT_CODE: ${CMAKE_POSITION_INDEPENDENT_CODE}")
+        
+        message(">> CMAKE_INSTALL_NAME_DIR: ${CMAKE_INSTALL_NAME_DIR}")
+        message(">> CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}")
+        
         add_executable(app src/app.cpp)
     """)
 
@@ -120,103 +156,149 @@ class AdjustAutoTestCase(unittest.TestCase):
                     "src/app.cpp": cls.app_cpp})
         # TODO: Remove the app.cpp and the add_executable, probably it is not need to run cmake configure.
 
-    def _profile(self, client, settings_dict):
+    def _run_configure(self, settings_dict, options_dict):
+        # Build the profile according to the settings provided
         settings_lines = "\n".join("{}={}".format(k, v) for k, v in settings_dict.items())
+        options_lines = "\n".join("{}={}".format(k, v) for k, v in options_dict.items())
         profile = textwrap.dedent("""
-            include(default)
-            [settings]
-            {}
-        """.format(settings_lines))
-        client.save({"profile": profile})
-        return os.path.join(client.current_folder, "profile")
+                    include(default)
+                    [settings]
+                    {}
+                    [options]
+                    {}
+                """.format(settings_lines, options_lines))
+        self.t.save({"profile": profile})
+        profile_path = os.path.join(self.t.current_folder, "profile")
+
+        # Run the configure corresponding to this test case
+        configure_out, cmake_cache = self.function(client=self.t, profile=profile_path)
+
+        # Prepare the outputs for the test cases
+        configure_out = [re.sub(r"\s\s+", " ", line) for line in str(configure_out).splitlines()]  # FIXME: There are some extra spaces between flags
+        cmake_cache_items = {}
+        for line in cmake_cache.splitlines():
+            if not line.strip() or line.startswith("//") or line.startswith("#"):
+                continue
+            key, value = line.split("=", 1)
+            cmake_cache_items[key] = value
+        cmake_cache_keys = [item.split(":")[0] for item in cmake_cache_items.keys()]
+
+        self._print_things(configure_out, cmake_cache_items)
+        return configure_out, cmake_cache_items, cmake_cache_keys
+
+    def _print_things(self, configure_out, cmake_cache):
+        # TODO: Remove this functions
+        print("\n".join(configure_out))
+        print("*"*200)
+        from pprint import pprint
+        pprint(cmake_cache)
 
     @parameterized.expand([("Debug",), ("Release",)])
     def test_build_type(self, build_type):
-        profile = self._profile(self.t, {"build_type": build_type})
-        configure_out, cmake_cache = self.function(client=self.t, profile=profile)
+        self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({"build_type": build_type})
 
-        print(configure_out)
-        print("*"*200)
-        print(cmake_cache)
+        self.assertIn("build_type={}".format(build_type), configure_out)
+        self.assertIn(">> CMAKE_BUILD_TYPE: {}".format(build_type), configure_out)
 
-        # Contents of the CMakeCache
-        self.assertIn("CMAKE_BUILD_TYPE:STRING={}".format(build_type), cmake_cache)
+        self.assertEqual(build_type, cmake_cache["CMAKE_BUILD_TYPE:STRING"])
 
+    @parameterized.expand([("libc++",), ])  # ("libstdc++",), is deprecated
+    @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
+    def test_libcxx(self, libcxx):
+        self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({"compiler.libcxx": libcxx})
 
+        self.assertIn("compiler.libcxx={}".format(libcxx), configure_out)
+        self.assertIn("-- Conan: C++ stdlib: {}".format(libcxx), configure_out)
+        self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib={}".format(libcxx), configure_out)
 
-    """
-    @parameterized.expand([("Debug",), ("Release",)])
-    def test_cache_create(self, build_type):
-        # TODO: Remove. It is here just to check that the package builds in the cache
-        # Compile the app in the cache
-        pref = self.t.create(ref=self.app_ref, conanfile=self.conanfile,
-                             args=" -s build_type={}".format(build_type))
-        self.assertIn("Using Conan toolchain", self.t.out)
+        if not self.use_toolchain:
+            self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:UNINITIALIZED"])
+        else:
+            self.assertEqual(libcxx, cmake_cache["CONAN_LIBCXX:STRING"])
 
-        # Run the app and check it has been properly compiled
-        package_layout = self.t.cache.package_layout(pref.ref)
-        self.t.run_command("./app", cwd=package_layout.package(pref))
-        self.assertIn("Hello World {}!".format(build_type), self.t.out)
-        self.assertIn("App: {}".format(build_type), self.t.out)
-        # self.assertIn("CMAKE_GENERATOR: ", self.t.out)
-        self.assertIn("GENERATOR_IS_MULTI_CONFIG: 0", self.t.out)
-        self.assertIn("CMAKE_BUILD_TYPE: {}".format(build_type), self.t.out)
-    """
+    def test_install_paths(self):
+        self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({})
 
-    """
-    @parameterized.expand([("Debug",), ("Release",)])
-    def test_local_conan(self, build_type):
-        # TODO: Remove. Here just to check another way of building
-        # Conan local workflow
-        with self.t.chdir("build"):
-            self.t.run("install .. -s build_type={}".format(build_type))
-            self.t.run("build ..")
-            self.assertIn("Using Conan toolchain", self.t.out)
+        self.assertIn(">> CMAKE_INSTALL_BINDIR: bin", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_DATAROOTDIR: share", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_INCLUDEDIR: include", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_LIBDIR: lib", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_LIBEXECDIR: bin", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_OLDINCLUDEDIR: include", configure_out)
+        self.assertIn(">> CMAKE_INSTALL_SBINDIR: bin", configure_out)
 
-        # Run the app and check it has been properly compiled
-        self.t.run_command("./build/app")
-        print(self.t.current_folder)
-        print(self.t.out)
-    """
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_BINDIR:" + type_str])
+        self.assertEqual("share", cmake_cache["CMAKE_INSTALL_DATAROOTDIR:" + type_str])
+        self.assertEqual("include", cmake_cache["CMAKE_INSTALL_INCLUDEDIR:" + type_str])
+        self.assertEqual("lib", cmake_cache["CMAKE_INSTALL_LIBDIR:" + type_str])
+        self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_LIBEXECDIR:" + type_str])
+        self.assertEqual("include", cmake_cache["CMAKE_INSTALL_OLDINCLUDEDIR:" + type_str])
+        self.assertEqual("bin", cmake_cache["CMAKE_INSTALL_SBINDIR:" + type_str])
 
-    """
-    self.assertIn("Hello World {}!".format(build_type), self.t.out)
-    self.assertIn("App: {}".format(build_type), self.t.out)
-    # self.assertIn("CMAKE_GENERATOR: ", self.t.out)
-    self.assertIn("GENERATOR_IS_MULTI_CONFIG: 0", self.t.out)
-    self.assertIn("CMAKE_BUILD_TYPE: {}".format(build_type), self.t.out)
-    """
+        type_str = "STRING" if self.use_toolchain else "PATH"
+        self.assertTrue(len(cmake_cache["CMAKE_INSTALL_PREFIX:" + type_str].strip()) > 0)
 
-    """
-    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Require multiconfig generator")
-    def test_multiconfig_generator(self):
-        with self.t.chdir("build"):
-            self.t.run("install .. -s build_type=Debug")
-            self.t.run("install .. -s build_type=Release")
+    def test_ccxx_flags(self):
+        self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({})
 
-            # Configure once
-            mgenerator = "Xcode" if platform.system() == "Darwin" else "Visual Studio 15 Win64"
-            with environment_append({"CMAKE_GENERATOR": mgenerator}):
-                cmake_configure = 'cmake .. -DCMAKE_TOOLCHAIN_FILE={}'.format(
-                    CMakeToolchain.filename)
-                self.t.run_command(cmake_configure)
-                self.assertIn("Using Conan toolchain", self.t.out)
+        self.assertIn(">> CMAKE_CXX_FLAGS: -m64 -stdlib=libc++", configure_out)
+        self.assertIn(">> CMAKE_C_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_SHARED_LINKER_FLAGS: -m64", configure_out)
+        self.assertIn(">> CMAKE_EXE_LINKER_FLAGS: ", configure_out)
 
-            # Test debug
-            self.t.run_command("cmake --build . --config Debug")
-            self.t.run_command("./Debug/app")
-            self.assertIn("Hello World Debug!", self.t.out)
-            self.assertIn("App: Debug", self.t.out)
-            self.assertIn("CMAKE_GENERATOR: {}".format(mgenerator), self.t.out)
-            self.assertIn("GENERATOR_IS_MULTI_CONFIG: 1", self.t.out)
-            self.assertNotIn("CMAKE_BUILD_TYPE", self.t.out)
+        # FIXME: Cache doesn't match those in CMakeLists
+        self.assertEqual("", cmake_cache["CMAKE_CXX_FLAGS:STRING"])
+        self.assertEqual("", cmake_cache["CMAKE_C_FLAGS:STRING"])
+        self.assertEqual("", cmake_cache["CMAKE_SHARED_LINKER_FLAGS:STRING"])
+        self.assertEqual("", cmake_cache["CMAKE_EXE_LINKER_FLAGS:STRING"])
 
-            # Test release
-            self.t.run_command("cmake --build . --config Release")
-            self.t.run_command("./Release/app")
-            self.assertIn("Hello World Release!", self.t.out)
-            self.assertIn("App: Release", self.t.out)
-            self.assertIn("CMAKE_GENERATOR: {}".format(mgenerator), self.t.out)
-            self.assertIn("GENERATOR_IS_MULTI_CONFIG: 1", self.t.out)
-            self.assertNotIn("CMAKE_BUILD_TYPE", self.t.out)
-    """
+    @parameterized.expand([("gnu14",), ("14", ), ])
+    def test_stdcxx_flags(self, cppstd):
+        self.skipTest("Disabled")
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({"compiler.cppstd": cppstd})
+
+        extensions_str = "ON" if "gnu" in cppstd else "OFF"
+        self.assertIn("compiler.cppstd={}".format(cppstd), configure_out)
+        self.assertIn("-- Conan setting CPP STANDARD: 14 WITH EXTENSIONS {}".format(extensions_str), configure_out)
+        self.assertIn(">> CMAKE_CXX_STANDARD: 14", configure_out)
+        self.assertIn(">> CMAKE_CXX_EXTENSIONS: {}".format(extensions_str), configure_out)
+
+        # FIXME: Cache doesn't match those in CMakeLists
+        self.assertNotIn("CMAKE_CXX_STANDARD", cmake_cache_keys)
+        self.assertNotIn("CMAKE_CXX_EXTENSIONS", cmake_cache_keys)
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        cxx_flag_str = "gnu++" if "gnu" in cppstd else "c++"
+        self.assertEqual("-std={}14".format(cxx_flag_str), cmake_cache["CONAN_STD_CXX_FLAG:" + type_str])
+        if self.use_toolchain:
+            self.assertEqual(extensions_str, cmake_cache["CONAN_CMAKE_CXX_EXTENSIONS:STRING"])
+            self.assertEqual("14", cmake_cache["CONAN_CMAKE_CXX_STANDARD:STRING"])
+
+    @parameterized.expand([("True",), ("False", ), ])
+    def test_fPIC(self, fpic):
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({}, {"app:fPIC": fpic})
+
+        fpic_str = "ON" if fpic == "True" else "OFF"
+        self.assertIn("app:fPIC={}".format(fpic), configure_out)
+        self.assertIn("-- Conan: Adjusting fPIC flag ({})".format(fpic_str), configure_out)
+        self.assertIn(">> CMAKE_POSITION_INDEPENDENT_CODE: {}".format(fpic_str), configure_out)
+
+        type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+        self.assertEqual(fpic_str, cmake_cache["CONAN_CMAKE_POSITION_INDEPENDENT_CODE:" + type_str])
+        self.assertNotIn("CMAKE_POSITION_INDEPENDENT_CODE", cmake_cache_keys)
+
+    @unittest.skipIf(platform.system() != "Darwin", "libcxx for Darwin")
+    def test_rpath(self):
+        configure_out, cmake_cache, cmake_cache_keys = self._run_configure({}, {})
+
+        self.assertIn(">> CMAKE_INSTALL_NAME_DIR: ", configure_out)
+        self.assertIn(">> CMAKE_SKIP_RPATH: 1", configure_out)
+
+        if self.use_toolchain:
+            self.assertEqual("1", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])
+        else:
+            self.assertEqual("NO", cmake_cache["CMAKE_SKIP_RPATH:BOOL"])

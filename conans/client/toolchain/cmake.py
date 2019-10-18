@@ -18,16 +18,24 @@ class CMakeToolchain:
 
     _template = textwrap.dedent("""
         # Conan generated toolchain file
+        
+        # Avoid including toolchain file several times (bad if appending to variables like
+        #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
+        if(CONAN_TOOLCHAIN_INCLUDED)
+          return()
+        endif()
+        set(CONAN_TOOLCHAIN_INCLUDED true)
+
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
         
         # CMAKE_BUILD_TYPE: If it is passed from the command line, do not use value in the toolchain,
         #   this is needed to allow Conan's multi generators to work: the user will run
         #   with 'cmake --build . --config Debug|Release|RelWithDebInfo' for multiconfig'
         get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
-        if(NOT ${_GENERATOR_IS_MULTI_CONFIG})
+        if(NOT _GENERATOR_IS_MULTI_CONFIG)
             set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
-            message(">>>>>>>>>> CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
         endif()
+        unset(_GENERATOR_IS_MULTI_CONFIG)
 
         # Configure
         # -- CMake::command_line
@@ -36,7 +44,7 @@ class CMakeToolchain:
         
         # --  - CMake.flags --> CMakeDefinitionsBuilder::get_definitions
         {%- for it, value in definitions.items() %}
-        set({{ it }} "{{ value }}")
+        set({{ it }} "{{ value }}" CACHE STRING "Do we want to set all these vars in the cache?" FORCE)
         {%- endfor %}
         
         # -- args  # TODO: The user cannot set specific arguments for the cmake.configure
@@ -56,7 +64,6 @@ class CMakeToolchain:
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             
-            # conan_global_flags()  We skip this step as it was configuring libraries! (also calling below 'conan_set_flags' functions
             conan_set_flags("")
             conan_set_flags("_RELEASE")
             conan_set_flags("_DEBUG")
@@ -68,9 +75,9 @@ class CMakeToolchain:
             
             #conan_check_compiler()
             conan_set_libcxx()
-            conan_set_vs_runtime()
-            conan_set_find_paths()
-            conan_set_find_library_paths()
+            #conan_set_vs_runtime()
+            #conan_set_find_paths()
+            #conan_set_find_library_paths()
             
         else()
             message(">>>> TRY COMPILE")

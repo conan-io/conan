@@ -50,7 +50,7 @@ macro(conan_set_rpath)
         #     libMyLib0.dylib (compatibility version 0.0.0, current version 0.0.0)
         #     /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
         #     /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
-        set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
+        set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths")  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
                                  # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
         # Policy CMP0068
         # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect the install_name in OSX
