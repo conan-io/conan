@@ -4,8 +4,7 @@ import os
 import sys
 
 from conans.build_info.conan_build_info import get_build_info
-from conans.build_info.conan_build_info_v2 import build_info_start, build_info_stop, \
-    build_info_create, build_info_update, build_info_publish
+from conans.build_info.conan_build_info_v2 import start, stop, create, update, publish
 from conans.errors import ConanException
 from conans.util.files import save
 from conans.client.output import ConanOutput
@@ -94,15 +93,15 @@ def run():
         try:
             args = parser_v2.parse_args()
             if args.subcommand == "start":
-                build_info_start(args.build_name, args.build_number)
+                start(args.build_name, args.build_number)
             if args.subcommand == "stop":
-                build_info_stop()
+                stop()
             if args.subcommand == "create":
-                build_info_create(args.build_info_file, args.lockfile)
+                create(args.build_info_file, args.lockfile)
             if args.subcommand == "update":
-                build_info_update(args.build_info_1, args.build_info_2)
+                update(args.build_info_1, args.build_info_2)
             if args.subcommand == "publish":
-                build_info_publish(args.build_info_file, args.url, args.user, args.password,
+                publish(args.build_info_file, args.url, args.user, args.password,
                                    args.apikey)
         except argparse.ArgumentError as exc:
             exc_v2 = exc

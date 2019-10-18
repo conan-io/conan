@@ -13,7 +13,7 @@ from conans.util.files import save
 output = ConanOutput(sys.stdout, sys.stderr, True)
 
 
-def build_info_start(build_name, build_number):
+def start(build_name, build_number):
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
     content = "artifact_property_build.name={}\n" \
               "artifact_property_build.number={}\n".format(build_name, build_number)
@@ -24,7 +24,7 @@ def build_info_start(build_name, build_number):
         raise ConanException("Can't write properties file in %s" % artifact_properties_file)
 
 
-def build_info_stop():
+def stop():
     paths = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
     try:
         artifact_properties_file = paths.put_headers_path
@@ -33,16 +33,16 @@ def build_info_stop():
         raise ConanException("Can't write properties file in %s" % artifact_properties_file)
 
 
-def build_info_create(build_info_file, lockfile):
+def create(build_info_file, lockfile):
     create_build_info(build_info_file, lockfile)
 
 
-def build_info_update(build_info_1, build_info_2):
+def update(build_info_1, build_info_2):
     print(build_info_1, build_info_2)
     pass
 
 
-def build_info_publish(build_info_file, url, user, password=None, apikey=None):
+def publish(build_info_file, url, user, password=None, apikey=None):
     if apikey:
         rtpy = Rtpy({"af_url": url, "api_key": apikey})
     elif password:
