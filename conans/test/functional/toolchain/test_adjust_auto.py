@@ -208,6 +208,7 @@ class AdjustAutoTestCase(unittest.TestCase):
         return configure_out, cmake_cache_items, cmake_cache_keys, build_directory, package_directory
 
     def _print_things(self, configure_out, cmake_cache):
+        return
         # TODO: Remove this functions
         print("\n".join(configure_out))
         print("*"*200)
