@@ -1,17 +1,10 @@
-# coding=utf-8
-
-# Build definition: https://github.com/jfrog/build-info
-
-import argparse
 import datetime
 import json
 import os
 import re
 import sys
-import textwrap
-from collections import OrderedDict, defaultdict, namedtuple
-from functools import partial
-from urllib.parse import urlparse, urljoin
+from collections import defaultdict, namedtuple
+from urllib.parse import urlparse
 
 from rtpy import Rtpy
 
