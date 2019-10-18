@@ -2,7 +2,6 @@
 name: 'Feature Request'
 about: 'Request a new feature or suggest a change'
 title: '[feature] SHORT DESCRIPTION'
-labels: 'type: feature'
 ---
 
 <!-- What is your suggestion? Please be as specific as possible! -->
