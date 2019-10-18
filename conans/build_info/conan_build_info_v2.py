@@ -33,8 +33,8 @@ def stop():
         raise ConanException("Can't write properties file in %s" % artifact_properties_file)
 
 
-def create(build_info_file, lockfile):
-    create_build_info(build_info_file, lockfile)
+def create(build_info_file, lockfile, multi_module, skip_env):
+    create_build_info(build_info_file, lockfile, multi_module, skip_env)
 
 
 def update(build_info_1, build_info_2):

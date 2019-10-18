@@ -77,6 +77,8 @@ def run():
         parser_create.add_argument("build_info_file", type=str,
                                    help="build info json for output")
         parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
+        parser_create.add_argument("--multi_module", nargs='?', default=True, help="input lockfile")
+        parser_create.add_argument("--skip_env", nargs='?', default=True, help="input lockfile")
 
         parser_update = subparsers.add_parser("update",
                                               help="Command to update a build info json with "
@@ -101,7 +103,7 @@ def run():
             if args.subcommand == "stop":
                 stop()
             if args.subcommand == "create":
-                create(args.build_info_file, args.lockfile)
+                create(args.build_info_file, args.lockfile, args.multi_module, args.skip_env)
             if args.subcommand == "update":
                 update(args.build_info_1, args.build_info_2)
             if args.subcommand == "publish":
