@@ -4,10 +4,9 @@ import os
 import re
 import sys
 from collections import defaultdict, namedtuple
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import requests
-from rtpy import Rtpy
 
 from conans.client.cache.cache import ClientCache
 from conans.model.ref import ConanFileReference
@@ -18,22 +17,6 @@ from conans.client.output import ConanOutput
 class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id"])):
     def __hash__(self):
         return hash(self.sha1)
-
-
-def _get_artifacts(path, remote, use_id=False, name_format="{name}"):
-    art_query = 'items.find({{"path": "{path}"}}).include("repo", "name", "path", "actual_md5", "actual_sha1")'
-    url = art_query.format(path=path)
-    ret = {}
-    r = remote.searches.artifactory_query_language(url)
-    if r:
-        for result in r["results"]:
-            if result["name"] in [".timestamp"]:
-                continue
-            name_or_id = name_format.format(**result)
-            ret[result["actual_sha1"]] = {"md5": result["actual_md5"],
-                                          "name": name_or_id if not use_id else None,
-                                          "id": name_or_id if use_id else None}
-    return set([Artifact(k, **v) for k, v in ret.items()])
 
 
 def _parse_options(contents):
@@ -81,23 +64,46 @@ class BuildInfoCreator(object):
         r = self.parse_pref(pref)
         return "{reference}:{pid}".format(reference=self._get_reference(pref), **r)
 
+    def _get_metadata_artifacts(self, metadata, request_path, use_id=False, name_format="{}",
+                                package_id=None):
+        ret = {}
+        have_sources = False
+        if package_id:
+            data = metadata.packages[package_id].checksums
+        else:
+            data = metadata.recipe.checksums
+            have_sources = "conan_sources.tgz" in data
+
+        for name, value in data.items():
+            name_or_id = name_format.format(name)
+            ret[value["sha1"]] = {"md5": value["md5"],
+                                  "name": name_or_id if not use_id else None,
+                                  "id": name_or_id if use_id else None}
+        if not have_sources:
+            remote_name = metadata.recipe.remote
+            remotes = self._conan_cache.registry.load_remotes()
+            remote_url = remotes[remote_name].url
+            parsed_uri = urlparse(remote_url)
+            base_url = "{uri.scheme}://{uri.netloc}/artifactory/api/storage/conan/".format(
+                uri=parsed_uri)
+            request_url = urljoin(base_url, "{}/conan_sources.tgz".format(request_path))
+            response = requests.get(request_url)
+            if response:
+                data = response.json()
+                ret[data["checksums"]["sha1"]] = {"md5": data["checksums"],
+                                                  "name": "conan_sources.tgz",
+                                                  "id": None}
+        return set([Artifact(k, **v) for k, v in ret.items()])
+
     def _get_recipe_artifacts(self, pref, add_prefix, use_id):
         r = self.parse_pref(pref)
         ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        # get remote from metadata
-        remote_name = metadata.recipe.remote
-        remotes = self._conan_cache.registry.load_remotes()
-        remote_url = remotes[remote_name].url
-        parsed_uri = urlparse(remote_url)
-        artifactory_url = '{uri.scheme}://{uri.netloc}/artifactory'.format(uri=parsed_uri)
-        artifactory = Rtpy(
-            {"af_url": artifactory_url, "username": "admin", "password": "password"})
+        name_format = "{} :: {{}}".format(self._get_reference(pref)) if add_prefix else "{}"
         url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
-        name_format = "{} :: {{name}}".format(self._get_reference(pref)) if add_prefix else "{name}"
-        return _get_artifacts(path=url, remote=artifactory, use_id=use_id, name_format=name_format)
+        return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id)
 
     def _get_package_artifacts(self, pref, add_prefix, use_id):
         r = self.parse_pref(pref)
@@ -105,18 +111,10 @@ class BuildInfoCreator(object):
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        # get remote from metadata
-        remote_name = metadata.packages[r["pid"]].remote
-        remotes = self._conan_cache.registry.load_remotes()
-        remote_url = remotes[remote_name].url
-        parsed_uri = urlparse(remote_url)
-        artifactory_url = '{uri.scheme}://{uri.netloc}/artifactory'.format(uri=parsed_uri)
-        artifactory = Rtpy(
-            {"af_url": artifactory_url, "username": "admin", "password": "password"})
+        name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if add_prefix else "{}"
         url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r)
-        name_format = "{} :: {{name}}".format(
-            self._get_package_reference(pref)) if add_prefix else "{name}"
-        arts = _get_artifacts(path=url, remote=artifactory, use_id=use_id, name_format=name_format)
+        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id,
+                                            package_id=r["pid"])
         return arts
 
     def process_lockfile(self):
