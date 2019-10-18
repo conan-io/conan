@@ -211,15 +211,17 @@ class CmdUpload(object):
                                    reference=ref, remote=recipe_remote)
         msg = "\rUploading %s to remote '%s'" % (str(ref), recipe_remote.name)
         self._output.info(left_justify_message(msg))
+        upload_packages = True
         try:
             self._upload_recipe(ref, conanfile, retry, retry_wait, policy, recipe_remote, remotes)
             upload_recorder.add_recipe(ref, recipe_remote.name, recipe_remote.url)
         except ConanException as exc:
             self._exceptions_list.append(exc)
+            upload_packages = False
             threading.current_thread().kill = True
 
         # Now the binaries
-        if prefs:
+        if prefs and upload_packages:
             total = len(prefs)
             p_remote = recipe_remote
 
