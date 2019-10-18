@@ -231,8 +231,9 @@ class AdjustAutoTestCase(unittest.TestCase):
             self.assertIn(">> CONAN_EXPORTED: {}".format(exported_str), configure_out)
             self.assertIn(">> CONAN_IN_LOCAL_CACHE: {}".format(in_local_cache), configure_out)
 
-            self.assertNotIn("CONAN_EXPORTED", cmake_cache_keys)
-            self.assertNotIn("CONAN_IN_LOCAL_CACHE", cmake_cache_keys)
+            type_str = "STRING" if self.use_toolchain else "UNINITIALIZED"
+            self.assertEqual(exported_str, cmake_cache["CONAN_EXPORTED:" + type_str])
+            self.assertEqual(in_local_cache, cmake_cache["CONAN_IN_LOCAL_CACHE:" + type_str])
 
     @parameterized.expand([("Debug",), ("Release",)])
     def test_build_type(self, build_type):
