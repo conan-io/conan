@@ -106,7 +106,7 @@ def run():
                 update(args.build_info_1, args.build_info_2)
             if args.subcommand == "publish":
                 publish(args.build_info_file, args.url, args.user, args.password,
-                                   args.apikey)
+                        args.apikey)
         except ArgumentParserError as exc:
             exc_v2 = exc
         except ConanException as exc:
@@ -123,6 +123,7 @@ def run():
         output.error(str(exc_v2))
         parser_v2.print_help()
         exit(1)
+
 
 if __name__ == "__main__":
     run()
