@@ -28,9 +28,7 @@ class CMakeToolchain:
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
         
-        # CMAKE_BUILD_TYPE: If it is passed from the command line, do not use value in the toolchain,
-        #   this is needed to allow Conan's multi generators to work: the user will run
-        #   with 'cmake --build . --config Debug|Release|RelWithDebInfo' for multiconfig'
+        # CMAKE_BUILD_TYPE: Use it only if it isn't a multi-config generator
         get_property(_GENERATOR_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG )
         if(NOT _GENERATOR_IS_MULTI_CONFIG)
             set(CMAKE_BUILD_TYPE "{{ CMAKE_BUILD_TYPE }}" CACHE STRING "Choose the type of build." FORCE)
@@ -46,9 +44,6 @@ class CMakeToolchain:
         {%- for it, value in definitions.items() %}
         set({{ it }} "{{ value }}" CACHE STRING "Do we want to set all these vars in the cache?" FORCE)
         {%- endfor %}
-        
-        # -- args  # TODO: The user cannot set specific arguments for the cmake.configure
-        # -- defs  # TODO: The user cannot set specific definitions for the cmake.configure
         
         # Set some environment variables
         {%- for it, value in environment.items() %}
